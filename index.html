@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GRM WhatsApp CRM — Modern Customer Communication & Assignment Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+              dark: '#082417',
+              wa: '#00a884',
+              waDark: '#128c7e',
+              waLight: '#25d366'
+            },
+            surface: {
+              bg: '#f8fafc',
+              card: '#ffffff',
+              cardDark: '#0f172a',
+              border: '#e2e8f0',
+              borderDark: '#1e293b',
+              sidebar: '#061a11',
+              sidebarActive: '#103824'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          },
+          boxShadow: {
+            'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.08)',
+            'glow': '0 0 20px -5px rgba(34, 197, 94, 0.4)',
+            'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.02);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.25);
+    }
+    .custom-chat-scroll {
+      scroll-behavior: smooth;
+    }
+    .badge-pulse {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.1); }
+    }
+    .chat-bubble-in {
+      border-radius: 0px 18px 18px 18px;
+    }
+    .chat-bubble-out {
+      border-radius: 18px 0px 18px 18px;
+    }
+    .modal-backdrop {
+      background: rgba(8, 36, 23, 0.65);
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body class="bg-surface-bg font-sans text-slate-800 antialiased overflow-hidden flex h-screen">
+
+  <!-- ========================================================================= -->
+  <!-- 1. LEFT NAVIGATION SIDEBAR -->
+  <!-- ========================================================================= -->
+  <aside class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-xl border-r border-brand-900/50 z-30 select-none">
+    <!-- Brand Top -->
+    <div class="h-16 flex items-center justify-between px-5 border-b border-brand-900/60 bg-brand-dark shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-wa to-brand-500 flex items-center justify-center text-white shadow-glow">
+          <span class="material-symbols-outlined text-[22px]">chat</span>
+        </div>
+        <div>
+          <h1 class="font-bold text-base tracking-tight text-white flex items-center gap-1.5">
+            GRM CRM <span class="text-[10px] bg-brand-500/20 text-brand-400 font-mono px-1.5 py-0.5 rounded">v2.5</span>
+          </h1>
+          <p class="text-[11px] text-emerald-400/80 font-medium">WhatsApp Business Hub</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Action / Status Bar (Clickable to open WhatsApp Settings!) -->
+    <div class="p-3 bg-brand-dark/40 border-b border-brand-900/30 shrink-0">
+      <div class="flex items-center justify-between bg-surface-sidebarActive p-2.5 rounded-xl border border-emerald-800/40 cursor-pointer hover:border-emerald-500/60 transition" onclick="switchView('settings')" title="Click to configure WhatsApp Business Number">
+        <div class="flex items-center gap-2">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <div class="text-xs">
+            <p class="font-semibold text-white leading-tight flex items-center gap-1">Live WhatsApp <span class="material-symbols-outlined text-[12px] text-emerald-400">tune</span></p>
+            <p id="sidebar-connected-phone" class="text-[10px] text-emerald-300/90 font-mono font-bold configured-business-phone">+91 97896 60115</p>
+          </div>
+        </div>
+        <button onclick="event.stopPropagation(); openInboundSimulatorModal()" class="text-[11px] bg-brand-wa hover:bg-brand-waDark text-white px-2 py-1 rounded-lg font-medium transition flex items-center gap-1 shadow-sm" title="Simulate incoming WhatsApp customer query (Cost-free!)">
+          <span class="material-symbols-outlined text-[14px]">add_circle</span> Sim In
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrollable Navigation Links -->
+    <nav class="flex-1 overflow-y-auto custom-chat-scroll p-3 space-y-1 text-xs font-medium min-h-0">
+      <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Command Center</div>
+      
+      <button onclick="switchView('dashboard')" id="nav-dashboard" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">dashboard</span>
+          <span>Dashboard</span>
+        </div>
+      </button>
+
+      <button onclick="switchView('inbox')" id="nav-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px]">inbox</span>
+          <span>WhatsApp Inbox</span>
+        </div>
+        <span id="badge-total-unread" class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">3</span>
+      </button>
+
+      <button onclick="switchView('enquiries')" id="nav-enquiries" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-amber-400 group-hover:scale-110 transition">contact_support</span>
+          <span>Customer Enquiries</span>
+        </div>
+        <span id="badge-unassigned-count" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full">2 New</span>
+      </button>
+
+      <div class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Sales & Operations</div>
+
+      <button onclick="switchView('followups')" id="nav-followups" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">schedule</span>
+          <span>Follow-up Due</span>
+        </div>
+        <span id="badge-followup-count" class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full">3 Today</span>
+      </button>
+
+      <button onclick="switchView('catalog')" id="nav-catalog" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">inventory_2</span>
+          <span>Live Stock & Sharing</span>
+        </div>
+      </button>
+
+      <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">shopping_bag</span>
+          <span>WhatsApp Orders</span>
+        </div>
+        <span id="badge-orders-count" class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">5</span>
+      </button>
+
+      <button onclick="switchView('customers')" id="nav-customers" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-purple-400 group-hover:scale-110 transition">groups</span>
+          <span>Customer 360</span>
+        </div>
+      </button>
+
+      <div class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Settings & Admin</div>
+
+      <!-- PROMINENT WHATSAPP SETTINGS BUTTON -->
+      <button onclick="switchView('settings')" id="nav-settings" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-emerald-300 group-hover:scale-110 transition">settings_phone</span>
+          <span>WhatsApp Settings</span>
+        </div>
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      </button>
+
+      <!-- DATA BACKUP & RESTORE MODULE -->
+      <button onclick="switchView('backup')" id="nav-backup" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-200 hover:text-white group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">cloud_sync</span>
+          <span class="font-bold">Data Backup & Restore</span>
+        </div>
+        <span class="material-symbols-outlined text-[14px] text-emerald-400">download</span>
+      </button>
+
+      <!-- STAFF MANAGEMENT MODULE (Admin Only) -->
+      <button onclick="switchView('staff')" id="nav-staff" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">badge</span>
+          <span>Staff Management</span>
+        </div>
+        <span id="badge-total-staff-count" class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full">3</span>
+      </button>
+
+      <button onclick="switchView('analytics')" id="nav-analytics" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-indigo-400 group-hover:scale-110 transition">monitoring</span>
+          <span>Staff KPI & Reports</span>
+        </div>
+      </button>
+
+      <button onclick="switchView('audit')" id="nav-audit" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">history</span>
+          <span>Audit Trail & Security</span>
+        </div>
+      </button>
+    </nav>
+
+    <!-- Bottom User Info & Logout Button -->
+    <div class="p-3 bg-brand-dark/90 border-t border-brand-900/60 shrink-0">
+      <div class="bg-surface-sidebarActive p-2.5 rounded-xl border border-emerald-800/30 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Logged In As</span>
+          <span id="current-role-badge" class="text-[10px] bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded-full font-bold border border-purple-400/30">Super Admin</span>
+        </div>
+        
+        <div class="flex items-center justify-between pt-1">
+          <div class="flex items-center gap-2">
+            <div id="sidebar-user-avatar" class="w-7 h-7 rounded-lg bg-emerald-700 text-white font-bold text-xs flex items-center justify-center">SA</div>
+            <div class="overflow-hidden">
+              <p id="sidebar-user-name" class="text-xs font-bold text-white truncate">Super Admin</p>
+              <p id="sidebar-user-role" class="text-[10px] text-emerald-400 truncate">Full Control Panel</p>
+            </div>
+          </div>
+          <button onclick="handleLogout()" class="p-1.5 text-rose-300 hover:text-white hover:bg-rose-500/20 rounded-lg transition" title="Logout from panel">
+            <span class="material-symbols-outlined text-[18px]">logout</span>
+          </button>
+        </div>
+        
+        <p class="text-[9px] text-slate-400 text-center border-t border-emerald-900/50 pt-1.5">Role-Based Access Protected</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========================================================================= -->
+  <!-- 2. MAIN CONTENT WRAPPER -->
+  <!-- ========================================================================= -->
+  <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100">
+
+    <!-- Top Header (Clean Height & Responsive Layout to Prevent Text Cutoff) -->
+    <header class="min-h-[64px] bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-20 gap-3">
+      <!-- Dynamic Header Title -->
+      <div class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg">
+        <div class="min-w-0">
+          <h2 id="page-title" class="font-bold text-base sm:text-lg text-slate-900 leading-tight truncate">WhatsApp Inbox &amp; Customer Queue</h2>
+          <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
+        </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <!-- Interactive Multi-WhatsApp Number Switcher Dropdown -->
+        <div class="relative" id="header-phone-switcher-wrapper">
+          <button type="button" onclick="togglePhoneSwitcherDropdown(event)" id="header-phone-badge" class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-sm cursor-pointer" title="Switch active WhatsApp Line / Business Number">
+            <span class="relative flex h-2.5 w-2.5 shrink-0">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span class="material-symbols-outlined text-[16px] text-emerald-600 shrink-0">phone_android</span>
+            <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold">+91 97896 60115</span>
+            <span class="material-symbols-outlined text-[16px] text-emerald-600 transition-transform duration-200 shrink-0" id="phone-dropdown-arrow">expand_more</span>
+          </button>
+
+          <!-- Dropdown Menu Box (Positioned left-0 to open towards the open space instead of under sidebar) -->
+          <div id="phone-switcher-dropdown" class="hidden absolute left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 text-xs">
+            <div class="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <p class="font-bold text-slate-900 text-xs">Switch WhatsApp Line</p>
+                <p class="text-[10px] text-slate-500">Select active number to view &amp; send chats</p>
+              </div>
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full" id="dropdown-connected-count">2 Active Lines</span>
+            </div>
+            
+            <div id="phone-dropdown-accounts-list" class="max-h-60 overflow-y-auto divide-y divide-slate-100 p-1">
+              <!-- Rendered dynamically by JS -->
+            </div>
+
+            <div class="p-2 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
+              <button type="button" onclick="switchView('settings'); closePhoneSwitcherDropdown();" class="w-full text-center py-1.5 px-3 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+                <span class="material-symbols-outlined text-[16px] text-emerald-600">qr_code_scanner</span>
+                <span>+ Scan New WhatsApp Line / QR</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Direct WhatsApp Settings Icon Button (Admin Only) -->
+        <button onclick="switchView('settings')" id="header-settings-btn" class="p-2 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition admin-only-ui" title="WhatsApp Business &amp; Phone Settings">
+          <span class="material-symbols-outlined text-[20px]">settings</span>
+        </button>
+
+        <!-- Number Masking / Privacy Toggle Button (Admin Only) -->
+        <button onclick="toggleGlobalPhoneMasking()" id="btn-mask-toggle" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition shadow-sm admin-only-ui" title="Toggle Customer Phone Number Masking (Data Privacy &amp; Lead Protection)">
+          <span class="material-symbols-outlined text-[16px] text-amber-700" id="mask-icon">lock</span>
+          <span class="hidden lg:inline">Masking:</span>
+          <span id="mask-status-label" class="font-bold">ON</span>
+        </button>
+
+        <!-- Inbound Test Trigger (Admin Only) -->
+        <button onclick="openInboundSimulatorModal()" id="header-inbound-sim-btn" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-semibold rounded-lg transition shadow-sm admin-only-ui">
+          <span class="material-symbols-outlined text-[16px]">sim_card_download</span>
+          <span>Receive WhatsApp Message</span>
+        </button>
+
+        <!-- Notification Bell -->
+        <div class="relative">
+          <button onclick="toggleNotificationDrawer()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition relative">
+            <span class="material-symbols-outlined text-[20px]">notifications</span>
+            <span id="header-notif-ping" class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+          </button>
+        </div>
+
+        <div class="h-6 w-px bg-slate-200"></div>
+
+        <!-- Current User Avatar Profile -->
+        <div class="flex items-center gap-2 pl-1">
+          <div id="user-avatar-initials" class="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-wa to-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+            SA
+          </div>
+          <div class="hidden md:block text-left">
+            <p id="user-display-name" class="text-xs font-bold text-slate-800 leading-none">Admin Manager</p>
+            <p id="user-display-sub" class="text-[10px] text-emerald-600 font-medium leading-none mt-1">Full System Access</p>
+          </div>
+        </div>
+
+        <!-- Header Logout Button -->
+        <button onclick="handleLogout()" class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg transition shadow-sm ml-1" title="Sign out from CRM Panel">
+          <span class="material-symbols-outlined text-[16px]">logout</span>
+          <span class="hidden sm:inline">Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Staff Workstation Info Banner (Visible Only When Logged in as Staff) -->
+    <div id="staff-workstation-banner" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-6 py-2 flex items-center justify-between border-b border-indigo-500/30 hidden">
+      <div class="flex items-center gap-3">
+        <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[10px] font-extrabold flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+          STAFF WORKSTATION PANEL
+        </span>
+        <p class="text-xs text-indigo-100">
+          Showing admin-assigned conversations & orders for: <strong id="staff-banner-name" class="text-white">Priya Sharma</strong> (<span id="staff-banner-role" class="text-indigo-200 font-medium">Sales Specialist</span>).
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] text-slate-400 font-mono">Staff ID: <span id="staff-banner-id" class="text-indigo-300 font-bold">staff_01</span></span>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 3. VIEWS CONTAINER -->
+    <!-- ========================================================================= -->
+    <main class="flex-1 overflow-hidden relative">
+
+      <!-- ========================================== -->
+      <!-- VIEW: WHATSAPP INBOX (3-PANEL CORE SCREEN) -->
+      <!-- ========================================== -->
+      <section id="view-inbox" class="h-full flex overflow-hidden">
+        
+        <!-- Left Panel: Conversation & Enquiry List -->
+        <div class="w-80 lg:w-96 bg-white border-r border-slate-200 flex flex-col h-full shrink-0">
+          
+          <!-- Search & Filters -->
+          <div class="p-3 border-b border-slate-200 space-y-2.5 bg-slate-50/70">
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+              <input type="text" id="chat-search-input" onkeyup="filterConversations(this.value)" placeholder="Search customer, phone, SKU, Query ID..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-brand-wa shadow-sm placeholder:text-slate-400 font-medium">
+            </div>
+
+            <!-- Filter Pills -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+              <button onclick="setInboxFilter('all')" id="filter-all" class="px-2.5 py-1 rounded-lg font-semibold bg-brand-wa text-white text-[11px] shrink-0 shadow-sm">All (<span id="count-all">0</span>)</button>
+              <button onclick="setInboxFilter('unassigned')" id="filter-unassigned" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">Unassigned (<span id="count-unassigned" class="text-amber-600 font-bold">0</span>)</button>
+              <button onclick="setInboxFilter('my')" id="filter-my" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">My Queue (<span id="count-my">0</span>)</button>
+              <button onclick="setInboxFilter('urgent')" id="filter-urgent" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">Urgent</button>
+            </div>
+          </div>
+
+          <!-- Conversation List Items Container -->
+          <div id="conversation-list-container" class="flex-1 overflow-y-auto divide-y divide-slate-100">
+            <!-- Dynamically populated by JS -->
+          </div>
+        </div>
+
+        <!-- Center Panel: Active Chat History & Messaging Stream -->
+        <div id="chat-center-panel" class="flex-1 flex flex-col h-full bg-[#efeae2]/40 relative">
+          
+          <!-- Chat Header Bar -->
+          <div id="chat-header-bar" class="h-16 bg-white border-b border-slate-200 px-5 flex items-center justify-between shrink-0 shadow-sm">
+            <!-- Rendered by JS -->
+          </div>
+
+          <!-- Message History Stream Container -->
+          <div id="chat-messages-stream" class="flex-1 overflow-y-auto p-5 space-y-3 custom-chat-scroll bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <!-- Quick Actions & Quick Reply Tray -->
+          <div class="bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-2 flex items-center gap-2 overflow-x-auto">
+            <span class="text-[10px] font-bold uppercase text-slate-400 shrink-0">Quick Actions:</span>
+            <button onclick="openProductSearchModal()" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 transition">
+              <span class="material-symbols-outlined text-[14px]">inventory_2</span> Search Stock & Share
+            </button>
+            <button onclick="openOrderModal()" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 transition shadow-sm">
+              <span class="material-symbols-outlined text-[14px]">shopping_cart_checkout</span> Convert to Order
+            </button>
+            <button onclick="openFollowUpModal()" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 transition">
+              <span class="material-symbols-outlined text-[14px]">event</span> Set Follow-up
+            </button>
+            <div class="h-4 w-px bg-slate-300 mx-1"></div>
+            <!-- Quick Reply Dropdown -->
+            <select onchange="insertQuickReply(this.value); this.value='';" class="text-xs bg-slate-100 text-slate-700 rounded-lg px-2 py-1 border border-slate-300 font-medium focus:outline-none">
+              <option value="">⚡ Quick Message Templates...</option>
+              <option value="price_enquiry">Price & Availability Enquiry</option>
+              <option value="stock_confirm">Stock Available - Size Confirm</option>
+              <option value="order_placed">Order Confirmed Successfully</option>
+              <option value="dispatched">Order Dispatched with Tracking</option>
+              <option value="bank_details">Payment UPI QR & Account Details</option>
+            </select>
+          </div>
+
+          <!-- Message Input Bar -->
+          <div class="p-3 bg-white border-t border-slate-200 shrink-0">
+            <form onsubmit="handleSendMessage(event)" class="flex items-center gap-2">
+              <button type="button" onclick="openProductSearchModal()" class="p-2 text-slate-500 hover:text-brand-wa hover:bg-slate-100 rounded-lg transition" title="Attach Product Card">
+                <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
+              </button>
+              <input type="text" id="chat-input-text" placeholder="Type a message or response to customer (Press Enter to send)..." class="flex-1 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-wa focus:bg-white transition" autocomplete="off">
+              <button type="submit" class="w-10 h-10 rounded-xl bg-brand-wa hover:bg-brand-waDark text-white flex items-center justify-center shadow-md transition shrink-0">
+                <span class="material-symbols-outlined text-[20px]">send</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Right Panel: Customer 360 & Query Management -->
+        <div id="chat-right-panel" class="w-80 lg:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto">
+          <!-- Rendered by JS -->
+        </div>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: CUSTOMER ENQUIRIES & ASSIGNMENT HUB -->
+      <!-- ========================================== -->
+      <section id="view-enquiries" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          
+          <!-- Top Banner Strip -->
+          <div class="bg-gradient-to-r from-brand-dark to-emerald-900 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                Admin Assignment Control
+              </div>
+              <h2 class="text-2xl font-bold mt-1 tracking-tight">Customer Query & Staff Assignment Queue</h2>
+              <p class="text-xs text-emerald-100/80 mt-1 max-w-xl">
+                When new WhatsApp queries arrive, assign them to dedicated staff members to ensure zero duplicate replies and 100% response tracking.
+              </p>
+            </div>
+            <button onclick="openInboundSimulatorModal()" class="px-4 py-2.5 bg-brand-wa hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-glow flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">add_circle</span>
+              Simulate New WhatsApp Enquiry
+            </button>
+          </div>
+
+          <!-- Staff Workload Counters -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="staff-workload-cards">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Enquiries Table -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
+              <div class="flex items-center gap-2">
+                <h3 class="font-bold text-slate-800 text-sm">All Customer Enquiries</h3>
+                <span id="table-total-count" class="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+              </div>
+              <!-- Filter Dropdowns -->
+              <div class="flex items-center gap-2">
+                <select id="enquiry-filter-status" onchange="renderEnquiriesTable()" class="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium">
+                  <option value="ALL">All Statuses</option>
+                  <option value="NEW">New (Unassigned)</option>
+                  <option value="ASSIGNED">Assigned</option>
+                  <option value="FOLLOW_UP">Follow-up</option>
+                  <option value="CONVERTED">Converted to Order</option>
+                  <option value="CLOSED">Closed</option>
+                </select>
+                <select id="enquiry-filter-staff" onchange="renderEnquiriesTable()" class="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium">
+                  <option value="ALL">All Staff Members</option>
+                  <option value="UNASSIGNED">Unassigned Only</option>
+                  <option value="staff_01">Staff 01 (Priya)</option>
+                  <option value="staff_02">Staff 02 (Rahul)</option>
+                  <option value="staff_03">Staff 03 (Sneha)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Table container -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-700">
+                <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th class="py-3 px-4">Query ID & Date</th>
+                    <th class="py-3 px-4">Customer</th>
+                    <th class="py-3 px-4">Product / Enquiry Text</th>
+                    <th class="py-3 px-4">Priority</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4">Assigned Staff</th>
+                    <th class="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="enquiries-table-body" class="divide-y divide-slate-100">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: DASHBOARD & OVERVIEW -->
+      <!-- ========================================== -->
+      <section id="view-dashboard" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          
+          <!-- 4 Main KPI Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1 -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Enquiries Today</p>
+                  <h3 id="dash-total-queries" class="text-2xl font-bold text-slate-900 mt-1">12</h3>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[24px]">chat</span>
+                </div>
+              </div>
+              <div class="mt-3 text-xs flex items-center text-emerald-600 font-semibold">
+                <span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> 100% Inbound Capture
+              </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Unassigned Queries</p>
+                  <h3 id="dash-unassigned-queries" class="text-2xl font-bold text-amber-600 mt-1">2</h3>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[24px]">person_add</span>
+                </div>
+              </div>
+              <div class="mt-3 text-xs flex items-center text-amber-600 font-semibold">
+                <span class="material-symbols-outlined text-[16px] mr-1">warning</span> Action required by Admin
+              </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">WhatsApp Orders Booked</p>
+                  <h3 id="dash-total-orders" class="text-2xl font-bold text-emerald-700 mt-1">5</h3>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[24px]">shopping_bag</span>
+                </div>
+              </div>
+              <div class="mt-3 text-xs flex items-center text-slate-600 font-semibold">
+                <span class="text-emerald-600 font-bold mr-1" id="dash-total-revenue">₹18,450</span> Total Sales
+              </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Follow-ups Scheduled</p>
+                  <h3 id="dash-total-followups" class="text-2xl font-bold text-blue-600 mt-1">3</h3>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[24px]">schedule</span>
+                </div>
+              </div>
+              <div class="mt-3 text-xs flex items-center text-blue-600 font-semibold">
+                <span class="material-symbols-outlined text-[16px] mr-1">notifications_active</span> Automated Reminders Active
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Charts & Workflow Cards -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 2-col: Recent High Priority Leads -->
+            <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm">Active WhatsApp Conversations</h3>
+                  <p class="text-xs text-slate-500">Live feed of pending customer chats across all staff</p>
+                </div>
+                <button onclick="switchView('inbox')" class="text-xs text-brand-wa font-bold hover:underline">Open Inbox &rarr;</button>
+              </div>
+              <div id="dash-recent-chats" class="divide-y divide-slate-100 text-xs">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+
+            <!-- 1-col: Staff Conversion Board -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+              <h3 class="font-bold text-slate-900 text-sm">Staff Performance Snapshot</h3>
+              <div class="space-y-3" id="dash-staff-perf-list">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: LIVE STOCK CATALOG & SHARING -->
+      <!-- ========================================== -->
+      <section id="view-catalog" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Garment Product Catalog & Live Stock Validator</h2>
+              <p class="text-xs text-slate-500">Check available vs reserved stock in real-time before replying to WhatsApp customers</p>
+            </div>
+            <div class="relative w-72">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+              <input type="text" id="catalog-search-input" onkeyup="renderCatalogGrid(this.value)" placeholder="Search SKU, name, color..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white rounded-xl border border-slate-300 focus:ring-1 focus:ring-brand-wa font-medium shadow-sm">
+            </div>
+          </div>
+
+          <div id="catalog-grid-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: ORDERS & STOCK RESERVATIONS -->
+      <!-- ========================================== -->
+      <section id="view-orders" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">WhatsApp Sales Orders</h2>
+              <p class="text-xs text-slate-500">Orders created directly from customer WhatsApp conversations with reserved inventory</p>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-700">
+                <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th class="py-3 px-4">Order ID & Date</th>
+                    <th class="py-3 px-4">Customer</th>
+                    <th class="py-3 px-4">Items & SKU</th>
+                    <th class="py-3 px-4">Amount</th>
+                    <th class="py-3 px-4">Payment</th>
+                    <th class="py-3 px-4">Order Status</th>
+                    <th class="py-3 px-4">Created By</th>
+                  </tr>
+                </thead>
+                <tbody id="orders-table-body" class="divide-y divide-slate-100">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: FOLLOW-UPS -->
+      <!-- ========================================== -->
+      <section id="view-followups" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Follow-up Management Hub</h2>
+              <p class="text-xs text-slate-500">Never forget a customer promise (size checks, family confirmations, payment reminders)</p>
+            </div>
+          </div>
+
+          <div id="followups-cards-grid" class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: CUSTOMER 360 -->
+      <!-- ========================================== -->
+      <section id="view-customers" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Customer Directory & 360 Profiles</h2>
+              <p class="text-xs text-slate-500">Complete customer purchase history, tags, alternate numbers, and past queries</p>
+            </div>
+          </div>
+
+          <div id="customers-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: AUDIT TRAIL & LOGS -->
+      <!-- ========================================== -->
+      <section id="view-audit" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">System Audit Trail & Security Logs</h2>
+            <p class="text-xs text-slate-500">Real-time tamper-evident log of staff assignments, query reassignments, orders, and status updates</p>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-700">
+                <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th class="py-3 px-4">Timestamp</th>
+                    <th class="py-3 px-4">Staff / User</th>
+                    <th class="py-3 px-4">Action</th>
+                    <th class="py-3 px-4">Module / Target</th>
+                    <th class="py-3 px-4">Details</th>
+                  </tr>
+                </thead>
+                <tbody id="audit-logs-table-body" class="divide-y divide-slate-100 font-mono text-[11px]">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: STAFF KPI & REPORTS -->
+      <!-- ========================================== -->
+      <section id="view-analytics" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Staff Performance Analytics & Reports</h2>
+            <p class="text-xs text-slate-500">Objective, factual operational metrics on reply speed, conversion rates, and handled volume</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="analytics-staff-cards">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: STAFF MANAGEMENT MODULE -->
+      <!-- ========================================== -->
+      <section id="view-staff" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          
+          <!-- Header Banner -->
+          <div class="bg-gradient-to-r from-slate-900 via-brand-dark to-emerald-950 p-6 rounded-2xl text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center text-white shadow-glow">
+                <span class="material-symbols-outlined text-[28px]">badge</span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold">Staff & Team Management Hub</h2>
+                <p class="text-xs text-emerald-200/80 mt-0.5">Manage team members, create new staff accounts, assign roles & permissions, and monitor workloads</p>
+              </div>
+            </div>
+
+            <!-- Sub-Division Navigation Tabs Strip -->
+            <div class="flex items-center gap-2 bg-black/30 p-1.5 rounded-xl border border-white/10 shrink-0">
+              <button type="button" onclick="switchStaffTab('list')" id="tab-btn-staff-list" class="px-3.5 py-2 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+                <span class="material-symbols-outlined text-[16px]">groups</span>
+                <span>1. Total Staff List</span>
+              </button>
+              <button type="button" onclick="switchStaffTab('create')" id="tab-btn-staff-create" class="px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">person_add</span>
+                <span>2. Create Staff</span>
+              </button>
+              <button type="button" onclick="switchStaffTab('roles')" id="tab-btn-staff-roles" class="px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+                <span>3. Assign the Role</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ======================================================= -->
+          <!-- SUB-DIVISION 1: TOTAL STAFF LIST -->
+          <!-- ======================================================= -->
+          <div id="subview-staff-list" class="space-y-6">
+            
+            <!-- Staff KPI Overview Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Total Staff Team</span>
+                <p id="kpi-staff-total" class="text-2xl font-black text-slate-900 mt-1">3 Members</p>
+                <p class="text-[11px] text-blue-600 font-semibold mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">groups</span> Onboarded Staff
+                </p>
+              </div>
+
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Active On-Duty</span>
+                <p id="kpi-staff-active" class="text-2xl font-black text-emerald-700 mt-1">3 Active</p>
+                <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">check_circle</span> Ready to take leads
+                </p>
+              </div>
+
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Active Leads Handled</span>
+                <p id="kpi-staff-leads" class="text-2xl font-black text-amber-600 mt-1">6 Leads</p>
+                <p class="text-[11px] text-slate-500 font-medium mt-1">In progress across team</p>
+              </div>
+
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Total Converted Orders</span>
+                <p id="kpi-staff-orders" class="text-2xl font-black text-purple-700 mt-1">34 Orders</p>
+                <p class="text-[11px] text-purple-600 font-semibold mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">trending_up</span> ₹42,500+ Revenue
+                </p>
+              </div>
+            </div>
+
+            <!-- Staff List Container with Filter & Search -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 class="font-bold text-sm text-slate-900">Registered Staff Directory</h3>
+                  <p class="text-xs text-slate-500">Live operational team status, active workloads, and quick action controls</p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                    <input type="text" id="staff-search-input" oninput="renderStaffTable()" placeholder="Search staff name or role..." class="pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-wa focus:bg-white w-56 transition">
+                  </div>
+                  <button type="button" onclick="switchStaffTab('create')" class="px-3.5 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1 transition">
+                    <span class="material-symbols-outlined text-[16px]">add</span> + Add Staff
+                  </button>
+                </div>
+              </div>
+
+              <!-- Table -->
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-700">
+                  <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th class="py-3.5 px-4">Staff Member</th>
+                      <th class="py-3.5 px-4">Role & Specialization</th>
+                      <th class="py-3.5 px-4">Contact Info</th>
+                      <th class="py-3.5 px-4">Active Leads</th>
+                      <th class="py-3.5 px-4">Converted Orders</th>
+                      <th class="py-3.5 px-4">Status</th>
+                      <th class="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="staff-list-table-body" class="divide-y divide-slate-100 font-medium">
+                    <!-- Populated dynamically by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ======================================================= -->
+          <!-- SUB-DIVISION 2: CREATE NEW STAFF -->
+          <!-- ======================================================= -->
+          <div id="subview-staff-create" class="space-y-6 hidden">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-3xl mx-auto space-y-6">
+              <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md">
+                  <span class="material-symbols-outlined text-[24px]">person_add</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-sm text-slate-900">Onboard New Staff Member</h3>
+                  <p class="text-xs text-slate-500">Create a login profile, assign department, and allocate customer handling capacity</p>
+                </div>
+              </div>
+
+              <form onsubmit="handleCreateNewStaff(event)" class="space-y-5 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block font-bold text-slate-800 mb-1">Full Name <span class="text-rose-500">*</span>:</label>
+                    <div class="relative">
+                      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">person</span>
+                      <input type="text" id="staff-new-name" required placeholder="e.g. Suresh Kumar" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-slate-800 mb-1">Email Address:</label>
+                    <div class="relative">
+                      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">mail</span>
+                      <input type="email" id="staff-new-email" placeholder="e.g. suresh@grmgarments.com" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block font-bold text-slate-800 mb-1">Mobile / WhatsApp Number <span class="text-rose-500">*</span>:</label>
+                    <div class="relative">
+                      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">phone</span>
+                      <input type="text" id="staff-new-phone" required placeholder="e.g. +91 98765 12345" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-slate-800 mb-1">Primary Role <span class="text-rose-500">*</span>:</label>
+                    <select id="staff-new-role" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                      <option value="Sales Specialist (Baby Collection)">Sales Specialist (Baby Collection)</option>
+                      <option value="Enquiry Specialist (Maternity & Kids)">Enquiry Specialist (Maternity & Kids)</option>
+                      <option value="Order Fulfillment & Support">Order Fulfillment & Support</option>
+                      <option value="Senior Sales Executive">Senior Sales Executive</option>
+                      <option value="Customer Care Representative">Customer Care Representative</option>
+                      <option value="Admin Manager">Admin Manager (Full Control)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block font-bold text-slate-800 mb-1">Product Specialization / Department:</label>
+                    <select id="staff-new-specialization" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                      <option value="Baby Collection">Baby Collection & Frocks</option>
+                      <option value="Maternity Wear">Maternity & Feeding Gowns</option>
+                      <option value="Kids Wear">Kids Wear & Sets</option>
+                      <option value="Girls Festive">Girls Festive Silk Collection</option>
+                      <option value="General & All Categories">General (All Categories)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-slate-800 mb-1">Initial Status:</label>
+                    <select id="staff-new-status" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                      <option value="ACTIVE" selected>🟢 Active (Ready for Lead Assignment)</option>
+                      <option value="ON_LEAVE">⚪ On Leave (Temporary Pause)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                  <button type="button" onclick="switchStaffTab('list')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
+                    Cancel
+                  </button>
+                  <button type="submit" class="px-6 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-xl shadow-md flex items-center gap-1.5 transition hover:scale-105">
+                    <span class="material-symbols-outlined text-[18px]">check_circle</span> Onboard & Create Staff
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ======================================================= -->
+          <!-- SUB-DIVISION 3: ASSIGN THE ROLE -->
+          <!-- ======================================================= -->
+          <div id="subview-staff-roles" class="space-y-6 hidden">
+            
+            <!-- Role Reassignment Card -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center shadow-md">
+                    <span class="material-symbols-outlined text-[24px]">admin_panel_settings</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-sm text-slate-900">Role & Permission Assignment Engine</h3>
+                    <p class="text-xs text-slate-500">Assign roles to team members and configure granular operational permissions</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Role Assignment Tool -->
+              <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[16px] text-purple-600">switch_account</span>
+                  Quick Role Reassignment Tool
+                </h4>
+
+                <form onsubmit="handleQuickRoleReassign(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs items-end">
+                  <div>
+                    <label class="block font-bold text-slate-700 mb-1">Select Staff Member:</label>
+                    <select id="role-assign-staff-select" required class="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa">
+                      <!-- Populated dynamically by JS -->
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-slate-700 mb-1">New Role to Assign:</label>
+                    <select id="role-assign-new-role" required class="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa">
+                      <option value="Sales Specialist (Baby Collection)">Sales Specialist (Baby Collection)</option>
+                      <option value="Enquiry Specialist (Maternity & Kids)">Enquiry Specialist (Maternity & Kids)</option>
+                      <option value="Order Fulfillment & Support">Order Fulfillment & Support</option>
+                      <option value="Senior Sales Executive">Senior Sales Executive</option>
+                      <option value="Customer Care Representative">Customer Care Representative</option>
+                      <option value="Admin Manager">Admin Manager (Full Access)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <button type="submit" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition">
+                      <span class="material-symbols-outlined text-[18px]">verified</span> Assign Role Now
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Role Permission Matrix Table -->
+              <div class="space-y-3">
+                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wider">Role Permission Matrix</h4>
+                
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                  <table class="w-full text-left text-xs text-slate-700">
+                    <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
+                      <tr>
+                        <th class="py-3 px-4">Role Title</th>
+                        <th class="py-3 px-4 text-center">Chat & Reply</th>
+                        <th class="py-3 px-4 text-center">Share Catalog</th>
+                        <th class="py-3 px-4 text-center">Confirm Orders</th>
+                        <th class="py-3 px-4 text-center">Reassign Leads</th>
+                        <th class="py-3 px-4 text-center">Unmask Phone #</th>
+                        <th class="py-3 px-4 text-center">Backup & Export</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs">
+                      <tr class="hover:bg-slate-50">
+                        <td class="py-3 px-4 font-bold text-purple-900 flex items-center gap-1.5">
+                          <span class="material-symbols-outlined text-[16px] text-purple-600">shield_person</span> Admin Manager
+                        </td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
+                      </tr>
+                      <tr class="hover:bg-slate-50">
+                        <td class="py-3 px-4 font-bold text-blue-900 flex items-center gap-1.5">
+                          <span class="material-symbols-outlined text-[16px] text-blue-600">point_of_sale</span> Sales Specialist
+                        </td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Assigned</td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Yes</td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Yes</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ Masked</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
+                      </tr>
+                      <tr class="hover:bg-slate-50">
+                        <td class="py-3 px-4 font-bold text-amber-900 flex items-center gap-1.5">
+                          <span class="material-symbols-outlined text-[16px] text-amber-600">support_agent</span> Enquiry Specialist
+                        </td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Assigned</td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Yes</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ Masked</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
+                      </tr>
+                      <tr class="hover:bg-slate-50">
+                        <td class="py-3 px-4 font-bold text-teal-900 flex items-center gap-1.5">
+                          <span class="material-symbols-outlined text-[16px] text-teal-600">local_shipping</span> Order Fulfillment
+                        </td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Dispatches</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
+                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Yes</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ Masked</td>
+                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+      <section id="view-settings" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-4xl mx-auto space-y-6">
+          
+          <!-- Header Banner -->
+          <div class="bg-gradient-to-r from-brand-dark to-emerald-900 p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-brand-wa flex items-center justify-center text-white shadow-glow">
+                <span class="material-symbols-outlined text-[28px]">settings_phone</span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold">WhatsApp Business Phone Configuration</h2>
+                <p class="text-xs text-emerald-200/80 mt-0.5">Configure your primary WhatsApp number to dynamically route all messages and queries</p>
+              </div>
+            </div>
+            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-full text-xs font-bold flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Live Dynamic Sync
+            </span>
+          </div>
+
+          <!-- Configuration Form Card -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+            
+            <!-- Integration Mode Tabs -->
+            <div class="flex items-center gap-2 border-b border-slate-200 pb-3">
+              <button type="button" onclick="switchSettingsTab('qr')" id="tab-btn-qr" class="px-3.5 py-1.5 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+                <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+                <span>Method 3: Link Phone via QR Code (Free & Live)</span>
+              </button>
+              <button type="button" onclick="switchSettingsTab('manual')" id="tab-btn-manual" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">tune</span>
+                <span>Manual Meta API / Webhook Settings</span>
+              </button>
+            </div>
+
+            <!-- TAB 1: LIVE QR CODE LINKED DEVICE (METHOD 3) -->
+            <div id="settings-tab-qr" class="space-y-6">
+              <!-- Multi-Account Header & Action Strip -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-emerald-950 via-brand-dark to-slate-900 rounded-2xl border border-emerald-500/40 text-white shadow-md">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-glow">
+                    <span class="material-symbols-outlined text-[24px]">phonelink_ring</span>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h3 class="font-bold text-sm">Linked WhatsApp Numbers (Multi-Account Hub)</h3>
+                      <span id="badge-multi-accounts-count" class="bg-emerald-400 text-slate-900 text-[10px] font-extrabold px-2 py-0.2 rounded-full">1 Active</span>
+                    </div>
+                    <p class="text-[11px] text-emerald-200/80">Link multiple sales & support phones with zero Meta API fees</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="addNewWhatsAppAccountSlot()" class="px-3.5 py-2 bg-brand-wa hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-glow flex items-center gap-1.5 transition">
+                    <span class="material-symbols-outlined text-[16px]">add_to_photos</span>
+                    <span>+ Link Another Phone (Add QR)</span>
+                  </button>
+                  <button type="button" onclick="fetchQRBridgeStatus()" class="p-2 bg-emerald-900/80 hover:bg-emerald-800 text-emerald-300 rounded-xl transition" title="Refresh Accounts">
+                    <span class="material-symbols-outlined text-[18px]">sync</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Dynamic Multi-Account Cards Container -->
+              <div id="multi-accounts-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Dynamically populated by JS with live QR and status for each account -->
+              </div>
+
+              <!-- Quick Status Strip -->
+              <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span class="font-bold text-emerald-900" id="qr-bridge-status-text">Bridge Status: Multi-Account Socket Active (Port 3000)</span>
+                </div>
+                <span class="text-[11px] text-emerald-700 font-mono font-semibold">Method 3 Open Standard</span>
+              </div>
+            </div>
+
+            <!-- TAB 2: MANUAL API & WEBHOOK FORM -->
+            <form id="settings-tab-manual" onsubmit="handleSaveWhatsAppConfig(event)" class="space-y-5 text-xs hidden">
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label class="block font-bold text-slate-800 mb-1">Primary WhatsApp Business Phone Number <span class="text-rose-500">*</span>:</label>
+                  <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">phone</span>
+                    <input type="text" id="cfg-phone-number" required placeholder="+91 98765 43210" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs font-bold text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                  </div>
+                  <p class="text-[11px] text-slate-500 mt-1">Incoming WhatsApp messages for this number will dynamically appear in the CRM Inbox.</p>
+                </div>
+
+                <div>
+                  <label class="block font-bold text-slate-800 mb-1">Business Display Name:</label>
+                  <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">badge</span>
+                    <input type="text" id="cfg-display-name" required placeholder="GRM Garments Official" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                  </div>
+                  <p class="text-[11px] text-slate-500 mt-1">Official verified business title shown to customers.</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label class="block font-bold text-slate-800 mb-1">Integration Provider / Mode:</label>
+                  <select id="cfg-provider" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                    <option value="QR_CODE_BRIDGE" selected>Method 3: Free QR-Code Linked Device</option>
+                    <option value="META_CLOUD_API">Method 2: Meta WhatsApp Cloud API (Free Tier)</option>
+                    <option value="SIMULATOR">Method 1: Integrated Simulation Engine</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block font-bold text-slate-800 mb-1">Webhook Verify Token:</label>
+                  <input type="text" id="cfg-verify-token" value="GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-semibold text-slate-700">
+                </div>
+              </div>
+
+              <!-- Webhook Callback URL Display -->
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Your Live Webhook Callback URL (Paste in Meta Developer Portal)</span>
+                <div class="flex items-center gap-2">
+                  <input type="text" readonly id="cfg-webhook-url" value="http://localhost:8080/webhook.php" class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-xs font-bold text-emerald-800 select-all">
+                  <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('cfg-webhook-url').value); showToast('Copied', 'Webhook URL copied to clipboard', 'content_copy', 'emerald');" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition">Copy</button>
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-200">
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span class="text-xs font-bold text-emerald-700">Status: Account Connected & Ready</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="handleSendQuickTestToNumber()" class="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-bold shadow-sm flex items-center gap-1.5 transition">
+                    <span class="material-symbols-outlined text-[18px] text-emerald-600">send_to_mobile</span>
+                    <span>Test Inbound to this Number</span>
+                  </button>
+                  <button type="submit" class="px-6 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-2 transition hover:scale-105">
+                    <span class="material-symbols-outlined text-[18px]">save</span> Save & Connect Phone Number
+                  </button>
+                </div>
+              </div>
+
+            </form>
+          </div>
+
+          <!-- BRAND IDENTITY & CUSTOMER DISPLAY CONFIGURATION CARD -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-md">
+                  <span class="material-symbols-outlined text-[22px]">storefront</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-sm text-slate-900">Company Brand Identity & Customer Display</h3>
+                  <p class="text-xs text-slate-500">Set your official company brand name shown to customers on WhatsApp</p>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200">
+                Brand Branding Mode
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <!-- Left: Form Inputs (7 cols) -->
+              <div class="lg:col-span-7 space-y-4 text-xs">
+                <div>
+                  <label class="block font-bold text-slate-800 mb-1">Company / Brand Name Shown to Customer <span class="text-rose-500">*</span>:</label>
+                  <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">verified</span>
+                    <input type="text" id="cfg-brand-name" value="GRM Garments" oninput="updateBrandPreview()" placeholder="e.g. GRM Garments" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                  </div>
+                  <p class="text-[11px] text-slate-500 mt-1">This brand title is sent in official customer greetings, order confirmations, and quick replies.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block font-bold text-slate-800 mb-1">Tagline / Business Category:</label>
+                    <input type="text" id="cfg-brand-tagline" value="Premium Kids & Maternity Wear" oninput="updateBrandPreview()" placeholder="e.g. Wholesale & Retail Apparel" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-slate-800 mb-1">Support Website / Social:</label>
+                    <input type="text" id="cfg-brand-website" value="www.grmgarments.com" oninput="updateBrandPreview()" placeholder="e.g. www.grmgarments.com" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                  </div>
+                </div>
+
+                <!-- Auto-Append Brand Signature Toggle -->
+                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div class="space-y-0.5">
+                    <p class="font-bold text-slate-800 text-xs">Include Brand Header in Outbound Messages</p>
+                    <p class="text-[11px] text-slate-500">Automatically formats messages with your company brand banner.</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="cfg-brand-header-toggle" checked onchange="updateBrandPreview()" class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                <div class="pt-2">
+                  <button type="button" onclick="saveBrandSettings()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md flex items-center gap-2 transition hover:scale-105">
+                    <span class="material-symbols-outlined text-[18px]">verified_user</span> Save Brand Identity
+                  </button>
+                </div>
+              </div>
+
+              <!-- Right: Customer WhatsApp Screen Mock Preview (5 cols) -->
+              <div class="lg:col-span-5 bg-slate-900 rounded-2xl p-4 text-white shadow-lg space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <span class="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">smartphone</span> Customer WhatsApp View
+                  </span>
+                  <span class="text-[9px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">Live Preview</span>
+                </div>
+
+                <!-- WhatsApp Top Header Mock -->
+                <div class="bg-emerald-950 p-2.5 rounded-xl border border-emerald-800/60 flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-white">
+                    GR
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1">
+                      <p id="preview-brand-header-title" class="font-bold text-xs text-white truncate">GRM Garments</p>
+                      <span class="material-symbols-outlined text-[13px] text-emerald-400 font-bold">verified</span>
+                    </div>
+                    <p id="preview-brand-header-sub" class="text-[10px] text-emerald-300/80 truncate">Official Business Account</p>
+                  </div>
+                </div>
+
+                <!-- WhatsApp Message Bubble Mock -->
+                <div class="bg-emerald-900/40 p-3.5 rounded-2xl border border-emerald-700/50 space-y-2 text-[11px] leading-relaxed">
+                  <p id="preview-msg-brand-header" class="font-bold text-emerald-300 border-b border-emerald-700/60 pb-1 flex items-center gap-1">
+                    🛍️ <span id="preview-brand-name-text">GRM Garments</span> &bull; Order Desk
+                  </p>
+                  <p class="text-slate-200">
+                    Hello Priya! Here is your product detail & price breakdown for <strong>Baby Frock (Embroidered Cotton)</strong>.
+                  </p>
+                  <div class="pt-1.5 border-t border-emerald-700/50 text-[10px] text-emerald-300/80 font-mono flex items-center justify-between">
+                    <span id="preview-brand-tagline-text">Premium Kids & Maternity Wear</span>
+                    <span>12:35 PM ✔✔</span>
+                  </div>
+                </div>
+
+                <p class="text-[10px] text-slate-400 text-center">Customers see this official brand identity on their WhatsApp phone.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: DATA BACKUP & RECOVERY MODULE -->
+      <!-- ========================================== -->
+      <section id="view-backup" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-4xl mx-auto space-y-6">
+          
+          <!-- Header Banner -->
+          <div class="bg-gradient-to-r from-emerald-950 via-brand-dark to-slate-900 p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-glow">
+                <span class="material-symbols-outlined text-[28px]">cloud_sync</span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold">CRM Data Backup & Recovery Hub</h2>
+                <p class="text-xs text-emerald-200/80 mt-0.5">Section 53 &bull; Full snapshot export and zero-loss restore for customers, chats, and orders</p>
+              </div>
+            </div>
+            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-full text-xs font-bold flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 100% Data Protection
+            </span>
+          </div>
+
+          <!-- Backup Status Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Total Records Protected</span>
+              <p id="backup-total-records" class="text-2xl font-black text-slate-900 mt-1">128 Items</p>
+              <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">check_circle</span> Customers & Orders Safe
+              </p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Auto-Backup Engine</span>
+              <p class="text-2xl font-black text-emerald-700 mt-1">Active (Local)</p>
+              <p class="text-[11px] text-slate-500 mt-1">Continuous zero-loss sync</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Last Backup Snapshot</span>
+              <p id="backup-last-time" class="text-2xl font-black text-blue-700 mt-1">Today</p>
+              <p class="text-[11px] text-slate-500 mt-1">Ready for 1-click download</p>
+            </div>
+          </div>
+
+          <!-- Action Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- 1. Export Backup Card -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between space-y-4">
+              <div class="space-y-2">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[24px]">download</span>
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm">Download Complete Database Backup</h3>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  Export all customer profiles, chat history, queries, staff assignments, product reservations, and audit logs into a single downloadable JSON backup file.
+                </p>
+              </div>
+              <button onclick="handleExportBackupJSON()" class="w-full py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02]">
+                <span class="material-symbols-outlined text-[18px]">file_download</span>
+                <span>Download Backup File (.json)</span>
+              </button>
+            </div>
+
+            <!-- 2. Restore Backup Card -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between space-y-4">
+              <div class="space-y-2">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[24px]">upload_file</span>
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm">Restore from Backup File</h3>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  Upload a previously saved CRM backup file to instantly restore the complete database state with zero loss.
+                </p>
+              </div>
+              <div>
+                <input type="file" id="backup-file-input" accept=".json" class="hidden" onchange="handleImportBackupJSON(event)">
+                <button onclick="document.getElementById('backup-file-input').click()" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02]">
+                  <span class="material-symbols-outlined text-[18px]">file_upload</span>
+                  <span>Upload & Restore Backup</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Reset / Factory Defaults Note -->
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center justify-between text-xs">
+            <div>
+              <h4 class="font-bold text-slate-800">Reset System to Initial Demo State</h4>
+              <p class="text-slate-500 mt-0.5">Cleans temporary test chats and reloads the default garment catalog with fresh demo enquiries.</p>
+            </div>
+            <button onclick="if(confirm('Are you sure you want to reset demo data?')) { localStorage.removeItem('GRM_CRM_STATE_V2_5'); location.reload(); }" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold transition">
+              Reset Demo Data
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 4. MODALS & POPUPS -->
+  <!-- ========================================================================= -->
+
+  <!-- MODAL: INBOUND WHATSAPP SIMULATOR (Cost-Free Testing) -->
+  <div id="modal-inbound-sim" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-emerald-500/20 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-brand-dark to-emerald-900 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-brand-wa flex items-center justify-center text-white shadow-glow">
+            <span class="material-symbols-outlined text-[22px]">mark_chat_unread</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Inbound WhatsApp Simulator</h3>
+            <p class="text-xs text-emerald-200/80">Simulate incoming customer WhatsApp message (Zero API cost)</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-inbound-sim')" class="text-emerald-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <form onsubmit="handleSimulateInbound(event)" class="p-6 space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Select Preset Customer or Enter New:</label>
+          <select id="sim-customer-preset" onchange="applySimPreset(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa">
+            <option value="priya">Priya (Baby Collection - Regular Customer)</option>
+            <option value="ananya">Ananya (Maternity Dresses - High Value VIP)</option>
+            <option value="kavitha">Kavitha (Kids Wear - New Enquiry)</option>
+            <option value="custom">+ New Unregistered Customer Number</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Customer Name:</label>
+            <input type="text" id="sim-name" value="Priya" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">WhatsApp Mobile Number:</label>
+            <input type="text" id="sim-phone" value="+91 98765 43210" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">WhatsApp Inbound Message Text:</label>
+          <textarea id="sim-message" rows="3" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa" placeholder="e.g. Hello, is Baby Frock Pink size 2-3 years in stock? What is the price?">Hello! Is Baby Frock BF-001 Pink colour in 2-3 Years size available in your shop? How much is it?</textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Enquiry Priority:</label>
+            <select id="sim-priority" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+              <option value="NORMAL">Normal</option>
+              <option value="HIGH" selected>High (Active Buyer)</option>
+              <option value="URGENT">Urgent (Order Issue)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Initial Staff Assignment:</label>
+            <select id="sim-assign" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+              <option value="UNASSIGNED" selected>⚡ Unassigned (Goes to Admin Queue)</option>
+              <option value="staff_01">Assign Direct to Staff 01 (Priya)</option>
+              <option value="staff_02">Assign Direct to Staff 02 (Rahul)</option>
+              <option value="staff_03">Assign Direct to Staff 03 (Sneha)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-inbound-sim')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[18px]">send</span> Push Message to CRM
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADMIN STAFF ASSIGNMENT MODAL -->
+  <div id="modal-staff-assign" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white flex items-center justify-between">
+        <div>
+          <h3 class="font-bold text-base">Assign Customer Enquiry</h3>
+          <p id="assign-modal-subtitle" class="text-xs text-slate-300">Assign query Q-2026-0012 to a staff member</p>
+        </div>
+        <button onclick="closeModal('modal-staff-assign')" class="text-slate-400 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <form onsubmit="handleConfirmAssignment(event)" class="p-6 space-y-4 text-xs">
+        <input type="hidden" id="assign-target-query-id">
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Select Dedicated Staff Member:</label>
+          <div class="space-y-2" id="assign-staff-options">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Handoff Instructions / Internal Note (Optional):</label>
+          <input type="text" id="assign-note" placeholder="e.g. Customer wants photos of pink dress before 2 PM" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-staff-assign')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[18px]">how_to_reg</span> Confirm Assignment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONVERT TO ORDER MODAL (Atomic Stock Reservation) -->
+  <div id="modal-convert-order" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-emerald-800 to-brand-dark p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
+            <span class="material-symbols-outlined text-[22px]">shopping_cart_checkout</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Book WhatsApp Order & Reserve Stock</h3>
+            <p class="text-xs text-emerald-200/80">Creates sales order and reserves warehouse quantity</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-convert-order')" class="text-emerald-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateOrder(event)" class="p-6 space-y-4 text-xs">
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400">Customer</span>
+            <p id="order-modal-customer-name" class="font-bold text-slate-800 text-sm">Priya</p>
+            <p id="order-modal-customer-phone" class="text-xs text-slate-500 font-mono">+91 98765 43210</p>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-slate-400">Linked Query</span>
+            <p id="order-modal-query-id" class="font-bold text-brand-wa font-mono">Q-2026-0012</p>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Select Garment Product & Size:</label>
+          <select id="order-product-select" onchange="calculateOrderTotal()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa">
+            <option value="BF-001-PK" data-price="599" data-stock="8" data-name="Baby Frock (Pink, 2-3Y)">Baby Frock (BF-001-PK) - Pink / 2-3Y (₹599 | Stock: 8)</option>
+            <option value="MD-102-BL" data-price="1299" data-stock="5" data-name="Maternity Maxi Gown (Blue, L)">Maternity Maxi Gown (MD-102-BL) - Sky Blue / L (₹1,299 | Stock: 5)</option>
+            <option value="KD-204-YL" data-price="450" data-stock="12" data-name="Kids Cotton T-Shirt Set (Yellow, 4-5Y)">Kids Cotton T-Shirt Set (KD-204-YL) - Yellow / 4-5Y (₹450 | Stock: 12)</option>
+            <option value="GL-505-RD" data-price="899" data-stock="6" data-name="Girls Festive Lehenga (Red, 6-7Y)">Girls Festive Lehenga (GL-505-RD) - Ruby Red / 6-7Y (₹899 | Stock: 6)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Quantity:</label>
+            <input type="number" id="order-qty" min="1" max="20" value="2" onchange="calculateOrderTotal()" onkeyup="calculateOrderTotal()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Unit Price (₹):</label>
+            <input type="number" id="order-unit-price" value="599" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-600">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Payment Method:</label>
+            <select id="order-payment-method" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+              <option value="COD">Cash on Delivery (COD)</option>
+              <option value="UPI">UPI / GPay / PhonePe</option>
+              <option value="CASH">Direct Cash</option>
+              <option value="CARD">Card / Online</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Delivery / Shipping Address:</label>
+          <input type="text" id="order-shipping-addr" value="No. 45, 2nd Main Road, Gandhinagar, Chennai - 600020" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+        </div>
+
+        <!-- Total Calculation Box -->
+        <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center justify-between">
+          <div class="text-xs">
+            <span class="text-emerald-800 font-bold">Grand Total Amount</span>
+            <p class="text-[10px] text-emerald-600">Includes taxes & delivery</p>
+          </div>
+          <span id="order-grand-total" class="text-xl font-extrabold text-emerald-900 font-mono">₹1,198</span>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-convert-order')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[18px]">check_circle</span> Confirm Order & Reserve Stock
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: FOLLOW-UP SCHEDULER -->
+  <div id="modal-followup" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-blue-900 to-indigo-900 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center text-white">
+            <span class="material-symbols-outlined text-[22px]">event</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Schedule Follow-up</h3>
+            <p class="text-xs text-blue-200/80">Set date & time reminder for customer callback</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-followup')" class="text-blue-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateFollowup(event)" class="p-6 space-y-4 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Follow-up Date:</label>
+            <input type="date" id="followup-date" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Follow-up Time:</label>
+            <input type="time" id="followup-time" value="11:00" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Follow-up Reason / Context:</label>
+          <select id="followup-reason-select" onchange="if(this.value!=='other') document.getElementById('followup-notes').value=this.value;" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium mb-2">
+            <option value="Customer will confirm required size after checking with family.">Customer will confirm size after checking</option>
+            <option value="Customer asked to send product photos of alternative colors.">Send photos of alternative colors</option>
+            <option value="Customer promised to place order by tomorrow morning.">Promised to place order tomorrow</option>
+            <option value="Waiting for customer payment confirmation / UPI screenshot.">Waiting for UPI payment confirmation</option>
+            <option value="other">Custom reason...</option>
+          </select>
+          <textarea id="followup-notes" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium" placeholder="Additional notes...">Customer will confirm required size after checking with family.</textarea>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-followup')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[18px]">alarm_on</span> Save Follow-up
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PRODUCT SEARCH & INSTANT WHATSAPP SHARING -->
+  <div id="modal-product-search" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+      <div class="bg-gradient-to-r from-teal-900 to-emerald-950 p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-teal-500 flex items-center justify-center text-white">
+            <span class="material-symbols-outlined text-[22px]">inventory_2</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Search Stock & Share to WhatsApp</h3>
+            <p class="text-xs text-teal-200/80">Check real-time warehouse inventory and generate WhatsApp share card</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-product-search')" class="text-teal-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <div class="p-4 border-b border-slate-200 bg-slate-50 shrink-0">
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+          <input type="text" id="modal-catalog-search" onkeyup="renderModalProductList(this.value)" placeholder="Search garment by SKU (BF-001), name, size, color..." class="w-full pl-9 pr-3 py-2 text-xs bg-white rounded-xl border border-slate-300 focus:ring-1 focus:ring-brand-wa font-medium shadow-sm">
+        </div>
+      </div>
+
+      <div id="modal-products-list" class="flex-1 overflow-y-auto p-4 divide-y divide-slate-100">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: INBOUND WHATSAPP MESSAGE SIMULATOR -->
+  <div id="modal-inbound-simulator" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-emerald-900 to-teal-950 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-brand-wa flex items-center justify-center text-white">
+            <span class="material-symbols-outlined text-[22px]">sim_card_download</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Simulate Inbound WhatsApp Message</h3>
+            <p class="text-xs text-emerald-200/80">Test live realtime message routing, lead creation &amp; audio alerts</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-inbound-simulator')" class="text-emerald-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <form onsubmit="handleInboundSimulationSubmit(event)" class="p-6 space-y-4 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Customer Name:</label>
+            <input type="text" id="sim-customer-name" value="Deepa Nandakumar" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Customer Phone Number:</label>
+            <input type="text" id="sim-customer-phone" value="+91 98401 23456" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Select Incoming Line:</label>
+          <select id="sim-account-slot" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold">
+            <option value="account_1">Line 1: Primary WhatsApp (+91 97896 60115)</option>
+            <option value="account_2">Line 2: Customer Support (+91 98765 43210)</option>
+            <option value="account_3">Line 3: Wholesale &amp; Orders (+91 98450 99887)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Message Content / Customer Query:</label>
+          <textarea id="sim-message-text" rows="3" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa" placeholder="Type customer message text...">Hi GRM Garments! Is the newborn organic romper gift set (BB-301-WH) available in 0-6 months size?</textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Message Type:</label>
+            <select id="sim-message-type" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+              <option value="text">💬 Regular Text</option>
+              <option value="audio">🎙️ Voice Note (PTT)</option>
+              <option value="image">🖼️ Product Photo / Attachment</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Priority Level:</label>
+            <select id="sim-message-priority" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+              <option value="HIGH">High Priority</option>
+              <option value="URGENT">🔴 Urgent Enquiry</option>
+              <option value="NORMAL">Normal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-inbound-simulator')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition hover:scale-105">
+            <span class="material-symbols-outlined text-[18px]">send</span> Simulate &amp; Receive Message
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION TOAST -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- AUDIO SOUND ALERT (Web Audio API synthetic notification chime) -->
+  <script>
+    function playChime(type = 'inbound') {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        if (type === 'inbound') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.35);
+        } else if (type === 'order') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+          osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
+          osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.16);
+          gain.gain.setValueAtTime(0.4, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.45);
+        }
+      } catch (e) {
+        console.log('Audio chime simulated');
+      }
+    }
+
+    function showToast(title, message, icon = 'info', color = 'emerald') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto bg-white border border-${color}-200 shadow-xl rounded-2xl p-4 flex items-start gap-3 w-80 transform transition-all duration-300 translate-y-4 opacity-0`;
+      toast.innerHTML = `
+        <div class="w-8 h-8 rounded-xl bg-${color}-100 text-${color}-600 flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-[20px]">${icon}</span>
+        </div>
+        <div class="flex-1 text-xs">
+          <h4 class="font-bold text-slate-800">${title}</h4>
+          <p class="text-slate-600 mt-0.5">${message}</p>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.remove('translate-y-4', 'opacity-0');
+      }, 10);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-x-8');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+  </script>
+
+  <!-- LOAD WEBSOCKET (SOCKET.IO) CLIENT -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+  <!-- LOAD MAIN APPLICATION LOGIC -->
+  <script src="crm_app.js?v=3.8"></script>
+</body>
+</html>

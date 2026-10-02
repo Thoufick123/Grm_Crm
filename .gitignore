@@ -1,0 +1,50 @@
+# =========================================================================
+# GRM WhatsApp CRM — Git Ignore Configuration
+# =========================================================================
+
+# Dependencies
+node_modules/
+bridge/node_modules/
+*/node_modules/
+
+# WhatsApp Baileys Authentication & Session Storage (Sensitive Credentials & Keys)
+bridge/auth_session/
+bridge/auth_sessions/
+baileys_auth_info/
+*.session
+*.session-journal
+
+# Environment & Secrets Configuration
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs & Runtime Diagnostics
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+webhook_logs.json
+
+# Operating System & Cache Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Directories
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# Temporary & Cache Dumps
+tmp/
+temp/
+*.tmp

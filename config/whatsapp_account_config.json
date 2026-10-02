@@ -1,0 +1,13 @@
+{
+    "id": 1,
+    "business_name": "GRM Garments Business",
+    "display_name": "GRM Garments Official",
+    "phone_number": "+91 98765 43210",
+    "phone_number_id": "109823471928374",
+    "waba_id": "982374619283745",
+    "access_token": "EAABwzLIX124BA...",
+    "webhook_verify_token": "GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026",
+    "provider": "META_CLOUD_API",
+    "status": "CONNECTED",
+    "last_sync": "2026-10-02 08:05:07"
+}

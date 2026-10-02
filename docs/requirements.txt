@@ -1,0 +1,72 @@
+# GRM WhatsApp CRM — Modern Customer Communication & Assignment Hub
+
+
+# GRM CRM v2.5
+WhatsApp Business Hub
+Live WhatsApp
++91 98765 43210
+Cost-Free Local Engine • Zero Server Bill
+
+## WhatsApp Inbox & Customer Queue
+Live conversation management with instant staff assignment & order booking
+Admin Manager
+Full System Access
+
+## Customer Query & Staff Assignment Queue
+When new WhatsApp queries arrive, assign them to dedicated staff members to ensure zero duplicate replies and 100% response tracking.
+
+### All Customer Enquiries
+Total Enquiries Today
+
+### 12
+Unassigned Queries
+
+### 2
+WhatsApp Orders Booked
+
+### 5
+Follow-ups Scheduled
+
+### 3
+
+### Active WhatsApp Conversations
+Live feed of pending customer chats across all staff
+
+### Staff Performance Snapshot
+
+## Garment Product Catalog & Live Stock Validator
+Check available vs reserved stock in real-time before replying to WhatsApp customers
+
+## WhatsApp Sales Orders
+Orders created directly from customer WhatsApp conversations with reserved inventory
+
+## Follow-up Management Hub
+Never forget a customer promise (size checks, family confirmations, payment reminders)
+
+## Customer Directory & 360 Profiles
+Complete customer purchase history, tags, alternate numbers, and past queries
+
+## System Audit Trail & Security Logs
+Real-time tamper-evident log of staff assignments, query reassignments, orders, and status updates
+
+## Staff Performance Analytics & Reports
+Objective, factual operational metrics on reply speed, conversion rates, and handled volume
+
+### Inbound WhatsApp Simulator
+Simulate incoming customer WhatsApp message (Zero API cost)
+
+### Assign Customer Enquiry
+Assign query Q-2026-0012 to a staff member
+
+### Book WhatsApp Order & Reserve Stock
+Creates sales order and reserves warehouse quantity
+Priya
++91 98765 43210
+Q-2026-0012
+Includes taxes & delivery
+
+### Schedule Follow-up
+Set date & time reminder for customer callback
+
+### Search Stock & Share to WhatsApp
+Check real-time warehouse inventory and generate WhatsApp share card

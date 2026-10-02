@@ -1,0 +1,1131 @@
+﻿GRM WhatsApp Business & Customer Communication
+Functional Workflow & Module Documentation
+Project: GRM Garment Business Management SystemModule: WhatsApp Business & Customer CommunicationTechnology: PHP + MySQL + BootstrapDocument Version: 1.0Date: September 2026
+1. Purpose
+The WhatsApp Business & Customer Communication module is designed to manage high-volume WhatsApp customer enquiries, conversations, follow-ups, orders, payments, delivery communication, returns, and staff activities.
+The primary business problem is that customer enquiries and orders are currently handled directly through WhatsApp conversations. When the account is logged out, the phone changes, or many staff members handle the same number, important conversations, customer details, and pending orders can become difficult to track.
+The new module separates:
+WhatsApp Communication → Customer Query → Customer → Order → Payment → Inventory → Delivery
+WhatsApp becomes the communication channel, while the GRM system becomes the central business record.
+2. Business Problems
+The system must address the following problems:
+2.1 WhatsApp Account Logout
+The business currently depends on one WhatsApp Business number. Repeated registration or device changes can cause account/session problems.
+2.2 Large Number of Customer Queries
+During busy periods, the business can receive hundreds or thousands of messages.
+Staff cannot reliably remember:
+Who asked what
+Who was already replied to
+Who is waiting for a response
+Who requested product photos
+Who said they would order later
+Who needs follow-up
+Who actually converted into an order
+2.3 Multiple Staff
+Three to five employees may need to handle the same WhatsApp customer communication.
+Without assignment and ownership, multiple staff members may reply to the same customer.
+2.4 Customer Data Loss
+Important customer information can remain inside chat messages rather than the business database.
+2.5 Order Tracking
+A customer may first make an enquiry and later place an order. The system must connect the enquiry and conversation to the final order.
+3. Main Objectives
+The module should:
+Manage large numbers of WhatsApp enquiries.
+Prevent customer queries from being lost.
+Allow multiple staff members to handle customer communication.
+Assign conversations to specific staff.
+Track unanswered and pending conversations.
+Schedule follow-ups.
+Maintain customer profiles.
+Convert enquiries into orders.
+Connect WhatsApp orders with inventory.
+Maintain complete conversation history.
+Track staff activity.
+Provide reports and analytics.
+Maintain audit logs.
+Provide a foundation for WhatsApp Business Platform/API integration.
+Reduce dependency on a single physical phone.
+4. Overall Architecture
+The module follows this business flow:
+Customer↓WhatsApp Message↓WhatsApp Inbox↓Customer Query↓Conversation↓Staff Assignment↓Product Enquiry↓Follow-up↓Order Confirmation↓Sales Order↓Payment↓Stock Reservation↓Picking / Packing↓Dispatch↓Delivery↓Return / Exchange if required
+5. Main Module Structure
+WHATSAPP BUSINESS
+│
+├── Dashboard
+├── Inbox
+├── Queries
+├── Conversations
+├── Staff Assignment
+├── Follow-ups
+├── Customers
+├── Product Enquiries
+├── Orders
+├── Payments
+├── Product Sharing
+├── Quick Replies
+├── Delivery Communication
+├── Returns / Exchange
+├── Broadcast
+├── Notifications
+├── Staff Management
+├── Chat History
+├── Customer Tags
+├── Reports & Analytics
+└── Settings & Security
+6. User Roles
+6.1 Super Admin
+Full access.
+Permissions:
+View all conversations
+View all customers
+Assign staff
+Reassign queries
+View orders
+View reports
+Manage templates
+Manage staff
+Manage settings
+Manage WhatsApp integration
+View audit logs
+6.2 WhatsApp Manager
+Permissions:
+View all queries
+Assign queries
+Reassign queries
+View conversations
+Manage follow-ups
+View customer information
+View order information
+View reports
+6.3 WhatsApp Staff
+Permissions:
+View assigned conversations
+Reply to customers
+Create queries
+Update query status
+Add customer notes
+Create follow-ups
+Create orders
+View product availability
+Staff should not be able to:
+Delete conversations
+Change system settings
+Delete customers
+Modify audit logs
+Change WhatsApp integration settings
+7. WhatsApp Dashboard
+The dashboard provides an overall view of WhatsApp operations.
+Dashboard Cards
+Query Cards
+Total Queries
+New Queries
+Unanswered
+Assigned
+Waiting for Customer
+Follow-up Due
+Converted
+Closed
+Order Cards
+WhatsApp Orders Today
+Pending Orders
+Payment Pending
+Confirmed Orders
+Dispatched Orders
+Delivered Orders
+Cancelled Orders
+Staff Cards
+Active Staff
+Queries Assigned
+Queries Pending
+Follow-ups Due
+Orders Converted
+8. WhatsApp Inbox
+The Inbox is the primary workspace for customer communication.
+Inbox Filters
+All
+Unread
+New
+Unassigned
+Assigned
+My Conversations
+Waiting
+Follow-up
+Order Pending
+Closed
+Conversation List
+Each conversation should display:
+Customer name
+Mobile number
+Latest message
+Last message time
+Unread count
+Assigned staff
+Query status
+Priority
+Order status
+9. Conversation Screen
+The conversation screen contains:
+Left Panel
+Customer conversation list.
+Center Panel
+Complete chat history.
+Right Panel
+Customer information.
+Example:
+CUSTOMER
+Name:
+Priya
+WhatsApp:
+9876543210
+Customer Type:
+Retail
+Orders:
+8
+Total Purchase:
+₹12,450
+Current Query:
+Q-2026-001245
+Assigned Staff:
+Staff 02
+Tags:
+Baby, Repeat Customer
+10. Customer Query Management
+Every customer enquiry should be represented as a query.
+Example:
+Query ID: Q-2026-001245
+Customer:
+Priya
+WhatsApp:
+9876543210
+Query:
+"Baby frock available?"
+Product:
+Baby Frock
+Size:
+Not specified
+Color:
+Not specified
+Status:
+New
+Priority:
+Normal
+Assigned Staff:
+Staff 02
+11. Query Status
+Recommended statuses:
+NEW
+↓
+ASSIGNED
+↓
+REPLIED
+↓
+WAITING_FOR_CUSTOMER
+↓
+FOLLOW_UP
+↓
+CONVERTED
+↓
+CLOSED
+Alternative terminal status:
+LOST / NOT INTERESTED
+12. Query Priority
+Three priority levels:
+Normal
+Regular enquiry.
+High
+Customer is actively waiting or product availability is limited.
+Urgent
+Order/payment/delivery issue requiring immediate attention.
+13. Staff Assignment
+Each query should have an assigned staff member.
+Example:
+Q-1001 → Staff 01
+Q-1002 → Staff 02
+Q-1003 → Staff 03
+Q-1004 → Staff 01
+Managers can reassign queries.
+Example:
+Staff 01
+   ↓
+Q-1001
+   ↓
+Reassign
+   ↓
+Staff 03
+The system must record the reassignment in the audit log.
+14. Conversation Ownership
+Only the assigned staff member should normally handle a conversation.
+Managers can override the assignment.
+The system should display:
+Assigned to: Staff 02
+This reduces duplicate replies.
+15. Follow-up Management
+Customers often say:
+"I will check and tell you."
+"I will order tomorrow."
+"Send me the photos."
+"I will ask my husband."
+"I will confirm size later."
+The staff can create a follow-up.
+Example:
+Follow-up ID:
+FU-2026-000245
+Customer:
+Priya
+Query:
+Q-2026-001245
+Follow-up Date:
+26-09-2026
+Time:
+10:00 AM
+Assigned:
+Staff 02
+Reason:
+Customer will confirm size
+16. Follow-up Dashboard
+The system should show:
+TODAY'S FOLLOW-UPS
+10:00 AM   Priya       Baby Frock
+10:30 AM   Meena       Maternity Dress
+11:00 AM   Anu         Baby Set
+11:30 AM   Kumar       Girls Dress
+Staff should receive internal notifications for due follow-ups.
+17. Customer Management
+Customer master information:
+Customer ID
+Customer Name
+Mobile Number
+WhatsApp Number
+Alternate Number
+Email
+Address
+City
+State
+Pincode
+Customer Type
+Notes
+Tags 
+Created Date
+Updated Date
+18. Customer Types
+Recommended:
+Retail Customer
+Website Customer
+WhatsApp Customer
+Walk-in Customer
+Repeat Customer
+Wholesale Customer
+A customer can have multiple order sources.
+19. Customer History
+Customer profile should show:
+Customer
+│
+├── Conversations
+├── Queries
+├── Orders
+├── Payments
+├── Deliveries
+├── Returns
+├── Exchanges
+├── Follow-ups
+└── Notes
+20. Product Enquiry
+Staff should be able to search products from the WhatsApp screen.
+Search by:
+Product name
+Product code
+SKU
+Category
+Variant
+Size
+Color
+Display:
+Product:
+Baby Frock
+SKU:
+BF-001-PK
+Size:
+2–3 Years
+Color:
+Pink
+Available:
+8
+Selling Price:
+₹599
+21. Stock Validation
+Before confirming a WhatsApp order, the system should check inventory.
+Flow:
+Customer requests product
+↓
+Staff searches product
+↓
+System checks available stock
+↓
+Available?
+├── YES → Continue
+└── NO → Show unavailable / alternatives
+Stock should not be reduced simply because a customer asks about a product.
+22. Product Sharing
+Staff can select a product and share its information.
+Product sharing data:
+Product image
+Product name
+Product code
+Available sizes
+Available colors
+Price
+Offer price
+Product link
+Stock availability
+23. Quick Replies
+The system should provide reusable message templates.
+Examples:
+Price Enquiry
+Hello! Thank you for contacting GRM.
+The price of this product is ₹___.
+Please let us know your required size and color.
+Stock Enquiry
+Yes, this product is currently available.
+Please let us know your required size and color.
+Order Confirmation
+Your order has been confirmed successfully.
+Order ID: ______
+Total Amount: ₹______
+Thank you for shopping with us.
+Dispatch
+Your order ______ has been dispatched.
+Tracking details: ______
+Thank you for shopping with GRM.
+Templates should be editable by authorized users.
+24. WhatsApp Order Management
+A query can be converted into an order.
+Example:
+Q-2026-001245
+       ↓
+Customer confirms
+       ↓
+Create Order
+       ↓
+WA-2026-001125
+The original query must remain linked to the order.
+25. WhatsApp Order Fields
+Order ID
+Customer ID
+Query ID
+Order Source
+Order Date
+Products
+Variants
+Quantity
+Selling Price
+Discount
+Tax
+Delivery Charge
+Grand Total
+Payment Method
+Payment Status
+Order Status
+Shipping Address
+Assigned Staff
+Created By
+Created Date
+26. Order Status
+NEW
+↓
+CONFIRMED
+↓
+STOCK RESERVED
+↓
+PACKING
+↓
+DISPATCHED
+↓
+DELIVERED
+Alternative:
+CANCELLED
+27. Payment Management
+Payment methods:
+Cash
+UPI
+Card
+Online Payment
+COD
+Bank Transfer
+Payment statuses:
+PENDING
+PARTIAL
+PAID
+REFUNDED
+FAILED
+Payment records must be linked to the order.
+28. Inventory Integration
+WhatsApp orders must follow the central inventory rules.
+Example:
+WhatsApp Order
+      ↓
+Stock Check
+      ↓
+Stock Reservation
+      ↓
+Packing
+      ↓
+Dispatch
+      ↓
+Stock Transaction
+The system must not directly edit stock quantities.
+Every stock change should generate a stock transaction.
+29. Delivery Communication
+Messages can be sent for:
+Order Confirmed
+Payment Received
+Packed
+Dispatched
+Out for Delivery
+Delivered
+The actual messaging mechanism will depend on the WhatsApp integration used.
+30. Return & Exchange Communication
+Customer can initiate a return/exchange through WhatsApp.
+Flow:
+Customer Message
+↓
+Return Request
+↓
+Original Order Validation
+↓
+Return Reason
+↓
+Inspection
+↓
+Approved / Rejected
+↓
+Refund / Exchange
+The return must be linked to the original order.
+31. Broadcast Management
+Authorized users can prepare customer communications for:
+New arrivals
+Festival offers
+Clearance
+Baby collection
+Maternity collection
+New product launches
+Promotional campaigns
+Broadcast functionality must follow applicable WhatsApp business messaging rules and template requirements.
+32. Notifications
+Staff Notifications
+New query assigned
+New message
+Follow-up due
+Customer waiting
+Payment received
+Order confirmed
+Return request
+Delivery issue
+Manager Notifications
+Unanswered queries
+Large number of pending queries
+Staff workload
+Failed messages
+API/integration errors
+33. Staff Performance
+Manager dashboard:
+STAFF PERFORMANCE
+Staff 01
+Assigned: 250
+Handled: 230
+Pending: 20
+Follow-ups: 15
+Converted Orders: 75
+Staff 02
+Assigned: 210
+Handled: 198
+Pending: 12
+Follow-ups: 10
+Converted Orders: 68
+The system should provide factual activity metrics rather than manually entered performance scores.
+34. Chat History
+Every conversation should be searchable.
+Search by:
+Customer name
+Mobile
+Query ID
+Order ID
+Product
+Staff
+Date
+Status
+Example:
+Search:
+9876543210
+Result:
+Customer: Priya
+Queries:
+Q-1001
+Q-1024
+Q-1088
+Orders:
+WA-2001
+WA-2045
+Returns:
+RT-1005
+35. Customer Tags
+Examples:
+New Customer
+Repeat Customer
+VIP
+Baby
+Maternity
+Kids
+Girls
+COD
+Prepaid
+Follow-up
+Potential Customer
+Multiple tags can be assigned to one customer.
+36. Reports & Analytics
+Query Report
+Filters:
+Date
+Staff
+Status
+Product
+Customer
+Metrics:
+Total queries
+New queries
+Answered
+Pending
+Follow-ups
+Converted
+Closed
+Order Report
+WhatsApp orders
+Total sales
+Pending orders
+Cancelled orders
+Delivered orders
+Returned orders
+Product Enquiry Report
+Shows which products receive the most enquiries.
+Staff Activity Report
+Shows:
+Assigned conversations
+Handled conversations
+Pending conversations
+Follow-ups
+Orders created
+37. WhatsApp Security
+The system should support operational security controls around the WhatsApp account.
+Recommended business practices:
+Keep one primary WhatsApp Business device.
+Use authorized linked devices for staff.
+Enable WhatsApp two-step verification.
+Never share verification codes.
+Review linked devices regularly.
+Remove unknown devices.
+Maintain regular backups.
+Restrict WhatsApp account settings to authorized administrators.
+Maintain system audit logs.
+Do not use unofficial WhatsApp applications.
+The GRM system should not attempt to bypass WhatsApp's authentication or security mechanisms.
+38. WhatsApp Business Platform/API Integration
+For high-volume operations, the architecture should support future integration with the WhatsApp Business Platform.
+Proposed architecture:
+CUSTOMER
+   ↓
+WHATSAPP
+   ↓
+WHATSAPP BUSINESS PLATFORM
+   ↓
+WEBHOOK
+   ↓
+GRM BACKEND
+   ↓
+WHATSAPP INBOX
+   ↓
+STAFF
+Outgoing:
+STAFF
+ ↓
+GRM SYSTEM
+ ↓
+WHATSAPP API
+ ↓
+CUSTOMER
+The integration layer should be designed separately from the core order/inventory logic.
+39. Database Design
+Recommended tables:
+whatsapp_accounts
+whatsapp_devices
+whatsapp_conversations
+whatsapp_messages
+whatsapp_queries
+whatsapp_query_assignments
+whatsapp_followups
+whatsapp_templates
+whatsapp_broadcasts
+whatsapp_broadcast_recipients
+whatsapp_message_logs
+whatsapp_webhook_logs
+whatsapp_notifications
+customer_tags
+customer_tag_assignments
+Existing/common tables can be reused:
+customers
+users
+products
+product_variants
+orders
+order_items
+payments
+returns
+return_items
+stock_transactions
+audit_logs
+40. whatsapp_accounts
+Suggested fields:
+id
+business_name
+phone_number
+display_name
+provider
+api_status
+verification_status
+created_at
+updated_at
+41. whatsapp_conversations
+Suggested fields:
+id
+customer_id
+whatsapp_account_id
+conversation_reference
+status
+assigned_user_id
+priority
+last_message_at
+unread_count
+created_at
+updated_at
+42. whatsapp_messages
+Suggested fields:
+id
+conversation_id
+customer_id
+message_reference
+direction
+message_type
+message_text
+media_url
+sent_by_user_id
+delivery_status
+message_timestamp
+created_at
+Direction:
+INBOUND
+OUTBOUND
+Delivery status:
+PENDING
+SENT
+DELIVERED
+READ
+FAILED
+43. whatsapp_queries
+Suggested fields:
+id
+query_number
+conversation_id
+customer_id
+product_id
+variant_id
+query_text
+status
+priority
+assigned_user_id
+source
+created_at
+updated_at
+closed_at
+44. whatsapp_query_assignments
+Suggested fields:
+id
+query_id
+user_id
+assigned_by
+assigned_at
+unassigned_at
+reason
+This provides assignment history.
+45. whatsapp_followups
+Suggested fields:
+id
+query_id
+customer_id
+assigned_user_id
+followup_date
+followup_time
+reason
+status
+completed_at
+notes
+created_at
+46. whatsapp_templates
+Suggested fields:
+id
+template_name
+category
+language
+template_content
+whatsapp_template_id
+status
+created_by
+created_at
+updated_at
+47. whatsapp_webhook_logs
+This table is useful when integrating the WhatsApp Business Platform.
+Fields:
+id
+event_type
+external_reference
+payload
+processing_status
+error_message
+received_at
+processed_at
+This allows developers to troubleshoot incoming webhook events.
+48. Audit Logs
+Important actions must be logged.
+Examples:
+Query Created
+Query Assigned
+Query Reassigned
+Query Closed
+Customer Updated
+Order Created
+Order Cancelled
+Template Updated
+Staff Access Changed
+WhatsApp Setting Changed
+Audit fields:
+user_id
+action
+module
+record_id
+old_value
+new_value
+ip_address
+created_at
+49. Query-to-Order Relationship
+This is one of the most important relationships.
+CUSTOMER
+   │
+   └── CONVERSATION
+          │
+          └── QUERY
+                │
+                └── ORDER
+                      │
+                      ├── PAYMENT
+                      ├── STOCK TRANSACTION
+                      ├── DELIVERY
+                      └── RETURN
+This means a customer enquiry never becomes disconnected from the eventual transaction.
+50. Complete Example
+Customer sends:
+"Hi, baby frock available?"
+System:
+Conversation Created
+        ↓
+Query Q-2026-001245
+        ↓
+Assigned to Staff 02
+Staff replies:
+"Yes, which size do you need?"
+Customer:
+"2–3 years. Pink colour."
+Staff searches inventory.
+System:
+Baby Frock
+Size: 2–3Y
+Color: Pink
+Available: 8
+Price: ₹599
+Staff shares product.
+Customer:
+"I need 2."
+Staff creates order:
+Order: WA-2026-001125
+Qty: 2
+Amount: ₹1,198
+Payment: COD
+System:
+Query
+ ↓
+Order
+ ↓
+Stock Reservation
+ ↓
+Packing
+ ↓
+Dispatch
+ ↓
+Delivery
+The entire conversation remains linked to the customer and order.
+51. High-Volume Query Workflow
+For 1,000 queries:
+              1,000 MESSAGES
+                     │
+                     ↓
+             WHATSAPP INBOX
+                     │
+                     ↓
+             QUERY CREATION
+                     │
+        ┌────────────┼────────────┐
+        ↓            ↓            ↓
+     STAFF 1       STAFF 2      STAFF 3
+        │            │            │
+        └────────────┼────────────┘
+                     ↓
+              FOLLOW-UP SYSTEM
+                     │
+                     ↓
+                CONVERSION
+                     │
+                     ↓
+                  ORDERS
+The system must always know:
+Who → Asked what → When → Who handled it → Current status → Next action → Order created or not
+52. Error Handling
+Examples:
+WhatsApp integration unavailable
+Show:
+WhatsApp service is temporarily unavailable.
+Your existing customer/order records are safe.
+Message failed
+Store:
+Message Status: FAILED
+Error: [Provider Error]
+Retry Available: YES
+Duplicate message
+Use the external WhatsApp message ID to prevent duplicate database records.
+Duplicate customer
+Match using the WhatsApp/mobile number before creating a new customer.
+53. Backup & Recovery
+Important data:
+Customers
+Conversations
+Messages
+Queries
+Orders
+Payments
+Follow-ups
+Templates
+Audit logs
+The system should have:
+Database backups
+Backup retention
+Recovery procedure
+Error logging
+Transaction-safe order creation
+WhatsApp chat backup and the GRM database backup should be treated as two separate backup layers.
+54. Security Permissions
+Recommended permissions:
+whatsapp.view
+whatsapp.inbox
+whatsapp.reply
+whatsapp.query.create
+whatsapp.query.assign
+whatsapp.query.close
+whatsapp.followup
+whatsapp.customer.view
+whatsapp.customer.edit
+whatsapp.order.create
+whatsapp.order.view
+whatsapp.template.manage
+whatsapp.broadcast.manage
+whatsapp.report.view
+whatsapp.settings
+whatsapp.security
+55. UI Screen List
+Development screens:
+01. WhatsApp Dashboard
+02. WhatsApp Inbox
+03. Conversation View
+04. Query List
+05. Query Details
+06. Create Query
+07. Assign Query
+08. Follow-up List
+09. Follow-up Details
+10. Customer List
+11. Customer Details
+12. Product Search
+13. Product Enquiry
+14. WhatsApp Order Creation
+15. WhatsApp Order Details
+16. Payment Details
+17. Quick Reply Templates
+18. Product Sharing
+19. Broadcast Management
+20. Notification Center
+21. Staff Workload
+22. Chat History
+23. Customer Tags
+24. WhatsApp Reports
+25. WhatsApp Settings
+26. Device/Security
+27. Integration/API Settings
+28. Webhook Logs
+29. Audit Logs
+56. Recommended Development Priority
+Phase 1 — Essential
+WhatsApp Dashboard
+WhatsApp Inbox
+Queries
+Conversations
+Staff Assignment
+Customers
+Follow-ups
+Chat History
+Phase 2 — Sales
+Product Enquiry
+Product Sharing
+WhatsApp Orders
+Payment
+Stock Integration
+Delivery
+Phase 3 — Communication
+Quick Replies
+Notifications
+Returns
+Exchange
+Broadcast
+Templates
+Phase 4 — Management
+Reports
+Analytics
+Staff Performance
+Audit Logs
+Security
+Phase 5 — Integration
+WhatsApp Business Platform
+API
+Webhooks
+Message Delivery Status
+Automated Notifications
+57. Important Business Rule
+The system must follow this principle:
+WhatsApp is the communication channel. GRM is the business source of truth.
+Customer conversations should never be the only place where an order exists.
+The system should maintain:
+Customer
+   ↓
+Conversation
+   ↓
+Query
+   ↓
+Order
+   ↓
+Payment
+   ↓
+Inventory
+   ↓
+Delivery
+   ↓
+Return / Exchange
+58. Final Recommended GRM Architecture
+GRM GARMENT MANAGEMENT SYSTEM
+│
+├── ADMIN
+│
+├── MASTER DATA
+│
+├── PRODUCTION
+│
+├── WAREHOUSE
+│
+├── SHOP
+│
+├── WEBSITE
+│   └── Website Orders
+│
+├── WHATSAPP BUSINESS
+│   ├── Dashboard
+│   ├── Inbox
+│   ├── Conversations
+│   ├── Queries
+│   ├── Assignments
+│   ├── Follow-ups
+│   ├── Customers
+│   ├── Product Enquiries
+│   ├── Product Sharing
+│   ├── Orders
+│   ├── Payments
+│   ├── Delivery
+│   ├── Returns
+│   ├── Exchange
+│   ├── Quick Replies
+│   ├── Broadcast
+│   ├── Notifications
+│   ├── Staff Management
+│   ├── Chat History
+│   ├── Tags
+│   ├── Reports
+│   ├── Security
+│   └── API Integration
+│
+├── INVENTORY
+│
+├── REPORTS
+│
+└── SYSTEM
+    ├── Authentication
+    ├── Roles
+    ├── Permissions
+    ├── Notifications
+    ├── Audit Logs
+    ├── Backup
+    └── Settings
+59. Success Criteria
+The WhatsApp module will be considered successfully implemented when:
+1,000+ customer enquiries can be tracked.
+Staff can work on assigned conversations.
+Unanswered queries can be identified.
+Follow-ups cannot easily be forgotten.
+Customer history is searchable.
+A query can be converted into an order.
+Orders connect to inventory.
+Multiple staff can work without repeatedly registering the main WhatsApp number.
+WhatsApp communication and GRM business data are separated.
+Important actions are recorded in audit logs.
+The system can later integrate with the WhatsApp Business Platform/API.
+Losing access to a particular WhatsApp session does not mean losing the corresponding GRM customer/order records.
+60. Core Principle
+The complete business architecture should be:
+Customer Message
+↓
+WhatsApp
+↓
+GRM Inbox
+↓
+Query
+↓
+Customer
+↓
+Product Enquiry
+↓
+Follow-up
+↓
+Order
+↓
+Payment
+↓
+Stock
+↓
+Packing
+↓
+Dispatch
+↓
+Delivery
+↓
+Return / Exchange
+This architecture provides a foundation for handling high-volume WhatsApp customer communication while keeping the actual business records inside the GRM system.
