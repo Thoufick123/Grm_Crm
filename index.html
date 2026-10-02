@@ -359,17 +359,30 @@
     </header>
 
     <!-- Staff Workstation Info Banner (Visible Only When Logged in as Staff) -->
-    <div id="staff-workstation-banner" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-6 py-2 flex items-center justify-between border-b border-indigo-500/30 hidden">
+    <div id="staff-workstation-banner" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-4 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-500/30 gap-2 hidden">
       <div class="flex items-center gap-3">
-        <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[10px] font-extrabold flex items-center gap-1.5">
+        <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[10px] font-extrabold flex items-center gap-1.5 shrink-0">
           <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
           STAFF WORKSTATION PANEL
         </span>
-        <p class="text-xs text-indigo-100">
-          Showing admin-assigned conversations & orders for: <strong id="staff-banner-name" class="text-white">Priya Sharma</strong> (<span id="staff-banner-role" class="text-indigo-200 font-medium">Sales Specialist</span>).
+        <p class="text-xs text-indigo-100 truncate">
+          Showing assigned conversations for: <strong id="staff-banner-name" class="text-white">Staff Member</strong> (<span id="staff-banner-role" class="text-indigo-200 font-medium">Sales Specialist</span>).
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2.5 shrink-0">
+        <!-- Live Staff Daily Message Allocation Quota Indicator -->
+        <div class="flex items-center gap-2 bg-indigo-900/80 border border-indigo-400/40 px-3 py-1 rounded-xl shadow-sm">
+          <span class="material-symbols-outlined text-[16px] text-emerald-400">stacked_bar_chart</span>
+          <div class="text-[11px] leading-tight flex items-center gap-1.5">
+            <span class="text-indigo-200 hidden md:inline">Today's Allocation:</span>
+            <strong id="staff-banner-quota" class="text-emerald-300 font-extrabold font-mono">0 / 70 msgs (0%)</strong>
+          </div>
+          <!-- Mini Progress Bar -->
+          <div class="w-16 h-1.5 bg-indigo-950 rounded-full overflow-hidden border border-indigo-700/50 hidden lg:block">
+            <div id="staff-banner-progress-bar" class="h-full bg-emerald-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+
         <span class="text-[11px] text-slate-400 font-mono">Staff ID: <span id="staff-banner-id" class="text-indigo-300 font-bold">staff_01</span></span>
       </div>
     </div>
@@ -387,6 +400,19 @@
         <!-- Left Panel: Conversation & Enquiry List -->
         <div class="w-80 lg:w-96 bg-white border-r border-slate-200 flex flex-col h-full shrink-0">
           
+          <!-- Daily Inbound Message Volume Progress Tracker -->
+          <div class="px-3.5 py-2 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200/80 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="material-symbols-outlined text-[16px] text-brand-wa shrink-0">mark_chat_unread</span>
+              <span class="font-bold text-slate-800 text-[11px] truncate">Today's Received Messages:</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span id="inbox-today-message-count" class="font-mono font-extrabold text-emerald-900 bg-white border border-emerald-300 px-2 py-0.5 rounded-lg text-[10px] shadow-sm">
+                0 / 200 msgs (0%)
+              </span>
+            </div>
+          </div>
+
           <!-- Search & Filters -->
           <div class="p-3 border-b border-slate-200 space-y-2.5 bg-slate-50/70">
             <div class="relative">
@@ -807,18 +833,22 @@
             </div>
 
             <!-- Sub-Division Navigation Tabs Strip -->
-            <div class="flex items-center gap-2 bg-black/30 p-1.5 rounded-xl border border-white/10 shrink-0">
-              <button type="button" onclick="switchStaffTab('list')" id="tab-btn-staff-list" class="px-3.5 py-2 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+            <div class="flex items-center gap-1.5 bg-black/30 p-1.5 rounded-xl border border-white/10 shrink-0 flex-wrap">
+              <button type="button" onclick="switchStaffTab('list')" id="tab-btn-staff-list" class="px-3 py-1.5 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition">
                 <span class="material-symbols-outlined text-[16px]">groups</span>
-                <span>1. Total Staff List</span>
+                <span>1. Staff Directory</span>
               </button>
-              <button type="button" onclick="switchStaffTab('create')" id="tab-btn-staff-create" class="px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
+              <button type="button" onclick="switchStaffTab('quota')" id="tab-btn-staff-quota" class="px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">pie_chart</span>
+                <span>2. Daily Message Quota (200 Target)</span>
+              </button>
+              <button type="button" onclick="switchStaffTab('create')" id="tab-btn-staff-create" class="px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-[16px]">person_add</span>
-                <span>2. Create Staff</span>
+                <span>3. Create Staff</span>
               </button>
-              <button type="button" onclick="switchStaffTab('roles')" id="tab-btn-staff-roles" class="px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
+              <button type="button" onclick="switchStaffTab('roles')" id="tab-btn-staff-roles" class="px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                <span>3. Assign the Role</span>
+                <span>4. Assign the Role</span>
               </button>
             </div>
           </div>
@@ -887,7 +917,8 @@
                     <tr>
                       <th class="py-3.5 px-4">Staff Member</th>
                       <th class="py-3.5 px-4">Role & Specialization</th>
-                      <th class="py-3.5 px-4">Contact Info</th>
+                      <th class="py-3.5 px-4 text-center">Daily Quota</th>
+                      <th class="py-3.5 px-4">Today Handled</th>
                       <th class="py-3.5 px-4">Active Leads</th>
                       <th class="py-3.5 px-4">Converted Orders</th>
                       <th class="py-3.5 px-4">Status</th>
@@ -904,7 +935,105 @@
           </div>
 
           <!-- ======================================================= -->
-          <!-- SUB-DIVISION 2: CREATE NEW STAFF -->
+          <!-- SUB-DIVISION 2: DAILY MESSAGE ALLOCATION & QUOTA (200 TARGET) -->
+          <!-- ======================================================= -->
+          <div id="subview-staff-quota" class="space-y-6 hidden">
+            
+            <!-- Quota Management Banner -->
+            <div class="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 text-[10px] font-extrabold flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    ADMIN LEAD &amp; MESSAGE ALLOCATION ENGINE
+                  </span>
+                </div>
+                <h3 class="text-xl font-bold">Daily Inbound Message Allocation Control</h3>
+                <p class="text-xs text-emerald-100/80 max-w-2xl">
+                  Configure the daily expected WhatsApp inbound volume (e.g. 200 messages/day) and distribute capacity quotas across staff members. Once assigned, each staff member's workstation panel updates automatically in real-time.
+                </p>
+              </div>
+
+              <!-- 1-Click Auto-Balance Action -->
+              <div class="flex items-center gap-2 shrink-0">
+                <button type="button" onclick="handleAutoBalanceQuota()" class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-brand-wa hover:from-emerald-600 hover:to-brand-waDark text-white rounded-xl text-xs font-bold shadow-glow flex items-center gap-2 transition hover:scale-105">
+                  <span class="material-symbols-outlined text-[18px]">balance</span>
+                  <span>Auto-Distribute 200 Quota Equally</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 3 Quota KPI Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <!-- Expected Daily Target Card -->
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] uppercase font-bold text-slate-400">Expected Daily Target</span>
+                  <button type="button" onclick="openEditExpectedDailyTargetPrompt()" class="text-[11px] text-brand-wa hover:underline font-bold flex items-center gap-0.5">
+                    <span class="material-symbols-outlined text-[14px]">edit</span> Edit
+                  </button>
+                </div>
+                <p id="kpi-quota-expected" class="text-2xl font-black text-slate-900 mt-1.5 font-mono">200 msgs / day</p>
+                <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px] text-emerald-600">tune</span> Base expected WhatsApp inbound
+                </p>
+              </div>
+
+              <!-- Total Allocated Across Team Card -->
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Total Allocated Across Staff</span>
+                <p id="kpi-quota-allocated" class="text-2xl font-black text-emerald-700 mt-1.5 font-mono">200 / 200 msgs</p>
+                <p id="kpi-quota-balance-label" class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">check_circle</span> 100% Team Capacity Distributed
+                </p>
+              </div>
+
+              <!-- Today's Inbound Progress Card -->
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Today's Inbound Messages</span>
+                <p id="kpi-quota-today-received" class="text-2xl font-black text-blue-700 mt-1.5 font-mono">0 / 200 msgs (0%)</p>
+                <div class="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden border border-slate-200">
+                  <div id="kpi-quota-progress-bar" class="h-full bg-blue-600 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Interactive Staff Quota Distribution Form & Table -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <h4 class="font-bold text-sm text-slate-900">Staff Daily Message Capacity Allocation</h4>
+                  <p class="text-xs text-slate-500">Set individual message volume handling quotas per staff member</p>
+                </div>
+                <button type="button" onclick="handleSaveDailyAllocations()" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition hover:scale-105">
+                  <span class="material-symbols-outlined text-[18px]">save</span>
+                  <span>Save Quota Allocations</span>
+                </button>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-700">
+                  <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th class="py-3.5 px-4">Staff Member</th>
+                      <th class="py-3.5 px-4">Role / Department</th>
+                      <th class="py-3.5 px-4">Daily Message Quota (Target)</th>
+                      <th class="py-3.5 px-4">Today Handled</th>
+                      <th class="py-3.5 px-4">Utilization %</th>
+                      <th class="py-3.5 px-4 text-right">Quick Set</th>
+                    </tr>
+                  </thead>
+                  <tbody id="staff-quota-table-body" class="divide-y divide-slate-100 font-medium">
+                    <!-- Populated dynamically by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ======================================================= -->
+          <!-- SUB-DIVISION 3: CREATE NEW STAFF -->
           <!-- ======================================================= -->
           <div id="subview-staff-create" class="space-y-6 hidden">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-3xl mx-auto space-y-6">

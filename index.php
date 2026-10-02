@@ -391,17 +391,30 @@ if ($pdo) {
     </header>
 
     <!-- Staff Workstation Info Banner -->
-    <div id="staff-workstation-banner" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-6 py-2 flex items-center justify-between border-b border-indigo-500/30 <?php echo $isAdmin ? 'hidden' : ''; ?>">
+    <div id="staff-workstation-banner" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-4 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-500/30 gap-2 <?php echo $isAdmin ? 'hidden' : ''; ?>">
       <div class="flex items-center gap-3">
-        <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[10px] font-extrabold flex items-center gap-1.5">
+        <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[10px] font-extrabold flex items-center gap-1.5 shrink-0">
           <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
           STAFF WORKSTATION PANEL
         </span>
-        <p class="text-xs text-indigo-100">
-          Showing admin-assigned conversations & orders for: <strong id="staff-banner-name" class="text-white"><?php echo htmlspecialchars($currentUser['name']); ?></strong> (<span id="staff-banner-role" class="text-indigo-200 font-medium"><?php echo htmlspecialchars($currentUser['title'] ?? $currentUser['role']); ?></span>).
+        <p class="text-xs text-indigo-100 truncate">
+          Showing assigned conversations for: <strong id="staff-banner-name" class="text-white"><?php echo htmlspecialchars($currentUser['name']); ?></strong> (<span id="staff-banner-role" class="text-indigo-200 font-medium"><?php echo htmlspecialchars($currentUser['title'] ?? $currentUser['role']); ?></span>).
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2.5 shrink-0">
+        <!-- Live Staff Daily Message Allocation Quota Indicator -->
+        <div class="flex items-center gap-2 bg-indigo-900/80 border border-indigo-400/40 px-3 py-1 rounded-xl shadow-sm">
+          <span class="material-symbols-outlined text-[16px] text-emerald-400">stacked_bar_chart</span>
+          <div class="text-[11px] leading-tight flex items-center gap-1.5">
+            <span class="text-indigo-200 hidden md:inline">Today's Allocation:</span>
+            <strong id="staff-banner-quota" class="text-emerald-300 font-extrabold font-mono">0 / 70 msgs (0%)</strong>
+          </div>
+          <!-- Mini Progress Bar -->
+          <div class="w-16 h-1.5 bg-indigo-950 rounded-full overflow-hidden border border-indigo-700/50 hidden lg:block">
+            <div id="staff-banner-progress-bar" class="h-full bg-emerald-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+
         <span class="text-[11px] text-slate-400 font-mono">Staff ID: <span id="staff-banner-id" class="text-indigo-300 font-bold"><?php echo htmlspecialchars($currentUser['id']); ?></span></span>
       </div>
     </div>

@@ -19,10 +19,16 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
     status: 'CONNECTED',
     webhookUrl: 'http://localhost:8080/webhook.php'
   },
+  // 1.5. Expected Daily WhatsApp Inbound Message Target (Default: 200 msgs/day)
+  dailyMessageTarget: {
+    expectedPerDay: 200,
+    allocatedPerDay: 200,
+    lastResetDate: '2026-10-02'
+  },
   staffList: [
-    { id: 'staff_01', name: 'Priya Sharma', role: 'Sales Specialist (Baby Collection)', avatar: 'PS', activeQueries: 3, converted: 14 },
-    { id: 'staff_02', name: 'Rahul Verma', role: 'Enquiry Specialist (Maternity & Kids)', avatar: 'RV', activeQueries: 2, converted: 9 },
-    { id: 'staff_03', name: 'Sneha Patel', role: 'Order Fulfillment & Support', avatar: 'SP', activeQueries: 1, converted: 11 }
+    { id: 'staff_01', name: 'Priya Sharma', role: 'Sales Specialist (Baby Collection)', avatar: 'PS', activeQueries: 3, converted: 14, dailyQuota: 70, todayHandled: 18, email: 'priya.sharma@grmgarments.com', phone: '+91 98450 11221', specialization: 'Baby Collection', status: 'ACTIVE' },
+    { id: 'staff_02', name: 'Rahul Verma', role: 'Enquiry Specialist (Maternity & Kids)', avatar: 'RV', activeQueries: 2, converted: 9, dailyQuota: 70, todayHandled: 14, email: 'rahul.verma@grmgarments.com', phone: '+91 98450 11222', specialization: 'Maternity & Kids', status: 'ACTIVE' },
+    { id: 'staff_03', name: 'Sneha Patel', role: 'Order Fulfillment & Support', avatar: 'SP', activeQueries: 1, converted: 11, dailyQuota: 60, todayHandled: 8, email: 'sneha.patel@grmgarments.com', phone: '+91 98450 11223', specialization: 'Order Fulfillment', status: 'ACTIVE' }
   ],
   products: [
     { id: 1, sku: 'BF-001-PK', name: 'Baby Frock (Embroidered Cotton)', category: 'Baby Collection', size: '2-3 Years', color: 'Pink', price: 599, physicalStock: 12, reservedStock: 4, image: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60' },
@@ -688,6 +694,18 @@ function initCRMState() {
       } else if (CRM_STATE.whatsappAccount.phoneNumber === '+91 98765 43210') {
         CRM_STATE.whatsappAccount.phoneNumber = '+91 97896 60115';
       }
+      if (!CRM_STATE.dailyMessageTarget) {
+        CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
+      }
+      if (Array.isArray(CRM_STATE.staffList)) {
+        CRM_STATE.staffList.forEach((s, idx) => {
+          if (typeof s.dailyQuota === 'undefined') s.dailyQuota = idx === 2 ? 60 : 70;
+          if (typeof s.todayHandled === 'undefined') s.todayHandled = idx === 0 ? 18 : (idx === 1 ? 14 : 8);
+          if (!s.email) s.email = `${s.name.toLowerCase().replace(/\s+/g, '.')}@grmgarments.com`;
+          if (!s.phone) s.phone = `+91 98450 1122${idx + 1}`;
+          if (!s.status) s.status = 'ACTIVE';
+        });
+      }
     } catch (e) {
       CRM_STATE = JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
     }
@@ -1184,6 +1202,28 @@ function applyRoleBasedAccessControl(user) {
       if (staffBannerName) staffBannerName.innerText = user.name;
       if (staffBannerRole) staffBannerRole.innerText = user.title || user.role;
       if (staffBannerId) staffBannerId.innerText = user.staffId || user.role;
+
+      // Update Live Daily Message Allocation Quota Indicator on Staff Banner
+      const staffBannerQuota = document.getElementById('staff-banner-quota');
+      const staffBannerProgressBar = document.getElementById('staff-banner-progress-bar');
+      const staffMember = (CRM_STATE.staffList || []).find(s => s.id === (user.staffId || user.id || user.role));
+      const quota = staffMember ? (staffMember.dailyQuota || 70) : 70;
+      const handled = staffMember ? (staffMember.todayHandled || 0) : 0;
+      const pct = quota > 0 ? Math.min(100, Math.round((handled / quota) * 100)) : 0;
+
+      if (staffBannerQuota) {
+        staffBannerQuota.innerText = `${handled} / ${quota} msgs (${pct}%)`;
+      }
+      if (staffBannerProgressBar) {
+        staffBannerProgressBar.style.width = `${pct}%`;
+        if (pct >= 100) {
+          staffBannerProgressBar.className = 'h-full bg-rose-500 rounded-full transition-all duration-500';
+        } else if (pct >= 80) {
+          staffBannerProgressBar.className = 'h-full bg-amber-400 rounded-full transition-all duration-500';
+        } else {
+          staffBannerProgressBar.className = 'h-full bg-emerald-400 rounded-full transition-all duration-500';
+        }
+      }
     }
   }
 
@@ -3247,19 +3287,20 @@ function handleImportBackupJSON(event) {
 }
 
 // =========================================================================
-// 13.5. STAFF MANAGEMENT MODULE (Create Staff, Assign Role, Total Staff List)
+// 13.5. STAFF MANAGEMENT MODULE (Create Staff, Assign Role, Quota Allocations, Total Staff List)
 // =========================================================================
-let ACTIVE_STAFF_TAB = 'list'; // 'list', 'create', 'roles'
+let ACTIVE_STAFF_TAB = 'list'; // 'list', 'quota', 'create', 'roles'
 
 function renderStaffView() {
   switchStaffTab(ACTIVE_STAFF_TAB || 'list');
   renderStaffTable();
+  renderStaffQuotaView();
   updateStaffRoleSelectDropdowns();
 }
 
 function switchStaffTab(tab) {
   ACTIVE_STAFF_TAB = tab;
-  ['list', 'create', 'roles'].forEach(t => {
+  ['list', 'quota', 'create', 'roles'].forEach(t => {
     const btn = document.getElementById(`tab-btn-staff-${t}`);
     const subview = document.getElementById(`subview-staff-${t}`);
     if (btn) {
@@ -3276,6 +3317,7 @@ function switchStaffTab(tab) {
   });
 
   if (tab === 'list') renderStaffTable();
+  if (tab === 'quota') renderStaffQuotaView();
   if (tab === 'roles') updateStaffRoleSelectDropdowns();
 }
 
@@ -3289,7 +3331,7 @@ function renderStaffTable() {
   // Update KPI counters
   const totalStaff = staffList.length;
   const activeStaff = staffList.filter(s => (s.status || 'ACTIVE') === 'ACTIVE').length;
-  const totalLeadsHandled = CRM_STATE.queries.filter(q => q.assignedTo !== 'UNASSIGNED').length;
+  const totalLeadsHandled = (CRM_STATE.queries || []).filter(q => q.assignedTo !== 'UNASSIGNED').length;
   const totalOrders = (CRM_STATE.orders || []).length;
 
   const totalEl = document.getElementById('kpi-staff-total');
@@ -3318,7 +3360,7 @@ function renderStaffTable() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="py-8 text-center text-slate-400 text-xs font-normal">
+        <td colspan="8" class="py-8 text-center text-slate-400 text-xs font-normal">
           No staff members found matching your search.
         </td>
       </tr>
@@ -3327,9 +3369,127 @@ function renderStaffTable() {
   }
 
   tbody.innerHTML = filtered.map(staff => {
-    const activeQueries = CRM_STATE.queries.filter(q => q.assignedTo === staff.id).length;
+    const activeQueries = (CRM_STATE.queries || []).filter(q => q.assignedTo === staff.id).length;
     const status = staff.status || 'ACTIVE';
     const isActive = status === 'ACTIVE';
+    const quota = staff.dailyQuota || 70;
+    const handled = staff.todayHandled || 0;
+    const quotaPct = quota > 0 ? Math.min(100, Math.round((handled / quota) * 100)) : 0;
+
+    return `
+      <tr class="hover:bg-slate-50/80 transition">
+        <!-- 1. Staff Member & Avatar -->
+        <td class="py-3.5 px-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
+              ${staff.avatar || staff.name.substring(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <h4 class="font-bold text-slate-900 text-xs">${staff.name}</h4>
+                <span class="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">${staff.id}</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">${staff.email || `${staff.id}@grmgarments.com`}</p>
+            </div>
+          </div>
+        </td>
+
+        <!-- 2. Role & Specialization -->
+        <td class="py-3.5 px-4">
+          <div class="space-y-1">
+            <span class="inline-block bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+              ${staff.role || 'Sales Specialist'}
+            </span>
+            <p class="text-[11px] text-slate-500 font-medium">Dept: <span class="text-slate-700">${staff.specialization || 'General Apparel'}</span></p>
+          </div>
+        </td>
+
+        <!-- 3. Daily Quota -->
+        <td class="py-3.5 px-4 text-center">
+          <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono font-bold text-xs inline-block shadow-sm">
+            ${quota} msgs/day
+          </span>
+        </td>
+
+        <!-- 4. Today Handled Progress -->
+        <td class="py-3.5 px-4">
+          <div class="space-y-1 min-w-[100px]">
+            <div class="flex items-center justify-between text-xs font-mono font-bold text-slate-800">
+              <span>${handled} msgs</span>
+              <span class="text-[10px] text-slate-400 font-normal">(${quotaPct}%)</span>
+            </div>
+            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
+              <div class="h-full ${quotaPct >= 100 ? 'bg-rose-500' : (quotaPct >= 80 ? 'bg-amber-400' : 'bg-emerald-500')} rounded-full transition-all duration-300" style="width: ${quotaPct}%"></div>
+            </div>
+          </div>
+        </td>
+
+        <!-- 5. Active Leads Handled -->
+        <td class="py-3.5 px-4">
+          <span class="px-2.5 py-1 rounded-full text-xs font-bold ${activeQueries > 0 ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-600'}">
+            ${activeQueries} Active Leads
+          </span>
+        </td>
+
+        <!-- 6. Converted Orders -->
+        <td class="py-3.5 px-4 font-mono font-bold text-emerald-700 text-xs">
+          ${staff.converted || 0} Orders
+        </td>
+
+        <!-- 7. Status -->
+        <td class="py-3.5 px-4">
+          <button type="button" onclick="toggleStaffStatus('${staff.id}')" class="px-2.5 py-1 rounded-full text-[10px] font-bold transition flex items-center gap-1 ${isActive ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}" title="Click to toggle Active / On-Leave status">
+            <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}"></span>
+            <span>${isActive ? 'Active (On-Duty)' : 'On Leave'}</span>
+          </button>
+        </td>
+
+        <!-- 8. Actions -->
+        <td class="py-3.5 px-4 text-right">
+          <div class="flex items-center justify-end gap-1.5">
+            <button type="button" onclick="switchStaffTab('quota')" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Adjust Daily Quota">
+              <span class="material-symbols-outlined text-[16px]">pie_chart</span>
+            </button>
+            <button type="button" onclick="quickAssignRoleForStaff('${staff.id}')" class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition" title="Assign / Edit Role">
+              <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+            </button>
+            <button type="button" onclick="deleteStaffMember('${staff.id}')" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="Remove Staff Member">
+              <span class="material-symbols-outlined text-[16px]">delete</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// =========================================================================
+// 13.6. DAILY MESSAGE QUOTA MANAGEMENT (200 Inbound Target Allocation)
+// =========================================================================
+function renderStaffQuotaView() {
+  const tbody = document.getElementById('staff-quota-table-body');
+  if (!tbody) return;
+
+  const staffList = CRM_STATE.staffList || [];
+  const target = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
+
+  if (staffList.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="py-8 text-center text-slate-400 text-xs font-normal">
+          No staff members onboarded yet. Add staff members first.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = staffList.map(staff => {
+    const quota = staff.dailyQuota || 0;
+    const handled = staff.todayHandled || 0;
+    const pct = quota > 0 ? Math.min(100, Math.round((handled / quota) * 100)) : 0;
+    const isOver = handled >= quota && quota > 0;
+    const remaining = Math.max(0, quota - handled);
 
     return `
       <tr class="hover:bg-slate-50/80 transition">
@@ -3349,55 +3509,194 @@ function renderStaffTable() {
           </div>
         </td>
 
-        <!-- Role & Specialization -->
+        <!-- Role / Department -->
         <td class="py-3.5 px-4">
-          <div class="space-y-1">
-            <span class="inline-block bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-              ${staff.role || 'Sales Specialist'}
-            </span>
-            <p class="text-[11px] text-slate-500 font-medium">Dept: <span class="text-slate-700">${staff.specialization || 'General Apparel'}</span></p>
-          </div>
-        </td>
-
-        <!-- Contact Info -->
-        <td class="py-3.5 px-4 font-mono text-[11px] text-slate-700">
-          ${staff.phone || '+91 98450 11223'}
-        </td>
-
-        <!-- Active Leads Handled -->
-        <td class="py-3.5 px-4">
-          <span class="px-2.5 py-1 rounded-full text-xs font-bold ${activeQueries > 0 ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-600'}">
-            ${activeQueries} Active Leads
+          <span class="inline-block bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+            ${staff.role || 'Sales Specialist'}
           </span>
         </td>
 
-        <!-- Converted Orders -->
-        <td class="py-3.5 px-4 font-mono font-bold text-emerald-700 text-xs">
-          ${staff.converted || 0} Orders
-        </td>
-
-        <!-- Status -->
+        <!-- Daily Message Quota (Target) Input -->
         <td class="py-3.5 px-4">
-          <button type="button" onclick="toggleStaffStatus('${staff.id}')" class="px-2.5 py-1 rounded-full text-[10px] font-bold transition flex items-center gap-1 ${isActive ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}" title="Click to toggle Active / On-Leave status">
-            <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}"></span>
-            <span>${isActive ? 'Active (On-Duty)' : 'On Leave'}</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <input type="number" id="quota-input-${staff.id}" min="0" max="500" value="${quota}" oninput="updateQuotaLiveSummary()" class="w-24 px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-wa text-center">
+            <span class="text-[11px] text-slate-500 font-medium">msgs/day</span>
+          </div>
         </td>
 
-        <!-- Actions -->
+        <!-- Today Handled -->
+        <td class="py-3.5 px-4 font-mono font-bold text-xs ${isOver ? 'text-rose-600' : 'text-slate-800'}">
+          ${handled} msgs
+        </td>
+
+        <!-- Utilization Progress Bar -->
+        <td class="py-3.5 px-4">
+          <div class="w-36 space-y-1">
+            <div class="flex items-center justify-between text-[10px] font-bold">
+              <span class="${isOver ? 'text-rose-600' : 'text-slate-600'}">${pct}% filled</span>
+              <span class="text-slate-400 font-mono">${remaining} left</span>
+            </div>
+            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
+              <div class="h-full ${pct >= 100 ? 'bg-rose-500' : (pct >= 80 ? 'bg-amber-400' : 'bg-emerald-500')} rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        </td>
+
+        <!-- Quick Set Actions -->
         <td class="py-3.5 px-4 text-right">
           <div class="flex items-center justify-end gap-1.5">
-            <button type="button" onclick="quickAssignRoleForStaff('${staff.id}')" class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition" title="Assign / Edit Role">
-              <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-            </button>
-            <button type="button" onclick="deleteStaffMember('${staff.id}')" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="Remove Staff Member">
-              <span class="material-symbols-outlined text-[16px]">delete</span>
-            </button>
+            <button type="button" onclick="setQuickStaffQuota('${staff.id}', 50)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold font-mono transition">50</button>
+            <button type="button" onclick="setQuickStaffQuota('${staff.id}', 70)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold font-mono transition">70</button>
+            <button type="button" onclick="setQuickStaffQuota('${staff.id}', 100)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold font-mono transition">100</button>
           </div>
         </td>
       </tr>
     `;
   }).join('');
+
+  updateQuotaLiveSummary();
+}
+
+function setQuickStaffQuota(staffId, amount) {
+  const input = document.getElementById(`quota-input-${staffId}`);
+  if (input) {
+    input.value = amount;
+    updateQuotaLiveSummary();
+  }
+}
+
+function updateQuotaLiveSummary() {
+  const staffList = CRM_STATE.staffList || [];
+  const target = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
+  let totalAllocated = 0;
+
+  staffList.forEach(staff => {
+    const input = document.getElementById(`quota-input-${staff.id}`);
+    if (input) {
+      totalAllocated += parseInt(input.value, 10) || 0;
+    } else {
+      totalAllocated += (Number(staff.dailyQuota) || 0);
+    }
+  });
+
+  const kpiExpected = document.getElementById('kpi-quota-expected');
+  const kpiAllocated = document.getElementById('kpi-quota-allocated');
+  const kpiBalanceLabel = document.getElementById('kpi-quota-balance-label');
+
+  if (kpiExpected) kpiExpected.innerText = `${target} msgs / day`;
+  if (kpiAllocated) kpiAllocated.innerText = `${totalAllocated} / ${target} msgs`;
+
+  if (kpiBalanceLabel) {
+    if (totalAllocated === target) {
+      kpiBalanceLabel.innerHTML = `<span class="material-symbols-outlined text-[14px]">check_circle</span> 100% Team Capacity Distributed (${totalAllocated}/${target})`;
+      kpiBalanceLabel.className = "text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1";
+    } else if (totalAllocated < target) {
+      const rem = target - totalAllocated;
+      kpiBalanceLabel.innerHTML = `<span class="material-symbols-outlined text-[14px]">warning</span> ${rem} msgs remaining to allocate`;
+      kpiBalanceLabel.className = "text-[11px] text-amber-600 font-semibold mt-1 flex items-center gap-1";
+    } else {
+      const over = totalAllocated - target;
+      kpiBalanceLabel.innerHTML = `<span class="material-symbols-outlined text-[14px]">info</span> Over-allocated by ${over} msgs`;
+      kpiBalanceLabel.className = "text-[11px] text-blue-600 font-semibold mt-1 flex items-center gap-1";
+    }
+  }
+}
+
+function handleAutoBalanceQuota() {
+  const activeStaff = (CRM_STATE.staffList || []).filter(s => (s.status || 'ACTIVE') === 'ACTIVE');
+  if (activeStaff.length === 0) {
+    alert('No active staff members available to allocate quota.');
+    return;
+  }
+
+  const target = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
+  const baseCount = Math.floor(target / activeStaff.length);
+  let remainder = target % activeStaff.length;
+
+  activeStaff.forEach((staff, idx) => {
+    let quota = baseCount;
+    if (remainder > 0) {
+      quota += 1;
+      remainder -= 1;
+    }
+    staff.dailyQuota = quota;
+    const input = document.getElementById(`quota-input-${staff.id}`);
+    if (input) input.value = quota;
+  });
+
+  // Set inactive staff to 0
+  (CRM_STATE.staffList || []).forEach(staff => {
+    if ((staff.status || 'ACTIVE') !== 'ACTIVE') {
+      staff.dailyQuota = 0;
+      const input = document.getElementById(`quota-input-${staff.id}`);
+      if (input) input.value = 0;
+    }
+  });
+
+  CRM_STATE.dailyMessageTarget.allocatedPerDay = target;
+  saveCRMState();
+  renderStaffQuotaView();
+  renderStaffTable();
+  if (CURRENT_USER) applyRoleBasedAccessControl(CURRENT_USER);
+  playChime('order');
+  showToast(
+    '200 Quota Distributed Equally!',
+    `Target ${target} msgs successfully balanced across ${activeStaff.length} active staff members.`,
+    'balance',
+    'emerald'
+  );
+}
+
+function handleSaveDailyAllocations() {
+  const staffList = CRM_STATE.staffList || [];
+  let totalAllocated = 0;
+
+  staffList.forEach(staff => {
+    const input = document.getElementById(`quota-input-${staff.id}`);
+    if (input) {
+      staff.dailyQuota = parseInt(input.value, 10) || 0;
+    }
+    totalAllocated += (Number(staff.dailyQuota) || 0);
+  });
+
+  if (!CRM_STATE.dailyMessageTarget) {
+    CRM_STATE.dailyMessageTarget = { expectedPerDay: 200, allocatedPerDay: totalAllocated, lastResetDate: new Date().toISOString().split('T')[0] };
+  } else {
+    CRM_STATE.dailyMessageTarget.allocatedPerDay = totalAllocated;
+  }
+
+  logAudit('QUOTA_ALLOCATED', 'STAFF_MODULE', `Admin updated daily message quota distribution across ${staffList.length} staff (Total: ${totalAllocated} msgs)`);
+
+  saveCRMState();
+  renderStaffQuotaView();
+  renderStaffTable();
+  if (CURRENT_USER) applyRoleBasedAccessControl(CURRENT_USER);
+  playChime('order');
+  showToast(
+    'Quota Allocations Saved!',
+    `Allocated ${totalAllocated} daily message capacity across staff members.`,
+    'check_circle',
+    'emerald'
+  );
+}
+
+function openEditExpectedDailyTargetPrompt() {
+  const current = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
+  const newVal = prompt('Enter expected daily WhatsApp inbound message volume target:', current);
+  if (newVal !== null) {
+    const num = parseInt(newVal, 10);
+    if (!isNaN(num) && num > 0) {
+      if (!CRM_STATE.dailyMessageTarget) CRM_STATE.dailyMessageTarget = {};
+      CRM_STATE.dailyMessageTarget.expectedPerDay = num;
+      saveCRMState();
+      renderStaffQuotaView();
+      renderStaffTable();
+      updateBadgeCounters();
+      showToast('Daily Target Updated', `Expected daily inbound target is now ${num} messages.`, 'tune', 'blue');
+    } else {
+      alert('Please enter a valid positive number.');
+    }
+  }
 }
 
 function handleCreateNewStaff(event) {
@@ -3429,6 +3728,8 @@ function handleCreateNewStaff(event) {
     status: status,
     activeQueries: 0,
     converted: 0,
+    dailyQuota: 50,
+    todayHandled: 0,
     joinedAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   };
 
@@ -3497,6 +3798,7 @@ function toggleStaffStatus(staffId) {
   staff.status = (staff.status === 'ACTIVE') ? 'ON_LEAVE' : 'ACTIVE';
   saveCRMState();
   renderStaffTable();
+  renderStaffQuotaView();
   showToast(
     'Status Updated',
     `${staff.name} is now marked as ${staff.status === 'ACTIVE' ? 'Active (Ready for Leads)' : 'On Leave (Paused)'}`,
@@ -3531,6 +3833,7 @@ function deleteStaffMember(staffId) {
 
     saveCRMState();
     renderStaffTable();
+    renderStaffQuotaView();
     updateStaffRoleSelectDropdowns();
     showToast('Staff Member Removed', `${staff.name} removed. Active leads moved to Unassigned queue.`, 'delete', 'blue');
   }
@@ -3556,11 +3859,11 @@ function logAudit(action, module, details) {
 }
 
 function updateBadgeCounters() {
-  const unassignedCount = CRM_STATE.queries.filter(q => q.assignedTo === 'UNASSIGNED').length;
-  const unreadCount = CRM_STATE.queries.reduce((acc, q) => acc + (q.unreadCount || 0), 0);
+  const unassignedCount = (CRM_STATE.queries || []).filter(q => q.assignedTo === 'UNASSIGNED').length;
+  const unreadCount = (CRM_STATE.queries || []).reduce((acc, q) => acc + (q.unreadCount || 0), 0);
   const myQueueCount = ACTIVE_ROLE === 'admin'
-    ? CRM_STATE.queries.length
-    : CRM_STATE.queries.filter(q => q.assignedTo === ACTIVE_ROLE).length;
+    ? (CRM_STATE.queries || []).length
+    : (CRM_STATE.queries || []).filter(q => q.assignedTo === ACTIVE_ROLE).length;
 
   const bUnassigned = document.getElementById('badge-unassigned-count');
   if (bUnassigned) bUnassigned.innerText = `${unassignedCount} New`;
@@ -3569,13 +3872,37 @@ function updateBadgeCounters() {
   if (bUnread) bUnread.innerText = unreadCount;
 
   const countAll = document.getElementById('count-all');
-  if (countAll) countAll.innerText = CRM_STATE.queries.length;
+  if (countAll) countAll.innerText = (CRM_STATE.queries || []).length;
 
   const countUnassigned = document.getElementById('count-unassigned');
   if (countUnassigned) countUnassigned.innerText = unassignedCount;
 
   const countMy = document.getElementById('count-my');
   if (countMy) countMy.innerText = myQueueCount;
+
+  // Update Daily Inbound Messages Progress Counter (e.g. 200 msgs target)
+  const target = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
+  const staffHandledTotal = (CRM_STATE.staffList || []).reduce((sum, s) => sum + (Number(s.todayHandled) || 0), 0);
+  const totalReceivedToday = staffHandledTotal + unassignedCount;
+  const todayPct = Math.min(100, Math.round((totalReceivedToday / (target || 1)) * 100));
+
+  const inboxTodayEl = document.getElementById('inbox-today-message-count');
+  if (inboxTodayEl) {
+    inboxTodayEl.innerText = `${totalReceivedToday} / ${target} msgs (${todayPct}%)`;
+  }
+
+  // Update Quota View KPI Counters if visible
+  const kpiExpected = document.getElementById('kpi-quota-expected');
+  const kpiAllocated = document.getElementById('kpi-quota-allocated');
+  const kpiTodayReceived = document.getElementById('kpi-quota-today-received');
+  const kpiProgressBar = document.getElementById('kpi-quota-progress-bar');
+
+  if (kpiExpected) kpiExpected.innerText = `${target} msgs / day`;
+  if (kpiTodayReceived) kpiTodayReceived.innerText = `${totalReceivedToday} / ${target} msgs (${todayPct}%)`;
+  if (kpiProgressBar) kpiProgressBar.style.width = `${todayPct}%`;
+
+  const totalAllocated = (CRM_STATE.staffList || []).reduce((sum, s) => sum + (Number(s.dailyQuota) || 0), 0);
+  if (kpiAllocated) kpiAllocated.innerText = `${totalAllocated} / ${target} msgs`;
 }
 
 function filterConversations(val) {
