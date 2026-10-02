@@ -168,5 +168,22 @@
         "source": "REAL_WHATSAPP_LIVE",
         "timestamp_epoch": 1790934606,
         "received_at": "03:20 pm"
+    },
+    {
+        "id": "msg_6abf84712cce1",
+        "sender_name": "Customer 5785",
+        "sender_phone": "+53210366615785",
+        "sender_jid": "53210366615785@lid",
+        "message_text": "[WhatsApp Message]",
+        "type": "text",
+        "media_url": null,
+        "duration": 0,
+        "account_id": "account_1",
+        "received_on_number": "+919789660115",
+        "priority": "HIGH",
+        "assigned_to": "UNASSIGNED",
+        "source": "REAL_WHATSAPP_LIVE",
+        "timestamp_epoch": 1790936177,
+        "received_at": "03:46 pm"
     }
 ]
