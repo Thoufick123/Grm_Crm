@@ -42,646 +42,12 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
     { id: 9, sku: 'GL-505-RD', name: 'Girls Festive Silk Lehenga Choli', category: 'Girls Festive', size: '6-7 Years', color: 'Ruby Red & Gold', price: 899, physicalStock: 6, reservedStock: 0, accountId: 'account_5', image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=400&auto=format&fit=crop&q=60' },
     { id: 10, sku: 'VIP-901-GL', name: 'Handcrafted Kanjivaram Silk Pattu Pavadai Set', category: 'VIP Collection', size: '3-4 Years', color: 'Emerald Green & Gold', price: 2499, physicalStock: 8, reservedStock: 2, accountId: 'account_5', image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&auto=format&fit=crop&q=60' }
   ],
-  customers: [
-    // --- LINE 1: +91 86680 07593 (GRM Business Central) ---
-    {
-      id: 'cust_100',
-      code: 'CUST-2026-0088',
-      name: 'SugunaMani',
-      phone: '+91 73389 65560',
-      whatsapp: '+91 73389 65560',
-      address: 'No. 18, Gandhi Road, T. Nagar, Chennai - 600017',
-      city: 'Chennai',
-      customerType: 'New WhatsApp Customer',
-      tags: ['New Lead', 'Baby Collection', 'Direct Line 1'],
-      totalOrders: 0,
-      totalSpend: 0,
-      avatar: 'S',
-      accountId: 'account_1',
-      businessNumber: '+91 86680 07593'
-    },
-    {
-      id: 'cust_101',
-      code: 'CUST-2026-0089',
-      name: 'Priya Sundaram',
-      phone: '+91 98765 43210',
-      whatsapp: '+91 98765 43210',
-      address: 'No. 45, 2nd Main Road, Gandhinagar, Adyar, Chennai - 600020',
-      city: 'Chennai',
-      customerType: 'Repeat Customer',
-      tags: ['Baby Collection', 'Repeat Buyer', 'COD'],
-      totalOrders: 8,
-      totalSpend: 12450,
-      avatar: 'PS',
-      accountId: 'account_1',
-      businessNumber: '+91 86680 07593'
-    },
-    {
-      id: 'cust_104',
-      code: 'CUST-2026-0090',
-      name: 'Mekha 🦋',
-      phone: '+91 95009 04638',
-      whatsapp: '+91 95009 04638',
-      address: 'Plot 12, R.S. Puram, Coimbatore - 641002',
-      city: 'Coimbatore',
-      customerType: 'VIP Customer',
-      tags: ['Baby Frock', 'VIP', 'Dispatched'],
-      totalOrders: 4,
-      totalSpend: 9200,
-      avatar: 'M',
-      accountId: 'account_1',
-      businessNumber: '+91 86680 07593'
-    },
-    {
-      id: 'cust_102',
-      code: 'CUST-2026-0092',
-      name: 'Ananya Sharma',
-      phone: '+91 98450 11223',
-      whatsapp: '+91 98450 11223',
-      address: 'Flat 402, Green Glen Layout, Bellandur, Bengaluru - 560103',
-      city: 'Bengaluru',
-      customerType: 'VIP Customer',
-      tags: ['Maternity', 'VIP', 'Prepaid'],
-      totalOrders: 3,
-      totalSpend: 7800,
-      avatar: 'AS',
-      accountId: 'account_1',
-      businessNumber: '+91 86680 07593'
-    },
-
-    // --- LINE 2: +91 97896 60115 (Blue Berry Kids & Maternity) ---
-    {
-      id: 'cust_103',
-      code: 'CUST-2026-0104',
-      name: 'Kavitha Ramachandran',
-      phone: '+91 97890 55441',
-      whatsapp: '+91 97890 55441',
-      address: '12/B, Anna Nagar West, Madurai - 625020',
-      city: 'Madurai',
-      customerType: 'New WhatsApp Customer',
-      tags: ['New Lead', 'Kids Wear'],
-      totalOrders: 0,
-      totalSpend: 0,
-      avatar: 'KR',
-      accountId: 'account_2',
-      businessNumber: '+91 97896 60115'
-    },
-    {
-      id: 'cust_105',
-      code: 'CUST-2026-0105',
-      name: 'Deepa Krishnan',
-      phone: '+91 94432 18902',
-      whatsapp: '+91 94432 18902',
-      address: '24/1, Trichy Main Road, Salem - 636001',
-      city: 'Salem',
-      customerType: 'Repeat Customer',
-      tags: ['Newborn Rompers', 'Organic Cotton'],
-      totalOrders: 2,
-      totalSpend: 3400,
-      avatar: 'DK',
-      accountId: 'account_2',
-      businessNumber: '+91 97896 60115'
-    },
-    {
-      id: 'cust_106',
-      code: 'CUST-2026-0106',
-      name: 'Soundarya R',
-      phone: '+91 98840 55219',
-      whatsapp: '+91 98840 55219',
-      address: '77, Besant Nagar, Chennai - 600090',
-      city: 'Chennai',
-      customerType: 'VIP Customer',
-      tags: ['Maternity Gowns', 'VIP'],
-      totalOrders: 5,
-      totalSpend: 11500,
-      avatar: 'SR',
-      accountId: 'account_2',
-      businessNumber: '+91 97896 60115'
-    },
-
-    // --- LINE 3: +91 98765 43210 (Customer Support & Enquiries) ---
-    {
-      id: 'cust_107',
-      code: 'CUST-2026-0107',
-      name: 'Rajesh Kumar',
-      phone: '+91 98401 23456',
-      whatsapp: '+91 98401 23456',
-      address: '88, Lake View Road, Velachery, Chennai - 600042',
-      city: 'Chennai',
-      customerType: 'Support Enquiry',
-      tags: ['Order Tracking', 'Dispatched'],
-      totalOrders: 1,
-      totalSpend: 1198,
-      avatar: 'RK',
-      accountId: 'account_3',
-      businessNumber: '+91 98765 43210'
-    },
-    {
-      id: 'cust_108',
-      code: 'CUST-2026-0108',
-      name: 'Karthik N',
-      phone: '+91 99402 33412',
-      whatsapp: '+91 99402 33412',
-      address: '15, 4th Cross, Koramangala, Bengaluru - 560034',
-      city: 'Bengaluru',
-      customerType: 'New Customer',
-      tags: ['Size Exchange', 'Policy Enquiry'],
-      totalOrders: 0,
-      totalSpend: 0,
-      avatar: 'KN',
-      accountId: 'account_3',
-      businessNumber: '+91 98765 43210'
-    },
-    {
-      id: 'cust_109',
-      code: 'CUST-2026-0109',
-      name: 'Meena Swaminathan',
-      phone: '+91 98410 77652',
-      whatsapp: '+91 98410 77652',
-      address: '5, M.G. Road, Puducherry - 605001',
-      city: 'Puducherry',
-      customerType: 'Repeat Buyer',
-      tags: ['Refund Complete', 'UPI'],
-      totalOrders: 4,
-      totalSpend: 6200,
-      avatar: 'MS',
-      accountId: 'account_3',
-      businessNumber: '+91 98765 43210'
-    },
-
-    // --- LINE 4: +91 98450 99887 (Wholesale & Bulk Orders) ---
-    {
-      id: 'cust_110',
-      code: 'CUST-2026-0110',
-      name: 'Balaji Textiles Wholesale',
-      phone: '+91 98230 44556',
-      whatsapp: '+91 98230 44556',
-      address: 'Market Yard Complex, Erode - 638001',
-      city: 'Erode',
-      customerType: 'Wholesale Partner',
-      tags: ['Bulk Buyer', '200 Pcs Frocks', 'GST Verified'],
-      totalOrders: 12,
-      totalSpend: 185000,
-      avatar: 'BT',
-      accountId: 'account_4',
-      businessNumber: '+91 98450 99887'
-    },
-    {
-      id: 'cust_111',
-      code: 'CUST-2026-0111',
-      name: 'Sri Lakshmi Garments',
-      phone: '+91 98721 00983',
-      whatsapp: '+91 98721 00983',
-      address: 'Avinashi Road, Tirupur - 641602',
-      city: 'Tirupur',
-      customerType: 'Bulk Buyer',
-      tags: ['Wholesale Catalog', 'Organic Rompers'],
-      totalOrders: 6,
-      totalSpend: 92000,
-      avatar: 'SL',
-      accountId: 'account_4',
-      businessNumber: '+91 98450 99887'
-    },
-    {
-      id: 'cust_112',
-      code: 'CUST-2026-0112',
-      name: 'Kancheepuram Kids Boutique',
-      phone: '+91 94441 22390',
-      whatsapp: '+91 94441 22390',
-      address: '102, Sannathi Street, Kancheepuram - 631501',
-      city: 'Kancheepuram',
-      customerType: 'Wholesale Client',
-      tags: ['Festive Silk Lehenga', 'Repeat Wholesale'],
-      totalOrders: 9,
-      totalSpend: 145000,
-      avatar: 'KK',
-      accountId: 'account_4',
-      businessNumber: '+91 98450 99887'
-    },
-
-    // --- LINE 5: +91 95009 04638 (VIP Desk & Fast Dispatch) ---
-    {
-      id: 'cust_113',
-      code: 'CUST-2026-0113',
-      name: 'Dr. Shalini Ramesh',
-      phone: '+91 97910 88231',
-      whatsapp: '+91 97910 88231',
-      address: 'Tower 4, Ceebros Boulevard, OMR, Chennai - 600097',
-      city: 'Chennai',
-      customerType: 'VIP Priority Lead',
-      tags: ['1-Day Delivery', 'Gift Hamper', 'VIP Desk'],
-      totalOrders: 7,
-      totalSpend: 24500,
-      avatar: 'SR',
-      accountId: 'account_5',
-      businessNumber: '+91 95009 04638'
-    },
-    {
-      id: 'cust_114',
-      code: 'CUST-2026-0114',
-      name: 'Gayathri Menon',
-      phone: '+91 98403 99120',
-      whatsapp: '+91 98403 99120',
-      address: '42, Boat Club Road, RA Puram, Chennai - 600028',
-      city: 'Chennai',
-      customerType: 'VIP Client',
-      tags: ['Custom Embroidery', 'Festive Collection'],
-      totalOrders: 11,
-      totalSpend: 38900,
-      avatar: 'GM',
-      accountId: 'account_5',
-      businessNumber: '+91 95009 04638'
-    },
-    {
-      id: 'cust_115',
-      code: 'CUST-2026-0115',
-      name: 'Archana Venkatesh',
-      phone: '+91 99620 44182',
-      whatsapp: '+91 99620 44182',
-      address: '10, 11th Cross, Indiranagar, Bengaluru - 560038',
-      city: 'Bengaluru',
-      customerType: 'VIP Repeat Customer',
-      tags: ['Newborn Luxury Hamper', 'Feedback ⭐⭐⭐⭐⭐'],
-      totalOrders: 6,
-      totalSpend: 19800,
-      avatar: 'AV',
-      accountId: 'account_5',
-      businessNumber: '+91 95009 04638'
-    }
-  ],
-  queries: [
-    // Line 1 Queries
-    {
-      id: 'Q-2026-001245',
-      customerId: 'cust_100',
-      assignedTo: 'UNASSIGNED',
-      status: 'NEW',
-      priority: 'HIGH',
-      queryText: '[Document: .env] Please check invoice details in the attached document',
-      productSku: 'BF-001-PK',
-      createdAt: '12:23 PM',
-      unreadCount: 1,
-      lastMessage: 'Customer: "[Document: .env]..."',
-      accountId: 'account_1',
-      businessNumber: '+91 86680 07593',
-      lastTimeEpoch: 1791200000
-    },
-    {
-      id: 'Q-2026-001245',
-      customerId: 'cust_101',
-      assignedTo: 'staff_01',
-      status: 'ASSIGNED',
-      priority: 'HIGH',
-      queryText: 'Baby Frock BF-001 Pink 2-3 Years available?',
-      productSku: 'BF-001-PK',
-      createdAt: '11:54 AM',
-      unreadCount: 0,
-      lastMessage: 'Staff: "📦 *Baby Frock (Embroidered Cotton)*..."',
-      accountId: 'account_1',
-      businessNumber: '+91 86680 07593',
-      lastTimeEpoch: 1791195000
-    },
-    {
-      id: 'Q-2026-001244',
-      customerId: 'cust_104',
-      assignedTo: 'UNASSIGNED',
-      status: 'NEW',
-      priority: 'HIGH',
-      queryText: 'Hi, when will my frock order be dispatched?',
-      productSku: 'BF-001-PK',
-      createdAt: '11:50 AM',
-      unreadCount: 0,
-      lastMessage: 'Staff: "Hello Mekha🦋, your package from *GRM..."',
-      accountId: 'account_1',
-      businessNumber: '+91 86680 07593',
-      lastTimeEpoch: 1791190000
-    },
-    {
-      id: 'Q-2026-001246',
-      customerId: 'cust_102',
-      assignedTo: 'UNASSIGNED',
-      status: 'NEW',
-      priority: 'URGENT',
-      queryText: 'Can you share photos and colors of Maternity feeding gown?',
-      productSku: 'MD-102-BL',
-      createdAt: '10:45 AM',
-      unreadCount: 2,
-      lastMessage: 'Customer: "Please share latest photos of maternity gown MD-102"',
-      accountId: 'account_1',
-      businessNumber: '+91 86680 07593',
-      lastTimeEpoch: 1791185000
-    },
-
-    // Line 2 Queries
-    {
-      id: 'Q-2026-001247',
-      customerId: 'cust_103',
-      assignedTo: 'UNASSIGNED',
-      status: 'NEW',
-      priority: 'NORMAL',
-      queryText: 'Do you deliver to Madurai? What are the COD charges?',
-      productSku: null,
-      createdAt: '11:05 AM',
-      unreadCount: 1,
-      lastMessage: 'Customer: "Hi, do you provide cash on delivery to Madurai?"',
-      accountId: 'account_2',
-      businessNumber: '+91 97896 60115',
-      lastTimeEpoch: 1791180000
-    },
-    {
-      id: 'Q-2026-001248',
-      customerId: 'cust_105',
-      assignedTo: 'staff_02',
-      status: 'ASSIGNED',
-      priority: 'HIGH',
-      queryText: 'Need 3 sets of newborn rompers in mint color for gifting.',
-      productSku: 'BB-301-WH',
-      createdAt: '09:40 AM',
-      unreadCount: 0,
-      lastMessage: 'Customer: "Need 3 sets of newborn rompers in mint color"',
-      accountId: 'account_2',
-      businessNumber: '+91 97896 60115',
-      lastTimeEpoch: 1791175000
-    },
-    {
-      id: 'Q-2026-001249',
-      customerId: 'cust_106',
-      assignedTo: 'staff_01',
-      status: 'ASSIGNED',
-      priority: 'NORMAL',
-      queryText: 'Which maternity dress is most comfortable for hospital stay?',
-      productSku: 'MD-102-BL',
-      createdAt: '08:55 AM',
-      unreadCount: 0,
-      lastMessage: 'Staff: "We have size L and XL in feeding nightwear ready to dispatch today."',
-      accountId: 'account_2',
-      businessNumber: '+91 97896 60115',
-      lastTimeEpoch: 1791170000
-    },
-
-    // Line 3 Queries
-    {
-      id: 'Q-2026-001250',
-      customerId: 'cust_107',
-      assignedTo: 'staff_03',
-      status: 'ASSIGNED',
-      priority: 'HIGH',
-      queryText: 'Can I track my order WA-2026-001120 dispatched yesterday?',
-      productSku: null,
-      createdAt: '11:20 AM',
-      unreadCount: 0,
-      lastMessage: 'Customer: "Can I track my order WA-2026-001120 dispatched yesterday?"',
-      accountId: 'account_3',
-      businessNumber: '+91 98765 43210',
-      lastTimeEpoch: 1791165000
-    },
-    {
-      id: 'Q-2026-001251',
-      customerId: 'cust_108',
-      assignedTo: 'UNASSIGNED',
-      status: 'NEW',
-      priority: 'NORMAL',
-      queryText: 'Is exchange available if size does not fit?',
-      productSku: 'KD-204-YL',
-      createdAt: '10:08 AM',
-      unreadCount: 1,
-      lastMessage: 'Customer: "Is exchange available if size does not fit?"',
-      accountId: 'account_3',
-      businessNumber: '+91 98765 43210',
-      lastTimeEpoch: 1791160000
-    },
-    {
-      id: 'Q-2026-001252',
-      customerId: 'cust_109',
-      assignedTo: 'staff_03',
-      status: 'ASSIGNED',
-      priority: 'NORMAL',
-      queryText: 'Has my return refund been initiated?',
-      productSku: null,
-      createdAt: '09:15 AM',
-      unreadCount: 0,
-      lastMessage: 'Staff: "Refund of Rs. 599 has been credited to your UPI."',
-      accountId: 'account_3',
-      businessNumber: '+91 98765 43210',
-      lastTimeEpoch: 1791155000
-    },
-
-    // Line 4 Queries
-    {
-      id: 'Q-2026-001253',
-      customerId: 'cust_110',
-      assignedTo: 'staff_02',
-      status: 'ASSIGNED',
-      priority: 'URGENT',
-      queryText: 'Requirement for 200 pcs Baby Frock pink & yellow mix.',
-      productSku: 'BF-001-PK',
-      createdAt: '08:20 AM',
-      unreadCount: 1,
-      lastMessage: 'Customer: "Requirement for 200 pcs Baby Frock pink & yellow mix."',
-      accountId: 'account_4',
-      businessNumber: '+91 98450 99887',
-      lastTimeEpoch: 1791150000
-    },
-    {
-      id: 'Q-2026-001254',
-      customerId: 'cust_111',
-      assignedTo: 'UNASSIGNED',
-      status: 'NEW',
-      priority: 'HIGH',
-      queryText: 'Please send latest kids organic wear wholesale price list.',
-      productSku: 'BB-301-WH',
-      createdAt: '10:35 AM',
-      unreadCount: 0,
-      lastMessage: 'Staff: "Wholesale catalog PDF and GST invoice sample sent."',
-      accountId: 'account_4',
-      businessNumber: '+91 98450 99887',
-      lastTimeEpoch: 1791145000
-    },
-    {
-      id: 'Q-2026-001255',
-      customerId: 'cust_112',
-      assignedTo: 'staff_01',
-      status: 'ASSIGNED',
-      priority: 'NORMAL',
-      queryText: 'Dispatched 50 bundles received. All top quality!',
-      productSku: 'GL-505-RD',
-      createdAt: '11:40 AM',
-      unreadCount: 0,
-      lastMessage: 'Customer: "Dispatched 50 bundles received. All top quality!"',
-      accountId: 'account_4',
-      businessNumber: '+91 98450 99887',
-      lastTimeEpoch: 1791140000
-    },
-
-    // Line 5 Queries
-    {
-      id: 'Q-2026-001256',
-      customerId: 'cust_113',
-      assignedTo: 'staff_01',
-      status: 'ASSIGNED',
-      priority: 'URGENT',
-      queryText: 'Need express 1-day delivery for maternity gown gift hamper to Anna Nagar.',
-      productSku: 'MD-102-BL',
-      createdAt: '11:15 AM',
-      unreadCount: 0,
-      lastMessage: 'Customer: "Need express 1-day delivery for maternity gown gift hamper."',
-      accountId: 'account_5',
-      businessNumber: '+91 95009 04638',
-      lastTimeEpoch: 1791135000
-    },
-    {
-      id: 'Q-2026-001257',
-      customerId: 'cust_114',
-      assignedTo: 'UNASSIGNED',
-      status: 'NEW',
-      priority: 'HIGH',
-      queryText: 'Can you customize the festive silk lehenga in size 6-7Y?',
-      productSku: 'GL-505-RD',
-      createdAt: '09:50 AM',
-      unreadCount: 0,
-      lastMessage: 'Staff: "VIP custom silk festive lehenga set prepared."',
-      accountId: 'account_5',
-      businessNumber: '+91 95009 04638',
-      lastTimeEpoch: 1791130000
-    },
-    {
-      id: 'Q-2026-001258',
-      customerId: 'cust_115',
-      assignedTo: 'staff_02',
-      status: 'ASSIGNED',
-      priority: 'NORMAL',
-      queryText: 'Received the newborn hamper today. Quality is super soft!',
-      productSku: 'BB-301-WH',
-      createdAt: '10:55 AM',
-      unreadCount: 0,
-      lastMessage: 'Customer: "Thank you so much, dress quality is super soft!"',
-      accountId: 'account_5',
-      businessNumber: '+91 95009 04638',
-      lastTimeEpoch: 1791125000
-    }
-  ],
-  conversations: {
-    'cust_100': [
-      { id: 1001, sender: 'customer', text: '[Document: .env]', time: '12:23 PM', status: 'READ' },
-      { id: 1002, sender: 'customer', text: 'Hi, please check invoice details in the attached document for Cotton Baby Frocks.', time: '12:24 PM', status: 'READ' }
-    ],
-    'cust_101': [
-      { id: 1, sender: 'customer', text: 'Hi GRM team, is baby frock available in pink?', time: '10:14 AM', status: 'READ' },
-      { id: 2, sender: 'staff', text: 'Hello Priya! Thank you for contacting GRM Garments. 📦 *Baby Frock (Embroidered Cotton)* is in stock (Size 2-3Y). Price is Rs. 599.', time: '10:16 AM', status: 'READ' },
-      { id: 3, sender: 'customer', text: '2–3 years. Pink colour. How much is it?', time: '11:54 AM', status: 'READ' }
-    ],
-    'cust_104': [
-      { id: 401, sender: 'customer', text: 'Hi, when will my frock order be dispatched?', time: '11:48 AM', status: 'READ' },
-      { id: 402, sender: 'staff', text: 'Hello Mekha🦋, your package from *GRM Garments* has been packed and dispatched via express courier!', time: '11:50 AM', status: 'READ' }
-    ],
-    'cust_102': [
-      { id: 201, sender: 'customer', text: 'Hello! I need a maternity feeding gown in size L.', time: '10:42 AM', status: 'READ' },
-      { id: 202, sender: 'customer', text: 'Please share latest photos of maternity gown MD-102 in Sky Blue.', time: '10:45 AM', status: 'DELIVERED' }
-    ],
-    'cust_103': [
-      { id: 301, sender: 'customer', text: 'Hi, do you provide cash on delivery to Madurai? What are the charges?', time: '11:05 AM', status: 'DELIVERED' }
-    ],
-    'cust_105': [
-      { id: 501, sender: 'customer', text: 'Hello Blue Berry team, looking for newborn organic cotton sets.', time: '09:30 AM', status: 'READ' },
-      { id: 502, sender: 'staff', text: 'Hello Deepa! We have the 5-Piece Newborn Gift set available in Mint and White.', time: '09:35 AM', status: 'READ' },
-      { id: 503, sender: 'customer', text: 'Need 3 sets of newborn rompers in mint color for gifting.', time: '09:40 AM', status: 'READ' }
-    ],
-    'cust_106': [
-      { id: 601, sender: 'customer', text: 'Hi, which maternity dress is most comfortable for hospital stay?', time: '08:50 AM', status: 'READ' },
-      { id: 602, sender: 'staff', text: 'We have size L and XL in feeding nightwear ready to dispatch today.', time: '08:55 AM', status: 'READ' }
-    ],
-    'cust_107': [
-      { id: 701, sender: 'customer', text: 'Can I track my order WA-2026-001120 dispatched yesterday?', time: '11:15 AM', status: 'READ' },
-      { id: 702, sender: 'staff', text: 'Sure Rajesh! Tracking link: https://grmgarments.com/track/DTDC-9921', time: '11:20 AM', status: 'READ' }
-    ],
-    'cust_108': [
-      { id: 801, sender: 'customer', text: 'Hi support team, what is your exchange policy for kids dress?', time: '10:05 AM', status: 'READ' },
-      { id: 802, sender: 'customer', text: 'Is exchange available if size does not fit?', time: '10:08 AM', status: 'DELIVERED' }
-    ],
-    'cust_109': [
-      { id: 901, sender: 'customer', text: 'Has my return refund been initiated?', time: '09:10 AM', status: 'READ' },
-      { id: 902, sender: 'staff', text: 'Refund of Rs. 599 has been credited to your UPI. UTR: 629103948.', time: '09:15 AM', status: 'READ' }
-    ],
-    'cust_110': [
-      { id: 1101, sender: 'customer', text: 'Hello GRM Wholesale desk! Need bulk quotation for Diwali season.', time: '08:15 AM', status: 'READ' },
-      { id: 1102, sender: 'customer', text: 'Requirement for 200 pcs Baby Frock pink & yellow mix.', time: '08:20 AM', status: 'DELIVERED' }
-    ],
-    'cust_111': [
-      { id: 1111, sender: 'customer', text: 'Please send latest kids organic wear wholesale price list.', time: '10:30 AM', status: 'READ' },
-      { id: 1112, sender: 'staff', text: 'Wholesale catalog PDF and GST invoice sample sent.', time: '10:35 AM', status: 'READ' }
-    ],
-    'cust_112': [
-      { id: 1121, sender: 'customer', text: 'Dispatched 50 bundles received. All top quality! Placing next order soon.', time: '11:40 AM', status: 'READ' }
-    ],
-    'cust_113': [
-      { id: 1131, sender: 'customer', text: 'Need express 1-day delivery for maternity gown gift hamper to Anna Nagar.', time: '11:10 AM', status: 'READ' },
-      { id: 1132, sender: 'staff', text: 'Hello Dr. Shalini! Premium VIP pack dispatched via Dunzo Express.', time: '11:15 AM', status: 'READ' }
-    ],
-    'cust_114': [
-      { id: 1141, sender: 'customer', text: 'Hi! Can you customize the festive silk lehenga in size 6-7Y?', time: '09:45 AM', status: 'READ' },
-      { id: 1142, sender: 'staff', text: 'VIP custom silk festive lehenga set prepared with hand embroidery.', time: '09:50 AM', status: 'READ' }
-    ],
-    'cust_115': [
-      { id: 1151, sender: 'customer', text: 'Received the newborn hamper today. Thank you so much, dress quality is super soft!', time: '10:55 AM', status: 'READ' }
-    ]
-  },
-  orders: [
-    {
-      id: 'WA-2026-001120',
-      queryId: 'Q-2026-001210',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      items: [{ sku: 'BF-001-PK', name: 'Baby Frock (Pink 2-3Y)', qty: 2, price: 599 }],
-      grandTotal: 1198,
-      paymentMethod: 'COD',
-      paymentStatus: 'PAID',
-      orderStatus: 'DELIVERED',
-      createdAt: '28 Sep 2026',
-      createdBy: 'Priya Sharma (Staff 01)'
-    },
-    {
-      id: 'WA-2026-001121',
-      queryId: 'Q-2026-001222',
-      customerId: 'cust_102',
-      customerName: 'Ananya Sharma',
-      items: [{ sku: 'MD-102-BL', name: 'Maternity Maxi Gown (Blue L)', qty: 1, price: 1299 }],
-      grandTotal: 1299,
-      paymentMethod: 'UPI',
-      paymentStatus: 'PAID',
-      orderStatus: 'DISPATCHED',
-      createdAt: 'Yesterday',
-      createdBy: 'Rahul Verma (Staff 02)'
-    }
-  ],
-  followups: [
-    {
-      id: 'FU-2026-000245',
-      queryId: 'Q-2026-001245',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      assignedTo: 'staff_01',
-      date: 'Today',
-      time: '12:00 PM',
-      reason: 'Customer will confirm size and place order after checking with family',
-      status: 'PENDING'
-    },
-    {
-      id: 'FU-2026-000246',
-      queryId: 'Q-2026-001246',
-      customerId: 'cust_102',
-      customerName: 'Ananya Sharma',
-      assignedTo: 'staff_02',
-      date: 'Tomorrow',
-      time: '10:30 AM',
-      reason: 'Send live video of the maternity fabric softness',
-      status: 'PENDING'
-    }
-  ],
-  auditLogs: [
-    { timestamp: '12:23 PM', user: 'System (Webhook)', action: 'QUERY_CREATED', module: 'QUERIES', details: 'Created Q-2026-001245 from SugunaMani (+91 73389 65560)' },
-    { timestamp: '11:54 AM', user: 'Admin', action: 'QUERY_ASSIGNED', module: 'STAFF_ASSIGN', details: 'Assigned Q-2026-001245 to Priya Sharma (Staff 01)' },
-    { timestamp: '10:45 AM', user: 'System (Webhook)', action: 'QUERY_CREATED', module: 'QUERIES', details: 'Created Q-2026-001246 from Ananya Sharma (UNASSIGNED)' }
-  ]
+  customers: [],
+  queries: [],
+  conversations: {},
+  orders: [],
+  followups: [],
+  auditLogs: []
 };
 window.INITIAL_CRM_DATA = INITIAL_CRM_DATA;
 
@@ -821,6 +187,7 @@ function renderCurrentView() {
   if (ACTIVE_VIEW === 'inbox') renderInbox();
   else if (ACTIVE_VIEW === 'enquiries') renderEnquiriesTable();
   else if (ACTIVE_VIEW === 'customers') renderCustomersTable();
+  else if (ACTIVE_VIEW === 'dnd') renderDndModule();
   else if (ACTIVE_VIEW === 'orders') renderOrdersTable();
   else if (ACTIVE_VIEW === 'dashboard') renderDashboard();
 }
@@ -906,6 +273,9 @@ function ingestInboundMessage(payload, suppressChime = false) {
   const safeAvatar = (nameChars.slice(0, 2).join('')).toUpperCase() || 'WA';
 
   // 2. Match or Create Customer in CRM_STATE
+  const payloadAccountId = payload.account_id || 'account_1';
+  const payloadBusinessNum = payload.received_on_number || CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
+
   let customer = CRM_STATE.customers.find(c => {
     const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
     return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
@@ -921,6 +291,8 @@ function ingestInboundMessage(payload, suppressChime = false) {
       phone: cleanPhone,
       whatsapp: cleanPhone,
       jid: payload.sender_jid || '',
+      accountId: payloadAccountId,
+      businessNumber: payloadBusinessNum,
       address: 'Online WhatsApp Customer',
       city: 'Direct Inbound',
       customerType: 'Live WhatsApp Lead',
@@ -931,6 +303,8 @@ function ingestInboundMessage(payload, suppressChime = false) {
     };
     CRM_STATE.customers.unshift(customer);
   } else {
+    if (!customer.accountId) customer.accountId = payloadAccountId;
+    if (!customer.businessNumber) customer.businessNumber = payloadBusinessNum;
     if (senderName && !senderName.startsWith('WhatsApp Customer') && (customer.name.startsWith('Customer') || customer.name.startsWith('WhatsApp Customer'))) {
       customer.name = senderName;
     }
@@ -972,6 +346,8 @@ function ingestInboundMessage(payload, suppressChime = false) {
   // 4. Match or Create Lead / Query Card
   let query = CRM_STATE.queries.find(q => q.customerId === customer.id);
   if (query) {
+    if (!query.accountId) query.accountId = payloadAccountId;
+    if (!query.businessNumber) query.businessNumber = payloadBusinessNum;
     if (!isDuplicate) {
       query.unreadCount = (query.unreadCount || 0) + 1;
     }
@@ -986,6 +362,8 @@ function ingestInboundMessage(payload, suppressChime = false) {
     query = {
       id: `Q-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
       customerId: customer.id,
+      accountId: payloadAccountId,
+      businessNumber: payloadBusinessNum,
       assignedTo: payload.assigned_to || 'UNASSIGNED',
       status: 'NEW',
       priority: payload.priority || 'HIGH',
@@ -1033,6 +411,11 @@ function ingestInboundMessage(payload, suppressChime = false) {
       'chat',
       'emerald'
     );
+  }
+
+  // 9. Automated Stock Category Instant Auto-Responder Engine
+  if (!suppressChime && !isDuplicate && payload.source !== 'STAFF_OUTBOUND' && payload.source !== 'AUTOREPLY_BOT') {
+    handleAutomatedInboundResponse(customer, messageText, payload);
   }
 }
 
@@ -1135,16 +518,22 @@ function cleanupAndDeduplicateCRMState() {
 
   CRM_STATE.customers.forEach(cust => {
     const clean = (cust.phone || cust.whatsapp || '').replace(/[^0-9]/g, '');
+    if (!clean || clean.length < 5) {
+      dedupedCustomers.push(cust);
+      return;
+    }
     if (!seenPhones.has(clean)) {
       seenPhones.set(clean, cust);
       dedupedCustomers.push(cust);
     } else {
       const existing = seenPhones.get(clean);
       // Merge conversation history into primary customer
-      if (CRM_STATE.conversations[cust.id]) {
+      if (CRM_STATE.conversations && CRM_STATE.conversations[cust.id]) {
         if (!CRM_STATE.conversations[existing.id]) CRM_STATE.conversations[existing.id] = [];
         CRM_STATE.conversations[existing.id] = CRM_STATE.conversations[existing.id].concat(CRM_STATE.conversations[cust.id]);
-        delete CRM_STATE.conversations[cust.id];
+        if (cust.id !== existing.id) {
+          delete CRM_STATE.conversations[cust.id];
+        }
       }
     }
   });
@@ -1170,7 +559,7 @@ function cleanupAndDeduplicateCRMState() {
 
 
 
-// Load State from LocalStorage or Initialise
+// Load State from LocalStorage or Initialise (100% Persistent across page reloads)
 function initCRMState() {
   const saved = localStorage.getItem('GRM_CRM_STATE_V2_5');
   if (saved) {
@@ -1184,6 +573,22 @@ function initCRMState() {
       if (!CRM_STATE.dailyMessageTarget) {
         CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
       }
+      if (!Array.isArray(CRM_STATE.customers)) CRM_STATE.customers = [];
+      if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+      if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object') CRM_STATE.conversations = {};
+      if (!Array.isArray(CRM_STATE.orders)) CRM_STATE.orders = [];
+      if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
+      if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.products));
+
+      if (!CRM_STATE.autoReplySettings || typeof CRM_STATE.autoReplySettings !== 'object') {
+        CRM_STATE.autoReplySettings = {
+          enabled: true,
+          cooldownMinutes: 0,
+          keywordMatching: true,
+          messageTemplate: getDefaultStockAutoReplyTemplate()
+        };
+      }
+
       if (Array.isArray(CRM_STATE.staffList)) {
         CRM_STATE.staffList.forEach((s, idx) => {
           if (typeof s.dailyQuota === 'undefined') s.dailyQuota = idx === 2 ? 60 : 70;
@@ -1193,38 +598,35 @@ function initCRMState() {
           if (!s.status) s.status = 'ACTIVE';
         });
       }
-
-      // Ensure all initial customers from the 5 connected lines are populated
-      if (Array.isArray(INITIAL_CRM_DATA.customers)) {
-        if (!Array.isArray(CRM_STATE.customers)) CRM_STATE.customers = [];
-        INITIAL_CRM_DATA.customers.forEach(initCust => {
-          if (!CRM_STATE.customers.some(c => c.id === initCust.id)) {
-            CRM_STATE.customers.push(initCust);
-          }
-        });
-      }
-      if (Array.isArray(INITIAL_CRM_DATA.queries)) {
-        if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
-        INITIAL_CRM_DATA.queries.forEach(initQ => {
-          if (!CRM_STATE.queries.some(q => q.customerId === initQ.customerId)) {
-            CRM_STATE.queries.push(initQ);
-          }
-        });
-      }
-      if (INITIAL_CRM_DATA.conversations) {
-        if (!CRM_STATE.conversations) CRM_STATE.conversations = {};
-        Object.keys(INITIAL_CRM_DATA.conversations).forEach(cid => {
-          if (!CRM_STATE.conversations[cid]) {
-            CRM_STATE.conversations[cid] = INITIAL_CRM_DATA.conversations[cid];
-          }
-        });
-      }
     } catch (e) {
+      console.warn('Recovering CRM state from initial schema:', e);
       CRM_STATE = JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
     }
   } else {
     CRM_STATE = JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
+    if (!CRM_STATE.autoReplySettings) {
+      CRM_STATE.autoReplySettings = {
+        enabled: true,
+        cooldownMinutes: 0,
+        keywordMatching: true,
+        messageTemplate: getDefaultStockAutoReplyTemplate()
+      };
+    }
     saveCRMState();
+  }
+
+  // Set active customer ID to first existing customer who actually has messages/conversations
+  const activeChatCusts = (CRM_STATE.customers || []).filter(c => {
+    if (!c || c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || (c.name && c.name.startsWith('WhatsApp Linked'))) return false;
+    const conv = CRM_STATE.conversations?.[c.id] || [];
+    const q = CRM_STATE.queries?.find(qry => qry.customerId === c.id);
+    return conv.length > 0 || q;
+  });
+
+  if (activeChatCusts.length > 0) {
+    ACTIVE_CUSTOMER_ID = activeChatCusts[0].id;
+  } else {
+    ACTIVE_CUSTOMER_ID = null;
   }
 
   // Load from backend config if available
@@ -1245,8 +647,9 @@ function initCRMState() {
   fetch('api.php?action=get_all')
     .then(r => r.json())
     .then(res => {
-      if (res && res.products && Array.isArray(res.products) && res.products.length > 0) {
-        CRM_STATE.products = res.products.map(p => ({
+      const data = res.data || res;
+      if (data && data.products && Array.isArray(data.products) && data.products.length > 0) {
+        CRM_STATE.products = data.products.map(p => ({
           id: p.id,
           sku: p.sku,
           name: p.name,
@@ -1266,9 +669,16 @@ function initCRMState() {
 
   cleanupAndDeduplicateCRMState();
   updateConfiguredPhoneDisplays();
+  updateAutoReplyUI();
   initSocketIO();
   fetchQRBridgeStatus();
   startRealtimeMessageSync();
+}
+
+function purgeStaticMockData() {
+  // Deprecated: Never auto-purge customer conversations on page load/refresh
+  // Preserves 100% of incoming live chats, customer histories and enquiries
+  return;
 }
 
 function saveCRMState() {
@@ -1339,8 +749,10 @@ function getAvailableWhatsAppAccounts() {
         ...acc,
         status: liveAcc.status || acc.status,
         connected_number: liveAcc.connected_number || acc.connected_number,
+        connected_name: liveAcc.connected_name || acc.connected_name,
         label: liveAcc.label || acc.label,
-        qr: liveAcc.qr || acc.qr
+        qr_image: liveAcc.qr_image || acc.qr_image || liveAcc.qr || acc.qr,
+        qr: liveAcc.qr_image || liveAcc.qr || acc.qr
       };
     });
   }
@@ -1570,7 +982,7 @@ function switchView(viewName) {
   }
 
   ACTIVE_VIEW = viewName;
-  const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'staff', 'audit', 'analytics', 'settings', 'backup'];
+  const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
 
   views.forEach(v => {
     const el = document.getElementById(`view-${v}`);
@@ -1600,6 +1012,7 @@ function switchView(viewName) {
     orders: { title: 'WhatsApp Sales Orders & Reservations', sub: 'Direct orders booked from WhatsApp chats with reserved inventory' },
     followups: { title: 'Customer Follow-up Scheduler', sub: 'Automated reminders to prevent lost customer enquiries' },
     customers: { title: 'Customer 360 & Tag Directory', sub: 'Profiles, purchase history, and communication preferences' },
+    dnd: { title: 'DND & Opt-Out Customer Hub', sub: 'Customers who requested not to receive garment product offers or messages' },
     staff: { title: 'Staff & Team Management Hub', sub: 'Onboard team members, assign operational roles & permissions, and monitor workloads' },
     audit: { title: 'System Audit Trail & Security Logs', sub: 'Tamper-proof record of every staff assignment and order update' },
     analytics: { title: 'Staff Performance Analytics & KPIs', sub: 'Factual metrics on response times, volume handled, and conversions' },
@@ -1622,6 +1035,7 @@ function switchView(viewName) {
   if (viewName === 'orders') renderOrdersTable();
   if (viewName === 'followups') renderFollowupsCards();
   if (viewName === 'customers') renderCustomersGrid();
+  if (viewName === 'dnd') renderDndModule();
   if (viewName === 'staff') renderStaffView();
   if (viewName === 'audit') renderAuditTable();
   if (viewName === 'analytics') renderAnalyticsView();
@@ -1915,10 +1329,26 @@ function renderQuickLineSwitcher() {
 
   const accounts = getAvailableWhatsAppAccounts();
   const availableAccountIds = accounts.map(a => a.id);
+
+  // Count only customers that have actual conversation messages or active queries
+  const getActiveCustomerCountForAccount = (accId) => {
+    return (CRM_STATE?.customers || []).filter(c => {
+      if (c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || c.name.startsWith('WhatsApp Linked')) return false;
+      const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+      const conv = CRM_STATE?.conversations?.[c.id] || [];
+      if (conv.length === 0 && !q) return false;
+      const customerAccId = c.accountId || (q ? q.accountId : 'account_1');
+      return customerAccId === accId;
+    }).length;
+  };
+
   const totalChats = (CRM_STATE?.customers || []).filter(c => {
+    if (c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || c.name.startsWith('WhatsApp Linked')) return false;
     const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
-    const accId = c.accountId || (q ? q.accountId : 'account_1');
-    return availableAccountIds.includes(accId);
+    const conv = CRM_STATE?.conversations?.[c.id] || [];
+    if (conv.length === 0 && !q) return false;
+    const customerAccId = c.accountId || (q ? q.accountId : 'account_1');
+    return availableAccountIds.includes(customerAccId);
   }).length;
 
   let chipsHtml = '';
@@ -1935,10 +1365,7 @@ function renderQuickLineSwitcher() {
   chipsHtml += accounts.map((acc, idx) => {
     const isCurrent = ACTIVE_SEND_ACCOUNT_ID === acc.id || (accounts.length === 1 && ACTIVE_SEND_ACCOUNT_ID === 'all');
     const shortNumber = acc.connected_number ? acc.connected_number.replace(/[^0-9]/g, '').slice(-5) : `${idx+1}`;
-    const custCount = (CRM_STATE?.customers || []).filter(c => {
-      const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
-      return (c.accountId || (q ? q.accountId : 'account_1')) === acc.id;
-    }).length;
+    const custCount = getActiveCustomerCountForAccount(acc.id);
 
     return `
       <button onclick="switchActiveWhatsAppLine('${acc.id}', '${acc.connected_number}', '${acc.label}')" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold shrink-0 transition flex items-center gap-1 ${isCurrent ? 'bg-brand-wa text-white shadow-sm ring-1 ring-emerald-300' : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-300'}" title="${acc.label}: ${acc.connected_number}">
@@ -1970,6 +1397,11 @@ function renderInboxConversationList() {
     const conv = CRM_STATE.conversations[cust.id] || [];
     const lastMsgObj = conv.length > 0 ? conv[conv.length - 1] : null;
 
+    // Filter out contacts with no messages and no active query from the inbox list
+    if (conv.length === 0 && !query) {
+      return;
+    }
+
     let lastText = 'No messages yet';
     let timeDisplay = query ? query.createdAt : 'Recent';
     let lastTimeEpoch = lastMsgObj ? (lastMsgObj.id || 0) : 0;
@@ -1983,6 +1415,7 @@ function renderInboxConversationList() {
 
     const custAccountId = cust.accountId || (query ? query.accountId : null) || 'account_1';
     const custBusinessNumber = cust.businessNumber || (query ? query.businessNumber : null) || '+91 86680 07593';
+    const qStatus = query ? (query.status || 'NEW') : 'NEW';
 
     customerCards.push({
       customerId: cust.id,
@@ -1990,6 +1423,7 @@ function renderInboxConversationList() {
       queryId: query ? query.id : ('Q-' + cust.id),
       assignedTo: query ? query.assignedTo : 'UNASSIGNED',
       staff: staff,
+      status: qStatus,
       priority: query ? query.priority : 'NORMAL',
       lastMessage: lastText,
       createdAt: timeDisplay,
@@ -2036,6 +1470,7 @@ function renderInboxConversationList() {
   }
 
   if (customerCards.length === 0) {
+    ACTIVE_CUSTOMER_ID = null;
     const accObj = getAvailableWhatsAppAccounts().find(a => a.id === ACTIVE_SEND_ACCOUNT_ID);
     const lineName = accObj ? accObj.label : 'this line';
     container.innerHTML = `
@@ -2050,6 +1485,11 @@ function renderInboxConversationList() {
     return;
   }
 
+  // Ensure ACTIVE_CUSTOMER_ID strictly points to a visible conversation thread
+  if (!ACTIVE_CUSTOMER_ID || !customerCards.some(c => c.customerId === ACTIVE_CUSTOMER_ID)) {
+    ACTIVE_CUSTOMER_ID = customerCards[0].customerId;
+  }
+
   container.innerHTML = customerCards.map(item => {
     const isSelected = item.customerId === ACTIVE_CUSTOMER_ID;
     const isUnassigned = item.assignedTo === 'UNASSIGNED';
@@ -2058,6 +1498,16 @@ function renderInboxConversationList() {
     let priorityBadge = '';
     if (item.priority === 'URGENT') priorityBadge = `<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-200">URGENT</span>`;
     else if (item.priority === 'HIGH') priorityBadge = `<span class="bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200">HIGH</span>`;
+
+    // Status Badge
+    let statusBadge = '';
+    const qStatus = item.status || 'NEW';
+    if (qStatus === 'DND' || item.customer?.isDND) statusBadge = `<span class="bg-rose-100 text-rose-900 border border-rose-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">🚫 DND</span>`;
+    else if (qStatus === 'PENDING') statusBadge = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">PENDING</span>`;
+    else if (qStatus === 'FOLLOW_UP') statusBadge = `<span class="bg-blue-100 text-blue-900 border border-blue-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">FOLLOW-UP</span>`;
+    else if (qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED') statusBadge = `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">IN PROGRESS</span>`;
+    else if (qStatus === 'RESOLVED') statusBadge = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">RESOLVED</span>`;
+    else if (qStatus === 'CONVERTED') statusBadge = `<span class="bg-purple-100 text-purple-900 border border-purple-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">CONVERTED</span>`;
 
     // Line Badge
     const lineIdx = (item.accountId === 'account_1') ? 'L1' : (item.accountId === 'account_2' ? 'L2' : (item.accountId === 'account_3' ? 'L3' : (item.accountId === 'account_4' ? 'L4' : 'L5')));
@@ -2092,6 +1542,7 @@ function renderInboxConversationList() {
             <div class="flex items-center gap-1.5 flex-wrap">
               <span class="text-[9px] bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-200" title="Received on Line: ${item.businessNumber}">${lineIdx}</span>
               <span class="text-[10px] bg-slate-100 text-slate-600 font-mono font-semibold px-1.5 py-0.2 rounded">${item.queryId}</span>
+              ${statusBadge}
               ${priorityBadge}
             </div>
 
@@ -2116,6 +1567,49 @@ function renderInboxConversationList() {
 function selectCustomerChat(customerId) {
   ACTIVE_CUSTOMER_ID = customerId;
   renderInbox();
+}
+
+// Slide / Hide Toggle State for Right Customer 360 Panel
+let IS_RIGHT_PANEL_OPEN = true;
+
+function toggleRightPanel(forceState = null) {
+  if (forceState !== null) {
+    IS_RIGHT_PANEL_OPEN = forceState;
+  } else {
+    IS_RIGHT_PANEL_OPEN = !IS_RIGHT_PANEL_OPEN;
+  }
+
+  const panel = document.getElementById('chat-right-panel');
+  const toggleBtn = document.getElementById('btn-toggle-right-panel');
+  const floatingToggle = document.getElementById('floating-panel-toggle-btn');
+
+  if (panel) {
+    if (IS_RIGHT_PANEL_OPEN) {
+      panel.classList.remove('hidden');
+      panel.classList.add('flex');
+    } else {
+      panel.classList.add('hidden');
+      panel.classList.remove('flex');
+    }
+  }
+
+  if (toggleBtn) {
+    if (IS_RIGHT_PANEL_OPEN) {
+      toggleBtn.className = "px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-emerald-100";
+      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_right</span><span class="hidden sm:inline">Hide Profile</span>`;
+    } else {
+      toggleBtn.className = "px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-slate-200";
+      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_left</span><span class="hidden sm:inline">Customer Profile</span>`;
+    }
+  }
+
+  if (floatingToggle) {
+    if (IS_RIGHT_PANEL_OPEN) {
+      floatingToggle.classList.add('hidden');
+    } else {
+      floatingToggle.classList.remove('hidden');
+    }
+  }
 }
 
 function renderChatHeader() {
@@ -2154,7 +1648,7 @@ function renderChatHeader() {
       </div>
     </div>
 
-    <!-- Active Connected Business Line Tag & Staff Assignment Actions in Header -->
+    <!-- Active Connected Business Line Tag & Actions & Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-2 shrink-0">
       <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-900" title="Connected WhatsApp Business Number for this conversation">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -2181,6 +1675,12 @@ function renderChatHeader() {
       <a href="https://wa.me/${(customer.phone || '').replace(/[^0-9]/g, '')}" target="_blank" class="p-1.5 text-slate-600 hover:text-brand-wa hover:bg-emerald-50 rounded-lg transition" title="Open Native WhatsApp Web">
         <span class="material-symbols-outlined text-[18px]">open_in_new</span>
       </a>
+
+      <!-- Slide Hide / Show Toggle Button for Customer Profile Panel -->
+      <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel()" class="px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition" title="Slide Hide / Show Customer Profile Panel">
+        <span class="material-symbols-outlined text-[16px]">${IS_RIGHT_PANEL_OPEN ? 'dock_to_right' : 'dock_to_left'}</span>
+        <span class="hidden sm:inline">${IS_RIGHT_PANEL_OPEN ? 'Hide Profile' : 'Customer Profile'}</span>
+      </button>
     </div>
   `;
 }
@@ -2215,7 +1715,7 @@ function renderChatMessages() {
     const isOut = msg.sender === 'staff';
     const msgId = msg.id || ('msg_' + idx);
     const isAudio = msg.type === 'audio' || (msg.media_url && msg.media_url.includes('audio')) || (msg.text && (msg.text.includes('Voice Message') || msg.text.includes('[WhatsApp Message]')));
-    const isImage = msg.type === 'image' || (msg.media_url && msg.media_url.startsWith('data:image'));
+    const isImage = msg.type === 'image' || (msg.media_url && (msg.media_url.startsWith('data:image') || msg.media_url.includes('http') || msg.media_url.includes('.png') || msg.media_url.includes('.jpg') || msg.media_url.includes('blob:')));
     const duration = msg.duration || 12;
 
     let contentHtml = '';
@@ -2262,9 +1762,14 @@ function renderChatMessages() {
       `;
     } else if (isImage) {
       contentHtml = `
-        <div class="space-y-1.5">
-          <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 max-w-xs shadow-sm">
-            <img src="${msg.media_url}" alt="Attachment" class="w-full max-h-64 object-cover cursor-pointer hover:opacity-95 transition" onclick="window.open('${msg.media_url}', '_blank')">
+        <div class="space-y-2">
+          <div class="group relative rounded-2xl overflow-hidden border border-slate-200/90 bg-slate-900/5 shadow-sm hover:shadow-md transition cursor-pointer" onclick="openImageLightbox('${msgId}')">
+            <img src="${msg.media_url}" id="chat-img-${msgId}" alt="Customer Attachment" class="w-full max-h-[380px] object-contain rounded-2xl block mx-auto transition duration-200 group-hover:brightness-95">
+            <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
+              <span class="px-3 py-1.5 rounded-full bg-slate-900/90 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg border border-white/20">
+                <span class="material-symbols-outlined text-[16px] text-emerald-400">zoom_in</span> Click to Enlarge / Inspect
+              </span>
+            </div>
           </div>
           ${msg.text && msg.text !== '[Photo Attachment]' ? `<p class="text-xs leading-relaxed font-normal">${msg.text.replace(/\n/g, '<br>')}</p>` : ''}
         </div>
@@ -2293,6 +1798,153 @@ function renderChatMessages() {
 }
 
 window.renderChatStream = renderChatMessages;
+
+// =========================================================================
+// HIGH-RESOLUTION IMAGE LIGHTBOX CONTROLLER
+// =========================================================================
+let CURRENT_LIGHTBOX_ZOOM = 1.0;
+let CURRENT_LIGHTBOX_SRC = '';
+
+window.openImageLightbox = function(msgIdOrSrc, customTitle) {
+  let imgSrc = '';
+  let title = customTitle || 'Customer WhatsApp Photo Attachment';
+
+  // Check active customer chat for message
+  const customer = CRM_STATE.customers.find(c => c.id === CRM_STATE.activeCustomerId);
+  if (customer && customer.chat) {
+    const msg = customer.chat.find(m => m.id === msgIdOrSrc);
+    if (msg && msg.media_url) {
+      imgSrc = msg.media_url;
+      title = `${customer.name} - Photo (${msg.time || 'Chat Attachment'})`;
+    }
+  }
+
+  // Fallback if direct src was passed or found in DOM
+  if (!imgSrc) {
+    const el = document.getElementById(`chat-img-${msgIdOrSrc}`);
+    if (el && el.src) {
+      imgSrc = el.src;
+    } else if (typeof msgIdOrSrc === 'string' && (msgIdOrSrc.startsWith('data:') || msgIdOrSrc.startsWith('http') || msgIdOrSrc.startsWith('/'))) {
+      imgSrc = msgIdOrSrc;
+    }
+  }
+
+  if (!imgSrc) {
+    console.warn('[Lightbox] No valid image source found for:', msgIdOrSrc);
+    return;
+  }
+
+  CURRENT_LIGHTBOX_SRC = imgSrc;
+  CURRENT_LIGHTBOX_ZOOM = 1.0;
+
+  const modal = document.getElementById('modal-image-lightbox');
+  const imgEl = document.getElementById('lightbox-img');
+  const titleEl = document.getElementById('lightbox-image-title');
+  const subEl = document.getElementById('lightbox-image-sub');
+  const zoomPctEl = document.getElementById('lightbox-zoom-pct');
+
+  if (imgEl) {
+    imgEl.src = imgSrc;
+    imgEl.style.transform = 'scale(1.0)';
+  }
+  if (titleEl) titleEl.innerText = title;
+  if (subEl) subEl.innerText = customer ? `${customer.name} (${customer.phone || customer.id})` : 'High-Resolution WhatsApp Media';
+  if (zoomPctEl) zoomPctEl.innerText = '100%';
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+};
+
+window.closeImageLightbox = function() {
+  const modal = document.getElementById('modal-image-lightbox');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  CURRENT_LIGHTBOX_ZOOM = 1.0;
+};
+
+window.zoomLightboxImage = function(delta) {
+  CURRENT_LIGHTBOX_ZOOM = Math.max(0.5, Math.min(3.5, CURRENT_LIGHTBOX_ZOOM + delta));
+  const imgEl = document.getElementById('lightbox-img');
+  const zoomPctEl = document.getElementById('lightbox-zoom-pct');
+  if (imgEl) {
+    imgEl.style.transform = `scale(${CURRENT_LIGHTBOX_ZOOM})`;
+  }
+  if (zoomPctEl) {
+    zoomPctEl.innerText = `${Math.round(CURRENT_LIGHTBOX_ZOOM * 100)}%`;
+  }
+};
+
+window.resetLightboxZoom = function() {
+  CURRENT_LIGHTBOX_ZOOM = 1.0;
+  const imgEl = document.getElementById('lightbox-img');
+  const zoomPctEl = document.getElementById('lightbox-zoom-pct');
+  if (imgEl) {
+    imgEl.style.transform = 'scale(1.0)';
+  }
+  if (zoomPctEl) {
+    zoomPctEl.innerText = '100%';
+  }
+};
+
+window.downloadLightboxImage = function() {
+  if (!CURRENT_LIGHTBOX_SRC) return;
+  try {
+    const a = document.createElement('a');
+    a.href = CURRENT_LIGHTBOX_SRC;
+    const filename = `whatsapp_media_${Date.now()}.png`;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    if (typeof showToast === 'function') {
+      showToast('Image downloaded successfully!', 'success');
+    }
+  } catch (err) {
+    console.error('Download error:', err);
+    window.open(CURRENT_LIGHTBOX_SRC, '_blank');
+  }
+};
+
+window.openLightboxImageInNewTab = function() {
+  if (!CURRENT_LIGHTBOX_SRC) return;
+  if (CURRENT_LIGHTBOX_SRC.startsWith('data:')) {
+    const imgWindow = window.open('');
+    if (imgWindow) {
+      imgWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>WhatsApp Attachment Full View</title>
+          <style>
+            body { margin: 0; background: #0f172a; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+            img { max-width: 98vw; max-height: 98vh; object-fit: contain; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; }
+          </style>
+        </head>
+        <body>
+          <img src="${CURRENT_LIGHTBOX_SRC}" alt="Full Photo">
+        </body>
+        </html>
+      `);
+      imgWindow.document.close();
+    }
+  } else {
+    window.open(CURRENT_LIGHTBOX_SRC, '_blank');
+  }
+};
+
+// Keyboard listener for Escape key to close lightbox
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('modal-image-lightbox');
+    if (modal && !modal.classList.contains('hidden')) {
+      closeImageLightbox();
+    }
+  }
+});
 
 // =========================================================================
 // AUDIO PLAYBACK CONTROLLER
@@ -2424,6 +2076,395 @@ window.playSimulatedVoice = function (msgId) {
   }, 500);
 };
 
+// Update Query Status (Pending, Follow-up, In Progress, Converted, Resolved, DND)
+function updateCustomerQueryStatus(queryId, newStatus) {
+  const query = CRM_STATE.queries.find(q => q.id === queryId || q.customerId === queryId);
+  const customer = query ? CRM_STATE.customers.find(c => c.id === query.customerId) : CRM_STATE.customers.find(c => c.id === queryId);
+  if (!query && !customer) return;
+
+  const oldStatus = query ? query.status : 'NEW';
+  if (query) query.status = newStatus;
+
+  const staffName = ACTIVE_ROLE === 'admin' ? 'Super Admin' : (CRM_STATE.staffList.find(s => s.id === ACTIVE_ROLE)?.name || 'Staff');
+
+  if (customer) {
+    if (newStatus === 'DND') {
+      customer.isDND = true;
+      customer.dndReason = 'Customer not interested in products (Requested DND)';
+      customer.dndTimestamp = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      customer.dndMarkedBy = staffName;
+      if (!Array.isArray(customer.tags)) customer.tags = [];
+      if (!customer.tags.includes('DND / Opt-Out')) customer.tags.push('DND / Opt-Out');
+    } else {
+      customer.isDND = false;
+      if (Array.isArray(customer.tags)) {
+        customer.tags = customer.tags.filter(t => t !== 'DND / Opt-Out');
+      }
+    }
+  }
+  
+  logAudit('STATUS_CHANGE', 'INBOX_PANEL', `Query ${query ? query.id : customer?.id} status changed from ${oldStatus} to ${newStatus}`);
+
+  saveCRMState();
+  renderInbox();
+  renderCustomer360Panel();
+  if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
+  if (typeof renderFollowupsTable === 'function') renderFollowupsTable();
+  if (typeof renderDndModule === 'function') renderDndModule();
+  updateBadgeCounters();
+
+  const label = newStatus === 'DND' ? '🚫 DND / Not Interested' : newStatus.replace('_', ' ');
+  showToast(
+    newStatus === 'DND' ? 'Customer Marked as DND' : 'Status Updated',
+    newStatus === 'DND' ? `Customer moved to separate DND & Opt-Out module.` : `Query status is now set to "${label}".`,
+    newStatus === 'DND' ? 'do_not_disturb_on' : (newStatus === 'RESOLVED' || newStatus === 'CONVERTED' ? 'emerald' : (newStatus === 'PENDING' ? 'amber' : 'blue')),
+    newStatus === 'DND' ? 'rose' : (newStatus === 'RESOLVED' || newStatus === 'CONVERTED' ? 'emerald' : (newStatus === 'PENDING' ? 'amber' : 'blue'))
+  );
+  if (typeof playChime === 'function') playChime('inbound');
+}
+
+function reactivateCustomerFromDND(customerId) {
+  const customer = CRM_STATE.customers.find(c => c.id === customerId);
+  if (!customer) return;
+
+  customer.isDND = false;
+  if (Array.isArray(customer.tags)) {
+    customer.tags = customer.tags.filter(t => t !== 'DND / Opt-Out');
+  }
+
+  const query = CRM_STATE.queries.find(q => q.customerId === customerId);
+  if (query && query.status === 'DND') {
+    query.status = 'IN_PROGRESS';
+  }
+
+  logAudit('DND_REACTIVATED', 'DND_MODULE', `Reactivated customer ${customer.name} (${customer.phone}) from DND list.`);
+  saveCRMState();
+  renderDndModule();
+  renderInbox();
+  renderCustomer360Panel();
+  updateBadgeCounters();
+
+  showToast('Customer Reactivated', `${customer.name} has been restored to active communication.`, 'check_circle', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+
+function renderDndModule() {
+  const tableBody = document.getElementById('dnd-table-body');
+  const countSummary = document.getElementById('dnd-count-summary');
+  const kpiTotal = document.getElementById('kpi-dnd-total');
+  const badgeDnd = document.getElementById('badge-dnd-count');
+  const searchInput = document.getElementById('dnd-search-input');
+  const searchVal = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+  const dndCustomers = (CRM_STATE?.customers || []).filter(c => {
+    if (!c) return false;
+    const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+    return c.isDND === true || (q && q.status === 'DND') || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'));
+  });
+
+  const totalDnd = dndCustomers.length;
+  if (countSummary) countSummary.innerText = `${totalDnd} DND Customer${totalDnd === 1 ? '' : 's'}`;
+  if (kpiTotal) kpiTotal.innerText = totalDnd;
+  if (badgeDnd) badgeDnd.innerText = totalDnd;
+
+  let filtered = dndCustomers;
+  if (searchVal) {
+    filtered = filtered.filter(c => 
+      (c.name && c.name.toLowerCase().includes(searchVal)) ||
+      (c.phone && c.phone.includes(searchVal)) ||
+      (c.whatsapp && c.whatsapp.includes(searchVal)) ||
+      (c.dndReason && c.dndReason.toLowerCase().includes(searchVal))
+    );
+  }
+
+  if (!tableBody) return;
+
+  if (filtered.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="6" class="p-8 text-center text-slate-400">
+          <span class="material-symbols-outlined text-[36px] text-slate-300">verified_user</span>
+          <p class="text-xs font-semibold mt-1">No DND customers found</p>
+          <p class="text-[11px] text-slate-400">When staff changes a customer's enquiry status to "🚫 DND", they will be listed here separately.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tableBody.innerHTML = filtered.map(c => {
+    const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+    const conv = CRM_STATE?.conversations?.[c.id] || [];
+    const lastMsg = conv.length > 0 ? conv[conv.length - 1].text : (q ? q.lastMessage : 'No recent messages');
+    const dndTime = c.dndTimestamp || (q ? q.createdAt : 'Recent');
+    const markedBy = c.dndMarkedBy || 'Staff';
+    const reason = c.dndReason || 'Customer not interested in products';
+    const displayPhone = formatPhoneNumberPretty(c.whatsapp || c.phone);
+
+    return `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-700 to-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0">
+            ${c.avatar || 'CU'}
+          </div>
+          <div class="min-w-0">
+            <p class="font-bold text-slate-900 text-xs truncate">${c.name || 'Customer'}</p>
+            <p class="text-[10px] text-slate-400 font-mono">${c.code || c.id}</p>
+          </div>
+        </td>
+        <td class="py-3.5 px-4 font-mono font-bold text-emerald-950 text-xs">
+          ${displayPhone}
+        </td>
+        <td class="py-3.5 px-4">
+          <span class="bg-rose-50 text-rose-800 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+            <span class="material-symbols-outlined text-[12px] text-rose-600">block</span>
+            <span>${reason}</span>
+          </span>
+          <p class="text-[10px] text-slate-500 truncate max-w-xs mt-1 italic">"${lastMsg.length > 40 ? lastMsg.substring(0, 37) + '...' : lastMsg}"</p>
+        </td>
+        <td class="py-3.5 px-4 text-xs font-semibold text-slate-700">
+          <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-lg border border-slate-200">${markedBy}</span>
+        </td>
+        <td class="py-3.5 px-4 text-xs text-slate-500 font-medium">
+          ${dndTime}
+        </td>
+        <td class="py-3.5 px-4 text-right">
+          <div class="flex items-center justify-end gap-1.5">
+            <button onclick="reactivateCustomerFromDND('${c.id}')" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Reactivate customer to allow messages and orders">
+              <span class="material-symbols-outlined text-[14px]">check_circle</span>
+              <span>Re-activate</span>
+            </button>
+            <button onclick="ACTIVE_CUSTOMER_ID='${c.id}'; switchView('inbox');" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1" title="View chat in inbox">
+              <span class="material-symbols-outlined text-[14px]">chat</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Update all sidebar & header badge counters dynamically across all modules
+function updateBadgeCounters() {
+  if (!CRM_STATE) return;
+
+  // 1. Unread count in inbox
+  const unreadEl = document.getElementById('badge-total-unread');
+  if (unreadEl) {
+    let unreadCount = 0;
+    (CRM_STATE.queries || []).forEach(q => {
+      if (q.status !== 'DND') {
+        unreadCount += (q.unreadCount || 0);
+      }
+    });
+    unreadEl.innerText = unreadCount > 0 ? unreadCount : '0';
+  }
+
+  // 2. Unassigned Enquiries
+  const unassignedEl = document.getElementById('badge-unassigned-count');
+  if (unassignedEl) {
+    const unassignedCount = (CRM_STATE.queries || []).filter(q => q.assignedTo === 'UNASSIGNED' && q.status !== 'DND').length;
+    unassignedEl.innerText = `${unassignedCount} New`;
+  }
+
+  // 3. Followup count
+  const followupEl = document.getElementById('badge-followup-count');
+  if (followupEl) {
+    const dueCount = (CRM_STATE.followups || []).filter(f => f.status === 'PENDING').length;
+    followupEl.innerText = `${dueCount} Due`;
+  }
+
+  // 4. Orders count
+  const ordersEl = document.getElementById('badge-orders-count');
+  if (ordersEl) {
+    const ordCount = (CRM_STATE.orders || []).length;
+    ordersEl.innerText = ordCount;
+  }
+
+  // 5. DND count
+  const dndEl = document.getElementById('badge-dnd-count');
+  const kpiDndEl = document.getElementById('kpi-dnd-total');
+  const dndSummaryEl = document.getElementById('dnd-count-summary');
+  const dndCustomers = (CRM_STATE.customers || []).filter(c => {
+    if (!c) return false;
+    const q = (CRM_STATE.queries || []).find(qry => qry.customerId === c.id);
+    return c.isDND === true || (q && q.status === 'DND') || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'));
+  });
+  const dndCount = dndCustomers.length;
+  if (dndEl) dndEl.innerText = dndCount;
+  if (kpiDndEl) kpiDndEl.innerText = dndCount;
+  if (dndSummaryEl) dndSummaryEl.innerText = `${dndCount} DND Customer${dndCount === 1 ? '' : 's'}`;
+
+  // 6. Total Staff count
+  const staffEl = document.getElementById('badge-total-staff-count');
+  if (staffEl) {
+    staffEl.innerText = (CRM_STATE.staffList || []).length;
+  }
+}
+
+// Quick Reassign Handling Staff
+function quickReassignQueryStaff(queryId, newStaffId) {
+  const query = CRM_STATE.queries.find(q => q.id === queryId || q.customerId === queryId);
+  if (!query) return;
+
+  const staff = CRM_STATE.staffList.find(s => s.id === newStaffId);
+  query.assignedTo = newStaffId;
+  if (query.status === 'NEW' && newStaffId !== 'UNASSIGNED') {
+    query.status = 'IN_PROGRESS';
+  }
+
+  logAudit('STAFF_ASSIGNMENT', 'INBOX_PANEL', `Query ${query.id} assigned to ${staff ? staff.name : 'Unassigned'}`);
+  saveCRMState();
+  renderInbox();
+  renderCustomer360Panel();
+  if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
+
+  showToast(
+    'Staff Assigned',
+    `Handling staff for query ${query.id} set to ${staff ? staff.name : 'Unassigned'}.`,
+    'how_to_reg',
+    'emerald'
+  );
+  if (typeof playChime === 'function') playChime('inbound');
+}
+
+// Track which customer profile is currently in Edit Mode (locked by default once saved)
+const CUSTOMER_EDIT_MODES = new Set();
+
+function toggleCustomerEditMode(customerId, enableEdit = true) {
+  if (enableEdit) {
+    CUSTOMER_EDIT_MODES.add(customerId);
+  } else {
+    CUSTOMER_EDIT_MODES.delete(customerId);
+  }
+  renderCustomer360Panel();
+}
+
+function handleSaveQueryStatus(queryId) {
+  const select = document.getElementById('query-status-select');
+  if (!select) return;
+  const newStatus = select.value;
+  updateCustomerQueryStatus(queryId, newStatus);
+}
+
+// Save Customer Details from Right-Side Panel Form
+function handleQuickCustomerSave(event, customerId) {
+  if (event) event.preventDefault();
+
+  const customer = CRM_STATE.customers.find(c => c.id === customerId);
+  if (!customer) return;
+
+  const nameInput = document.getElementById('cust-edit-name');
+  const phoneInput = document.getElementById('cust-edit-phone');
+  const ageInput = document.getElementById('cust-edit-age');
+  const genderInput = document.getElementById('cust-edit-gender');
+  const emailInput = document.getElementById('cust-edit-email');
+  const addressInput = document.getElementById('cust-edit-address');
+  const notesInput = document.getElementById('cust-edit-notes');
+
+  const newName = nameInput ? nameInput.value.trim() : customer.name;
+  const newPhone = phoneInput ? phoneInput.value.trim() : (customer.whatsapp || customer.phone);
+  const newAge = ageInput ? ageInput.value.trim() : (customer.age || '');
+  const newGender = genderInput ? genderInput.value : (customer.gender || '');
+  const newEmail = emailInput ? emailInput.value.trim() : (customer.email || '');
+  const newAddress = addressInput ? addressInput.value.trim() : (customer.address || '');
+  const newNotes = notesInput ? notesInput.value.trim() : (customer.notes || '');
+
+  customer.name = newName;
+  customer.phone = newPhone;
+  customer.whatsapp = newPhone;
+  customer.age = newAge;
+  customer.gender = newGender;
+  customer.email = newEmail;
+  customer.address = newAddress;
+  customer.notes = newNotes;
+
+  // Update avatar initials
+  const nameChars = Array.from(newName || 'WA');
+  customer.avatar = (nameChars.slice(0, 2).join('')).toUpperCase();
+
+  // Exit edit mode (locks fields)
+  CUSTOMER_EDIT_MODES.delete(customerId);
+
+  // Save to CRM state & MySQL backend
+  saveCRMState();
+
+  fetch('api.php?action=save_customer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      whatsapp: customer.whatsapp,
+      age: customer.age,
+      gender: customer.gender,
+      email: customer.email,
+      address: customer.address,
+      notes: customer.notes
+    })
+  }).catch(() => {});
+
+  logAudit('CUSTOMER_UPDATED', 'CUSTOMER_360', `Updated profile details and notes for customer ${customer.name} (${customer.id})`);
+
+  renderInbox();
+  renderChatHeader();
+  renderCustomer360Panel();
+  if (typeof renderCustomersGrid === 'function') renderCustomersGrid();
+  if (typeof renderCustomersTable === 'function') renderCustomersTable();
+
+  showToast('Customer Details Saved', `Profile & mindset notes for "${customer.name}" saved & locked!`, 'check_circle', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+
+// Quick 1-Click Customer Mindset Notes Modal / Prompt
+function openCustomerQuickNotesModal(customerId) {
+  const customer = CRM_STATE.customers.find(c => c.id === customerId);
+  if (!customer) return;
+
+  const currentNotes = customer.notes || '';
+  const updatedNotes = prompt(`📝 Update Customer Mindset, Behavioral Records & Notes for "${customer.name}":`, currentNotes);
+
+  if (updatedNotes !== null) {
+    customer.notes = updatedNotes.trim();
+    saveCRMState();
+
+    fetch('api.php?action=save_customer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone,
+        notes: customer.notes
+      })
+    }).catch(() => {});
+
+    logAudit('CUSTOMER_NOTES', 'CUSTOMER_360', `Updated mindset notes for ${customer.name}: "${customer.notes.substring(0, 30)}..."`);
+    renderCustomer360Panel();
+    showToast('Customer Notes Updated', 'Mindset notes saved successfully.', 'edit_note', 'amber');
+    if (typeof playChime === 'function') playChime('order');
+  }
+}
+
+// Quick Append Mindset Tag to Customer Record
+function appendCustomerMindsetTag(customerId, tagText) {
+  const customer = CRM_STATE.customers.find(c => c.id === customerId);
+  if (!customer) return;
+
+  const existing = customer.notes ? customer.notes.trim() : '';
+  if (existing.includes(tagText)) {
+    showToast('Already Added', `Tag "${tagText}" is already in customer notes.`, 'info', 'blue');
+    return;
+  }
+
+  customer.notes = existing ? `${existing} | ${tagText}` : tagText;
+  saveCRMState();
+  renderCustomer360Panel();
+  showToast('Mindset Tag Added', `"${tagText}" recorded in customer mindset notes.`, 'psychology', 'amber');
+  if (typeof playChime === 'function') playChime('order');
+}
+
 function renderCustomer360Panel() {
   const panel = document.getElementById('chat-right-panel');
   if (!panel) return;
@@ -2440,8 +2481,40 @@ function renderCustomer360Panel() {
 
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
+  const isEditing = CUSTOMER_EDIT_MODES.has(customer.id);
+
+  // Status Badge Formatting
+  const qStatus = query ? (query.status || 'NEW') : (customer.isDND ? 'DND' : 'NONE');
+  let statusBadgeHtml = '';
+  if (qStatus === 'DND' || customer.isDND) {
+    statusBadgeHtml = `<span class="bg-rose-100 text-rose-900 border border-rose-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span> 🚫 DND</span>`;
+  } else if (qStatus === 'PENDING') {
+    statusBadgeHtml = `<span class="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> 🟡 PENDING</span>`;
+  } else if (qStatus === 'FOLLOW_UP') {
+    statusBadgeHtml = `<span class="bg-blue-100 text-blue-900 border border-blue-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> 🔵 FOLLOW-UP</span>`;
+  } else if (qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED') {
+    statusBadgeHtml = `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> 🟣 IN PROGRESS</span>`;
+  } else if (qStatus === 'CONVERTED') {
+    statusBadgeHtml = `<span class="bg-purple-100 text-purple-900 border border-purple-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span> 🏆 CONVERTED</span>`;
+  } else if (qStatus === 'RESOLVED') {
+    statusBadgeHtml = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> ✅ RESOLVED</span>`;
+  } else {
+    statusBadgeHtml = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 🟢 NEW</span>`;
+  }
 
   panel.innerHTML = `
+    <!-- Top Bar with Slide / Hide Toggle Button -->
+    <div class="px-4 py-2.5 bg-slate-100/90 border-b border-slate-200 flex items-center justify-between shrink-0 sticky top-0 z-10 backdrop-blur">
+      <span class="text-[11px] font-extrabold uppercase text-slate-700 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[16px] text-emerald-700">account_box</span>
+        <span>Customer 360 Details</span>
+      </span>
+      <button type="button" onclick="toggleRightPanel(false)" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-[10px] font-bold shadow-sm" title="Slide Hide Customer Profile Panel">
+        <span>Hide</span>
+        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+      </button>
+    </div>
+
     <!-- Top Customer Summary -->
     <div class="p-5 border-b border-slate-200 text-center bg-slate-50/50">
       <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-xl flex items-center justify-center mx-auto shadow-md">
@@ -2451,10 +2524,18 @@ function renderCustomer360Panel() {
       <div class="flex items-center justify-center gap-1.5 mt-1">
         <p class="text-xs text-emerald-800 font-mono font-bold">${displayPhone}</p>
       </div>
+
+      <!-- Handle Staff Subtitle Badge -->
+      <div class="mt-2 flex items-center justify-center">
+        <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${staff ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'} px-2.5 py-0.5 rounded-full">
+          <span class="material-symbols-outlined text-[13px]">${staff ? 'badge' : 'person_alert'}</span>
+          <span>Handled by: <strong>${staff ? staff.name : 'Unassigned'}</strong></span>
+        </span>
+      </div>
       
       <!-- Tags -->
       <div class="flex items-center justify-center gap-1.5 flex-wrap mt-3">
-        ${customer.tags.map(t => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full">${t}</span>`).join('')}
+        ${(customer.tags || []).map(t => `<span class="${t.includes('DND') ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'} text-[10px] font-bold px-2 py-0.5 rounded-full">${t}</span>`).join('')}
       </div>
     </div>
 
@@ -2462,48 +2543,238 @@ function renderCustomer360Panel() {
     <div class="grid grid-cols-2 gap-3 p-4 border-b border-slate-200 bg-white">
       <div class="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200/60 text-center">
         <span class="text-[10px] uppercase font-bold text-emerald-800">Total Orders</span>
-        <p class="text-base font-extrabold text-emerald-950 mt-0.5">${customer.totalOrders} Orders</p>
+        <p class="text-base font-extrabold text-emerald-950 mt-0.5">${customer.totalOrders || 0} Orders</p>
       </div>
       <div class="bg-blue-50/70 p-2.5 rounded-xl border border-blue-200/60 text-center">
         <span class="text-[10px] uppercase font-bold text-blue-800">Lifetime Spend</span>
-        <p class="text-base font-extrabold text-blue-950 font-mono mt-0.5">₹${customer.totalSpend.toLocaleString('en-IN')}</p>
+        <p class="text-base font-extrabold text-blue-950 font-mono mt-0.5">₹${(customer.totalSpend || 0).toLocaleString('en-IN')}</p>
       </div>
     </div>
 
-    <!-- Active Query Info Box -->
-    <div class="p-4 border-b border-slate-200 space-y-2.5">
+    <!-- 1. CUSTOMER PROFILE DETAILS FORM (LOCKED / EDITABLE) -->
+    <div class="p-4 border-b border-slate-200 bg-white space-y-3">
       <div class="flex items-center justify-between">
-        <span class="text-[11px] font-bold uppercase text-slate-500">Current Query</span>
-        <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">${query ? query.status : 'NONE'}</span>
+        <span class="text-[11px] font-bold uppercase text-slate-700 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px] text-brand-wa">person_pin</span>
+          <span>Customer Profile Details</span>
+        </span>
+        ${isEditing ? `
+          <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Editing Mode
+          </span>
+        ` : `
+          <span class="text-[9px] bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+            <span class="material-symbols-outlined text-[12px] text-slate-500">lock</span> Saved &amp; Locked
+          </span>
+        `}
+      </div>
+
+      <form id="form-quick-customer-edit" onsubmit="handleQuickCustomerSave(event, '${customer.id}')" class="space-y-2.5 text-xs">
+        <!-- Customer Name -->
+        <div>
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Name *:</label>
+          <input type="text" id="cust-edit-name" value="${customer.name || ''}" ${isEditing ? '' : 'disabled'} required placeholder="Full Name" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
+        </div>
+
+        <!-- Phone Number (Auto-Fetched from WhatsApp Message) -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide">WhatsApp Phone *:</label>
+            <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Auto-Fetched
+            </span>
+          </div>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-emerald-600">call</span>
+            <input type="text" id="cust-edit-phone" value="${customer.whatsapp || customer.phone || ''}" ${isEditing ? '' : 'disabled'} required placeholder="+91 98765 43210" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-emerald-950 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-bold">
+          </div>
+        </div>
+
+        <!-- Age & Gender Grid -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Age:</label>
+            <input type="number" id="cust-edit-age" value="${customer.age || ''}" ${isEditing ? '' : 'disabled'} min="1" max="120" placeholder="e.g. 28" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Gender:</label>
+            <select id="cust-edit-gender" ${isEditing ? '' : 'disabled'} class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
+              <option value="" ${!customer.gender ? 'selected' : ''}>-- Select --</option>
+              <option value="Female" ${customer.gender === 'Female' ? 'selected' : ''}>Female</option>
+              <option value="Male" ${customer.gender === 'Male' ? 'selected' : ''}>Male</option>
+              <option value="Other" ${customer.gender === 'Other' ? 'selected' : ''}>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Email (Optional) -->
+        <div>
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Email (Optional):</label>
+          <input type="email" id="cust-edit-email" value="${customer.email || ''}" ${isEditing ? '' : 'disabled'} placeholder="customer@example.com" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
+        </div>
+
+        <!-- Delivery Address -->
+        <div>
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Delivery Address:</label>
+          <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Door No, Street, Landmark, City, Pincode" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${customer.address || ''}</textarea>
+        </div>
+
+        <!-- Customer Mindset & Records Notes Field -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px] text-amber-600">psychology</span>
+              <span>Customer Mindset &amp; Notes:</span>
+            </label>
+            <span class="text-[9px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">Mindset Log</span>
+          </div>
+          <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions..." class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${customer.notes || ''}</textarea>
+        </div>
+
+        <!-- Action Buttons (Locked vs Editing) -->
+        <div class="pt-1">
+          ${isEditing ? `
+            <div class="flex gap-2">
+              <button type="button" onclick="toggleCustomerEditMode('${customer.id}', false)" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center">
+                Cancel
+              </button>
+              <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                <span class="material-symbols-outlined text-[16px]">save</span>
+                <span>Save Customer Details</span>
+              </button>
+            </div>
+          ` : `
+            <button type="button" onclick="toggleCustomerEditMode('${customer.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+              <span class="material-symbols-outlined text-[16px]">edit_note</span>
+              <span>Edit Customer Details &amp; Notes</span>
+            </button>
+          `}
+        </div>
+      </form>
+    </div>
+
+    <!-- 2. PROMINENT CUSTOMER MINDSET & BEHAVIORAL NOTES CARD (1-Click Quick Update) -->
+    <div class="p-4 border-b border-slate-200 bg-amber-50/40 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px] text-amber-600">psychology</span>
+          <span class="text-[11px] font-extrabold uppercase text-amber-950">Customer Mindset &amp; Notes</span>
+        </div>
+        <button type="button" onclick="openCustomerQuickNotesModal('${customer.id}')" class="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 flex items-center gap-0.5 transition" title="Edit Customer Mindset Notes">
+          <span class="material-symbols-outlined text-[13px]">edit_note</span> Quick Edit
+        </button>
+      </div>
+
+      <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs space-y-2">
+        <p class="text-xs text-slate-800 font-medium leading-relaxed italic ${customer.notes ? '' : 'text-slate-400 font-normal'}">
+          ${customer.notes ? `"${customer.notes}"` : 'No mindset notes recorded yet. Record their fabric preference, wholesale budget, sizing, or buying behavior.'}
+        </p>
+
+        <!-- Quick Mindset Badges / Chips -->
+        <div class="flex items-center gap-1 flex-wrap pt-1.5 border-t border-slate-100">
+          <span class="text-[9px] font-bold uppercase text-slate-400">Quick Tags:</span>
+          <button type="button" onclick="appendCustomerMindsetTag('${customer.id}', '🛍️ Bulk Wholesale Buyer')" class="px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-[9px] font-bold transition">+ Bulk Buyer</button>
+          <button type="button" onclick="appendCustomerMindsetTag('${customer.id}', '✨ Premium Quality Focus')" class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded text-[9px] font-bold transition">+ Premium Quality</button>
+          <button type="button" onclick="appendCustomerMindsetTag('${customer.id}', '🏷️ Price Sensitive')" class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[9px] font-bold transition">+ Price Sensitive</button>
+          <button type="button" onclick="appendCustomerMindsetTag('${customer.id}', '👶 Newborn Size Focus')" class="px-1.5 py-0.5 bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 rounded text-[9px] font-bold transition">+ Newborn 0-6M</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. ACTIVE QUERY & STATUS CONTROLLER (DROPDOWN + SAVE BUTTON) -->
+    <div class="p-4 border-b border-slate-200 space-y-3 bg-white">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px] text-brand-wa">assignment</span>
+          <span class="text-[11px] font-bold uppercase text-slate-700">Enquiry Status &amp; State</span>
+        </div>
+        ${statusBadgeHtml}
       </div>
 
       ${query ? `
-        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1.5">
-          <div class="flex justify-between">
-            <span class="text-slate-500">Query ID:</span>
+        <!-- Status Dropdown Selector & Save Button -->
+        <div class="space-y-2">
+          <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide">Change Status:</label>
+          <div class="relative">
+            <select id="query-status-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-brand-wa appearance-none pr-8">
+              <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 New Lead</option>
+              <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 Pending Action</option>
+              <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 Follow-up Scheduled</option>
+              <option value="IN_PROGRESS" ${qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED' ? 'selected' : ''}>🟣 In Progress / Active</option>
+              <option value="RESOLVED" ${qStatus === 'RESOLVED' ? 'selected' : ''}>✅ Resolved / Closed</option>
+              <option value="CONVERTED" ${qStatus === 'CONVERTED' ? 'selected' : ''}>🏆 Converted to Sale</option>
+              <option value="DND" ${qStatus === 'DND' ? 'selected' : ''}>🚫 DND / Not Interested (No Products Needed)</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+          </div>
+
+          <button type="button" onclick="handleSaveQueryStatus('${query.id}')" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+            <span class="material-symbols-outlined text-[15px]">save</span>
+            <span>Save Status</span>
+          </button>
+        </div>
+
+        <!-- Query Meta Details -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500 font-medium">Query ID:</span>
             <span class="font-mono font-bold text-slate-800">${query.id}</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-500">Assigned Staff:</span>
-            <span class="font-bold text-emerald-800">${staff ? staff.name : '<span class="text-amber-600">Unassigned</span>'}</span>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500 font-medium">Priority:</span>
+            <span class="font-bold ${query.priority === 'URGENT' ? 'text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200' : 'text-amber-700'}">${query.priority}</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-500">Priority:</span>
-            <span class="font-bold text-rose-600">${query.priority}</span>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500 font-medium">Schedule Action:</span>
+            <button type="button" onclick="openFollowUpModal()" class="text-[11px] text-blue-700 font-bold hover:underline flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px]">calendar_add_on</span> Set Follow-up
+            </button>
           </div>
         </div>
-      ` : '<p class="text-xs text-slate-400">No active query</p>'}
+      ` : '<p class="text-xs text-slate-400">No active query recorded for this customer</p>'}
     </div>
 
-    <!-- Customer Address Details -->
-    <div class="p-4 border-b border-slate-200 space-y-2 text-xs">
-      <span class="text-[11px] font-bold uppercase text-slate-500">Delivery Address</span>
-      <p class="text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200 leading-relaxed font-medium">
-        ${customer.address}
-      </p>
+    <!-- 3. PROMINENT HANDLING STAFF SECTION -->
+    <div class="p-4 border-b border-slate-200 space-y-2.5 bg-slate-50/50">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase text-slate-700 flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-emerald-700">support_agent</span>
+          <span>Handling Staff Member</span>
+        </span>
+        <button type="button" onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="text-brand-wa hover:text-brand-waDark font-bold text-xs flex items-center gap-0.5">
+          <span class="material-symbols-outlined text-[14px]">edit</span> Change
+        </button>
+      </div>
+
+      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2.5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl ${staff ? 'bg-gradient-to-tr from-brand-dark to-emerald-700 text-white' : 'bg-amber-100 text-amber-800'} font-extrabold text-sm flex items-center justify-center shadow-sm shrink-0">
+            ${staff ? staff.avatar : '?'}
+          </div>
+          <div class="min-w-0 flex-1">
+            <h4 class="font-bold text-slate-900 text-xs truncate">
+              ${staff ? staff.name : '<span class="text-amber-700 font-extrabold">⚠️ Unassigned (In Queue)</span>'}
+            </h4>
+            <p class="text-[11px] text-slate-500 truncate mt-0.5">
+              ${staff ? (staff.role || staff.specialization) : 'No staff member allocated yet'}
+            </p>
+          </div>
+        </div>
+
+        <!-- Quick Staff Reassign Selector -->
+        <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
+          <label class="text-[10px] text-slate-500 font-bold shrink-0">Quick Assign:</label>
+          <select onchange="quickReassignQueryStaff('${query ? query.id : ('Q-' + customer.id)}', this.value)" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-brand-wa">
+            <option value="UNASSIGNED" ${(!staff || query?.assignedTo === 'UNASSIGNED') ? 'selected' : ''}>-- Unassigned --</option>
+            ${(CRM_STATE.staffList || []).map(s => `
+              <option value="${s.id}" ${query?.assignedTo === s.id ? 'selected' : ''}>${s.name} (${s.specialization || s.role.split('(')[0]})</option>
+            `).join('')}
+          </select>
+        </div>
+      </div>
     </div>
 
-    <!-- Recent WhatsApp Orders Accordion -->
+    <!-- 4. RECENT WHATSAPP ORDERS ACCORDION -->
     <div class="p-4 space-y-2.5 text-xs">
       <div class="flex items-center justify-between">
         <span class="text-[11px] font-bold uppercase text-slate-500">Past WhatsApp Orders (${orders.length})</span>
@@ -2534,73 +2805,77 @@ function renderCustomer360Panel() {
 // =========================================================================
 
 // Dispatches live message to customer's WhatsApp via Node Baileys QR Bridge (Method 3)
-async function dispatchWhatsAppOutbound(phone, text, msgRef, jid) {
+async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false) {
+  const targetAccId = accountId || ACTIVE_SEND_ACCOUNT_ID || 'account_1';
+
   // 1. Try Instant WebSocket (Socket.IO) Dispatch
   if (SOCKET_IO && SOCKET_IO.connected) {
-    SOCKET_IO.emit('whatsapp:send', { phone, text, jid }, (res) => {
-      if (res && res.status === 'success') {
-        if (msgRef) msgRef.status = 'DELIVERED';
-        renderChatMessages();
-        showToast('WhatsApp Delivered', `Live message sent to customer (${phone})!`, 'done_all', 'emerald');
-      } else {
-        console.warn('[Socket Send Notice]:', res);
-        showToast('WhatsApp Notice', res?.message || 'Message queued', 'info', 'amber');
-      }
+    return new Promise((resolve) => {
+      SOCKET_IO.emit('whatsapp:send', { phone, text, jid, accountId: targetAccId }, (res) => {
+        if (res && res.status === 'success') {
+          if (msgRef) msgRef.status = 'DELIVERED';
+          if (typeof renderChatMessages === 'function') renderChatMessages();
+          if (!silent) showToast('WhatsApp Delivered', `Live message sent to customer (${phone})!`, 'done_all', 'emerald');
+          resolve(true);
+        } else {
+          console.warn('[Socket Send Notice]:', res);
+          if (!silent) showToast('WhatsApp Notice', res?.message || 'Message queued', 'info', 'amber');
+          resolve(false);
+        }
+      });
     });
-    return true;
   }
 
-  // 2. HTTP Fallback
+  // 2. HTTP Fallback to Node.js Bridge
   try {
     let resp = await fetch('http://localhost:3000/api/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, text, jid })
+      body: JSON.stringify({ phone, text, jid, accountId: targetAccId })
     });
     let result = await resp.json();
     if (result.status === 'success') {
       if (msgRef) msgRef.status = 'DELIVERED';
-      renderChatMessages();
-      showToast('WhatsApp Delivered', `Live message sent to customer (${phone})!`, 'done_all', 'emerald');
+      if (typeof renderChatMessages === 'function') renderChatMessages();
+      if (!silent) showToast('WhatsApp Delivered', `Live message sent to customer (${phone})!`, 'done_all', 'emerald');
       return true;
     } else {
       console.warn('[Bridge Send Notice]:', result);
-      showToast('Saved to CRM', result.message || 'Stored in CRM', 'info', 'amber');
+      if (!silent) showToast('Saved to CRM', result.message || 'Stored in CRM', 'info', 'amber');
       return false;
     }
   } catch (err) {
-    // Fallback via PHP backend proxy
+    // 3. Fallback via PHP backend proxy
     try {
       let fResp = await fetch('api.php?action=send_message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, text, jid })
+        body: JSON.stringify({ phone, text, jid, accountId: targetAccId })
       });
       let fResult = await fResp.json();
       if (fResult.status === 'success') {
         if (msgRef) msgRef.status = 'DELIVERED';
-        renderChatMessages();
-        showToast('WhatsApp Delivered', `Live message sent to customer (${phone})!`, 'done_all', 'emerald');
+        if (typeof renderChatMessages === 'function') renderChatMessages();
+        if (!silent) showToast('WhatsApp Delivered', `Live message sent to customer (${phone})!`, 'done_all', 'emerald');
         return true;
       }
     } catch (e) { }
     console.warn('[Bridge Offline]:', err);
-    showToast('Saved in CRM', 'Recorded locally. Connect QR in WhatsApp Settings for live delivery.', 'info', 'blue');
+    if (!silent) showToast('Saved in CRM', 'Recorded locally. Connect QR in WhatsApp Settings for live delivery.', 'info', 'blue');
     return false;
   }
 }
 
 function formatOutboundBrandMessage(text) {
   const brandName = getBrandName();
-  const tagline = getBrandTagline();
   const includeHeader = CRM_STATE?.brandSettings?.includeBrandHeader !== false;
 
   if (!includeHeader) return text;
 
   // Don't format if already formatted with brand header
-  if (text.includes(brandName)) return text;
+  if (text.includes('Order Desk') || text.includes(brandName)) return text;
 
-  return `🛍️ *${brandName}* • Order Desk\n━━━━━━━━━━━━━━━━━━━━\n${text}\n\n_${tagline}_`;
+  return `🛍️ *${brandName}* • Order Desk\n━━━━━━━━━━━━━━━━━━━━\n${text}`;
 }
 
 function handleSendMessage(event) {
@@ -2672,8 +2947,354 @@ function insertQuickReply(type) {
 }
 
 // =========================================================================
-// BRAND IDENTITY & CUSTOMER DISPLAY ENGINE
+// WHATSAPP MESSAGE AUTOMATION & STOCK AUTO-REPLY BOT ENGINE
 // =========================================================================
+
+function getDefaultStockAutoReplyTemplate() {
+  return `🛍️ *{brand_name}* • Live Stock & Collections
+━━━━━━━━━━━━━━━━━━━━
+Hello {customer_name}! 👋 Thank you for messaging us.
+
+Here is our live available stock & collections today:
+
+{stock_categories}
+
+━━━━━━━━━━━━━━━━━━━━
+💬 *How to Order / Inquire:*
+Reply with the *Category Number (1-6)* or tell us what size you need, and our sales team will share photos & reserve your order instantly!`;
+}
+
+// Dynamically aggregates live stock and price ranges from CRM_STATE.products
+function generateLiveCategoryStockText() {
+  const categories = [
+    { num: 1, name: 'Baby Collection (0-3 Years)', key: 'Baby Collection', desc: 'Embroidered Cotton Frocks & Soft Sets' },
+    { num: 2, name: 'Maternity & Feeding Gowns', key: 'Maternity', desc: 'Tiered Cotton Maxi & Feeding Gowns' },
+    { num: 3, name: 'Newborn Gift Sets (0-6 Months)', key: 'Newborn', desc: '5-Piece Organic Romper Gift Sets' },
+    { num: 4, name: 'Kids Everyday Wear (4-5 Years)', key: 'Kids', desc: 'Pure Cotton T-Shirts Pack & Daily Sets' },
+    { num: 5, name: 'Wholesale & Bulk Bundles', key: 'Wholesale', desc: 'Bulk 25 & 50 Pcs Assorted Boxes' },
+    { num: 6, name: 'Festive & VIP Silk Collection', key: 'Festive', desc: 'Girls Silk Lehengas & Pattu Pavadai Sets' }
+  ];
+
+  let text = '';
+  categories.forEach(cat => {
+    const prods = (CRM_STATE.products || []).filter(p => (p.category || '').toLowerCase().includes(cat.key.toLowerCase()));
+    let priceInfo = '';
+    if (prods.length > 0) {
+      const prices = prods.map(p => p.price).filter(Boolean);
+      const minP = Math.min(...prices);
+      const maxP = Math.max(...prices);
+      priceInfo = minP === maxP ? `₹${minP}` : `₹${minP} - ₹${maxP}`;
+    } else {
+      priceInfo = '₹450 - ₹1,450';
+    }
+
+    text += `📦 *${cat.num}. ${cat.name}*\n• ${cat.desc} — *${priceInfo}*\n\n`;
+  });
+
+  return text.trim();
+}
+
+function buildStockAutoReplyMessage(customer) {
+  const brand = getBrandName();
+  const custName = customer ? customer.name.split(' ')[0] : 'Customer';
+  const categoriesText = generateLiveCategoryStockText();
+  const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
+
+  let customTpl = CRM_STATE?.autoReplySettings?.messageTemplate;
+  if (!customTpl || customTpl.trim() === '') {
+    customTpl = getDefaultStockAutoReplyTemplate();
+  }
+
+  return customTpl
+    .replace(/{customer_name}/g, custName)
+    .replace(/{brand_name}/g, brand)
+    .replace(/{stock_categories}/g, categoriesText)
+    .replace(/{business_phone}/g, phone);
+}
+
+function getSpecificCategoryStockCard(categoryName, customer) {
+  const brand = getBrandName();
+  const custName = customer ? customer.name.split(' ')[0] : 'Customer';
+  const prods = (CRM_STATE.products || []).filter(p => (p.category || '').toLowerCase().includes(categoryName.toLowerCase()));
+
+  if (prods.length === 0) {
+    return `🛍️ *${brand}* • Stock Update\n━━━━━━━━━━━━━━━━━━━━\nHello ${custName}! 👋 Here are our latest *${categoryName}* items in stock. Please let us know your preferred size and our team will share ready-stock photos!`;
+  }
+
+  let itemsList = prods.slice(0, 5).map(p => {
+    const avail = (p.physicalStock || 0) - (p.reservedStock || 0);
+    const stockStatus = avail > 0 ? `✅ Ready Stock (${avail} pcs)` : `⏳ Reserved (${avail} left)`;
+    return `• *${p.name}* (${p.size || 'Standard'})\n  Price: *₹${p.price}* | SKU: \`${p.sku}\` | ${stockStatus}`;
+  }).join('\n\n');
+
+  return `🛍️ *${brand}* • ${categoryName} Live Stock\n━━━━━━━━━━━━━━━━━━━━\nHello ${custName}! 👋 Here is our current live stock for *${categoryName}*:\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with the *SKU or Product Name* and your delivery pincode to book your order instantly!`;
+}
+
+// Inbound Automated Response Dispatcher
+function handleAutomatedInboundResponse(customer, messageText, payload) {
+  if (!customer || !CRM_STATE?.autoReplySettings?.enabled) return;
+
+  const text = (messageText || '').trim().toLowerCase();
+  const settings = CRM_STATE.autoReplySettings;
+  const cooldownMin = typeof settings.cooldownMinutes !== 'undefined' ? parseInt(settings.cooldownMinutes) : 0;
+  const cooldownMs = (isNaN(cooldownMin) ? 0 : cooldownMin) * 60 * 1000;
+  const now = Date.now();
+  const lastAutoReply = customer.lastAutoReplyEpoch || 0;
+  const isCooldownOver = cooldownMs === 0 || (now - lastAutoReply) >= cooldownMs;
+
+  let replyText = null;
+  let responseType = 'STOCK_MENU';
+
+  // 1. Keyword-based interactive category responses (if enabled)
+  if (settings.keywordMatching !== false) {
+    if (text === '1' || text === 'baby' || text.includes('baby collection') || text.includes('frock')) {
+      replyText = getSpecificCategoryStockCard('Baby Collection', customer);
+      responseType = 'CATEGORY_BABY';
+    } else if (text === '2' || text === 'maternity' || text.includes('feeding') || text.includes('gown')) {
+      replyText = getSpecificCategoryStockCard('Maternity', customer);
+      responseType = 'CATEGORY_MATERNITY';
+    } else if (text === '3' || text === 'newborn' || text.includes('romper') || text.includes('gift set')) {
+      replyText = getSpecificCategoryStockCard('Newborn', customer);
+      responseType = 'CATEGORY_NEWBORN';
+    } else if (text === '4' || text === 'kids' || text.includes('t-shirt') || text.includes('tshirt')) {
+      replyText = getSpecificCategoryStockCard('Kids', customer);
+      responseType = 'CATEGORY_KIDS';
+    } else if (text === '5' || text === 'wholesale' || text.includes('bulk') || text.includes('bundle')) {
+      replyText = getSpecificCategoryStockCard('Wholesale', customer);
+      responseType = 'CATEGORY_WHOLESALE';
+    } else if (text === '6' || text === 'festive' || text.includes('lehenga') || text.includes('pattu') || text.includes('silk')) {
+      replyText = getSpecificCategoryStockCard('Girls Festive', customer);
+      responseType = 'CATEGORY_FESTIVE';
+    }
+  }
+
+  // 2. If no specific keyword matched, check if cooldown is over to send the main Stock Category Menu
+  if (!replyText && isCooldownOver) {
+    replyText = buildStockAutoReplyMessage(customer);
+    responseType = 'STOCK_MENU';
+  }
+
+  if (!replyText) return;
+
+  // Record auto-reply timestamp to enforce cooldown
+  customer.lastAutoReplyEpoch = now;
+
+  // Create message in conversation
+  const autoMsg = {
+    id: Date.now() + 200,
+    sender: 'staff',
+    isBot: true,
+    text: replyText,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    status: 'DELIVERED'
+  };
+
+  if (!CRM_STATE.conversations[customer.id]) {
+    CRM_STATE.conversations[customer.id] = [];
+  }
+  CRM_STATE.conversations[customer.id].push(autoMsg);
+
+  // Update query status to AUTOMATED_REPLIED
+  const query = CRM_STATE.queries.find(q => q.customerId === customer.id);
+  if (query) {
+    query.lastMessage = `Bot: "Stock Menu & Categories Sent"`;
+  }
+
+  saveCRMState();
+
+  if (ACTIVE_VIEW === 'inbox') {
+    renderInbox();
+    const stream = document.getElementById('chat-messages-stream');
+    if (stream) stream.scrollTop = stream.scrollHeight;
+  }
+
+  // Dispatch live WhatsApp message via bridge
+  dispatchWhatsAppOutbound(
+    customer.whatsapp || customer.phone,
+    replyText,
+    autoMsg,
+    customer.jid || payload.sender_jid,
+    customer.accountId || payload.account_id,
+    true
+  );
+
+  console.log(`[Auto-Reply Bot] Sent ${responseType} to ${customer.name} (${customer.phone})`);
+}
+
+// 1-Click Share Stock Category Menu from Chat Quick Action Tray
+function shareStockCategoryMenu() {
+  if (!ACTIVE_CUSTOMER_ID) {
+    showToast('Select Customer', 'Please select a conversation from the left to share stock menu.', 'info', 'amber');
+    return;
+  }
+  const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
+  if (!customer) return;
+
+  const msgText = buildStockAutoReplyMessage(customer);
+  const input = document.getElementById('chat-input-text');
+  if (input) {
+    input.value = msgText;
+    input.focus();
+    showToast('Stock Menu Ready', 'Stock Category menu inserted into message bar. Click Send to dispatch.', 'category', 'emerald');
+    if (typeof playChime === 'function') playChime('inbound');
+  }
+}
+
+// Modal Controllers
+function openAutoReplyModal() {
+  if (!CRM_STATE.autoReplySettings) {
+    CRM_STATE.autoReplySettings = {
+      enabled: true,
+      cooldownMinutes: 30,
+      keywordMatching: true,
+      messageTemplate: getDefaultStockAutoReplyTemplate()
+    };
+  }
+
+  const settings = CRM_STATE.autoReplySettings;
+  const masterToggle = document.getElementById('autoreply-master-toggle');
+  const cooldownSelect = document.getElementById('autoreply-cooldown-select');
+  const keywordToggle = document.getElementById('autoreply-keyword-toggle');
+  const tplArea = document.getElementById('autoreply-message-template');
+
+  if (masterToggle) masterToggle.checked = settings.enabled !== false;
+  if (cooldownSelect) cooldownSelect.value = settings.cooldownMinutes || '30';
+  if (keywordToggle) keywordToggle.checked = settings.keywordMatching !== false;
+  if (tplArea) tplArea.value = settings.messageTemplate || getDefaultStockAutoReplyTemplate();
+
+  updateAutoReplyLivePreview();
+  openModal('modal-auto-reply-settings');
+}
+
+function updateAutoReplyLivePreview() {
+  const tplArea = document.getElementById('autoreply-message-template');
+  const previewBox = document.getElementById('autoreply-live-preview-box');
+  const charEl = document.getElementById('autoreply-preview-chars');
+  if (!tplArea || !previewBox) return;
+
+  const rawTemplate = tplArea.value || getDefaultStockAutoReplyTemplate();
+  const sampleCustomer = { name: 'Mekha 🦋', phone: '+91 97896 60115' };
+  const brand = getBrandName();
+  const categoriesText = generateLiveCategoryStockText();
+  const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
+
+  const previewText = rawTemplate
+    .replace(/{customer_name}/g, sampleCustomer.name)
+    .replace(/{brand_name}/g, brand)
+    .replace(/{stock_categories}/g, categoriesText)
+    .replace(/{business_phone}/g, phone);
+
+  previewBox.innerText = previewText;
+  if (charEl) charEl.innerText = `${previewText.length} chars`;
+}
+
+function insertAutoReplyTag(tag) {
+  const tplArea = document.getElementById('autoreply-message-template');
+  if (!tplArea) return;
+  const start = tplArea.selectionStart;
+  const end = tplArea.selectionEnd;
+  const text = tplArea.value;
+  tplArea.value = text.substring(0, start) + tag + text.substring(end);
+  tplArea.focus();
+  tplArea.selectionStart = tplArea.selectionEnd = start + tag.length;
+  updateAutoReplyLivePreview();
+}
+
+function regenerateLiveStockMenuTemplate() {
+  const tplArea = document.getElementById('autoreply-message-template');
+  if (tplArea) {
+    tplArea.value = getDefaultStockAutoReplyTemplate();
+    updateAutoReplyLivePreview();
+    showToast('Template Regenerated', 'Loaded latest stock categories and price ranges.', 'sync', 'emerald');
+    if (typeof playChime === 'function') playChime('inbound');
+  }
+}
+
+function toggleAutoReplyMaster(enabled) {
+  if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
+  CRM_STATE.autoReplySettings.enabled = enabled;
+  saveCRMState();
+  updateAutoReplyUI();
+  showToast(
+    enabled ? 'Stock Auto-Reply Active' : 'Auto-Reply Paused',
+    enabled ? 'Customers will receive instant stock category menus upon messaging.' : 'Automated replies are paused.',
+    enabled ? 'smart_toy' : 'pause_circle',
+    enabled ? 'emerald' : 'amber'
+  );
+  if (typeof playChime === 'function') playChime('inbound');
+}
+
+function saveAutoReplySettings() {
+  const masterToggle = document.getElementById('autoreply-master-toggle');
+  const cooldownSelect = document.getElementById('autoreply-cooldown-select');
+  const keywordToggle = document.getElementById('autoreply-keyword-toggle');
+  const tplArea = document.getElementById('autoreply-message-template');
+
+  if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
+  CRM_STATE.autoReplySettings.enabled = masterToggle ? masterToggle.checked : true;
+  CRM_STATE.autoReplySettings.cooldownMinutes = cooldownSelect ? parseInt(cooldownSelect.value) : 30;
+  CRM_STATE.autoReplySettings.keywordMatching = keywordToggle ? keywordToggle.checked : true;
+  CRM_STATE.autoReplySettings.messageTemplate = tplArea ? tplArea.value.trim() : getDefaultStockAutoReplyTemplate();
+
+  saveCRMState();
+  updateAutoReplyUI();
+  closeModal('modal-auto-reply-settings');
+  showToast('Automation Saved', 'WhatsApp Stock Auto-Reply settings saved successfully.', 'check_circle', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+
+function updateAutoReplyUI() {
+  const isEnabled = CRM_STATE?.autoReplySettings?.enabled !== false;
+  const pillDot = document.getElementById('pill-autoreply-dot');
+  const pillLabel = document.getElementById('pill-autoreply-label');
+  const headerBtn = document.getElementById('header-auto-reply-btn');
+
+  if (pillDot) {
+    pillDot.className = `w-2 h-2 rounded-full ${isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`;
+  }
+  if (pillLabel) {
+    pillLabel.innerText = isEnabled ? 'Auto-Reply: ON' : 'Auto-Reply: OFF';
+  }
+  if (headerBtn) {
+    if (isEnabled) {
+      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
+    } else {
+      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-lg transition shadow-sm";
+    }
+  }
+}
+
+function testSendStockAutoReplyToCurrentChat() {
+  if (!ACTIVE_CUSTOMER_ID) {
+    showToast('No Customer Selected', 'Please select an active chat conversation to test.', 'info', 'amber');
+    return;
+  }
+  const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
+  if (!customer) return;
+
+  const msgText = buildStockAutoReplyMessage(customer);
+  const testMsg = {
+    id: Date.now(),
+    sender: 'staff',
+    isBot: true,
+    text: msgText,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    status: 'SENDING'
+  };
+
+  if (!CRM_STATE.conversations[customer.id]) {
+    CRM_STATE.conversations[customer.id] = [];
+  }
+  CRM_STATE.conversations[customer.id].push(testMsg);
+  saveCRMState();
+  renderChatMessages();
+
+  dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, msgText, testMsg, customer.jid, customer.accountId);
+  closeModal('modal-auto-reply-settings');
+  showToast('Test Auto-Reply Dispatched', `Stock category menu sent to ${customer.name}!`, 'smart_toy', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+
 function getBrandName() {
   return CRM_STATE?.brandSettings?.brandName || CRM_STATE?.whatsappAccount?.displayName || 'GRM Garments';
 }
@@ -2806,18 +3427,21 @@ function confirmResetInboxMessages() {
 
 function resetInboxMessages(skipAlert) {
   try {
-    // Reset state directly from INITIAL_CRM_DATA
-    CRM_STATE.customers = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.customers));
-    CRM_STATE.queries = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.queries));
-    CRM_STATE.conversations = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.conversations));
+    // Reset state cleanly without static mock data
+    CRM_STATE.customers = [];
+    CRM_STATE.queries = [];
+    CRM_STATE.conversations = {};
     CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
     CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
     CRM_STATE.deletedSlots = [];
     CRM_STATE.whatsappLines = null;
     
     // Reset active line and active customer
-    ACTIVE_CUSTOMER_ID = 'cust_100';
+    ACTIVE_CUSTOMER_ID = null;
     ACTIVE_SEND_ACCOUNT_ID = 'all';
+
+    // Clear backend message queue as well
+    fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => {});
 
     // Persist to local storage
     saveCRMState();
@@ -2839,7 +3463,7 @@ function resetInboxMessages(skipAlert) {
     if (!skipAlert && typeof showToast === 'function') {
       showToast(
         'Inbox Messages Reset',
-        'All 5 WhatsApp lines and test chat threads have been reset to default mock state.',
+        'Inbox has been cleared. Only active connected WhatsApp numbers and incoming chats will be displayed.',
         'restart_alt',
         'emerald'
       );
@@ -3248,19 +3872,156 @@ function handleCreateOrder(event) {
 }
 
 // =========================================================================
-// 9. FOLLOW-UP SCHEDULER
+// 9. FOLLOW-UP SCHEDULER (12-HOUR TIME, CALENDAR & RICH NOTES)
 // =========================================================================
 function openFollowUpModal() {
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('followup-date').value = today;
+  const now = new Date();
+  
+  // Format local date YYYY-MM-DD
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+  
+  const dateInput = document.getElementById('followup-date');
+  if (dateInput) {
+    dateInput.value = dateStr;
+    dateInput.min = dateStr; // Avoid selecting past dates
+  }
+
+  // Calculate 12-hour time: current local time rounded to next 5 minutes
+  let hours = now.getHours();
+  let minutes = now.getMinutes();
+  
+  minutes = Math.ceil(minutes / 5) * 5;
+  if (minutes >= 60) {
+    hours = (hours + 1) % 24;
+    minutes = 0;
+  }
+  
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  let hour12 = hours % 12;
+  hour12 = hour12 === 0 ? 12 : hour12;
+  const hourStr = String(hour12).padStart(2, '0');
+  const minStr = String(minutes).padStart(2, '0');
+
+  const hourEl = document.getElementById('followup-hour');
+  const minEl = document.getElementById('followup-minute');
+  const ampmEl = document.getElementById('followup-ampm');
+
+  if (hourEl) hourEl.value = hourStr;
+  if (minEl) minEl.value = minStr;
+  if (ampmEl) ampmEl.value = ampm;
+
+  updateFollowUpTimePreview();
   openModal('modal-followup');
+}
+
+function updateFollowUpTimePreview() {
+  const dateVal = document.getElementById('followup-date')?.value;
+  const hourVal = document.getElementById('followup-hour')?.value || '11';
+  const minVal = document.getElementById('followup-minute')?.value || '00';
+  const ampmVal = document.getElementById('followup-ampm')?.value || 'AM';
+
+  const previewEl = document.getElementById('followup-preview-text');
+  if (!previewEl) return;
+
+  if (dateVal) {
+    const parts = dateVal.split('-');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      const dayName = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      previewEl.innerText = `${dayName} at ${hourVal}:${minVal} ${ampmVal}`;
+    } else {
+      previewEl.innerText = `${dateVal} at ${hourVal}:${minVal} ${ampmVal}`;
+    }
+  } else {
+    previewEl.innerText = `${hourVal}:${minVal} ${ampmVal}`;
+  }
+}
+
+function setFollowUpQuickDate(daysAhead) {
+  const target = new Date();
+  target.setDate(target.getDate() + daysAhead);
+  const year = target.getFullYear();
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const day = String(target.getDate()).padStart(2, '0');
+  const dateInput = document.getElementById('followup-date');
+  if (dateInput) {
+    dateInput.value = `${year}-${month}-${day}`;
+  }
+  updateFollowUpTimePreview();
+}
+
+function setFollowUpQuickTime(preset) {
+  const hourEl = document.getElementById('followup-hour');
+  const minEl = document.getElementById('followup-minute');
+  const ampmEl = document.getElementById('followup-ampm');
+  if (!hourEl || !minEl || !ampmEl) return;
+
+  const now = new Date();
+
+  if (preset === 'NOW') {
+    let h = now.getHours();
+    let m = Math.ceil(now.getMinutes() / 5) * 5;
+    if (m >= 60) { h = (h + 1) % 24; m = 0; }
+    ampmEl.value = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12 || 12;
+    hourEl.value = String(h12).padStart(2, '0');
+    minEl.value = String(m).padStart(2, '0');
+  } else if (preset === 'PLUS_1H') {
+    let h = (now.getHours() + 1) % 24;
+    let m = Math.ceil(now.getMinutes() / 5) * 5;
+    if (m >= 60) { h = (h + 1) % 24; m = 0; }
+    ampmEl.value = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12 || 12;
+    hourEl.value = String(h12).padStart(2, '0');
+    minEl.value = String(m).padStart(2, '0');
+  } else if (preset === 'MORNING') {
+    hourEl.value = '10';
+    minEl.value = '00';
+    ampmEl.value = 'AM';
+  } else if (preset === 'EVENING') {
+    hourEl.value = '05';
+    minEl.value = '00';
+    ampmEl.value = 'PM';
+  }
+
+  updateFollowUpTimePreview();
+}
+
+function handleFollowupReasonSelect(val) {
+  const notesEl = document.getElementById('followup-notes');
+  if (!notesEl) return;
+  if (val === 'other') {
+    notesEl.value = '';
+    notesEl.placeholder = 'Type custom conversation notes & callback instructions here...';
+    notesEl.focus();
+  } else {
+    notesEl.value = val;
+  }
+}
+
+function appendFollowUpNoteTemplate(text) {
+  const notesEl = document.getElementById('followup-notes');
+  if (!notesEl) return;
+  const current = notesEl.value.trim();
+  if (!current || current === 'other') {
+    notesEl.value = text;
+  } else {
+    notesEl.value = `${current} ${text}`;
+  }
+  notesEl.focus();
 }
 
 function handleCreateFollowup(event) {
   event.preventDefault();
-  const date = document.getElementById('followup-date').value;
-  const time = document.getElementById('followup-time').value;
-  const notes = document.getElementById('followup-notes').value;
+  const date = document.getElementById('followup-date')?.value || new Date().toISOString().split('T')[0];
+  const hour = document.getElementById('followup-hour')?.value || '11';
+  const min = document.getElementById('followup-minute')?.value || '00';
+  const ampm = document.getElementById('followup-ampm')?.value || 'AM';
+  const formattedTime = `${hour}:${min} ${ampm}`;
+  const notes = document.getElementById('followup-notes')?.value?.trim() || 'Follow-up callback scheduled';
 
   const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
   const query = CRM_STATE.queries.find(q => q.customerId === ACTIVE_CUSTOMER_ID);
@@ -3272,7 +4033,7 @@ function handleCreateFollowup(event) {
     customerName: customer ? customer.name : 'Customer',
     assignedTo: query ? query.assignedTo : 'staff_01',
     date: date,
-    time: time,
+    time: formattedTime,
     reason: notes,
     status: 'PENDING'
   };
@@ -3280,12 +4041,13 @@ function handleCreateFollowup(event) {
   CRM_STATE.followups.unshift(newFollowup);
   if (query) query.status = 'FOLLOW_UP';
 
-  logAudit('FOLLOWUP_SCHEDULED', 'FOLLOWUP', `Scheduled follow-up for ${customer.name} on ${date} at ${time}`);
+  logAudit('FOLLOWUP_SCHEDULED', 'FOLLOWUP', `Scheduled follow-up for ${customer ? customer.name : 'Customer'} on ${date} at ${formattedTime}. Notes: ${notes}`);
 
   saveCRMState();
   closeModal('modal-followup');
-  showToast('Follow-up Scheduled', `Reminder set for ${date} at ${time}`, 'event', 'blue');
+  showToast('Follow-up Scheduled', `Reminder set for ${date} at ${formattedTime}`, 'event', 'blue');
   renderInbox();
+  if (typeof renderFollowupsTable === 'function') renderFollowupsTable();
 }
 
 // =========================================================================
@@ -4413,16 +5175,17 @@ function updateQRBridgeUI(res) {
   }
 }
 
-// Poll Bridge Server on http://localhost:3000/api/accounts
+// Poll Bridge Server on http://localhost:3000/api/qr/status
 function fetchQRBridgeStatus() {
-  fetch('http://localhost:3000/api/accounts')
+  fetch('http://localhost:3000/api/qr/status')
     .then(r => r.json())
     .then(res => {
-      if (res.status === 'success' && res.accounts) {
+      if (res.status === 'success' && Array.isArray(res.accounts)) {
         MULTI_ACCOUNTS_STATE = res.accounts;
         renderMultiAccountsHub();
+        updateQRBridgeUI(res);
 
-        const primary = res.accounts[0];
+        const primary = res.accounts.find(a => a.id === 'account_1') || res.accounts[0];
         if (primary) {
           if (primary.status === 'CONNECTED' && primary.connected_number) {
             CRM_STATE.whatsappAccount.phoneNumber = primary.connected_number;
@@ -4655,6 +5418,16 @@ function generateFreshAccountQR(accountId) {
   const targetId = accountId || 'account_1';
   showToast('Generating QR Code...', 'Initializing fresh WhatsApp session for scanning.', 'qr_code_scanner', 'emerald');
 
+  // Immediately mark account as CONNECTING in UI so user sees instant feedback
+  if (Array.isArray(MULTI_ACCOUNTS_STATE)) {
+    const acc = MULTI_ACCOUNTS_STATE.find(a => a.id === targetId);
+    if (acc) {
+      acc.status = 'CONNECTING';
+      acc.qr_image = null;
+      renderMultiAccountsHub();
+    }
+  }
+
   fetch('http://localhost:3000/api/accounts/refresh_qr', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -4662,7 +5435,9 @@ function generateFreshAccountQR(accountId) {
   })
     .then(r => r.json())
     .then(res => {
-      setTimeout(fetchQRBridgeStatus, 1500);
+      setTimeout(fetchQRBridgeStatus, 1000);
+      setTimeout(fetchQRBridgeStatus, 2500);
+      setTimeout(fetchQRBridgeStatus, 4500);
     })
     .catch(() => {
       showToast('Bridge Offline', 'Please make sure Node.js bridge server is running on port 3000', 'warning', 'rose');
@@ -5593,6 +6368,742 @@ function filterConversations(val) {
 
 function toggleNotificationDrawer() {
   showToast('Follow-up Reminder', 'Priya Sundaram follow-up is scheduled for today at 12:00 PM', 'alarm', 'blue');
+}
+
+// Dev & Test helper to completely clear and reset all inbox conversations and messages
+function confirmResetInboxMessages() {
+  if (confirm("⚠️ Are you sure you want to clear all WhatsApp inbox chats?\n\nThis will clear all conversation history and active inquiry cards, giving you a 100% clean inbox.")) {
+    CRM_STATE.conversations = {};
+    CRM_STATE.queries = [];
+    ACTIVE_CUSTOMER_ID = null;
+
+    // Reset unread counters on all customers
+    if (Array.isArray(CRM_STATE.customers)) {
+      CRM_STATE.customers.forEach(c => {
+        c.totalOrders = c.totalOrders || 0;
+      });
+    }
+
+    // Call backend API to clear messages and live message queue
+    fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => {});
+
+    saveCRMState();
+    renderInbox();
+    renderInboxConversationList();
+    renderChatHeader();
+    renderChatMessages();
+    renderCustomer360Panel();
+    updateBadgeCounters();
+    showToast('Inbox Chats Cleared', 'All WhatsApp inbox conversations and messages have been cleared.', 'delete_sweep', 'emerald');
+    if (typeof playChime === 'function') playChime('inbound');
+  }
+}
+
+// =========================================================================
+// 15. AUTOMATED TEMPLATE BROADCAST CONTROLLER (100% FREE & SAFE DISPATCH)
+// =========================================================================
+let BROADCAST_CANCEL_FLAG = false;
+let IS_BROADCASTING_ACTIVE = false;
+
+// Dynamic Manual Custom Tags Map for Broadcast Personalization
+let BROADCAST_CUSTOM_TAGS = {
+  offer_discount: '15% OFF',
+  product_name: 'Festive Garments Collection',
+  coupon_code: 'FESTIVE2026'
+};
+
+// Preset Templates Dictionary with Dynamic Name & Management
+let BROADCAST_PRESETS_DATA = {
+  festive_offer: {
+    label: "🎉 Festive Mega Sale (15% Off on Baby Frocks & Maternity)",
+    text: "🎉 *GRM FESTIVE SPECIAL OFFER!* 🎉\n\nDear {{customer_name}},\nWe are delighted to announce our exclusive Festive Collection! Enjoy an instant *{{offer_discount}}* on all Baby Frocks, Pure Cotton Newborn Rompers & Maternity Feeding Gowns.\n\n✨ Direct Line: {{line_phone}}\nReply *'CATALOG'* to this chat to receive our full photo brochure with price list!\n\nBest regards,\n{{business_name}}"
+  },
+  new_collection: {
+    label: "✨ New Garments & Newborn Rompers Launch",
+    text: "✨ *NEW ARRIVALS ALERT!* ✨\n\nHello {{customer_name}},\nOur brand-new Summer Collection has just landed! Premium Handcrafted Baby Lehengas, Organic Cotton 5-Pc Romper Gift Sets, and Trendy Maternity Wear are now in stock.\n\n📦 Same-Day Dispatch available.\n📞 Contact us on {{line_phone}}\n\nReply to this message with your required size to check live stock!\n\nWarm wishes,\n{{business_name}}"
+  },
+  order_followup: {
+    label: "📦 Order Status & Stock Availability Follow-up",
+    text: "📦 *ORDER & STOCK STATUS UPDATE* 📦\n\nHi {{customer_name}},\nWe are checking in regarding your recent enquiry with {{business_name}}.\n\nOur workshop has fresh inventory ready for dispatch today. If you would like to proceed with your order or modify quantities, please reply here!\n\n💬 Dedicated Support Line: {{line_phone}}"
+  },
+  wholesale_catalog: {
+    label: "🏢 Wholesale & Bulk Garments Catalog (Erode / Tirupur)",
+    text: "🏢 *WHOLESALE BULK DEALS — {{business_name}}* 🏢\n\nRespected {{customer_name}},\nExclusive wholesale lot prices are now live for bulk buyers:\n• Baby Frocks Bundle (25 Pcs Assorted)\n• Organic Rompers Bulk Box (50 Pcs)\n• Festive Silk Pattu Pavadai Sets\n\n🚚 GST Invoicing & Doorstep Cargo Delivery across India.\n📞 Wholesale Desk: {{line_phone}}\n\nReply *'BULK'* to receive current wholesale price sheet."
+  },
+  payment_reminder: {
+    label: "💳 Payment UPI & Order Confirmation",
+    text: "💳 *PAYMENT & ORDER CONFIRMATION* 💳\n\nDear {{customer_name}},\nThank you for choosing {{business_name}}!\n\nYour order items have been reserved in our warehouse. To confirm your dispatch slot for today, please complete your payment via GPay / PhonePe / UPI to {{line_phone}}.\n\nOnce paid, please share the screenshot here for immediate shipping tracking number."
+  },
+  custom: {
+    label: "✍️ Custom Announcement Message",
+    text: "Dear {{customer_name}},\n\nThank you for connecting with {{business_name}}! We are happy to assist you with all your garment requirements.\n\nFeel free to message us here on {{line_phone}} anytime.\n\nBest regards,\n{{business_name}}"
+  }
+};
+
+function renderBroadcastTemplateDropdown(selectedKey = null) {
+  const presetSelect = document.getElementById('bcast-preset-select');
+  if (!presetSelect) return;
+
+  const currentVal = selectedKey || presetSelect.value || 'festive_offer';
+  const entries = Object.entries(BROADCAST_PRESETS_DATA);
+
+  presetSelect.innerHTML = entries.map(([key, item]) => `
+    <option value="${key}" ${key === currentVal ? 'selected' : ''}>${item.label || key}</option>
+  `).join('');
+
+  if (entries.some(([k]) => k === currentVal)) {
+    presetSelect.value = currentVal;
+  } else if (entries.length > 0) {
+    presetSelect.value = entries[0][0];
+  }
+}
+
+// 1. Admin Action: Save Current Message as a New Named Template
+function handleSaveCurrentAsNewTemplate() {
+  const msgInput = document.getElementById('bcast-message-text');
+  const text = msgInput ? msgInput.value.trim() : '';
+
+  if (!text) {
+    alert('Please enter some message text before saving as a template.');
+    if (msgInput) msgInput.focus();
+    return;
+  }
+
+  const templateName = prompt('Enter a name / title for this new template (e.g. "Diwali 20% Sale Announcement"):');
+  if (!templateName || !templateName.trim()) return;
+
+  const cleanKey = 'template_' + Date.now();
+  BROADCAST_PRESETS_DATA[cleanKey] = {
+    label: `📋 ${templateName.trim()}`,
+    text: text
+  };
+
+  try {
+    localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+  } catch (e) {}
+
+  renderBroadcastTemplateDropdown(cleanKey);
+  showToast('Template Saved', `Template "${templateName.trim()}" saved successfully!`, 'bookmark_added', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+
+// 2. Admin Action: Rename the Currently Selected Template
+function handleRenameCurrentTemplate() {
+  const presetSelect = document.getElementById('bcast-preset-select');
+  if (!presetSelect) return;
+
+  const currentKey = presetSelect.value;
+  if (!currentKey || !BROADCAST_PRESETS_DATA[currentKey]) {
+    alert('Please select a template to rename.');
+    return;
+  }
+
+  const currentLabel = BROADCAST_PRESETS_DATA[currentKey].label || '';
+  const newName = prompt(`Rename template "${currentLabel}":`, currentLabel);
+  if (newName && newName.trim()) {
+    BROADCAST_PRESETS_DATA[currentKey].label = newName.trim();
+    try {
+      localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+    } catch (e) {}
+    renderBroadcastTemplateDropdown(currentKey);
+    showToast('Template Renamed', `Template renamed to "${newName.trim()}".`, 'edit', 'blue');
+  }
+}
+
+// 3. Admin Action: Delete Selected Custom Template
+function handleDeleteCurrentTemplate() {
+  const presetSelect = document.getElementById('bcast-preset-select');
+  if (!presetSelect) return;
+
+  const currentKey = presetSelect.value;
+  if (!currentKey || !BROADCAST_PRESETS_DATA[currentKey]) return;
+
+  const keys = Object.keys(BROADCAST_PRESETS_DATA);
+  if (keys.length <= 1) {
+    alert('You cannot delete the only remaining template.');
+    return;
+  }
+
+  if (confirm(`Are you sure you want to delete the template "${BROADCAST_PRESETS_DATA[currentKey].label}"?`)) {
+    delete BROADCAST_PRESETS_DATA[currentKey];
+    try {
+      localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+    } catch (e) {}
+    renderBroadcastTemplateDropdown(Object.keys(BROADCAST_PRESETS_DATA)[0]);
+    applyBroadcastPreset(Object.keys(BROADCAST_PRESETS_DATA)[0]);
+    showToast('Template Deleted', 'Template removed successfully.', 'delete', 'amber');
+  }
+}
+
+function openBroadcastModal() {
+  BROADCAST_CANCEL_FLAG = false;
+  IS_BROADCASTING_ACTIVE = false;
+
+  // Load saved custom templates from storage if present
+  try {
+    const saved = localStorage.getItem('GRM_CUSTOM_BROADCAST_TEMPLATES');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        BROADCAST_PRESETS_DATA = Object.assign({}, BROADCAST_PRESETS_DATA, parsed);
+      }
+    }
+  } catch (e) {}
+
+  renderBroadcastTemplateDropdown('festive_offer');
+  applyBroadcastPreset('festive_offer');
+  renderCustomTagsTray();
+  refreshBroadcastAutoFetchedNumbers();
+  updateBroadcastPreview();
+
+  // Reset Broadcast Progress UI
+  const progContainer = document.getElementById('bcast-progress-container');
+  if (progContainer) progContainer.classList.add('hidden');
+  
+  const startBtn = document.getElementById('btn-bcast-start');
+  if (startBtn) {
+    startBtn.classList.remove('hidden');
+    startBtn.disabled = false;
+  }
+  const stopBtn = document.getElementById('btn-bcast-stop');
+  if (stopBtn) stopBtn.classList.add('hidden');
+
+  const cancelBtn = document.getElementById('btn-bcast-cancel');
+  if (cancelBtn) cancelBtn.disabled = false;
+
+  openModal('modal-broadcast-template');
+}
+
+function closeBroadcastModal() {
+  if (IS_BROADCASTING_ACTIVE) {
+    if (!confirm('A broadcast is currently sending messages. Are you sure you want to stop and close?')) {
+      return;
+    }
+    BROADCAST_CANCEL_FLAG = true;
+  }
+  closeModal('modal-broadcast-template');
+}
+
+function applyBroadcastPreset(presetKey) {
+  const msgInput = document.getElementById('bcast-message-text');
+  if (!msgInput) return;
+
+  if (BROADCAST_PRESETS_DATA[presetKey]) {
+    msgInput.value = BROADCAST_PRESETS_DATA[presetKey].text;
+  }
+  updateBroadcastPreview();
+}
+
+// Insert tag at cursor position in template textarea
+function insertBroadcastVariable(varTag) {
+  const msgInput = document.getElementById('bcast-message-text');
+  if (!msgInput) return;
+
+  const formattedTag = varTag.startsWith('{{') ? varTag : `{{${varTag}}}`;
+  const startPos = msgInput.selectionStart;
+  const endPos = msgInput.selectionEnd;
+  const val = msgInput.value;
+
+  if (typeof startPos === 'number' && typeof endPos === 'number') {
+    msgInput.value = val.substring(0, startPos) + formattedTag + val.substring(endPos);
+    msgInput.focus();
+    msgInput.selectionStart = msgInput.selectionEnd = startPos + formattedTag.length;
+  } else {
+    msgInput.value += formattedTag;
+  }
+  updateBroadcastPreview();
+}
+
+// Manual Custom Tag Handler: Adds/Updates a user-defined placeholder & replacement value
+function handleApplyManualCustomTag() {
+  const nameInput = document.getElementById('manual-tag-name');
+  const valInput = document.getElementById('manual-tag-value');
+  if (!nameInput) return;
+
+  let rawKey = nameInput.value.trim().replace(/^\{\{|\}\}$/g, '').trim();
+  if (!rawKey) {
+    alert('Please enter a tag name (e.g. discount, offer_code, product_name, event_date).');
+    nameInput.focus();
+    return;
+  }
+
+  // Normalize tag identifier (lowercase alphanumeric with underscores)
+  const cleanKey = rawKey.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  const tagVal = valInput ? valInput.value.trim() : '';
+
+  if (!cleanKey) {
+    alert('Please enter a valid tag name containing letters or numbers.');
+    return;
+  }
+
+  BROADCAST_CUSTOM_TAGS[cleanKey] = tagVal || `[${cleanKey}]`;
+
+  // Insert tag into textarea at cursor position
+  insertBroadcastVariable(`{{${cleanKey}}}`);
+
+  // Re-render tray & preview
+  renderCustomTagsTray();
+  updateBroadcastPreview();
+
+  showToast('Custom Tag Applied', `Tag "{{${cleanKey}}}" set to "${BROADCAST_CUSTOM_TAGS[cleanKey]}" and inserted!`, 'check_circle', 'indigo');
+  if (typeof playChime === 'function') playChime('order');
+}
+
+// Render active custom tags pills in the broadcast modal with 1-click edit & insert
+function renderCustomTagsTray() {
+  const tray = document.getElementById('manual-custom-tags-tray');
+  if (!tray) return;
+
+  const entries = Object.entries(BROADCAST_CUSTOM_TAGS || {});
+  if (entries.length === 0) {
+    tray.innerHTML = `<span class="text-[10px] text-slate-400 italic">No custom tags created yet. Type tag name &amp; value above to create one.</span>`;
+    return;
+  }
+
+  tray.innerHTML = entries.map(([key, val]) => `
+    <div class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs text-xs hover:border-indigo-400 transition">
+      <button type="button" onclick="insertBroadcastVariable('{{${key}}}')" class="font-mono font-bold text-indigo-700 hover:text-indigo-950 transition flex items-center gap-1" title="Click to insert {{${key}}} into message">
+        <span class="text-indigo-400 font-bold">+</span>
+        <span>{{${key}}}</span>
+      </button>
+      <span class="text-slate-400 text-[10px] select-none">=</span>
+      <span class="font-semibold text-slate-800 text-[11px] truncate max-w-[130px] bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200" title="${val}">"${val}"</span>
+      <button type="button" onclick="editManualCustomTag('${key}')" class="text-slate-400 hover:text-indigo-600 p-0.5 rounded transition" title="Change replacement value for {{${key}}}">
+        <span class="material-symbols-outlined text-[14px]">edit</span>
+      </button>
+      <button type="button" onclick="removeManualCustomTag('${key}')" class="text-slate-400 hover:text-rose-600 p-0.5 rounded transition" title="Remove custom tag">
+        <span class="material-symbols-outlined text-[14px]">close</span>
+      </button>
+    </div>
+  `).join('');
+}
+
+function editManualCustomTag(key) {
+  const currentVal = BROADCAST_CUSTOM_TAGS[key] || '';
+  const newVal = prompt(`Edit custom replacement value for dynamic tag {{${key}}}:`, currentVal);
+  if (newVal !== null) {
+    BROADCAST_CUSTOM_TAGS[key] = newVal.trim();
+    renderCustomTagsTray();
+    updateBroadcastPreview();
+    showToast('Tag Value Updated', `{{${key}}} will now be replaced with "${newVal.trim()}" in all messages.`, 'tune', 'emerald');
+  }
+}
+
+function removeManualCustomTag(key) {
+  delete BROADCAST_CUSTOM_TAGS[key];
+  renderCustomTagsTray();
+  updateBroadcastPreview();
+}
+
+// Universal Template Message Personalization Engine (Replaces System & Manual Custom Tags)
+function renderTemplateMessagePersonalized(rawTemplate, customer = {}, account = {}, customTags = BROADCAST_CUSTOM_TAGS) {
+  if (!rawTemplate) return '';
+
+  const businessName = (account && (account.brandName || account.businessName)) || 'GRM Garments Business Hub';
+  const linePhone = customer.businessNumber || (account && account.phoneNumber) || '+91 86680 07593';
+  const customerName = customer.name || 'Valued Customer';
+  const customerPhone = customer.whatsapp || customer.phone || '';
+  const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  
+  let staffName = 'Handling Staff';
+  if (ACTIVE_ROLE === 'admin') {
+    staffName = 'Super Admin';
+  } else if (CRM_STATE && Array.isArray(CRM_STATE.staffList)) {
+    const s = CRM_STATE.staffList.find(st => st.id === ACTIVE_ROLE);
+    if (s) staffName = s.name;
+  }
+
+  let text = rawTemplate;
+
+  // 1. Built-in system tags
+  text = text
+    .replace(/\{\{\s*customer_name\s*\}\}/gi, customerName)
+    .replace(/\{\{\s*customer_phone\s*\}\}/gi, customerPhone)
+    .replace(/\{\{\s*phone\s*\}\}/gi, customerPhone)
+    .replace(/\{\{\s*business_name\s*\}\}/gi, businessName)
+    .replace(/\{\{\s*line_phone\s*\}\}/gi, linePhone)
+    .replace(/\{\{\s*today_date\s*\}\}/gi, todayStr)
+    .replace(/\{\{\s*date\s*\}\}/gi, todayStr)
+    .replace(/\{\{\s*time\s*\}\}/gi, timeStr)
+    .replace(/\{\{\s*staff_name\s*\}\}/gi, staffName);
+
+  // 2. Manual Custom Tags & Dynamic Variables
+  if (customTags && typeof customTags === 'object') {
+    Object.keys(customTags).forEach(tagKey => {
+      const tagVal = customTags[tagKey] || '';
+      const regex = new RegExp(`\\{\\{\\s*${tagKey}\\s*\\}\\}`, 'gi');
+      text = text.replace(regex, tagVal);
+    });
+  }
+
+  return text;
+}
+
+function getBroadcastTargetCustomers(targetVal) {
+  const availableAccounts = typeof getAvailableWhatsAppAccounts === 'function' 
+    ? getAvailableWhatsAppAccounts() 
+    : (CRM_STATE.whatsappAccounts || [CRM_STATE.whatsappAccount]);
+  const availableAccountIds = availableAccounts.map(a => a.id);
+
+  const rawCustomers = (CRM_STATE.customers || []).filter(c => {
+    if (!c) return false;
+    if (c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || (c.name && c.name.startsWith('WhatsApp Linked'))) return false;
+    return availableAccountIds.includes(c.accountId || 'account_1');
+  });
+
+  // 1. DND Users Only Option
+  if (targetVal === 'DND_ONLY') {
+    return rawCustomers.filter(c => {
+      const q = (CRM_STATE.queries || []).find(qry => qry.customerId === c.id);
+      return c.isDND === true || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out')) || (q && q.status === 'DND');
+    });
+  }
+
+  // 2. All Customers (Including DND List)
+  if (targetVal === 'ALL_INCLUDING_DND') {
+    return rawCustomers;
+  }
+
+  // 3. Filter active customers (Excludes DND by default)
+  const activeCustomers = rawCustomers.filter(c => {
+    if (c.isDND === true || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'))) return false;
+    const q = (CRM_STATE.queries || []).find(qry => qry.customerId === c.id);
+    if (q && q.status === 'DND') return false;
+    return true;
+  });
+
+  if (!targetVal || targetVal === 'ALL' || targetVal === 'ALL_ACTIVE') {
+    return activeCustomers;
+  }
+
+  if (targetVal.startsWith('account_')) {
+    return activeCustomers.filter(c => (c.accountId || 'account_1') === targetVal);
+  }
+
+  if (targetVal === 'TAG_VIP') {
+    return activeCustomers.filter(c => 
+      (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes('vip'))) ||
+      (c.customerType && c.customerType.toLowerCase().includes('vip'))
+    );
+  }
+
+  if (targetVal === 'TAG_WHOLESALE') {
+    return activeCustomers.filter(c => 
+      (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes('wholesale') || t.toLowerCase().includes('bulk'))) ||
+      (c.customerType && c.customerType.toLowerCase().includes('wholesale'))
+    );
+  }
+
+  if (targetVal === 'TAG_NEW') {
+    return activeCustomers.filter(c => 
+      (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes('new'))) ||
+      (c.customerType && c.customerType.toLowerCase().includes('new'))
+    );
+  }
+
+  return activeCustomers;
+}
+
+function extractCurrentActiveNumbers(targetVal = 'ALL') {
+  const targetCustomers = getBroadcastTargetCustomers(targetVal);
+  const numbers = [];
+  const seen = new Set();
+
+  targetCustomers.forEach(c => {
+    const rawNum = c.whatsapp || c.phone || '';
+    if (rawNum) {
+      const clean = rawNum.trim();
+      const digits = clean.replace(/[^0-9]/g, '');
+      if (digits.length >= 7 && !seen.has(digits)) {
+        seen.add(digits);
+        numbers.push(clean);
+      }
+    }
+  });
+
+  return numbers;
+}
+
+function refreshBroadcastAutoFetchedNumbers() {
+  const audienceSelect = document.getElementById('bcast-target-audience');
+  const targetVal = audienceSelect ? audienceSelect.value : 'ALL';
+  const numbers = extractCurrentActiveNumbers(targetVal);
+
+  const textarea = document.getElementById('bcast-target-numbers');
+  if (textarea) {
+    textarea.value = numbers.join(', ');
+  }
+
+  updateBroadcastCustomNumbersCount();
+}
+
+function updateBroadcastCustomNumbersCount() {
+  const textarea = document.getElementById('bcast-target-numbers');
+  const countBadge = document.getElementById('bcast-fetched-count');
+  const countEl = document.getElementById('bcast-recipients-count');
+  
+  let numCount = 0;
+  if (textarea && textarea.value.trim()) {
+    const splitNums = textarea.value.split(/[,\n;]+/).map(s => s.trim()).filter(s => s.replace(/[^0-9]/g, '').length >= 7);
+    numCount = splitNums.length;
+  }
+
+  if (countBadge) {
+    countBadge.innerText = `Auto-Fetched ${numCount} Number${numCount === 1 ? '' : 's'}`;
+  }
+
+  if (countEl) {
+    countEl.innerText = `${numCount} Recipient${numCount === 1 ? '' : 's'}`;
+  }
+
+  updateBroadcastPreview();
+}
+
+function updateBroadcastTargetCount() {
+  refreshBroadcastAutoFetchedNumbers();
+  updateBroadcastPreview();
+}
+
+function updateBroadcastPreview() {
+  const msgInput = document.getElementById('bcast-message-text');
+  const previewBox = document.getElementById('bcast-live-preview-box');
+  const previewCustLabel = document.getElementById('bcast-preview-customer-label');
+  const previewCharCount = document.getElementById('bcast-preview-char-count');
+  if (!previewBox) return;
+
+  const rawTemplate = (msgInput && msgInput.value.trim()) || "Hello {{customer_name}}, welcome to {{business_name}}! Reach us on {{line_phone}}.";
+  
+  const audienceSelect = document.getElementById('bcast-target-audience');
+  const targetVal = audienceSelect ? audienceSelect.value : 'ALL';
+  const recipients = getBroadcastTargetCustomers(targetVal);
+  const sampleCustomer = recipients[0] || (CRM_STATE.customers && CRM_STATE.customers[0]) || {
+    name: 'SugunaMani',
+    phone: '+91 73389 65560',
+    accountId: 'account_1',
+    businessNumber: '+91 86680 07593'
+  };
+
+  const account = (CRM_STATE.whatsappAccounts && CRM_STATE.whatsappAccounts.find(a => a.id === sampleCustomer.accountId)) || CRM_STATE.whatsappAccount;
+
+  const rendered = renderTemplateMessagePersonalized(rawTemplate, sampleCustomer, account, BROADCAST_CUSTOM_TAGS);
+  previewBox.innerText = rendered;
+
+  if (previewCustLabel) {
+    const custName = sampleCustomer.name || 'Recipient';
+    const custPhone = sampleCustomer.whatsapp || sampleCustomer.phone || '+91 86680 07593';
+    previewCustLabel.innerText = `Sample Recipient: ${custName} (${custPhone})`;
+  }
+
+  if (previewCharCount) {
+    previewCharCount.innerText = `${rendered.length} characters`;
+  }
+}
+
+async function startAutomatedBroadcast() {
+  if (IS_BROADCASTING_ACTIVE) return;
+
+  const msgInput = document.getElementById('bcast-message-text');
+  const rawTemplate = msgInput ? msgInput.value.trim() : '';
+
+  if (!rawTemplate) {
+    alert('Please enter or select a message template before starting broadcast.');
+    if (msgInput) msgInput.focus();
+    return;
+  }
+
+  const numbersTextarea = document.getElementById('bcast-target-numbers');
+  const rawNumbersText = numbersTextarea ? numbersTextarea.value.trim() : '';
+  const parsedPhoneList = rawNumbersText
+    ? rawNumbersText.split(/[,\n;]+/).map(s => s.trim()).filter(s => s.replace(/[^0-9]/g, '').length >= 7)
+    : [];
+
+  const audienceSelect = document.getElementById('bcast-target-audience');
+  const targetVal = audienceSelect ? audienceSelect.value : 'ALL';
+  const targetCustomers = getBroadcastTargetCustomers(targetVal);
+
+  // Build recipients list based on parsed numbers
+  let recipients = [];
+  if (parsedPhoneList.length > 0) {
+    parsedPhoneList.forEach(rawPhone => {
+      const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
+      // Try to find matching customer in state
+      const matchedCust = (CRM_STATE.customers || []).find(c => {
+        const cDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+        return cDigits && (cDigits === cleanDigits || cDigits.endsWith(cleanDigits) || cleanDigits.endsWith(cDigits));
+      });
+
+      if (matchedCust) {
+        recipients.push(matchedCust);
+      } else {
+        // Synthesize recipient
+        const defaultAccId = targetVal.startsWith('account_') ? targetVal : 'account_1';
+        recipients.push({
+          id: 'cust_bcast_' + cleanDigits,
+          name: 'Customer',
+          phone: rawPhone,
+          whatsapp: rawPhone,
+          accountId: defaultAccId
+        });
+      }
+    });
+  } else {
+    recipients = targetCustomers;
+  }
+
+  if (recipients.length === 0) {
+    alert('No recipient phone numbers found. Please enter or select phone numbers to broadcast.');
+    return;
+  }
+
+  const delayInput = document.getElementById('bcast-delay-range');
+  const delaySec = delayInput ? parseFloat(delayInput.value) || 1.5 : 1.5;
+
+  if (!confirm(`📢 Confirm Automated WhatsApp Broadcast:\n\n• Target Audience: ${audienceSelect ? audienceSelect.options[audienceSelect.selectedIndex].text : 'Selected Recipients'}\n• Total Target Numbers: ${recipients.length}\n• Safe Anti-Spam Throttle: ${delaySec} sec/message\n\nProceed to start dispatch loop?`)) {
+    return;
+  }
+
+  // Setup UI State for broadcast in progress
+  IS_BROADCASTING_ACTIVE = true;
+  BROADCAST_CANCEL_FLAG = false;
+
+  const progContainer = document.getElementById('bcast-progress-container');
+  const progBar = document.getElementById('bcast-progress-bar');
+  const progPct = document.getElementById('bcast-progress-pct');
+  const progStatus = document.getElementById('bcast-progress-status');
+  const progDetail = document.getElementById('bcast-progress-detail');
+
+  const startBtn = document.getElementById('btn-bcast-start');
+  const stopBtn = document.getElementById('btn-bcast-stop');
+  const cancelBtn = document.getElementById('btn-bcast-cancel');
+
+  if (progContainer) progContainer.classList.remove('hidden');
+  if (startBtn) startBtn.classList.add('hidden');
+  if (stopBtn) stopBtn.classList.remove('hidden');
+  if (cancelBtn) cancelBtn.disabled = true;
+
+  if (msgInput) msgInput.disabled = true;
+  if (numbersTextarea) numbersTextarea.disabled = true;
+  if (audienceSelect) audienceSelect.disabled = true;
+  if (delayInput) delayInput.disabled = true;
+
+  if (progStatus) progStatus.innerText = `Broadcasting to ${recipients.length} customer phone numbers...`;
+  if (progPct) progPct.innerText = '0%';
+  if (progBar) progBar.style.width = '0%';
+  if (progDetail) progDetail.innerText = `Starting automated dispatch loop (${delaySec}s delay)...`;
+
+  let sentCount = 0;
+
+  for (let i = 0; i < recipients.length; i++) {
+    if (BROADCAST_CANCEL_FLAG) {
+      if (progStatus) progStatus.innerText = 'Broadcast Stopped by User';
+      if (progDetail) progDetail.innerText = `Stopped after sending ${sentCount} of ${recipients.length} messages.`;
+      break;
+    }
+
+    const customer = recipients[i];
+    const account = (CRM_STATE.whatsappAccounts && CRM_STATE.whatsappAccounts.find(a => a.id === customer.accountId)) || CRM_STATE.whatsappAccount;
+
+    // Personalize message with all system & manual custom tags
+    const personalizedText = renderTemplateMessagePersonalized(rawTemplate, customer, account, BROADCAST_CUSTOM_TAGS);
+
+    // Append to customer's conversation history if valid id
+    if (customer.id) {
+      if (!CRM_STATE.conversations[customer.id]) {
+        CRM_STATE.conversations[customer.id] = [];
+      }
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const newMsg = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        sender: 'staff',
+        text: personalizedText,
+        time: timeStr,
+        timestamp: Date.now(),
+        status: 'DELIVERED',
+        isBroadcast: true
+      };
+
+      CRM_STATE.conversations[customer.id].push(newMsg);
+
+      // Update query summary in list
+      const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
+      if (query) {
+        query.lastMessage = `Staff (Broadcast): "${personalizedText.length > 40 ? personalizedText.substring(0, 37) + '...' : personalizedText}"`;
+        query.lastMessageTime = 'Just now';
+      }
+
+      // DISPATCH LIVE REAL-TIME OUTBOUND MESSAGE OVER WHATSAPP
+      const targetPhone = customer.whatsapp || customer.phone;
+      const targetJid = customer.jid || null;
+      const targetAccId = customer.accountId || (account && account.id) || 'account_1';
+      
+      try {
+        await dispatchWhatsAppOutbound(targetPhone, personalizedText, newMsg, targetJid, targetAccId, true);
+      } catch (sendErr) {
+        console.warn('[Broadcast Send Error for ' + (customer.name || targetPhone) + ']:', sendErr);
+      }
+    }
+
+    sentCount++;
+    const pct = Math.round((sentCount / recipients.length) * 100);
+
+    if (progPct) progPct.innerText = `${pct}%`;
+    if (progBar) progBar.style.width = `${pct}%`;
+    if (progDetail) progDetail.innerText = `Sent to ${customer.name || 'Recipient'} (${customer.phone || customer.whatsapp}) [${sentCount}/${recipients.length}]`;
+
+    // Audio chime feedback
+    if (typeof playChime === 'function') {
+      playChime('order');
+    }
+
+    // Refresh active chat stream if this customer is currently being viewed
+    if (ACTIVE_CUSTOMER_ID === customer.id && typeof renderChatMessages === 'function') {
+      renderChatMessages(customer.id);
+    }
+
+    // Anti-spam throttling delay between consecutive messages
+    await new Promise(resolve => setTimeout(resolve, delaySec * 1000));
+  }
+
+  // Finalize Broadcast State
+  IS_BROADCASTING_ACTIVE = false;
+  saveCRMState();
+
+  if (typeof renderInboxConversationList === 'function') {
+    renderInboxConversationList();
+  }
+  if (typeof updateBadgeCounters === 'function') {
+    updateBadgeCounters();
+  }
+
+  logAudit('TEMPLATE_BROADCAST', 'INBOX_BROADCAST', `Dispatched automated broadcast "${rawTemplate.substring(0, 30)}..." to ${sentCount} recipients.`);
+
+  if (startBtn) startBtn.classList.remove('hidden');
+  if (stopBtn) stopBtn.classList.add('hidden');
+  if (cancelBtn) cancelBtn.disabled = false;
+  if (msgInput) msgInput.disabled = false;
+  if (numbersTextarea) numbersTextarea.disabled = false;
+  if (audienceSelect) audienceSelect.disabled = false;
+  if (delayInput) delayInput.disabled = false;
+
+  if (!BROADCAST_CANCEL_FLAG) {
+    if (progStatus) progStatus.innerText = '✅ Broadcast Completed Successfully!';
+    if (progDetail) progDetail.innerText = `All ${sentCount} messages delivered to recipients.`;
+    showToast('Broadcast Complete', `Personalized template delivered to ${sentCount} recipients!`, 'campaign', 'emerald');
+  } else {
+    showToast('Broadcast Stopped', `Broadcast paused after sending ${sentCount} messages.`, 'stop_circle', 'amber');
+  }
+}
+
+function stopAutomatedBroadcast() {
+  if (IS_BROADCASTING_ACTIVE) {
+    BROADCAST_CANCEL_FLAG = true;
+    const progStatus = document.getElementById('bcast-progress-status');
+    if (progStatus) progStatus.innerText = 'Stopping broadcast...';
+    showToast('Broadcast Stopping', 'Finishing current message and pausing automated queue...', 'pause_circle', 'amber');
+  }
 }
 
 // INITIALIZE APP ON LOAD

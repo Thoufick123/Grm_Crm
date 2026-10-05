@@ -361,6 +361,12 @@ if ($pdo) {
           <span>Receive WhatsApp Message</span>
         </button>
 
+        <!-- Broadcast Template to All Customers Button -->
+        <button onclick="openBroadcastModal()" id="header-broadcast-btn" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Send customized template message to all customer chats automatically">
+          <span class="material-symbols-outlined text-[16px]">campaign</span>
+          <span>Broadcast Template</span>
+        </button>
+
         <!-- Reset Test Inbox Messages Button -->
         <button onclick="confirmResetInboxMessages()" id="header-reset-inbox-btn" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-lg transition shadow-sm" title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
           <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>

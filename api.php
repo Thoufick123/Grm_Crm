@@ -235,6 +235,24 @@ if ($action === 'delete_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+if ($action === 'clear_inbox' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if ($pdo) {
+            $pdo->exec("DELETE FROM `messages`");
+            $pdo->exec("DELETE FROM `queries`");
+        }
+        if (file_exists($messagesFile)) {
+            file_put_contents($messagesFile, json_encode([]));
+        }
+        echo json_encode(["status" => "success", "message" => "All inbox chat messages and active inquiries cleared."]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
 // =========================================================================
 // 3. WHATSAPP ACCOUNT CONFIGURATION & BRAND BANNER
 // =========================================================================
@@ -321,8 +339,38 @@ if ($action === 'delete_account_slot' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         echo json_encode(["status" => "success", "message" => "Account slot $accountId deleted successfully"]);
         exit;
     }
-
     echo json_encode(["status" => "error", "message" => "Invalid account slot"]);
+    exit;
+}
+
+if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (empty($data['id'])) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Customer ID is required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE `customers` 
+                SET `name` = ?, `phone` = ?, `whatsapp` = ?, `address` = ?
+                WHERE `id` = ?
+            ");
+            $stmt->execute([
+                $data['name'] ?? '',
+                $data['phone'] ?? '',
+                $data['whatsapp'] ?? ($data['phone'] ?? ''),
+                $data['address'] ?? '',
+                $data['id']
+            ]);
+        } catch (Exception $e) {}
+    }
+
+    echo json_encode(["status" => "success", "message" => "Customer details saved successfully"]);
     exit;
 }
 

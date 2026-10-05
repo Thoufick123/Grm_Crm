@@ -38,6 +38,14 @@ const io = new Server(server, {
     }
 });
 
+// Prevent unhandled Baileys network drops from crashing bridge process
+process.on('uncaughtException', (err) => {
+    console.warn('[Bridge Safe Catch - uncaughtException]:', err.message);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.warn('[Bridge Safe Catch - unhandledRejection]:', reason?.message || reason);
+});
+
 const PORT = 3000;
 const SESSIONS_BASE_DIR = path.join(__dirname, 'auth_sessions');
 
@@ -61,10 +69,90 @@ if (fs.existsSync(legacyAuth) && !fs.existsSync(primaryAuth)) {
 const accounts = new Map(); // accountId -> AccountObject
 // Map phone/LID to destination JIDs
 const jidMap = new Map();
+const LID_TO_PHONE_MAP = new Map();
+const PHONE_TO_LID_MAP = new Map();
+
+// Scan and index all Baileys LID <-> Phone mappings
+function indexAllLidMappings() {
+    try {
+        if (!fs.existsSync(SESSIONS_BASE_DIR)) return;
+        const dirs = fs.readdirSync(SESSIONS_BASE_DIR, { withFileTypes: true })
+            .filter(d => d.isDirectory())
+            .map(d => d.name);
+
+        for (const dir of dirs) {
+            const sessionPath = path.join(SESSIONS_BASE_DIR, dir);
+            if (!fs.existsSync(sessionPath)) continue;
+            const files = fs.readdirSync(sessionPath);
+            for (const file of files) {
+                if (file.startsWith('lid-mapping-') && file.endsWith('.json')) {
+                    try {
+                        const fullPath = path.join(sessionPath, file);
+                        const content = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+                        if (typeof content === 'string') {
+                            const valDigits = content.replace(/[^0-9]/g, '');
+                            if (file.endsWith('_reverse.json')) {
+                                const lidDigits = file.replace('lid-mapping-', '').replace('_reverse.json', '');
+                                if (lidDigits && valDigits) {
+                                    LID_TO_PHONE_MAP.set(lidDigits, valDigits);
+                                    PHONE_TO_LID_MAP.set(valDigits, lidDigits);
+                                }
+                            } else {
+                                const phoneDigits = file.replace('lid-mapping-', '').replace('.json', '');
+                                if (phoneDigits && valDigits) {
+                                    LID_TO_PHONE_MAP.set(valDigits, phoneDigits);
+                                    PHONE_TO_LID_MAP.set(phoneDigits, valDigits);
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+        console.log(`[LID Indexer] Loaded ${LID_TO_PHONE_MAP.size} bidirectional LID-to-Phone mappings into memory.`);
+    } catch (e) {
+        console.warn('[LID Indexer Warning]:', e.message);
+    }
+}
+indexAllLidMappings();
 
 // Brand Configuration
 let BRAND_NAME = 'Blue Berry 💙';
 let BRAND_TAGLINE = 'Premium Kids & Maternity Wear';
+
+// Autonomous Server-Side Auto-Responder Configuration & Cache
+const lastAutoReplyMap = new Map();
+let autoReplyConfig = {
+    enabled: true,
+    cooldownMinutes: 0, // 0 = Instant reply on every message
+    keywordMatching: true
+};
+
+function getStockAutoReplyTemplate(customerName) {
+    const brand = BRAND_NAME || 'Blue Berry 💙';
+    const cName = customerName ? customerName.split(' ')[0] : 'there';
+    
+    return `🛍️ *${brand}* • Live Stock & Collections\n━━━━━━━━━━━━━━━━━━━━\nHello ${cName}! 👋 Thank you for messaging us.\n\nHere is our live available stock & collections today:\n\n📦 *1. Baby Collection (0-3 Years)*\n• Embroidered Cotton Frocks & Soft Sets — *₹599*\n\n📦 *2. Maternity & Feeding Gowns*\n• Tiered Cotton Maxi & Feeding Gowns — *₹1299 - ₹1450*\n\n📦 *3. Newborn Gift Sets (0-6 Months)*\n• 5-Piece Organic Romper Gift Sets — *₹799*\n\n📦 *4. Kids Everyday Wear (4-5 Years)*\n• Pure Cotton T-Shirts Pack & Daily Sets — *₹450*\n\n📦 *5. Wholesale & Bulk Bundles*\n• Bulk 25 & 50 Pcs Assorted Boxes — *₹7200 - ₹8500*\n\n📦 *6. Festive & VIP Silk Collection*\n• Girls Silk Lehengas & Pattu Pavadai Sets — *₹899*\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *How to Order / Inquire:*\nReply with the *Category Number (1-6)* or tell us what size you need, and our sales team will share photos & reserve your order instantly!`;
+}
+
+function getKeywordResponse(key, custName) {
+    const brand = BRAND_NAME || 'Blue Berry 💙';
+    const name = custName ? custName.split(' ')[0] : 'there';
+    if (key === '1' || key.includes('baby') || key.includes('frock')) {
+        return `🛍️ *${brand}* • Baby Collection (0-3 Years)\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Here are our top Baby Collection items in ready stock:\n\n• *Embroidered Cotton Baby Frock* (0-1 Yrs)\n  Price: *₹599* | SKU: \`BABY-FRK-01\` | ✅ Ready Stock\n\n• *Soft Cotton Romper Daily Set* (1-2 Yrs)\n  Price: *₹499* | SKU: \`BABY-RMP-02\` | ✅ Ready Stock\n\n• *Organic Cotton Dungaree Set* (2-3 Yrs)\n  Price: *₹699* | SKU: \`BABY-DNG-03\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with the *SKU or Size* to reserve this item instantly!`;
+    } else if (key === '2' || key.includes('maternity') || key.includes('feeding') || key.includes('gown')) {
+        return `🛍️ *${brand}* • Maternity & Feeding Wear\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Here are our top Maternity gowns in ready stock:\n\n• *Pure Cotton Tiered Feeding Gown* (M / L / XL / XXL)\n  Price: *₹1299* | SKU: \`MAT-GWN-01\` | ✅ Ready Stock (Concealed Zips)\n\n• *Floral Pure Rayon Maxi Gown* (Free Size)\n  Price: *₹1450* | SKU: \`MAT-MAXI-02\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with the *SKU & Size* to place your order!`;
+    } else if (key === '3' || key.includes('newborn') || key.includes('romper')) {
+        return `🛍️ *${brand}* • Newborn Gift Sets (0-6 Months)\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Newborn items in ready stock:\n\n• *5-Piece Organic Newborn Gift Box* (0-3M)\n  Price: *₹799* | SKU: \`NB-BOX-01\` | ✅ Ready Stock\n\n• *Newborn Pure Cotton Rompers (Pack of 3)* (3-6M)\n  Price: *₹599* | SKU: \`NB-RMP-03\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *SKU* to book!`;
+    } else if (key === '4' || key.includes('kids') || key.includes('tshirt') || key.includes('t-shirt')) {
+        return `🛍️ *${brand}* • Kids Everyday Wear (4-5 Years)\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Kids wear in ready stock:\n\n• *Pure Cotton Printed T-Shirt Pack (Pack of 2)*\n  Price: *₹450* | SKU: \`KID-TEE-04\` | ✅ Ready Stock\n\n• *Everyday Shorts & Top Co-ord Set*\n  Price: *₹650* | SKU: \`KID-SET-05\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *SKU & Size* to book!`;
+    } else if (key === '5' || key.includes('wholesale') || key.includes('bulk')) {
+        return `🛍️ *${brand}* • Wholesale & Bulk Bundles\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Wholesale packages available for boutique resellers:\n\n• *Assorted 25-Piece Baby Frocks Box*\n  Price: *₹7200* | SKU: \`WS-BOX-25\` | ✅ Ready for Dispatch\n\n• *Assorted 50-Piece Maternity & Kids Combo Box*\n  Price: *₹14000* | SKU: \`WS-BOX-50\` | ✅ Ready for Dispatch\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with your *Shop Name & GST Number* for wholesale dispatch!`;
+    } else if (key === '6' || key.includes('festive') || key.includes('silk') || key.includes('lehenga')) {
+        return `🛍️ *${brand}* • Festive & VIP Silk Collection\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Festive items in ready stock:\n\n• *Girls Pattu Pavadai Silk Set* (2-4 Yrs)\n  Price: *₹899* | SKU: \`FEST-SILK-01\` | ✅ Ready Stock\n\n• *Festive Jacquard Lehenga Choli* (4-6 Yrs)\n  Price: *₹1199* | SKU: \`FEST-LHG-02\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *SKU & Age* to order!`;
+    }
+    return null;
+}
 
 const configFilePath = path.join(__dirname, '..', 'whatsapp_account_config.json');
 function loadBrandConfig() {
@@ -73,6 +161,7 @@ function loadBrandConfig() {
             const rawCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
             if (rawCfg.brand_name) BRAND_NAME = rawCfg.brand_name;
             if (rawCfg.brand_tagline) BRAND_TAGLINE = rawCfg.brand_tagline;
+            if (typeof rawCfg.autoReplyEnabled === 'boolean') autoReplyConfig.enabled = rawCfg.autoReplyEnabled;
         }
     } catch (e) {}
 }
@@ -145,19 +234,58 @@ function forwardToCRM(data) {
     }
 }
 
-// Helper to determine destination JID
+// Helper to determine destination JID (Resolves WhatsApp Privacy LIDs to Standard Phone JIDs for flawless delivery)
 function resolveDestinationJid(phoneOrJid) {
     if (!phoneOrJid) return null;
     let target = phoneOrJid.toString().trim();
 
-    // Already a complete JID
-    if (target.includes('@s.whatsapp.net') || target.includes('@lid')) {
+    // 1. Check if target has @lid or is a pure 14+ digit privacy LID
+    if (target.includes('@lid') || (target.length >= 14 && (target.startsWith('156') || target.startsWith('235') || target.startsWith('253') || target.startsWith('275') || target.startsWith('967')))) {
+        const lidDigits = target.split('@')[0].replace(/[^0-9]/g, '');
+        if (LID_TO_PHONE_MAP.has(lidDigits)) {
+            const mappedPhone = LID_TO_PHONE_MAP.get(lidDigits);
+            console.log(`[JID Resolver] Resolved LID ${lidDigits} -> Standard Phone JID: ${mappedPhone}@s.whatsapp.net`);
+            return `${mappedPhone}@s.whatsapp.net`;
+        }
+        // Check on-demand scan of session files
+        try {
+            for (const [id, acc] of accounts.entries()) {
+                const sessionDir = path.join(SESSIONS_BASE_DIR, id);
+                if (fs.existsSync(sessionDir)) {
+                    const directPhoneFiles = fs.readdirSync(sessionDir).filter(f => f.startsWith('lid-mapping-') && !f.endsWith('_reverse.json'));
+                    for (const pf of directPhoneFiles) {
+                        try {
+                            const c = JSON.parse(fs.readFileSync(path.join(sessionDir, pf), 'utf8'));
+                            if (c && c.toString().replace(/[^0-9]/g, '') === lidDigits) {
+                                const ph = pf.replace('lid-mapping-', '').replace('.json', '');
+                                LID_TO_PHONE_MAP.set(lidDigits, ph);
+                                PHONE_TO_LID_MAP.set(ph, lidDigits);
+                                console.log(`[JID Resolver Disk Hit] Resolved LID ${lidDigits} -> ${ph}@s.whatsapp.net`);
+                                return `${ph}@s.whatsapp.net`;
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+        } catch (e) {}
+        return target.includes('@lid') ? target : `${target}@lid`;
+    }
+
+    // 2. Standard WhatsApp format
+    if (target.includes('@s.whatsapp.net')) {
         return target;
     }
 
-    // Check cached map
+    // 3. Check memory cache
     if (jidMap.has(target)) {
-        return jidMap.get(target);
+        const cached = jidMap.get(target);
+        if (cached.includes('@lid')) {
+            const lidDig = cached.split('@')[0].replace(/[^0-9]/g, '');
+            if (LID_TO_PHONE_MAP.has(lidDig)) {
+                return `${LID_TO_PHONE_MAP.get(lidDig)}@s.whatsapp.net`;
+            }
+        }
+        return cached;
     }
 
     let clean = target.replace(/[^0-9]/g, '');
@@ -165,12 +293,7 @@ function resolveDestinationJid(phoneOrJid) {
         return jidMap.get(clean);
     }
 
-    // If 14+ digits and starts with known privacy prefixes, it is a WhatsApp Privacy LID
-    if (clean.length >= 14 && (clean.startsWith('156') || clean.startsWith('235') || clean.startsWith('253'))) {
-        return `${clean}@lid`;
-    }
-
-    // Standard Indian phone number (10 digits)
+    // 4. Standard 10-digit Indian numbers
     if (clean.length === 10) {
         clean = '91' + clean;
     }
@@ -294,16 +417,50 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         let realPhone = null;
 
                         // Check Baileys LID reverse mapping file if LID format
-                        if (senderJid.includes('@lid') || (cleanNumber.length >= 14 && (cleanNumber.startsWith('156') || cleanNumber.startsWith('235') || cleanNumber.startsWith('253')))) {
-                            const reverseFile = path.join(sessionDir, `lid-mapping-${cleanNumber}_reverse.json`);
-                            if (fs.existsSync(reverseFile)) {
-                                try {
-                                    const rawMapped = JSON.parse(fs.readFileSync(reverseFile, 'utf8'));
-                                    if (rawMapped && typeof rawMapped === 'string') {
-                                        const digits = rawMapped.replace(/[^0-9]/g, '');
-                                        if (digits.length >= 10) {
-                                            realPhone = '+' + digits;
+                        if (senderJid.includes('@lid') || (cleanNumber.length >= 14 && (cleanNumber.startsWith('156') || cleanNumber.startsWith('235') || cleanNumber.startsWith('253') || cleanNumber.startsWith('275') || cleanNumber.startsWith('967')))) {
+                            // 1. Check in-memory index
+                            if (LID_TO_PHONE_MAP.has(cleanNumber)) {
+                                const digits = LID_TO_PHONE_MAP.get(cleanNumber);
+                                if (digits.length === 10) {
+                                    realPhone = '+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5);
+                                } else if (digits.length === 12 && digits.startsWith('91')) {
+                                    realPhone = '+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7);
+                                } else {
+                                    realPhone = '+' + digits;
+                                }
+                            }
+                            
+                            // 2. Check disk reverse file if not found
+                            if (!realPhone) {
+                                const reverseFile = path.join(sessionDir, `lid-mapping-${cleanNumber}_reverse.json`);
+                                if (fs.existsSync(reverseFile)) {
+                                    try {
+                                        const rawMapped = JSON.parse(fs.readFileSync(reverseFile, 'utf8'));
+                                        if (rawMapped && typeof rawMapped === 'string') {
+                                            const digits = rawMapped.replace(/[^0-9]/g, '');
+                                            if (digits.length >= 10) {
+                                                realPhone = digits.length === 10 ? ('+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5)) : (digits.length === 12 && digits.startsWith('91') ? ('+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7)) : ('+' + digits));
+                                            }
                                         }
+                                    } catch (e) {}
+                                }
+                            }
+
+                            // 3. Check direct phone mapping files on disk
+                            if (!realPhone) {
+                                try {
+                                    const directFiles = fs.readdirSync(sessionDir).filter(f => f.startsWith('lid-mapping-') && !f.endsWith('_reverse.json'));
+                                    for (const pf of directFiles) {
+                                        try {
+                                            const c = JSON.parse(fs.readFileSync(path.join(sessionDir, pf), 'utf8'));
+                                            if (c && c.toString().replace(/[^0-9]/g, '') === cleanNumber) {
+                                                const digits = pf.replace('lid-mapping-', '').replace('.json', '');
+                                                LID_TO_PHONE_MAP.set(cleanNumber, digits);
+                                                PHONE_TO_LID_MAP.set(digits, cleanNumber);
+                                                realPhone = digits.length === 10 ? ('+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5)) : (digits.length === 12 && digits.startsWith('91') ? ('+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7)) : ('+' + digits));
+                                                break;
+                                            }
+                                        } catch (e) {}
                                     }
                                 } catch (e) {}
                             }
@@ -323,9 +480,16 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         const senderNumber = realPhone;
                         const senderName = msg.pushName || ('Customer ' + senderNumber.slice(-4));
 
-                        // Store in JID Cache
-                        jidMap.set(senderNumber, senderJid);
-                        jidMap.set(cleanNumber, senderJid);
+                        // Store in JID Cache (Always map to standard @s.whatsapp.net for guaranteed outbound delivery)
+                        if (LID_TO_PHONE_MAP.has(cleanNumber)) {
+                            const standardJid = `${LID_TO_PHONE_MAP.get(cleanNumber)}@s.whatsapp.net`;
+                            jidMap.set(senderNumber, standardJid);
+                            jidMap.set(cleanNumber, standardJid);
+                            jidMap.set(senderJid, standardJid);
+                        } else {
+                            jidMap.set(senderNumber, senderJid);
+                            jidMap.set(cleanNumber, senderJid);
+                        }
 
                         // Unwrap nested WhatsApp message formats (Ephemeral, ViewOnce, Document captions, etc.)
                         let rawMsg = msg.message || {};
@@ -440,6 +604,56 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                         // 2. Forward to CRM PHP API for persistent file storage
                         forwardToCRM(payload);
+
+                        // 3. Server-Side Autonomous Instant Auto-Responder Engine
+                        if (autoReplyConfig.enabled) {
+                            const lastEpoch = lastAutoReplyMap.get(senderNumber) || 0;
+                            const cooldownMs = (parseInt(autoReplyConfig.cooldownMinutes) || 0) * 60 * 1000;
+                            const isCooldownPassed = cooldownMs === 0 || (Date.now() - lastEpoch) >= cooldownMs;
+
+                            let autoReplyText = null;
+                            const cleanMsg = (messageText || '').trim().toLowerCase();
+
+                            if (autoReplyConfig.keywordMatching) {
+                                autoReplyText = getKeywordResponse(cleanMsg, senderName);
+                            }
+
+                            if (!autoReplyText && isCooldownPassed) {
+                                autoReplyText = getStockAutoReplyTemplate(senderName);
+                            }
+
+                            if (autoReplyText) {
+                                lastAutoReplyMap.set(senderNumber, Date.now());
+                                lastAutoReplyMap.set(cleanNumber, Date.now());
+                                if (senderJid) lastAutoReplyMap.set(senderJid, Date.now());
+
+                                setTimeout(async () => {
+                                    try {
+                                        const targetJid = resolveDestinationJid(senderNumber || senderJid);
+                                        console.log(`[Auto-Reply Engine] 🤖 Dispatching automated stock reply to ${senderName} (${targetJid})...`);
+                                        const sentRes = await sock.sendMessage(targetJid, { text: autoReplyText });
+                                        console.log(`[Auto-Reply Engine] ✅ Successfully delivered automated stock reply to ${targetJid} (ID: ${sentRes?.key?.id})`);
+
+                                        const botPayload = {
+                                            sender_name: 'Bot (Auto-Reply)',
+                                            sender_phone: senderNumber,
+                                            sender_jid: targetJid,
+                                            message_text: autoReplyText,
+                                            type: 'text',
+                                            account_id: accountId,
+                                            source: 'AUTOREPLY_BOT',
+                                            is_outbound: true,
+                                            timestamp_epoch: Math.floor(Date.now() / 1000),
+                                            received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                        };
+                                        io.emit('whatsapp:inbound', botPayload);
+                                        forwardToCRM(botPayload);
+                                    } catch (err) {
+                                        console.error('[Auto-Reply Send Error]:', err.message);
+                                    }
+                                }, 800);
+                            }
+                        }
                     }
                 }
             }
@@ -480,11 +694,8 @@ async function sendWhatsAppMessage(target, text, accountId = null) {
         throw new Error('Invalid phone number or JID.');
     }
 
-    // Auto-prepend Brand Name Banner to customer WhatsApp messages
-    let finalText = text;
-    if (BRAND_NAME && !finalText.includes(BRAND_NAME)) {
-        finalText = `🛍️ *${BRAND_NAME}* • Order Desk\n━━━━━━━━━━━━━━━━━━━━\n${finalText}\n\n_${BRAND_TAGLINE}_`;
-    }
+    // Send exact message from CRM without duplicate brand wrapping or bottom tagline
+    let finalText = typeof text === 'string' ? text.trim() : String(text || '');
 
     console.log(`[Outbound Send via ${activeAcc.connectedNumber || activeAcc.id}] Dispatching to ${jid}: "${finalText}"`);
     const sent = await activeAcc.sock.sendMessage(jid, { text: finalText });
@@ -732,6 +943,29 @@ app.post('/api/accounts/update_profile', async (req, res) => {
 });
 
 app.get('/api/qr/status', (req, res) => {
+    const summary = getAccountsSummary();
+    const primary = summary[0] || { status: 'DISCONNECTED', connected_number: null, qr_image: null, connected_name: null };
+    res.json({
+        status: 'success',
+        connection: primary.status,
+        qr_image: primary.qr_image,
+        connected_number: primary.connected_number,
+        connected_name: primary.connected_name,
+        accounts: summary,
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get('/api/accounts', (req, res) => {
+    const summary = getAccountsSummary();
+    res.json({
+        status: 'success',
+        accounts: summary,
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get('/api/status', (req, res) => {
     const summary = getAccountsSummary();
     const primary = summary[0] || { status: 'DISCONNECTED', connected_number: null, qr_image: null, connected_name: null };
     res.json({

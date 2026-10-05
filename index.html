@@ -215,6 +215,15 @@
         </div>
       </button>
 
+      <!-- DND / OPT-OUT CUSTOMERS MODULE -->
+      <button onclick="switchView('dnd')" id="nav-dnd" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">do_not_disturb_on</span>
+          <span>DND / Opt-Out List</span>
+        </div>
+        <span id="badge-dnd-count" class="bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+      </button>
+
       <div class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Settings & Admin</div>
 
       <!-- PROMINENT WHATSAPP SETTINGS BUTTON -->
@@ -337,15 +346,17 @@
           </div>
         </div>
 
-        <!-- Direct WhatsApp Settings Icon Button (Admin Only) -->
-        <button onclick="switchView('settings')" id="header-settings-btn" class="p-2 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition admin-only-ui" title="WhatsApp Business &amp; Phone Settings">
-          <span class="material-symbols-outlined text-[20px]">settings</span>
+
+        <!-- Message Automation / Stock Auto-Reply Button -->
+        <button onclick="openAutoReplyModal()" id="header-auto-reply-btn" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Configure Automated Stock Category Instant Replies for Incoming WhatsApp Messages">
+          <span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span>
+          <span>Stock Auto-Reply Bot</span>
         </button>
 
-        <!-- Inbound Test Trigger (Admin Only) -->
-        <button onclick="openInboundSimulatorModal()" id="header-inbound-sim-btn" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-semibold rounded-lg transition shadow-sm admin-only-ui" title="Simulate incoming WhatsApp message">
-          <span class="material-symbols-outlined text-[16px]">sim_card_download</span>
-          <span>Receive WhatsApp Message</span>
+        <!-- Broadcast Template to All Customers Button -->
+        <button onclick="openBroadcastModal()" id="header-broadcast-btn" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Send customized template message to all customer chats automatically">
+          <span class="material-symbols-outlined text-[16px]">campaign</span>
+          <span>Broadcast Template</span>
         </button>
 
         <!-- Reset Test Inbox Messages Button (Dev / Test Helper) -->
@@ -353,27 +364,7 @@
           <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>
           <span>Reset Inbox</span>
         </button>
-
-        <!-- Notification Bell -->
-        <div class="relative">
-          <button onclick="toggleNotificationDrawer()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition relative">
-            <span class="material-symbols-outlined text-[20px]">notifications</span>
-            <span id="header-notif-ping" class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
-          </button>
-        </div>
-
         <div class="h-6 w-px bg-slate-200"></div>
-
-        <!-- Current User Avatar Profile -->
-        <div class="flex items-center gap-2 pl-1">
-          <div id="user-avatar-initials" class="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-wa to-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
-            SA
-          </div>
-          <div class="hidden md:block text-left">
-            <p id="user-display-name" class="text-xs font-bold text-slate-800 leading-none">Admin Manager</p>
-            <p id="user-display-sub" class="text-[10px] text-emerald-600 font-medium leading-none mt-1">Full System Access</p>
-          </div>
-        </div>
 
         <!-- Header Logout Button -->
         <button onclick="handleLogout()" class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg transition shadow-sm ml-1" title="Sign out from CRM Panel">
@@ -451,7 +442,7 @@
             </div>
 
             <!-- Filter Pills -->
-            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs">
               <button onclick="setInboxFilter('all')" id="filter-all" class="px-2.5 py-1 rounded-lg font-semibold bg-brand-wa text-white text-[11px] shrink-0 shadow-sm">All (<span id="count-all">0</span>)</button>
               <button onclick="setInboxFilter('unassigned')" id="filter-unassigned" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">Unassigned (<span id="count-unassigned" class="text-amber-600 font-bold">0</span>)</button>
               <button onclick="setInboxFilter('my')" id="filter-my" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">My Queue (<span id="count-my">0</span>)</button>
@@ -485,6 +476,9 @@
           <!-- Quick Actions & Quick Reply Tray -->
           <div class="bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-2 flex items-center gap-2 overflow-x-auto">
             <span class="text-[10px] font-bold uppercase text-slate-400 shrink-0">Quick Actions:</span>
+            <button onclick="shareStockCategoryMenu()" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1 shrink-0 transition shadow-xs" title="1-Click send/insert live garment stock & collection menu to customer">
+              <span class="material-symbols-outlined text-[14px] text-amber-600">category</span> Share Stock Menu
+            </button>
             <button onclick="openProductSearchModal()" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 transition">
               <span class="material-symbols-outlined text-[14px]">inventory_2</span> Search Stock & Share
             </button>
@@ -493,6 +487,14 @@
             </button>
             <button onclick="openFollowUpModal()" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 transition">
               <span class="material-symbols-outlined text-[14px]">event</span> Set Follow-up
+            </button>
+            <button onclick="openAutoReplyModal()" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition shadow-xs" title="Configure Automated Stock Category Instant Replies for Incoming WhatsApp Messages">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="pill-autoreply-dot"></span>
+              <span class="material-symbols-outlined text-[14px] text-emerald-600">smart_toy</span>
+              <span id="pill-autoreply-label">Auto-Reply: ON</span>
+            </button>
+            <button onclick="openBroadcastModal()" class="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-lg text-xs font-bold flex items-center gap-1 shrink-0 transition shadow-sm" title="Broadcast custom template to all customers automatically">
+              <span class="material-symbols-outlined text-[14px] text-purple-600">campaign</span> Auto-Broadcast
             </button>
             <div class="h-4 w-px bg-slate-300 mx-1"></div>
             <!-- Quick Reply Dropdown -->
@@ -518,10 +520,16 @@
               </button>
             </form>
           </div>
+
+          <!-- Floating Slide-Open Tab Button (Visible when right panel is hidden) -->
+          <button id="floating-panel-toggle-btn" onclick="toggleRightPanel(true)" class="hidden absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-emerald-700 hover:bg-emerald-800 text-white py-3 px-1.5 rounded-l-2xl shadow-2xl transition flex flex-col items-center gap-1 border-y border-l border-emerald-400/50 group" title="Slide Open Customer Details">
+            <span class="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition">chevron_left</span>
+            <span class="text-[9px] font-extrabold uppercase [writing-mode:vertical-lr] tracking-widest py-1 select-none">Customer Profile</span>
+          </button>
         </div>
 
         <!-- Right Panel: Customer 360 & Query Management -->
-        <div id="chat-right-panel" class="w-80 lg:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto">
+        <div id="chat-right-panel" class="w-80 lg:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto transition-all duration-300">
           <!-- Rendered by JS -->
         </div>
 
@@ -922,6 +930,103 @@
           <div id="customers-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             <!-- Populated by JS -->
           </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: DND / OPT-OUT CUSTOMERS MODULE -->
+      <!-- ========================================== -->
+      <section id="view-dnd" class="h-full overflow-y-auto p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          
+          <!-- Header Banner -->
+          <div class="bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 p-6 rounded-2xl text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-300 shadow-glow">
+                <span class="material-symbols-outlined text-[28px]">do_not_disturb_on</span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                  <span>DND &amp; Opt-Out Customer Hub</span>
+                  <span class="text-xs bg-rose-500/30 text-rose-200 border border-rose-400/40 px-2 py-0.5 rounded-full font-bold">Privacy Protected</span>
+                </h2>
+                <p class="text-xs text-rose-200/80 mt-0.5">Customers marked as Not Interested / DND are excluded from promotional broadcasts and sales outreach</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span id="dnd-count-summary" class="bg-white/10 text-white border border-white/20 px-3 py-1.5 rounded-xl text-xs font-mono font-bold">
+                0 DND Customers
+              </span>
+            </div>
+          </div>
+
+          <!-- KPI Summary Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                <span class="material-symbols-outlined text-[22px]">block</span>
+              </div>
+              <div>
+                <p class="text-[11px] font-bold uppercase text-slate-400">Total DND Leads</p>
+                <p id="kpi-dnd-total" class="text-lg font-extrabold text-slate-900">0</p>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                <span class="material-symbols-outlined text-[22px]">unsubscribe</span>
+              </div>
+              <div>
+                <p class="text-[11px] font-bold uppercase text-slate-400">Not Interested in Products</p>
+                <p id="kpi-dnd-reason" class="text-lg font-extrabold text-slate-900">100%</p>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <span class="material-symbols-outlined text-[22px]">shield_check</span>
+              </div>
+              <div>
+                <p class="text-[11px] font-bold uppercase text-slate-400">Broadcast Filter Status</p>
+                <p class="text-xs font-extrabold text-emerald-700">Auto-Excluded from Broadcasts</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- DND Table / Card List Container -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/70">
+              <div class="relative flex-1 max-w-md">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                <input type="text" id="dnd-search-input" onkeyup="renderDndModule()" placeholder="Search DND customer name, phone number..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-brand-wa">
+              </div>
+
+              <div class="text-xs text-slate-500 font-semibold flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px] text-emerald-600">info</span>
+                <span>Click "Re-activate" on any customer to allow messaging again.</span>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-700">
+                <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th class="py-3 px-4">Customer Details</th>
+                    <th class="py-3 px-4">Phone / WhatsApp</th>
+                    <th class="py-3 px-4">Opt-Out Reason</th>
+                    <th class="py-3 px-4">Marked By Staff</th>
+                    <th class="py-3 px-4">Date / Time</th>
+                    <th class="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="dnd-table-body" class="divide-y divide-slate-100">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -1960,50 +2065,151 @@
 
   <!-- MODAL: FOLLOW-UP SCHEDULER -->
   <div id="modal-followup" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-      <div class="bg-gradient-to-r from-blue-900 to-indigo-900 p-5 text-white flex items-center justify-between">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-200">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-5 text-white flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center text-white">
-            <span class="material-symbols-outlined text-[22px]">event</span>
+          <div class="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300">
+            <span class="material-symbols-outlined text-[24px]">event_available</span>
           </div>
           <div>
-            <h3 class="font-bold text-base">Schedule Follow-up</h3>
-            <p class="text-xs text-blue-200/80">Set date & time reminder for customer callback</p>
+            <h3 class="font-bold text-base tracking-tight">Schedule Customer Follow-up</h3>
+            <p class="text-xs text-blue-200/80">Set calendar date, 12-hr reminder time &amp; callback notes</p>
           </div>
         </div>
-        <button onclick="closeModal('modal-followup')" class="text-blue-300 hover:text-white">
-          <span class="material-symbols-outlined text-[24px]">close</span>
+        <button type="button" onclick="closeModal('modal-followup')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-blue-200 hover:text-white transition">
+          <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
 
       <form onsubmit="handleCreateFollowup(event)" class="p-6 space-y-4 text-xs">
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Follow-up Date:</label>
-            <input type="date" id="followup-date" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+        <!-- Date & 12-Hour Time Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <!-- Calendar Date -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-blue-600">calendar_month</span>
+                <span>Follow-up Date *</span>
+              </label>
+            </div>
+            <input type="date" id="followup-date" required onchange="updateFollowUpTimePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+            <!-- Quick Date Chips -->
+            <div class="flex items-center gap-1 pt-0.5">
+              <button type="button" onclick="setFollowUpQuickDate(0)" class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md border border-slate-200 transition">Today</button>
+              <button type="button" onclick="setFollowUpQuickDate(1)" class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md border border-slate-200 transition">Tomorrow</button>
+              <button type="button" onclick="setFollowUpQuickDate(2)" class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md border border-slate-200 transition">+2 Days</button>
+            </div>
           </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Follow-up Time:</label>
-            <input type="time" id="followup-time" value="11:00" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+
+          <!-- 12-Hour Follow-up Time -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-indigo-600">schedule</span>
+                <span>12-Hour Time *</span>
+              </label>
+              <span id="followup-live-time-badge" class="text-[9px] bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.2 rounded font-mono font-bold">12-Hr AM/PM</span>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-1.5">
+              <!-- Hour (01 - 12) -->
+              <select id="followup-hour" onchange="updateFollowUpTimePreview()" class="bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                <option value="01">01</option>
+                <option value="02">02</option>
+                <option value="03">03</option>
+                <option value="04">04</option>
+                <option value="05">05</option>
+                <option value="06">06</option>
+                <option value="07">07</option>
+                <option value="08">08</option>
+                <option value="09">09</option>
+                <option value="10">10</option>
+                <option value="11" selected>11</option>
+                <option value="12">12</option>
+              </select>
+
+              <!-- Minute (00 - 55) -->
+              <select id="followup-minute" onchange="updateFollowUpTimePreview()" class="bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                <option value="00" selected>00</option>
+                <option value="05">05</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+                <option value="35">35</option>
+                <option value="40">40</option>
+                <option value="45">45</option>
+                <option value="50">50</option>
+                <option value="55">55</option>
+              </select>
+
+              <!-- AM / PM -->
+              <select id="followup-ampm" onchange="updateFollowUpTimePreview()" class="bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-bold text-indigo-900 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                <option value="AM" selected>AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+
+            <!-- Quick Time Presets -->
+            <div class="flex items-center gap-1 pt-0.5">
+              <button type="button" onclick="setFollowUpQuickTime('NOW')" class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md border border-slate-200 transition">Now</button>
+              <button type="button" onclick="setFollowUpQuickTime('PLUS_1H')" class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md border border-slate-200 transition">+1 Hr</button>
+              <button type="button" onclick="setFollowUpQuickTime('MORNING')" class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md border border-slate-200 transition">10 AM</button>
+              <button type="button" onclick="setFollowUpQuickTime('EVENING')" class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md border border-slate-200 transition">05 PM</button>
+            </div>
           </div>
         </div>
 
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Follow-up Reason / Context:</label>
-          <select id="followup-reason-select" onchange="if(this.value!=='other') document.getElementById('followup-notes').value=this.value;" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium mb-2">
-            <option value="Customer will confirm required size after checking with family.">Customer will confirm size after checking</option>
-            <option value="Customer asked to send product photos of alternative colors.">Send photos of alternative colors</option>
-            <option value="Customer promised to place order by tomorrow morning.">Promised to place order tomorrow</option>
-            <option value="Waiting for customer payment confirmation / UPI screenshot.">Waiting for UPI payment confirmation</option>
-            <option value="other">Custom reason...</option>
+        <!-- Live Reminder Timestamp Banner -->
+        <div id="followup-preview-banner" class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 p-2.5 rounded-xl flex items-center gap-2 text-blue-950 font-bold text-xs">
+          <span class="material-symbols-outlined text-[18px] text-blue-700">alarm</span>
+          <span>Reminder scheduled for: <strong id="followup-preview-text" class="text-blue-900 font-mono">Today at 11:00 AM</strong></span>
+        </div>
+
+        <!-- MAIN THING: FOLLOW-UP REASON & DETAILED NOTES -->
+        <div class="space-y-2 pt-1">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px] text-emerald-700">description</span>
+              <span>Follow-up Reason &amp; Context</span>
+            </label>
+            <span class="text-[10px] text-slate-500 font-medium">Select context or type notes below</span>
+          </div>
+
+          <select id="followup-reason-select" onchange="handleFollowupReasonSelect(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+            <option value="Customer will confirm required size after checking with family.">Customer will confirm required size after checking</option>
+            <option value="Customer asked to send product photos of alternative colors & designs.">Send product photos &amp; alternative catalog</option>
+            <option value="Customer promised to place order & complete payment by callback time.">Promised to place order &amp; pay</option>
+            <option value="Waiting for customer UPI / Bank transfer payment screenshot.">Waiting for UPI / Payment confirmation</option>
+            <option value="Price negotiation / Special festive discount inquiry.">Price negotiation / Discount inquiry</option>
+            <option value="Customer requested callback at a specific time.">Customer requested specific callback</option>
+            <option value="other">✍️ Custom reason / custom notes...</option>
           </select>
-          <textarea id="followup-notes" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium" placeholder="Additional notes...">Customer will confirm required size after checking with family.</textarea>
+
+          <!-- Quick Note Chips -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] text-slate-500 font-bold">Quick add notes:</span>
+            <button type="button" onclick="appendFollowUpNoteTemplate('Size verification pending.')" class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full hover:bg-emerald-100 transition">+ Size Check</button>
+            <button type="button" onclick="appendFollowUpNoteTemplate('Send catalog on WhatsApp.')" class="px-2 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-800 border border-blue-200 rounded-full hover:bg-blue-100 transition">+ Send Catalog</button>
+            <button type="button" onclick="appendFollowUpNoteTemplate('Urgent dispatch requested.')" class="px-2 py-0.5 text-[10px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 rounded-full hover:bg-rose-100 transition">+ Urgent Dispatch</button>
+            <button type="button" onclick="appendFollowUpNoteTemplate('Customer requested COD option.')" class="px-2 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 rounded-full hover:bg-amber-100 transition">+ COD Inquiry</button>
+          </div>
+
+          <!-- Main Detailed Notes Textarea -->
+          <div>
+            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Detailed Conversation Notes *:</label>
+            <textarea id="followup-notes" rows="3" required placeholder="Write detailed customer conversation notes, requirements, and callback instructions here..." class="w-full bg-slate-50 border border-slate-300 rounded-2xl p-3 text-xs font-medium text-slate-900 focus:bg-white focus:ring-1 focus:ring-blue-600 leading-relaxed shadow-inner">Customer will confirm required size after checking with family.</textarea>
+          </div>
         </div>
 
-        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
-          <button type="button" onclick="closeModal('modal-followup')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
-          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[18px]">alarm_on</span> Save Follow-up
+        <!-- Footer Actions -->
+        <div class="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-followup')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">Cancel</button>
+          <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold shadow-md transition flex items-center gap-1.5 active:scale-[0.99]">
+            <span class="material-symbols-outlined text-[18px]">alarm_on</span>
+            <span>Save Follow-up</span>
           </button>
         </div>
       </form>
@@ -2159,6 +2365,440 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- MODAL: AUTOMATED TEMPLATE BROADCAST TO CUSTOMER CHATS -->
+  <div id="modal-broadcast-template" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-teal-900 via-emerald-950 to-brand-dark p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 text-slate-900 font-extrabold flex items-center justify-center shadow-lg">
+            <span class="material-symbols-outlined text-[24px]">campaign</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Automated WhatsApp Template Broadcast</h3>
+            <p class="text-xs text-emerald-200/80">Send personalized promotional &amp; update templates to all customer chats automatically</p>
+          </div>
+        </div>
+        <button onclick="closeBroadcastModal()" class="text-emerald-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <!-- Form Body -->
+      <div class="p-6 space-y-4 text-xs overflow-y-auto custom-chat-scroll flex-1">
+        
+        <!-- 1. Preset Template Selector with Admin Actions -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-800 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px] text-brand-wa">bookmark</span>
+              <span>Choose Pre-Built Template or Write Custom:</span>
+            </label>
+            <div class="flex items-center gap-1">
+              <button type="button" onclick="handleSaveCurrentAsNewTemplate()" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs" title="Save current text as a new reusable template with custom name">
+                <span class="material-symbols-outlined text-[14px]">bookmark_add</span>
+                <span>+ Save Template</span>
+              </button>
+              <button type="button" onclick="handleRenameCurrentTemplate()" class="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs transition" title="Rename selected template">
+                <span class="material-symbols-outlined text-[14px]">edit</span>
+              </button>
+              <button type="button" onclick="handleDeleteCurrentTemplate()" class="p-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs transition" title="Delete selected template">
+                <span class="material-symbols-outlined text-[14px]">delete</span>
+              </button>
+            </div>
+          </div>
+          <select id="bcast-preset-select" onchange="applyBroadcastPreset(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-brand-wa">
+            <!-- Rendered by JS -->
+          </select>
+        </div>
+
+        <!-- 2. Target Audience Selector & Auto-Fetched Numbers -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Target Audience / WhatsApp Line:</label>
+            <select id="bcast-target-audience" onchange="updateBroadcastTargetCount()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-brand-wa">
+              <option value="ALL">📱 All Active Customers (Excluding DND)</option>
+              <option value="ALL_INCLUDING_DND">👥 All Customers (Including DND List)</option>
+              <option value="DND_ONLY">🚫 DND / Opt-Out Customers Only</option>
+              <option value="account_1">Line 1: GRM Business Central (+91 86680 07593)</option>
+              <option value="account_2">Line 2: Blue Berry Kids &amp; Maternity (+91 97896 60115)</option>
+              <option value="account_3">Line 3: Customer Support &amp; Enquiries (+91 98765 43210)</option>
+              <option value="account_4">Line 4: Wholesale &amp; Bulk Orders (+91 98450 99887)</option>
+              <option value="account_5">Line 5: VIP Fast-Track &amp; Dispatch (+91 95009 04638)</option>
+              <option value="TAG_VIP">⭐ VIP Customers Only</option>
+              <option value="TAG_WHOLESALE">📦 Wholesale Partners Only</option>
+              <option value="TAG_NEW">🌱 New WhatsApp Leads Only</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Estimated Recipients:</label>
+            <div class="p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-between">
+              <span class="font-bold text-slate-700">Total Chats:</span>
+              <span id="bcast-recipients-count" class="font-mono font-extrabold text-sm text-emerald-900 bg-white border border-emerald-300 px-2.5 py-0.5 rounded-lg">0 Customers</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auto-Fetched Current Customer Numbers -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-800 text-xs flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px] text-emerald-600">contact_phone</span>
+              <span>Auto-Fetched Recipient Numbers:</span>
+            </label>
+            <span class="text-[10px] text-emerald-900 bg-emerald-100 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span id="bcast-fetched-count">Auto-Fetched 0 Numbers</span>
+            </span>
+          </div>
+          <textarea id="bcast-target-numbers" oninput="updateBroadcastCustomNumbersCount()" rows="2" placeholder="Auto-fetched customer phone numbers (e.g. +91 73389 65560, +91 97896 60115)..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-emerald-950 focus:bg-white focus:ring-1 focus:ring-brand-wa"></textarea>
+          <div class="flex items-center justify-between text-[10px] text-slate-500">
+            <span>✨ Numbers automatically extracted from current active customer chats. You can also paste additional numbers here.</span>
+            <button type="button" onclick="refreshBroadcastAutoFetchedNumbers()" class="text-brand-wa hover:underline font-bold flex items-center gap-0.5">
+              <span class="material-symbols-outlined text-[13px]">refresh</span> Re-fetch
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Dynamic Template Variables Insertion -->
+        <div class="space-y-2">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <label class="font-bold text-slate-800 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px] text-brand-wa">edit_note</span>
+              <span>Template Message Text:</span>
+            </label>
+            
+            <!-- Quick System Insert Tags -->
+            <div class="flex items-center gap-1 flex-wrap text-[10px]">
+              <span class="text-slate-400 font-semibold shrink-0">Insert Tag:</span>
+              <button type="button" onclick="insertBroadcastVariable('{{customer_name}}')" class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded font-mono font-bold transition shadow-2xs" title="Insert customer name">+ {{customer_name}}</button>
+              <button type="button" onclick="insertBroadcastVariable('{{business_name}}')" class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded font-mono font-bold transition shadow-2xs" title="Insert business name">+ {{business_name}}</button>
+              <button type="button" onclick="insertBroadcastVariable('{{line_phone}}')" class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded font-mono font-bold transition shadow-2xs" title="Insert business phone">+ {{line_phone}}</button>
+              <button type="button" onclick="insertBroadcastVariable('{{customer_phone}}')" class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded font-mono font-bold transition shadow-2xs" title="Insert customer phone number">+ {{customer_phone}}</button>
+              <button type="button" onclick="insertBroadcastVariable('{{today_date}}')" class="px-1.5 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded font-mono font-bold transition shadow-2xs" title="Insert today's date">+ {{today_date}}</button>
+              <button type="button" onclick="insertBroadcastVariable('{{staff_name}}')" class="px-1.5 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded font-mono font-bold transition shadow-2xs" title="Insert handling staff name">+ {{staff_name}}</button>
+            </div>
+          </div>
+
+          <!-- MANUAL CUSTOM TAG CREATOR & VALUE CHANGER -->
+          <div class="bg-gradient-to-r from-slate-50 to-indigo-50/50 p-3 rounded-xl border border-indigo-100 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-extrabold uppercase text-indigo-900 tracking-wider flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px] text-indigo-600">tune</span>
+                <span>Tag Values &amp; Custom Dynamic Variables Controller</span>
+              </span>
+              <span class="text-[9px] text-indigo-700 font-bold bg-indigo-100/70 px-2 py-0.5 rounded-full">Click ✏️ below to change any tag value</span>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 text-xs">
+              <div class="flex-1 flex items-center gap-1.5">
+                <div class="relative w-2/5 min-w-[130px]">
+                  <span class="text-[10px] font-mono font-bold text-slate-400 absolute left-2 top-1/2 -translate-y-1/2 select-none">{{</span>
+                  <input type="text" id="manual-tag-name" placeholder="tag_name" class="w-full pl-5 pr-5 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-400" title="Tag identifier without curly braces, e.g. discount, product_name, offer_code">
+                  <span class="text-[10px] font-mono font-bold text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 select-none">}}</span>
+                </div>
+                <span class="text-slate-400 font-bold">=</span>
+                <input type="text" id="manual-tag-value" placeholder="Custom Value (e.g. 20% OFF or Coupon Code)" class="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-400" title="Value to be replaced when sending message">
+              </div>
+
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" onclick="handleApplyManualCustomTag()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm">
+                  <span class="material-symbols-outlined text-[15px]">add_circle</span>
+                  <span>Insert &amp; Apply Tag</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Active Tag Values Pills Tray (Interactive with 1-click Value Edit) -->
+            <div class="space-y-1 pt-1">
+              <div class="flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+                <span>Active Tag Values (Click tag to insert, or click ✏️ to change value):</span>
+              </div>
+              <div id="manual-custom-tags-tray" class="flex items-center gap-2 flex-wrap">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+          </div>
+
+          <textarea id="bcast-message-text" oninput="updateBroadcastPreview()" rows="5" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3.5 text-xs font-medium focus:ring-2 focus:ring-brand-wa focus:bg-white transition leading-relaxed" placeholder="Write message with {{customer_name}}, {{offer_discount}}, or custom placeholders..."></textarea>
+        </div>
+
+        <!-- 4. Safe Throttling & Large Live Personalized Preview -->
+        <div class="space-y-3">
+          <!-- Anti-Spam Dispatch Throttling -->
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="font-bold text-slate-700 text-[11px] flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px] text-teal-600">timer</span>
+                <span>Anti-Spam Dispatch Delay:</span>
+              </label>
+              <span id="bcast-delay-label" class="font-mono font-bold text-xs text-brand-waDark">1.5 sec / chat</span>
+            </div>
+            <input type="range" id="bcast-delay-range" min="0.5" max="3" step="0.5" value="1.5" oninput="document.getElementById('bcast-delay-label').innerText = this.value + ' sec / chat'" class="w-full accent-brand-wa cursor-pointer">
+            <p class="text-[10px] text-slate-400">Sequential safe delivery prevents WhatsApp spam restrictions.</p>
+          </div>
+
+          <!-- Expanded & Prominent Live Personalized Preview Card -->
+          <div class="p-4 bg-gradient-to-b from-emerald-50/90 to-teal-50/60 border border-emerald-300/80 rounded-2xl space-y-2.5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-xs text-emerald-950 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px] text-emerald-600">visibility</span>
+                <span>Live WhatsApp Message Preview (Real Customer View):</span>
+              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] bg-emerald-200/80 text-emerald-900 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                  <span>Fully Personalized</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- WhatsApp Chat Preview Bubble Container (Spacious & Clean) -->
+            <div class="bg-surface-chat rounded-xl p-4 border border-emerald-200/70 shadow-inner">
+              <div class="flex items-center justify-between text-[11px] font-semibold text-emerald-900/80 mb-2 border-b border-emerald-100 pb-1.5">
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">phone_iphone</span>
+                  <span id="bcast-preview-customer-label">Sample Recipient: SugunaMani (+91 73389 65560)</span>
+                </span>
+                <span class="text-[10px] font-mono text-slate-400" id="bcast-preview-char-count">0 chars</span>
+              </div>
+              
+              <div class="bg-emerald-50 text-slate-800 p-3.5 rounded-2xl rounded-tr-none border border-emerald-200/80 text-xs leading-relaxed font-sans shadow-sm whitespace-pre-wrap min-h-[140px] max-h-[280px] overflow-y-auto custom-chat-scroll" id="bcast-live-preview-box">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Active Progress Stream (Shown during sending) -->
+        <div id="bcast-progress-container" class="hidden p-4 bg-teal-50 border border-teal-200 rounded-xl space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-teal-900 text-xs flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[18px] text-brand-wa animate-spin">autorenew</span>
+              <span id="bcast-progress-status">Broadcasting to customer chats...</span>
+            </span>
+            <span id="bcast-progress-pct" class="font-mono font-extrabold text-teal-900 text-xs">0%</span>
+          </div>
+          <div class="w-full h-2 bg-teal-200 rounded-full overflow-hidden">
+            <div id="bcast-progress-bar" class="h-full bg-gradient-to-r from-teal-500 to-emerald-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p id="bcast-progress-detail" class="text-[10px] text-teal-700 font-mono">Preparing automated queue...</p>
+        </div>
+
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <button type="button" onclick="closeBroadcastModal()" id="btn-bcast-cancel" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs transition">
+          Cancel
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btn-bcast-stop" onclick="stopAutomatedBroadcast()" class="hidden px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">stop_circle</span> Stop Broadcast
+          </button>
+          <button type="button" id="btn-bcast-start" onclick="startAutomatedBroadcast()" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-lg transition hover:scale-[1.02] flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">rocket_launch</span> Start Automated Broadcast
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: WHATSAPP MESSAGE AUTOMATION & STOCK AUTO-REPLY BOT -->
+  <div id="modal-auto-reply-settings" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-teal-900 via-emerald-900 to-slate-900 p-5 text-white flex items-center justify-between shrink-0 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md">
+            <span class="material-symbols-outlined text-[24px]">smart_toy</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-extrabold text-base tracking-tight">WhatsApp Auto-Reply &amp; Stock Bot</h3>
+              <span class="text-[9px] bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Automations</span>
+            </div>
+            <p class="text-xs text-emerald-200/80 mt-0.5">Automatically send live garment stock &amp; category menus when customers message you</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-auto-reply-settings')" class="text-slate-300 hover:text-white transition p-1">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <!-- Body Form -->
+      <div class="p-5 space-y-4 text-xs overflow-y-auto custom-chat-scroll flex-1 bg-slate-50/50">
+        
+        <!-- 1. Master Automation Enable Toggle Strip -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+              <span class="material-symbols-outlined text-[20px]">bolt</span>
+            </div>
+            <div>
+              <h4 class="font-extrabold text-slate-800 text-xs">Instant Inbound Auto-Reply</h4>
+              <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                When a customer sends a new message on WhatsApp, immediately reply with your greeting &amp; live available stock categories.
+              </p>
+            </div>
+          </div>
+          
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" id="autoreply-master-toggle" class="sr-only peer" onchange="toggleAutoReplyMaster(this.checked)">
+            <div class="w-12 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+        </div>
+
+        <!-- 2. Cooldown & Keyword Auto-Responder Options -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Cooldown Period -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
+            <label class="block font-bold text-slate-700 text-[11px] flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px] text-teal-600">timer</span>
+              <span>Repeat Cooldown Time:</span>
+            </label>
+            <select id="autoreply-cooldown-select" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+              <option value="0" selected>⚡ 0 Minutes (Instant Auto-Reply on Every Message)</option>
+              <option value="2">2 Minutes (Rapid Test Mode)</option>
+              <option value="15">15 Minutes (Fast response)</option>
+              <option value="30">30 Minutes (Standard Interval)</option>
+              <option value="60">1 Hour (Avoid repeat in chat)</option>
+              <option value="1440">24 Hours (Once per day)</option>
+            </select>
+            <p class="text-[10px] text-slate-400">Set to 0 Minutes to auto-reply to every incoming message instantly.</p>
+          </div>
+
+          <!-- Keyword Auto-Response Switch -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
+            <label class="block font-bold text-slate-700 text-[11px] flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px] text-indigo-600">dialpad</span>
+              <span>Interactive Menu Numbers:</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer pt-1">
+              <input type="checkbox" id="autoreply-keyword-toggle" checked class="w-4 h-4 text-brand-wa rounded border-slate-300 focus:ring-brand-wa">
+              <span class="text-xs text-slate-700 font-semibold">Auto-reply when customer types 1, 2, 3, 4, 5</span>
+            </label>
+            <p class="text-[10px] text-slate-400">Automatically sends photos &amp; sizes for the selected collection.</p>
+          </div>
+        </div>
+
+        <!-- 3. Dynamic Stock Categories Generator & Tag Insertion -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label class="font-extrabold text-slate-700 text-xs flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-amber-600">edit_note</span>
+              <span>Automated Message Template:</span>
+            </label>
+            <button type="button" onclick="regenerateLiveStockMenuTemplate()" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[11px] font-bold flex items-center gap-1 transition" title="Auto-build clean stock category menu from live catalog">
+              <span class="material-symbols-outlined text-[14px]">sync</span>
+              <span>Generate from Live Stock</span>
+            </button>
+          </div>
+
+          <!-- Quick Variable Chips -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">Insert Tag:</span>
+            <button type="button" onclick="insertAutoReplyTag('{customer_name}')" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold border border-slate-200">{customer_name}</button>
+            <button type="button" onclick="insertAutoReplyTag('{brand_name}')" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold border border-slate-200">{brand_name}</button>
+            <button type="button" onclick="insertAutoReplyTag('{stock_categories}')" class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded text-[10px] font-mono font-bold border border-emerald-200">{stock_categories}</button>
+            <button type="button" onclick="insertAutoReplyTag('{business_phone}')" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold border border-slate-200">{business_phone}</button>
+          </div>
+
+          <textarea id="autoreply-message-template" rows="6" oninput="updateAutoReplyLivePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono font-medium focus:bg-white focus:ring-2 focus:ring-brand-wa leading-relaxed" placeholder="Enter automated message template..."></textarea>
+        </div>
+
+        <!-- 4. Live WhatsApp Bubble Preview -->
+        <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-extrabold text-slate-700 text-[11px] flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[15px] text-brand-wa">chat_bubble</span>
+              <span>Live Customer WhatsApp Preview:</span>
+            </span>
+            <span class="text-[10px] text-slate-400 font-mono" id="autoreply-preview-chars">0 chars</span>
+          </div>
+
+          <div class="bg-emerald-50/90 text-slate-800 p-3.5 rounded-2xl rounded-tr-none border border-emerald-200/80 text-xs leading-relaxed font-sans shadow-sm whitespace-pre-wrap max-h-48 overflow-y-auto custom-chat-scroll" id="autoreply-live-preview-box">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <button type="button" onclick="closeModal('modal-auto-reply-settings')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition">
+          Close
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="testSendStockAutoReplyToCurrentChat()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5 active:scale-[0.99]" title="Send this stock category template to currently open chat right now">
+            <span class="material-symbols-outlined text-[15px] text-emerald-400">send</span>
+            <span>Send Test to Active Chat</span>
+          </button>
+          <button type="button" onclick="saveAutoReplySettings()" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5 active:scale-[0.99]">
+            <span class="material-symbols-outlined text-[16px]">save</span>
+            <span>Save Automation Settings</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: HIGH-RESOLUTION IMAGE LIGHTBOX & PHOTO VIEWER -->
+  <div id="modal-image-lightbox" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex flex-col items-center justify-between p-3 sm:p-5 select-none animate-in fade-in duration-200">
+    <!-- Top Control Bar -->
+    <div class="w-full max-w-6xl flex items-center justify-between text-white py-2 px-4 bg-slate-900/80 rounded-2xl border border-slate-800 backdrop-blur shadow-2xl z-10 shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white">
+          <span class="material-symbols-outlined text-[18px]">photo_library</span>
+        </div>
+        <div>
+          <h4 class="font-bold text-xs sm:text-sm text-white" id="lightbox-image-title">Customer WhatsApp Photo Attachment</h4>
+          <p class="text-[10px] text-emerald-300 font-mono" id="lightbox-image-sub">High-Resolution Live Preview</p>
+        </div>
+      </div>
+
+      <!-- Zoom & Action Controls -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <button type="button" onclick="zoomLightboxImage(-0.25)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center justify-center transition" title="Zoom Out (-)">
+          <span class="material-symbols-outlined text-[18px]">zoom_out</span>
+        </button>
+        <span class="font-mono text-xs font-bold text-slate-300 min-w-[48px] text-center" id="lightbox-zoom-pct">100%</span>
+        <button type="button" onclick="zoomLightboxImage(0.25)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center justify-center transition" title="Zoom In (+)">
+          <span class="material-symbols-outlined text-[18px]">zoom_in</span>
+        </button>
+        <button type="button" onclick="resetLightboxZoom()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition hidden sm:inline" title="Reset Zoom">
+          Reset
+        </button>
+
+        <div class="h-5 w-px bg-slate-700 mx-1"></div>
+
+        <button type="button" onclick="downloadLightboxImage()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-sm" title="Download & Save Image to computer">
+          <span class="material-symbols-outlined text-[16px]">download</span>
+          <span class="hidden sm:inline">Download</span>
+        </button>
+
+        <button type="button" onclick="openLightboxImageInNewTab()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition" title="Open full image in new browser tab">
+          <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+        </button>
+
+        <button type="button" onclick="closeImageLightbox()" class="w-8 h-8 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white flex items-center justify-center transition ml-1" title="Close Viewer (Esc)">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Center Interactive Image Canvas -->
+    <div class="flex-1 w-full flex items-center justify-center overflow-auto p-2 my-2 cursor-grab active:cursor-grabbing" onclick="if(event.target === this) closeImageLightbox()">
+      <img id="lightbox-img" src="" alt="Customer Image" class="max-h-[82vh] max-w-[94vw] object-contain rounded-2xl shadow-2xl transition-transform duration-150 border border-slate-700/50">
+    </div>
+
+    <!-- Bottom Hint -->
+    <p class="text-[11px] text-slate-400 text-center shrink-0">Click anywhere outside image or press <kbd class="px-1.5 py-0.5 bg-slate-800 rounded font-mono text-[10px] text-slate-300">Esc</kbd> to close &bull; Use zoom buttons to inspect screenshot details</p>
   </div>
 
   <!-- MODAL: ADD / EDIT GARMENT PRODUCT -->
