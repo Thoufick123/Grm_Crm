@@ -147,7 +147,7 @@
           </span>
           <div class="text-xs">
             <p class="font-semibold text-white leading-tight flex items-center gap-1">Live WhatsApp <span class="material-symbols-outlined text-[12px] text-emerald-400">tune</span></p>
-            <p id="sidebar-connected-phone" class="text-[10px] text-emerald-300/90 font-mono font-bold configured-business-phone">+91 97896 60115</p>
+            <p id="sidebar-connected-phone" class="text-[10px] text-emerald-300/90 font-mono font-bold configured-business-phone">+91 86680 07593</p>
           </div>
         </div>
         <button onclick="event.stopPropagation(); openInboundSimulatorModal()" class="text-[11px] bg-brand-wa hover:bg-brand-waDark text-white px-2 py-1 rounded-lg font-medium transition flex items-center gap-1 shadow-sm" title="Simulate incoming WhatsApp customer query (Cost-free!)">
@@ -310,7 +310,7 @@
               <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
             <span class="material-symbols-outlined text-[16px] text-emerald-600 shrink-0">phone_android</span>
-            <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold">+91 97896 60115</span>
+            <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold">+91 86680 07593</span>
             <span class="material-symbols-outlined text-[16px] text-emerald-600 transition-transform duration-200 shrink-0" id="phone-dropdown-arrow">expand_more</span>
           </button>
 
@@ -321,7 +321,7 @@
                 <p class="font-bold text-slate-900 text-xs">Switch WhatsApp Line</p>
                 <p class="text-[10px] text-slate-500">Select active number to view &amp; send chats</p>
               </div>
-              <span class="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full" id="dropdown-connected-count">2 Active Lines</span>
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full" id="dropdown-connected-count">5 Active Lines</span>
             </div>
             
             <div id="phone-dropdown-accounts-list" class="max-h-60 overflow-y-auto divide-y divide-slate-100 p-1">
@@ -343,9 +343,15 @@
         </button>
 
         <!-- Inbound Test Trigger (Admin Only) -->
-        <button onclick="openInboundSimulatorModal()" id="header-inbound-sim-btn" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-semibold rounded-lg transition shadow-sm admin-only-ui">
+        <button onclick="openInboundSimulatorModal()" id="header-inbound-sim-btn" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-semibold rounded-lg transition shadow-sm admin-only-ui" title="Simulate incoming WhatsApp message">
           <span class="material-symbols-outlined text-[16px]">sim_card_download</span>
           <span>Receive WhatsApp Message</span>
+        </button>
+
+        <!-- Reset Test Inbox Messages Button (Dev / Test Helper) -->
+        <button onclick="confirmResetInboxMessages()" id="header-reset-inbox-btn" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-lg transition shadow-sm" title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
+          <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>
+          <span>Reset Inbox</span>
         </button>
 
         <!-- Notification Bell -->
@@ -432,6 +438,11 @@
             </div>
           </div>
 
+          <!-- Interactive Quick WhatsApp Line Switcher Strip (5 Connected Lines) -->
+          <div id="quick-line-switcher-container" class="px-2.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto custom-chat-scroll">
+            <!-- Populated dynamically by JS with 5 numbers + All lines -->
+          </div>
+
           <!-- Search & Filters -->
           <div class="p-3 border-b border-slate-200 space-y-2.5 bg-slate-50/70">
             <div class="relative">
@@ -445,6 +456,10 @@
               <button onclick="setInboxFilter('unassigned')" id="filter-unassigned" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">Unassigned (<span id="count-unassigned" class="text-amber-600 font-bold">0</span>)</button>
               <button onclick="setInboxFilter('my')" id="filter-my" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">My Queue (<span id="count-my">0</span>)</button>
               <button onclick="setInboxFilter('urgent')" id="filter-urgent" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">Urgent</button>
+              <button onclick="confirmResetInboxMessages()" class="ml-auto px-2 py-1 rounded-lg font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] shrink-0 flex items-center gap-1 transition shadow-sm" title="Reset all test messages to initial state">
+                <span class="material-symbols-outlined text-[14px] text-rose-600">restart_alt</span>
+                <span>Reset</span>
+              </button>
             </div>
           </div>
 
@@ -712,6 +727,12 @@
             </div>
             
             <div class="flex items-center gap-2 flex-wrap">
+              <!-- Sync WhatsApp Catalog Button (100% Free Local Bridge Sync) -->
+              <button onclick="syncWhatsAppBusinessCatalog()" id="btn-sync-wa-catalog" class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-emerald-300 shadow-sm" title="Sync live products & stock from connected WhatsApp Business Account (100% Free)">
+                <span class="material-symbols-outlined text-[18px] text-brand-wa">sync_saved_locally</span>
+                <span>Sync WhatsApp Catalog (Free)</span>
+              </button>
+
               <button onclick="refreshCatalogStockFromAPI()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-slate-300" title="Fetch latest stock levels from database">
                 <span class="material-symbols-outlined text-[18px]">sync</span> Refresh Stock
               </button>
@@ -781,11 +802,19 @@
 
           <!-- Search & Filter Controls Toolbar -->
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-            <div class="flex items-center gap-2 flex-1">
-              <div class="relative flex-1 max-w-md">
+            <div class="flex items-center gap-2 flex-1 flex-wrap">
+              <div class="relative flex-1 min-w-[200px] max-w-md">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
                 <input type="text" id="catalog-search-input" oninput="filterCatalogGrid()" placeholder="Search SKU (e.g. BF-001), name, color, size..." class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 rounded-xl border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brand-wa font-medium shadow-sm transition">
               </div>
+              <select id="catalog-line-filter" onchange="filterCatalogGrid()" class="px-3 py-2 text-xs bg-slate-50 rounded-xl border border-slate-300 font-semibold text-slate-700 focus:ring-2 focus:ring-brand-wa transition">
+                <option value="ALL">📱 All WhatsApp Lines</option>
+                <option value="account_1">Line 1: GRM Business Central (+91 86680 07593)</option>
+                <option value="account_2">Line 2: Blue Berry Maternity (+91 97896 60115)</option>
+                <option value="account_3">Line 3: Customer Support (+91 98765 43210)</option>
+                <option value="account_4">Line 4: Wholesale &amp; Bulk (+91 98450 99887)</option>
+                <option value="account_5">Line 5: VIP Fast-Track (+91 95009 04638)</option>
+              </select>
               <select id="catalog-category-filter" onchange="filterCatalogGrid()" class="px-3 py-2 text-xs bg-slate-50 rounded-xl border border-slate-300 font-semibold text-slate-700 focus:ring-2 focus:ring-brand-wa transition">
                 <option value="ALL">All Categories</option>
                 <option value="Baby Collection">Baby Collection</option>
@@ -793,6 +822,8 @@
                 <option value="Kids">Kids Wear</option>
                 <option value="Girls Festive">Girls Festive</option>
                 <option value="Newborn">Newborn Sets</option>
+                <option value="Wholesale">Wholesale Bundles</option>
+                <option value="VIP Collection">VIP Collection</option>
               </select>
             </div>
 
@@ -2041,11 +2072,13 @@
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Select Incoming Line:</label>
+          <label class="block font-bold text-slate-700 mb-1">Select Incoming Line (5 Connected Numbers):</label>
           <select id="sim-account-slot" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold">
-            <option value="account_1">Line 1: Primary WhatsApp (+91 97896 60115)</option>
-            <option value="account_2">Line 2: Customer Support (+91 98765 43210)</option>
-            <option value="account_3">Line 3: Wholesale &amp; Orders (+91 98450 99887)</option>
+            <option value="account_1">Line 1: GRM Business Central (+91 86680 07593)</option>
+            <option value="account_2">Line 2: Blue Berry Kids &amp; Maternity (+91 97896 60115)</option>
+            <option value="account_3">Line 3: Customer Support &amp; Enquiries (+91 98765 43210)</option>
+            <option value="account_4">Line 4: Wholesale &amp; Bulk Orders (+91 98450 99887)</option>
+            <option value="account_5">Line 5: VIP Fast-Track &amp; Dispatch (+91 95009 04638)</option>
           </select>
         </div>
 
@@ -2073,13 +2106,58 @@
           </div>
         </div>
 
-        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
-          <button type="button" onclick="closeModal('modal-inbound-simulator')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
-          <button type="submit" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition hover:scale-105">
-            <span class="material-symbols-outlined text-[18px]">send</span> Simulate &amp; Receive Message
+        <div class="pt-2 flex items-center justify-between gap-2 border-t border-slate-200">
+          <button type="button" onclick="confirmResetInboxMessages()" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-xs flex items-center gap-1.5 transition" title="Reset all chat threads and inbox messages to default test state">
+            <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>
+            <span>Reset Messages (Dev)</span>
           </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeModal('modal-inbound-simulator')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+            <button type="submit" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition hover:scale-105">
+              <span class="material-symbols-outlined text-[18px]">send</span> Simulate &amp; Receive Message
+            </button>
+          </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRM RESET INBOX MESSAGES (DEV TEST) -->
+  <div id="modal-reset-inbox-confirm" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-rose-900 via-slate-900 to-rose-950 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white shadow-md">
+            <span class="material-symbols-outlined text-[24px]">restart_alt</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Reset Inbox Messages</h3>
+            <p class="text-xs text-rose-200/80">Developer Test Mode</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-reset-inbox-confirm')" class="text-rose-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs">
+        <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 flex items-start gap-3">
+          <span class="material-symbols-outlined text-rose-600 text-[22px] shrink-0 mt-0.5">warning</span>
+          <div class="text-xs space-y-1.5">
+            <p class="font-bold text-slate-900">Reset all chat threads &amp; inbound messages?</p>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
+              This will restore all 5 connected WhatsApp lines (Line 1 to Line 5), default customer conversations (SugunaMani, Mekha, Priya, Ananya, etc.), and clear any temporary simulation messages.
+            </p>
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-reset-inbox-confirm')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+          <button type="button" onclick="resetInboxMessages()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition hover:scale-105">
+            <span class="material-symbols-outlined text-[18px]">restart_alt</span> Yes, Reset Messages
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

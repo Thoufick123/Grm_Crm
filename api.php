@@ -297,6 +297,35 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+if ($action === 'delete_account_slot' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $postData = json_decode($input, true);
+    $accountId = $postData['accountId'] ?? '';
+
+    if (!empty($accountId) && $accountId !== 'account_1') {
+        $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+        if (isset($currentConfig['connected_lines']) && is_array($currentConfig['connected_lines'])) {
+            $currentConfig['connected_lines'] = array_values(array_filter($currentConfig['connected_lines'], function($line) use ($accountId) {
+                return ($line['id'] ?? '') !== $accountId;
+            }));
+            file_put_contents($configFile, json_encode($currentConfig, JSON_PRETTY_PRINT));
+        }
+
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("DELETE FROM `whatsapp_accounts` WHERE `account_slot` = ?");
+                $stmt->execute([$accountId]);
+            } catch (Exception $e) {}
+        }
+
+        echo json_encode(["status" => "success", "message" => "Account slot $accountId deleted successfully"]);
+        exit;
+    }
+
+    echo json_encode(["status" => "error", "message" => "Invalid account slot"]);
+    exit;
+}
+
 // =========================================================================
 // 4. SEND OUTBOUND WHATSAPP MESSAGE TO CUSTOMER (Via Baileys Bridge)
 // =========================================================================

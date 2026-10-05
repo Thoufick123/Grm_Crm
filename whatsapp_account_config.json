@@ -1,15 +1,52 @@
 {
     "id": 1,
-    "business_name": "Blue Berry 💙",
-    "display_name": "Blue Berry 💙",
-    "brand_name": "Blue Berry 💙",
+    "business_name": "GRM Garments Business Hub",
+    "display_name": "GRM Garments Official",
+    "brand_name": "GRM Garments 💙",
     "brand_tagline": "Premium Kids & Maternity Wear",
-    "phone_number": "+91 97896 60115",
+    "phone_number": "+91 86680 07593",
     "phone_number_id": "109823471928374",
     "waba_id": "982374619283745",
     "access_token": "EAABwzLIX124BA...",
     "webhook_verify_token": "GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026",
     "provider": "META_CLOUD_API",
     "status": "CONNECTED",
-    "last_sync": "2026-10-02 08:05:07"
+    "last_sync": "2026-10-05 12:45:00",
+    "connected_lines": [
+        {
+            "id": "account_1",
+            "label": "Line 1: GRM Business Central",
+            "phone_number": "+91 86680 07593",
+            "brand_name": "GRM Garments Central",
+            "status": "CONNECTED"
+        },
+        {
+            "id": "account_2",
+            "label": "Line 2: Blue Berry Kids & Maternity",
+            "phone_number": "+91 97896 60115",
+            "brand_name": "Blue Berry 💙",
+            "status": "CONNECTED"
+        },
+        {
+            "id": "account_3",
+            "label": "Line 3: Customer Support & Enquiries",
+            "phone_number": "+91 98765 43210",
+            "brand_name": "GRM Support Desk",
+            "status": "CONNECTED"
+        },
+        {
+            "id": "account_4",
+            "label": "Line 4: Wholesale & Bulk Orders",
+            "phone_number": "+91 98450 99887",
+            "brand_name": "GRM Wholesale Desk",
+            "status": "CONNECTED"
+        },
+        {
+            "id": "account_5",
+            "label": "Line 5: VIP Fast-Track & Dispatch",
+            "phone_number": "+91 95009 04638",
+            "brand_name": "GRM VIP Desk",
+            "status": "CONNECTED"
+        }
+    ]
 }

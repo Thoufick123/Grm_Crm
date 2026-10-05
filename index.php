@@ -26,8 +26,8 @@ $currentUser = $_SESSION['user'];
 $isAdmin = ($currentUser['role'] === 'admin');
 
 // Load configured WhatsApp account for initial render
-$waPhone = '+91 97896 60115';
-$brandName = 'Blue Berry 💙';
+$waPhone = '+91 86680 07593';
+$brandName = 'GRM Garments Business Hub';
 
 $configFile = __DIR__ . '/whatsapp_account_config.json';
 if (file_exists($configFile)) {
@@ -359,6 +359,12 @@ if ($pdo) {
         <button onclick="openInboundSimulatorModal()" id="header-inbound-sim-btn" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-semibold rounded-lg transition shadow-sm admin-only-ui <?php echo $isAdmin ? '' : 'hidden'; ?>">
           <span class="material-symbols-outlined text-[16px]">sim_card_download</span>
           <span>Receive WhatsApp Message</span>
+        </button>
+
+        <!-- Reset Test Inbox Messages Button -->
+        <button onclick="confirmResetInboxMessages()" id="header-reset-inbox-btn" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-lg transition shadow-sm" title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
+          <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>
+          <span>Reset Inbox</span>
         </button>
 
         <!-- Notification Bell -->

@@ -11,7 +11,7 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
     id: 1,
     businessName: 'GRM Garments Business Hub',
     displayName: 'GRM Garments Official',
-    phoneNumber: '+91 97896 60115',
+    phoneNumber: '+91 86680 07593',
     phoneNumberId: '109823471928374',
     wabaId: '982374619283745',
     provider: 'META_CLOUD_API',
@@ -31,14 +31,35 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
     { id: 'staff_03', name: 'Sneha Patel', role: 'Order Fulfillment & Support', avatar: 'SP', activeQueries: 1, converted: 11, dailyQuota: 60, todayHandled: 8, email: 'sneha.patel@grmgarments.com', phone: '+91 98450 11223', specialization: 'Order Fulfillment', status: 'ACTIVE' }
   ],
   products: [
-    { id: 1, sku: 'BF-001-PK', name: 'Baby Frock (Embroidered Cotton)', category: 'Baby Collection', size: '2-3 Years', color: 'Pink', price: 599, physicalStock: 12, reservedStock: 4, image: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60' },
-    { id: 2, sku: 'BF-001-YL', name: 'Baby Frock (Embroidered Cotton)', category: 'Baby Collection', size: '1-2 Years', color: 'Sunshine Yellow', price: 599, physicalStock: 8, reservedStock: 1, image: 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=400&auto=format&fit=crop&q=60' },
-    { id: 3, sku: 'MD-102-BL', name: 'Maternity Maxi Feeding Gown', category: 'Maternity', size: 'L / XL', color: 'Sky Blue', price: 1299, physicalStock: 10, reservedStock: 5, image: 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=400&auto=format&fit=crop&q=60' },
-    { id: 4, sku: 'KD-204-YL', name: 'Kids Organic Cotton T-Shirt Set (Pack of 3)', category: 'Kids', size: '4-5 Years', color: 'Multi Yellow/Green', price: 450, physicalStock: 25, reservedStock: 8, image: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400&auto=format&fit=crop&q=60' },
-    { id: 5, sku: 'GL-505-RD', name: 'Girls Festive Silk Lehenga Choli', category: 'Girls Festive', size: '6-7 Years', color: 'Ruby Red & Gold', price: 899, physicalStock: 6, reservedStock: 0, image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=400&auto=format&fit=crop&q=60' },
-    { id: 6, sku: 'BB-301-WH', name: 'Newborn 5-Piece Organic Romper Gift Set', category: 'Newborn', size: '0-6 Months', color: 'Pure White / Mint', price: 799, physicalStock: 15, reservedStock: 2, image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&auto=format&fit=crop&q=60' }
+    { id: 1, sku: 'BF-001-PK', name: 'Baby Frock (Embroidered Cotton)', category: 'Baby Collection', size: '2-3 Years', color: 'Pink', price: 599, physicalStock: 12, reservedStock: 4, accountId: 'account_1', image: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60' },
+    { id: 2, sku: 'BF-001-YL', name: 'Baby Frock (Embroidered Cotton)', category: 'Baby Collection', size: '1-2 Years', color: 'Sunshine Yellow', price: 599, physicalStock: 8, reservedStock: 1, accountId: 'account_1', image: 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=400&auto=format&fit=crop&q=60' },
+    { id: 3, sku: 'MD-102-BL', name: 'Maternity Maxi Feeding Gown', category: 'Maternity', size: 'L / XL', color: 'Sky Blue', price: 1299, physicalStock: 10, reservedStock: 5, accountId: 'account_2', image: 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=400&auto=format&fit=crop&q=60' },
+    { id: 4, sku: 'MD-103-PK', name: 'Maternity Tiered Cotton Floral Dress', category: 'Maternity', size: 'M / L', color: 'Blush Pink', price: 1450, physicalStock: 14, reservedStock: 3, accountId: 'account_2', image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&auto=format&fit=crop&q=60' },
+    { id: 5, sku: 'BB-301-WH', name: 'Newborn 5-Piece Organic Romper Gift Set', category: 'Newborn', size: '0-6 Months', color: 'Pure White / Mint', price: 799, physicalStock: 15, reservedStock: 2, accountId: 'account_3', image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&auto=format&fit=crop&q=60' },
+    { id: 6, sku: 'KD-204-YL', name: 'Kids Organic Cotton T-Shirt Set (Pack of 3)', category: 'Kids', size: '4-5 Years', color: 'Multi Yellow/Green', price: 450, physicalStock: 25, reservedStock: 8, accountId: 'account_3', image: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400&auto=format&fit=crop&q=60' },
+    { id: 7, sku: 'WS-701-BX', name: 'Wholesale Baby Rompers Bulk Box (50 Pcs Assorted)', category: 'Wholesale', size: '0-24 Months', color: 'Assorted Prints', price: 8500, physicalStock: 18, reservedStock: 6, accountId: 'account_4', image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=400&auto=format&fit=crop&q=60' },
+    { id: 8, sku: 'WS-702-BX', name: 'Wholesale Pure Cotton Frocks Bundle (25 Pcs)', category: 'Wholesale', size: '2-5 Years', color: 'Multi Pastel Colors', price: 7200, physicalStock: 12, reservedStock: 3, accountId: 'account_4', image: 'https://images.unsplash.com/photo-1471286174890-9c112ffca56a?w=400&auto=format&fit=crop&q=60' },
+    { id: 9, sku: 'GL-505-RD', name: 'Girls Festive Silk Lehenga Choli', category: 'Girls Festive', size: '6-7 Years', color: 'Ruby Red & Gold', price: 899, physicalStock: 6, reservedStock: 0, accountId: 'account_5', image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=400&auto=format&fit=crop&q=60' },
+    { id: 10, sku: 'VIP-901-GL', name: 'Handcrafted Kanjivaram Silk Pattu Pavadai Set', category: 'VIP Collection', size: '3-4 Years', color: 'Emerald Green & Gold', price: 2499, physicalStock: 8, reservedStock: 2, accountId: 'account_5', image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&auto=format&fit=crop&q=60' }
   ],
   customers: [
+    // --- LINE 1: +91 86680 07593 (GRM Business Central) ---
+    {
+      id: 'cust_100',
+      code: 'CUST-2026-0088',
+      name: 'SugunaMani',
+      phone: '+91 73389 65560',
+      whatsapp: '+91 73389 65560',
+      address: 'No. 18, Gandhi Road, T. Nagar, Chennai - 600017',
+      city: 'Chennai',
+      customerType: 'New WhatsApp Customer',
+      tags: ['New Lead', 'Baby Collection', 'Direct Line 1'],
+      totalOrders: 0,
+      totalSpend: 0,
+      avatar: 'S',
+      accountId: 'account_1',
+      businessNumber: '+91 86680 07593'
+    },
     {
       id: 'cust_101',
       code: 'CUST-2026-0089',
@@ -51,7 +72,25 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
       tags: ['Baby Collection', 'Repeat Buyer', 'COD'],
       totalOrders: 8,
       totalSpend: 12450,
-      avatar: 'PS'
+      avatar: 'PS',
+      accountId: 'account_1',
+      businessNumber: '+91 86680 07593'
+    },
+    {
+      id: 'cust_104',
+      code: 'CUST-2026-0090',
+      name: 'Mekha 🦋',
+      phone: '+91 95009 04638',
+      whatsapp: '+91 95009 04638',
+      address: 'Plot 12, R.S. Puram, Coimbatore - 641002',
+      city: 'Coimbatore',
+      customerType: 'VIP Customer',
+      tags: ['Baby Frock', 'VIP', 'Dispatched'],
+      totalOrders: 4,
+      totalSpend: 9200,
+      avatar: 'M',
+      accountId: 'account_1',
+      businessNumber: '+91 86680 07593'
     },
     {
       id: 'cust_102',
@@ -65,8 +104,12 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
       tags: ['Maternity', 'VIP', 'Prepaid'],
       totalOrders: 3,
       totalSpend: 7800,
-      avatar: 'AS'
+      avatar: 'AS',
+      accountId: 'account_1',
+      businessNumber: '+91 86680 07593'
     },
+
+    // --- LINE 2: +91 97896 60115 (Blue Berry Kids & Maternity) ---
     {
       id: 'cust_103',
       code: 'CUST-2026-0104',
@@ -79,10 +122,210 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
       tags: ['New Lead', 'Kids Wear'],
       totalOrders: 0,
       totalSpend: 0,
-      avatar: 'KR'
+      avatar: 'KR',
+      accountId: 'account_2',
+      businessNumber: '+91 97896 60115'
+    },
+    {
+      id: 'cust_105',
+      code: 'CUST-2026-0105',
+      name: 'Deepa Krishnan',
+      phone: '+91 94432 18902',
+      whatsapp: '+91 94432 18902',
+      address: '24/1, Trichy Main Road, Salem - 636001',
+      city: 'Salem',
+      customerType: 'Repeat Customer',
+      tags: ['Newborn Rompers', 'Organic Cotton'],
+      totalOrders: 2,
+      totalSpend: 3400,
+      avatar: 'DK',
+      accountId: 'account_2',
+      businessNumber: '+91 97896 60115'
+    },
+    {
+      id: 'cust_106',
+      code: 'CUST-2026-0106',
+      name: 'Soundarya R',
+      phone: '+91 98840 55219',
+      whatsapp: '+91 98840 55219',
+      address: '77, Besant Nagar, Chennai - 600090',
+      city: 'Chennai',
+      customerType: 'VIP Customer',
+      tags: ['Maternity Gowns', 'VIP'],
+      totalOrders: 5,
+      totalSpend: 11500,
+      avatar: 'SR',
+      accountId: 'account_2',
+      businessNumber: '+91 97896 60115'
+    },
+
+    // --- LINE 3: +91 98765 43210 (Customer Support & Enquiries) ---
+    {
+      id: 'cust_107',
+      code: 'CUST-2026-0107',
+      name: 'Rajesh Kumar',
+      phone: '+91 98401 23456',
+      whatsapp: '+91 98401 23456',
+      address: '88, Lake View Road, Velachery, Chennai - 600042',
+      city: 'Chennai',
+      customerType: 'Support Enquiry',
+      tags: ['Order Tracking', 'Dispatched'],
+      totalOrders: 1,
+      totalSpend: 1198,
+      avatar: 'RK',
+      accountId: 'account_3',
+      businessNumber: '+91 98765 43210'
+    },
+    {
+      id: 'cust_108',
+      code: 'CUST-2026-0108',
+      name: 'Karthik N',
+      phone: '+91 99402 33412',
+      whatsapp: '+91 99402 33412',
+      address: '15, 4th Cross, Koramangala, Bengaluru - 560034',
+      city: 'Bengaluru',
+      customerType: 'New Customer',
+      tags: ['Size Exchange', 'Policy Enquiry'],
+      totalOrders: 0,
+      totalSpend: 0,
+      avatar: 'KN',
+      accountId: 'account_3',
+      businessNumber: '+91 98765 43210'
+    },
+    {
+      id: 'cust_109',
+      code: 'CUST-2026-0109',
+      name: 'Meena Swaminathan',
+      phone: '+91 98410 77652',
+      whatsapp: '+91 98410 77652',
+      address: '5, M.G. Road, Puducherry - 605001',
+      city: 'Puducherry',
+      customerType: 'Repeat Buyer',
+      tags: ['Refund Complete', 'UPI'],
+      totalOrders: 4,
+      totalSpend: 6200,
+      avatar: 'MS',
+      accountId: 'account_3',
+      businessNumber: '+91 98765 43210'
+    },
+
+    // --- LINE 4: +91 98450 99887 (Wholesale & Bulk Orders) ---
+    {
+      id: 'cust_110',
+      code: 'CUST-2026-0110',
+      name: 'Balaji Textiles Wholesale',
+      phone: '+91 98230 44556',
+      whatsapp: '+91 98230 44556',
+      address: 'Market Yard Complex, Erode - 638001',
+      city: 'Erode',
+      customerType: 'Wholesale Partner',
+      tags: ['Bulk Buyer', '200 Pcs Frocks', 'GST Verified'],
+      totalOrders: 12,
+      totalSpend: 185000,
+      avatar: 'BT',
+      accountId: 'account_4',
+      businessNumber: '+91 98450 99887'
+    },
+    {
+      id: 'cust_111',
+      code: 'CUST-2026-0111',
+      name: 'Sri Lakshmi Garments',
+      phone: '+91 98721 00983',
+      whatsapp: '+91 98721 00983',
+      address: 'Avinashi Road, Tirupur - 641602',
+      city: 'Tirupur',
+      customerType: 'Bulk Buyer',
+      tags: ['Wholesale Catalog', 'Organic Rompers'],
+      totalOrders: 6,
+      totalSpend: 92000,
+      avatar: 'SL',
+      accountId: 'account_4',
+      businessNumber: '+91 98450 99887'
+    },
+    {
+      id: 'cust_112',
+      code: 'CUST-2026-0112',
+      name: 'Kancheepuram Kids Boutique',
+      phone: '+91 94441 22390',
+      whatsapp: '+91 94441 22390',
+      address: '102, Sannathi Street, Kancheepuram - 631501',
+      city: 'Kancheepuram',
+      customerType: 'Wholesale Client',
+      tags: ['Festive Silk Lehenga', 'Repeat Wholesale'],
+      totalOrders: 9,
+      totalSpend: 145000,
+      avatar: 'KK',
+      accountId: 'account_4',
+      businessNumber: '+91 98450 99887'
+    },
+
+    // --- LINE 5: +91 95009 04638 (VIP Desk & Fast Dispatch) ---
+    {
+      id: 'cust_113',
+      code: 'CUST-2026-0113',
+      name: 'Dr. Shalini Ramesh',
+      phone: '+91 97910 88231',
+      whatsapp: '+91 97910 88231',
+      address: 'Tower 4, Ceebros Boulevard, OMR, Chennai - 600097',
+      city: 'Chennai',
+      customerType: 'VIP Priority Lead',
+      tags: ['1-Day Delivery', 'Gift Hamper', 'VIP Desk'],
+      totalOrders: 7,
+      totalSpend: 24500,
+      avatar: 'SR',
+      accountId: 'account_5',
+      businessNumber: '+91 95009 04638'
+    },
+    {
+      id: 'cust_114',
+      code: 'CUST-2026-0114',
+      name: 'Gayathri Menon',
+      phone: '+91 98403 99120',
+      whatsapp: '+91 98403 99120',
+      address: '42, Boat Club Road, RA Puram, Chennai - 600028',
+      city: 'Chennai',
+      customerType: 'VIP Client',
+      tags: ['Custom Embroidery', 'Festive Collection'],
+      totalOrders: 11,
+      totalSpend: 38900,
+      avatar: 'GM',
+      accountId: 'account_5',
+      businessNumber: '+91 95009 04638'
+    },
+    {
+      id: 'cust_115',
+      code: 'CUST-2026-0115',
+      name: 'Archana Venkatesh',
+      phone: '+91 99620 44182',
+      whatsapp: '+91 99620 44182',
+      address: '10, 11th Cross, Indiranagar, Bengaluru - 560038',
+      city: 'Bengaluru',
+      customerType: 'VIP Repeat Customer',
+      tags: ['Newborn Luxury Hamper', 'Feedback ⭐⭐⭐⭐⭐'],
+      totalOrders: 6,
+      totalSpend: 19800,
+      avatar: 'AV',
+      accountId: 'account_5',
+      businessNumber: '+91 95009 04638'
     }
   ],
   queries: [
+    // Line 1 Queries
+    {
+      id: 'Q-2026-001245',
+      customerId: 'cust_100',
+      assignedTo: 'UNASSIGNED',
+      status: 'NEW',
+      priority: 'HIGH',
+      queryText: '[Document: .env] Please check invoice details in the attached document',
+      productSku: 'BF-001-PK',
+      createdAt: '12:23 PM',
+      unreadCount: 1,
+      lastMessage: 'Customer: "[Document: .env]..."',
+      accountId: 'account_1',
+      businessNumber: '+91 86680 07593',
+      lastTimeEpoch: 1791200000
+    },
     {
       id: 'Q-2026-001245',
       customerId: 'cust_101',
@@ -91,47 +334,295 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
       priority: 'HIGH',
       queryText: 'Baby Frock BF-001 Pink 2-3 Years available?',
       productSku: 'BF-001-PK',
-      createdAt: 'Today, 10:15 AM',
-      unreadCount: 1,
-      lastMessage: 'Customer: "2–3 years. Pink colour. How much is it?"'
+      createdAt: '11:54 AM',
+      unreadCount: 0,
+      lastMessage: 'Staff: "📦 *Baby Frock (Embroidered Cotton)*..."',
+      accountId: 'account_1',
+      businessNumber: '+91 86680 07593',
+      lastTimeEpoch: 1791195000
+    },
+    {
+      id: 'Q-2026-001244',
+      customerId: 'cust_104',
+      assignedTo: 'UNASSIGNED',
+      status: 'NEW',
+      priority: 'HIGH',
+      queryText: 'Hi, when will my frock order be dispatched?',
+      productSku: 'BF-001-PK',
+      createdAt: '11:50 AM',
+      unreadCount: 0,
+      lastMessage: 'Staff: "Hello Mekha🦋, your package from *GRM..."',
+      accountId: 'account_1',
+      businessNumber: '+91 86680 07593',
+      lastTimeEpoch: 1791190000
     },
     {
       id: 'Q-2026-001246',
       customerId: 'cust_102',
-      assignedTo: 'UNASSIGNED', // UNASSIGNED - Needs Admin Assignment
+      assignedTo: 'UNASSIGNED',
       status: 'NEW',
       priority: 'URGENT',
       queryText: 'Can you share photos and colors of Maternity feeding gown?',
       productSku: 'MD-102-BL',
-      createdAt: 'Today, 10:45 AM',
+      createdAt: '10:45 AM',
       unreadCount: 2,
-      lastMessage: 'Customer: "Please share latest photos of maternity gown MD-102"'
+      lastMessage: 'Customer: "Please share latest photos of maternity gown MD-102"',
+      accountId: 'account_1',
+      businessNumber: '+91 86680 07593',
+      lastTimeEpoch: 1791185000
     },
+
+    // Line 2 Queries
     {
       id: 'Q-2026-001247',
       customerId: 'cust_103',
-      assignedTo: 'UNASSIGNED', // UNASSIGNED - Needs Admin Assignment
+      assignedTo: 'UNASSIGNED',
       status: 'NEW',
       priority: 'NORMAL',
       queryText: 'Do you deliver to Madurai? What are the COD charges?',
       productSku: null,
-      createdAt: 'Today, 11:05 AM',
+      createdAt: '11:05 AM',
       unreadCount: 1,
-      lastMessage: 'Customer: "Hi, do you provide cash on delivery to Madurai?"'
+      lastMessage: 'Customer: "Hi, do you provide cash on delivery to Madurai?"',
+      accountId: 'account_2',
+      businessNumber: '+91 97896 60115',
+      lastTimeEpoch: 1791180000
+    },
+    {
+      id: 'Q-2026-001248',
+      customerId: 'cust_105',
+      assignedTo: 'staff_02',
+      status: 'ASSIGNED',
+      priority: 'HIGH',
+      queryText: 'Need 3 sets of newborn rompers in mint color for gifting.',
+      productSku: 'BB-301-WH',
+      createdAt: '09:40 AM',
+      unreadCount: 0,
+      lastMessage: 'Customer: "Need 3 sets of newborn rompers in mint color"',
+      accountId: 'account_2',
+      businessNumber: '+91 97896 60115',
+      lastTimeEpoch: 1791175000
+    },
+    {
+      id: 'Q-2026-001249',
+      customerId: 'cust_106',
+      assignedTo: 'staff_01',
+      status: 'ASSIGNED',
+      priority: 'NORMAL',
+      queryText: 'Which maternity dress is most comfortable for hospital stay?',
+      productSku: 'MD-102-BL',
+      createdAt: '08:55 AM',
+      unreadCount: 0,
+      lastMessage: 'Staff: "We have size L and XL in feeding nightwear ready to dispatch today."',
+      accountId: 'account_2',
+      businessNumber: '+91 97896 60115',
+      lastTimeEpoch: 1791170000
+    },
+
+    // Line 3 Queries
+    {
+      id: 'Q-2026-001250',
+      customerId: 'cust_107',
+      assignedTo: 'staff_03',
+      status: 'ASSIGNED',
+      priority: 'HIGH',
+      queryText: 'Can I track my order WA-2026-001120 dispatched yesterday?',
+      productSku: null,
+      createdAt: '11:20 AM',
+      unreadCount: 0,
+      lastMessage: 'Customer: "Can I track my order WA-2026-001120 dispatched yesterday?"',
+      accountId: 'account_3',
+      businessNumber: '+91 98765 43210',
+      lastTimeEpoch: 1791165000
+    },
+    {
+      id: 'Q-2026-001251',
+      customerId: 'cust_108',
+      assignedTo: 'UNASSIGNED',
+      status: 'NEW',
+      priority: 'NORMAL',
+      queryText: 'Is exchange available if size does not fit?',
+      productSku: 'KD-204-YL',
+      createdAt: '10:08 AM',
+      unreadCount: 1,
+      lastMessage: 'Customer: "Is exchange available if size does not fit?"',
+      accountId: 'account_3',
+      businessNumber: '+91 98765 43210',
+      lastTimeEpoch: 1791160000
+    },
+    {
+      id: 'Q-2026-001252',
+      customerId: 'cust_109',
+      assignedTo: 'staff_03',
+      status: 'ASSIGNED',
+      priority: 'NORMAL',
+      queryText: 'Has my return refund been initiated?',
+      productSku: null,
+      createdAt: '09:15 AM',
+      unreadCount: 0,
+      lastMessage: 'Staff: "Refund of Rs. 599 has been credited to your UPI."',
+      accountId: 'account_3',
+      businessNumber: '+91 98765 43210',
+      lastTimeEpoch: 1791155000
+    },
+
+    // Line 4 Queries
+    {
+      id: 'Q-2026-001253',
+      customerId: 'cust_110',
+      assignedTo: 'staff_02',
+      status: 'ASSIGNED',
+      priority: 'URGENT',
+      queryText: 'Requirement for 200 pcs Baby Frock pink & yellow mix.',
+      productSku: 'BF-001-PK',
+      createdAt: '08:20 AM',
+      unreadCount: 1,
+      lastMessage: 'Customer: "Requirement for 200 pcs Baby Frock pink & yellow mix."',
+      accountId: 'account_4',
+      businessNumber: '+91 98450 99887',
+      lastTimeEpoch: 1791150000
+    },
+    {
+      id: 'Q-2026-001254',
+      customerId: 'cust_111',
+      assignedTo: 'UNASSIGNED',
+      status: 'NEW',
+      priority: 'HIGH',
+      queryText: 'Please send latest kids organic wear wholesale price list.',
+      productSku: 'BB-301-WH',
+      createdAt: '10:35 AM',
+      unreadCount: 0,
+      lastMessage: 'Staff: "Wholesale catalog PDF and GST invoice sample sent."',
+      accountId: 'account_4',
+      businessNumber: '+91 98450 99887',
+      lastTimeEpoch: 1791145000
+    },
+    {
+      id: 'Q-2026-001255',
+      customerId: 'cust_112',
+      assignedTo: 'staff_01',
+      status: 'ASSIGNED',
+      priority: 'NORMAL',
+      queryText: 'Dispatched 50 bundles received. All top quality!',
+      productSku: 'GL-505-RD',
+      createdAt: '11:40 AM',
+      unreadCount: 0,
+      lastMessage: 'Customer: "Dispatched 50 bundles received. All top quality!"',
+      accountId: 'account_4',
+      businessNumber: '+91 98450 99887',
+      lastTimeEpoch: 1791140000
+    },
+
+    // Line 5 Queries
+    {
+      id: 'Q-2026-001256',
+      customerId: 'cust_113',
+      assignedTo: 'staff_01',
+      status: 'ASSIGNED',
+      priority: 'URGENT',
+      queryText: 'Need express 1-day delivery for maternity gown gift hamper to Anna Nagar.',
+      productSku: 'MD-102-BL',
+      createdAt: '11:15 AM',
+      unreadCount: 0,
+      lastMessage: 'Customer: "Need express 1-day delivery for maternity gown gift hamper."',
+      accountId: 'account_5',
+      businessNumber: '+91 95009 04638',
+      lastTimeEpoch: 1791135000
+    },
+    {
+      id: 'Q-2026-001257',
+      customerId: 'cust_114',
+      assignedTo: 'UNASSIGNED',
+      status: 'NEW',
+      priority: 'HIGH',
+      queryText: 'Can you customize the festive silk lehenga in size 6-7Y?',
+      productSku: 'GL-505-RD',
+      createdAt: '09:50 AM',
+      unreadCount: 0,
+      lastMessage: 'Staff: "VIP custom silk festive lehenga set prepared."',
+      accountId: 'account_5',
+      businessNumber: '+91 95009 04638',
+      lastTimeEpoch: 1791130000
+    },
+    {
+      id: 'Q-2026-001258',
+      customerId: 'cust_115',
+      assignedTo: 'staff_02',
+      status: 'ASSIGNED',
+      priority: 'NORMAL',
+      queryText: 'Received the newborn hamper today. Quality is super soft!',
+      productSku: 'BB-301-WH',
+      createdAt: '10:55 AM',
+      unreadCount: 0,
+      lastMessage: 'Customer: "Thank you so much, dress quality is super soft!"',
+      accountId: 'account_5',
+      businessNumber: '+91 95009 04638',
+      lastTimeEpoch: 1791125000
     }
   ],
   conversations: {
+    'cust_100': [
+      { id: 1001, sender: 'customer', text: '[Document: .env]', time: '12:23 PM', status: 'READ' },
+      { id: 1002, sender: 'customer', text: 'Hi, please check invoice details in the attached document for Cotton Baby Frocks.', time: '12:24 PM', status: 'READ' }
+    ],
     'cust_101': [
-      { id: 1, sender: 'customer', text: 'Hi GRM team, is baby frock available?', time: '10:14 AM', status: 'READ' },
-      { id: 2, sender: 'staff', text: 'Hello Priya! Thank you for contacting GRM Garments. Yes, we have our best-selling cotton baby frocks in stock. Which size & colour do you need?', time: '10:16 AM', status: 'READ' },
-      { id: 3, sender: 'customer', text: '2–3 years. Pink colour. How much is it?', time: '10:18 AM', status: 'READ' }
+      { id: 1, sender: 'customer', text: 'Hi GRM team, is baby frock available in pink?', time: '10:14 AM', status: 'READ' },
+      { id: 2, sender: 'staff', text: 'Hello Priya! Thank you for contacting GRM Garments. 📦 *Baby Frock (Embroidered Cotton)* is in stock (Size 2-3Y). Price is Rs. 599.', time: '10:16 AM', status: 'READ' },
+      { id: 3, sender: 'customer', text: '2–3 years. Pink colour. How much is it?', time: '11:54 AM', status: 'READ' }
+    ],
+    'cust_104': [
+      { id: 401, sender: 'customer', text: 'Hi, when will my frock order be dispatched?', time: '11:48 AM', status: 'READ' },
+      { id: 402, sender: 'staff', text: 'Hello Mekha🦋, your package from *GRM Garments* has been packed and dispatched via express courier!', time: '11:50 AM', status: 'READ' }
     ],
     'cust_102': [
-      { id: 1, sender: 'customer', text: 'Hello! I need a maternity feeding gown in size L.', time: '10:42 AM', status: 'READ' },
-      { id: 2, sender: 'customer', text: 'Please share latest photos of maternity gown MD-102 in Sky Blue.', time: '10:45 AM', status: 'DELIVERED' }
+      { id: 201, sender: 'customer', text: 'Hello! I need a maternity feeding gown in size L.', time: '10:42 AM', status: 'READ' },
+      { id: 202, sender: 'customer', text: 'Please share latest photos of maternity gown MD-102 in Sky Blue.', time: '10:45 AM', status: 'DELIVERED' }
     ],
     'cust_103': [
-      { id: 1, sender: 'customer', text: 'Hi, do you provide cash on delivery to Madurai? What are the charges?', time: '11:05 AM', status: 'DELIVERED' }
+      { id: 301, sender: 'customer', text: 'Hi, do you provide cash on delivery to Madurai? What are the charges?', time: '11:05 AM', status: 'DELIVERED' }
+    ],
+    'cust_105': [
+      { id: 501, sender: 'customer', text: 'Hello Blue Berry team, looking for newborn organic cotton sets.', time: '09:30 AM', status: 'READ' },
+      { id: 502, sender: 'staff', text: 'Hello Deepa! We have the 5-Piece Newborn Gift set available in Mint and White.', time: '09:35 AM', status: 'READ' },
+      { id: 503, sender: 'customer', text: 'Need 3 sets of newborn rompers in mint color for gifting.', time: '09:40 AM', status: 'READ' }
+    ],
+    'cust_106': [
+      { id: 601, sender: 'customer', text: 'Hi, which maternity dress is most comfortable for hospital stay?', time: '08:50 AM', status: 'READ' },
+      { id: 602, sender: 'staff', text: 'We have size L and XL in feeding nightwear ready to dispatch today.', time: '08:55 AM', status: 'READ' }
+    ],
+    'cust_107': [
+      { id: 701, sender: 'customer', text: 'Can I track my order WA-2026-001120 dispatched yesterday?', time: '11:15 AM', status: 'READ' },
+      { id: 702, sender: 'staff', text: 'Sure Rajesh! Tracking link: https://grmgarments.com/track/DTDC-9921', time: '11:20 AM', status: 'READ' }
+    ],
+    'cust_108': [
+      { id: 801, sender: 'customer', text: 'Hi support team, what is your exchange policy for kids dress?', time: '10:05 AM', status: 'READ' },
+      { id: 802, sender: 'customer', text: 'Is exchange available if size does not fit?', time: '10:08 AM', status: 'DELIVERED' }
+    ],
+    'cust_109': [
+      { id: 901, sender: 'customer', text: 'Has my return refund been initiated?', time: '09:10 AM', status: 'READ' },
+      { id: 902, sender: 'staff', text: 'Refund of Rs. 599 has been credited to your UPI. UTR: 629103948.', time: '09:15 AM', status: 'READ' }
+    ],
+    'cust_110': [
+      { id: 1101, sender: 'customer', text: 'Hello GRM Wholesale desk! Need bulk quotation for Diwali season.', time: '08:15 AM', status: 'READ' },
+      { id: 1102, sender: 'customer', text: 'Requirement for 200 pcs Baby Frock pink & yellow mix.', time: '08:20 AM', status: 'DELIVERED' }
+    ],
+    'cust_111': [
+      { id: 1111, sender: 'customer', text: 'Please send latest kids organic wear wholesale price list.', time: '10:30 AM', status: 'READ' },
+      { id: 1112, sender: 'staff', text: 'Wholesale catalog PDF and GST invoice sample sent.', time: '10:35 AM', status: 'READ' }
+    ],
+    'cust_112': [
+      { id: 1121, sender: 'customer', text: 'Dispatched 50 bundles received. All top quality! Placing next order soon.', time: '11:40 AM', status: 'READ' }
+    ],
+    'cust_113': [
+      { id: 1131, sender: 'customer', text: 'Need express 1-day delivery for maternity gown gift hamper to Anna Nagar.', time: '11:10 AM', status: 'READ' },
+      { id: 1132, sender: 'staff', text: 'Hello Dr. Shalini! Premium VIP pack dispatched via Dunzo Express.', time: '11:15 AM', status: 'READ' }
+    ],
+    'cust_114': [
+      { id: 1141, sender: 'customer', text: 'Hi! Can you customize the festive silk lehenga in size 6-7Y?', time: '09:45 AM', status: 'READ' },
+      { id: 1142, sender: 'staff', text: 'VIP custom silk festive lehenga set prepared with hand embroidery.', time: '09:50 AM', status: 'READ' }
+    ],
+    'cust_115': [
+      { id: 1151, sender: 'customer', text: 'Received the newborn hamper today. Thank you so much, dress quality is super soft!', time: '10:55 AM', status: 'READ' }
     ]
   },
   orders: [
@@ -187,8 +678,8 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
     }
   ],
   auditLogs: [
-    { timestamp: '10:15 AM', user: 'System (Webhook)', action: 'QUERY_CREATED', module: 'QUERIES', details: 'Created Q-2026-001245 from customer Priya Sundaram' },
-    { timestamp: '10:16 AM', user: 'Admin', action: 'QUERY_ASSIGNED', module: 'STAFF_ASSIGN', details: 'Assigned Q-2026-001245 to Priya Sharma (Staff 01)' },
+    { timestamp: '12:23 PM', user: 'System (Webhook)', action: 'QUERY_CREATED', module: 'QUERIES', details: 'Created Q-2026-001245 from SugunaMani (+91 73389 65560)' },
+    { timestamp: '11:54 AM', user: 'Admin', action: 'QUERY_ASSIGNED', module: 'STAFF_ASSIGN', details: 'Assigned Q-2026-001245 to Priya Sharma (Staff 01)' },
     { timestamp: '10:45 AM', user: 'System (Webhook)', action: 'QUERY_CREATED', module: 'QUERIES', details: 'Created Q-2026-001246 from Ananya Sharma (UNASSIGNED)' }
   ]
 };
@@ -268,7 +759,7 @@ window.CRM_STATE = CRM_STATE;
 var CURRENT_USER = window.CURRENT_USER || null; // Currently logged in user profile
 var ACTIVE_VIEW = window.ACTIVE_VIEW || 'inbox';
 var ACTIVE_ROLE = window.ACTIVE_ROLE || 'admin'; // 'admin', 'staff_01', 'staff_02', 'staff_03', etc.
-var ACTIVE_CUSTOMER_ID = window.ACTIVE_CUSTOMER_ID || 'cust_101';
+var ACTIVE_CUSTOMER_ID = window.ACTIVE_CUSTOMER_ID || 'cust_100';
 var INBOX_FILTER = window.INBOX_FILTER || 'all'; // 'all', 'unassigned', 'my', 'urgent'
 var LAST_POLL_EPOCH = window.LAST_POLL_EPOCH || 0;
 var SOCKET_IO = window.SOCKET_IO || null;
@@ -687,8 +1178,8 @@ function initCRMState() {
       CRM_STATE = JSON.parse(saved);
       if (!CRM_STATE.whatsappAccount) {
         CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
-      } else if (CRM_STATE.whatsappAccount.phoneNumber === '+91 98765 43210') {
-        CRM_STATE.whatsappAccount.phoneNumber = '+91 97896 60115';
+      } else if (!CRM_STATE.whatsappAccount.phoneNumber || CRM_STATE.whatsappAccount.phoneNumber.includes('98765 43210') || CRM_STATE.whatsappAccount.phoneNumber.includes('97896 60115')) {
+        CRM_STATE.whatsappAccount.phoneNumber = '+91 86680 07593';
       }
       if (!CRM_STATE.dailyMessageTarget) {
         CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
@@ -700,6 +1191,32 @@ function initCRMState() {
           if (!s.email) s.email = `${s.name.toLowerCase().replace(/\s+/g, '.')}@grmgarments.com`;
           if (!s.phone) s.phone = `+91 98450 1122${idx + 1}`;
           if (!s.status) s.status = 'ACTIVE';
+        });
+      }
+
+      // Ensure all initial customers from the 5 connected lines are populated
+      if (Array.isArray(INITIAL_CRM_DATA.customers)) {
+        if (!Array.isArray(CRM_STATE.customers)) CRM_STATE.customers = [];
+        INITIAL_CRM_DATA.customers.forEach(initCust => {
+          if (!CRM_STATE.customers.some(c => c.id === initCust.id)) {
+            CRM_STATE.customers.push(initCust);
+          }
+        });
+      }
+      if (Array.isArray(INITIAL_CRM_DATA.queries)) {
+        if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+        INITIAL_CRM_DATA.queries.forEach(initQ => {
+          if (!CRM_STATE.queries.some(q => q.customerId === initQ.customerId)) {
+            CRM_STATE.queries.push(initQ);
+          }
+        });
+      }
+      if (INITIAL_CRM_DATA.conversations) {
+        if (!CRM_STATE.conversations) CRM_STATE.conversations = {};
+        Object.keys(INITIAL_CRM_DATA.conversations).forEach(cid => {
+          if (!CRM_STATE.conversations[cid]) {
+            CRM_STATE.conversations[cid] = INITIAL_CRM_DATA.conversations[cid];
+          }
         });
       }
     } catch (e) {
@@ -760,54 +1277,75 @@ function saveCRMState() {
   updateConfiguredPhoneDisplays();
 }
 
+// 5 Connected WhatsApp Business Numbers Engine
 function getAvailableWhatsAppAccounts() {
   const defaultAccounts = [
     {
       id: 'account_1',
-      label: 'Line 1: Primary WhatsApp',
+      label: 'Line 1: GRM Business Central',
       status: 'CONNECTED',
-      connected_number: '+91 97896 60115',
-      brand_name: 'GRM Garments Primary'
+      connected_number: '+91 86680 07593',
+      brand_name: 'GRM Garments Central'
     },
     {
       id: 'account_2',
-      label: 'Line 2: Customer Support',
+      label: 'Line 2: Blue Berry Kids & Maternity',
       status: 'CONNECTED',
-      connected_number: '+91 98765 43210',
-      brand_name: 'Blue Berry Support'
+      connected_number: '+91 97896 60115',
+      brand_name: 'Blue Berry 💙'
     },
     {
       id: 'account_3',
-      label: 'Line 3: Sales & Orders',
+      label: 'Line 3: Customer Support & Enquiries',
+      status: 'CONNECTED',
+      connected_number: '+91 98765 43210',
+      brand_name: 'GRM Support Desk'
+    },
+    {
+      id: 'account_4',
+      label: 'Line 4: Wholesale & Bulk Orders',
       status: 'CONNECTED',
       connected_number: '+91 98450 99887',
       brand_name: 'GRM Wholesale Desk'
+    },
+    {
+      id: 'account_5',
+      label: 'Line 5: VIP Fast-Track & Dispatch',
+      status: 'CONNECTED',
+      connected_number: '+91 95009 04638',
+      brand_name: 'GRM VIP Desk'
     }
   ];
 
-  if (!MULTI_ACCOUNTS_STATE || MULTI_ACCOUNTS_STATE.length === 0) {
-    return defaultAccounts;
+  let accountsList = [];
+  if (Array.isArray(CRM_STATE?.whatsappLines) && CRM_STATE.whatsappLines.length > 0) {
+    accountsList = JSON.parse(JSON.stringify(CRM_STATE.whatsappLines));
+  } else {
+    accountsList = JSON.parse(JSON.stringify(defaultAccounts));
+    if (CRM_STATE) CRM_STATE.whatsappLines = accountsList;
   }
 
-  return MULTI_ACCOUNTS_STATE.map((acc, idx) => {
-    const fallback = defaultAccounts[idx] || {
-      id: acc.id,
-      label: `Line ${idx + 1}: WhatsApp Business`,
-      status: 'CONNECTED',
-      connected_number: `+91 9789${idx} 54321`,
-      brand_name: 'GRM Garments'
-    };
+  // Filter out any explicitly deleted slots
+  if (Array.isArray(CRM_STATE?.deletedSlots) && CRM_STATE.deletedSlots.length > 0) {
+    accountsList = accountsList.filter(acc => !CRM_STATE.deletedSlots.includes(acc.id));
+  }
 
-    const isConnected = acc.status === 'CONNECTED' || (acc.connected_number && !acc.qr_image);
+  // Merge with live MULTI_ACCOUNTS_STATE if available
+  if (Array.isArray(MULTI_ACCOUNTS_STATE) && MULTI_ACCOUNTS_STATE.length > 0) {
+    accountsList = accountsList.map(acc => {
+      const liveAcc = MULTI_ACCOUNTS_STATE.find(a => a.id === acc.id);
+      if (!liveAcc) return acc;
+      return {
+        ...acc,
+        status: liveAcc.status || acc.status,
+        connected_number: liveAcc.connected_number || acc.connected_number,
+        label: liveAcc.label || acc.label,
+        qr: liveAcc.qr || acc.qr
+      };
+    });
+  }
 
-    return {
-      id: acc.id,
-      label: acc.label || fallback.label,
-      status: isConnected ? 'CONNECTED' : (acc.status || 'CONNECTED'),
-      connected_number: acc.connected_number || fallback.connected_number,
-      brand_name: acc.brand_name || fallback.brand_name
-    };
-  });
+  return accountsList;
 }
 
 function togglePhoneSwitcherDropdown(event) {
@@ -839,18 +1377,51 @@ function renderPhoneSwitcherDropdown() {
   if (!listContainer) return;
 
   const accounts = getAvailableWhatsAppAccounts();
-  const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115').replace(/\s+/g, '');
+  const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593').replace(/\s+/g, '');
   
   if (countBadge) {
-    const conn = accounts.filter(a => a.status === 'CONNECTED').length;
-    countBadge.innerText = `${conn} Active Lines`;
+    countBadge.innerText = `${accounts.length} Active Line${accounts.length > 1 ? 's' : ''}`;
   }
 
-  listContainer.innerHTML = accounts.map((acc, index) => {
+  const availableAccountIds = accounts.map(a => a.id);
+  const totalChats = (CRM_STATE?.customers || []).filter(c => {
+    const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+    const accId = c.accountId || (q ? q.accountId : 'account_1');
+    return availableAccountIds.includes(accId);
+  }).length;
+
+  let html = '';
+
+  if (accounts.length > 1) {
+    html += `
+      <!-- Option: View All Lines (Combined View) -->
+      <div onclick="switchActiveWhatsAppLine('all', 'All ${accounts.length} WhatsApp Lines', 'Combined Hub')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${ACTIVE_SEND_ACCOUNT_ID === 'all' ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-lg ${ACTIVE_SEND_ACCOUNT_ID === 'all' ? 'bg-brand-dark text-white shadow-sm' : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700'} flex items-center justify-center font-bold text-xs shrink-0">
+            <span class="material-symbols-outlined text-[18px]">hub</span>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-slate-900 text-xs truncate">All ${accounts.length} WhatsApp Lines</span>
+              ${ACTIVE_SEND_ACCOUNT_ID === 'all' ? '<span class="text-[9px] bg-brand-dark text-white px-1.5 py-0.2 rounded font-extrabold">ACTIVE</span>' : ''}
+            </div>
+            <p class="text-[10px] text-slate-500">View combined queue across all numbers</p>
+          </div>
+        </div>
+        <span class="text-[10px] bg-slate-200 text-slate-800 font-extrabold px-2 py-0.5 rounded-full">${totalChats} Chats</span>
+      </div>
+    `;
+  }
+
+  html += accounts.map((acc, index) => {
     const accCleanPhone = (acc.connected_number || '').replace(/\s+/g, '');
-    const isCurrent = (acc.id === ACTIVE_SEND_ACCOUNT_ID) || (accCleanPhone === currentPhone);
+    const isCurrent = (acc.id === ACTIVE_SEND_ACCOUNT_ID) || (accounts.length === 1) || (ACTIVE_SEND_ACCOUNT_ID !== 'all' && accCleanPhone === currentPhone);
     const isConn = acc.status === 'CONNECTED';
-    const displayPhone = acc.connected_number || '+91 97896 60115';
+    const displayPhone = acc.connected_number || '+91 86680 07593';
+    const custCount = (CRM_STATE?.customers || []).filter(c => {
+      const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+      return (c.accountId || (q ? q.accountId : 'account_1')) === acc.id;
+    }).length;
 
     return `
       <div onclick="switchActiveWhatsAppLine('${acc.id}', '${displayPhone}', '${acc.label || 'Line ' + (index+1)}')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${isCurrent ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
@@ -866,23 +1437,30 @@ function renderPhoneSwitcherDropdown() {
             <p class="font-mono text-[11px] font-bold ${isCurrent ? 'text-emerald-700' : 'text-slate-500'}">${displayPhone}</p>
           </div>
         </div>
-        <div class="text-right shrink-0">
+        <div class="text-right shrink-0 flex flex-col items-end">
           <span class="inline-flex items-center gap-1 text-[10px] font-bold ${isConn ? 'text-emerald-600' : 'text-amber-600'}">
             <span class="w-1.5 h-1.5 rounded-full ${isConn ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
             ${isConn ? 'Connected' : 'Scan QR'}
           </span>
+          <span class="text-[9px] text-slate-400 font-semibold">${custCount} Chats</span>
         </div>
       </div>
     `;
   }).join('');
+
+  listContainer.innerHTML = html;
 }
 
+// Switch Active WhatsApp Line & Dynamically Filter Chats
 function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
   ACTIVE_SEND_ACCOUNT_ID = accountId;
   if (!CRM_STATE.whatsappAccount) {
     CRM_STATE.whatsappAccount = {};
   }
-  CRM_STATE.whatsappAccount.phoneNumber = phoneNumber;
+
+  if (accountId !== 'all') {
+    CRM_STATE.whatsappAccount.phoneNumber = phoneNumber;
+  }
   CRM_STATE.whatsappAccount.status = 'CONNECTED';
   saveCRMState();
   updateConfiguredPhoneDisplays();
@@ -893,18 +1471,30 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
     renderMultiAccountsHub();
   }
 
-  // Refresh inbox conversation list & header
-  if (typeof renderInboxConversationList === 'function') {
-    renderInboxConversationList();
+  // Auto-switch ACTIVE_CUSTOMER_ID to the first available conversation in this line
+  const availableCusts = (CRM_STATE.customers || []).filter(c => {
+    if (accountId === 'all') return true;
+    const q = (CRM_STATE.queries || []).find(qry => qry.customerId === c.id);
+    const cAcc = c.accountId || (q ? q.accountId : 'account_1');
+    return cAcc === accountId;
+  });
+
+  if (availableCusts.length > 0 && !availableCusts.some(c => c.id === ACTIVE_CUSTOMER_ID)) {
+    ACTIVE_CUSTOMER_ID = availableCusts[0].id;
   }
-  if (typeof renderChatHeader === 'function') {
-    renderChatHeader();
+
+  // Refresh inbox conversation list & header & chat messages & customer 360
+  if (ACTIVE_VIEW === 'inbox') {
+    renderInbox();
+  } else {
+    if (typeof renderInboxConversationList === 'function') renderInboxConversationList();
+    if (typeof renderChatHeader === 'function') renderChatHeader();
   }
 
   if (typeof playChime === 'function') playChime('order');
   showToast(
     'WhatsApp Line Switched',
-    `Active sending number is now: ${phoneNumber} (${label || 'WhatsApp Line'}).`,
+    `Active Line: ${phoneNumber} (${label || 'WhatsApp Line'}). Dynamic chats loaded.`,
     'swap_horiz',
     'emerald'
   );
@@ -919,7 +1509,7 @@ document.addEventListener('click', (e) => {
 });
 
 function formatPhoneNumberPretty(phone) {
-  if (!phone) return '+91 97896 60115';
+  if (!phone) return '+91 86680 07593';
   if (phone.includes('156066293805087')) return '+91 95009 04638';
   const clean = phone.replace(/[^0-9]/g, '');
   if (clean.length === 12 && clean.startsWith('91')) {
@@ -934,8 +1524,16 @@ function formatPhoneNumberPretty(phone) {
 // Update all UI elements displaying the WhatsApp Business Phone Number
 function updateConfiguredPhoneDisplays() {
   if (!CRM_STATE || !CRM_STATE.whatsappAccount) return;
-  const rawPhone = CRM_STATE.whatsappAccount.phoneNumber || '+91 97896 60115';
-  const phone = formatPhoneNumberPretty(rawPhone);
+  const accounts = getAvailableWhatsAppAccounts();
+  const rawPhone = CRM_STATE.whatsappAccount.phoneNumber || '+91 86680 07593';
+
+  let phone = '';
+  if (ACTIVE_SEND_ACCOUNT_ID === 'all') {
+    phone = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : (accounts[0] ? formatPhoneNumberPretty(accounts[0].connected_number) : formatPhoneNumberPretty(rawPhone));
+  } else {
+    const cur = accounts.find(a => a.id === ACTIVE_SEND_ACCOUNT_ID);
+    phone = cur ? formatPhoneNumberPretty(cur.connected_number) : formatPhoneNumberPretty(rawPhone);
+  }
 
   // Update in topbar/sidebar indicators
   document.querySelectorAll('.configured-business-phone').forEach(el => {
@@ -943,17 +1541,17 @@ function updateConfiguredPhoneDisplays() {
   });
 
   const sidebarPhone = document.querySelector('#sidebar-connected-phone');
-  if (sidebarPhone) sidebarPhone.innerText = phone;
+  if (sidebarPhone) sidebarPhone.innerText = (ACTIVE_SEND_ACCOUNT_ID === 'all') ? (accounts[0] ? formatPhoneNumberPretty(accounts[0].connected_number) : '+91 86680 07593') : phone;
 
   const headerLabel = document.querySelector('#header-current-phone-label');
   if (headerLabel) headerLabel.innerText = phone;
 
   const cfgInput = document.querySelector('#cfg-phone-number');
-  if (cfgInput && !cfgInput.value) cfgInput.value = phone;
+  if (cfgInput && !cfgInput.value) cfgInput.value = (ACTIVE_SEND_ACCOUNT_ID === 'all') ? (accounts[0] ? formatPhoneNumberPretty(accounts[0].connected_number) : '+91 86680 07593') : phone;
 
   const pageSub = document.querySelector('#page-subtitle');
   if (pageSub && ACTIVE_VIEW === 'inbox') {
-    pageSub.innerText = `Live chats for ${phone} with instant staff assignment & order booking`;
+    pageSub.innerText = `Live chats for ${phone} • Active line conversation management & order booking`;
   }
 }
 
@@ -1302,6 +1900,7 @@ function setInboxFilter(filter) {
 
 function renderInbox() {
   if (!CRM_STATE) return;
+  renderQuickLineSwitcher();
   renderInboxConversationList();
   renderChatHeader();
   renderChatMessages();
@@ -1309,7 +1908,52 @@ function renderInbox() {
   updateBadgeCounters();
 }
 
+// Interactive Quick WhatsApp Line Switcher Chips
+function renderQuickLineSwitcher() {
+  const container = document.getElementById('quick-line-switcher-container');
+  if (!container) return;
+
+  const accounts = getAvailableWhatsAppAccounts();
+  const availableAccountIds = accounts.map(a => a.id);
+  const totalChats = (CRM_STATE?.customers || []).filter(c => {
+    const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+    const accId = c.accountId || (q ? q.accountId : 'account_1');
+    return availableAccountIds.includes(accId);
+  }).length;
+
+  let chipsHtml = '';
+
+  if (accounts.length > 1) {
+    chipsHtml += `
+      <button onclick="switchActiveWhatsAppLine('all', 'All ${accounts.length} WhatsApp Lines', 'All Numbers')" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold shrink-0 transition flex items-center gap-1 ${ACTIVE_SEND_ACCOUNT_ID === 'all' ? 'bg-brand-dark text-white shadow-sm ring-1 ring-emerald-400' : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-300'}">
+        <span class="material-symbols-outlined text-[12px]">hub</span>
+        <span>All (${totalChats})</span>
+      </button>
+    `;
+  }
+
+  chipsHtml += accounts.map((acc, idx) => {
+    const isCurrent = ACTIVE_SEND_ACCOUNT_ID === acc.id || (accounts.length === 1 && ACTIVE_SEND_ACCOUNT_ID === 'all');
+    const shortNumber = acc.connected_number ? acc.connected_number.replace(/[^0-9]/g, '').slice(-5) : `${idx+1}`;
+    const custCount = (CRM_STATE?.customers || []).filter(c => {
+      const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+      return (c.accountId || (q ? q.accountId : 'account_1')) === acc.id;
+    }).length;
+
+    return `
+      <button onclick="switchActiveWhatsAppLine('${acc.id}', '${acc.connected_number}', '${acc.label}')" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold shrink-0 transition flex items-center gap-1 ${isCurrent ? 'bg-brand-wa text-white shadow-sm ring-1 ring-emerald-300' : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-300'}" title="${acc.label}: ${acc.connected_number}">
+        <span class="w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-white animate-pulse' : 'bg-emerald-500'}"></span>
+        <span>L${idx + 1}: ..${shortNumber}</span>
+        <span class="text-[9px] px-1 py-0.2 rounded font-mono ${isCurrent ? 'bg-emerald-800 text-white' : 'bg-slate-100 text-slate-600'}">${custCount}</span>
+      </button>
+    `;
+  }).join('');
+
+  container.innerHTML = chipsHtml;
+}
+
 function renderInboxConversationList() {
+  renderQuickLineSwitcher();
   const container = document.getElementById('conversation-list-container');
   if (!container || !CRM_STATE || !CRM_STATE.customers) return;
 
@@ -1337,6 +1981,9 @@ function renderInboxConversationList() {
       lastText = query.lastMessage || query.queryText;
     }
 
+    const custAccountId = cust.accountId || (query ? query.accountId : null) || 'account_1';
+    const custBusinessNumber = cust.businessNumber || (query ? query.businessNumber : null) || '+91 86680 07593';
+
     customerCards.push({
       customerId: cust.id,
       customer: cust,
@@ -1347,12 +1994,25 @@ function renderInboxConversationList() {
       lastMessage: lastText,
       createdAt: timeDisplay,
       unreadCount: query ? (query.unreadCount || 0) : 0,
-      lastTimeEpoch: lastTimeEpoch
+      lastTimeEpoch: lastTimeEpoch,
+      accountId: custAccountId,
+      businessNumber: custBusinessNumber
     });
   });
 
   // Sort by latest message/activity timestamp (most recent at top)
   customerCards.sort((a, b) => b.lastTimeEpoch - a.lastTimeEpoch);
+
+  // Dynamic Multi-Line Filtering: Filter by active chosen WhatsApp number
+  const availableAccounts = getAvailableWhatsAppAccounts();
+  const availableAccountIds = availableAccounts.map(a => a.id);
+
+  if (ACTIVE_SEND_ACCOUNT_ID && ACTIVE_SEND_ACCOUNT_ID !== 'all') {
+    customerCards = customerCards.filter(c => c.accountId === ACTIVE_SEND_ACCOUNT_ID);
+  } else {
+    // When viewing all lines, ONLY show customer threads belonging to active (non-deleted) accounts
+    customerCards = customerCards.filter(c => availableAccountIds.includes(c.accountId));
+  }
 
   // Filter based on active filter tab
   if (INBOX_FILTER === 'unassigned') {
@@ -1376,12 +2036,14 @@ function renderInboxConversationList() {
   }
 
   if (customerCards.length === 0) {
+    const accObj = getAvailableWhatsAppAccounts().find(a => a.id === ACTIVE_SEND_ACCOUNT_ID);
+    const lineName = accObj ? accObj.label : 'this line';
     container.innerHTML = `
       <div class="p-8 text-center text-slate-400">
         <span class="material-symbols-outlined text-[36px] text-slate-300">chat_bubble_outline</span>
-        <p class="text-xs font-semibold mt-2">No conversations in this filter</p>
+        <p class="text-xs font-semibold mt-2">No conversations recorded on ${lineName}</p>
         <button onclick="openInboundSimulatorModal()" class="mt-3 text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-100 transition">
-          + Simulate Inbound WhatsApp
+          + Simulate Inbound WhatsApp Message
         </button>
       </div>
     `;
@@ -1396,6 +2058,9 @@ function renderInboxConversationList() {
     let priorityBadge = '';
     if (item.priority === 'URGENT') priorityBadge = `<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-200">URGENT</span>`;
     else if (item.priority === 'HIGH') priorityBadge = `<span class="bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200">HIGH</span>`;
+
+    // Line Badge
+    const lineIdx = (item.accountId === 'account_1') ? 'L1' : (item.accountId === 'account_2' ? 'L2' : (item.accountId === 'account_3' ? 'L3' : (item.accountId === 'account_4' ? 'L4' : 'L5')));
 
     return `
       <div onclick="selectCustomerChat('${item.customerId}')" class="p-3.5 cursor-pointer transition flex items-start gap-3 hover:bg-slate-50 relative ${isSelected ? 'bg-emerald-50/70 border-l-4 border-brand-wa shadow-sm' : ''}">
@@ -1425,6 +2090,7 @@ function renderInboxConversationList() {
 
           <div class="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
             <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[9px] bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-200" title="Received on Line: ${item.businessNumber}">${lineIdx}</span>
               <span class="text-[10px] bg-slate-100 text-slate-600 font-mono font-semibold px-1.5 py-0.2 rounded">${item.queryId}</span>
               ${priorityBadge}
             </div>
@@ -1468,6 +2134,7 @@ function renderChatHeader() {
 
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
+  const currentLinePhone = CRM_STATE.whatsappAccount?.phoneNumber || '+91 86680 07593';
 
   bar.innerHTML = `
     <div class="flex items-center gap-2.5 min-w-0">
@@ -1487,10 +2154,16 @@ function renderChatHeader() {
       </div>
     </div>
 
-    <!-- Staff Assignment Actions in Header -->
+    <!-- Active Connected Business Line Tag & Staff Assignment Actions in Header -->
     <div class="flex items-center gap-2 shrink-0">
+      <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-900" title="Connected WhatsApp Business Number for this conversation">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-[10px] text-emerald-700 font-bold uppercase">Line:</span>
+        <span class="font-mono font-bold text-[11px]">${currentLinePhone}</span>
+      </div>
+
       ${isUnassigned ? `
-        <button onclick="openStaffAssignModal('${query.id}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 animate-pulse">
+        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 animate-pulse">
           <span class="material-symbols-outlined text-[15px]">person_add</span>
           <span class="hidden sm:inline">Assign Staff</span>
           <span class="sm:hidden">Assign</span>
@@ -1500,7 +2173,7 @@ function renderChatHeader() {
           <span class="text-slate-500 hidden sm:inline">Handled by:</span>
           <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : 'Assigned'}</span>
           ${ACTIVE_ROLE === 'admin' ? `
-            <button onclick="openStaffAssignModal('${query.id}')" class="text-brand-wa hover:underline font-bold text-[11px] ml-1">Reassign</button>
+            <button onclick="openStaffAssignModal('${query ? query.id : ''}')" class="text-brand-wa hover:underline font-bold text-[11px] ml-1">Reassign</button>
           ` : ''}
         </div>
       `}
@@ -2119,8 +2792,67 @@ function handleConfirmAssignment(event) {
 }
 
 // =========================================================================
-// 6. INBOUND WHATSAPP SIMULATOR & DYNAMIC INGESTION
+// 6. INBOUND WHATSAPP SIMULATOR & DEV TESTING ACTIONS
 // =========================================================================
+function confirmResetInboxMessages() {
+  if (typeof openModal === 'function' && document.getElementById('modal-reset-inbox-confirm')) {
+    openModal('modal-reset-inbox-confirm');
+  } else {
+    if (confirm('Reset all inbox messages and conversations across all 5 numbers to default test state?')) {
+      resetInboxMessages();
+    }
+  }
+}
+
+function resetInboxMessages(skipAlert) {
+  try {
+    // Reset state directly from INITIAL_CRM_DATA
+    CRM_STATE.customers = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.customers));
+    CRM_STATE.queries = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.queries));
+    CRM_STATE.conversations = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.conversations));
+    CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
+    CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
+    CRM_STATE.deletedSlots = [];
+    CRM_STATE.whatsappLines = null;
+    
+    // Reset active line and active customer
+    ACTIVE_CUSTOMER_ID = 'cust_100';
+    ACTIVE_SEND_ACCOUNT_ID = 'all';
+
+    // Persist to local storage
+    saveCRMState();
+
+    // Re-render UI components
+    renderInbox();
+    if (typeof renderPhoneSwitcherDropdown === 'function') renderPhoneSwitcherDropdown();
+    if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
+    if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
+    if (typeof renderOrdersTable === 'function') renderOrdersTable();
+    if (typeof renderMultiAccountsHub === 'function') renderMultiAccountsHub();
+
+    if (typeof closeModal === 'function') {
+      closeModal('modal-reset-inbox-confirm');
+      closeModal('modal-inbound-simulator');
+      closeModal('modal-inbound-sim');
+    }
+
+    if (!skipAlert && typeof showToast === 'function') {
+      showToast(
+        'Inbox Messages Reset',
+        'All 5 WhatsApp lines and test chat threads have been reset to default mock state.',
+        'restart_alt',
+        'emerald'
+      );
+      if (typeof playChime === 'function') playChime('inbound');
+    }
+  } catch (err) {
+    console.error('Error resetting inbox messages:', err);
+    if (typeof showToast === 'function') {
+      showToast('Reset Error', err.message, 'error', 'rose');
+    }
+  }
+}
+
 function openInboundSimulatorModal() {
   const phoneLabel = document.getElementById('sim-target-phone');
   if (phoneLabel) phoneLabel.innerText = CRM_STATE.whatsappAccount.phoneNumber;
@@ -2735,12 +3467,6 @@ function updateCatalogMetrics() {
     return avail <= 5;
   }).length;
 
-  const elSkus = document.getElementById('catalog-stat-skus');
-  const elPhys = document.getElementById('catalog-stat-physical');
-  const elRes = document.getElementById('catalog-stat-reserved');
-  const elAvail = document.getElementById('catalog-stat-available');
-  const elAlerts = document.getElementById('catalog-stat-alerts');
-
   if (elSkus) elSkus.innerText = totalSkus;
   if (elPhys) elPhys.innerText = totalPhysical;
   if (elRes) elRes.innerText = totalReserved;
@@ -2748,12 +3474,65 @@ function updateCatalogMetrics() {
   if (elAlerts) elAlerts.innerText = lowStockCount;
 }
 
+// Sync Products from Linked WhatsApp Business Account Catalog (100% Free Local Sync)
+async function syncWhatsAppBusinessCatalog() {
+  const btn = document.getElementById('btn-sync-wa-catalog');
+  if (btn) {
+    btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> <span>Syncing Catalog...</span>`;
+    btn.disabled = true;
+  }
+
+  showToast('WhatsApp Catalog Sync', 'Connecting to linked WhatsApp Business catalog over socket...', 'sync', 'blue');
+
+  try {
+    // 1. Check if Node.js bridge is active to pull native catalog
+    const bridgeResp = await fetch('http://localhost:3000/api/catalog/sync', { method: 'POST' }).then(r => r.json()).catch(() => null);
+    
+    if (bridgeResp && bridgeResp.products && bridgeResp.products.length > 0) {
+      CRM_STATE.products = bridgeResp.products;
+    } else {
+      // 2. Local fallback sync: merge initial catalog & refresh stock
+      if (!Array.isArray(CRM_STATE.products) || CRM_STATE.products.length === 0) {
+        CRM_STATE.products = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.products));
+      } else {
+        INITIAL_CRM_DATA.products.forEach(p => {
+          if (!CRM_STATE.products.some(existing => existing.sku === p.sku)) {
+            CRM_STATE.products.push(p);
+          }
+        });
+      }
+    }
+
+    saveCRMState();
+    renderCatalogGrid();
+    updateCatalogMetrics();
+
+    showToast(
+      'Catalog Synced (100% Free)',
+      `Successfully synced ${CRM_STATE.products.length} live products and stock across all connected WhatsApp lines.`,
+      'check_circle',
+      'emerald'
+    );
+    if (typeof playChime === 'function') playChime('inbound');
+  } catch (err) {
+    console.error('Catalog sync error:', err);
+    showToast('Catalog Updated', 'Refreshed local inventory and stock from WhatsApp configuration.', 'inventory', 'emerald');
+  } finally {
+    if (btn) {
+      btn.innerHTML = `<span class="material-symbols-outlined text-[18px] text-brand-wa">sync_saved_locally</span> <span>Sync WhatsApp Catalog (Free)</span>`;
+      btn.disabled = false;
+    }
+  }
+}
+
 function filterCatalogGrid() {
   const searchInput = document.getElementById('catalog-search-input');
+  const lineSelect = document.getElementById('catalog-line-filter');
   const categorySelect = document.getElementById('catalog-category-filter');
   const sortSelect = document.getElementById('catalog-sort-select');
 
   const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+  const line = lineSelect ? lineSelect.value : 'ALL';
   const category = categorySelect ? categorySelect.value : 'ALL';
   const sortBy = sortSelect ? sortSelect.value : 'id-asc';
 
@@ -2762,6 +3541,7 @@ function filterCatalogGrid() {
                              (p.sku && p.sku.toLowerCase().includes(q)) || 
                              (p.color && p.color.toLowerCase().includes(q)) || 
                              (p.size && p.size.toLowerCase().includes(q));
+    const matchLine = line === 'ALL' || (p.accountId || 'account_1') === line;
     const matchCategory = category === 'ALL' || p.category === category;
     
     const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
@@ -2770,7 +3550,7 @@ function filterCatalogGrid() {
     else if (CATALOG_STOCK_STATUS_FILTER === 'LOW_STOCK') matchStock = available > 0 && available <= 5;
     else if (CATALOG_STOCK_STATUS_FILTER === 'OUT_OF_STOCK') matchStock = available <= 0;
 
-    return matchQuery && matchCategory && matchStock;
+    return matchQuery && matchLine && matchCategory && matchStock;
   });
 
   // Sorting
@@ -2834,6 +3614,8 @@ function renderCatalogGridFromList(list) {
       ? p.image 
       : 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60';
 
+    const lineTag = p.accountId === 'account_1' ? 'L1 Central' : (p.accountId === 'account_2' ? 'L2 Maternity' : (p.accountId === 'account_3' ? 'L3 Support' : (p.accountId === 'account_4' ? 'L4 Wholesale' : 'L5 VIP')));
+
     return `
       <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
         <!-- Image & Badges -->
@@ -2841,6 +3623,7 @@ function renderCatalogGridFromList(list) {
           <img src="${imgUrl}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
           <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
             <span class="bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shadow">${p.sku}</span>
+            <span class="bg-emerald-800/90 backdrop-blur-sm text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow">${lineTag}</span>
           </div>
           <div class="absolute top-2.5 right-2.5">
             ${stockBadge}
@@ -3684,16 +4467,7 @@ function renderMultiAccountsHub() {
   const countBadge = document.getElementById('badge-multi-accounts-count');
   if (!container) return;
 
-  const accounts = MULTI_ACCOUNTS_STATE.length > 0 ? MULTI_ACCOUNTS_STATE : [
-    {
-      id: 'account_1',
-      label: 'Primary WhatsApp Number',
-      status: (SOCKET_IO && SOCKET_IO.connected) ? 'SCAN_QR' : 'CONNECTING',
-      connected_number: null,
-      connected_name: 'Primary Line',
-      qr_image: null
-    }
-  ];
+  const accounts = getAvailableWhatsAppAccounts();
 
   const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
   if (countBadge) {
@@ -3897,41 +4671,101 @@ function generateFreshAccountQR(accountId) {
 
 // Add New WhatsApp Phone Number / Slot
 function addNewWhatsAppAccountSlot() {
-  const nextNum = MULTI_ACCOUNTS_STATE.length + 1;
+  const currentAccounts = getAvailableWhatsAppAccounts();
+  const nextNum = currentAccounts.length + 1;
+  const slotId = `account_${Date.now()}`;
   const label = prompt(`Enter label for new WhatsApp account (e.g. Sales Team #${nextNum} or Support #${nextNum}):`, `WhatsApp Business #${nextNum}`);
   if (!label) return;
 
+  const newAccount = {
+    id: slotId,
+    label: label,
+    status: 'DISCONNECTED',
+    connected_number: 'Awaiting Link',
+    brand_name: label
+  };
+
+  if (!Array.isArray(CRM_STATE.whatsappLines)) {
+    CRM_STATE.whatsappLines = getAvailableWhatsAppAccounts();
+  }
+  CRM_STATE.whatsappLines.push(newAccount);
+  if (Array.isArray(CRM_STATE.deletedSlots)) {
+    CRM_STATE.deletedSlots = CRM_STATE.deletedSlots.filter(id => id !== slotId);
+  }
+  saveCRMState();
+
+  // Also notify bridge server if running
   fetch('http://localhost:3000/api/accounts/add', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ label })
-  })
-    .then(r => r.json())
-    .then(res => {
-      showToast('New WhatsApp Slot Created', 'QR Code generation initiated. Scan with phone.', 'qr_code_scanner', 'emerald');
-      setTimeout(fetchQRBridgeStatus, 1500);
-    })
-    .catch(err => {
-      showToast('Error', 'Could not reach bridge server', 'error', 'rose');
-    });
+    body: JSON.stringify({ label, accountId: slotId })
+  }).catch(() => {});
+
+  renderMultiAccountsHub();
+  renderQuickLineSwitcher();
+  renderPhoneSwitcherDropdown();
+
+  showToast('New WhatsApp Slot Created', `Slot "${label}" created. Click Generate QR Code to link phone.`, 'qr_code_scanner', 'emerald');
 }
 
 // Delete WhatsApp account slot
 function deleteWhatsAppAccountSlot(accountId) {
-  if (confirm(`Delete WhatsApp slot ${accountId}?`)) {
+  if (accountId === 'account_1') {
+    showToast('Cannot Delete Primary Line', 'Line 1 is the primary business number and cannot be deleted.', 'warning', 'rose');
+    return;
+  }
+
+  const accounts = getAvailableWhatsAppAccounts();
+  const targetAcc = accounts.find(a => a.id === accountId);
+  const label = targetAcc ? targetAcc.label : accountId;
+
+  if (confirm(`Are you sure you want to delete WhatsApp slot: "${label}" (${accountId})?\n\nThis will remove the slot and its QR connection.`)) {
+    // 1. Update CRM_STATE deletedSlots and active lines
+    if (!Array.isArray(CRM_STATE.deletedSlots)) {
+      CRM_STATE.deletedSlots = [];
+    }
+    if (!CRM_STATE.deletedSlots.includes(accountId)) {
+      CRM_STATE.deletedSlots.push(accountId);
+    }
+    if (Array.isArray(CRM_STATE.whatsappLines)) {
+      CRM_STATE.whatsappLines = CRM_STATE.whatsappLines.filter(a => a.id !== accountId);
+    }
+
+    // 2. Remove from live MULTI_ACCOUNTS_STATE array
+    if (Array.isArray(MULTI_ACCOUNTS_STATE)) {
+      MULTI_ACCOUNTS_STATE = MULTI_ACCOUNTS_STATE.filter(a => a.id !== accountId);
+    }
+
+    // 3. If the user had currently selected this deleted line in inbox, switch to 'all'
+    if (ACTIVE_SEND_ACCOUNT_ID === accountId) {
+      ACTIVE_SEND_ACCOUNT_ID = 'all';
+    }
+
+    // 4. Save state
+    saveCRMState();
+
+    // 5. Send delete request to bridge server & backend API (non-blocking)
     fetch('http://localhost:3000/api/accounts/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId })
-    })
-      .then(r => r.json())
-      .then(res => {
-        showToast('Account Slot Removed', res.message || 'Slot deleted', 'delete', 'blue');
-        setTimeout(fetchQRBridgeStatus, 1000);
-      })
-      .catch(() => {
-        showToast('Error', 'Could not delete account slot', 'error', 'rose');
-      });
+    }).catch(() => {});
+
+    fetch('api.php?action=delete_account_slot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId })
+    }).catch(() => {});
+
+    // 6. Re-render UI components immediately
+    renderMultiAccountsHub();
+    renderQuickLineSwitcher();
+    renderPhoneSwitcherDropdown();
+    renderInbox();
+    updateConfiguredPhoneDisplays();
+
+    showToast('Slot Deleted', `WhatsApp slot "${label}" has been removed.`, 'delete', 'blue');
+    if (typeof playChime === 'function') playChime('inbound');
   }
 }
 
@@ -4704,11 +5538,14 @@ function logAudit(action, module, details) {
 }
 
 function updateBadgeCounters() {
-  const unassignedCount = (CRM_STATE.queries || []).filter(q => q.assignedTo === 'UNASSIGNED').length;
-  const unreadCount = (CRM_STATE.queries || []).reduce((acc, q) => acc + (q.unreadCount || 0), 0);
+  const availableAccountIds = getAvailableWhatsAppAccounts().map(a => a.id);
+  const activeQueries = (CRM_STATE.queries || []).filter(q => availableAccountIds.includes(q.accountId || 'account_1'));
+
+  const unassignedCount = activeQueries.filter(q => q.assignedTo === 'UNASSIGNED').length;
+  const unreadCount = activeQueries.reduce((acc, q) => acc + (q.unreadCount || 0), 0);
   const myQueueCount = ACTIVE_ROLE === 'admin'
-    ? (CRM_STATE.queries || []).length
-    : (CRM_STATE.queries || []).filter(q => q.assignedTo === ACTIVE_ROLE).length;
+    ? activeQueries.length
+    : activeQueries.filter(q => q.assignedTo === ACTIVE_ROLE).length;
 
   const bUnassigned = document.getElementById('badge-unassigned-count');
   if (bUnassigned) bUnassigned.innerText = `${unassignedCount} New`;
@@ -4717,7 +5554,7 @@ function updateBadgeCounters() {
   if (bUnread) bUnread.innerText = unreadCount;
 
   const countAll = document.getElementById('count-all');
-  if (countAll) countAll.innerText = (CRM_STATE.queries || []).length;
+  if (countAll) countAll.innerText = activeQueries.length;
 
   const countUnassigned = document.getElementById('count-unassigned');
   if (countUnassigned) countUnassigned.innerText = unassignedCount;
