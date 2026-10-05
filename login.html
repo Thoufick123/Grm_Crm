@@ -36,6 +36,31 @@
       }
     }
   </script>
+  <script>
+    // Prevent VS Code Live Server (Port 5500) from reloading on WhatsApp background file writes
+    (function() {
+      if (window.location.port === '5500') {
+        const OrigWebSocket = window.WebSocket;
+        window.WebSocket = function(url, protocols) {
+          if (typeof url === 'string' && url.includes(':5500') && url.includes('/ws')) {
+            const fakeWs = {
+              send: function() {},
+              close: function() {},
+              addEventListener: function() {},
+              removeEventListener: function() {},
+              set onmessage(fn) {},
+              set onopen(fn) {},
+              set onclose(fn) {},
+              set onerror(fn) {}
+            };
+            return fakeWs;
+          }
+          return new OrigWebSocket(url, protocols);
+        };
+        window.WebSocket.prototype = OrigWebSocket.prototype;
+      }
+    })();
+  </script>
   <style>
     @keyframes shake {
       0%, 100% { transform: translateX(0); }

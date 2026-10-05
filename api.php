@@ -480,7 +480,169 @@ if ($action === 'get_inbound_messages') {
 }
 
 // =========================================================================
-// 5. DATABASE BACKUP & RESTORE
+// 5. PRODUCT & STOCK MANAGEMENT ENDPOINTS
+// =========================================================================
+if ($action === 'save_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+
+    if (empty($p['name']) || empty($p['sku'])) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Product name and SKU are required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $id = $p['id'] ?? null;
+            if ($id && is_numeric($id)) {
+                $stmt = $pdo->prepare("
+                    UPDATE `products` SET 
+                        `sku` = ?, `name` = ?, `category` = ?, `size` = ?, `color` = ?, 
+                        `price` = ?, `physical_stock` = ?, `reserved_stock` = ?, `image` = ?
+                    WHERE `id` = ?
+                ");
+                $stmt->execute([
+                    $p['sku'], $p['name'], $p['category'] ?? 'General', $p['size'] ?? 'Standard',
+                    $p['color'] ?? 'Default', (float)($p['price'] ?? 0), (int)($p['physical_stock'] ?? 0),
+                    (int)($p['reserved_stock'] ?? 0), $p['image'] ?? '', $id
+                ]);
+            } else {
+                $stmt = $pdo->prepare("
+                    INSERT INTO `products` (`sku`, `name`, `category`, `size`, `color`, `price`, `physical_stock`, `reserved_stock`, `image`)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([
+                    $p['sku'], $p['name'], $p['category'] ?? 'General', $p['size'] ?? 'Standard',
+                    $p['color'] ?? 'Default', (float)($p['price'] ?? 0), (int)($p['physical_stock'] ?? 0),
+                    (int)($p['reserved_stock'] ?? 0), $p['image'] ?? ''
+                ]);
+                $id = $pdo->lastInsertId();
+            }
+            echo json_encode(["status" => "success", "message" => "Product saved to database", "id" => $id]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Product saved locally"]);
+    exit;
+}
+
+if ($action === 'update_stock' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+
+    $productId = $p['id'] ?? null;
+    $physical = isset($p['physical_stock']) ? (int)$p['physical_stock'] : null;
+    $reserved = isset($p['reserved_stock']) ? (int)$p['reserved_stock'] : null;
+
+    if (!$productId || $physical === null) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Product ID and physical stock are required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            if ($reserved !== null) {
+                $stmt = $pdo->prepare("UPDATE `products` SET `physical_stock` = ?, `reserved_stock` = ? WHERE `id` = ?");
+                $stmt->execute([$physical, $reserved, $productId]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE `products` SET `physical_stock` = ? WHERE `id` = ?");
+                $stmt->execute([$physical, $productId]);
+            }
+            echo json_encode(["status" => "success", "message" => "Stock updated in database", "id" => $productId]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Stock updated locally"]);
+    exit;
+}
+
+if ($action === 'delete_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+    $productId = $p['id'] ?? null;
+
+    if (!$productId) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Product ID is required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM `products` WHERE `id` = ?");
+            $stmt->execute([$productId]);
+            echo json_encode(["status" => "success", "message" => "Product deleted from database"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Product deleted locally"]);
+    exit;
+}
+
+if ($action === 'upload_product_image' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $uploadDir = __DIR__ . '/uploads/products/';
+    if (!is_dir($uploadDir)) {
+        @mkdir($uploadDir, 0777, true);
+    }
+
+    if (!empty($_FILES['image']) && is_uploaded_file($_FILES['image']['tmp_name'])) {
+        $file = $_FILES['image'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        if (!in_array($ext, $allowed)) {
+            $ext = 'jpg';
+        }
+        $fileName = 'prod_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+        $targetPath = $uploadDir . $fileName;
+
+        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+            $url = 'uploads/products/' . $fileName;
+            echo json_encode(["status" => "success", "url" => $url, "message" => "Image uploaded successfully"]);
+            exit;
+        }
+    }
+
+    // Check if JSON base64 payload
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+    if (!empty($p['image_base64'])) {
+        $data = $p['image_base64'];
+        if (preg_match('/^data:image\/(\w+);base64,/', $data, $type)) {
+            $data = substr($data, strpos($data, ',') + 1);
+            $ext = strtolower($type[1]);
+            if ($ext === 'jpeg') $ext = 'jpg';
+            $data = base64_decode($data);
+            if ($data !== false) {
+                $fileName = 'prod_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+                file_put_contents($uploadDir . $fileName, $data);
+                $url = 'uploads/products/' . $fileName;
+                echo json_encode(["status" => "success", "url" => $url, "message" => "Image saved successfully"]);
+                exit;
+            }
+        }
+    }
+
+    http_response_code(400);
+    echo json_encode(["status" => "error", "message" => "No valid image uploaded"]);
+    exit;
+}
+
+// =========================================================================
+// 6. DATABASE BACKUP & RESTORE
 // =========================================================================
 if ($action === 'backup_db') {
     try {

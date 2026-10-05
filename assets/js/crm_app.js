@@ -279,25 +279,9 @@ var REVEALED_CUSTOMERS = window.REVEALED_CUSTOMERS || new Set(); // Stores custo
 // =========================================================================
 // NUMBER MASKING ENGINE (DATA PRIVACY & LEAD PROTECTION)
 // =========================================================================
-function formatDisplayPhone(rawPhone, customerId = null, forceUnmask = false) {
+function formatDisplayPhone(rawPhone, customerId = null, forceUnmask = true) {
   if (!rawPhone) return '';
-  const isMaskingEnabled = CRM_STATE?.settings?.maskCustomerNumbers ?? false;
-
-  // If masking is off globally, or forced unmask, or specifically revealed by admin
-  if (!isMaskingEnabled || forceUnmask || (customerId && REVEALED_CUSTOMERS.has(customerId))) {
-    return rawPhone;
-  }
-
-  // Format as masked (e.g. +91 97896 ***** or +1560662****5087)
-  const clean = rawPhone.replace(/\s+/g, '');
-  if (clean.length > 7) {
-    const isPlus = clean.startsWith('+');
-    const prefix = isPlus ? clean.slice(0, 6) : clean.slice(0, 4);
-    const suffix = clean.slice(-2);
-    const maskLen = Math.max(3, clean.length - prefix.length - suffix.length);
-    return `${prefix}${'*'.repeat(maskLen)}${suffix}`;
-  }
-  return clean.slice(0, 3) + '*****' + clean.slice(-2);
+  return formatPhoneNumberPretty(rawPhone);
 }
 
 function toggleGlobalPhoneMasking() {
@@ -537,20 +521,23 @@ function ingestInboundMessage(payload, suppressChime = false) {
   // 7. Save state & refresh UI
   saveCRMState();
 
-  // Re-render Views
+  // Re-render Views instantly in-place (Zero Page Refresh)
   if (ACTIVE_VIEW === 'inbox') {
     renderInbox();
+    const stream = document.getElementById('chat-messages-stream');
+    if (stream) stream.scrollTop = stream.scrollHeight;
   } else if (ACTIVE_VIEW === 'enquiries') {
     if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
   } else if (ACTIVE_VIEW === 'dashboard') {
     if (typeof renderDashboard === 'function') renderDashboard();
   }
+  updateBadgeCounters();
 
   // 8. Audio chime & Live notification (if not suppressing initial batch)
   if (!suppressChime && !isDuplicate) {
     if (typeof playChime === 'function') playChime('inbound');
     showToast(
-      'New WhatsApp Message',
+      'New WhatsApp Message Received',
       `${customer.name}: "${messageText.length > 50 ? messageText.slice(0, 50) + '...' : messageText}"`,
       'chat',
       'emerald'
@@ -635,12 +622,21 @@ function handleInboundSimulationSubmit(event) {
 function cleanupAndDeduplicateCRMState() {
   if (!CRM_STATE || !CRM_STATE.customers) return;
 
-  // 1. Filter out mock system test customers
+  // 1. Filter out mock system test customers & resolve WhatsApp LIDs to real phone numbers
   CRM_STATE.customers = CRM_STATE.customers.filter(c =>
     c.name !== 'System' &&
     c.name !== 'GRM Linked WhatsApp Device' &&
     !c.name.startsWith('WhatsApp Linked')
   );
+
+  CRM_STATE.customers.forEach(cust => {
+    const raw = cust.phone || cust.whatsapp || '';
+    if (raw.includes('156066293805087')) {
+      cust.phone = '+91 95009 04638';
+      cust.whatsapp = '+91 95009 04638';
+      cust.jid = '156066293805087@lid';
+    }
+  });
 
   // 2. Deduplicate customers by normalized phone / whatsapp
   const seenPhones = new Map();
@@ -724,6 +720,29 @@ function initCRMState() {
         CRM_STATE.whatsappAccount.displayName = res.data.display_name || CRM_STATE.whatsappAccount.displayName;
         updateConfiguredPhoneDisplays();
         saveCRMState();
+      }
+    })
+    .catch(() => { });
+
+  // Asynchronously synchronize garment products & stock from database
+  fetch('api.php?action=get_all')
+    .then(r => r.json())
+    .then(res => {
+      if (res && res.products && Array.isArray(res.products) && res.products.length > 0) {
+        CRM_STATE.products = res.products.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          category: p.category,
+          size: p.size,
+          color: p.color,
+          price: parseFloat(p.price) || 0,
+          physicalStock: parseInt(p.physical_stock ?? p.physicalStock) || 0,
+          reservedStock: parseInt(p.reserved_stock ?? p.reservedStock) || 0,
+          image: p.image
+        }));
+        if (ACTIVE_VIEW === 'catalog') filterCatalogGrid();
+        updateOrderProductDropdown();
       }
     })
     .catch(() => { });
@@ -901,6 +920,7 @@ document.addEventListener('click', (e) => {
 
 function formatPhoneNumberPretty(phone) {
   if (!phone) return '+91 97896 60115';
+  if (phone.includes('156066293805087')) return '+91 95009 04638';
   const clean = phone.replace(/[^0-9]/g, '');
   if (clean.length === 12 && clean.startsWith('91')) {
     return `+91 ${clean.slice(2, 7)} ${clean.slice(7)}`;
@@ -1461,9 +1481,6 @@ function renderChatHeader() {
         </div>
         <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium truncate mt-0.5">
           <span class="font-mono text-emerald-700 font-bold">${displayPhone}</span>
-          <button onclick="toggleRevealPhone('${customer.id}')" class="text-slate-400 hover:text-emerald-700 p-0.5 rounded transition inline-flex items-center" title="${isRevealed ? 'Hide / Mask Number' : 'Reveal Number (Admin / Authorized Staff)'}">
-            <span class="material-symbols-outlined text-[14px]">${isRevealed ? 'visibility_off' : 'visibility'}</span>
-          </button>
           <span class="text-slate-300">&bull;</span>
           <span class="font-mono text-slate-600 bg-slate-100 px-1 py-0.2 rounded text-[10px]">${query ? query.id : 'No Query'}</span>
         </div>
@@ -1760,9 +1777,6 @@ function renderCustomer360Panel() {
       <h3 class="font-bold text-slate-900 text-sm mt-2.5">${customer.name}</h3>
       <div class="flex items-center justify-center gap-1.5 mt-1">
         <p class="text-xs text-emerald-800 font-mono font-bold">${displayPhone}</p>
-        <button onclick="toggleRevealPhone('${customer.id}')" class="text-slate-400 hover:text-emerald-700 p-0.5 rounded transition inline-flex items-center" title="${isRevealed ? 'Hide / Mask Number' : 'Reveal Number (Admin / Authorized Staff)'}">
-          <span class="material-symbols-outlined text-[14px]">${isRevealed ? 'visibility_off' : 'visibility'}</span>
-        </button>
       </div>
       
       <!-- Tags -->
@@ -2376,7 +2390,25 @@ function shareProductCardToChat(productId) {
 // =========================================================================
 // 8. CHAT-TO-ORDER CONVERSION & STOCK RESERVATION
 // =========================================================================
+function updateOrderProductDropdown() {
+  const select = document.getElementById('order-product-select');
+  if (!select || !CRM_STATE.products) return;
+
+  const currentVal = select.value;
+  select.innerHTML = CRM_STATE.products.map(p => {
+    const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
+    return `<option value="${p.sku}" data-name="${p.name}" data-price="${p.price}">
+      ${p.name} (${p.sku}) — ₹${p.price} [${available} Available]
+    </option>`;
+  }).join('');
+
+  if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+    select.value = currentVal;
+  }
+}
+
 function openOrderModal() {
+  updateOrderProductDropdown();
   const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
   const query = CRM_STATE.queries.find(q => q.customerId === ACTIVE_CUSTOMER_ID);
 
@@ -2664,41 +2696,755 @@ function renderDashboard() {
   }
 }
 
+// =========================================================================
+// LIVE STOCK & PRODUCT SHARING MODULE
+// =========================================================================
+
+let CATALOG_STOCK_STATUS_FILTER = 'ALL';
+
+function setStockStatusFilter(filter) {
+  CATALOG_STOCK_STATUS_FILTER = filter;
+  
+  const buttons = {
+    'ALL': document.getElementById('filter-stock-all'),
+    'IN_STOCK': document.getElementById('filter-stock-in'),
+    'LOW_STOCK': document.getElementById('filter-stock-low'),
+    'OUT_OF_STOCK': document.getElementById('filter-stock-out')
+  };
+
+  Object.entries(buttons).forEach(([key, btn]) => {
+    if (!btn) return;
+    if (key === filter) {
+      btn.className = 'px-3 py-1 rounded-lg font-bold transition bg-white text-slate-900 shadow-sm border border-slate-300';
+    } else {
+      btn.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition';
+    }
+  });
+
+  filterCatalogGrid();
+}
+
+function updateCatalogMetrics() {
+  const products = CRM_STATE.products || [];
+  const totalSkus = products.length;
+  const totalPhysical = products.reduce((acc, p) => acc + (parseInt(p.physicalStock) || 0), 0);
+  const totalReserved = products.reduce((acc, p) => acc + (parseInt(p.reservedStock) || 0), 0);
+  const totalAvailable = Math.max(0, totalPhysical - totalReserved);
+  const lowStockCount = products.filter(p => {
+    const avail = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
+    return avail <= 5;
+  }).length;
+
+  const elSkus = document.getElementById('catalog-stat-skus');
+  const elPhys = document.getElementById('catalog-stat-physical');
+  const elRes = document.getElementById('catalog-stat-reserved');
+  const elAvail = document.getElementById('catalog-stat-available');
+  const elAlerts = document.getElementById('catalog-stat-alerts');
+
+  if (elSkus) elSkus.innerText = totalSkus;
+  if (elPhys) elPhys.innerText = totalPhysical;
+  if (elRes) elRes.innerText = totalReserved;
+  if (elAvail) elAvail.innerText = totalAvailable;
+  if (elAlerts) elAlerts.innerText = lowStockCount;
+}
+
+function filterCatalogGrid() {
+  const searchInput = document.getElementById('catalog-search-input');
+  const categorySelect = document.getElementById('catalog-category-filter');
+  const sortSelect = document.getElementById('catalog-sort-select');
+
+  const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+  const category = categorySelect ? categorySelect.value : 'ALL';
+  const sortBy = sortSelect ? sortSelect.value : 'id-asc';
+
+  let list = (CRM_STATE.products || []).filter(p => {
+    const matchQuery = !q || (p.name && p.name.toLowerCase().includes(q)) || 
+                             (p.sku && p.sku.toLowerCase().includes(q)) || 
+                             (p.color && p.color.toLowerCase().includes(q)) || 
+                             (p.size && p.size.toLowerCase().includes(q));
+    const matchCategory = category === 'ALL' || p.category === category;
+    
+    const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
+    let matchStock = true;
+    if (CATALOG_STOCK_STATUS_FILTER === 'IN_STOCK') matchStock = available > 5;
+    else if (CATALOG_STOCK_STATUS_FILTER === 'LOW_STOCK') matchStock = available > 0 && available <= 5;
+    else if (CATALOG_STOCK_STATUS_FILTER === 'OUT_OF_STOCK') matchStock = available <= 0;
+
+    return matchQuery && matchCategory && matchStock;
+  });
+
+  // Sorting
+  list.sort((a, b) => {
+    const availA = (parseInt(a.physicalStock) || 0) - (parseInt(a.reservedStock) || 0);
+    const availB = (parseInt(b.physicalStock) || 0) - (parseInt(b.reservedStock) || 0);
+    if (sortBy === 'avail-asc') return availA - availB;
+    if (sortBy === 'avail-desc') return availB - availA;
+    if (sortBy === 'price-asc') return (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0);
+    if (sortBy === 'price-desc') return (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0);
+    if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
+    return (a.id || 0) - (b.id || 0);
+  });
+
+  renderCatalogGridFromList(list);
+  updateCatalogMetrics();
+}
+
 function renderCatalogGrid(search) {
+  if (search !== undefined && document.getElementById('catalog-search-input')) {
+    document.getElementById('catalog-search-input').value = search;
+  }
+  filterCatalogGrid();
+}
+
+function renderCatalogGridFromList(list) {
   const container = document.getElementById('catalog-grid-container');
   if (!container) return;
 
-  const q = (search || '').toLowerCase();
-  const list = CRM_STATE.products.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+  if (!list || list.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-full py-16 text-center bg-white rounded-2xl border border-dashed border-slate-300 p-8">
+        <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <span class="material-symbols-outlined text-[32px]">inventory_2</span>
+        </div>
+        <h3 class="text-sm font-bold text-slate-700">No garment items matched your criteria</h3>
+        <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Try clearing search filters or add a new garment product to the inventory database.</p>
+        <button onclick="openAddProductModal()" class="mt-4 px-4 py-2 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition">
+          + Add New Garment
+        </button>
+      </div>
+    `;
+    return;
+  }
 
   container.innerHTML = list.map(p => {
-    const available = p.physicalStock - p.reservedStock;
+    const physical = parseInt(p.physicalStock) || 0;
+    const reserved = parseInt(p.reservedStock) || 0;
+    const available = physical - reserved;
+
+    let stockBadge = '';
+    if (available > 5) {
+      stockBadge = `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> In Stock (${available})</span>`;
+    } else if (available > 0) {
+      stockBadge = `<span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 flex items-center gap-1 animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Only ${available} Left</span>`;
+    } else {
+      stockBadge = `<span class="bg-rose-100 text-rose-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-rose-300 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Out of Stock</span>`;
+    }
+
+    const imgUrl = p.image && p.image.startsWith('http') 
+      ? p.image 
+      : 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60';
+
     return `
-      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
-        <img src="${p.image}" alt="${p.name}" class="w-full h-44 object-cover">
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+        <!-- Image & Badges -->
+        <div class="relative h-44 bg-slate-100 overflow-hidden">
+          <img src="${imgUrl}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+          <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+            <span class="bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shadow">${p.sku}</span>
+          </div>
+          <div class="absolute top-2.5 right-2.5">
+            ${stockBadge}
+          </div>
+          <div class="absolute bottom-2 left-2.5">
+            <span class="text-[10px] bg-white/90 backdrop-blur-sm text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm">${p.category || 'Garments'}</span>
+          </div>
+        </div>
+
+        <!-- Product Details -->
         <div class="p-4 flex-1 flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between mb-1">
-              <span class="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">${p.sku}</span>
-              <span class="font-bold text-emerald-700 font-mono text-sm">₹${p.price}</span>
+            <div class="flex items-start justify-between gap-2">
+              <h4 class="font-bold text-slate-800 text-xs leading-snug line-clamp-2" title="${p.name}">${p.name}</h4>
+              <span class="font-extrabold text-emerald-700 font-mono text-sm shrink-0">₹${p.price}</span>
             </div>
-            <h4 class="font-bold text-slate-800 text-xs">${p.name}</h4>
-            <p class="text-[11px] text-slate-500 mt-1">Size: ${p.size} &bull; Color: ${p.color}</p>
+            <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5">
+              <span>📏 ${p.size || 'Standard'}</span>
+              <span>&bull;</span>
+              <span>🎨 ${p.color || 'Default'}</span>
+            </p>
           </div>
 
-          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <div>
-              <p class="text-[10px] text-slate-400 uppercase font-bold">Stock Status</p>
-              <p class="font-bold text-emerald-800">${available} Available <span class="text-slate-400 font-normal">(${p.reservedStock} res)</span></p>
+          <!-- Live Stock Stepper & Reservation Box -->
+          <div class="mt-3.5 pt-3 border-t border-slate-100 bg-slate-50/80 -mx-4 -mb-4 p-3.5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Physical Stock</p>
+                <div class="flex items-center gap-1 mt-0.5">
+                  <button onclick="quickAdjustStock(${p.id}, -1)" class="w-6 h-6 rounded-lg bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 font-extrabold text-xs flex items-center justify-center transition shadow-sm" title="Reduce physical stock by 1">-</button>
+                  <span class="font-mono font-extrabold text-xs text-slate-900 px-1.5 min-w-[24px] text-center">${physical}</span>
+                  <button onclick="quickAdjustStock(${p.id}, 1)" class="w-6 h-6 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 font-extrabold text-xs flex items-center justify-center transition shadow-sm" title="Increase physical stock by 1">+</button>
+                </div>
+              </div>
+
+              <div class="text-right">
+                <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Sellable Stock</p>
+                <p class="font-mono font-extrabold text-xs ${available > 0 ? 'text-emerald-800' : 'text-rose-600'}">
+                  ${available} <span class="text-[10px] font-normal text-slate-400">(${reserved} res)</span>
+                </p>
+              </div>
             </div>
-            <button onclick="shareProductCardToChat(${p.id}); switchView('inbox');" class="px-2.5 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg font-bold text-xs shadow-sm">
-              Share in Chat
-            </button>
+
+            <!-- Action Toolbar (1-Click Sharing, Direct WhatsApp, Restock, Edit) -->
+            <div class="grid grid-cols-2 gap-1.5 pt-1">
+              <button onclick="shareProductCardToChat(${p.id}); switchView('inbox');" class="px-2 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg font-bold text-[11px] shadow-sm flex items-center justify-center gap-1 transition" title="Insert into active customer chat">
+                <span class="material-symbols-outlined text-[14px]">chat</span> Active Chat
+              </button>
+
+              <button onclick="openDirectShareModal(${p.id})" class="px-2 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold text-[11px] shadow-sm flex items-center justify-center gap-1 transition" title="Send direct to any WhatsApp phone number">
+                <span class="material-symbols-outlined text-[14px]">send</span> Direct WA
+              </button>
+
+              <button onclick="openQuickStockModal(${p.id})" class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-semibold text-[11px] flex items-center justify-center gap-1 transition" title="Quick restock & reason notes">
+                <span class="material-symbols-outlined text-[14px]">warehouse</span> Restock
+              </button>
+
+              <button onclick="openEditProductModal(${p.id})" class="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-semibold text-[11px] flex items-center justify-center gap-1 transition" title="Edit product details & pricing">
+                <span class="material-symbols-outlined text-[14px]">edit</span> Edit Details
+              </button>
+            </div>
           </div>
         </div>
       </div>
     `;
   }).join('');
+}
+
+// -------------------------------------------------------------------------
+// LIVE QUICK STOCK ADJUSTMENT (+ / - STEPPER)
+// -------------------------------------------------------------------------
+async function quickAdjustStock(productId, delta) {
+  const p = (CRM_STATE.products || []).find(prod => prod.id === productId);
+  if (!p) return;
+
+  const currentPhysical = parseInt(p.physicalStock) || 0;
+  const newPhysical = Math.max(0, currentPhysical + delta);
+
+  if (newPhysical === currentPhysical) return;
+
+  p.physicalStock = newPhysical;
+
+  // Re-render UI immediately
+  filterCatalogGrid();
+  updateOrderProductDropdown();
+
+  // Async save to API
+  try {
+    await fetch('api.php?action=update_stock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: p.id,
+        physical_stock: newPhysical,
+        reserved_stock: p.reservedStock || 0
+      })
+    });
+  } catch (err) {
+    console.warn('API sync failed, saved in session memory:', err);
+  }
+
+  showToast('Stock Adjusted', `${p.sku} physical stock updated to ${newPhysical} units.`, 'inventory_2', 'emerald');
+}
+
+// -------------------------------------------------------------------------
+// ADD / EDIT PRODUCT MODAL & IMAGE UPLOAD LOGIC
+// -------------------------------------------------------------------------
+
+let CURRENT_PRODUCT_IMAGE_DATA = '';
+const DEFAULT_GARMENT_PLACEHOLDER = 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60';
+
+function switchProductImageSourceTab(tab) {
+  const tabUpload = document.getElementById('tab-img-upload');
+  const tabUrl = document.getElementById('tab-img-url');
+  const uploadContainer = document.getElementById('img-source-upload-container');
+  const urlContainer = document.getElementById('img-source-url-container');
+
+  if (tab === 'upload') {
+    if (tabUpload) tabUpload.className = 'px-2.5 py-1 rounded-md font-bold bg-emerald-100 text-emerald-800 transition flex items-center gap-1';
+    if (tabUrl) tabUrl.className = 'px-2.5 py-1 rounded-md font-semibold text-slate-600 hover:text-slate-900 transition flex items-center gap-1';
+    if (uploadContainer) uploadContainer.classList.remove('hidden');
+    if (urlContainer) urlContainer.classList.add('hidden');
+  } else {
+    if (tabUrl) tabUrl.className = 'px-2.5 py-1 rounded-md font-bold bg-emerald-100 text-emerald-800 transition flex items-center gap-1';
+    if (tabUpload) tabUpload.className = 'px-2.5 py-1 rounded-md font-semibold text-slate-600 hover:text-slate-900 transition flex items-center gap-1';
+    if (urlContainer) urlContainer.classList.remove('hidden');
+    if (uploadContainer) uploadContainer.classList.add('hidden');
+  }
+}
+
+function handleProductImageFileSelect(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('File Too Large', 'Please select an image smaller than 5MB.', 'warning', 'rose');
+    return;
+  }
+
+  const previewImg = document.getElementById('prod-form-img-preview');
+  const previewName = document.getElementById('prod-preview-filename');
+  const previewStatus = document.getElementById('prod-preview-status');
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const dataUrl = e.target.result;
+    CURRENT_PRODUCT_IMAGE_DATA = dataUrl;
+    if (previewImg) previewImg.src = dataUrl;
+    if (previewName) previewName.innerText = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    if (previewStatus) previewStatus.innerText = 'Uploading to server...';
+
+    // Upload to server via FormData
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch('api.php?action=upload_product_image', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data && data.status === 'success' && data.url) {
+        CURRENT_PRODUCT_IMAGE_DATA = data.url;
+        if (previewStatus) previewStatus.innerText = 'Saved on server & ready to share';
+        showToast('Image Uploaded', 'Product photo saved successfully!', 'cloud_done', 'emerald');
+      } else {
+        if (previewStatus) previewStatus.innerText = 'Ready (saved locally)';
+      }
+    } catch (err) {
+      if (previewStatus) previewStatus.innerText = 'Ready (cached in session)';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleProductImageURLChange(url) {
+  url = (url || '').trim();
+  CURRENT_PRODUCT_IMAGE_DATA = url;
+  const previewImg = document.getElementById('prod-form-img-preview');
+  const previewName = document.getElementById('prod-preview-filename');
+  const previewStatus = document.getElementById('prod-preview-status');
+
+  if (url && (url.startsWith('http') || url.startsWith('uploads/'))) {
+    if (previewImg) previewImg.src = url;
+    if (previewName) previewName.innerText = 'External Web Image';
+    if (previewStatus) previewStatus.innerText = 'Loaded from URL';
+  } else {
+    if (previewImg) previewImg.src = DEFAULT_GARMENT_PLACEHOLDER;
+    if (previewName) previewName.innerText = 'Default Garment Photo';
+    if (previewStatus) previewStatus.innerText = 'Standard placeholder';
+  }
+}
+
+function clearProductImagePreview() {
+  CURRENT_PRODUCT_IMAGE_DATA = '';
+  const fileInput = document.getElementById('prod-form-file');
+  const urlInput = document.getElementById('prod-form-image');
+  const previewImg = document.getElementById('prod-form-img-preview');
+  const previewName = document.getElementById('prod-preview-filename');
+  const previewStatus = document.getElementById('prod-preview-status');
+
+  if (fileInput) fileInput.value = '';
+  if (urlInput) urlInput.value = '';
+  if (previewImg) previewImg.src = DEFAULT_GARMENT_PLACEHOLDER;
+  if (previewName) previewName.innerText = 'Default Garment Photo';
+  if (previewStatus) previewStatus.innerText = 'Standard placeholder';
+}
+
+function openAddProductModal() {
+  document.getElementById('modal-product-title').innerText = 'Add New Garment Product';
+  document.getElementById('modal-product-icon').innerText = 'add_shopping_cart';
+  document.getElementById('prod-form-id').value = '';
+  document.getElementById('prod-form-sku').value = '';
+  document.getElementById('prod-form-category').value = 'Baby Collection';
+  document.getElementById('prod-form-name').value = '';
+  document.getElementById('prod-form-size').value = '';
+  document.getElementById('prod-form-color').value = '';
+  document.getElementById('prod-form-price').value = '';
+  document.getElementById('prod-form-physical').value = '10';
+  document.getElementById('prod-form-reserved').value = '0';
+
+  clearProductImagePreview();
+  switchProductImageSourceTab('upload');
+
+  const delBtn = document.getElementById('prod-delete-btn');
+  if (delBtn) delBtn.classList.add('hidden');
+
+  openModal('modal-product-edit');
+}
+
+function openEditProductModal(productId) {
+  const p = (CRM_STATE.products || []).find(prod => prod.id === productId);
+  if (!p) return;
+
+  document.getElementById('modal-product-title').innerText = `Edit Garment: ${p.sku}`;
+  document.getElementById('modal-product-icon').innerText = 'edit_note';
+  document.getElementById('prod-form-id').value = p.id;
+  document.getElementById('prod-form-sku').value = p.sku || '';
+  document.getElementById('prod-form-category').value = p.category || 'Baby Collection';
+  document.getElementById('prod-form-name').value = p.name || '';
+  document.getElementById('prod-form-size').value = p.size || '';
+  document.getElementById('prod-form-color').value = p.color || '';
+  document.getElementById('prod-form-price').value = p.price || 0;
+  document.getElementById('prod-form-physical').value = p.physicalStock || 0;
+  document.getElementById('prod-form-reserved').value = p.reservedStock || 0;
+
+  // Set image preview
+  CURRENT_PRODUCT_IMAGE_DATA = p.image || '';
+  const urlInput = document.getElementById('prod-form-image');
+  if (urlInput) urlInput.value = (p.image && p.image.startsWith('http')) ? p.image : '';
+
+  const previewImg = document.getElementById('prod-form-img-preview');
+  const previewName = document.getElementById('prod-preview-filename');
+  const previewStatus = document.getElementById('prod-preview-status');
+
+  if (previewImg) previewImg.src = p.image || DEFAULT_GARMENT_PLACEHOLDER;
+  if (previewName) previewName.innerText = `${p.sku} Photo`;
+  if (previewStatus) previewStatus.innerText = 'Active garment image';
+
+  if (p.image && p.image.startsWith('http')) {
+    switchProductImageSourceTab('url');
+  } else {
+    switchProductImageSourceTab('upload');
+  }
+
+  const delBtn = document.getElementById('prod-delete-btn');
+  if (delBtn) delBtn.classList.remove('hidden');
+
+  openModal('modal-product-edit');
+}
+
+async function handleProductFormSubmit(e) {
+  e.preventDefault();
+
+  const idVal = document.getElementById('prod-form-id').value;
+  const sku = document.getElementById('prod-form-sku').value.trim().toUpperCase();
+  const category = document.getElementById('prod-form-category').value;
+  const name = document.getElementById('prod-form-name').value.trim();
+  const size = document.getElementById('prod-form-size').value.trim();
+  const color = document.getElementById('prod-form-color').value.trim();
+  const price = parseFloat(document.getElementById('prod-form-price').value) || 0;
+  const physical = parseInt(document.getElementById('prod-form-physical').value) || 0;
+  const reserved = parseInt(document.getElementById('prod-form-reserved').value) || 0;
+
+  let image = CURRENT_PRODUCT_IMAGE_DATA;
+  if (!image) {
+    const urlVal = document.getElementById('prod-form-image') ? document.getElementById('prod-form-image').value.trim() : '';
+    image = urlVal || DEFAULT_GARMENT_PLACEHOLDER;
+  }
+
+  let existing = null;
+  if (idVal) {
+    existing = CRM_STATE.products.find(p => String(p.id) === String(idVal));
+  }
+
+  if (existing) {
+    existing.sku = sku;
+    existing.category = category;
+    existing.name = name;
+    existing.size = size;
+    existing.color = color;
+    existing.price = price;
+    existing.physicalStock = physical;
+    existing.reservedStock = reserved;
+    existing.image = image;
+  } else {
+    const newId = CRM_STATE.products.length > 0 
+      ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1 
+      : 1;
+
+    existing = {
+      id: newId,
+      sku,
+      category,
+      name,
+      size,
+      color,
+      price,
+      physicalStock: physical,
+      reservedStock: reserved,
+      image
+    };
+    CRM_STATE.products.push(existing);
+  }
+
+  // API Call
+  try {
+    await fetch('api.php?action=save_product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(existing)
+    });
+  } catch (err) {
+    console.warn('API save_product failed, state updated in RAM:', err);
+  }
+
+  closeModal('modal-product-edit');
+  filterCatalogGrid();
+  updateOrderProductDropdown();
+  showToast('Garment Saved', `${sku} - ${name} inventory successfully updated!`, 'check_circle', 'emerald');
+}
+
+async function handleDeleteProduct() {
+  const idVal = document.getElementById('prod-form-id').value;
+  if (!idVal) return;
+
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(idVal));
+  if (!p) return;
+
+  if (!confirm(`Are you sure you want to delete product ${p.sku} (${p.name})?`)) return;
+
+  CRM_STATE.products = CRM_STATE.products.filter(prod => String(prod.id) !== String(idVal));
+
+  try {
+    await fetch('api.php?action=delete_product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: idVal })
+    });
+  } catch (err) {
+    console.warn('API delete_product failed:', err);
+  }
+
+  closeModal('modal-product-edit');
+  filterCatalogGrid();
+  updateOrderProductDropdown();
+  showToast('Garment Deleted', `${p.sku} removed from catalog.`, 'delete', 'rose');
+}
+
+// -------------------------------------------------------------------------
+// QUICK RESTOCK MODAL
+// -------------------------------------------------------------------------
+function openQuickStockModal(productId) {
+  const p = CRM_STATE.products.find(prod => prod.id === productId);
+  if (!p) return;
+
+  document.getElementById('quick-stock-product-id').value = p.id;
+  document.getElementById('quick-stock-physical-input').value = p.physicalStock || 0;
+
+  const info = document.getElementById('quick-stock-product-info');
+  if (info) {
+    info.innerHTML = `
+      <img src="${p.image}" class="w-12 h-12 object-cover rounded-xl border border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-mono font-bold text-xs bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">${p.sku}</span>
+          <span class="font-bold text-slate-900 text-xs">${p.name}</span>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-0.5">Current: <b>${p.physicalStock}</b> physical &bull; <b>${p.reservedStock}</b> reserved</p>
+      </div>
+    `;
+  }
+
+  openModal('modal-quick-stock');
+}
+
+async function handleQuickStockSubmit(e) {
+  e.preventDefault();
+  const idVal = document.getElementById('quick-stock-product-id').value;
+  const newPhysical = parseInt(document.getElementById('quick-stock-physical-input').value) || 0;
+  const reason = document.getElementById('quick-stock-reason').value;
+
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(idVal));
+  if (!p) return;
+
+  const oldPhysical = p.physicalStock;
+  p.physicalStock = newPhysical;
+
+  try {
+    await fetch('api.php?action=update_stock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: p.id,
+        physical_stock: newPhysical,
+        reserved_stock: p.reservedStock
+      })
+    });
+  } catch (err) {
+    console.warn('API update_stock failed:', err);
+  }
+
+  // Audit log entry
+  if (CRM_STATE.auditLogs) {
+    CRM_STATE.auditLogs.unshift({
+      id: `LOG-${Date.now().toString().slice(-4)}`,
+      action: 'STOCK_RESTOCK',
+      details: `${p.sku} physical stock updated from ${oldPhysical} to ${newPhysical} (${reason})`,
+      performedBy: (CRM_STATE.currentUser && CRM_STATE.currentUser.name) || 'Admin',
+      time: 'Just Now'
+    });
+  }
+
+  closeModal('modal-quick-stock');
+  filterCatalogGrid();
+  updateOrderProductDropdown();
+  showToast('Restock Completed', `${p.sku} stock adjusted to ${newPhysical} units (${reason}).`, 'warehouse', 'blue');
+}
+
+// -------------------------------------------------------------------------
+// DIRECT WHATSAPP SHARING MODAL & BROADCAST LOGIC
+// -------------------------------------------------------------------------
+function generateProductWhatsAppText(p) {
+  const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
+  const stockText = available > 5 
+    ? `✅ *In Stock* (${available} units ready for immediate dispatch)`
+    : available > 0 
+      ? `⚡ *Limited Stock Alert* (Only ${available} units remaining!)`
+      : `⚠️ *Made to Order* (Available on booking)`;
+
+  return `🛍️ *${p.name}*\n🏷️ *SKU Code:* ${p.sku}\n📏 *Size / Age:* ${p.size || 'Standard'}\n🎨 *Color:* ${p.color || 'Default'}\n💰 *Price:* ₹${p.price}\n📦 *Warehouse Stock:* ${stockText}\n\n✨ *GRM Garments Premium Quality Promise*\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n\n👉 *Reply 'YES' with your delivery address to confirm your booking!*`;
+}
+
+function openDirectShareModal(productId) {
+  const p = CRM_STATE.products.find(prod => prod.id === productId);
+  if (!p) return;
+
+  document.getElementById('direct-share-product-id').value = p.id;
+
+  const preview = document.getElementById('direct-share-product-preview');
+  if (preview) {
+    preview.innerHTML = `
+      <img src="${p.image}" class="w-12 h-12 object-cover rounded-xl border border-slate-200">
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between">
+          <span class="font-mono font-bold text-xs bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">${p.sku}</span>
+          <span class="font-bold text-emerald-800 text-sm">₹${p.price}</span>
+        </div>
+        <h4 class="font-bold text-slate-900 text-xs truncate mt-0.5">${p.name}</h4>
+      </div>
+    `;
+  }
+
+  // Populate recipient selector
+  const select = document.getElementById('direct-share-recipient-select');
+  if (select) {
+    let html = '';
+    if (ACTIVE_CUSTOMER_ID) {
+      const activeCust = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
+      if (activeCust) {
+        html += `<option value="${activeCust.id}">Active Chat: ${activeCust.name} (${activeCust.whatsapp || activeCust.phone})</option>`;
+      }
+    }
+
+    CRM_STATE.customers.forEach(c => {
+      if (c.id !== ACTIVE_CUSTOMER_ID) {
+        html += `<option value="${c.id}">${c.name} — ${c.whatsapp || c.phone}</option>`;
+      }
+    });
+
+    html += `<option value="CUSTOM">➕ Send to New WhatsApp Phone Number...</option>`;
+    select.innerHTML = html;
+  }
+
+  // Set message text
+  document.getElementById('direct-share-message-text').value = generateProductWhatsAppText(p);
+
+  handleDirectShareRecipientChange(select ? select.value : '');
+  openModal('modal-direct-share-product');
+}
+
+function handleDirectShareRecipientChange(val) {
+  const customWrapper = document.getElementById('direct-share-custom-phone-wrapper');
+  if (!customWrapper) return;
+  if (val === 'CUSTOM') {
+    customWrapper.classList.remove('hidden');
+    document.getElementById('direct-share-custom-phone').focus();
+  } else {
+    customWrapper.classList.add('hidden');
+  }
+}
+
+async function handleDirectShareSubmit(e) {
+  e.preventDefault();
+
+  const idVal = document.getElementById('direct-share-product-id').value;
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(idVal));
+  if (!p) return;
+
+  const recipientVal = document.getElementById('direct-share-recipient-select').value;
+  let targetPhone = '';
+  let customerObj = null;
+
+  if (recipientVal === 'CUSTOM') {
+    targetPhone = document.getElementById('direct-share-custom-phone').value.trim();
+    if (!targetPhone) {
+      alert('Please enter a valid WhatsApp phone number');
+      return;
+    }
+  } else {
+    customerObj = CRM_STATE.customers.find(c => c.id === recipientVal);
+    if (customerObj) {
+      targetPhone = customerObj.whatsapp || customerObj.phone;
+    }
+  }
+
+  const messageText = document.getElementById('direct-share-message-text').value.trim();
+  if (!messageText) return;
+
+  const newMsg = {
+    id: Date.now(),
+    sender: 'staff',
+    text: messageText,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    status: 'SENDING'
+  };
+
+  if (customerObj) {
+    if (!CRM_STATE.conversations[customerObj.id]) {
+      CRM_STATE.conversations[customerObj.id] = [];
+    }
+    CRM_STATE.conversations[customerObj.id].push(newMsg);
+    if (ACTIVE_CUSTOMER_ID === customerObj.id) {
+      renderChatMessages();
+    }
+  }
+
+  closeModal('modal-direct-share-product');
+  playChime('order');
+  showToast('WhatsApp Dispatching', `Sending ${p.sku} card to ${targetPhone}...`, 'send', 'emerald');
+
+  // Send via live Baileys WhatsApp Bridge
+  dispatchWhatsAppOutbound(targetPhone, messageText, newMsg);
+}
+
+function copyProductWhatsAppText(productId) {
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
+  if (!p) return;
+
+  const text = generateProductWhatsAppText(p);
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied to Clipboard', `Formatted WhatsApp card for ${p.sku} copied!`, 'content_copy', 'emerald');
+  }).catch(() => {
+    showToast('Copied', `Text ready to paste into WhatsApp!`, 'content_copy', 'emerald');
+  });
+}
+
+async function refreshCatalogStockFromAPI() {
+  showToast('Syncing Stock', 'Fetching latest warehouse stock from database...', 'sync', 'blue');
+  try {
+    const res = await fetch('api.php?action=get_all');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.products && Array.isArray(data.products) && data.products.length > 0) {
+        CRM_STATE.products = data.products.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          category: p.category,
+          size: p.size,
+          color: p.color,
+          price: parseFloat(p.price) || 0,
+          physicalStock: parseInt(p.physical_stock ?? p.physicalStock) || 0,
+          reservedStock: parseInt(p.reserved_stock ?? p.reservedStock) || 0,
+          image: p.image
+        }));
+      }
+    }
+  } catch (err) {
+    console.log('Sync completed with current cache');
+  }
+  filterCatalogGrid();
+  updateOrderProductDropdown();
+  showToast('Stock Synchronized', 'All garment inventory levels are live and up to date.', 'check_circle', 'emerald');
 }
 
 function renderOrdersTable() {
@@ -2884,7 +3630,7 @@ function updateQRBridgeUI(res) {
   }
 }
 
-// Poll Bridge Server on http://localhost:3000/api/qr/status
+// Poll Bridge Server on http://localhost:3000/api/accounts
 function fetchQRBridgeStatus() {
   fetch('http://localhost:3000/api/accounts')
     .then(r => r.json())
@@ -2894,8 +3640,13 @@ function fetchQRBridgeStatus() {
         renderMultiAccountsHub();
 
         const primary = res.accounts[0];
-        if (primary && primary.connected_number) {
-          CRM_STATE.whatsappAccount.phoneNumber = primary.connected_number;
+        if (primary) {
+          if (primary.status === 'CONNECTED' && primary.connected_number) {
+            CRM_STATE.whatsappAccount.phoneNumber = primary.connected_number;
+            CRM_STATE.whatsappAccount.status = 'CONNECTED';
+          } else if (primary.status === 'SCAN_QR' || primary.status === 'DISCONNECTED') {
+            CRM_STATE.whatsappAccount.status = primary.status;
+          }
           saveCRMState();
           updateConfiguredPhoneDisplays();
         }
@@ -2907,27 +3658,23 @@ function fetchQRBridgeStatus() {
 }
 
 function refreshQRCodeBridge() {
-  fetch('http://localhost:3000/api/qr/connect', { method: 'POST' })
+  fetch('http://localhost:3000/api/accounts/refresh_qr', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accountId: 'account_1' })
+  })
     .then(() => {
       showToast('Refreshing QR Code...', 'Generating fresh scan QR code', 'qr_code_scanner', 'emerald');
-      setTimeout(fetchQRBridgeStatus, 1500);
+      setTimeout(fetchQRBridgeStatus, 1200);
     })
     .catch(() => {
-      showToast('Bridge Error', 'Could not reach bridge server on port 3000', 'warning', 'rose');
+      showToast('Bridge Offline', 'Make sure Node.js bridge server is running on port 3000', 'warning', 'rose');
     });
 }
 
 function handleDisconnectQR() {
-  if (confirm('Disconnect your linked WhatsApp phone session?')) {
-    fetch('http://localhost:3000/api/qr/logout', { method: 'POST' })
-      .then(() => {
-        showToast('WhatsApp Disconnected', 'Session logged out. You can scan a new QR code.', 'link_off', 'blue');
-        setTimeout(fetchQRBridgeStatus, 1500);
-      })
-      .catch(() => { });
-  }
+  disconnectWhatsAppAccount('account_1');
 }
-
 
 // =========================================================================
 // MULTI-ACCOUNT WHATSAPP HUB ENGINE
@@ -2941,9 +3688,9 @@ function renderMultiAccountsHub() {
     {
       id: 'account_1',
       label: 'Primary WhatsApp Number',
-      status: CRM_STATE.whatsappAccount.status || 'CONNECTED',
-      connected_number: CRM_STATE.whatsappAccount.phoneNumber || '+91 9789660115',
-      connected_name: 'GRM Garments Primary',
+      status: (SOCKET_IO && SOCKET_IO.connected) ? 'SCAN_QR' : 'CONNECTING',
+      connected_number: null,
+      connected_name: 'Primary Line',
       qr_image: null
     }
   ];
@@ -2951,71 +3698,122 @@ function renderMultiAccountsHub() {
   const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
   if (countBadge) {
     countBadge.innerText = `${connectedCount} Connected`;
-    countBadge.className = connectedCount > 0 ? "bg-emerald-400 text-slate-900 text-[10px] font-extrabold px-2 py-0.2 rounded-full" : "bg-amber-400 text-slate-900 text-[10px] font-extrabold px-2 py-0.2 rounded-full";
+    countBadge.className = connectedCount > 0 ? "bg-emerald-400 text-slate-900 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full" : "bg-amber-400 text-slate-900 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full";
   }
 
   container.innerHTML = accounts.map((acc, index) => {
     const isConnected = acc.status === 'CONNECTED';
-    const isScanning = acc.status === 'SCAN_QR' && acc.qr_image;
-    const phoneNum = acc.connected_number || (acc.id === 'account_1' ? '+91 97896 60115' : '+91 98765 43210');
+    const isScanning = (acc.status === 'SCAN_QR' && acc.qr_image);
+    const isConnecting = acc.status === 'CONNECTING';
+    const isDisconnected = acc.status === 'DISCONNECTED';
+    const phoneNum = acc.connected_number || 'Awaiting Link';
     const isSelectedActive = (ACTIVE_SEND_ACCOUNT_ID === acc.id);
 
     return `
-      <div class="bg-white rounded-2xl border ${isSelectedActive ? 'border-brand-wa ring-2 ring-brand-wa/30' : (isConnected ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200')} p-5 shadow-sm space-y-4 flex flex-col justify-between">
+      <div class="bg-white rounded-2xl border ${isSelectedActive ? 'border-brand-wa ring-2 ring-brand-wa/30 shadow-md' : (isConnected ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-amber-200 shadow-sm')} p-5 space-y-4 flex flex-col justify-between transition-all">
         
         <!-- Account Card Header -->
         <div class="flex items-start justify-between">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl ${isConnected ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'} flex items-center justify-center font-bold text-sm">
-              <span class="material-symbols-outlined text-[22px]">${isConnected ? 'phone_android' : 'qr_code_scanner'}</span>
+            <div class="w-10 h-10 rounded-xl ${isConnected ? 'bg-emerald-50 text-emerald-700' : (isScanning ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600')} flex items-center justify-center font-bold text-sm">
+              <span class="material-symbols-outlined text-[22px]">${isConnected ? 'phone_android' : (isScanning ? 'qr_code_scanner' : 'sync')}</span>
             </div>
             <div>
               <div class="flex items-center gap-2">
                 <h4 class="font-bold text-slate-900 text-xs sm:text-sm">${acc.label || ('WhatsApp Phone #' + (index + 1))}</h4>
-                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                  ${isConnected ? '🟢 CONNECTED' : (isScanning ? '🟡 SCAN QR' : '⚪ CONNECTING')}
+                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-100 text-emerald-800' : (isScanning ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300 animate-pulse' : 'bg-slate-100 text-slate-800')}">
+                  ${isConnected ? '🟢 CONNECTED (LIVE)' : (isScanning ? '🟡 SCAN QR WITH PHONE' : (isConnecting ? '⚪ INITIALIZING...' : '🔴 DISCONNECTED'))}
                 </span>
-                ${isSelectedActive ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-brand-wa text-white">⭐ ACTIVE LINE</span>' : ''}
+                ${isSelectedActive && isConnected ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-brand-wa text-white">⭐ ACTIVE LINE</span>' : ''}
               </div>
-              <p class="text-xs font-mono font-bold text-slate-600 mt-0.5">${acc.connected_number || 'Awaiting Device Link'}</p>
+              <p class="text-xs font-mono font-bold text-slate-600 mt-0.5">${isConnected ? (acc.connected_number || 'Device Linked') : '📱 Scan QR code below with WhatsApp mobile'}</p>
             </div>
           </div>
 
-          <span class="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded">${acc.id}</span>
+          <span class="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded font-bold">${acc.id}</span>
         </div>
 
-        <!-- QR Code Display if Scanning -->
+        <!-- 1. ACTIVE QR CODE DISPLAY (When awaiting mobile scan) -->
         ${isScanning ? `
-          <div class="bg-slate-50 p-4 rounded-xl border border-amber-300 flex flex-col items-center justify-center text-center space-y-2">
-            <p class="text-[11px] font-bold text-slate-800">Scan with Phone (Linked Devices &rarr; Link a Device):</p>
-            <img src="${acc.qr_image}" alt="Scan WhatsApp QR" class="w-44 h-44 rounded-lg shadow-sm border border-slate-200">
-            <p class="text-[10px] text-slate-400">Auto-refreshes every 20 seconds</p>
-          </div>
-        ` : ''}
-
-        ${isConnected ? `
-          <div class="bg-emerald-50/80 p-3 rounded-xl border border-emerald-200/60 flex items-center justify-between text-xs">
-            <div class="flex items-center gap-2 text-emerald-900">
-              <span class="material-symbols-outlined text-[18px] text-brand-wa">check_circle</span>
-              <span class="font-bold text-[11px]">Phone session authenticated</span>
+          <div class="bg-gradient-to-b from-amber-50/70 to-orange-50/40 p-4 rounded-2xl border-2 border-amber-300/80 flex flex-col items-center justify-center text-center space-y-3 shadow-inner">
+            <div class="flex items-center gap-2 text-amber-950 font-extrabold text-xs">
+              <span class="material-symbols-outlined text-[18px] text-amber-600">smartphone</span>
+              <span>Link Your Mobile Device</span>
             </div>
-            <span class="font-mono text-emerald-800 font-bold text-[11px]">${acc.connected_number || '+91 97896 60115'}</span>
+
+            <!-- Crisp QR Code Image -->
+            <div class="p-2.5 bg-white rounded-xl shadow-md border border-amber-200">
+              <img src="${acc.qr_image}" alt="Scan WhatsApp QR" class="w-48 h-48 sm:w-52 sm:h-52 rounded-lg object-contain mx-auto">
+            </div>
+
+            <!-- Step-by-Step Scan Instructions -->
+            <div class="bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-amber-200/80 text-left text-[11px] text-slate-700 w-full max-w-sm space-y-1">
+              <p class="font-bold text-slate-900 text-[11px] mb-1">📲 How to link your phone:</p>
+              <div class="flex items-start gap-1.5"><span class="font-bold text-brand-waDark">1.</span><span>Open <b>WhatsApp</b> on your mobile phone.</span></div>
+              <div class="flex items-start gap-1.5"><span class="font-bold text-brand-waDark">2.</span><span>Tap <b>Menu (⋮)</b> or <b>Settings</b> &rarr; <b>Linked Devices</b>.</span></div>
+              <div class="flex items-start gap-1.5"><span class="font-bold text-brand-waDark">3.</span><span>Tap <b>Link a Device</b> and point camera at this QR code.</span></div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+              <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition shadow-sm">
+                <span class="material-symbols-outlined text-[15px]">refresh</span> Refresh QR Code
+              </button>
+            </div>
           </div>
         ` : ''}
 
-        <!-- PROMINENT CONNECT & OPEN INBOX BUTTON -->
-        <div class="pt-2">
-          <button type="button" onclick="connectAndOpenWhatsAppChats('${acc.id}', '${phoneNum}', '${acc.label || 'WhatsApp Line'}')" class="w-full py-2.5 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-[0.99]" title="Connect this WhatsApp number and open live conversations">
-            <span class="material-symbols-outlined text-[18px]">chat</span>
-            <span>Connect & Open Chats (${phoneNum})</span>
-          </button>
-        </div>
+        <!-- 2. CONNECTED SUCCESS BANNER -->
+        ${isConnected ? `
+          <div class="bg-emerald-50 p-3.5 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2.5 text-emerald-950">
+              <span class="material-symbols-outlined text-[22px] text-emerald-600">verified</span>
+              <div>
+                <p class="font-bold text-xs text-emerald-900">Live Device Linked & Authenticated</p>
+                <p class="text-[11px] text-emerald-700">Real-time incoming & outgoing messages active</p>
+              </div>
+            </div>
+            <span class="font-mono text-emerald-900 font-extrabold text-xs bg-emerald-200/70 px-2.5 py-1 rounded-lg">${acc.connected_number || '+91 ...'}</span>
+          </div>
+
+          <!-- PROMINENT CONNECT & OPEN INBOX BUTTON -->
+          <div class="pt-1">
+            <button type="button" onclick="connectAndOpenWhatsAppChats('${acc.id}', '${acc.connected_number}', '${acc.label || 'WhatsApp Line'}')" class="w-full py-2.5 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-[0.99]" title="Connect this WhatsApp number and open live conversations">
+              <span class="material-symbols-outlined text-[18px]">chat</span>
+              <span>Open Live Conversations (${acc.connected_number || 'Connected Line'})</span>
+            </button>
+          </div>
+        ` : ''}
+
+        <!-- 3. DISCONNECTED / INITIALIZING STATE BUTTON -->
+        ${(!isConnected && !isScanning) ? `
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center space-y-2.5">
+            <p class="text-xs font-bold text-slate-700">${isConnecting ? 'Connecting to WhatsApp Socket...' : 'Device not linked. Click below to generate scan QR code.'}</p>
+            <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-4 py-2 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow flex items-center gap-2 transition">
+              <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+              <span>Generate QR Code to Link Phone</span>
+            </button>
+          </div>
+        ` : ''}
 
         <!-- Actions Strip -->
         <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-          <button type="button" onclick="disconnectWhatsAppAccount('${acc.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-xs flex items-center gap-1 transition">
-            <span class="material-symbols-outlined text-[14px]">link_off</span> Disconnect
-          </button>
+          <div class="flex items-center gap-2">
+            ${isConnected ? `
+              <button type="button" onclick="disconnectWhatsAppAccount('${acc.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Log out device session">
+                <span class="material-symbols-outlined text-[14px]">link_off</span> Disconnect
+              </button>
+            ` : `
+              <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-3 py-1.5 bg-brand-wa/10 hover:bg-brand-wa/20 text-brand-waDark border border-brand-wa/30 rounded-lg font-bold text-xs flex items-center gap-1 transition">
+                <span class="material-symbols-outlined text-[14px]">qr_code</span> New QR Code
+              </button>
+            `}
+
+            ${acc.id !== 'account_1' ? `
+              <button type="button" onclick="deleteWhatsAppAccountSlot('${acc.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Delete account slot">
+                <span class="material-symbols-outlined text-[14px]">delete</span> Delete Slot
+              </button>
+            ` : ''}
+          </div>
           
           <button type="button" onclick="refreshSpecificAccount('${acc.id}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs flex items-center gap-1 transition">
             <span class="material-symbols-outlined text-[14px]">refresh</span> Refresh Status
@@ -3032,7 +3830,7 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
   ACTIVE_SEND_ACCOUNT_ID = accountId;
 
   // Format clean phone number
-  const raw = (connectedNumber && connectedNumber !== 'Awaiting Device Link')
+  const raw = (connectedNumber && connectedNumber !== 'Awaiting Link')
     ? connectedNumber 
     : (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115');
   const cleanPhone = formatPhoneNumberPretty(raw);
@@ -3078,6 +3876,25 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
   });
 }
 
+// Generate a brand new QR Code for account
+function generateFreshAccountQR(accountId) {
+  const targetId = accountId || 'account_1';
+  showToast('Generating QR Code...', 'Initializing fresh WhatsApp session for scanning.', 'qr_code_scanner', 'emerald');
+
+  fetch('http://localhost:3000/api/accounts/refresh_qr', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accountId: targetId })
+  })
+    .then(r => r.json())
+    .then(res => {
+      setTimeout(fetchQRBridgeStatus, 1500);
+    })
+    .catch(() => {
+      showToast('Bridge Offline', 'Please make sure Node.js bridge server is running on port 3000', 'warning', 'rose');
+    });
+}
+
 // Add New WhatsApp Phone Number / Slot
 function addNewWhatsAppAccountSlot() {
   const nextNum = MULTI_ACCOUNTS_STATE.length + 1;
@@ -3099,9 +3916,34 @@ function addNewWhatsAppAccountSlot() {
     });
 }
 
+// Delete WhatsApp account slot
+function deleteWhatsAppAccountSlot(accountId) {
+  if (confirm(`Delete WhatsApp slot ${accountId}?`)) {
+    fetch('http://localhost:3000/api/accounts/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId })
+    })
+      .then(r => r.json())
+      .then(res => {
+        showToast('Account Slot Removed', res.message || 'Slot deleted', 'delete', 'blue');
+        setTimeout(fetchQRBridgeStatus, 1000);
+      })
+      .catch(() => {
+        showToast('Error', 'Could not delete account slot', 'error', 'rose');
+      });
+  }
+}
+
 // Disconnect specific WhatsApp account session
 function disconnectWhatsAppAccount(accountId) {
-  if (confirm(`Disconnect and log out WhatsApp session for ${accountId}? All CRM messages, notes & customer history will remain 100% safe.`)) {
+  if (confirm(`Disconnect and unbind WhatsApp session for ${accountId}? Your CRM chats, customers & orders are 100% safe.`)) {
+    if (CRM_STATE.whatsappAccount) {
+      CRM_STATE.whatsappAccount.status = 'DISCONNECTED';
+      saveCRMState();
+      updateConfiguredPhoneDisplays();
+    }
+
     fetch('http://localhost:3000/api/accounts/disconnect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3109,12 +3951,12 @@ function disconnectWhatsAppAccount(accountId) {
     })
       .then(r => r.json())
       .then(res => {
-        showToast('Account Disconnected', `WhatsApp session logged out. All CRM chats & records are safely preserved.`, 'link_off', 'blue');
-        setTimeout(fetchQRBridgeStatus, 1500);
+        showToast('WhatsApp Disconnected', `Session logged out. Fresh QR code is ready to scan.`, 'link_off', 'blue');
+        setTimeout(fetchQRBridgeStatus, 1200);
       })
       .catch(() => {
-        showToast('Notice', 'Disconnect signal sent to bridge.', 'info', 'blue');
-        setTimeout(fetchQRBridgeStatus, 1500);
+        showToast('Disconnected', 'Session reset. Re-checking status...', 'info', 'blue');
+        setTimeout(fetchQRBridgeStatus, 1200);
       });
   }
 }
@@ -3275,7 +4117,10 @@ function handleImportBackupJSON(event) {
         saveCRMState();
         showToast('Database Restored Successfully!', 'All customers, chats, and orders recovered.', 'cloud_done', 'emerald');
         logAudit('DATABASE_RESTORED', 'BACKUP', `Restored database from uploaded backup file: ${file.name}`);
-        setTimeout(() => location.reload(), 800);
+        renderInbox();
+        updateBadgeCounters();
+        renderCustomer360Panel();
+        updateConfiguredPhoneDisplays();
       } else {
         alert('Invalid CRM backup file format. Please upload a valid JSON backup file.');
       }

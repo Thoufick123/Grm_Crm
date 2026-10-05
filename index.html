@@ -52,6 +52,32 @@
       }
     }
   </script>
+  <script>
+    // Prevent VS Code Live Server (Port 5500) from reloading on WhatsApp background file writes
+    (function() {
+      if (window.location.port === '5500') {
+        const OrigWebSocket = window.WebSocket;
+        window.WebSocket = function(url, protocols) {
+          if (typeof url === 'string' && url.includes(':5500') && url.includes('/ws')) {
+            console.log('🛡️ Live Server auto-reload intercepted to maintain persistent WhatsApp chat state.');
+            const fakeWs = {
+              send: function() {},
+              close: function() {},
+              addEventListener: function() {},
+              removeEventListener: function() {},
+              set onmessage(fn) {},
+              set onopen(fn) {},
+              set onclose(fn) {},
+              set onerror(fn) {}
+            };
+            return fakeWs;
+          }
+          return new OrigWebSocket(url, protocols);
+        };
+        window.WebSocket.prototype = OrigWebSocket.prototype;
+      }
+    })();
+  </script>
   <style>
     /* Custom scrollbars */
     ::-webkit-scrollbar {
@@ -314,13 +340,6 @@
         <!-- Direct WhatsApp Settings Icon Button (Admin Only) -->
         <button onclick="switchView('settings')" id="header-settings-btn" class="p-2 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition admin-only-ui" title="WhatsApp Business &amp; Phone Settings">
           <span class="material-symbols-outlined text-[20px]">settings</span>
-        </button>
-
-        <!-- Number Masking / Privacy Toggle Button (Admin Only) -->
-        <button onclick="toggleGlobalPhoneMasking()" id="btn-mask-toggle" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition shadow-sm admin-only-ui" title="Toggle Customer Phone Number Masking (Data Privacy &amp; Lead Protection)">
-          <span class="material-symbols-outlined text-[16px] text-amber-700" id="mask-icon">lock</span>
-          <span class="hidden lg:inline">Masking:</span>
-          <span id="mask-status-label" class="font-bold">ON</span>
         </button>
 
         <!-- Inbound Test Trigger (Admin Only) -->
@@ -679,17 +698,125 @@
       <!-- ========================================== -->
       <section id="view-catalog" class="h-full overflow-y-auto p-6 hidden">
         <div class="max-w-7xl mx-auto space-y-6">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          
+          <!-- Header & Actions -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
             <div>
-              <h2 class="text-xl font-bold text-slate-900">Garment Product Catalog & Live Stock Validator</h2>
-              <p class="text-xs text-slate-500">Check available vs reserved stock in real-time before replying to WhatsApp customers</p>
+              <div class="flex items-center gap-2">
+                <h2 class="text-xl font-bold text-slate-900">Garment Inventory &amp; Live WhatsApp Sharing</h2>
+                <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Auto-Sync
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1">Adjust warehouse physical stock live, track order reservations, and dispatch instant WhatsApp product cards</p>
             </div>
-            <div class="relative w-72">
-              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-              <input type="text" id="catalog-search-input" onkeyup="renderCatalogGrid(this.value)" placeholder="Search SKU, name, color..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white rounded-xl border border-slate-300 focus:ring-1 focus:ring-brand-wa font-medium shadow-sm">
+            
+            <div class="flex items-center gap-2 flex-wrap">
+              <button onclick="refreshCatalogStockFromAPI()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-slate-300" title="Fetch latest stock levels from database">
+                <span class="material-symbols-outlined text-[18px]">sync</span> Refresh Stock
+              </button>
+              <button onclick="openAddProductModal()" class="px-4 py-2 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px]">add_circle</span> + Add New Garment
+              </button>
             </div>
           </div>
 
+          <!-- Live Stock Metrics Banner (5 Cards) -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Total Garments</span>
+                <span class="material-symbols-outlined text-teal-600 text-[20px]">inventory_2</span>
+              </div>
+              <div class="mt-2">
+                <span id="catalog-stat-skus" class="text-2xl font-extrabold text-slate-900 font-mono">6</span>
+                <span class="text-[11px] text-slate-500 ml-1">Active SKUs</span>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Physical Stock</span>
+                <span class="material-symbols-outlined text-blue-600 text-[20px]">warehouse</span>
+              </div>
+              <div class="mt-2">
+                <span id="catalog-stat-physical" class="text-2xl font-extrabold text-blue-700 font-mono">76</span>
+                <span class="text-[11px] text-slate-500 ml-1">Units in Warehouse</span>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Reserved Orders</span>
+                <span class="material-symbols-outlined text-amber-600 text-[20px]">lock_clock</span>
+              </div>
+              <div class="mt-2">
+                <span id="catalog-stat-reserved" class="text-2xl font-extrabold text-amber-600 font-mono">20</span>
+                <span class="text-[11px] text-slate-500 ml-1">Units Reserved</span>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-sm flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wide">Net Sellable</span>
+                <span class="material-symbols-outlined text-emerald-600 text-[20px]">check_circle</span>
+              </div>
+              <div class="mt-2">
+                <span id="catalog-stat-available" class="text-2xl font-extrabold text-emerald-800 font-mono">56</span>
+                <span class="text-[11px] text-emerald-700 ml-1">Ready to Ship</span>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-rose-200 bg-rose-50/40 shadow-sm flex flex-col justify-between col-span-2 sm:col-span-1">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-rose-800 uppercase tracking-wide">Low Stock Alert</span>
+                <span class="material-symbols-outlined text-rose-600 text-[20px]">warning</span>
+              </div>
+              <div class="mt-2">
+                <span id="catalog-stat-alerts" class="text-2xl font-extrabold text-rose-700 font-mono">1</span>
+                <span class="text-[11px] text-rose-600 ml-1">Need Restock (&le;5)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search & Filter Controls Toolbar -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-1">
+              <div class="relative flex-1 max-w-md">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                <input type="text" id="catalog-search-input" oninput="filterCatalogGrid()" placeholder="Search SKU (e.g. BF-001), name, color, size..." class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 rounded-xl border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brand-wa font-medium shadow-sm transition">
+              </div>
+              <select id="catalog-category-filter" onchange="filterCatalogGrid()" class="px-3 py-2 text-xs bg-slate-50 rounded-xl border border-slate-300 font-semibold text-slate-700 focus:ring-2 focus:ring-brand-wa transition">
+                <option value="ALL">All Categories</option>
+                <option value="Baby Collection">Baby Collection</option>
+                <option value="Maternity">Maternity</option>
+                <option value="Kids">Kids Wear</option>
+                <option value="Girls Festive">Girls Festive</option>
+                <option value="Newborn">Newborn Sets</option>
+              </select>
+            </div>
+
+            <!-- Stock Status Pills & Sort -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                <button onclick="setStockStatusFilter('ALL')" id="filter-stock-all" class="px-3 py-1 rounded-lg font-bold transition bg-white text-slate-800 shadow-sm">All</button>
+                <button onclick="setStockStatusFilter('IN_STOCK')" id="filter-stock-in" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">🟢 In Stock</button>
+                <button onclick="setStockStatusFilter('LOW_STOCK')" id="filter-stock-low" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">🟡 Low (&le;5)</button>
+                <button onclick="setStockStatusFilter('OUT_OF_STOCK')" id="filter-stock-out" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">🔴 Out (0)</button>
+              </div>
+
+              <select id="catalog-sort-select" onchange="filterCatalogGrid()" class="px-3 py-2 text-xs bg-slate-50 rounded-xl border border-slate-300 font-semibold text-slate-700 focus:ring-2 focus:ring-brand-wa transition">
+                <option value="id-asc">Default Order</option>
+                <option value="avail-asc">Available Stock: Low &rarr; High</option>
+                <option value="avail-desc">Available Stock: High &rarr; Low</option>
+                <option value="price-asc">Price: Low &rarr; High</option>
+                <option value="price-desc">Price: High &rarr; Low</option>
+                <option value="name-asc">Name: A &rarr; Z</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Product Cards Grid -->
           <div id="catalog-grid-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             <!-- Rendered by JS -->
           </div>
@@ -1950,6 +2077,253 @@
           <button type="button" onclick="closeModal('modal-inbound-simulator')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
           <button type="submit" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition hover:scale-105">
             <span class="material-symbols-outlined text-[18px]">send</span> Simulate &amp; Receive Message
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT GARMENT PRODUCT -->
+  <div id="modal-product-edit" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+      <div class="bg-gradient-to-r from-emerald-900 to-teal-900 p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
+            <span class="material-symbols-outlined text-[22px]" id="modal-product-icon">inventory_2</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base" id="modal-product-title">Add New Garment Product</h3>
+            <p class="text-xs text-emerald-200/80">Configure SKU, pricing, initial warehouse stock &amp; WhatsApp share media</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-product-edit')" class="text-emerald-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <form id="form-product-edit" onsubmit="handleProductFormSubmit(event)" class="p-6 space-y-4 text-xs flex-1 overflow-y-auto custom-chat-scroll">
+        <input type="hidden" id="prod-form-id" value="">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">SKU Code (e.g. BF-001-PK) *:</label>
+            <input type="text" id="prod-form-sku" required placeholder="BF-001-PK" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold uppercase focus:bg-white focus:ring-2 focus:ring-brand-wa">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Category *:</label>
+            <select id="prod-form-category" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-brand-wa">
+              <option value="Baby Collection">Baby Collection</option>
+              <option value="Maternity">Maternity Wear</option>
+              <option value="Kids">Kids Wear</option>
+              <option value="Girls Festive">Girls Festive / Lehengas</option>
+              <option value="Newborn">Newborn Sets</option>
+              <option value="Accessories">Accessories &amp; Essentials</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Garment Product Name *:</label>
+          <input type="text" id="prod-form-name" required placeholder="Baby Frock (Embroidered Cotton)" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-brand-wa">
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Size / Age *:</label>
+            <input type="text" id="prod-form-size" required placeholder="2-3 Years" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-brand-wa">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Color *:</label>
+            <input type="text" id="prod-form-color" required placeholder="Pink / Floral" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-brand-wa">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Selling Price (₹) *:</label>
+            <input type="number" id="prod-form-price" required min="0" step="1" placeholder="599" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-emerald-800 focus:bg-white focus:ring-2 focus:ring-brand-wa">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200">
+          <div>
+            <label class="block font-bold text-emerald-950 mb-1">Physical Warehouse Stock *:</label>
+            <input type="number" id="prod-form-physical" required min="0" step="1" value="10" class="w-full bg-white border border-emerald-300 rounded-xl p-2.5 text-xs font-mono font-extrabold text-slate-900 focus:ring-2 focus:ring-emerald-500">
+            <p class="text-[10px] text-emerald-700 mt-1">Total physical units currently in factory / warehouse.</p>
+          </div>
+          <div>
+            <label class="block font-bold text-emerald-950 mb-1">Reserved Orders Stock:</label>
+            <input type="number" id="prod-form-reserved" min="0" step="1" value="0" class="w-full bg-white border border-emerald-300 rounded-xl p-2.5 text-xs font-mono font-bold text-amber-700 focus:ring-2 focus:ring-amber-500">
+            <p class="text-[10px] text-emerald-700 mt-1">Units locked for unfulfilled WhatsApp orders.</p>
+          </div>
+        </div>
+
+        <!-- Garment Product Image Upload & Preview Section -->
+        <div class="space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <div class="flex items-center justify-between">
+            <label class="block font-bold text-slate-800">Garment Product Photo *:</label>
+            
+            <!-- Source Selector Tabs -->
+            <div class="flex items-center bg-white p-0.5 rounded-lg border border-slate-200 text-[11px]">
+              <button type="button" id="tab-img-upload" onclick="switchProductImageSourceTab('upload')" class="px-2.5 py-1 rounded-md font-bold bg-emerald-100 text-emerald-800 transition flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">cloud_upload</span> Upload File
+              </button>
+              <button type="button" id="tab-img-url" onclick="switchProductImageSourceTab('url')" class="px-2.5 py-1 rounded-md font-semibold text-slate-600 hover:text-slate-900 transition flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">link</span> Image URL
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab 1: Device File Upload (Drag & Drop or Browse) -->
+          <div id="img-source-upload-container">
+            <div id="prod-drag-drop-zone" onclick="document.getElementById('prod-form-file').click()" class="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-white hover:bg-emerald-50/50 rounded-xl p-4 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 group">
+              <input type="file" id="prod-form-file" accept="image/*" class="hidden" onchange="handleProductImageFileSelect(event)">
+              <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition">
+                <span class="material-symbols-outlined text-[24px]">add_photo_alternate</span>
+              </div>
+              <div>
+                <p class="font-bold text-slate-800 text-xs">Click to browse or drag &amp; drop photo here</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">Supports JPG, PNG, WEBP &bull; Max 5MB</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: Web Image URL Input -->
+          <div id="img-source-url-container" class="hidden">
+            <input type="url" id="prod-form-image" oninput="handleProductImageURLChange(this.value)" placeholder="https://images.unsplash.com/..." class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-brand-wa">
+            <p class="text-[10px] text-slate-400 mt-1">Paste a direct HTTPS image URL from the web.</p>
+          </div>
+
+          <!-- Live Image Preview Box -->
+          <div id="prod-image-preview-wrapper" class="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-200">
+            <div class="w-14 h-14 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 shrink-0 relative">
+              <img id="prod-form-img-preview" src="https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60" class="w-full h-full object-cover">
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-bold text-slate-800 text-xs truncate" id="prod-preview-filename">Default Garment Photo</p>
+              <p class="text-[10px] text-emerald-700 font-medium" id="prod-preview-status">Ready to attach in WhatsApp cards</p>
+            </div>
+            <button type="button" onclick="clearProductImagePreview()" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Clear / Reset Image">
+              <span class="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-3 flex items-center justify-between border-t border-slate-200">
+          <button type="button" id="prod-delete-btn" onclick="handleDeleteProduct()" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold transition flex items-center gap-1 hidden">
+            <span class="material-symbols-outlined text-[16px]">delete</span> Delete
+          </button>
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" onclick="closeModal('modal-product-edit')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+            <button type="submit" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition">
+              <span class="material-symbols-outlined text-[18px]">save</span> Save Garment &amp; Stock
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DIRECT WHATSAPP PRODUCT SHARING -->
+  <div id="modal-direct-share-product" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+      <div class="bg-gradient-to-r from-teal-900 to-emerald-950 p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-brand-wa flex items-center justify-center text-white">
+            <span class="material-symbols-outlined text-[22px]">send</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Direct WhatsApp Product Dispatch</h3>
+            <p class="text-xs text-emerald-200/80">Send live stock card directly to a customer or new number</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-direct-share-product')" class="text-emerald-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <form onsubmit="handleDirectShareSubmit(event)" class="p-6 space-y-4 text-xs flex-1 overflow-y-auto custom-chat-scroll">
+        <input type="hidden" id="direct-share-product-id" value="">
+
+        <!-- Selected Product Overview Card -->
+        <div id="direct-share-product-preview" class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3">
+          <!-- JS fills this -->
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Select Customer or Custom Number:</label>
+          <select id="direct-share-recipient-select" onchange="handleDirectShareRecipientChange(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800">
+            <!-- Populated by JS -->
+          </select>
+        </div>
+
+        <div id="direct-share-custom-phone-wrapper" class="hidden">
+          <label class="block font-bold text-slate-700 mb-1">Enter WhatsApp Phone Number:</label>
+          <input type="text" id="direct-share-custom-phone" placeholder="+91 98765 43210" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-brand-wa">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">WhatsApp Message Preview &amp; Caption:</label>
+          <textarea id="direct-share-message-text" rows="6" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-medium focus:bg-white focus:ring-2 focus:ring-brand-wa"></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center justify-between border-t border-slate-200">
+          <button type="button" onclick="copyProductWhatsAppText(document.getElementById('direct-share-product-id').value)" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-[16px]">content_copy</span> Copy Text
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeModal('modal-direct-share-product')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+            <button type="submit" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition">
+              <span class="material-symbols-outlined text-[18px]">send</span> Send to WhatsApp
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: QUICK RESTOCK / ADJUST STOCK -->
+  <div id="modal-quick-stock" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-blue-900 to-indigo-950 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center text-white">
+            <span class="material-symbols-outlined text-[22px]">warehouse</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Quick Warehouse Restock</h3>
+            <p class="text-xs text-blue-200/80">Adjust physical units and log warehouse notes</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-quick-stock')" class="text-blue-300 hover:text-white">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <form onsubmit="handleQuickStockSubmit(event)" class="p-6 space-y-4 text-xs">
+        <input type="hidden" id="quick-stock-product-id" value="">
+
+        <div id="quick-stock-product-info" class="p-3 bg-blue-50/60 border border-blue-200 rounded-xl flex items-center gap-3">
+          <!-- JS fills this -->
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">New Physical Units *:</label>
+            <input type="number" id="quick-stock-physical-input" required min="0" step="1" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-base font-mono font-extrabold text-blue-900 focus:bg-white focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Adjustment Reason:</label>
+            <select id="quick-stock-reason" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-blue-500">
+              <option value="New Factory Production Batch">🏭 Factory Batch Restock</option>
+              <option value="Damaged / Defective Removed">⚠️ Damaged Units Removed</option>
+              <option value="Physical Warehouse Audit Correction">📋 Inventory Audit Count</option>
+              <option value="Customer Return Restocked">🔄 Customer Return Restocked</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-quick-stock')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-[18px]">check_circle</span> Update Stock Live
           </button>
         </div>
       </form>

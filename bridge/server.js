@@ -237,23 +237,33 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-                console.log(`[QR Bridge - ${accountId}] Connection closed (status: ${statusCode}). Reconnecting: ${shouldReconnect}`);
+                const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+                console.log(`[QR Bridge - ${accountId}] Connection closed (status: ${statusCode}). Logged out: ${isLoggedOut}`);
                 accountObj.status = 'DISCONNECTED';
                 accountObj.qrImage = null;
+                accountObj.connectedNumber = null;
+                accountObj.connectedName = null;
                 accountObj.isStarting = false;
                 broadcastAccountsUpdate();
 
-                if (statusCode === DisconnectReason.loggedOut) {
+                if (isLoggedOut) {
+                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Clearing credentials and generating new QR Code...`);
                     if (fs.existsSync(sessionDir)) {
-                        fs.rmSync(sessionDir, { recursive: true, force: true });
+                        try {
+                            fs.rmSync(sessionDir, { recursive: true, force: true });
+                        } catch (e) {
+                            console.warn('[Session Clear Notice]:', e.message);
+                        }
                     }
-                }
-
-                if (shouldReconnect) {
+                    // Auto-generate fresh QR code for this slot
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-                    }, 5000);
+                    }, 1500);
+                } else {
+                    // Reconnect on network drops
+                    setTimeout(() => {
+                        initAccountSession(accountId, label);
+                    }, 4000);
                 }
             } else if (connection === 'open') {
                 accountObj.status = 'CONNECTED';
@@ -280,8 +290,37 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         if (!senderJid) continue;
                         if (senderJid.includes('@g.us') || senderJid === 'status@broadcast') continue;
 
-                        const cleanNumber = senderJid.split('@')[0].split(':')[0];
-                        const senderNumber = '+' + cleanNumber;
+                        let cleanNumber = senderJid.split('@')[0].split(':')[0];
+                        let realPhone = null;
+
+                        // Check Baileys LID reverse mapping file if LID format
+                        if (senderJid.includes('@lid') || (cleanNumber.length >= 14 && (cleanNumber.startsWith('156') || cleanNumber.startsWith('235') || cleanNumber.startsWith('253')))) {
+                            const reverseFile = path.join(sessionDir, `lid-mapping-${cleanNumber}_reverse.json`);
+                            if (fs.existsSync(reverseFile)) {
+                                try {
+                                    const rawMapped = JSON.parse(fs.readFileSync(reverseFile, 'utf8'));
+                                    if (rawMapped && typeof rawMapped === 'string') {
+                                        const digits = rawMapped.replace(/[^0-9]/g, '');
+                                        if (digits.length >= 10) {
+                                            realPhone = '+' + digits;
+                                        }
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+
+                        if (!realPhone) {
+                            const digitsOnly = cleanNumber.replace(/[^0-9]/g, '');
+                            if (digitsOnly.length === 10) {
+                                realPhone = '+91 ' + digitsOnly.slice(0, 5) + ' ' + digitsOnly.slice(5);
+                            } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+                                realPhone = '+91 ' + digitsOnly.slice(2, 7) + ' ' + digitsOnly.slice(7);
+                            } else {
+                                realPhone = '+' + cleanNumber;
+                            }
+                        }
+
+                        const senderNumber = realPhone;
                         const senderName = msg.pushName || ('Customer ' + senderNumber.slice(-4));
 
                         // Store in JID Cache
@@ -468,10 +507,26 @@ function initializeAllSessions() {
             .filter(d => d.isDirectory())
             .map(d => d.name);
 
-        if (dirs.length === 0) {
+        const validDirs = dirs.filter(dir => {
+            if (dir === 'account_1') return true;
+            const credsFile = path.join(SESSIONS_BASE_DIR, dir, 'creds.json');
+            return fs.existsSync(credsFile);
+        });
+
+        // Clean up empty extra dirs
+        dirs.forEach(dir => {
+            if (dir !== 'account_1') {
+                const credsFile = path.join(SESSIONS_BASE_DIR, dir, 'creds.json');
+                if (!fs.existsSync(credsFile)) {
+                    try { fs.rmSync(path.join(SESSIONS_BASE_DIR, dir), { recursive: true, force: true }); } catch (e) {}
+                }
+            }
+        });
+
+        if (validDirs.length === 0) {
             initAccountSession('account_1', 'Primary WhatsApp');
         } else {
-            dirs.forEach((dir, idx) => {
+            validDirs.forEach((dir, idx) => {
                 const label = idx === 0 ? 'Primary WhatsApp' : `WhatsApp Business #${idx + 1}`;
                 initAccountSession(dir, label);
             });
@@ -552,6 +607,58 @@ app.post('/api/accounts/add', (req, res) => {
     res.json({ status: 'success', message: 'Account initialization started', account_id: nextId });
 });
 
+app.post('/api/accounts/refresh_qr', async (req, res) => {
+    try {
+        const { accountId } = req.body;
+        const targetId = accountId || 'account_1';
+        const label = accounts.get(targetId)?.label || (targetId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Business`);
+
+        if (accounts.has(targetId)) {
+            const acc = accounts.get(targetId);
+            if (acc.sock) {
+                try { await acc.sock.logout(); } catch (e) {}
+                try { acc.sock.end(); } catch (e) {}
+            }
+        }
+
+        const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
+        if (fs.existsSync(sessionDir)) {
+            try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) {}
+        }
+
+        initAccountSession(targetId, label);
+        res.json({ status: 'success', message: `Generating fresh QR for ${targetId}` });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
+});
+
+app.post('/api/accounts/delete', async (req, res) => {
+    try {
+        const { accountId } = req.body;
+        if (!accountId || accountId === 'account_1') {
+            return res.status(400).json({ status: 'error', message: 'Cannot delete primary account slot. Use disconnect instead.' });
+        }
+        if (accounts.has(accountId)) {
+            const acc = accounts.get(accountId);
+            if (acc.sock) {
+                try { await acc.sock.logout(); } catch (e) {}
+                try { acc.sock.end(); } catch (e) {}
+            }
+            accounts.delete(accountId);
+            const sessionDir = path.join(SESSIONS_BASE_DIR, accountId);
+            if (fs.existsSync(sessionDir)) {
+                try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) {}
+            }
+            broadcastAccountsUpdate();
+            return res.json({ status: 'success', message: `Account ${accountId} deleted successfully.` });
+        }
+        res.status(404).json({ status: 'error', message: 'Account not found' });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
+});
+
 app.post('/api/accounts/disconnect', async (req, res) => {
     try {
         const { accountId } = req.body;
@@ -583,10 +690,10 @@ app.post('/api/accounts/disconnect', async (req, res) => {
 
             broadcastAccountsUpdate();
 
-            // Re-initialize a fresh QR session for this slot after 1.5 seconds
+            // Re-initialize a fresh QR session for this slot after 1 second
             setTimeout(() => {
                 initAccountSession(targetId, acc.label);
-            }, 1500);
+            }, 1000);
 
             return res.json({ 
                 status: 'success', 
