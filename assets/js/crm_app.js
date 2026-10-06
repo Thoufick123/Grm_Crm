@@ -2242,7 +2242,75 @@ function renderChatMessages() {
         </div>
       `;
     } else {
-      contentHtml = `<p class="text-xs leading-relaxed font-normal">${msg.text.replace(/\n/g, '<br>')}</p>`;
+      let formattedMsg = (msg.text || '')
+        .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+        .replace(/_(.*?)_/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code class="bg-slate-100 text-slate-900 px-1 py-0.2 rounded text-[10px] font-mono font-bold">$1</code>')
+        .replace(/(https:\/\/wa\.me\/[^\s<?]+(?:\?text=([1-6]))?)/g, function(match, fullUrl, catNum) {
+          if (catNum) {
+            return `<a href="javascript:void(0)" onclick="triggerCategorySelection('${catNum}', '${ACTIVE_CUSTOMER_ID}')" class="inline-flex items-center gap-1 text-emerald-800 hover:text-emerald-950 font-bold bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded-lg border border-emerald-300 text-[11px] transition shadow-2xs cursor-pointer"><span class="material-symbols-outlined text-[13px] text-emerald-600">touch_app</span> Tap to View Option ${catNum}</a>`;
+          }
+          return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="text-teal-600 hover:text-teal-800 font-bold underline break-all inline-flex items-center gap-0.5">${fullUrl} <span class="material-symbols-outlined text-[11px]">open_in_new</span></a>`;
+        })
+        .replace(/(https?:\/\/(?!wa\.me\/)[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-teal-600 hover:text-teal-800 font-bold underline break-all inline-flex items-center gap-0.5">$1 <span class="material-symbols-outlined text-[11px]">open_in_new</span></a>')
+        .replace(/\n/g, '<br>');
+
+      const isStockMenu = msg.text && (
+        msg.text.includes('Live Stock') || 
+        msg.text.includes('Category Number') || 
+        msg.text.includes('Baby Collection (0-3 Years)') || 
+        msg.text.includes('Click any category button') ||
+        msg.text.includes('How to Order / Inquire:')
+      );
+
+      let buttonsHtml = '';
+      if (isStockMenu) {
+        buttonsHtml = `
+          <div class="mt-3 pt-2.5 border-t border-emerald-200/70 space-y-1.5">
+            <div class="flex items-center justify-between text-[10px] font-bold text-emerald-900">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-emerald-600">touch_app</span>
+                <span>Click any option to view ready stock:</span>
+              </span>
+              <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-mono">1-Click View</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+              <button type="button" onclick="triggerCategorySelection('1', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">1</span>
+                <span class="truncate">Baby Collection</span>
+              </button>
+              <button type="button" onclick="triggerCategorySelection('2', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">2</span>
+                <span class="truncate">Maternity Wear</span>
+              </button>
+              <button type="button" onclick="triggerCategorySelection('3', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">3</span>
+                <span class="truncate">Newborn Gift Sets</span>
+              </button>
+              <button type="button" onclick="triggerCategorySelection('4', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">4</span>
+                <span class="truncate">Kids Everyday</span>
+              </button>
+              <button type="button" onclick="triggerCategorySelection('5', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">5</span>
+                <span class="truncate">Wholesale Bundles</span>
+              </button>
+              <button type="button" onclick="triggerCategorySelection('6', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">6</span>
+                <span class="truncate">Festive Silk Sets</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      contentHtml = `
+        <div class="space-y-1">
+          <p class="text-xs leading-relaxed font-normal">${formattedMsg}</p>
+          ${buttonsHtml}
+        </div>
+      `;
     }
 
     return `
@@ -2265,6 +2333,63 @@ function renderChatMessages() {
 }
 
 window.renderChatStream = renderChatMessages;
+
+// Interactive 1-Click Category Selection Action Handler
+window.triggerCategorySelection = function(categoryNum, customerId) {
+  const targetCustId = customerId || ACTIVE_CUSTOMER_ID;
+  const customer = CRM_STATE.customers.find(c => c.id === targetCustId);
+  if (!customer) return;
+
+  const categoryNames = {
+    '1': 'Baby Collection',
+    '2': 'Maternity',
+    '3': 'Newborn',
+    '4': 'Kids',
+    '5': 'Wholesale',
+    '6': 'Girls Festive'
+  };
+
+  const catName = categoryNames[categoryNum] || 'Baby Collection';
+  const responseText = getSpecificCategoryStockCard(catName, customer);
+
+  const customerMsg = {
+    id: Date.now(),
+    sender: 'customer',
+    text: `👉 Selected Option [${categoryNum}. ${catName}]`,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    status: 'DELIVERED'
+  };
+
+  const botMsg = {
+    id: Date.now() + 100,
+    sender: 'staff',
+    isBot: true,
+    text: responseText,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    status: 'DELIVERED'
+  };
+
+  if (!CRM_STATE.conversations[targetCustId]) {
+    CRM_STATE.conversations[targetCustId] = [];
+  }
+  CRM_STATE.conversations[targetCustId].push(customerMsg);
+  CRM_STATE.conversations[targetCustId].push(botMsg);
+
+  saveCRMState();
+  renderChatMessages();
+  renderInboxConversationList();
+  if (typeof playChime === 'function') playChime('order');
+
+  // Dispatch live to WhatsApp
+  dispatchWhatsAppOutbound(
+    customer.whatsapp || customer.phone,
+    responseText,
+    botMsg,
+    customer.jid
+  );
+
+  showToast('Category Stock Sent', `Sent ${catName} stock details to ${customer.name}!`, 'check_circle', 'emerald');
+};
 
 // =========================================================================
 // HIGH-RESOLUTION IMAGE LIGHTBOX CONTROLLER
@@ -3439,12 +3564,14 @@ Here is our live available stock & collections today:
 {stock_categories}
 
 ━━━━━━━━━━━━━━━━━━━━
-💬 *How to Order / Inquire:*
-Reply with the *Category Number (1-6)* or tell us what size you need, and our sales team will share photos & reserve your order instantly!`;
+👉 *Tap any link above (or reply with 1–6) to view ready-stock photos & prices instantly!*`;
 }
 
-// Dynamically aggregates live stock and price ranges from CRM_STATE.products
-function generateLiveCategoryStockText() {
+// Dynamically aggregates live stock and price ranges from CRM_STATE.products with 1-tap wa.me links
+function generateLiveCategoryStockText(rawPhone) {
+  const phoneVal = rawPhone || CRM_STATE?.whatsappAccount?.phoneNumber || '919789660115';
+  const cleanPhone = phoneVal.replace(/[^0-9]/g, '') || '919789660115';
+
   const categories = [
     { num: 1, name: 'Baby Collection (0-3 Years)', key: 'Baby Collection', desc: 'Embroidered Cotton Frocks & Soft Sets' },
     { num: 2, name: 'Maternity & Feeding Gowns', key: 'Maternity', desc: 'Tiered Cotton Maxi & Feeding Gowns' },
@@ -3467,7 +3594,7 @@ function generateLiveCategoryStockText() {
       priceInfo = '₹450 - ₹1,450';
     }
 
-    text += `📦 *${cat.num}. ${cat.name}*\n• ${cat.desc} — *${priceInfo}*\n\n`;
+    text += `📦 *${cat.num}. ${cat.name}*\n• ${cat.desc} — *${priceInfo}*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=${cat.num}\n\n`;
   });
 
   return text.trim();
@@ -3476,8 +3603,8 @@ function generateLiveCategoryStockText() {
 function buildStockAutoReplyMessage(customer) {
   const brand = getBrandName();
   const custName = customer ? customer.name.split(' ')[0] : 'Customer';
-  const categoriesText = generateLiveCategoryStockText();
-  const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
+  const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '919789660115';
+  const categoriesText = generateLiveCategoryStockText(phone);
 
   let customTpl = CRM_STATE?.autoReplySettings?.messageTemplate;
   if (!customTpl || customTpl.trim() === '') {
@@ -3663,7 +3790,52 @@ function updateAutoReplyLivePreview() {
     .replace(/{stock_categories}/g, categoriesText)
     .replace(/{business_phone}/g, phone);
 
-  previewBox.innerText = previewText;
+  let formattedHtml = previewText
+    .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+    .replace(/_(.*?)_/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+
+  previewBox.innerHTML = `
+    <div class="space-y-2">
+      <div class="leading-relaxed">${formattedHtml}</div>
+      <div class="mt-2.5 pt-2 border-t border-emerald-200/80 space-y-1.5">
+        <div class="flex items-center justify-between text-[10px] font-bold text-emerald-900">
+          <span class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-[13px] text-emerald-600">touch_app</span>
+            <span>Interactive Click Options (Live on chat):</span>
+          </span>
+          <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-mono">1-Click Tap</span>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+          <div class="px-2 py-1.5 bg-white text-slate-800 rounded-lg border border-emerald-300 font-bold text-[10px] flex items-center gap-1.5 shadow-2xs">
+            <span class="w-4 h-4 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold flex items-center justify-center shrink-0">1</span>
+            <span class="truncate">Baby Collection</span>
+          </div>
+          <div class="px-2 py-1.5 bg-white text-slate-800 rounded-lg border border-emerald-300 font-bold text-[10px] flex items-center gap-1.5 shadow-2xs">
+            <span class="w-4 h-4 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold flex items-center justify-center shrink-0">2</span>
+            <span class="truncate">Maternity Wear</span>
+          </div>
+          <div class="px-2 py-1.5 bg-white text-slate-800 rounded-lg border border-emerald-300 font-bold text-[10px] flex items-center gap-1.5 shadow-2xs">
+            <span class="w-4 h-4 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold flex items-center justify-center shrink-0">3</span>
+            <span class="truncate">Newborn Gift Sets</span>
+          </div>
+          <div class="px-2 py-1.5 bg-white text-slate-800 rounded-lg border border-emerald-300 font-bold text-[10px] flex items-center gap-1.5 shadow-2xs">
+            <span class="w-4 h-4 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold flex items-center justify-center shrink-0">4</span>
+            <span class="truncate">Kids Everyday</span>
+          </div>
+          <div class="px-2 py-1.5 bg-white text-slate-800 rounded-lg border border-emerald-300 font-bold text-[10px] flex items-center gap-1.5 shadow-2xs">
+            <span class="w-4 h-4 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold flex items-center justify-center shrink-0">5</span>
+            <span class="truncate">Wholesale Bundles</span>
+          </div>
+          <div class="px-2 py-1.5 bg-white text-slate-800 rounded-lg border border-emerald-300 font-bold text-[10px] flex items-center gap-1.5 shadow-2xs">
+            <span class="w-4 h-4 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold flex items-center justify-center shrink-0">6</span>
+            <span class="truncate">Festive Silk Sets</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
   if (charEl) charEl.innerText = `${previewText.length} chars`;
 }
 
@@ -6942,8 +7114,16 @@ function confirmResetInboxMessages() {
 let BROADCAST_CANCEL_FLAG = false;
 let IS_BROADCASTING_ACTIVE = false;
 
-// Dynamic Manual Custom Tags Map for Broadcast Personalization
+// Dynamic System & Custom Tags Map for Broadcast Personalization & Direct Value Editing
+const SYSTEM_TAG_KEYS = ['customer_name', 'business_name', 'line_phone', 'customer_phone', 'today_date', 'staff_name'];
+
 let BROADCAST_CUSTOM_TAGS = {
+  customer_name: 'Auto per Customer',
+  business_name: 'Blue Berry 💙',
+  line_phone: '+91 86680 07593',
+  customer_phone: 'Auto per Customer',
+  today_date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+  staff_name: 'Sales Desk',
   offer_discount: '15% OFF',
   product_name: 'Festive Garments Collection',
   coupon_code: 'FESTIVE2026'
@@ -7121,12 +7301,45 @@ function closeBroadcastModal() {
   closeModal('modal-broadcast-template');
 }
 
+let CURRENT_BROADCAST_TEMPLATE_TITLE = 'Template Message Text';
+
+function editBroadcastTemplateTitle() {
+  const currentTitle = CURRENT_BROADCAST_TEMPLATE_TITLE || 'Template Message Text';
+  const newTitle = prompt('Edit Template Heading / Title Name:', currentTitle);
+  if (newTitle !== null && newTitle.trim() !== '') {
+    CURRENT_BROADCAST_TEMPLATE_TITLE = newTitle.trim();
+    updateBroadcastTemplateTitleUI();
+    
+    // Also sync selected preset label if applicable
+    const presetSelect = document.getElementById('bcast-preset-select');
+    if (presetSelect && presetSelect.value && BROADCAST_PRESETS_DATA[presetSelect.value]) {
+      BROADCAST_PRESETS_DATA[presetSelect.value].label = `📋 ${CURRENT_BROADCAST_TEMPLATE_TITLE}`;
+      renderBroadcastTemplateDropdown(presetSelect.value);
+      try {
+        localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+      } catch (e) {}
+    }
+    showToast('Template Title Updated', `Heading changed to "${CURRENT_BROADCAST_TEMPLATE_TITLE}"`, 'edit_note', 'indigo');
+    if (typeof playChime === 'function') playChime('order');
+  }
+}
+
+function updateBroadcastTemplateTitleUI() {
+  const labelEl = document.getElementById('bcast-template-title-label');
+  if (labelEl) {
+    labelEl.innerText = CURRENT_BROADCAST_TEMPLATE_TITLE || 'Template Message Text';
+  }
+}
+
 function applyBroadcastPreset(presetKey) {
   const msgInput = document.getElementById('bcast-message-text');
   if (!msgInput) return;
 
   if (BROADCAST_PRESETS_DATA[presetKey]) {
     msgInput.value = BROADCAST_PRESETS_DATA[presetKey].text;
+    const cleanLabel = (BROADCAST_PRESETS_DATA[presetKey].label || 'Template Message Text').replace(/^[^\w\s]+/, '').trim();
+    CURRENT_BROADCAST_TEMPLATE_TITLE = cleanLabel || 'Template Message Text';
+    updateBroadcastTemplateTitleUI();
   }
   updateBroadcastPreview();
 }
@@ -7186,33 +7399,71 @@ function handleApplyManualCustomTag() {
   if (typeof playChime === 'function') playChime('order');
 }
 
-// Render active custom tags pills in the broadcast modal with 1-click edit & insert
+function getDefaultTagValue(key) {
+  const brand = (typeof getBrandName === 'function') ? getBrandName() : 'Blue Berry 💙';
+  const line = (CRM_STATE && CRM_STATE.whatsappAccount && CRM_STATE.whatsappAccount.phoneNumber) ? CRM_STATE.whatsappAccount.phoneNumber : '+91 86680 07593';
+  const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  let staff = 'Sales Desk';
+  if (ACTIVE_ROLE === 'admin') {
+    staff = 'Super Admin';
+  } else if (CRM_STATE && Array.isArray(CRM_STATE.staffList)) {
+    const s = CRM_STATE.staffList.find(st => st.id === ACTIVE_ROLE);
+    if (s) staff = s.name;
+  }
+
+  switch (key) {
+    case 'customer_name': return 'Auto per Customer';
+    case 'business_name': return brand;
+    case 'line_phone': return line;
+    case 'customer_phone': return 'Auto per Customer';
+    case 'today_date': return todayStr;
+    case 'staff_name': return staff;
+    case 'offer_discount': return '15% OFF';
+    case 'product_name': return 'Festive Garments Collection';
+    case 'coupon_code': return 'FESTIVE2026';
+    default: return '';
+  }
+}
+
+// Render active custom & system tags pills in the broadcast modal with 1-click edit & insert
 function renderCustomTagsTray() {
   const tray = document.getElementById('manual-custom-tags-tray');
   if (!tray) return;
 
   const entries = Object.entries(BROADCAST_CUSTOM_TAGS || {});
   if (entries.length === 0) {
-    tray.innerHTML = `<span class="text-[10px] text-slate-400 italic">No custom tags created yet. Type tag name &amp; value above to create one.</span>`;
+    tray.innerHTML = `<span class="text-[10px] text-slate-400 italic">No tags defined yet.</span>`;
     return;
   }
 
-  tray.innerHTML = entries.map(([key, val]) => `
-    <div class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs text-xs hover:border-indigo-400 transition">
-      <button type="button" onclick="insertBroadcastVariable('{{${key}}}')" class="font-mono font-bold text-indigo-700 hover:text-indigo-950 transition flex items-center gap-1" title="Click to insert {{${key}}} into message">
-        <span class="text-indigo-400 font-bold">+</span>
-        <span>{{${key}}}</span>
-      </button>
-      <span class="text-slate-400 text-[10px] select-none">=</span>
-      <span class="font-semibold text-slate-800 text-[11px] truncate max-w-[130px] bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200" title="${val}">"${val}"</span>
-      <button type="button" onclick="editManualCustomTag('${key}')" class="text-slate-400 hover:text-indigo-600 p-0.5 rounded transition" title="Change replacement value for {{${key}}}">
-        <span class="material-symbols-outlined text-[14px]">edit</span>
-      </button>
-      <button type="button" onclick="removeManualCustomTag('${key}')" class="text-slate-400 hover:text-rose-600 p-0.5 rounded transition" title="Remove custom tag">
-        <span class="material-symbols-outlined text-[14px]">close</span>
-      </button>
-    </div>
-  `).join('');
+  tray.innerHTML = entries.map(([key, val]) => {
+    const isSys = SYSTEM_TAG_KEYS.includes(key);
+    const borderCls = isSys ? 'border-indigo-200 bg-white hover:border-indigo-400' : 'border-emerald-200 bg-white hover:border-emerald-400';
+    const tagCls = isSys ? 'text-indigo-700 hover:text-indigo-950' : 'text-emerald-800 hover:text-emerald-950';
+
+    return `
+      <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${borderCls} shadow-2xs text-xs transition">
+        <button type="button" onclick="insertBroadcastVariable('{{${key}}}')" class="font-mono font-bold ${tagCls} transition flex items-center gap-1" title="Click to insert {{${key}}} into message text at cursor">
+          <span class="${isSys ? 'text-indigo-400' : 'text-emerald-500'} font-bold">+</span>
+          <span>{{${key}}}</span>
+        </button>
+        <span class="text-slate-400 text-[10px] select-none">=</span>
+        <span class="font-semibold text-slate-800 text-[11px] truncate max-w-[130px] bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200" title="${val}">"${val}"</span>
+        <button type="button" onclick="editManualCustomTag('${key}')" class="text-slate-400 hover:text-indigo-600 p-0.5 rounded transition" title="Change / edit replacement value for {{${key}}}">
+          <span class="material-symbols-outlined text-[14px]">edit</span>
+        </button>
+        ${isSys ? `
+          <button type="button" onclick="resetSystemTagValue('${key}')" class="text-slate-300 hover:text-amber-600 p-0.5 rounded transition" title="Reset {{${key}}} to default live value">
+            <span class="material-symbols-outlined text-[14px]">restart_alt</span>
+          </button>
+        ` : `
+          <button type="button" onclick="removeManualCustomTag('${key}')" class="text-slate-400 hover:text-rose-600 p-0.5 rounded transition" title="Remove custom tag">
+            <span class="material-symbols-outlined text-[14px]">close</span>
+          </button>
+        `}
+      </div>
+    `;
+  }).join('');
 }
 
 function editManualCustomTag(key) {
@@ -7222,8 +7473,17 @@ function editManualCustomTag(key) {
     BROADCAST_CUSTOM_TAGS[key] = newVal.trim();
     renderCustomTagsTray();
     updateBroadcastPreview();
-    showToast('Tag Value Updated', `{{${key}}} will now be replaced with "${newVal.trim()}" in all messages.`, 'tune', 'emerald');
+    showToast('Tag Value Updated', `{{${key}}} will now be replaced with "${newVal.trim()}" in message broadcasts.`, 'tune', 'emerald');
+    if (typeof playChime === 'function') playChime('order');
   }
+}
+
+function resetSystemTagValue(key) {
+  const defVal = getDefaultTagValue(key);
+  BROADCAST_CUSTOM_TAGS[key] = defVal;
+  renderCustomTagsTray();
+  updateBroadcastPreview();
+  showToast('Tag Reset', `{{${key}}} restored to default value: "${defVal}"`, 'restart_alt', 'blue');
 }
 
 function removeManualCustomTag(key) {
@@ -7236,7 +7496,7 @@ function removeManualCustomTag(key) {
 function renderTemplateMessagePersonalized(rawTemplate, customer = {}, account = {}, customTags = BROADCAST_CUSTOM_TAGS) {
   if (!rawTemplate) return '';
 
-  const businessName = (account && (account.brandName || account.businessName)) || 'GRM Garments Business Hub';
+  const businessName = (account && (account.brandName || account.businessName)) || (typeof getBrandName === 'function' ? getBrandName() : 'Blue Berry 💙');
   const linePhone = customer.businessNumber || (account && account.phoneNumber) || '+91 86680 07593';
   const customerName = customer.name || 'Valued Customer';
   const customerPhone = customer.whatsapp || customer.phone || '';
@@ -7253,24 +7513,33 @@ function renderTemplateMessagePersonalized(rawTemplate, customer = {}, account =
 
   let text = rawTemplate;
 
-  // 1. Built-in system tags
+  // 1. Built-in system tags resolution (Respects manual tag value overrides if user changed them)
+  const effCustName = (customTags && customTags.customer_name && customTags.customer_name !== 'Auto per Customer') ? customTags.customer_name : customerName;
+  const effBizName = (customTags && customTags.business_name) ? customTags.business_name : businessName;
+  const effLinePhone = (customTags && customTags.line_phone) ? customTags.line_phone : linePhone;
+  const effCustPhone = (customTags && customTags.customer_phone && customTags.customer_phone !== 'Auto per Customer') ? customTags.customer_phone : customerPhone;
+  const effToday = (customTags && customTags.today_date) ? customTags.today_date : todayStr;
+  const effStaff = (customTags && customTags.staff_name) ? customTags.staff_name : staffName;
+
   text = text
-    .replace(/\{\{\s*customer_name\s*\}\}/gi, customerName)
-    .replace(/\{\{\s*customer_phone\s*\}\}/gi, customerPhone)
-    .replace(/\{\{\s*phone\s*\}\}/gi, customerPhone)
-    .replace(/\{\{\s*business_name\s*\}\}/gi, businessName)
-    .replace(/\{\{\s*line_phone\s*\}\}/gi, linePhone)
-    .replace(/\{\{\s*today_date\s*\}\}/gi, todayStr)
-    .replace(/\{\{\s*date\s*\}\}/gi, todayStr)
+    .replace(/\{\{\s*customer_name\s*\}\}/gi, effCustName)
+    .replace(/\{\{\s*customer_phone\s*\}\}/gi, effCustPhone)
+    .replace(/\{\{\s*phone\s*\}\}/gi, effCustPhone)
+    .replace(/\{\{\s*business_name\s*\}\}/gi, effBizName)
+    .replace(/\{\{\s*line_phone\s*\}\}/gi, effLinePhone)
+    .replace(/\{\{\s*today_date\s*\}\}/gi, effToday)
+    .replace(/\{\{\s*date\s*\}\}/gi, effToday)
     .replace(/\{\{\s*time\s*\}\}/gi, timeStr)
-    .replace(/\{\{\s*staff_name\s*\}\}/gi, staffName);
+    .replace(/\{\{\s*staff_name\s*\}\}/gi, effStaff);
 
   // 2. Manual Custom Tags & Dynamic Variables
   if (customTags && typeof customTags === 'object') {
     Object.keys(customTags).forEach(tagKey => {
-      const tagVal = customTags[tagKey] || '';
-      const regex = new RegExp(`\\{\\{\\s*${tagKey}\\s*\\}\\}`, 'gi');
-      text = text.replace(regex, tagVal);
+      if (!SYSTEM_TAG_KEYS.includes(tagKey)) {
+        const tagVal = customTags[tagKey] || '';
+        const regex = new RegExp(`\\{\\{\\s*${tagKey}\\s*\\}\\}`, 'gi');
+        text = text.replace(regex, tagVal);
+      }
     });
   }
 

@@ -2473,10 +2473,15 @@
         <!-- 3. Dynamic Template Variables Insertion -->
         <div class="space-y-2">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-            <label class="font-bold text-slate-800 flex items-center gap-1">
-              <span class="material-symbols-outlined text-[16px] text-brand-wa">edit_note</span>
-              <span>Template Message Text:</span>
-            </label>
+            <div class="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+              <label class="font-bold text-slate-800 flex items-center gap-1 cursor-pointer group" onclick="editBroadcastTemplateTitle()" title="Click ✏️ to rename Template Heading">
+                <span class="material-symbols-outlined text-[16px] text-brand-wa">edit_note</span>
+                <span id="bcast-template-title-label" class="group-hover:text-indigo-700 transition">Template Message Text</span>:
+              </label>
+              <button type="button" onclick="editBroadcastTemplateTitle()" class="p-0.5 text-slate-400 hover:text-indigo-600 rounded transition" title="Click ✏️ to change template heading / title (like Active Tag Values below)">
+                <span class="material-symbols-outlined text-[14px]">edit</span>
+              </button>
+            </div>
             
             <!-- Quick System Insert Tags -->
             <div class="flex items-center gap-1 flex-wrap text-[10px]">
@@ -2567,8 +2572,8 @@
             <div class="bg-surface-chat rounded-xl p-4 border border-emerald-200/70 shadow-inner">
               <div class="flex items-center justify-between text-[11px] font-semibold text-emerald-900/80 mb-2 border-b border-emerald-100 pb-1.5">
                 <span class="flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[14px]">phone_iphone</span>
-                  <span id="bcast-preview-customer-label">Sample Recipient: SugunaMani (+91 73389 65560)</span>
+                  <!-- <span class="material-symbols-outlined text-[14px]">phone_iphone</span> -->
+                  <!-- <span id="bcast-preview-customer-label">Sample Recipient: SugunaMani (+91 73389 65560)</span> -->
                 </span>
                 <span class="text-[10px] font-mono text-slate-400" id="bcast-preview-char-count">0 chars</span>
               </div>
