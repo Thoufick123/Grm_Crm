@@ -347,6 +347,13 @@
         </div>
 
 
+        <!-- Number Masking & Lead Privacy Toggle Button -->
+        <button onclick="toggleGlobalPhoneMasking()" id="btn-mask-toggle" class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition shadow-sm" title="Toggle Number Masking (Protects customer phone numbers from unauthorized export)">
+          <span class="material-symbols-outlined text-[16px] text-amber-700" id="mask-icon">lock</span>
+          <span>Masking:</span>
+          <span class="font-extrabold text-amber-950" id="mask-status-label">OFF</span>
+        </button>
+
         <!-- Message Automation / Stock Auto-Reply Button -->
         <button onclick="openAutoReplyModal()" id="header-auto-reply-btn" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Configure Automated Stock Category Instant Replies for Incoming WhatsApp Messages">
           <span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span>
@@ -3048,6 +3055,165 @@
     </div>
   </div>
 
+  <!-- MODAL: BRAND-MASKED WHATSAPP VOICE CALL -->
+  <div id="modal-brand-call" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-emerald-200">
+      
+      <!-- Top Brand Calling Header -->
+      <div class="bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/30 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-glow">
+            <span class="material-symbols-outlined text-[24px] animate-pulse">call</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-base" id="call-modal-brand-title">Blue Berry 💙 Voice Call</h3>
+              <span class="text-[9px] bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>MASKED CALLER ID</span>
+              </span>
+            </div>
+            <p class="text-xs text-emerald-200/80">Customer sees only Brand Name &bull; Staff SIM is 100% hidden</p>
+          </div>
+        </div>
+        <button onclick="endBrandMaskedCall()" class="text-emerald-300 hover:text-white transition p-1.5 rounded-xl hover:bg-white/10">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5 text-xs">
+        <!-- Caller & Recipient Identity Card -->
+        <div class="bg-gradient-to-b from-emerald-50/70 to-teal-50/40 p-4 rounded-2xl border border-emerald-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center shadow-md" id="call-customer-avatar">
+                CU
+              </div>
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm" id="call-customer-name">Customer Name</h4>
+                <p class="text-xs font-mono font-bold text-emerald-800" id="call-customer-phone">+91 98••• ••210</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-200/80 text-emerald-900 shadow-2xs" id="call-status-badge">
+                <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                <span id="call-status-label">Calling...</span>
+              </span>
+              <p class="font-mono text-xs font-bold text-slate-700 mt-1" id="call-timer-display">00:00</p>
+            </div>
+          </div>
+
+          <!-- Active Brand Identity Shield Notice -->
+          <div class="bg-white/90 backdrop-blur p-3 rounded-xl border border-emerald-300/60 flex items-start gap-2.5 text-[11px] text-slate-700">
+            <span class="material-symbols-outlined text-emerald-600 text-[18px] shrink-0 mt-0.5">verified_user</span>
+            <div>
+              <p class="font-bold text-slate-900">🛡️ Brand Privacy Protection Active</p>
+              <p class="text-slate-600 mt-0.5">Customer's phone displays: <strong class="text-emerald-800" id="call-brand-display-name">Blue Berry 💙</strong> (Official Verified WhatsApp Line). Staff personal numbers and SIM are never exposed.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- In-Browser WebRTC Voice Softphone & Live Audio Waveform -->
+        <div class="bg-gradient-to-r from-slate-950 via-emerald-950 to-slate-900 text-white p-4 rounded-2xl border border-emerald-500/30 space-y-3 shadow-xl">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span class="font-extrabold text-xs text-emerald-300 tracking-wide">IN-CRM WEBRTC SOFTPHONE</span>
+            </div>
+            <span id="call-mic-status-badge" class="text-[10px] text-emerald-300 font-mono bg-emerald-900/80 px-2 py-0.5 rounded-md border border-emerald-500/30 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px] text-emerald-400">mic</span> Mic Ready
+            </span>
+          </div>
+
+          <!-- Live Audio Waveform Canvas Visualizer -->
+          <div class="relative bg-slate-900/90 rounded-xl p-2.5 border border-emerald-500/20 overflow-hidden flex flex-col items-center justify-center">
+            <canvas id="call-waveform-canvas" width="380" height="48" class="w-full h-12 rounded-lg"></canvas>
+            <div class="flex items-center justify-between w-full px-2 mt-1 text-[9px] text-emerald-300/70 font-mono">
+              <span id="call-audio-stream-status">● Live WebRTC Audio Stream Active</span>
+              <span id="call-audio-quality-label">HD Audio • 48 kHz</span>
+            </div>
+          </div>
+
+          <!-- Primary In-Browser Call Actions -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button type="button" onclick="startInBrowserWebRTCCall()" class="sm:col-span-3 py-3 px-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-xl shadow-lg flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-95 text-xs">
+              <span class="material-symbols-outlined text-[20px]">phone_in_talk</span>
+              <span>Talk Live via Browser Mic (No WhatsApp Needed)</span>
+            </button>
+            <button type="button" onclick="triggerDirectWhatsAppVoiceCall(null, 'web')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl border border-emerald-500/40 flex items-center justify-center gap-1.5 transition text-[11px]">
+              <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+              <span>WhatsApp Web</span>
+            </button>
+            <button type="button" onclick="triggerDirectWhatsAppVoiceCall(null, 'app')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl border border-emerald-500/40 flex items-center justify-center gap-1.5 transition text-[11px]">
+              <span class="material-symbols-outlined text-[16px]">chat</span>
+              <span>WhatsApp App</span>
+            </button>
+            <button type="button" onclick="triggerDirectWhatsAppVoiceCall(null, 'tel')" class="py-2 px-2 bg-blue-700 hover:bg-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition text-[11px]">
+              <span class="material-symbols-outlined text-[16px]">call</span>
+              <span>Phone Dialer</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Audio & Call Controls -->
+        <div class="flex items-center justify-center gap-3 py-1">
+          <button type="button" id="btn-call-mute" onclick="toggleCallMute()" class="w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex flex-col items-center justify-center gap-0.5 transition shadow-sm" title="Mute / Unmute Microphone">
+            <span class="material-symbols-outlined text-[18px]" id="icon-call-mute">mic</span>
+            <span class="text-[9px] font-bold" id="label-call-mute">Mute</span>
+          </button>
+
+          <button type="button" id="btn-call-hold" onclick="toggleCallHold()" class="w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex flex-col items-center justify-center gap-0.5 transition shadow-sm" title="Put Call on Hold">
+            <span class="material-symbols-outlined text-[18px]" id="icon-call-hold">pause</span>
+            <span class="text-[9px] font-bold" id="label-call-hold">Hold</span>
+          </button>
+
+          <button type="button" id="btn-call-speaker" onclick="toggleCallSpeaker()" class="w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex flex-col items-center justify-center gap-0.5 transition shadow-sm" title="Toggle Speaker Audio">
+            <span class="material-symbols-outlined text-[18px]" id="icon-call-speaker">volume_up</span>
+            <span class="text-[9px] font-bold">Speaker</span>
+          </button>
+
+          <button type="button" onclick="sendCallWhatsAppPing()" class="px-3 h-11 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 flex flex-col items-center justify-center gap-0.5 transition shadow-sm" title="Send Instant Call Notification over WhatsApp">
+            <span class="material-symbols-outlined text-[18px] text-brand-wa">chat</span>
+            <span class="text-[9px] font-bold">Ping Text</span>
+          </button>
+
+          <button type="button" onclick="endBrandMaskedCall()" class="w-11 h-11 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white flex flex-col items-center justify-center gap-0.5 transition shadow-md hover:scale-105 active:scale-95" title="End Call">
+            <span class="material-symbols-outlined text-[20px]">call_end</span>
+            <span class="text-[9px] font-bold">End</span>
+          </button>
+        </div>
+
+        <!-- Quick Call Outcome Notes -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-700 text-[11px]">📝 Call Notes &amp; Outcome:</label>
+            <span class="text-[10px] text-slate-400 font-medium">Logged to CRM Audit Trail</span>
+          </div>
+
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button type="button" onclick="insertCallOutcomeNote('Customer confirmed size &amp; color. Order booking requested.')" class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg text-[10px] font-semibold border border-slate-200 transition">+ Size Confirmed</button>
+            <button type="button" onclick="insertCallOutcomeNote('Customer requested callback in evening.')" class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg text-[10px] font-semibold border border-slate-200 transition">+ Callback Later</button>
+            <button type="button" onclick="insertCallOutcomeNote('Shared product catalog photos over WhatsApp.')" class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg text-[10px] font-semibold border border-slate-200 transition">+ Photos Shared</button>
+            <button type="button" onclick="insertCallOutcomeNote('Customer did not answer call. WhatsApp message sent.')" class="px-2 py-0.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-800 rounded-lg text-[10px] font-semibold border border-slate-200 transition">+ No Answer</button>
+          </div>
+
+          <textarea id="call-outcome-notes" rows="2" placeholder="Type call conversation summary, customer size request, or special instructions here..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa"></textarea>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="pt-2 flex items-center justify-between border-t border-slate-100">
+          <button type="button" onclick="openFollowupModal(ACTIVE_CUSTOMER_ID)" class="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-[16px]">calendar_add_on</span> Schedule Follow-up
+          </button>
+
+          <button type="button" onclick="endBrandMaskedCall(true)" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-[16px]">check_circle</span> Save Outcome &amp; Finish
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- NOTIFICATION TOAST -->
   <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -3112,6 +3278,6 @@
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=3.8"></script>
+  <script src="crm_app.js?v=4.0"></script>
 </body>
 </html>

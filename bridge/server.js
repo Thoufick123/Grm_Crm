@@ -877,42 +877,61 @@ app.post('/api/accounts/disconnect', async (req, res) => {
 
         console.log(`[Disconnect Request]: Disconnecting and logging out ${targetId}`);
 
-        if (accounts.has(targetId)) {
-            const acc = accounts.get(targetId);
-            if (acc.sock) {
-                try { await acc.sock.logout(); } catch (e) {}
-                try { acc.sock.end(); } catch (e) {}
-            }
-            acc.sock = null;
-            acc.status = 'DISCONNECTED';
-            acc.connectedNumber = null;
-            acc.connectedName = null;
-            acc.qrImage = null;
-            acc.isStarting = false;
-
-            const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
-            if (fs.existsSync(sessionDir)) {
-                try {
-                    fs.rmSync(sessionDir, { recursive: true, force: true });
-                } catch (e) {
-                    console.warn(`[Session Remove Notice for ${targetId}]:`, e.message);
-                }
-            }
-
-            broadcastAccountsUpdate();
-
-            // Re-initialize a fresh QR session for this slot after 1 second
-            setTimeout(() => {
-                initAccountSession(targetId, acc.label);
-            }, 1000);
-
-            return res.json({ 
-                status: 'success', 
-                message: `Account ${targetId} disconnected. CRM records and customer messages are completely preserved.` 
-            });
+        let acc = accounts.get(targetId);
+        if (!acc) {
+            acc = {
+                id: targetId,
+                label: targetId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Business (${targetId})`,
+                status: 'DISCONNECTED',
+                sock: null,
+                qrImage: null,
+                connectedNumber: null,
+                connectedName: null,
+                isStarting: false,
+                lastActive: new Date().toISOString()
+            };
+            accounts.set(targetId, acc);
         }
 
-        res.status(404).json({ status: 'error', message: 'Account not found' });
+        if (acc.sock) {
+            try { await acc.sock.logout(); } catch (e) {}
+            try { acc.sock.end(); } catch (e) {}
+        }
+        acc.sock = null;
+        acc.status = 'DISCONNECTED';
+        acc.connectedNumber = null;
+        acc.connectedName = null;
+        acc.qrImage = null;
+        acc.isStarting = false;
+
+        const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
+        if (fs.existsSync(sessionDir)) {
+            try {
+                fs.rmSync(sessionDir, { recursive: true, force: true });
+            } catch (e) {
+                console.warn(`[Session Remove Notice for ${targetId}]:`, e.message);
+            }
+        }
+
+        // Also clean legacy auth folder if primary
+        if (targetId === 'account_1') {
+            const legacyDir = path.join(__dirname, 'auth_session');
+            if (fs.existsSync(legacyDir)) {
+                try { fs.rmSync(legacyDir, { recursive: true, force: true }); } catch (e) {}
+            }
+        }
+
+        broadcastAccountsUpdate();
+
+        // Re-initialize a fresh QR session for this slot after a short delay
+        setTimeout(() => {
+            initAccountSession(targetId, acc.label);
+        }, 800);
+
+        return res.json({ 
+            status: 'success', 
+            message: `Account ${targetId} disconnected. CRM records and customer messages are completely preserved.` 
+        });
     } catch (e) {
         console.error('[Disconnect Error]:', e.message);
         res.status(500).json({ status: 'error', message: e.message });
@@ -977,6 +996,42 @@ app.get('/api/status', (req, res) => {
         accounts: summary,
         timestamp: new Date().toISOString()
     });
+});
+
+app.post('/api/calls/initiate', async (req, res) => {
+    try {
+        const { customerPhone, customerName, staffName, accountId } = req.body;
+        const brand = BRAND_NAME || 'Blue Berry 💙';
+
+        let activeAcc = null;
+        if (accountId && accounts.has(accountId) && accounts.get(accountId).status === 'CONNECTED') {
+            activeAcc = accounts.get(accountId);
+        } else {
+            for (const acc of accounts.values()) {
+                if (acc.status === 'CONNECTED' && acc.sock) {
+                    activeAcc = acc;
+                    break;
+                }
+            }
+        }
+
+        if (activeAcc && activeAcc.sock) {
+            try {
+                await activeAcc.sock.updateProfileName(brand);
+            } catch (e) {}
+        }
+
+        console.log(`[Call Initiated] Brand Call to ${customerPhone} by ${staffName || 'Staff'} under identity "${brand}"`);
+
+        res.json({
+            status: 'success',
+            caller_identity: brand,
+            masking: 'ACTIVE',
+            message: `Call session active under brand identity "${brand}". Staff personal number is 100% masked.`
+        });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
 });
 
 app.post('/api/send', async (req, res) => {

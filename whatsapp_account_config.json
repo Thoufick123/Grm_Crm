@@ -10,43 +10,43 @@
     "access_token": "EAABwzLIX124BA...",
     "webhook_verify_token": "GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026",
     "provider": "META_CLOUD_API",
-    "status": "CONNECTED",
-    "last_sync": "2026-10-05 12:45:00",
+    "status": "DISCONNECTED",
+    "last_sync": "2026-10-06 10:00:00",
     "connected_lines": [
         {
             "id": "account_1",
             "label": "Line 1: GRM Business Central",
-            "phone_number": "+91 86680 07593",
+            "phone_number": "Awaiting Link",
             "brand_name": "GRM Garments Central",
-            "status": "CONNECTED"
+            "status": "DISCONNECTED"
         },
         {
             "id": "account_2",
             "label": "Line 2: Blue Berry Kids & Maternity",
-            "phone_number": "+91 97896 60115",
+            "phone_number": "Awaiting Link",
             "brand_name": "Blue Berry 💙",
-            "status": "CONNECTED"
+            "status": "DISCONNECTED"
         },
         {
             "id": "account_3",
             "label": "Line 3: Customer Support & Enquiries",
-            "phone_number": "+91 98765 43210",
+            "phone_number": "Awaiting Link",
             "brand_name": "GRM Support Desk",
-            "status": "CONNECTED"
+            "status": "DISCONNECTED"
         },
         {
             "id": "account_4",
             "label": "Line 4: Wholesale & Bulk Orders",
-            "phone_number": "+91 98450 99887",
+            "phone_number": "Awaiting Link",
             "brand_name": "GRM Wholesale Desk",
-            "status": "CONNECTED"
+            "status": "DISCONNECTED"
         },
         {
             "id": "account_5",
             "label": "Line 5: VIP Fast-Track & Dispatch",
-            "phone_number": "+91 95009 04638",
+            "phone_number": "Awaiting Link",
             "brand_name": "GRM VIP Desk",
-            "status": "CONNECTED"
+            "status": "DISCONNECTED"
         }
     ]
 }

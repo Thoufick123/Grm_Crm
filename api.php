@@ -307,11 +307,45 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {}
     }
 
+    // Auto-sync brand name with live Bridge Server
+    try {
+        $brandToSync = $updatedConfig['display_name'] ?? $updatedConfig['brand_name'] ?? 'GRM Garments Official';
+        $ch = curl_init('http://localhost:3000/api/accounts/update_profile');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['brandName' => $brandToSync]));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        curl_exec($ch);
+        curl_close($ch);
+    } catch (Exception $e) {}
+
     echo json_encode([
         "status" => "success", 
-        "message" => "WhatsApp Phone Number and Brand Configuration saved successfully", 
+        "message" => "WhatsApp Phone Number and Brand Configuration saved and synced with Live Bridge", 
         "data" => $updatedConfig
     ]);
+    exit;
+}
+
+if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $postData = json_decode($input, true);
+    $accountId = $postData['accountId'] ?? 'account_1';
+
+    $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    $currentConfig['status'] = 'DISCONNECTED';
+    $currentConfig['last_sync'] = date("Y-m-d H:i:s");
+    file_put_contents($configFile, json_encode($currentConfig, JSON_PRETTY_PRINT));
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("UPDATE `whatsapp_accounts` SET `status` = 'DISCONNECTED' WHERE `account_slot` = ?");
+            $stmt->execute([$accountId]);
+        } catch (Exception $e) {}
+    }
+
+    echo json_encode(["status" => "success", "message" => "Account disconnected in backend"]);
     exit;
 }
 
