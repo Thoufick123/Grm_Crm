@@ -128,11 +128,13 @@ let autoReplyConfig = {
     keywordMatching: true
 };
 
-function getStockAutoReplyTemplate(customerName) {
+function getStockAutoReplyTemplate(customerName, botPhone) {
     const brand = BRAND_NAME || 'Blue Berry 💙';
     const cName = customerName ? customerName.split(' ')[0] : 'there';
+    const rawPhone = botPhone || (accounts.get('account_1')?.connectedNumber) || '919789660115';
+    const cleanPhone = String(rawPhone).replace(/[^0-9]/g, '') || '919789660115';
     
-    return `🛍️ *${brand}* • Live Stock & Collections\n━━━━━━━━━━━━━━━━━━━━\nHello ${cName}! 👋 Thank you for messaging us.\n\nHere is our live available stock & collections today:\n\n📦 *1. Baby Collection (0-3 Years)*\n• Embroidered Cotton Frocks & Soft Sets — *₹599*\n\n📦 *2. Maternity & Feeding Gowns*\n• Tiered Cotton Maxi & Feeding Gowns — *₹1299 - ₹1450*\n\n📦 *3. Newborn Gift Sets (0-6 Months)*\n• 5-Piece Organic Romper Gift Sets — *₹799*\n\n📦 *4. Kids Everyday Wear (4-5 Years)*\n• Pure Cotton T-Shirts Pack & Daily Sets — *₹450*\n\n📦 *5. Wholesale & Bulk Bundles*\n• Bulk 25 & 50 Pcs Assorted Boxes — *₹7200 - ₹8500*\n\n📦 *6. Festive & VIP Silk Collection*\n• Girls Silk Lehengas & Pattu Pavadai Sets — *₹899*\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *How to Order / Inquire:*\nReply with the *Category Number (1-6)* or tell us what size you need, and our sales team will share photos & reserve your order instantly!`;
+    return `🛍️ *${brand}* • Live Stock & Collections\n━━━━━━━━━━━━━━━━━━━━\nHello ${cName}! 👋 Thank you for messaging us.\n\nHere is our live available stock & collections today:\n\n📦 *1. Baby Collection (0-3 Years)*\n• Embroidered Cotton Frocks & Soft Sets — *₹599*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=1\n\n📦 *2. Maternity & Feeding Gowns*\n• Tiered Cotton Maxi & Feeding Gowns — *₹1299 - ₹1450*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=2\n\n📦 *3. Newborn Gift Sets (0-6 Months)*\n• 5-Piece Organic Romper Gift Sets — *₹799*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=3\n\n📦 *4. Kids Everyday Wear (4-5 Years)*\n• Pure Cotton T-Shirts Pack & Daily Sets — *₹450*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=4\n\n📦 *5. Wholesale & Bulk Bundles*\n• Bulk 25 & 50 Pcs Assorted Boxes — *₹7200 - ₹8500*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=5\n\n📦 *6. Festive & VIP Silk Collection*\n• Girls Silk Lehengas & Pattu Pavadai Sets — *₹899*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=6\n\n━━━━━━━━━━━━━━━━━━━━\n👉 *Tap any link above (or reply with 1–6) to view ready-stock photos & prices instantly!*`;
 }
 
 function getKeywordResponse(key, custName) {
