@@ -11,12 +11,12 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
     id: 1,
     businessName: 'GRM Garments Business Hub',
     displayName: 'GRM Garments Official',
-    phoneNumber: '+91 86680 07593',
+    phoneNumber: null,
     phoneNumberId: '109823471928374',
     wabaId: '982374619283745',
-    provider: 'META_CLOUD_API',
+    provider: 'QR_CODE_BRIDGE',
     verifyToken: 'GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026',
-    status: 'CONNECTED',
+    status: 'DISCONNECTED',
     webhookUrl: 'http://localhost:8080/webhook.php'
   },
   // 1.5. Expected Daily WhatsApp Inbound Message Target (Default: 200 msgs/day)
@@ -225,11 +225,17 @@ function initSocketIO() {
         MULTI_ACCOUNTS_STATE = data.accounts;
         renderMultiAccountsHub();
         const primary = data.accounts[0];
-        if (primary && primary.connected_number) {
+        if (primary && primary.connected_number && primary.status === 'CONNECTED') {
           CRM_STATE.whatsappAccount.phoneNumber = primary.connected_number;
-          saveCRMState();
-          updateConfiguredPhoneDisplays();
+          CRM_STATE.whatsappAccount.status = 'CONNECTED';
+        } else {
+          CRM_STATE.whatsappAccount.phoneNumber = null;
+          CRM_STATE.whatsappAccount.status = primary ? primary.status : 'DISCONNECTED';
         }
+        saveCRMState();
+        updateConfiguredPhoneDisplays();
+        if (typeof renderQuickLineSwitcher === 'function') renderQuickLineSwitcher();
+        if (typeof renderPhoneSwitcherDropdown === 'function') renderPhoneSwitcherDropdown();
       }
     });
 
@@ -567,8 +573,9 @@ function initCRMState() {
       CRM_STATE = JSON.parse(saved);
       if (!CRM_STATE.whatsappAccount) {
         CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
-      } else if (!CRM_STATE.whatsappAccount.phoneNumber || CRM_STATE.whatsappAccount.phoneNumber.includes('98765 43210') || CRM_STATE.whatsappAccount.phoneNumber.includes('97896 60115')) {
-        CRM_STATE.whatsappAccount.phoneNumber = '+91 86680 07593';
+      } else if (CRM_STATE.whatsappAccount.phoneNumber && (CRM_STATE.whatsappAccount.phoneNumber.includes('86680 07593') || CRM_STATE.whatsappAccount.phoneNumber.includes('98765 43210') || CRM_STATE.whatsappAccount.phoneNumber.includes('97896 60115'))) {
+        CRM_STATE.whatsappAccount.phoneNumber = null;
+        CRM_STATE.whatsappAccount.status = 'DISCONNECTED';
       }
       if (!CRM_STATE.dailyMessageTarget) {
         CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
@@ -597,6 +604,14 @@ function initCRMState() {
           if (!s.phone) s.phone = `+91 98450 1122${idx + 1}`;
           if (!s.status) s.status = 'ACTIVE';
         });
+      }
+
+      // Sanitize legacy mock whatsappLines so only real live accounts from bridge/user are displayed
+      if (Array.isArray(CRM_STATE.whatsappLines)) {
+        const hasLegacyMock = CRM_STATE.whatsappLines.some(l => l.connected_number === '+91 97896 60115' || l.connected_number === '+91 98450 99887' || (l.label && l.label.includes('Blue Berry Kids')));
+        if (hasLegacyMock) {
+          CRM_STATE.whatsappLines = null;
+        }
       }
     } catch (e) {
       console.warn('Recovering CRM state from initial schema:', e);
@@ -633,7 +648,7 @@ function initCRMState() {
   fetch('api.php?action=get_config')
     .then(r => r.json())
     .then(res => {
-      if (res.status === 'success' && res.data && res.data.phone_number) {
+      if (res.status === 'success' && res.data && res.data.phone_number && res.data.status === 'CONNECTED') {
         CRM_STATE.whatsappAccount.phoneNumber = formatPhoneNumberPretty(res.data.phone_number);
         CRM_STATE.whatsappAccount.businessName = res.data.business_name || CRM_STATE.whatsappAccount.businessName;
         CRM_STATE.whatsappAccount.displayName = res.data.display_name || CRM_STATE.whatsappAccount.displayName;
@@ -687,77 +702,62 @@ function saveCRMState() {
   updateConfiguredPhoneDisplays();
 }
 
-// 5 Connected WhatsApp Business Numbers Engine
+// Dynamic Multi-Account WhatsApp Hub Engine (100% Live, No Hardcoded Mock Accounts)
 function getAvailableWhatsAppAccounts() {
-  const defaultAccounts = [
-    {
-      id: 'account_1',
-      label: 'Line 1: GRM Business Central',
-      status: 'CONNECTED',
-      connected_number: '+91 86680 07593',
-      brand_name: 'GRM Garments Central'
-    },
-    {
-      id: 'account_2',
-      label: 'Line 2: Blue Berry Kids & Maternity',
-      status: 'CONNECTED',
-      connected_number: '+91 97896 60115',
-      brand_name: 'Blue Berry 💙'
-    },
-    {
-      id: 'account_3',
-      label: 'Line 3: Customer Support & Enquiries',
-      status: 'CONNECTED',
-      connected_number: '+91 98765 43210',
-      brand_name: 'GRM Support Desk'
-    },
-    {
-      id: 'account_4',
-      label: 'Line 4: Wholesale & Bulk Orders',
-      status: 'CONNECTED',
-      connected_number: '+91 98450 99887',
-      brand_name: 'GRM Wholesale Desk'
-    },
-    {
-      id: 'account_5',
-      label: 'Line 5: VIP Fast-Track & Dispatch',
-      status: 'CONNECTED',
-      connected_number: '+91 95009 04638',
-      brand_name: 'GRM VIP Desk'
-    }
-  ];
+  let list = [];
 
-  let accountsList = [];
-  if (Array.isArray(CRM_STATE?.whatsappLines) && CRM_STATE.whatsappLines.length > 0) {
-    accountsList = JSON.parse(JSON.stringify(CRM_STATE.whatsappLines));
-  } else {
-    accountsList = JSON.parse(JSON.stringify(defaultAccounts));
-    if (CRM_STATE) CRM_STATE.whatsappLines = accountsList;
-  }
-
-  // Filter out any explicitly deleted slots
-  if (Array.isArray(CRM_STATE?.deletedSlots) && CRM_STATE.deletedSlots.length > 0) {
-    accountsList = accountsList.filter(acc => !CRM_STATE.deletedSlots.includes(acc.id));
-  }
-
-  // Merge with live MULTI_ACCOUNTS_STATE if available
+  // 1. Prioritize live Baileys multi-account sessions from Node.js Bridge Server
   if (Array.isArray(MULTI_ACCOUNTS_STATE) && MULTI_ACCOUNTS_STATE.length > 0) {
-    accountsList = accountsList.map(acc => {
-      const liveAcc = MULTI_ACCOUNTS_STATE.find(a => a.id === acc.id);
-      if (!liveAcc) return acc;
+    list = MULTI_ACCOUNTS_STATE.map((liveAcc, idx) => {
+      const isLiveConnected = (liveAcc.status === 'CONNECTED' && Boolean(liveAcc.connected_number));
       return {
-        ...acc,
-        status: liveAcc.status || acc.status,
-        connected_number: liveAcc.connected_number || acc.connected_number,
-        connected_name: liveAcc.connected_name || acc.connected_name,
-        label: liveAcc.label || acc.label,
-        qr_image: liveAcc.qr_image || acc.qr_image || liveAcc.qr || acc.qr,
-        qr: liveAcc.qr_image || liveAcc.qr || acc.qr
+        id: liveAcc.id || (`account_${idx + 1}`),
+        label: liveAcc.label || (idx === 0 ? 'Line 1: Primary WhatsApp' : `Line ${idx + 1}: WhatsApp Business`),
+        status: isLiveConnected ? 'CONNECTED' : (liveAcc.status || 'DISCONNECTED'),
+        connected_number: liveAcc.connected_number || null,
+        connected_name: liveAcc.connected_name || null,
+        brand_name: liveAcc.connected_name || liveAcc.label || 'WhatsApp Business',
+        qr_image: liveAcc.qr_image || liveAcc.qr || null
       };
     });
   }
 
-  return accountsList;
+  // 2. Merge any user-added custom slots from CRM_STATE (e.g. newly added slots)
+  if (Array.isArray(CRM_STATE?.whatsappLines) && CRM_STATE.whatsappLines.length > 0) {
+    CRM_STATE.whatsappLines.forEach(slot => {
+      const exists = list.find(a => a.id === slot.id);
+      if (!exists) {
+        list.push({
+          id: slot.id,
+          label: slot.label || slot.id,
+          status: slot.status === 'CONNECTED' && slot.connected_number ? 'CONNECTED' : (slot.status || 'DISCONNECTED'),
+          connected_number: slot.connected_number || null,
+          brand_name: slot.brand_name || slot.label || 'WhatsApp Line',
+          qr_image: slot.qr_image || null
+        });
+      }
+    });
+  }
+
+  // 3. Fallback: If no accounts exist at all, initialize clean slot 1
+  if (list.length === 0) {
+    list = [
+      {
+        id: 'account_1',
+        label: 'Line 1: Primary WhatsApp',
+        status: 'DISCONNECTED',
+        connected_number: null,
+        brand_name: 'Primary WhatsApp'
+      }
+    ];
+  }
+
+  // 4. Exclude explicitly deleted slots
+  if (Array.isArray(CRM_STATE?.deletedSlots) && CRM_STATE.deletedSlots.length > 0) {
+    list = list.filter(acc => !CRM_STATE.deletedSlots.includes(acc.id));
+  }
+
+  return list;
 }
 
 function togglePhoneSwitcherDropdown(event) {
@@ -789,10 +789,13 @@ function renderPhoneSwitcherDropdown() {
   if (!listContainer) return;
 
   const accounts = getAvailableWhatsAppAccounts();
-  const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593').replace(/\s+/g, '');
+  const connectedAccounts = accounts.filter(a => a.status === 'CONNECTED' && a.connected_number);
   
   if (countBadge) {
-    countBadge.innerText = `${accounts.length} Active Line${accounts.length > 1 ? 's' : ''}`;
+    countBadge.innerText = `${connectedAccounts.length} Connected / ${accounts.length} Total`;
+    countBadge.className = connectedAccounts.length > 0
+      ? "text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full"
+      : "text-[10px] bg-amber-100 text-amber-800 font-extrabold px-2 py-0.5 rounded-full";
   }
 
   const availableAccountIds = accounts.map(a => a.id);
@@ -807,7 +810,7 @@ function renderPhoneSwitcherDropdown() {
   if (accounts.length > 1) {
     html += `
       <!-- Option: View All Lines (Combined View) -->
-      <div onclick="switchActiveWhatsAppLine('all', 'All ${accounts.length} WhatsApp Lines', 'Combined Hub')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${ACTIVE_SEND_ACCOUNT_ID === 'all' ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
+      <div onclick="switchActiveWhatsAppLine('all', 'All Lines', 'Combined Hub')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${ACTIVE_SEND_ACCOUNT_ID === 'all' ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
         <div class="flex items-center gap-2.5 min-w-0">
           <div class="w-8 h-8 rounded-lg ${ACTIVE_SEND_ACCOUNT_ID === 'all' ? 'bg-brand-dark text-white shadow-sm' : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700'} flex items-center justify-center font-bold text-xs shrink-0">
             <span class="material-symbols-outlined text-[18px]">hub</span>
@@ -826,33 +829,33 @@ function renderPhoneSwitcherDropdown() {
   }
 
   html += accounts.map((acc, index) => {
-    const accCleanPhone = (acc.connected_number || '').replace(/\s+/g, '');
-    const isCurrent = (acc.id === ACTIVE_SEND_ACCOUNT_ID) || (accounts.length === 1) || (ACTIVE_SEND_ACCOUNT_ID !== 'all' && accCleanPhone === currentPhone);
-    const isConn = acc.status === 'CONNECTED';
-    const displayPhone = acc.connected_number || '+91 86680 07593';
+    const isConn = (acc.status === 'CONNECTED' && Boolean(acc.connected_number));
+    const isScanning = (acc.status === 'SCAN_QR');
+    const isCurrent = (acc.id === ACTIVE_SEND_ACCOUNT_ID) || (accounts.length === 1 && ACTIVE_SEND_ACCOUNT_ID === 'all');
+    const displayPhone = isConn ? formatPhoneNumberPretty(acc.connected_number) : (isScanning ? '🟡 Scan QR Code' : '🔴 Not Linked');
     const custCount = (CRM_STATE?.customers || []).filter(c => {
       const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
       return (c.accountId || (q ? q.accountId : 'account_1')) === acc.id;
     }).length;
 
     return `
-      <div onclick="switchActiveWhatsAppLine('${acc.id}', '${displayPhone}', '${acc.label || 'Line ' + (index+1)}')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${isCurrent ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
+      <div onclick="switchActiveWhatsAppLine('${acc.id}', '${acc.connected_number || ''}', '${acc.label || 'Line ' + (index+1)}')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${isCurrent ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
         <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-8 h-8 rounded-lg ${isCurrent ? 'bg-brand-wa text-white shadow-sm' : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700'} flex items-center justify-center font-bold text-xs shrink-0">
-            <span class="material-symbols-outlined text-[18px]">${isCurrent ? 'check_circle' : 'phone_android'}</span>
+          <div class="w-8 h-8 rounded-lg ${isConn ? (isCurrent ? 'bg-brand-wa text-white shadow-sm' : 'bg-emerald-50 text-emerald-700') : 'bg-slate-100 text-slate-600 group-hover:bg-amber-100 group-hover:text-amber-700'} flex items-center justify-center font-bold text-xs shrink-0">
+            <span class="material-symbols-outlined text-[18px]">${isConn ? 'check_circle' : (isScanning ? 'qr_code_scanner' : 'phone_android')}</span>
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-1.5">
               <span class="font-bold text-slate-900 text-xs truncate">${acc.label || ('WhatsApp Line #' + (index + 1))}</span>
               ${isCurrent ? '<span class="text-[9px] bg-brand-wa text-white px-1.5 py-0.2 rounded font-extrabold">ACTIVE</span>' : ''}
             </div>
-            <p class="font-mono text-[11px] font-bold ${isCurrent ? 'text-emerald-700' : 'text-slate-500'}">${displayPhone}</p>
+            <p class="font-mono text-[11px] font-bold ${isConn ? (isCurrent ? 'text-emerald-700' : 'text-slate-700') : 'text-slate-400'}">${displayPhone}</p>
           </div>
         </div>
         <div class="text-right shrink-0 flex flex-col items-end">
-          <span class="inline-flex items-center gap-1 text-[10px] font-bold ${isConn ? 'text-emerald-600' : 'text-amber-600'}">
-            <span class="w-1.5 h-1.5 rounded-full ${isConn ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
-            ${isConn ? 'Connected' : 'Scan QR'}
+          <span class="inline-flex items-center gap-1 text-[10px] font-bold ${isConn ? 'text-emerald-600' : (isScanning ? 'text-amber-600' : 'text-rose-500')}">
+            <span class="w-1.5 h-1.5 rounded-full ${isConn ? 'bg-emerald-500' : (isScanning ? 'bg-amber-500 animate-pulse' : 'bg-rose-400')}"></span>
+            ${isConn ? 'Connected' : (isScanning ? 'Scan QR' : 'Disconnected')}
           </span>
           <span class="text-[9px] text-slate-400 font-semibold">${custCount} Chats</span>
         </div>
@@ -871,9 +874,9 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
   }
 
   if (accountId !== 'all') {
-    CRM_STATE.whatsappAccount.phoneNumber = phoneNumber;
+    CRM_STATE.whatsappAccount.phoneNumber = phoneNumber || null;
+    CRM_STATE.whatsappAccount.status = phoneNumber ? 'CONNECTED' : 'DISCONNECTED';
   }
-  CRM_STATE.whatsappAccount.status = 'CONNECTED';
   saveCRMState();
   updateConfiguredPhoneDisplays();
   closePhoneSwitcherDropdown();
@@ -886,7 +889,7 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
   // Auto-switch ACTIVE_CUSTOMER_ID to the first available conversation in this line
   const availableCusts = (CRM_STATE.customers || []).filter(c => {
     if (accountId === 'all') return true;
-    const q = (CRM_STATE.queries || []).find(qry => qry.customerId === c.id);
+    const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
     const cAcc = c.accountId || (q ? q.accountId : 'account_1');
     return cAcc === accountId;
   });
@@ -906,7 +909,7 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
   if (typeof playChime === 'function') playChime('order');
   showToast(
     'WhatsApp Line Switched',
-    `Active Line: ${phoneNumber} (${label || 'WhatsApp Line'}). Dynamic chats loaded.`,
+    `Active Line: ${phoneNumber || 'Selected Slot'} (${label || 'WhatsApp Line'}). Dynamic chats loaded.`,
     'swap_horiz',
     'emerald'
   );
@@ -921,7 +924,7 @@ document.addEventListener('click', (e) => {
 });
 
 function formatPhoneNumberPretty(phone) {
-  if (!phone) return '+91 86680 07593';
+  if (!phone || phone === 'null' || phone === 'undefined' || phone === 'Awaiting Link') return 'Not Linked';
   if (phone.includes('156066293805087')) return '+91 95009 04638';
   const clean = phone.replace(/[^0-9]/g, '');
   if (clean.length === 12 && clean.startsWith('91')) {
@@ -935,16 +938,22 @@ function formatPhoneNumberPretty(phone) {
 
 // Update all UI elements displaying the WhatsApp Business Phone Number
 function updateConfiguredPhoneDisplays() {
-  if (!CRM_STATE || !CRM_STATE.whatsappAccount) return;
+  if (!CRM_STATE) return;
   const accounts = getAvailableWhatsAppAccounts();
-  const rawPhone = CRM_STATE.whatsappAccount.phoneNumber || '+91 86680 07593';
+  const isAll = ACTIVE_SEND_ACCOUNT_ID === 'all';
+  const cur = accounts.find(a => a.id === ACTIVE_SEND_ACCOUNT_ID) || accounts[0];
+  const isConn = Boolean(cur && cur.status === 'CONNECTED' && cur.connected_number);
 
   let phone = '';
-  if (ACTIVE_SEND_ACCOUNT_ID === 'all') {
-    phone = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : (accounts[0] ? formatPhoneNumberPretty(accounts[0].connected_number) : formatPhoneNumberPretty(rawPhone));
+  if (isAll) {
+    const connList = accounts.filter(a => a.status === 'CONNECTED' && a.connected_number);
+    phone = connList.length > 0 ? `All (${connList.length} Connected)` : `All (${accounts.length} Lines • Scan QR)`;
+  } else if (isConn) {
+    phone = formatPhoneNumberPretty(cur.connected_number);
+  } else if (cur && cur.status === 'SCAN_QR') {
+    phone = 'Link Phone (Scan QR)';
   } else {
-    const cur = accounts.find(a => a.id === ACTIVE_SEND_ACCOUNT_ID);
-    phone = cur ? formatPhoneNumberPretty(cur.connected_number) : formatPhoneNumberPretty(rawPhone);
+    phone = 'Link WhatsApp Phone';
   }
 
   // Update in topbar/sidebar indicators
@@ -952,18 +961,32 @@ function updateConfiguredPhoneDisplays() {
     el.innerText = phone;
   });
 
-  const sidebarPhone = document.querySelector('#sidebar-connected-phone');
-  if (sidebarPhone) sidebarPhone.innerText = (ACTIVE_SEND_ACCOUNT_ID === 'all') ? (accounts[0] ? formatPhoneNumberPretty(accounts[0].connected_number) : '+91 86680 07593') : phone;
-
+  const headerBadge = document.querySelector('#header-phone-badge');
   const headerLabel = document.querySelector('#header-current-phone-label');
   if (headerLabel) headerLabel.innerText = phone;
+  if (headerBadge) {
+    if (isConn || (isAll && accounts.some(a => a.status === 'CONNECTED' && a.connected_number))) {
+      headerBadge.className = "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-300 transition shadow-sm cursor-pointer";
+    } else {
+      headerBadge.className = "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-xl border border-amber-300 transition shadow-sm cursor-pointer";
+    }
+  }
+
+  const sidebarPhone = document.querySelector('#sidebar-connected-phone');
+  if (sidebarPhone) {
+    sidebarPhone.innerText = isConn ? phone : 'Disconnected';
+  }
 
   const cfgInput = document.querySelector('#cfg-phone-number');
-  if (cfgInput && !cfgInput.value) cfgInput.value = (ACTIVE_SEND_ACCOUNT_ID === 'all') ? (accounts[0] ? formatPhoneNumberPretty(accounts[0].connected_number) : '+91 86680 07593') : phone;
+  if (cfgInput) {
+    cfgInput.value = isConn ? formatPhoneNumberPretty(cur.connected_number) : '';
+  }
 
   const pageSub = document.querySelector('#page-subtitle');
   if (pageSub && ACTIVE_VIEW === 'inbox') {
-    pageSub.innerText = `Live chats for ${phone} • Active line conversation management & order booking`;
+    pageSub.innerText = isConn
+      ? `Live chats for ${phone} • Active line conversation management & order booking`
+      : `WhatsApp Disconnected • Scan QR in Settings to connect your phone`;
   }
 }
 
@@ -5362,11 +5385,14 @@ function fetchQRBridgeStatus() {
           if (primary.status === 'CONNECTED' && primary.connected_number) {
             CRM_STATE.whatsappAccount.phoneNumber = primary.connected_number;
             CRM_STATE.whatsappAccount.status = 'CONNECTED';
-          } else if (primary.status === 'SCAN_QR' || primary.status === 'DISCONNECTED') {
-            CRM_STATE.whatsappAccount.status = primary.status;
+          } else {
+            CRM_STATE.whatsappAccount.phoneNumber = null;
+            CRM_STATE.whatsappAccount.status = primary.status || 'DISCONNECTED';
           }
           saveCRMState();
           updateConfiguredPhoneDisplays();
+          if (typeof renderQuickLineSwitcher === 'function') renderQuickLineSwitcher();
+          if (typeof renderPhoneSwitcherDropdown === 'function') renderPhoneSwitcherDropdown();
         }
       }
     })
@@ -5404,7 +5430,7 @@ function renderMultiAccountsHub() {
 
   const accounts = getAvailableWhatsAppAccounts();
 
-  const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
+  const connectedCount = accounts.filter(a => a.status === 'CONNECTED' && a.connected_number).length;
   if (countBadge) {
     countBadge.innerText = `${connectedCount} Connected`;
     countBadge.className = connectedCount > 0 ? "bg-emerald-400 text-slate-900 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full" : "bg-amber-400 text-slate-900 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full";

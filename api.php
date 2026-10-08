@@ -264,9 +264,9 @@ if ($action === 'get_config') {
             "id" => 1,
             "business_name" => "GRM Garments Business Hub",
             "display_name" => "GRM Garments Official",
-            "brand_name" => "Blue Berry 💙",
-            "phone_number" => "+91 98765 43210",
-            "status" => "CONNECTED"
+            "brand_name" => "GRM Garments 💙",
+            "phone_number" => null,
+            "status" => "DISCONNECTED"
         ];
     }
     echo json_encode(["status" => "success", "data" => $configData]);
