@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GRM WhatsApp CRM — Modern Customer Communication & Assignment Hub</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2300a884'/><text y='70' x='18' font-size='65' fill='white'>💬</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -118,10 +119,13 @@
 </head>
 <body class="bg-surface-bg font-sans text-slate-800 antialiased overflow-hidden flex h-screen">
 
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="sidebar-mobile-backdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 bg-slate-900/60 z-40 lg:hidden hidden transition-opacity duration-300"></div>
+
   <!-- ========================================================================= -->
-  <!-- 1. LEFT NAVIGATION SIDEBAR -->
+  <!-- 1. LEFT NAVIGATION SIDEBAR (RESPONSIVE DRAWER) -->
   <!-- ========================================================================= -->
-  <aside class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-xl border-r border-brand-900/50 z-30 select-none">
+  <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 lg:relative lg:translate-x-0 -translate-x-full lg:flex transition-transform duration-300 w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl lg:shadow-xl border-r border-brand-900/50 select-none">
     <!-- Brand Top -->
     <div class="h-16 flex items-center justify-between px-5 border-b border-brand-900/60 bg-brand-dark shrink-0">
       <div class="flex items-center gap-3">
@@ -135,6 +139,10 @@
           <p class="text-[11px] text-emerald-400/80 font-medium">WhatsApp Business Hub</p>
         </div>
       </div>
+      <!-- Close button on mobile -->
+      <button type="button" onclick="toggleMobileSidebar(false)" class="lg:hidden p-1 text-slate-400 hover:text-white rounded-lg transition" title="Close Menu">
+        <span class="material-symbols-outlined text-[22px]">close</span>
+      </button>
     </div>
 
     <!-- Quick Action / Status Bar (Clickable to open WhatsApp Settings!) -->
@@ -227,7 +235,7 @@
       <div class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Settings & Admin</div>
 
       <!-- PROMINENT WHATSAPP SETTINGS BUTTON -->
-      <button onclick="switchView('settings')" id="nav-settings" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+      <button onclick="switchView('settings')" id="nav-settings" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
         <div class="flex items-center gap-3">
           <span class="material-symbols-outlined text-[20px] text-emerald-300 group-hover:scale-110 transition">settings_phone</span>
           <span>WhatsApp Settings</span>
@@ -236,7 +244,7 @@
       </button>
 
       <!-- DATA BACKUP & RESTORE MODULE -->
-      <button onclick="switchView('backup')" id="nav-backup" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-200 hover:text-white group">
+      <button onclick="switchView('backup')" id="nav-backup" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-200 hover:text-white group admin-only-nav">
         <div class="flex items-center gap-3">
           <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">cloud_sync</span>
           <span class="font-bold">Data Backup & Restore</span>
@@ -301,11 +309,14 @@
 
     <!-- Top Header (Clean Height & Responsive Layout to Prevent Text Cutoff) -->
     <header class="min-h-[64px] bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-20 gap-3">
-      <!-- Dynamic Header Title -->
-      <div class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg">
+      <!-- Dynamic Header Title & Mobile Menu Trigger -->
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 max-w-xl">
+        <button type="button" onclick="toggleMobileSidebar(true)" class="lg:hidden p-1.5 -ml-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition flex items-center justify-center shrink-0" title="Open Navigation Menu">
+          <span class="material-symbols-outlined text-[24px]">menu</span>
+        </button>
         <div class="min-w-0">
-          <h2 id="page-title" class="font-bold text-base sm:text-lg text-slate-900 leading-tight truncate">WhatsApp Inbox &amp; Customer Queue</h2>
-          <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
+          <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight">WhatsApp Inbox &amp; Customer Queue</h2>
+          <p id="page-subtitle" class="text-[11px] sm:text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
         </div>
       </div>
 
@@ -348,21 +359,21 @@
 
 
         <!-- Message Automation / Stock Auto-Reply Button -->
-        <button onclick="openAutoReplyModal()" id="header-auto-reply-btn" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Configure Automated Stock Category Instant Replies for Incoming WhatsApp Messages">
+        <button onclick="openAutoReplyModal()" id="header-auto-reply-btn" class="hidden md:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Configure Automated Stock Category Instant Replies for Incoming WhatsApp Messages">
           <span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span>
-          <span>Stock Auto-Reply Bot</span>
+          <span class="hidden xl:inline">Auto-Reply Bot</span>
         </button>
 
         <!-- Broadcast Template to All Customers Button -->
-        <button onclick="openBroadcastModal()" id="header-broadcast-btn" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Send customized template message to all customer chats automatically">
+        <button onclick="openBroadcastModal()" id="header-broadcast-btn" class="hidden md:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Send customized template message to all customer chats automatically">
           <span class="material-symbols-outlined text-[16px]">campaign</span>
-          <span>Broadcast Template</span>
+          <span class="hidden xl:inline">Broadcast</span>
         </button>
 
         <!-- Reset Test Inbox Messages Button (Dev / Test Helper) -->
         <button onclick="confirmResetInboxMessages()" id="header-reset-inbox-btn" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-lg transition shadow-sm" title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
           <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>
-          <span>Reset Inbox</span>
+          <span class="hidden 2xl:inline">Reset</span>
         </button>
         <div class="h-6 w-px bg-slate-200"></div>
 
@@ -406,15 +417,15 @@
     <!-- ========================================================================= -->
     <!-- 3. VIEWS CONTAINER -->
     <!-- ========================================================================= -->
-    <main class="flex-1 overflow-hidden relative">
+    <main class="flex-1 overflow-hidden relative min-w-0">
 
       <!-- ========================================== -->
       <!-- VIEW: WHATSAPP INBOX (3-PANEL CORE SCREEN) -->
       <!-- ========================================== -->
-      <section id="view-inbox" class="h-full flex overflow-hidden">
+      <section id="view-inbox" class="h-full flex overflow-hidden w-full min-w-0">
         
-        <!-- Left Panel: Conversation & Enquiry List -->
-        <div class="w-80 lg:w-96 bg-white border-r border-slate-200 flex flex-col h-full shrink-0">
+        <!-- Left Panel: Conversation & Enquiry List (Full width on mobile, side panel on tablet/desktop) -->
+        <div id="inbox-left-panel" class="w-full md:w-80 lg:w-80 xl:w-96 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0">
           
           <!-- Daily Inbound Message Volume Progress Tracker -->
           <div class="px-3.5 py-2 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200/80 flex items-center justify-between text-xs">
@@ -461,20 +472,20 @@
         </div>
 
         <!-- Center Panel: Active Chat History & Messaging Stream -->
-        <div id="chat-center-panel" class="flex-1 flex flex-col h-full bg-[#efeae2]/40 relative">
+        <div id="chat-center-panel" class="hidden md:flex flex-1 min-w-0 flex flex-col h-full bg-[#efeae2]/40 relative overflow-hidden">
           
           <!-- Chat Header Bar -->
-          <div id="chat-header-bar" class="h-16 bg-white border-b border-slate-200 px-5 flex items-center justify-between shrink-0 shadow-sm">
+          <div id="chat-header-bar" class="h-16 bg-white border-b border-slate-200 px-4 sm:px-5 flex items-center justify-between shrink-0 shadow-sm min-w-0">
             <!-- Rendered by JS -->
           </div>
 
           <!-- Message History Stream Container -->
-          <div id="chat-messages-stream" class="flex-1 overflow-y-auto p-5 space-y-3 custom-chat-scroll bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]">
+          <div id="chat-messages-stream" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 custom-chat-scroll bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px] min-w-0">
             <!-- Rendered dynamically -->
           </div>
 
           <!-- Quick Actions & Quick Reply Tray -->
-          <div class="bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-2 flex items-center gap-2 overflow-x-auto">
+          <div class="bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-2 flex items-center gap-2 overflow-x-auto min-w-0 max-w-full">
             <span class="text-[10px] font-bold uppercase text-slate-400 shrink-0">Quick Actions:</span>
             <button onclick="shareStockCategoryMenu()" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1 shrink-0 transition shadow-xs" title="1-Click send/insert live garment stock & collection menu to customer">
               <span class="material-symbols-outlined text-[14px] text-amber-600">category</span> Share Stock Menu
@@ -498,7 +509,7 @@
             </button>
             <div class="h-4 w-px bg-slate-300 mx-1"></div>
             <!-- Quick Reply Dropdown -->
-            <select onchange="insertQuickReply(this.value); this.value='';" class="text-xs bg-slate-100 text-slate-700 rounded-lg px-2 py-1 border border-slate-300 font-medium focus:outline-none">
+            <select onchange="insertQuickReply(this.value); this.value='';" class="text-xs bg-slate-100 text-slate-700 rounded-lg px-2 py-1 border border-slate-300 font-medium focus:outline-none shrink-0">
               <option value="">⚡ Quick Message Templates...</option>
               <option value="price_enquiry">Price & Availability Enquiry</option>
               <option value="stock_confirm">Stock Available - Size Confirm</option>
@@ -511,10 +522,10 @@
           <!-- Message Input Bar -->
           <div class="p-3 bg-white border-t border-slate-200 shrink-0">
             <form onsubmit="handleSendMessage(event)" class="flex items-center gap-2">
-              <button type="button" onclick="openProductSearchModal()" class="p-2 text-slate-500 hover:text-brand-wa hover:bg-slate-100 rounded-lg transition" title="Attach Product Card">
+              <button type="button" onclick="openProductSearchModal()" class="p-2 text-slate-500 hover:text-brand-wa hover:bg-slate-100 rounded-lg transition shrink-0" title="Attach Product Card">
                 <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
               </button>
-              <input type="text" id="chat-input-text" placeholder="Type a message or response to customer (Press Enter to send)..." class="flex-1 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-wa focus:bg-white transition" autocomplete="off">
+              <input type="text" id="chat-input-text" placeholder="Type a message or response to customer (Press Enter to send)..." class="flex-1 min-w-0 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-wa focus:bg-white transition" autocomplete="off">
               <button type="submit" class="w-10 h-10 rounded-xl bg-brand-wa hover:bg-brand-waDark text-white flex items-center justify-center shadow-md transition shrink-0">
                 <span class="material-symbols-outlined text-[20px]">send</span>
               </button>
@@ -529,7 +540,7 @@
         </div>
 
         <!-- Right Panel: Customer 360 & Query Management -->
-        <div id="chat-right-panel" class="w-80 lg:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto transition-all duration-300">
+        <div id="chat-right-panel" class="w-80 lg:w-80 xl:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto transition-all duration-300 min-w-0">
           <!-- Rendered by JS -->
         </div>
 
@@ -1885,7 +1896,7 @@
 
       <form onsubmit="handleSimulateInbound(event)" class="p-6 space-y-4 text-xs">
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Select Preset Customer or Enter New:</label>
+          <label for="sim-customer-preset" class="block font-bold text-slate-700 mb-1">Select Preset Customer or Enter New:</label>
           <select id="sim-customer-preset" onchange="applySimPreset(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa">
             <option value="priya">Priya (Baby Collection - Regular Customer)</option>
             <option value="ananya">Ananya (Maternity Dresses - High Value VIP)</option>
@@ -1896,23 +1907,23 @@
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Customer Name:</label>
+            <label for="sim-name" class="block font-bold text-slate-700 mb-1">Customer Name:</label>
             <input type="text" id="sim-name" value="Priya" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">WhatsApp Mobile Number:</label>
+            <label for="sim-phone" class="block font-bold text-slate-700 mb-1">WhatsApp Mobile Number:</label>
             <input type="text" id="sim-phone" value="+91 98765 43210" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-medium">
           </div>
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">WhatsApp Inbound Message Text:</label>
+          <label for="sim-message" class="block font-bold text-slate-700 mb-1">WhatsApp Inbound Message Text:</label>
           <textarea id="sim-message" rows="3" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa" placeholder="e.g. Hello, is Baby Frock Pink size 2-3 years in stock? What is the price?">Hello! Is Baby Frock BF-001 Pink colour in 2-3 Years size available in your shop? How much is it?</textarea>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Enquiry Priority:</label>
+            <label for="sim-priority" class="block font-bold text-slate-700 mb-1">Enquiry Priority:</label>
             <select id="sim-priority" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
               <option value="NORMAL">Normal</option>
               <option value="HIGH" selected>High (Active Buyer)</option>
@@ -1920,7 +1931,7 @@
             </select>
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Initial Staff Assignment:</label>
+            <label for="sim-assign" class="block font-bold text-slate-700 mb-1">Initial Staff Assignment:</label>
             <select id="sim-assign" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
               <option value="UNASSIGNED" selected>⚡ Unassigned (Goes to Admin Queue)</option>
               <option value="staff_01">Assign Direct to Staff 01 (Priya)</option>
@@ -2268,17 +2279,17 @@
       <form onsubmit="handleInboundSimulationSubmit(event)" class="p-6 space-y-4 text-xs">
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Customer Name:</label>
+            <label for="sim-customer-name" class="block font-bold text-slate-700 mb-1">Customer Name:</label>
             <input type="text" id="sim-customer-name" value="Deepa Nandakumar" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800">
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Customer Phone Number:</label>
+            <label for="sim-customer-phone" class="block font-bold text-slate-700 mb-1">Customer Phone Number:</label>
             <input type="text" id="sim-customer-phone" value="+91 98401 23456" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800">
           </div>
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Select Incoming Line:</label>
+          <label for="sim-account-slot" class="block font-bold text-slate-700 mb-1">Select Incoming Line:</label>
           <select id="sim-account-slot" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold">
             <option value="account_1">Line 1: Primary WhatsApp</option>
             <option value="account_2">Line 2: WhatsApp Line 2</option>
@@ -2289,13 +2300,13 @@
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Message Content / Customer Query:</label>
+          <label for="sim-message-text" class="block font-bold text-slate-700 mb-1">Message Content / Customer Query:</label>
           <textarea id="sim-message-text" rows="3" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa" placeholder="Type customer message text...">Hi GRM Garments! Is the newborn organic romper gift set (BB-301-WH) available in 0-6 months size?</textarea>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Message Type:</label>
+            <label for="sim-message-type" class="block font-bold text-slate-700 mb-1">Message Type:</label>
             <select id="sim-message-type" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
               <option value="text">💬 Regular Text</option>
               <option value="audio">🎙️ Voice Note (PTT)</option>
@@ -2303,7 +2314,7 @@
             </select>
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Priority Level:</label>
+            <label for="sim-message-priority" class="block font-bold text-slate-700 mb-1">Priority Level:</label>
             <select id="sim-message-priority" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
               <option value="HIGH">High Priority</option>
               <option value="URGENT">🔴 Urgent Enquiry</option>

@@ -136,10 +136,27 @@ var REVEALED_CUSTOMERS = window.REVEALED_CUSTOMERS || new Set(); // Stores custo
 // =========================================================================
 // NUMBER MASKING ENGINE (DATA PRIVACY & LEAD PROTECTION)
 // =========================================================================
-function formatDisplayPhone(rawPhone, customerId = null, forceUnmask = true) {
+function formatDisplayPhone(rawPhone, customerId = null, forceUnmask = false) {
   if (!rawPhone) return '';
-  return formatPhoneNumberPretty(rawPhone);
+  const pretty = formatPhoneNumberPretty(rawPhone);
+  
+  const isAdmin = CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'ADMIN');
+  const isRevealed = customerId && REVEALED_CUSTOMERS && REVEALED_CUSTOMERS.has(customerId);
+  const isMaskEnabled = (CRM_STATE?.settings?.maskCustomerNumbers !== false);
+
+  if (forceUnmask || isAdmin || isRevealed || !isMaskEnabled) {
+    return pretty;
+  }
+
+  const clean = rawPhone.replace(/[^0-9]/g, '');
+  if (clean.length >= 10) {
+    const start = clean.slice(0, 4);
+    const end = clean.slice(-3);
+    return `+91 ${start.slice(-2)}*** **${end.slice(-2)}`;
+  }
+  return pretty.replace(/\d(?=\d{3})/g, '•');
 }
+window.formatDisplayPhone = formatDisplayPhone;
 
 function toggleGlobalPhoneMasking() {
   if (!CRM_STATE.settings) CRM_STATE.settings = {};
@@ -458,6 +475,12 @@ function startRealtimeMessageSync() {
 function openInboundSimulatorModal() {
   openModal('modal-inbound-simulator');
 }
+window.openInboundSimulatorModal = openInboundSimulatorModal;
+
+function closeInboundSimulatorModal() {
+  closeModal('modal-inbound-simulator');
+}
+window.closeInboundSimulatorModal = closeInboundSimulatorModal;
 
 function handleInboundSimulationSubmit(event) {
   event.preventDefault();
@@ -1018,10 +1041,12 @@ function switchView(viewName) {
       }
     }
     if (navBtn) {
+      const isAdminOnly = adminOnlyViews.includes(v);
+      const isHiddenForStaff = (ACTIVE_ROLE !== 'admin' && isAdminOnly);
       if (v === viewName) {
-        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm";
+        navBtn.className = `w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm ${isAdminOnly ? 'admin-only-nav' : ''} ${isHiddenForStaff ? 'hidden' : ''}`;
       } else {
-        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group";
+        navBtn.className = `w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group ${isAdminOnly ? 'admin-only-nav' : ''} ${isHiddenForStaff ? 'hidden' : ''}`;
       }
     }
   });
@@ -1208,9 +1233,10 @@ function handleLogout() {
 // Apply granular Role-Based Access Control and update UI
 function applyRoleBasedAccessControl(user) {
   if (!user) return;
+  CURRENT_USER = user;
   ACTIVE_ROLE = user.role || 'admin';
 
-  const isAdmin = user.role === 'admin';
+  const isAdmin = (user.role || '').toLowerCase() === 'admin';
 
   const roleBadge = document.getElementById('current-role-badge');
   const avatarInitials = document.getElementById('user-avatar-initials');
@@ -1587,9 +1613,44 @@ function renderInboxConversationList() {
   }).join('');
 }
 
+function toggleMobileChatView(showChat) {
+  const leftPanel = document.getElementById('inbox-left-panel');
+  const centerPanel = document.getElementById('chat-center-panel');
+  if (!leftPanel || !centerPanel) return;
+
+  if (window.innerWidth < 768) {
+    if (showChat) {
+      leftPanel.classList.add('hidden');
+      centerPanel.classList.remove('hidden');
+      centerPanel.classList.add('flex');
+    } else {
+      leftPanel.classList.remove('hidden');
+      centerPanel.classList.add('hidden');
+      centerPanel.classList.remove('flex');
+    }
+  } else {
+    leftPanel.classList.remove('hidden');
+    centerPanel.classList.remove('hidden');
+    centerPanel.classList.add('flex');
+  }
+}
+window.toggleMobileChatView = toggleMobileChatView;
+
+window.addEventListener('resize', () => {
+  const leftPanel = document.getElementById('inbox-left-panel');
+  const centerPanel = document.getElementById('chat-center-panel');
+  if (!leftPanel || !centerPanel) return;
+  if (window.innerWidth >= 768) {
+    leftPanel.classList.remove('hidden');
+    centerPanel.classList.remove('hidden');
+    centerPanel.classList.add('flex');
+  }
+});
+
 function selectCustomerChat(customerId) {
   ACTIVE_CUSTOMER_ID = customerId;
   renderInbox();
+  toggleMobileChatView(true);
 }
 
 // Slide / Hide Toggle State for Right Customer 360 Panel
@@ -1655,12 +1716,15 @@ function renderChatHeader() {
 
   bar.innerHTML = `
     <div class="flex items-center gap-2.5 min-w-0">
+      <button type="button" onclick="toggleMobileChatView(false)" class="md:hidden p-1.5 -ml-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition shrink-0" title="Back to Chat List">
+        <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+      </button>
       <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
         ${customer.avatar}
       </div>
       <div class="min-w-0">
         <div class="flex items-center gap-1.5 flex-wrap">
-          <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate max-w-[140px] sm:max-w-[200px]" title="${customer.name}">${customer.name}</h3>
+          <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate max-w-[120px] sm:max-w-[200px]" title="${customer.name}">${customer.name}</h3>
           <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0">${customer.customerType}</span>
         </div>
         <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium truncate mt-0.5">
@@ -4424,6 +4488,12 @@ function updateCatalogMetrics() {
     return avail <= 5;
   }).length;
 
+  const elSkus = document.getElementById('catalog-stat-skus') || document.getElementById('catalog-total-skus');
+  const elPhys = document.getElementById('catalog-stat-physical') || document.getElementById('catalog-total-physical');
+  const elRes = document.getElementById('catalog-stat-reserved') || document.getElementById('catalog-total-reserved');
+  const elAvail = document.getElementById('catalog-stat-available') || document.getElementById('catalog-total-available');
+  const elAlerts = document.getElementById('catalog-stat-alerts') || document.getElementById('catalog-total-alerts');
+
   if (elSkus) elSkus.innerText = totalSkus;
   if (elPhys) elPhys.innerText = totalPhysical;
   if (elRes) elRes.innerText = totalReserved;
@@ -5191,24 +5261,30 @@ function renderOrdersTable() {
   const tbody = document.getElementById('orders-table-body');
   if (!tbody) return;
 
-  tbody.innerHTML = CRM_STATE.orders.map(ord => `
-    <tr class="hover:bg-slate-50 transition">
-      <td class="py-3 px-4 font-mono font-bold text-slate-900">
-        ${ord.id}
-        <div class="text-[10px] font-normal text-slate-400">${ord.createdAt}</div>
-      </td>
-      <td class="py-3 px-4 font-bold text-slate-800">${ord.customerName}</td>
-      <td class="py-3 px-4 text-slate-600 font-medium">${ord.items.map(i => `${i.name} (x${i.qty})`).join(', ')}</td>
-      <td class="py-3 px-4 font-mono font-bold text-emerald-700">₹${ord.grandTotal.toLocaleString('en-IN')}</td>
-      <td class="py-3 px-4">
-        <span class="text-[10px] font-bold px-2 py-0.5 rounded ${ord.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${ord.paymentMethod} (${ord.paymentStatus})</span>
-      </td>
-      <td class="py-3 px-4">
-        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">${ord.orderStatus}</span>
-      </td>
-      <td class="py-3 px-4 text-slate-500 font-medium">${ord.createdBy}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = (CRM_STATE.orders || []).map(ord => {
+    const total = parseFloat(ord.grandTotal ?? ord.totalAmount ?? 0) || 0;
+    const itemsText = Array.isArray(ord.items) ? ord.items.map(i => `${i.name} (x${i.qty})`).join(', ') : 'Garment Product';
+    const statusText = ord.orderStatus || ord.status || 'CONFIRMED';
+    const creator = ord.createdBy || ord.assignedStaffId || 'Staff';
+    return `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="py-3 px-4 font-mono font-bold text-slate-900">
+          ${ord.id}
+          <div class="text-[10px] font-normal text-slate-400">${ord.createdAt || 'Recent'}</div>
+        </td>
+        <td class="py-3 px-4 font-bold text-slate-800">${ord.customerName || 'Customer'}</td>
+        <td class="py-3 px-4 text-slate-600 font-medium">${itemsText}</td>
+        <td class="py-3 px-4 font-mono font-bold text-emerald-700">₹${total.toLocaleString('en-IN')}</td>
+        <td class="py-3 px-4">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded ${ord.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${ord.paymentMethod || 'UPI'} (${ord.paymentStatus || 'PENDING'})</span>
+        </td>
+        <td class="py-3 px-4">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">${statusText}</span>
+        </td>
+        <td class="py-3 px-4 text-slate-500 font-medium">${creator}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function renderFollowupsCards() {
@@ -5239,26 +5315,107 @@ function renderCustomersGrid() {
   if (!container) return;
 
   container.innerHTML = CRM_STATE.customers.map(c => `
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-base flex items-center justify-center">
-          ${c.avatar}
+    <div class="bg-white p-5 rounded-2xl border ${c.isDnd ? 'border-rose-200 bg-rose-50/20' : 'border-slate-200'} shadow-sm space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-base flex items-center justify-center shadow-sm">
+            ${c.avatar || 'CU'}
+          </div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">${c.name}</h4>
+            <p class="text-xs text-slate-500 font-mono font-semibold">${formatDisplayPhone(c.whatsapp || c.phone, c.id)}</p>
+          </div>
         </div>
-        <div>
-          <h4 class="font-bold text-slate-900 text-sm">${c.name}</h4>
-          <p class="text-xs text-slate-500 font-mono">${c.whatsapp}</p>
-        </div>
+        ${c.isDnd ? `<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold">🚫 DND</span>` : ''}
       </div>
       <div class="flex items-center gap-1.5 flex-wrap">
-        ${c.tags.map(t => `<span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${t}</span>`).join('')}
+        ${(c.tags || []).map(t => `<span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${t}</span>`).join('')}
       </div>
       <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-        <span class="text-slate-500">${c.totalOrders} Orders &bull; ₹${c.totalSpend.toLocaleString('en-IN')} Spend</span>
-        <button onclick="selectCustomerChat('${c.id}'); switchView('inbox');" class="text-brand-wa font-bold hover:underline">Chat</button>
+        <span class="text-slate-500">${c.totalOrders || 0} Orders &bull; ₹${(c.totalSpend || 0).toLocaleString('en-IN')} Spend</span>
+        <div class="flex items-center gap-2">
+          <button onclick="toggleCustomerDnd('${c.id}')" class="text-xs font-bold ${c.isDnd ? 'text-emerald-700 hover:underline' : 'text-rose-600 hover:underline'}">
+            ${c.isDnd ? 'Remove DND' : 'Add DND'}
+          </button>
+          <button onclick="selectCustomerChat('${c.id}'); switchView('inbox');" class="px-3 py-1 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-lg transition shadow-2xs">
+            Chat
+          </button>
+        </div>
       </div>
     </div>
   `).join('');
 }
+
+function renderDndModule() {
+  const tbody = document.getElementById('dnd-table-body');
+  const totalKpi = document.getElementById('kpi-dnd-total');
+  const countSummary = document.getElementById('dnd-count-summary');
+  const badgeDnd = document.getElementById('badge-dnd-count');
+  const search = (document.getElementById('dnd-search-input')?.value || '').toLowerCase();
+
+  const dndCustomers = (CRM_STATE.customers || []).filter(c => {
+    if (!c.isDnd) return false;
+    if (!search) return true;
+    return (c.name || '').toLowerCase().includes(search) || (c.phone || '').toLowerCase().includes(search);
+  });
+
+  const allDndCount = (CRM_STATE.customers || []).filter(c => c.isDnd).length;
+  if (totalKpi) totalKpi.innerText = allDndCount;
+  if (countSummary) countSummary.innerText = `${allDndCount} DND Customers`;
+  if (badgeDnd) badgeDnd.innerText = allDndCount;
+
+  if (!tbody) return;
+
+  if (dndCustomers.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center py-10 text-slate-400">
+          <span class="material-symbols-outlined text-[32px] text-slate-300">shield_check</span>
+          <p class="text-xs mt-1 font-medium">No customers currently on the DND / Opt-Out list</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = dndCustomers.map(c => `
+    <tr class="hover:bg-slate-50 transition">
+      <td class="py-3.5 px-4 font-bold text-slate-900">${c.name}</td>
+      <td class="py-3.5 px-4 font-mono font-bold text-slate-600">${formatDisplayPhone(c.phone, c.id)}</td>
+      <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px]">${c.dndReason || 'Customer requested opt-out'}</span></td>
+      <td class="py-3.5 px-4 text-slate-600 font-medium">${c.dndMarkedBy || 'Staff'}</td>
+      <td class="py-3.5 px-4 text-slate-400 text-[11px]">${c.dndMarkedAt || 'Recent'}</td>
+      <td class="py-3.5 px-4 text-right">
+        <button onclick="toggleCustomerDnd('${c.id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition shadow-2xs">
+          Re-activate
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+window.renderDndModule = renderDndModule;
+
+function toggleCustomerDnd(customerId) {
+  const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
+  if (!customer) return;
+  customer.isDnd = !customer.isDnd;
+  if (customer.isDnd) {
+    customer.dndReason = 'Customer requested opt-out / not interested';
+    customer.dndMarkedBy = CURRENT_USER ? CURRENT_USER.name : 'Staff';
+    customer.dndMarkedAt = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    showToast('Customer Added to DND', `${customer.name} excluded from promotions.`, 'do_not_disturb_on', 'rose');
+  } else {
+    delete customer.dndReason;
+    delete customer.dndMarkedBy;
+    delete customer.dndMarkedAt;
+    showToast('Customer Re-activated', `${customer.name} can now receive WhatsApp messages.`, 'check_circle', 'emerald');
+  }
+  saveCRMState();
+  if (ACTIVE_VIEW === 'dnd') renderDndModule();
+  if (ACTIVE_VIEW === 'customers') renderCustomersGrid();
+  if (ACTIVE_VIEW === 'inbox') renderInbox();
+}
+window.toggleCustomerDnd = toggleCustomerDnd;
 
 function renderAuditTable() {
   const tbody = document.getElementById('audit-logs-table-body');
@@ -5280,8 +5437,8 @@ function renderAnalyticsView() {
   if (!container) return;
 
   container.innerHTML = CRM_STATE.staffList.map(s => {
-    const orders = CRM_STATE.orders.filter(o => o.createdBy.includes(s.name));
-    const revenue = orders.reduce((acc, o) => acc + o.grandTotal, 0);
+    const orders = CRM_STATE.orders.filter(o => ((o && (o.createdBy || o.staffName || o.staff || '')) + '').includes(s.name));
+    const revenue = orders.reduce((acc, o) => acc + (Number(o.grandTotal || o.total || 0)), 0);
 
     return `
       <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -7401,8 +7558,35 @@ function stopAutomatedBroadcast() {
   }
 }
 
+// RESPONSIVE MOBILE SIDEBAR DRAWER CONTROLLER
+function toggleMobileSidebar(open = null) {
+  const sidebar = document.getElementById('main-sidebar');
+  const backdrop = document.getElementById('sidebar-mobile-backdrop');
+  if (!sidebar) return;
+  const isClosed = sidebar.classList.contains('-translate-x-full');
+  const shouldOpen = (open !== null) ? open : isClosed;
+  if (shouldOpen) {
+    sidebar.classList.remove('-translate-x-full');
+    if (backdrop) backdrop.classList.remove('hidden');
+  } else {
+    sidebar.classList.add('-translate-x-full');
+    if (backdrop) backdrop.classList.add('hidden');
+  }
+}
+window.toggleMobileSidebar = toggleMobileSidebar;
+
+// Auto close sidebar when a navigation item is clicked on mobile screens (<1024px)
+document.addEventListener('click', (e) => {
+  if (window.innerWidth >= 1024) return;
+  const navBtn = e.target.closest('#main-sidebar nav button, #main-sidebar nav a, #main-sidebar [onclick*="switchView"]');
+  if (navBtn) {
+    toggleMobileSidebar(false);
+  }
+});
+
 // INITIALIZE APP ON LOAD
 window.addEventListener('DOMContentLoaded', () => {
   initCRMState();
   initAuthSystem();
 });
+

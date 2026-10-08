@@ -122,10 +122,13 @@ if ($pdo) {
 </head>
 <body class="bg-surface-bg font-sans text-slate-800 antialiased overflow-hidden flex h-screen">
 
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="sidebar-mobile-backdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 bg-slate-900/60 z-40 lg:hidden hidden transition-opacity duration-300"></div>
+
   <!-- ========================================================================= -->
-  <!-- 1. LEFT NAVIGATION SIDEBAR -->
+  <!-- 1. LEFT NAVIGATION SIDEBAR (RESPONSIVE DRAWER) -->
   <!-- ========================================================================= -->
-  <aside class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-xl border-r border-brand-900/50 z-30 select-none">
+  <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 lg:relative lg:translate-x-0 -translate-x-full lg:flex transition-transform duration-300 w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl lg:shadow-xl border-r border-brand-900/50 select-none">
     <!-- Brand Top -->
     <div class="h-16 flex items-center justify-between px-5 border-b border-brand-900/60 bg-brand-dark shrink-0">
       <div class="flex items-center gap-3">
@@ -139,6 +142,9 @@ if ($pdo) {
           <p class="text-[11px] text-emerald-400/80 font-medium"><?php echo htmlspecialchars($brandName); ?></p>
         </div>
       </div>
+      <button type="button" onclick="toggleMobileSidebar(false)" class="lg:hidden p-1 text-slate-400 hover:text-white rounded-lg transition" title="Close Menu">
+        <span class="material-symbols-outlined text-xl">close</span>
+      </button>
     </div>
 
     <!-- Quick Action / Status Bar -->
@@ -302,6 +308,9 @@ if ($pdo) {
     <header class="min-h-[64px] bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-20 gap-3">
       <!-- Dynamic Header Title -->
       <div class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg">
+        <button type="button" onclick="toggleMobileSidebar(true)" class="lg:hidden p-1.5 -ml-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition flex items-center justify-center shrink-0" title="Open Navigation Menu">
+          <span class="material-symbols-outlined text-2xl">menu</span>
+        </button>
         <div class="min-w-0">
           <h2 id="page-title" class="font-bold text-base sm:text-lg text-slate-900 leading-tight truncate">WhatsApp Inbox &amp; Customer Queue</h2>
           <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
@@ -434,12 +443,12 @@ if ($pdo) {
     <!-- ========================================================================= -->
     <!-- 3. VIEWS CONTAINER (INCLUDE APPLICATION MODULES) -->
     <!-- ========================================================================= -->
-    <main class="flex-1 overflow-hidden relative">
+    <main class="flex-1 overflow-hidden relative min-w-0">
       <?php
       // Include the view sections from index.html template
       $html = file_get_contents(__DIR__ . '/index.html');
-      // Extract content within <main class="flex-1 overflow-hidden relative"> ... </main>
-      if (preg_match('/<main class="flex-1 overflow-hidden relative">(.*?)<\/main>/s', $html, $matches)) {
+      // Extract content within <main ...> ... </main>
+      if (preg_match('/<main[^>]*>(.*?)<\/main>/s', $html, $matches)) {
           echo $matches[1];
       }
       ?>
