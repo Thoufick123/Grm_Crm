@@ -495,10 +495,19 @@
             <button onclick="openFollowUpModal()" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 transition">
               <span class="material-symbols-outlined text-[14px]">event</span> Set Follow-up
             </button>
-            <button onclick="openAutoReplyModal()" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition shadow-xs" title="Configure Automated Stock Category Instant Replies for Incoming WhatsApp Messages">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="pill-autoreply-dot"></span>
-              <span class="material-symbols-outlined text-[14px] text-emerald-600">smart_toy</span>
-              <span id="pill-autoreply-label">Auto-Reply: ON</span>
+            <div class="inline-flex items-center rounded-lg border border-teal-300 shadow-xs shrink-0 overflow-hidden bg-teal-50">
+              <button id="btn-inbox-autoreply-toggle" type="button" onclick="toggleAutoReplyFromInbox(event)" class="px-2.5 py-1 hover:bg-teal-100 text-teal-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer" title="Click to instantly Toggle Auto-Reply ON / OFF">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="pill-autoreply-dot"></span>
+                <span class="material-symbols-outlined text-[14px] text-emerald-600">smart_toy</span>
+                <span id="pill-autoreply-label">Auto-Reply: ON</span>
+              </button>
+              <button id="btn-inbox-autoreply-settings" type="button" onclick="openAutoReplyModal()" class="px-1.5 py-1 hover:bg-teal-200/60 text-teal-700 border-l border-teal-300 text-xs transition cursor-pointer" title="Auto-Reply Settings & Rules">
+                <span class="material-symbols-outlined text-[14px]">tune</span>
+              </button>
+            </div>
+            <button onclick="openAutoReplyModal('rules')" class="px-2.5 py-1 bg-gradient-to-r from-teal-50 to-emerald-50 hover:from-teal-100 hover:to-emerald-100 text-teal-800 border border-teal-300 rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition shadow-xs" title="Manage Pre-set Templates & Question Auto-Reply Rules (Feeding Kurti, Frocks, etc.)">
+              <span class="material-symbols-outlined text-[15px] text-teal-600">psychology</span>
+              <span>Q&amp;A Templates (<span id="inbox-rules-count-badge">9</span>)</span>
             </button>
             <button onclick="openBroadcastModal()" class="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-lg text-xs font-bold flex items-center gap-1 shrink-0 transition shadow-sm" title="Broadcast custom template to all customers automatically">
               <span class="material-symbols-outlined text-[14px] text-purple-600">campaign</span> Auto-Broadcast
@@ -513,6 +522,16 @@
               <option value="dispatched">Order Dispatched with Tracking</option>
               <option value="bank_details">Payment UPI QR & Account Details</option>
             </select>
+          </div>
+
+          <!-- Smart Pre-set Quick-Template Reply Bar (1-Click Feeding Kurti, Frocks, Store Address, etc.) -->
+          <div id="inbox-preset-templates-bar" class="bg-slate-50/95 border-t border-slate-200/90 px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto text-xs shrink-0 custom-chat-scroll min-h-[36px]">
+            <span class="text-[10px] font-bold uppercase text-slate-400 shrink-0 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px] text-teal-600">bolt</span> Quick Templates:
+            </span>
+            <div id="inbox-preset-chips-list" class="flex items-center gap-1.5 flex-nowrap">
+              <!-- Dynamically populated chips with instant 1-click preview / send / matched highlight! -->
+            </div>
           </div>
 
           <!-- Message Input Bar -->
@@ -1894,6 +1913,7 @@
         <div>
           <label class="block font-bold text-slate-700 mb-1">Select Preset Customer or Enter New:</label>
           <select id="sim-customer-preset" onchange="applySimPreset(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa">
+            <option value="feeding" selected>🎯 Pooja ("i want a feeding kurti" - Pre-set Auto-Reply Match)</option>
             <option value="priya">Priya (Baby Collection - Regular Customer)</option>
             <option value="ananya">Ananya (Maternity Dresses - High Value VIP)</option>
             <option value="kavitha">Kavitha (Kids Wear - New Enquiry)</option>
@@ -1904,17 +1924,17 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block font-bold text-slate-700 mb-1">Customer Name:</label>
-            <input type="text" id="sim-name" value="Priya" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+            <input type="text" id="sim-name" value="Pooja Venkatesh" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
           </div>
           <div>
             <label class="block font-bold text-slate-700 mb-1">WhatsApp Mobile Number:</label>
-            <input type="text" id="sim-phone" value="+91 98765 43210" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-medium">
+            <input type="text" id="sim-phone" value="+91 97896 60115" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-medium">
           </div>
         </div>
 
         <div>
           <label class="block font-bold text-slate-700 mb-1">WhatsApp Inbound Message Text:</label>
-          <textarea id="sim-message" rows="3" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa" placeholder="e.g. Hello, is Baby Frock Pink size 2-3 years in stock? What is the price?">Hello! Is Baby Frock BF-001 Pink colour in 2-3 Years size available in your shop? How much is it?</textarea>
+          <textarea id="sim-message" rows="3" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa" placeholder="e.g. i want a feeding kurti">i want a feeding kurti</textarea>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -2620,21 +2640,21 @@
     </div>
   </div>
 
-  <!-- MODAL: WHATSAPP MESSAGE AUTOMATION & STOCK AUTO-REPLY BOT -->
-  <div id="modal-auto-reply-settings" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
+  <!-- MODAL: WHATSAPP MESSAGE AUTOMATION & PRE-SET TEMPLATES BOT -->
+  <div id="modal-auto-reply-settings" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[94vh]">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-teal-900 via-emerald-900 to-slate-900 p-5 text-white flex items-center justify-between shrink-0 shadow-md">
+      <div class="bg-gradient-to-r from-teal-900 via-emerald-900 to-slate-900 p-4 sm:p-5 text-white flex items-center justify-between shrink-0 shadow-md">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md">
-            <span class="material-symbols-outlined text-[24px]">smart_toy</span>
+            <span class="material-symbols-outlined text-[24px]">psychology</span>
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="font-extrabold text-base tracking-tight">WhatsApp Auto-Reply &amp; Stock Bot</h3>
-              <span class="text-[9px] bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Automations</span>
+              <h3 class="font-extrabold text-base tracking-tight">WhatsApp Pre-Set Templates &amp; Auto-Reply Hub</h3>
+              <span class="text-[9px] bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Smart Bot</span>
             </div>
-            <p class="text-xs text-emerald-200/80 mt-0.5">Automatically send live garment stock &amp; category menus when customers message you</p>
+            <p class="text-xs text-emerald-200/80 mt-0.5">Admin pre-set questions, category replies &amp; instant automated responses</p>
           </div>
         </div>
         <button onclick="closeModal('modal-auto-reply-settings')" class="text-slate-300 hover:text-white transition p-1">
@@ -2642,106 +2662,261 @@
         </button>
       </div>
 
-      <!-- Body Form -->
-      <div class="p-5 space-y-4 text-xs overflow-y-auto custom-chat-scroll flex-1 bg-slate-50/50">
-        
-        <!-- 1. Master Automation Enable Toggle Strip -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-4">
-          <div class="flex items-start gap-3">
-            <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
-              <span class="material-symbols-outlined text-[20px]">bolt</span>
-            </div>
-            <div>
-              <h4 class="font-extrabold text-slate-800 text-xs">Instant Inbound Auto-Reply</h4>
-              <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                When a customer sends a new message on WhatsApp, immediately reply with your greeting &amp; live available stock categories.
-              </p>
-            </div>
-          </div>
-          
-          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+      <!-- Navigation Tabs -->
+      <div class="bg-slate-100 border-b border-slate-200 px-4 sm:px-5 flex items-center justify-between shrink-0 overflow-x-auto text-xs font-bold">
+        <div class="flex items-center gap-2 py-2">
+          <button type="button" onclick="switchAutoReplyTab('rules')" id="tab-btn-ar-rules" class="px-3.5 py-1.5 rounded-lg bg-white text-emerald-800 shadow-xs border border-slate-200 flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-[16px] text-emerald-600">tune</span>
+            <span>Q&amp;A Pre-Set Rules (<span id="tab-rules-count">9</span>)</span>
+          </button>
+          <button type="button" onclick="switchAutoReplyTab('general')" id="tab-btn-ar-general" class="px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-[16px] text-slate-500">settings</span>
+            <span>General Welcome &amp; Cooldown</span>
+          </button>
+          <button type="button" onclick="switchAutoReplyTab('tester')" id="tab-btn-ar-tester" class="px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-[16px] text-amber-500">science</span>
+            <span>Live Question Tester</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 py-1 shrink-0">
+          <span class="text-[11px] font-semibold text-slate-500 hidden sm:inline">Master Bot:</span>
+          <label id="autoreply-master-label" class="relative inline-flex items-center cursor-pointer shrink-0" title="Toggle Auto-Reply Engine Globally">
             <input type="checkbox" id="autoreply-master-toggle" class="sr-only peer" onchange="toggleAutoReplyMaster(this.checked)">
-            <div class="w-12 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            <div class="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
           </label>
         </div>
+      </div>
 
-        <!-- 2. Cooldown & Keyword Auto-Responder Options -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <!-- Cooldown Period -->
-          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
-            <label class="block font-bold text-slate-700 text-[11px] flex items-center gap-1">
-              <span class="material-symbols-outlined text-[15px] text-teal-600">timer</span>
-              <span>Repeat Cooldown Time:</span>
-            </label>
-            <select id="autoreply-cooldown-select" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-1 focus:ring-brand-wa">
-              <option value="0" selected>⚡ 0 Minutes (Instant Auto-Reply on Every Message)</option>
-              <option value="2">2 Minutes (Rapid Test Mode)</option>
-              <option value="15">15 Minutes (Fast response)</option>
-              <option value="30">30 Minutes (Standard Interval)</option>
-              <option value="60">1 Hour (Avoid repeat in chat)</option>
-              <option value="1440">24 Hours (Once per day)</option>
-            </select>
-            <p class="text-[10px] text-slate-400">Set to 0 Minutes to auto-reply to every incoming message instantly.</p>
-          </div>
+      <!-- Tab Content Area -->
+      <div class="p-4 sm:p-5 flex-1 overflow-y-auto custom-chat-scroll bg-slate-50/50 space-y-4">
+        
+        <!-- ============================================== -->
+        <!-- TAB 1: QUESTION-BASED RULES & PRE-SET TEMPLATES -->
+        <!-- ============================================== -->
+        <div id="tab-panel-ar-rules" class="space-y-4">
+          
+          <!-- Top Rules Action Bar -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-1">
+              <div class="relative flex-1">
+                <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">search</span>
+                <input type="text" id="ar-rules-search-input" oninput="renderAutoReplyRulesList()" placeholder="Search questions or keywords (e.g. feeding kurti, frocks, address)..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-wa">
+              </div>
+              <select id="ar-rules-filter-select" onchange="renderAutoReplyRulesList()" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-lg px-2.5 py-1.5 text-slate-700">
+                <option value="ALL">All Rules</option>
+                <option value="ACTIVE">Active Only</option>
+                <option value="CATEGORY">Category Stock Links</option>
+                <option value="CUSTOM">Custom Answers</option>
+              </select>
+            </div>
 
-          <!-- Keyword Auto-Response Switch -->
-          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
-            <label class="block font-bold text-slate-700 text-[11px] flex items-center gap-1">
-              <span class="material-symbols-outlined text-[15px] text-indigo-600">dialpad</span>
-              <span>Interactive Menu Numbers:</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer pt-1">
-              <input type="checkbox" id="autoreply-keyword-toggle" checked class="w-4 h-4 text-brand-wa rounded border-slate-300 focus:ring-brand-wa">
-              <span class="text-xs text-slate-700 font-semibold">Auto-reply when customer types 1, 2, 3, 4, 5</span>
-            </label>
-            <p class="text-[10px] text-slate-400">Automatically sends photos &amp; sizes for the selected collection.</p>
-          </div>
-        </div>
-
-        <!-- 3. Dynamic Stock Categories Generator & Tag Insertion -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
-          <div class="flex items-center justify-between">
-            <label class="font-extrabold text-slate-700 text-xs flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[16px] text-amber-600">edit_note</span>
-              <span>Automated Message Template:</span>
-            </label>
-            <button type="button" onclick="regenerateLiveStockMenuTemplate()" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[11px] font-bold flex items-center gap-1 transition" title="Auto-build clean stock category menu from live catalog">
-              <span class="material-symbols-outlined text-[14px]">sync</span>
-              <span>Generate from Live Stock</span>
+            <button type="button" onclick="openRuleEditor(null)" class="px-3.5 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 shrink-0 active:scale-95">
+              <span class="material-symbols-outlined text-[16px]">add_circle</span>
+              <span>+ Add Pre-Set Question &amp; Reply</span>
             </button>
           </div>
 
-          <!-- Quick Variable Chips -->
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">Insert Tag:</span>
-            <button type="button" onclick="insertAutoReplyTag('{customer_name}')" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold border border-slate-200">{customer_name}</button>
-            <button type="button" onclick="insertAutoReplyTag('{brand_name}')" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold border border-slate-200">{brand_name}</button>
-            <button type="button" onclick="insertAutoReplyTag('{stock_categories}')" class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded text-[10px] font-mono font-bold border border-emerald-200">{stock_categories}</button>
-            <button type="button" onclick="insertAutoReplyTag('{business_phone}')" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold border border-slate-200">{business_phone}</button>
+          <!-- Dynamic Rule Editor Card (Hidden until Add/Edit is clicked) -->
+          <div id="ar-rule-editor-card" class="hidden bg-white p-4.5 rounded-xl border-2 border-teal-500/80 shadow-md space-y-3.5 transition animate-in fade-in duration-150">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[20px] text-teal-600">edit_note</span>
+                <h4 id="ar-rule-editor-title" class="font-bold text-slate-900 text-xs">Configure Pre-Set Question &amp; Auto-Reply Template</h4>
+              </div>
+              <button type="button" onclick="closeRuleEditor()" class="text-slate-400 hover:text-slate-600 p-1">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <input type="hidden" id="edit-rule-id" value="">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Template / Question Name:</label>
+                <input type="text" id="edit-rule-name" placeholder="e.g. Feeding Kurti & Maternity Wear" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Customer Trigger Keywords / Questions:</label>
+                <input type="text" id="edit-rule-keywords" placeholder="feeding kurti, feeding, kurti, maternity (comma-separated)" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+                <p class="text-[10px] text-teal-700 font-medium mt-0.5">💡 Automatically triggers when customer asks ANY of these keywords OR the template question name above.</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Auto-Reply Response Action:</label>
+                <select id="edit-rule-action" onchange="handleRuleActionTypeChange()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+                  <option value="custom_text" selected>💬 Custom Text Message Only (Exact Answer Typed Below)</option>
+                  <option value="category_and_text">👗 Custom Text + Attach Ready-Stock Catalog</option>
+                  <option value="category_reply">📦 Category Ready-Stock Catalog Only</option>
+                </select>
+              </div>
+
+              <div id="edit-rule-category-container" class="hidden">
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Select Ready-Stock Category (Optional):</label>
+                <select id="edit-rule-category" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+                  <option value="">-- None (Text Message Only) --</option>
+                  <option value="2">🤰 Category 2: Maternity &amp; Feeding Wear (₹1,299)</option>
+                  <option value="1">👗 Category 1: Baby Collection 0–3 Years (₹599)</option>
+                  <option value="3">🎁 Category 3: Newborn Gift Sets 0–6 Months (₹799)</option>
+                  <option value="4">👕 Category 4: Kids Everyday Wear 4–5 Years (₹450)</option>
+                  <option value="5">📦 Category 5: Wholesale &amp; Bulk Bundles (₹7,200)</option>
+                  <option value="6">🥻 Category 6: Festive &amp; VIP Silk Sets (₹899)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Admin Reply Text Editor -->
+            <div id="edit-rule-text-container" class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="block text-[11px] font-bold text-slate-700">Admin Pre-Set Reply Message:</label>
+                <div class="flex items-center gap-1">
+                  <span class="text-[9px] font-bold text-slate-400">Insert:</span>
+                  <button type="button" onclick="insertRuleTag('{customer_name}')" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-mono font-bold border border-slate-200">{customer_name}</button>
+                  <button type="button" onclick="insertRuleTag('{brand_name}')" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-mono font-bold border border-slate-200">{brand_name}</button>
+                  <button type="button" onclick="insertRuleTag('{business_phone}')" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-mono font-bold border border-slate-200">{business_phone}</button>
+                </div>
+              </div>
+              <textarea id="edit-rule-reply-text" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono font-medium focus:bg-white focus:ring-2 focus:ring-brand-wa leading-relaxed" placeholder="Type the answer/reply message that will be sent to the customer..."></textarea>
+            </div>
+
+            <!-- Auto-Send Immediately Switch -->
+            <div class="flex items-center justify-between pt-1">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="edit-rule-enabled" checked class="w-4 h-4 text-brand-wa rounded border-slate-300 focus:ring-brand-wa">
+                <span class="text-xs text-slate-800 font-bold">Enable this rule for Auto-Reply</span>
+              </label>
+
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="closeRuleEditor()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition">Cancel</button>
+                <button type="button" onclick="saveRuleFromEditor()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center gap-1 active:scale-95">
+                  <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                  <span>Save Rule</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          <textarea id="autoreply-message-template" rows="6" oninput="updateAutoReplyLivePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono font-medium focus:bg-white focus:ring-2 focus:ring-brand-wa leading-relaxed" placeholder="Enter automated message template..."></textarea>
+          <!-- Rules List Container (Populated by JS) -->
+          <div id="ar-rules-list-container" class="space-y-2.5">
+            <!-- Populated dynamically -->
+          </div>
+
         </div>
 
-        <!-- 4. Live WhatsApp Bubble Preview -->
-        <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-extrabold text-slate-700 text-[11px] flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[15px] text-brand-wa">chat_bubble</span>
-              <span>Live Customer WhatsApp Preview:</span>
-            </span>
-            <span class="text-[10px] text-slate-400 font-mono" id="autoreply-preview-chars">0 chars</span>
+        <!-- ============================================== -->
+        <!-- TAB 2: GENERAL WELCOME & COOLDOWN SETTINGS -->
+        <!-- ============================================== -->
+        <div id="tab-panel-ar-general" class="space-y-4 hidden">
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Cooldown Period -->
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
+              <label class="block font-bold text-slate-700 text-[11px] flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px] text-teal-600">timer</span>
+                <span>Auto-Reply Cooldown Debounce:</span>
+              </label>
+              <select id="autoreply-cooldown-select" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+                <option value="0" selected>⚡ 0 Minutes (Instant Auto-Reply on Every Message)</option>
+                <option value="2">2 Minutes (Rapid Test Mode)</option>
+                <option value="15">15 Minutes (Fast response)</option>
+                <option value="30">30 Minutes (Standard Interval)</option>
+                <option value="60">1 Hour (Avoid repeat in chat)</option>
+                <option value="1440">24 Hours (Once per day)</option>
+              </select>
+              <p class="text-[10px] text-slate-400">Set to 0 Minutes to auto-reply to customer questions instantly every time.</p>
+            </div>
+
+            <!-- Keyword Auto-Response Switch -->
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
+              <label class="block font-bold text-slate-700 text-[11px] flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px] text-indigo-600">dialpad</span>
+                <span>Interactive Number Menus:</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer pt-1">
+                <input type="checkbox" id="autoreply-keyword-toggle" checked class="w-4 h-4 text-brand-wa rounded border-slate-300 focus:ring-brand-wa">
+                <span class="text-xs text-slate-700 font-semibold">Auto-reply when customer types 1, 2, 3, 4, 5, 6</span>
+              </label>
+              <p class="text-[10px] text-slate-400">Automatically sends photos &amp; sizes when numbers are selected.</p>
+            </div>
           </div>
 
-          <div class="bg-emerald-50/90 text-slate-800 p-3.5 rounded-2xl rounded-tr-none border border-emerald-200/80 text-xs leading-relaxed font-sans shadow-sm whitespace-pre-wrap max-h-48 overflow-y-auto custom-chat-scroll" id="autoreply-live-preview-box">
-            <!-- Rendered by JS -->
+          <!-- Greeting Template Box -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+            <div class="flex items-center justify-between">
+              <label class="font-extrabold text-slate-700 text-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px] text-amber-600">edit_note</span>
+                <span>Default Full Catalog Welcome Menu:</span>
+              </label>
+              <button type="button" onclick="regenerateLiveStockMenuTemplate()" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[11px] font-bold flex items-center gap-1 transition">
+                <span class="material-symbols-outlined text-[14px]">sync</span>
+                <span>Reset to Default</span>
+              </button>
+            </div>
+
+            <textarea id="autoreply-message-template" rows="5" oninput="updateAutoReplyLivePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono font-medium focus:bg-white focus:ring-2 focus:ring-brand-wa leading-relaxed" placeholder="Enter greeting template..."></textarea>
+          </div>
+
+          <!-- Live WhatsApp Bubble Preview -->
+          <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-extrabold text-slate-700 text-[11px] flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px] text-brand-wa">chat_bubble</span>
+                <span>Live Welcome Message Preview:</span>
+              </span>
+              <span class="text-[10px] text-slate-400 font-mono" id="autoreply-preview-chars">0 chars</span>
+            </div>
+
+            <div class="bg-emerald-50/90 text-slate-800 p-3.5 rounded-2xl rounded-tr-none border border-emerald-200/80 text-xs leading-relaxed font-sans shadow-sm whitespace-pre-wrap max-h-44 overflow-y-auto custom-chat-scroll" id="autoreply-live-preview-box">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 3: LIVE QUESTION TESTER & Q&A SIMULATOR -->
+        <!-- ============================================== -->
+        <div id="tab-panel-ar-tester" class="space-y-4 hidden">
+          <div class="bg-white p-4.5 rounded-xl border border-slate-200 shadow-2xs space-y-3">
+            <div>
+              <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[17px] text-teal-600">psychology_alt</span>
+                <span>Test Customer Question Against Configured Templates</span>
+              </h4>
+              <p class="text-[11px] text-slate-500 mt-0.5">Type any question customer might ask to see which rule matches and what will be sent automatically.</p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input type="text" id="ar-test-question-input" value="i want a feeding kurti" placeholder="e.g. i want a feeding kurti, do you have baby frock, where is your shop..." class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-wa" onkeydown="if(event.key==='Enter') testMatchAutoReplyQuestion()">
+              <button type="button" onclick="testMatchAutoReplyQuestion()" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0">
+                <span class="material-symbols-outlined text-[16px] text-emerald-400">play_arrow</span>
+                <span>Test Match</span>
+              </button>
+            </div>
+
+            <!-- Quick Test Chips -->
+            <div class="flex items-center gap-1.5 flex-wrap pt-1">
+              <span class="text-[10px] font-bold text-slate-400">Quick Test Samples:</span>
+              <button type="button" onclick="setTestQuestion('i want a feeding kurti')" class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 rounded-md text-[10px] font-bold border border-slate-200 transition">"i want a feeding kurti"</button>
+              <button type="button" onclick="setTestQuestion('show me baby frocks')" class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 rounded-md text-[10px] font-bold border border-slate-200 transition">"show me baby frocks"</button>
+              <button type="button" onclick="setTestQuestion('where is your shop location')" class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 rounded-md text-[10px] font-bold border border-slate-200 transition">"where is your shop location"</button>
+              <button type="button" onclick="setTestQuestion('how to pay gpay qr')" class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 rounded-md text-[10px] font-bold border border-slate-200 transition">"how to pay gpay qr"</button>
+            </div>
+          </div>
+
+          <!-- Match Result Display Box -->
+          <div id="ar-test-result-box" class="space-y-2">
+            <!-- Populated by JS -->
           </div>
         </div>
 
       </div>
 
       <!-- Footer Actions -->
-      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+      <div class="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
         <button type="button" onclick="closeModal('modal-auto-reply-settings')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition">
           Close
         </button>
@@ -2752,7 +2927,7 @@
           </button>
           <button type="button" onclick="saveAutoReplySettings()" class="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5 active:scale-[0.99]">
             <span class="material-symbols-outlined text-[16px]">save</span>
-            <span>Save Automation Settings</span>
+            <span>Save All Pre-Set Rules</span>
           </button>
         </div>
       </div>

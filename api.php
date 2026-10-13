@@ -328,6 +328,102 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+if ($action === 'toggle_autoreply' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $postData = json_decode($input, true) ?: [];
+
+    $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    if (isset($postData['enabled'])) {
+        $currentConfig['autoReplyEnabled'] = (bool)$postData['enabled'];
+    } else {
+        $currentConfig['autoReplyEnabled'] = empty($currentConfig['autoReplyEnabled']);
+    }
+
+    if (isset($postData['cooldownMinutes'])) {
+        $currentConfig['autoReplyCooldownMinutes'] = (int)$postData['cooldownMinutes'];
+    }
+    if (isset($postData['keywordMatching'])) {
+        $currentConfig['autoReplyKeywordMatching'] = (bool)$postData['keywordMatching'];
+    }
+
+    file_put_contents($configFile, json_encode($currentConfig, JSON_PRETTY_PRINT));
+
+    // Propagate to live Node Bridge
+    $bridgeRes = null;
+    try {
+        $ch = curl_init('http://localhost:3000/api/autoreply/toggle');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+            'enabled' => $currentConfig['autoReplyEnabled'],
+            'cooldownMinutes' => $currentConfig['autoReplyCooldownMinutes'] ?? 0,
+            'keywordMatching' => $currentConfig['autoReplyKeywordMatching'] ?? true
+        ]));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        $bridgeRes = curl_exec($ch);
+        curl_close($ch);
+    } catch (Exception $e) {}
+
+    echo json_encode([
+        "status" => "success",
+        "enabled" => $currentConfig['autoReplyEnabled'],
+        "message" => "Auto-reply is now " . ($currentConfig['autoReplyEnabled'] ? "ON" : "OFF"),
+        "config" => $currentConfig
+    ]);
+    exit;
+}
+
+if ($action === 'get_autoreply') {
+    $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    echo json_encode([
+        "status" => "success",
+        "enabled" => isset($currentConfig['autoReplyEnabled']) ? (bool)$currentConfig['autoReplyEnabled'] : true,
+        "cooldownMinutes" => $currentConfig['autoReplyCooldownMinutes'] ?? 0,
+        "keywordMatching" => $currentConfig['autoReplyKeywordMatching'] ?? true,
+        "rules" => $currentConfig['autoReplyRules'] ?? []
+    ]);
+    exit;
+}
+
+if ($action === 'get_autoreply_rules') {
+    $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    echo json_encode([
+        "status" => "success",
+        "rules" => $currentConfig['autoReplyRules'] ?? []
+    ]);
+    exit;
+}
+
+if ($action === 'save_autoreply_rules' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $postData = json_decode($input, true) ?: [];
+    $rules = $postData['rules'] ?? [];
+
+    $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    $currentConfig['autoReplyRules'] = $rules;
+    file_put_contents($configFile, json_encode($currentConfig, JSON_PRETTY_PRINT));
+
+    // Propagate to live Node Bridge
+    try {
+        $ch = curl_init('http://localhost:3000/api/autoreply/rules');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['rules' => $rules]));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        curl_exec($ch);
+        curl_close($ch);
+    } catch (Exception $e) {}
+
+    echo json_encode([
+        "status" => "success",
+        "message" => "Auto-reply rules updated successfully",
+        "rules" => $rules
+    ]);
+    exit;
+}
+
 if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
     $postData = json_decode($input, true);

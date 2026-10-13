@@ -646,12 +646,35 @@ function initSocketIO() {
     SOCKET_IO.on('connect', () => {
       console.log('⚡ Socket.IO Connected to Bridge (ID: ' + SOCKET_IO.id + ')');
       showToast('WebSocket Connected', 'Live WhatsApp synchronization active', 'bolt', 'emerald');
+      fetch('http://localhost:3000/api/autoreply/rules')
+        .then(r => r.json())
+        .then(data => {
+          if (data && Array.isArray(data.rules) && data.rules.length > 0) {
+            CRM_STATE.autoReplyRules = data.rules;
+            saveCRMState();
+            if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
+            if (typeof renderInboxPresetTemplatesBar === 'function') renderInboxPresetTemplatesBar();
+            if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
+          }
+        }).catch(() => {});
     });
 
     // Real-time Inbound Message from WhatsApp (Pushed instantly)
     SOCKET_IO.on('whatsapp:inbound', (payload) => {
       console.log('⚡ [Socket.IO Inbound Message Received]:', payload);
       ingestInboundMessage(payload);
+    });
+
+    // Real-time Auto-Reply Rules Sync from Bridge
+    SOCKET_IO.on('autoreply:rules_updated', (data) => {
+      if (data && Array.isArray(data.rules)) {
+        console.log('⚡ [Socket.IO Rules Sync Received]:', data.rules.length, 'rules');
+        CRM_STATE.autoReplyRules = data.rules;
+        saveCRMState();
+        if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
+        if (typeof renderInboxPresetTemplatesBar === 'function') renderInboxPresetTemplatesBar();
+        if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
+      }
     });
 
     // Real-time Bridge Status Changes
@@ -739,16 +762,27 @@ function ingestInboundMessage(payload, suppressChime = false) {
 
   let customer = CRM_STATE.customers.find(c => {
     const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
-    return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
+    const phoneMatch = (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
            (c.jid && payload.sender_jid && c.jid === payload.sender_jid);
+    const accountMatch = (c.accountId || 'account_1') === payloadAccountId;
+    return phoneMatch && accountMatch;
   });
 
   if (!customer) {
-    const newCustId = 'cust_' + (normalizedDigits.slice(-8) || Date.now().toString().slice(-6));
+    const newCustId = 'cust_' + (normalizedDigits.slice(-8) || Date.now().toString().slice(-6)) + '_' + payloadAccountId;
+    // Look up if customer exists in another line to inherit friendly contact name
+    const existingOther = CRM_STATE.customers.find(c => {
+      const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+      return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits)));
+    });
+    const finalName = (senderName && !senderName.startsWith('WhatsApp Customer'))
+      ? senderName
+      : (existingOther && existingOther.name && !existingOther.name.startsWith('WhatsApp Customer') ? existingOther.name : senderName);
+
     customer = {
       id: newCustId,
       code: `CUST-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: senderName,
+      name: finalName,
       phone: cleanPhone,
       whatsapp: cleanPhone,
       jid: payload.sender_jid || '',
@@ -757,15 +791,15 @@ function ingestInboundMessage(payload, suppressChime = false) {
       address: 'Online WhatsApp Customer',
       city: 'Direct Inbound',
       customerType: 'Live WhatsApp Lead',
-      tags: ['Live WhatsApp', 'Online Lead'],
+      tags: ['Live WhatsApp', payloadAccountId === 'account_2' ? 'Line 2 Lead' : 'Line 1 Lead'],
       totalOrders: 0,
       totalSpend: 0,
       avatar: safeAvatar
     };
     CRM_STATE.customers.unshift(customer);
   } else {
-    if (!customer.accountId) customer.accountId = payloadAccountId;
-    if (!customer.businessNumber) customer.businessNumber = payloadBusinessNum;
+    customer.accountId = payloadAccountId;
+    if (payloadBusinessNum && payloadBusinessNum !== 'Primary') customer.businessNumber = payloadBusinessNum;
     if (senderName && !senderName.startsWith('WhatsApp Customer') && (customer.name.startsWith('Customer') || customer.name.startsWith('WhatsApp Customer'))) {
       customer.name = senderName;
     }
@@ -798,6 +832,8 @@ function ingestInboundMessage(payload, suppressChime = false) {
       id: payload.id || msgTimestamp,
       sender: msgSender,
       isBot: isBotMsg,
+      rule_name: payload.rule_name || null,
+      rule_id: payload.rule_id || null,
       text: messageText,
       time: timeStr,
       status: 'DELIVERED',
@@ -810,6 +846,11 @@ function ingestInboundMessage(payload, suppressChime = false) {
 
     // Dynamic Bot Automation & Chosen Products Activity Tracker
     syncCustomerAutomationHistory(customer);
+
+    // Trigger simulated auto-reply if message is from customer simulator / test mode
+    if (!isOutboundMsg && (payload.source === 'SIMULATOR' || payload.source === 'TEST') && CRM_STATE?.autoReplySettings?.enabled !== false) {
+      triggerClientSideAutoReplyIfMatched(customer, messageText);
+    }
   }
 
   // 4. Match or Create Lead / Query Card
@@ -1060,6 +1101,10 @@ function initCRMState() {
         };
       }
 
+      if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
+        CRM_STATE.autoReplyRules = getDefaultAutoReplyRules();
+      }
+
       if (Array.isArray(CRM_STATE.staffList)) {
         CRM_STATE.staffList.forEach((s, idx) => {
           if (typeof s.dailyQuota === 'undefined') s.dailyQuota = idx === 2 ? 60 : 70;
@@ -1083,8 +1128,25 @@ function initCRMState() {
         messageTemplate: getDefaultStockAutoReplyTemplate()
       };
     }
+    if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
+      CRM_STATE.autoReplyRules = getDefaultAutoReplyRules();
+    }
     saveCRMState();
   }
+
+  // Sync auto-reply rules from backend API
+  fetch('api.php?action=get_autoreply_rules')
+    .then(r => r.json())
+    .then(res => {
+      if (res && res.status === 'success' && Array.isArray(res.rules) && res.rules.length > 0) {
+        CRM_STATE.autoReplyRules = res.rules;
+        saveCRMState();
+        if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
+        if (typeof renderInboxPresetTemplatesBar === 'function') renderInboxPresetTemplatesBar();
+        if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
+      }
+    })
+    .catch(() => {});
 
   // Set active customer ID to first existing customer who actually has messages/conversations
   const activeChatCusts = (CRM_STATE.customers || []).filter(c => {
@@ -1809,6 +1871,8 @@ function renderInbox() {
   renderChatHeader();
   renderChatMessages();
   renderCustomer360Panel();
+  renderInboxPresetTemplatesBar();
+  updateRulesCountBadge();
   updateBadgeCounters();
 }
 
@@ -1819,6 +1883,14 @@ function renderQuickLineSwitcher() {
 
   const accounts = getAvailableWhatsAppAccounts();
   const availableAccountIds = accounts.map(a => a.id);
+
+  // Filter to display: connected lines, plus account_1 and account_2, or lines with chats
+  const displayAccounts = accounts.filter(acc => 
+    acc.id === 'account_1' || 
+    acc.id === 'account_2' || 
+    acc.status === 'CONNECTED' || 
+    (CRM_STATE?.customers || []).some(c => (c.accountId || 'account_1') === acc.id)
+  );
 
   // Count only customers that have actual conversation messages or active queries
   const getActiveCustomerCountForAccount = (accId) => {
@@ -1843,25 +1915,47 @@ function renderQuickLineSwitcher() {
 
   let chipsHtml = '';
 
-  if (accounts.length > 1) {
-    chipsHtml += `
-      <button onclick="switchActiveWhatsAppLine('all', 'All ${accounts.length} WhatsApp Lines', 'All Numbers')" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold shrink-0 transition flex items-center gap-1 ${ACTIVE_SEND_ACCOUNT_ID === 'all' ? 'bg-brand-dark text-white shadow-sm ring-1 ring-emerald-400' : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-300'}">
-        <span class="material-symbols-outlined text-[12px]">hub</span>
-        <span>All (${totalChats})</span>
-      </button>
-    `;
-  }
+  // 1. All Lines Combined (Global Queue)
+  const isAllActive = (ACTIVE_SEND_ACCOUNT_ID === 'all');
+  chipsHtml += `
+    <button type="button" onclick="switchActiveWhatsAppLine('all', 'All Lines', 'All Numbers')" class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer shadow-xs ${isAllActive ? 'bg-slate-900 text-white ring-2 ring-emerald-400' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'}" title="View all messages combined across all WhatsApp lines">
+      <span class="material-symbols-outlined text-[15px] ${isAllActive ? 'text-emerald-400' : 'text-slate-500'}">hub</span>
+      <span>All Inboxes</span>
+      <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${isAllActive ? 'bg-emerald-800 text-white' : 'bg-slate-100 text-slate-700'}">${totalChats}</span>
+    </button>
+  `;
 
-  chipsHtml += accounts.map((acc, idx) => {
-    const isCurrent = ACTIVE_SEND_ACCOUNT_ID === acc.id || (accounts.length === 1 && ACTIVE_SEND_ACCOUNT_ID === 'all');
-    const shortNumber = acc.connected_number ? acc.connected_number.replace(/[^0-9]/g, '').slice(-5) : `${idx+1}`;
+  // 2. Individual WhatsApp Lines (Line 1, Line 2, etc.)
+  chipsHtml += displayAccounts.map((acc, idx) => {
+    const isCurrent = (ACTIVE_SEND_ACCOUNT_ID === acc.id);
+    const isConnected = (acc.status === 'CONNECTED');
     const custCount = getActiveCustomerCountForAccount(acc.id);
+    
+    let displayPhone = acc.connected_number && acc.connected_number !== 'Awaiting Link' && acc.connected_number !== 'Scan QR Code'
+      ? formatPhoneNumberPretty(acc.connected_number)
+      : (idx === 0 ? '+91 97896 60115' : 'Line ' + (idx + 1));
+
+    const lineName = (idx === 0) ? 'Line 1 (Central)' : (idx === 1 ? 'Line 2 (Blue Berry)' : (acc.label || 'Line ' + (idx + 1)));
+
+    // Distinct styling per line
+    let activeClass = '';
+    if (isCurrent) {
+      activeClass = (idx === 0) 
+        ? 'bg-brand-wa text-white ring-2 ring-emerald-300 shadow-sm' 
+        : (idx === 1 
+          ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-sm' 
+          : 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-sm');
+    } else {
+      activeClass = 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300';
+    }
+
+    const badgeClass = isCurrent ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-700';
 
     return `
-      <button onclick="switchActiveWhatsAppLine('${acc.id}', '${acc.connected_number}', '${acc.label}')" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold shrink-0 transition flex items-center gap-1 ${isCurrent ? 'bg-brand-wa text-white shadow-sm ring-1 ring-emerald-300' : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-300'}" title="${acc.label}: ${acc.connected_number}">
-        <span class="w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-white animate-pulse' : 'bg-emerald-500'}"></span>
-        <span>L${idx + 1}: ..${shortNumber}</span>
-        <span class="text-[9px] px-1 py-0.2 rounded font-mono ${isCurrent ? 'bg-emerald-800 text-white' : 'bg-slate-100 text-slate-600'}">${custCount}</span>
+      <button type="button" onclick="switchActiveWhatsAppLine('${acc.id}', '${acc.connected_number || displayPhone}', '${acc.label || lineName}')" class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer shadow-xs ${activeClass}" title="${acc.label || lineName}: ${displayPhone}">
+        <span class="w-2 h-2 rounded-full ${isConnected ? (isCurrent ? 'bg-white animate-pulse' : 'bg-emerald-500') : 'bg-amber-400'}"></span>
+        <span>${lineName}: ${displayPhone}</span>
+        <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${badgeClass}">${custCount}</span>
       </button>
     `;
   }).join('');
@@ -2000,7 +2094,12 @@ function renderInboxConversationList() {
     else if (qStatus === 'CONVERTED') statusBadge = `<span class="bg-purple-100 text-purple-900 border border-purple-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">CONVERTED</span>`;
 
     // Line Badge
-    const lineIdx = (item.accountId === 'account_1') ? 'L1' : (item.accountId === 'account_2' ? 'L2' : (item.accountId === 'account_3' ? 'L3' : (item.accountId === 'account_4' ? 'L4' : 'L5')));
+    const isLine1Card = (item.accountId === 'account_1');
+    const isLine2Card = (item.accountId === 'account_2');
+    const lineBadgeLabel = isLine1Card ? 'Line 1' : (isLine2Card ? 'Line 2' : (item.accountId ? item.accountId.replace('account_', 'L') : 'L1'));
+    const lineBadgeClass = isLine1Card
+      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+      : (isLine2Card ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-purple-100 text-purple-800 border-purple-300');
 
     return `
       <div onclick="selectCustomerChat('${item.customerId}')" class="p-3.5 cursor-pointer transition flex items-start gap-3 hover:bg-slate-50 relative ${isSelected ? 'bg-emerald-50/70 border-l-4 border-brand-wa shadow-sm' : ''}">
@@ -2030,7 +2129,7 @@ function renderInboxConversationList() {
 
           <div class="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-[9px] bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-200" title="Received on Line: ${item.businessNumber}">${lineIdx}</span>
+              <span class="text-[9px] ${lineBadgeClass} font-bold px-1.5 py-0.5 rounded border" title="Received on WhatsApp Line: ${item.businessNumber}">📱 ${lineBadgeLabel}</span>
               <span class="text-[10px] bg-slate-100 text-slate-600 font-mono font-semibold px-1.5 py-0.2 rounded">${item.queryId}</span>
               ${statusBadge}
               ${priorityBadge}
@@ -2118,7 +2217,26 @@ function renderChatHeader() {
 
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
-  const currentLinePhone = CRM_STATE.whatsappAccount?.phoneNumber || '+91 86680 07593';
+  const customerAccId = customer.accountId || 'account_1';
+  let lineLabel = 'Line 1';
+  let currentLinePhone = CRM_STATE.whatsappAccount?.phoneNumber || '+91 86680 07593';
+  let lineBadgeBg = 'bg-emerald-50 border-emerald-200 text-emerald-900';
+  let lineDotBg = 'bg-emerald-500';
+  let linePillBg = 'bg-emerald-200 text-emerald-800';
+
+  if (customerAccId === 'account_2') {
+    lineLabel = 'Line 2';
+    const acc2 = CRM_STATE.whatsappAccounts?.['account_2'];
+    currentLinePhone = acc2?.phone_number || acc2?.phoneNumber || '+91 97896 60115';
+    lineBadgeBg = 'bg-sky-50 border-sky-300 text-sky-900';
+    lineDotBg = 'bg-sky-500';
+    linePillBg = 'bg-sky-200 text-sky-800';
+  } else {
+    const acc1 = CRM_STATE.whatsappAccounts?.['account_1'];
+    if (acc1?.phone_number || acc1?.phoneNumber) {
+      currentLinePhone = acc1.phone_number || acc1.phoneNumber;
+    }
+  }
 
   bar.innerHTML = `
     <div class="flex items-center gap-2.5 min-w-0">
@@ -2140,9 +2258,9 @@ function renderChatHeader() {
 
     <!-- Active Connected Business Line Tag & Actions & Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-2 shrink-0">
-      <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-900" title="Connected WhatsApp Business Number for this conversation">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span class="text-[10px] text-emerald-700 font-bold uppercase">Line:</span>
+      <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 ${lineBadgeBg} border rounded-lg text-xs font-semibold" title="WhatsApp Business Number receiving and sending for this conversation">
+        <span class="w-2 h-2 rounded-full ${lineDotBg} animate-pulse"></span>
+        <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${linePillBg}">📱 ${lineLabel}</span>
         <span class="font-mono font-bold text-[11px]">${currentLinePhone}</span>
       </div>
 
@@ -2341,6 +2459,15 @@ function renderChatMessages() {
     return `
       <div class="flex ${isOut ? 'justify-end' : 'justify-start'}">
         <div class="max-w-md ${isOut ? 'bg-brand-50 border border-emerald-200 text-slate-800 chat-bubble-out shadow-sm' : 'bg-white border border-slate-200 text-slate-800 chat-bubble-in shadow-sm'} p-3.5 space-y-1">
+          ${(msg.isBot || msg.source === 'AUTOREPLY_BOT' || msg.rule_name) ? `
+            <div class="flex items-center justify-between text-[10px] font-bold text-teal-800 bg-teal-100/90 px-2 py-0.5 rounded-md mb-1.5 border border-teal-200">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px] text-teal-600">smart_toy</span>
+                <span>Auto-Reply: <strong>${msg.rule_name || 'Stock Template'}</strong></span>
+              </span>
+              <span class="text-[9px] uppercase tracking-wider text-teal-700 bg-white/90 px-1 py-0.2 rounded font-mono">Sent Auto</span>
+            </div>
+          ` : ''}
           ${contentHtml}
           <div class="flex items-center justify-end gap-1 text-[10px] text-slate-400 pt-0.5">
             <span>${msg.time}</span>
@@ -3914,7 +4041,7 @@ function handleSendMessage(event) {
   playChime('order');
 
   // Transmit live WhatsApp message across WebSocket bridge to customer's WhatsApp!
-  dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, formattedText, newMsg, customer.jid);
+  dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, formattedText, newMsg, customer.jid, customer.accountId || ACTIVE_SEND_ACCOUNT_ID);
 }
 
 function insertQuickReply(type) {
@@ -4122,15 +4249,127 @@ function shareStockCategoryMenu() {
   }
 }
 
+// =========================================================================
+// WHATSAPP PRE-SET TEMPLATES & QUESTION-BASED AUTO-REPLY SYSTEM
+// =========================================================================
+
+function getDefaultAutoReplyRules() {
+  return [
+    {
+      id: "rule_testing_the_crm",
+      name: "testing the crm",
+      keywords: ["feeding gown", "testing the crm", "testing", "crm"],
+      actionType: "custom_text",
+      categoryId: null,
+      replyText: "welcome",
+      enabled: true,
+      autoSend: true
+    },
+    {
+      id: "rule_feeding_kurti",
+      name: "Feeding Kurti & Maternity Wear",
+      keywords: ["feeding kurti", "feeding", "kurti", "maternity", "feeding dress", "feeding gown"],
+      actionType: "category_and_text",
+      categoryId: "2",
+      replyText: "🤰 *Maternity & Feeding Collection*\nHello *{customer_name}*! 👋 Yes, we have ready stock of Pure Cotton Feeding Kurtis & Maternity Gowns with concealed invisible feeding zips!\n\n✨ Pure mulmul breathable cotton • Sizes L to XXL • Ready to dispatch.",
+      enabled: true,
+      autoSend: true
+    },
+    {
+      id: "rule_baby_frocks",
+      name: "Baby Frocks & Frocks (0-3Y)",
+      keywords: ["baby frock", "frock", "baby dress", "baby collection", "cotton frock", "baby cloth"],
+      actionType: "category_and_text",
+      categoryId: "1",
+      replyText: "👗 *Baby Collection (0–3 Years)*\nHello *{customer_name}*! 👋 Here are our 100% combed cotton embroidered baby frocks:",
+      enabled: true,
+      autoSend: true
+    },
+    {
+      id: "rule_newborn_sets",
+      name: "Newborn Gift Sets (0-6M)",
+      keywords: ["newborn", "gift set", "baby born", "romper", "swaddle", "born baby"],
+      actionType: "category_and_text",
+      categoryId: "3",
+      replyText: "🎁 *Newborn Gift Sets (0–6 Months)*\nHello *{customer_name}*! 👋 Here are our organic cotton romper & swaddle luxury gift boxes:",
+      enabled: true,
+      autoSend: true
+    },
+    {
+      id: "rule_kids_daily",
+      name: "Kids Everyday T-Shirts (4-5Y)",
+      keywords: ["kids tshirt", "tshirt", "t-shirt", "boys tshirt", "daily wear", "shorts combo"],
+      actionType: "category_and_text",
+      categoryId: "4",
+      replyText: "👕 *Kids Everyday Wear (4–5 Years)*\nHello *{customer_name}*! 👋 Check out our bio-washed organic cotton t-shirt and denim combos:",
+      enabled: true,
+      autoSend: true
+    },
+    {
+      id: "rule_wholesale",
+      name: "Wholesale & Bulk Orders",
+      keywords: ["wholesale", "bulk", "bundle", "resale", "dealer", "margin", "bulk price"],
+      actionType: "category_and_text",
+      categoryId: "5",
+      replyText: "📦 *Wholesale & Bulk Bundles*\nHello *{customer_name}*! 👋 We offer bulk retailer carton boxes (25–50 pcs) with maximum resale profit margins:",
+      enabled: true,
+      autoSend: true
+    },
+    {
+      id: "rule_festive_silk",
+      name: "Festive & Silk Pattu Pavadai",
+      keywords: ["pattu", "silk", "lehenga", "festive", "pavadai", "diwali", "kanjivaram"],
+      actionType: "category_and_text",
+      categoryId: "6",
+      replyText: "🥻 *Festive & Silk Collection*\nHello *{customer_name}*! 👋 Here are our pure zari Kanjivaram silk pattu pavadais & designer lehengas:",
+      enabled: true,
+      autoSend: true
+    },
+    {
+      id: "rule_store_location",
+      name: "Store Address & Timings",
+      keywords: ["address", "location", "shop address", "where is your shop", "store", "visit", "timings", "map"],
+      actionType: "custom_text",
+      categoryId: null,
+      replyText: "📍 *{brand_name} Store Location*\n\n🏢 GRM Garments Hub, 42 Cotton Market Road, Tirupur, Tamil Nadu - 641604.\n🕒 Working Hours: Monday – Saturday (9:30 AM to 8:30 PM)\n📞 Direct Desk: {business_phone}\n\n🗺️ You are welcome to visit our retail counter & wholesale warehouse!",
+      enabled: true,
+      autoSend: true
+    },
+    {
+      id: "rule_payment_upi",
+      name: "Payment & UPI QR",
+      keywords: ["payment", "gpay", "phonepe", "paytm", "upi", "bank details", "account", "how to pay", "scanner"],
+      actionType: "custom_text",
+      categoryId: null,
+      replyText: "💳 *Payment Details — {brand_name}*\n\n📱 UPI ID: `grmgarments@upi`\n📲 GPay / PhonePe: {business_phone}\n\n🏦 *Bank Transfer:*\nBank: HDFC Bank\nA/C Name: GRM Garments Hub\nA/C No: 50200088991122\nIFSC: HDFC0001234\n\n📸 *Please reply with your payment screenshot once paid for immediate dispatch!*",
+      enabled: true,
+      autoSend: true
+    },
+    {
+      id: "rule_shipping_delivery",
+      name: "Shipping & Delivery Time",
+      keywords: ["delivery", "shipping", "courier", "how many days", "tracking", "dispatch", "charge"],
+      actionType: "custom_text",
+      categoryId: null,
+      replyText: "🚚 *Shipping & Delivery Information*\n\n⚡ Dispatch: Same day / within 24 hours of confirmation\n📦 Courier Partners: ST Courier, Professional Couriers & DTDC\n⏱️ Delivery Time: 2–3 days within South India, 4–5 days Rest of India\n\nLive tracking link will be sent to your WhatsApp upon courier pickup! 📦",
+      enabled: true,
+      autoSend: true
+    }
+  ];
+}
+
 // Modal Controllers
-function openAutoReplyModal() {
+function openAutoReplyModal(activeTab = 'rules') {
   if (!CRM_STATE.autoReplySettings) {
     CRM_STATE.autoReplySettings = {
       enabled: true,
-      cooldownMinutes: 30,
+      cooldownMinutes: 0,
       keywordMatching: true,
       messageTemplate: getDefaultStockAutoReplyTemplate()
     };
+  }
+  if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
+    CRM_STATE.autoReplyRules = getDefaultAutoReplyRules();
   }
 
   const settings = CRM_STATE.autoReplySettings;
@@ -4140,12 +4379,677 @@ function openAutoReplyModal() {
   const tplArea = document.getElementById('autoreply-message-template');
 
   if (masterToggle) masterToggle.checked = settings.enabled !== false;
-  if (cooldownSelect) cooldownSelect.value = settings.cooldownMinutes || '30';
+  if (cooldownSelect) cooldownSelect.value = String(settings.cooldownMinutes ?? '0');
   if (keywordToggle) keywordToggle.checked = settings.keywordMatching !== false;
   if (tplArea) tplArea.value = settings.messageTemplate || getDefaultStockAutoReplyTemplate();
 
   updateAutoReplyLivePreview();
+  renderAutoReplyRulesList();
+  updateRulesCountBadge();
+  switchAutoReplyTab(activeTab);
   openModal('modal-auto-reply-settings');
+}
+
+function switchAutoReplyTab(tabName) {
+  const tabs = ['rules', 'general', 'tester'];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`tab-btn-ar-${t}`);
+    const panel = document.getElementById(`tab-panel-ar-${t}`);
+    if (btn) {
+      if (t === tabName) {
+        btn.className = "px-3.5 py-1.5 rounded-lg bg-white text-emerald-800 shadow-xs border border-slate-200 flex items-center gap-1.5 transition";
+      } else {
+        btn.className = "px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 flex items-center gap-1.5 transition";
+      }
+    }
+    if (panel) {
+      if (t === tabName) panel.classList.remove('hidden');
+      else panel.classList.add('hidden');
+    }
+  });
+
+  if (tabName === 'rules') renderAutoReplyRulesList();
+  if (tabName === 'tester') testMatchAutoReplyQuestion();
+}
+
+function updateRulesCountBadge() {
+  const count = Array.isArray(CRM_STATE?.autoReplyRules) ? CRM_STATE.autoReplyRules.length : 0;
+  const badge1 = document.getElementById('tab-rules-count');
+  const badge2 = document.getElementById('inbox-rules-count-badge');
+  if (badge1) badge1.innerText = String(count);
+  if (badge2) badge2.innerText = String(count);
+}
+
+function renderAutoReplyRulesList() {
+  const container = document.getElementById('ar-rules-list-container');
+  if (!container) return;
+
+  if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
+    CRM_STATE.autoReplyRules = getDefaultAutoReplyRules();
+  }
+
+  const searchQ = (document.getElementById('ar-rules-search-input')?.value || '').trim().toLowerCase();
+  const filterType = document.getElementById('ar-rules-filter-select')?.value || 'ALL';
+
+  let list = CRM_STATE.autoReplyRules.filter(rule => {
+    if (searchQ) {
+      const matchName = (rule.name || '').toLowerCase().includes(searchQ);
+      const matchKws = Array.isArray(rule.keywords)
+        ? rule.keywords.some(k => (k || '').toLowerCase().includes(searchQ))
+        : (rule.keywords || '').toLowerCase().includes(searchQ);
+      const matchReply = (rule.replyText || '').toLowerCase().includes(searchQ);
+      if (!matchName && !matchKws && !matchReply) return false;
+    }
+
+    if (filterType === 'ACTIVE') return rule.enabled !== false;
+    if (filterType === 'CATEGORY') return rule.actionType === 'category_reply' || rule.actionType === 'category_and_text';
+    if (filterType === 'CUSTOM') return rule.actionType === 'custom_text';
+    return true;
+  });
+
+  updateRulesCountBadge();
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-400">
+        <span class="material-symbols-outlined text-[36px] text-slate-300">search_off</span>
+        <p class="text-xs font-semibold mt-1">No matching pre-set question rules found.</p>
+        <button type="button" onclick="openRuleEditor(null)" class="mt-2.5 px-3 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-bold transition">
+          + Add New Question Rule
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  const categoryLabels = {
+    '1': '👗 Baby Collection (0-3Y)',
+    '2': '🤰 Maternity & Feeding Wear',
+    '3': '🎁 Newborn Gift Sets (0-6M)',
+    '4': '👕 Kids Everyday (4-5Y)',
+    '5': '📦 Wholesale & Bulk Bundles',
+    '6': '🥻 Festive & VIP Silk Sets'
+  };
+
+  container.innerHTML = list.map(rule => {
+    const isEnabled = rule.enabled !== false;
+    const keywords = Array.isArray(rule.keywords) ? rule.keywords : (rule.keywords || '').split(',');
+    const catLabel = rule.categoryId ? (categoryLabels[rule.categoryId] || `Category #${rule.categoryId}`) : null;
+
+    let actionBadgeHtml = '';
+    if (rule.actionType === 'category_and_text') {
+      actionBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Category + Custom Text</span>`;
+    } else if (rule.actionType === 'category_reply') {
+      actionBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">Category Stock</span>`;
+    } else {
+      actionBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Custom Answer</span>`;
+    }
+
+    return `
+      <div class="bg-white p-3.5 sm:p-4 rounded-xl border ${isEnabled ? 'border-slate-200 hover:border-teal-300 shadow-2xs' : 'border-slate-200 opacity-60 bg-slate-50/70'} transition space-y-2">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h5 class="font-bold text-slate-900 text-xs">${rule.name}</h5>
+              ${actionBadgeHtml}
+              ${catLabel ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">${catLabel}</span>` : ''}
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono ${isEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
+                ${isEnabled ? 'AUTO-REPLY ACTIVE' : 'PAUSED'}
+              </span>
+            </div>
+
+            <!-- Keywords pills -->
+            <div class="flex items-center gap-1 flex-wrap pt-0.5">
+              <span class="text-[10px] font-bold text-slate-400">Triggers on:</span>
+              ${keywords.map(kw => `<span class="px-1.5 py-0.2 bg-slate-100 text-slate-700 rounded text-[10px] font-mono font-bold border border-slate-200">${(kw || '').trim()}</span>`).join('')}
+            </div>
+          </div>
+
+          <!-- Master Toggle for Rule -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5" title="Toggle Auto-Reply for this rule">
+            <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleRuleEnabled('${rule.id}', this.checked)" class="sr-only peer">
+            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+        </div>
+
+        <!-- Reply Message Preview -->
+        ${rule.replyText ? `
+          <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80 text-[11px] text-slate-700 font-sans leading-relaxed whitespace-pre-wrap max-h-24 overflow-y-auto custom-chat-scroll">
+            ${(rule.replyText || '').replace(/\*(.*?)\*/g, '<strong>$1</strong>')}
+          </div>
+        ` : ''}
+
+        <!-- Actions -->
+        <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="editRule('${rule.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg flex items-center gap-1 transition">
+              <span class="material-symbols-outlined text-[14px] text-slate-600">edit</span>
+              <span>Edit Question &amp; Answer</span>
+            </button>
+            <button type="button" onclick="testRuleInTester('${rule.id}')" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-lg flex items-center gap-1 transition">
+              <span class="material-symbols-outlined text-[14px]">science</span>
+              <span>Test Match</span>
+            </button>
+            <button type="button" onclick="applyRuleToActiveChat('${rule.id}')" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg flex items-center gap-1 transition" title="Insert or Send to active customer chat">
+              <span class="material-symbols-outlined text-[14px]">send</span>
+              <span>Send to Chat</span>
+            </button>
+          </div>
+
+          <button type="button" onclick="deleteRule('${rule.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition" title="Delete Rule">
+            <span class="material-symbols-outlined text-[16px]">delete</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openRuleEditor(ruleId = null) {
+  const card = document.getElementById('ar-rule-editor-card');
+  const titleEl = document.getElementById('ar-rule-editor-title');
+  const idInput = document.getElementById('edit-rule-id');
+  const nameInput = document.getElementById('edit-rule-name');
+  const kwsInput = document.getElementById('edit-rule-keywords');
+  const actionSelect = document.getElementById('edit-rule-action');
+  const catSelect = document.getElementById('edit-rule-category');
+  const textInput = document.getElementById('edit-rule-reply-text');
+  const enabledInput = document.getElementById('edit-rule-enabled');
+
+  if (!card) return;
+
+  if (ruleId) {
+    const rule = (CRM_STATE?.autoReplyRules || []).find(r => r.id === ruleId);
+    if (!rule) return;
+    if (titleEl) titleEl.innerText = `Edit Pre-Set Template: ${rule.name}`;
+    if (idInput) idInput.value = rule.id;
+    if (nameInput) nameInput.value = rule.name || '';
+    if (kwsInput) kwsInput.value = Array.isArray(rule.keywords) ? rule.keywords.join(', ') : (rule.keywords || '');
+    if (actionSelect) actionSelect.value = rule.actionType || 'category_and_text';
+    if (catSelect) catSelect.value = rule.categoryId || '2';
+    if (textInput) textInput.value = rule.replyText || '';
+    if (enabledInput) enabledInput.checked = rule.enabled !== false;
+  } else {
+    if (titleEl) titleEl.innerText = "Add New Pre-Set Question & Auto-Reply Template";
+    if (idInput) idInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (kwsInput) kwsInput.value = '';
+    if (actionSelect) actionSelect.value = 'custom_text';
+    if (catSelect) catSelect.value = '';
+    if (textInput) textInput.value = '';
+    if (enabledInput) enabledInput.checked = true;
+  }
+
+  handleRuleActionTypeChange();
+  card.classList.remove('hidden');
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeRuleEditor() {
+  const card = document.getElementById('ar-rule-editor-card');
+  if (card) card.classList.add('hidden');
+}
+
+function handleRuleActionTypeChange() {
+  const actionSelect = document.getElementById('edit-rule-action');
+  const catBox = document.getElementById('edit-rule-category-container');
+  const textBox = document.getElementById('edit-rule-text-container');
+  if (!actionSelect) return;
+
+  const mode = actionSelect.value;
+  if (mode === 'category_reply') {
+    if (catBox) catBox.classList.remove('hidden');
+    if (textBox) textBox.classList.add('hidden');
+  } else if (mode === 'custom_text') {
+    if (catBox) catBox.classList.add('hidden');
+    if (textBox) textBox.classList.remove('hidden');
+  } else {
+    if (catBox) catBox.classList.remove('hidden');
+    if (textBox) textBox.classList.remove('hidden');
+  }
+}
+
+function insertRuleTag(tag) {
+  const tplArea = document.getElementById('edit-rule-reply-text');
+  if (!tplArea) return;
+  const start = tplArea.selectionStart;
+  const end = tplArea.selectionEnd;
+  const text = tplArea.value;
+  tplArea.value = text.substring(0, start) + tag + text.substring(end);
+  tplArea.focus();
+  tplArea.selectionStart = tplArea.selectionEnd = start + tag.length;
+}
+
+function saveRuleFromEditor() {
+  const idInput = document.getElementById('edit-rule-id');
+  const nameInput = document.getElementById('edit-rule-name');
+  const kwsInput = document.getElementById('edit-rule-keywords');
+  const actionSelect = document.getElementById('edit-rule-action');
+  const catSelect = document.getElementById('edit-rule-category');
+  const textInput = document.getElementById('edit-rule-reply-text');
+  const enabledInput = document.getElementById('edit-rule-enabled');
+
+  const name = nameInput ? nameInput.value.trim() : '';
+  const rawKws = kwsInput ? kwsInput.value.trim() : '';
+
+  if (!name) {
+    showToast('Name Required', 'Please provide a name for this auto-reply template.', 'warning', 'amber');
+    return;
+  }
+  if (!rawKws) {
+    showToast('Keywords Required', 'Please enter at least one keyword or question phrase.', 'warning', 'amber');
+    return;
+  }
+
+  const keywords = rawKws.split(',').map(k => k.trim()).filter(Boolean);
+  const actionType = actionSelect ? actionSelect.value : 'custom_text';
+  const categoryId = (actionType === 'custom_text' || !catSelect || !catSelect.value) ? null : catSelect.value;
+  const replyText = textInput ? textInput.value.trim() : '';
+  const enabled = enabledInput ? enabledInput.checked : true;
+
+  if (!Array.isArray(CRM_STATE.autoReplyRules)) CRM_STATE.autoReplyRules = [];
+
+  const existingId = idInput ? idInput.value : '';
+  if (existingId) {
+    const idx = CRM_STATE.autoReplyRules.findIndex(r => r.id === existingId);
+    if (idx !== -1) {
+      CRM_STATE.autoReplyRules[idx] = {
+        ...CRM_STATE.autoReplyRules[idx],
+        name,
+        keywords,
+        actionType,
+        categoryId,
+        replyText,
+        enabled,
+        autoSend: true
+      };
+    }
+  } else {
+    const newId = 'rule_' + Date.now();
+    CRM_STATE.autoReplyRules.unshift({
+      id: newId,
+      name,
+      keywords,
+      actionType,
+      categoryId,
+      replyText,
+      enabled,
+      autoSend: true
+    });
+  }
+
+  saveCRMState();
+  closeRuleEditor();
+  renderAutoReplyRulesList();
+  renderInboxPresetTemplatesBar();
+  updateRulesCountBadge();
+
+  // Sync immediately to Baileys Bridge (WebSocket + REST) and PHP
+  syncAutoReplyRulesToBackend();
+
+  showToast('Rule Saved Successfully', `Template "${name}" is now active for WhatsApp auto-reply.`, 'check_circle', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+
+function syncAutoReplyRulesToBackend() {
+  const rules = CRM_STATE?.autoReplyRules || [];
+
+  // 1. Direct WebSocket real-time sync to Node Bridge (Port 3000)
+  const sock = window.SOCKET_IO || window.SOCKET;
+  if (sock && sock.connected) {
+    sock.emit('autoreply:save_rules', { rules: rules });
+  }
+
+  // 2. Direct REST POST to Node Bridge (Port 3000)
+  fetch('http://localhost:3000/api/autoreply/rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rules: rules })
+  }).catch(() => {});
+
+  // 3. Fallback PHP REST API
+  fetch('api.php?action=save_autoreply_rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rules: rules })
+  }).catch(() => {});
+}
+
+function editRule(ruleId) {
+  openRuleEditor(ruleId);
+}
+
+function deleteRule(ruleId) {
+  if (!confirm('Are you sure you want to delete this auto-reply rule?')) return;
+  if (!Array.isArray(CRM_STATE.autoReplyRules)) return;
+  CRM_STATE.autoReplyRules = CRM_STATE.autoReplyRules.filter(r => r.id !== ruleId);
+  saveCRMState();
+  renderAutoReplyRulesList();
+  renderInboxPresetTemplatesBar();
+  updateRulesCountBadge();
+
+  syncAutoReplyRulesToBackend();
+
+  showToast('Rule Removed', 'Auto-reply template rule deleted.', 'delete', 'slate');
+}
+
+function toggleRuleEnabled(ruleId, enabled) {
+  if (!Array.isArray(CRM_STATE.autoReplyRules)) return;
+  const rule = CRM_STATE.autoReplyRules.find(r => r.id === ruleId);
+  if (rule) {
+    rule.enabled = enabled;
+    saveCRMState();
+    renderAutoReplyRulesList();
+    renderInboxPresetTemplatesBar();
+
+    syncAutoReplyRulesToBackend();
+
+    showToast(enabled ? 'Rule Activated' : 'Rule Paused', `"${rule.name}" auto-reply is now ${enabled ? 'active' : 'paused'}.`, enabled ? 'bolt' : 'pause', enabled ? 'emerald' : 'amber');
+  }
+}
+
+// 1-Click Quick Preset Template Chips in Inbox Bar
+function renderInboxPresetTemplatesBar() {
+  const container = document.getElementById('inbox-preset-chips-list');
+  if (!container) return;
+
+  if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
+    CRM_STATE.autoReplyRules = getDefaultAutoReplyRules();
+  }
+
+  // Check last customer question in active conversation to highlight match!
+  const conv = CRM_STATE?.conversations?.[ACTIVE_CUSTOMER_ID] || [];
+  const lastCustMsg = [...conv].reverse().find(m => m.sender === 'customer' || !m.isBot);
+  const cleanLastTxt = (lastCustMsg?.text || '').trim().toLowerCase();
+
+  let matchedRuleId = null;
+  if (cleanLastTxt) {
+    for (const rule of CRM_STATE.autoReplyRules) {
+      if (rule.enabled === false) continue;
+      const kws = Array.isArray(rule.keywords) ? rule.keywords : (rule.keywords || '').split(',');
+      for (const kw of kws) {
+        const cleanKw = (kw || '').trim().toLowerCase();
+        if (cleanKw && cleanLastTxt.includes(cleanKw)) {
+          matchedRuleId = rule.id;
+          break;
+        }
+      }
+      if (matchedRuleId) break;
+    }
+  }
+
+  const categoryIcons = {
+    '1': '👗',
+    '2': '🤰',
+    '3': '🎁',
+    '4': '👕',
+    '5': '📦',
+    '6': '🥻'
+  };
+
+  container.innerHTML = CRM_STATE.autoReplyRules.map(rule => {
+    const isMatched = rule.id === matchedRuleId;
+    const icon = rule.categoryId ? (categoryIcons[rule.categoryId] || '💬') : '💬';
+    const isEnabled = rule.enabled !== false;
+
+    return `
+      <button type="button" onclick="applyPresetTemplateToComposer('${rule.id}')" 
+        class="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition flex items-center gap-1.5 shadow-2xs border ${
+          isMatched 
+            ? 'bg-emerald-100 text-emerald-950 border-emerald-500 ring-2 ring-emerald-400/80 animate-pulse font-extrabold' 
+            : (isEnabled ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300' : 'bg-slate-100 text-slate-400 border-slate-200 line-through')
+        }"
+        title="1-Click Insert into message bar (Double click to send directly to customer)">
+        <span>${icon}</span>
+        <span class="truncate max-w-[130px] sm:max-w-[160px]">${rule.name}</span>
+        ${isMatched ? `<span class="bg-emerald-600 text-white text-[9px] px-1 py-0.2 rounded font-mono">MATCHED</span>` : ''}
+      </button>
+    `;
+  }).join('');
+}
+
+function applyPresetTemplateToComposer(ruleId, autoSend = false) {
+  if (!ACTIVE_CUSTOMER_ID) {
+    showToast('No Chat Selected', 'Please select a customer chat conversation first.', 'info', 'amber');
+    return;
+  }
+  const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
+  const rule = (CRM_STATE?.autoReplyRules || []).find(r => r.id === ruleId);
+  if (!customer || !rule) return;
+
+  const brand = getBrandName();
+  const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
+  const cName = customer.name ? customer.name.split(' ')[0] : 'there';
+
+  let customText = (rule.replyText || '')
+    .replace(/{customer_name}/g, cName)
+    .replace(/{brand_name}/g, brand)
+    .replace(/{business_phone}/g, phone);
+
+  let finalMsg = customText;
+
+  if (rule.categoryId && (rule.actionType === 'category_reply' || rule.actionType === 'category_and_text')) {
+    const cat = GRM_BOT_CATALOG?.[rule.categoryId];
+    if (cat) {
+      const itemsList = Object.values(cat.items || {}).map((it, idx) => {
+        const cleanPrice = String(it.price || '').replace(/^₹/, '');
+        const stockCount = it.stock ?? 12;
+        return `${idx + 1}️⃣ *${it.name}*\n   💰 ₹${cleanPrice} | Size: ${it.size} | Stock: ${stockCount} Pcs Ready`;
+      }).join('\n\n');
+
+      if (rule.actionType === 'category_and_text' && customText.trim()) {
+        finalMsg = `${customText}\n\n━━━━━━━━━━━━━━━━━━━━\n${cat.icon} *${cat.categoryName} Ready Stock:*\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
+      } else {
+        finalMsg = `${cat.icon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${cName}! 👋 Here are our ready-stock items:\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
+      }
+    }
+  }
+
+  const inputEl = document.getElementById('chat-input-text');
+  if (inputEl) {
+    inputEl.value = finalMsg;
+    inputEl.focus();
+  }
+
+  showToast('Template Loaded', `Loaded "${rule.name}" into message composer. Review or press Send!`, 'edit_note', 'emerald');
+}
+
+function applyRuleToActiveChat(ruleId) {
+  applyPresetTemplateToComposer(ruleId);
+  closeModal('modal-auto-reply-settings');
+}
+
+function testRuleInTester(ruleId) {
+  const rule = (CRM_STATE?.autoReplyRules || []).find(r => r.id === ruleId);
+  if (!rule) return;
+  const kw = Array.isArray(rule.keywords) ? rule.keywords[0] : (rule.keywords || '').split(',')[0];
+  const sampleQ = kw ? `i want ${kw}` : 'feeding kurti';
+  setTestQuestion(sampleQ);
+  switchAutoReplyTab('tester');
+}
+
+function setTestQuestion(text) {
+  const input = document.getElementById('ar-test-question-input');
+  if (input) input.value = text;
+  testMatchAutoReplyQuestion();
+}
+
+function testMatchAutoReplyQuestion() {
+  const input = document.getElementById('ar-test-question-input');
+  const resultBox = document.getElementById('ar-test-result-box');
+  if (!input || !resultBox) return;
+
+  const query = (input.value || '').trim().toLowerCase();
+  if (!query) {
+    resultBox.innerHTML = `<p class="text-xs text-slate-400">Please enter a sample customer question above.</p>`;
+    return;
+  }
+
+  const brand = getBrandName();
+  const cName = 'Priya';
+  const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
+
+  let matchedRule = null;
+  let matchedKeyword = '';
+
+  for (const rule of (CRM_STATE?.autoReplyRules || [])) {
+    if (rule.enabled === false) continue;
+    const kws = Array.isArray(rule.keywords) ? [...rule.keywords] : (rule.keywords || '').split(',');
+    if (rule.name && typeof rule.name === 'string') kws.push(rule.name);
+    for (const kw of kws) {
+      const cleanKw = (kw || '').trim().toLowerCase();
+      if (cleanKw && (query.includes(cleanKw) || cleanKw.includes(query))) {
+        matchedRule = rule;
+        matchedKeyword = cleanKw;
+        break;
+      }
+    }
+    if (matchedRule) break;
+  }
+
+  if (!matchedRule) {
+    resultBox.innerHTML = `
+      <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 text-amber-900 space-y-2">
+        <div class="flex items-center gap-2 font-bold text-xs">
+          <span class="material-symbols-outlined text-[18px] text-amber-600">help</span>
+          <span>No Specific Question Rule Matched</span>
+        </div>
+        <p class="text-[11px] text-amber-800 leading-relaxed">
+          The query <strong>"${query}"</strong> did not match any custom keyword rule.
+          Under default settings, the bot will fall back to sending your <strong>Default Full Catalog Menu</strong> or await human agent assistance.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  let customText = (matchedRule.replyText || '')
+    .replace(/{customer_name}/g, cName)
+    .replace(/{brand_name}/g, brand)
+    .replace(/{business_phone}/g, phone);
+
+  let fullMsg = customText;
+  if (matchedRule.categoryId && (matchedRule.actionType === 'category_reply' || matchedRule.actionType === 'category_and_text')) {
+    const cat = GRM_BOT_CATALOG?.[matchedRule.categoryId];
+    if (cat) {
+      const itemsList = Object.values(cat.items || {}).map((it, idx) => {
+        const cleanPrice = String(it.price || '').replace(/^₹/, '');
+        const stockCount = it.stock ?? 12;
+        return `${idx + 1}️⃣ *${it.name}*\n   💰 ₹${cleanPrice} | Size: ${it.size} | Stock: ${stockCount} Pcs Ready`;
+      }).join('\n\n');
+
+      if (matchedRule.actionType === 'category_and_text' && customText.trim()) {
+        fullMsg = `${customText}\n\n━━━━━━━━━━━━━━━━━━━━\n${cat.icon} *${cat.categoryName} Ready Stock:*\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
+      } else {
+        fullMsg = `${cat.icon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${cName}! 👋 Here are our ready-stock items:\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
+      }
+    }
+  }
+
+  let formattedPreview = fullMsg
+    .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+    .replace(/_(.*?)_/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+
+  resultBox.innerHTML = `
+    <div class="bg-emerald-50/80 p-4 rounded-xl border border-emerald-300 space-y-3 animate-in fade-in duration-150">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">✓</span>
+          <div>
+            <h5 class="font-extrabold text-emerald-950 text-xs">Rule Matched: ${matchedRule.name}</h5>
+            <p class="text-[10px] text-emerald-800">Triggered by keyword: <code class="bg-emerald-200/80 px-1 py-0.2 rounded font-bold font-mono">"${matchedKeyword}"</code></p>
+          </div>
+        </div>
+        <span class="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 font-bold text-[10px]">Instant Auto-Send</span>
+      </div>
+
+      <div class="bg-white p-3.5 rounded-2xl rounded-tr-none border border-emerald-200 text-slate-800 text-xs leading-relaxed font-sans shadow-sm whitespace-pre-wrap max-h-56 overflow-y-auto custom-chat-scroll">
+        <div class="flex items-center justify-between text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded mb-2 border border-teal-200">
+          <span class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-[13px] text-teal-600">smart_toy</span>
+            <span>Auto-Reply Template: ${matchedRule.name}</span>
+          </span>
+          <span class="text-[9px] font-mono text-teal-700">Preview</span>
+        </div>
+        ${formattedPreview}
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button type="button" onclick="editRule('${matchedRule.id}')" class="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-lg border border-slate-200 transition">
+          Edit This Template
+        </button>
+        <button type="button" onclick="applyRuleToActiveChat('${matchedRule.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition shadow-sm flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px]">send</span>
+          <span>Send Test to Active Chat</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// Client-Side Simulated Auto-Responder Engine (For Simulator & Offline tests)
+function triggerClientSideAutoReplyIfMatched(customer, messageText) {
+  if (!customer || !messageText) return;
+  const clean = (messageText || '').trim().toLowerCase();
+
+  for (const rule of (CRM_STATE?.autoReplyRules || [])) {
+    if (rule.enabled === false) continue;
+    const kws = Array.isArray(rule.keywords) ? [...rule.keywords] : (rule.keywords || '').split(',');
+    if (rule.name && typeof rule.name === 'string') kws.push(rule.name);
+    let isMatch = false;
+    for (const kw of kws) {
+      const cleanKw = (kw || '').trim().toLowerCase();
+      if (cleanKw && (clean.includes(cleanKw) || cleanKw.includes(clean))) {
+        isMatch = true;
+        break;
+      }
+    }
+
+    if (isMatch) {
+      setTimeout(() => {
+        const brand = getBrandName();
+        const cName = customer.name ? customer.name.split(' ')[0] : 'there';
+        const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
+
+        let customText = (rule.replyText || '')
+          .replace(/{customer_name}/g, cName)
+          .replace(/{brand_name}/g, brand)
+          .replace(/{business_phone}/g, phone);
+
+        let finalMsg = customText;
+        if (rule.categoryId && (rule.actionType === 'category_reply' || rule.actionType === 'category_and_text')) {
+          const cat = GRM_BOT_CATALOG?.[rule.categoryId];
+          if (cat) {
+            const itemsList = Object.values(cat.items || {}).map((it, idx) => {
+              const cleanPrice = String(it.price || '').replace(/^₹/, '');
+              const stockCount = it.stock ?? 12;
+              return `${idx + 1}️⃣ *${it.name}*\n   💰 ₹${cleanPrice} | Size: ${it.size} | Stock: ${stockCount} Pcs Ready`;
+            }).join('\n\n');
+
+            if (rule.actionType === 'category_and_text' && customText.trim()) {
+              finalMsg = `${customText}\n\n━━━━━━━━━━━━━━━━━━━━\n${cat.icon} *${cat.categoryName} Ready Stock:*\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
+            } else {
+              finalMsg = `${cat.icon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${cName}! 👋 Here are our ready-stock items:\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
+            }
+          }
+        }
+
+        ingestInboundMessage({
+          sender_name: 'Bot (Auto-Reply)',
+          sender_phone: customer.phone,
+          sender_jid: customer.jid,
+          account_id: customer.accountId || 'account_1',
+          message_text: finalMsg,
+          source: 'AUTOREPLY_BOT',
+          rule_name: rule.name,
+          rule_id: rule.id,
+          is_outbound: true
+        });
+      }, 700);
+      break;
+    }
+  }
 }
 
 function updateAutoReplyLivePreview() {
@@ -4242,13 +5146,36 @@ function toggleAutoReplyMaster(enabled) {
   CRM_STATE.autoReplySettings.enabled = enabled;
   saveCRMState();
   updateAutoReplyUI();
+
+  // Sync state with PHP API & Node Baileys bridge in real-time
+  fetch('api.php?action=toggle_autoreply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      enabled: enabled,
+      cooldownMinutes: CRM_STATE.autoReplySettings.cooldownMinutes ?? 0,
+      keywordMatching: CRM_STATE.autoReplySettings.keywordMatching ?? true
+    })
+  }).catch(() => {});
+
   showToast(
-    enabled ? 'Stock Auto-Reply Active' : 'Auto-Reply Paused',
-    enabled ? 'Customers will receive instant stock category menus upon messaging.' : 'Automated replies are paused.',
+    enabled ? 'Auto-Reply Active' : 'Auto-Reply Paused',
+    enabled ? 'Customers will receive instant answers for pre-set questions & categories.' : 'Automated replies are paused across all WhatsApp lines.',
     enabled ? 'smart_toy' : 'pause_circle',
     enabled ? 'emerald' : 'amber'
   );
   if (typeof playChime === 'function') playChime('inbound');
+}
+
+// 1-Click Fast Toggle directly from WhatsApp Inbox bar
+function toggleAutoReplyFromInbox(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const current = CRM_STATE?.autoReplySettings?.enabled !== false;
+  const next = !current;
+  toggleAutoReplyMaster(next);
 }
 
 function saveAutoReplySettings() {
@@ -4258,15 +5185,38 @@ function saveAutoReplySettings() {
   const tplArea = document.getElementById('autoreply-message-template');
 
   if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
-  CRM_STATE.autoReplySettings.enabled = masterToggle ? masterToggle.checked : true;
-  CRM_STATE.autoReplySettings.cooldownMinutes = cooldownSelect ? parseInt(cooldownSelect.value) : 30;
+  const isEnabled = masterToggle ? masterToggle.checked : true;
+  CRM_STATE.autoReplySettings.enabled = isEnabled;
+  CRM_STATE.autoReplySettings.cooldownMinutes = cooldownSelect ? parseInt(cooldownSelect.value) : 0;
   CRM_STATE.autoReplySettings.keywordMatching = keywordToggle ? keywordToggle.checked : true;
   CRM_STATE.autoReplySettings.messageTemplate = tplArea ? tplArea.value.trim() : getDefaultStockAutoReplyTemplate();
 
   saveCRMState();
   updateAutoReplyUI();
+  renderAutoReplyRulesList();
+  renderInboxPresetTemplatesBar();
+
+  // Sync to API & Bridge
+  fetch('api.php?action=toggle_autoreply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      enabled: isEnabled,
+      cooldownMinutes: CRM_STATE.autoReplySettings.cooldownMinutes,
+      keywordMatching: CRM_STATE.autoReplySettings.keywordMatching
+    })
+  }).catch(() => {});
+
+  if (Array.isArray(CRM_STATE.autoReplyRules)) {
+    fetch('api.php?action=save_autoreply_rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rules: CRM_STATE.autoReplyRules })
+    }).catch(() => {});
+  }
+
   closeModal('modal-auto-reply-settings');
-  showToast('Automation Saved', 'WhatsApp Stock Auto-Reply settings saved successfully.', 'check_circle', 'emerald');
+  showToast('Settings Saved', 'All WhatsApp pre-set templates & auto-reply rules saved successfully.', 'check_circle', 'emerald');
   if (typeof playChime === 'function') playChime('order');
 }
 
@@ -4275,6 +5225,12 @@ function updateAutoReplyUI() {
   const pillDot = document.getElementById('pill-autoreply-dot');
   const pillLabel = document.getElementById('pill-autoreply-label');
   const headerBtn = document.getElementById('header-auto-reply-btn');
+  const inboxContainer = document.getElementById('inbox-autoreply-container');
+  const masterToggle = document.getElementById('autoreply-master-toggle');
+
+  if (masterToggle) {
+    masterToggle.checked = isEnabled;
+  }
 
   if (pillDot) {
     pillDot.className = `w-2 h-2 rounded-full ${isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`;
@@ -4282,6 +5238,15 @@ function updateAutoReplyUI() {
   if (pillLabel) {
     pillLabel.innerText = isEnabled ? 'Auto-Reply: ON' : 'Auto-Reply: OFF';
   }
+
+  if (inboxContainer) {
+    if (isEnabled) {
+      inboxContainer.className = "flex items-center rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 overflow-hidden shrink-0 transition shadow-xs";
+    } else {
+      inboxContainer.className = "flex items-center rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 overflow-hidden shrink-0 transition shadow-xs";
+    }
+  }
+
   if (headerBtn) {
     if (isEnabled) {
       headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
@@ -4304,6 +5269,7 @@ function testSendStockAutoReplyToCurrentChat() {
     id: Date.now(),
     sender: 'staff',
     isBot: true,
+    rule_name: 'Full Stock Catalog Menu',
     text: msgText,
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     status: 'SENDING'
@@ -4512,6 +5478,7 @@ function openInboundSimulatorModal() {
 
 function applySimPreset(preset) {
   const presets = {
+    feeding: { name: 'Pooja Venkatesh', phone: '+91 97896 60115', msg: 'i want a feeding kurti' },
     priya: { name: 'Priya Sundaram', phone: '+91 98765 43210', msg: 'Hello! Is Baby Frock BF-001 Pink colour in 2-3 Years size available in your shop? How much is it?' },
     ananya: { name: 'Ananya Sharma', phone: '+91 98450 11223', msg: 'Hi GRM, can you please send me photos and fabric details for the Maternity Maxi Gown in Blue?' },
     kavitha: { name: 'Kavitha Ramachandran', phone: '+91 97890 55441', msg: 'Do you have boys organic cotton t-shirt pack in 4-5Y size? And what are the delivery charges to Madurai?' },
@@ -4543,132 +5510,6 @@ function handleSimulateInbound(event) {
   });
 
   closeModal('modal-inbound-sim');
-}
-
-// Universal Inbound Ingestion Function (Handles both Simulated and Real Webhook messages)
-function ingestInboundMessage(payload) {
-  const name = payload.sender_name || 'WhatsApp Customer';
-  const phone = payload.sender_phone;
-  const messageText = payload.message_text;
-  const priority = payload.priority || 'HIGH';
-  const assignTo = payload.assigned_to || 'UNASSIGNED';
-
-  if (!phone || !messageText) return;
-
-  // Filter out internal status notices
-  if (payload.source === 'QR_BRIDGE_CONNECTED' || payload.source === 'QR_BRIDGE_AUTHENTICATED') return;
-
-  const cleanSender = phone.replace(/[^0-9]/g, '');
-
-  // 1. Match or create Customer
-  let customer = CRM_STATE.customers.find(c => {
-    const cPhone = (c.phone || '').replace(/[^0-9]/g, '');
-    const cWa = (c.whatsapp || '').replace(/[^0-9]/g, '');
-    return cPhone === cleanSender || cWa === cleanSender;
-  });
-
-  if (!customer) {
-    const newId = 'cust_' + (100 + CRM_STATE.customers.length + 1);
-    customer = {
-      id: newId,
-      code: `CUST-2026-00${100 + CRM_STATE.customers.length + 1}`,
-      name: name,
-      phone: phone,
-      whatsapp: phone,
-      jid: payload.sender_jid || null,
-      address: 'Registered via WhatsApp Inbound',
-      city: 'Live Customer',
-      customerType: 'New WhatsApp Customer',
-      tags: ['New Lead', 'WhatsApp Live'],
-      totalOrders: 0,
-      totalSpend: 0,
-      avatar: name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-    };
-    CRM_STATE.customers.push(customer);
-  } else {
-    if (payload.sender_jid) customer.jid = payload.sender_jid;
-    if (name && name !== 'WhatsApp Customer' && (!customer.name || customer.name === 'WhatsApp Customer')) {
-      customer.name = name;
-    }
-  }
-
-  // 2. Add message to conversation (Check if duplicate within 3 seconds)
-  if (!CRM_STATE.conversations[customer.id]) {
-    CRM_STATE.conversations[customer.id] = [];
-  }
-
-  const msgType = payload.type || (payload.media_url ? 'audio' : (messageText.includes('Voice Message') || messageText.includes('[WhatsApp Message]') ? 'audio' : 'text'));
-  const existingMsgs = CRM_STATE.conversations[customer.id];
-  const isDuplicate = existingMsgs.some(m => m.sender === 'customer' && m.text === messageText && (Date.now() - (m.id || 0)) < 3000);
-  if (isDuplicate) return;
-
-  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  CRM_STATE.conversations[customer.id].push({
-    id: Date.now(),
-    sender: 'customer',
-    text: messageText,
-    type: msgType,
-    media_url: payload.media_url || null,
-    duration: payload.duration || 12,
-    time: timeStr,
-    status: 'DELIVERED'
-  });
-
-  // 3. Create or update Query
-  const existingQuery = CRM_STATE.queries.find(q => q.customerId === customer.id);
-  if (existingQuery) {
-    existingQuery.lastMessage = `Customer: "${messageText.substring(0, 40)}..."`;
-    existingQuery.unreadCount = (existingQuery.unreadCount || 0) + 1;
-    existingQuery.createdAt = 'Just now';
-    if (existingQuery.status === 'REPLIED' || existingQuery.status === 'CLOSED') {
-      existingQuery.status = 'NEW';
-    }
-  } else {
-    const newQueryId = `Q-2026-00${1240 + CRM_STATE.queries.length + 1}`;
-    const newQuery = {
-      id: newQueryId,
-      customerId: customer.id,
-      assignedTo: assignTo,
-      status: assignTo === 'UNASSIGNED' ? 'NEW' : 'ASSIGNED',
-      priority: priority,
-      queryText: messageText,
-      productSku: null,
-      createdAt: 'Just now',
-      unreadCount: 1,
-      lastMessage: `Customer: "${messageText.substring(0, 40)}..."`
-    };
-    CRM_STATE.queries.unshift(newQuery);
-  }
-
-  // 4. Log Audit
-  logAudit('INBOUND_MESSAGE_RECEIVED', 'WEBHOOK', `Inbound WhatsApp received at ${CRM_STATE.whatsappAccount.phoneNumber} from ${customer.name} (${customer.phone}).`);
-
-  saveCRMState();
-  playChime('inbound');
-  showToast('New WhatsApp Message Received!', `From ${customer.name} (${formatDisplayPhone(customer.phone, customer.id)}): "${messageText.substring(0, 40)}..."`, 'chat', 'emerald');
-
-  // Select this customer and refresh
-  ACTIVE_CUSTOMER_ID = customer.id;
-  if (ACTIVE_VIEW === 'inbox') renderInbox();
-  else if (ACTIVE_VIEW === 'enquiries') renderEnquiriesTable();
-  else if (ACTIVE_VIEW === 'dashboard') renderDashboard();
-}
-
-// Real-Time Webhook Polling Loop (Pulls from api.php live messages queue every 3 seconds)
-function startRealtimeMessageSync() {
-  setInterval(() => {
-    fetch(`api.php?action=get_inbound_queue&since=${LAST_POLL_EPOCH}`)
-      .then(r => r.json())
-      .then(res => {
-        if (res.status === 'success' && res.messages && res.messages.length > 0) {
-          res.messages.forEach(msg => {
-            ingestInboundMessage(msg);
-            LAST_POLL_EPOCH = Math.max(LAST_POLL_EPOCH, msg.timestamp_epoch || Math.floor(Date.now() / 1000));
-          });
-        }
-      })
-      .catch(() => { });
-  }, 3000);
 }
 
 // =========================================================================

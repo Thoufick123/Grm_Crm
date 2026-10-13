@@ -129,6 +129,7 @@ let autoReplyConfig = {
     cooldownMinutes: 0, // 0 = Instant reply on every message
     keywordMatching: true
 };
+let autoReplyRules = [];
 
 const PRODUCTS_CATALOG = {
     '1': {
@@ -368,7 +369,74 @@ function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, sen
         }
     }
 
-    // 3. Category selection (1 to 6 or keywords)
+    // 3. Dynamic Admin-Configured Pre-set Template Rules (e.g. Feeding Kurti, Baby Frocks, Store Address, etc.)
+    loadBrandConfig(); // Always ensure latest rules from whatsapp_account_config.json
+    if (Array.isArray(autoReplyRules) && autoReplyRules.length > 0) {
+        for (const rule of autoReplyRules) {
+            if (rule.enabled === false) continue;
+            const keywords = Array.isArray(rule.keywords)
+                ? rule.keywords
+                : (typeof rule.keywords === 'string' ? rule.keywords.split(',').map(k => k.trim()) : []);
+
+            // Check both keywords AND the template rule name / question title
+            const allTriggers = [...keywords];
+            if (rule.name && typeof rule.name === 'string') allTriggers.push(rule.name);
+
+            let matched = false;
+            let matchedKw = '';
+            for (const kw of allTriggers) {
+                const cleanKw = (kw || '').trim().toLowerCase();
+                if (!cleanKw) continue;
+                if (rule.matchType === 'exact') {
+                    if (key === cleanKw) { matched = true; matchedKw = cleanKw; break; }
+                } else {
+                    if (key.includes(cleanKw) || cleanKw.includes(key)) { matched = true; matchedKw = cleanKw; break; }
+                }
+            }
+
+            if (matched) {
+                console.log(`[Auto-Reply Engine] 🎯 Matched Rule "${rule.name}" (kw: "${matchedKw}") for customer: "${cleanMsg}"`);
+                const catId = rule.categoryId ? String(rule.categoryId) : null;
+                let customText = (rule.replyText || '')
+                    .replace(/{customer_name}/g, name)
+                    .replace(/{brand_name}/g, brand)
+                    .replace(/{business_phone}/g, senderNumber || '+91 86680 07593');
+
+                if (catId && PRODUCTS_CATALOG[catId] && (rule.actionType === 'category_reply' || rule.actionType === 'category_and_text')) {
+                    setCustomerCategory({ catId: catId, awaitingProduct: true }, senderKey, senderNumber, senderJid, cleanNumber);
+                    const cat = PRODUCTS_CATALOG[catId];
+                    const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
+                    const itemsText = cat.items.map((it, idx) => {
+                        return `${numEmojis[idx] || (idx + 1 + '.')} *${it.name}*\n   💰 *₹${it.price}* | 📏 Size: *${it.size}* | ✅ *${it.stock} Pcs Ready*`;
+                    }).join('\n\n');
+                    const replyNumbersText = cat.items.length > 1 ? `1 to ${cat.items.length}` : '1';
+
+                    let fullText = '';
+                    if (rule.actionType === 'category_and_text' && customText.trim()) {
+                        fullText = `${customText}\n\n━━━━━━━━━━━━━━━━━━━━\n${cat.categoryIcon} *${cat.categoryName} Ready Stock:*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *Reply with ${replyNumbersText}* to view photos & sizes!\n(Reply *0* for Main Menu)`;
+                    } else {
+                        fullText = `${cat.categoryIcon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Here are our ready-stock items:\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *Reply with ${replyNumbersText}* to view the photo, sizes & order!\n(Reply *0* to return to Main Menu)`;
+                    }
+
+                    return {
+                        type: 'text',
+                        ruleId: rule.id,
+                        ruleName: rule.name,
+                        text: fullText
+                    };
+                } else if (customText) {
+                    return {
+                        type: 'text',
+                        ruleId: rule.id,
+                        ruleName: rule.name,
+                        text: customText
+                    };
+                }
+            }
+        }
+    }
+
+    // 4. Fallback Category selection (1 to 6 or keywords)
     let selectedCat = null;
     if (key === '1') selectedCat = '1';
     else if (key === '2') selectedCat = '2';
@@ -376,7 +444,7 @@ function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, sen
     else if (key === '4') selectedCat = '4';
     else if (key === '5') selectedCat = '5';
     else if (key === '6') selectedCat = '6';
-    // Keyword matching
+    // Keyword fallback
     else if (key.includes('wholesale') || key.includes('bulk') || key.includes('bundle')) selectedCat = '5';
     else if (key.includes('maternity') || key.includes('feeding') || key.includes('gown')) selectedCat = '2';
     else if (key.includes('baby') || key.includes('frock')) selectedCat = '1';
@@ -401,6 +469,7 @@ function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, sen
 
         return {
             type: 'text',
+            ruleName: `Category #${selectedCat}`,
             text: `${cat.categoryIcon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Here are our ready-stock items:\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *Reply with ${replyNumbersText}* to view the photo, sizes & order!\n(Reply *0* to return to Main Menu)`
         };
     }
@@ -436,6 +505,7 @@ function loadBrandConfig() {
             if (rawCfg.brand_name) BRAND_NAME = rawCfg.brand_name;
             if (rawCfg.brand_tagline) BRAND_TAGLINE = rawCfg.brand_tagline;
             if (typeof rawCfg.autoReplyEnabled === 'boolean') autoReplyConfig.enabled = rawCfg.autoReplyEnabled;
+            if (Array.isArray(rawCfg.autoReplyRules)) autoReplyRules = rawCfg.autoReplyRules;
         }
     } catch (e) {}
 }
@@ -484,25 +554,34 @@ function broadcastAccountsUpdate() {
 function forwardToCRM(data) {
     try {
         const postData = JSON.stringify(data);
-        const req = http.request({
-            hostname: 'localhost',
-            port: 8080,
-            path: '/api.php?action=receive_message',
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(postData)
-            }
-        }, (res) => {
-            res.on('data', () => {});
-        });
+        const sendToPort = (port) => {
+            const req = http.request({
+                hostname: 'localhost',
+                port: port,
+                path: '/api.php?action=receive_message',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(postData)
+                }
+            }, (res) => {
+                res.on('data', () => {});
+            });
 
-        req.on('error', (e) => {
-            console.error('[Forward Error]:', e.message);
-        });
+            req.on('error', (e) => {
+                if (port === 8000) {
+                    // Try fallback port 8080 if 8000 fails
+                    sendToPort(8080);
+                } else {
+                    console.error('[Forward Error]:', e.message);
+                }
+            });
 
-        req.write(postData);
-        req.end();
+            req.write(postData);
+            req.end();
+        };
+
+        sendToPort(8000);
     } catch (e) {
         console.error('Error forwarding message to CRM:', e.message);
     }
@@ -971,6 +1050,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                                 media_url: botMediaUrl,
                                                 account_id: accountId,
                                                 source: 'AUTOREPLY_BOT',
+                                                rule_name: replyObj.ruleName || 'Auto-Reply',
+                                                rule_id: replyObj.ruleId || null,
                                                 is_outbound: true,
                                                 timestamp_epoch: Math.floor(Date.now() / 1000),
                                                 received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -1124,12 +1205,132 @@ io.on('connection', (socket) => {
         initAccountSession(nextId, label);
     });
 
+    // Handle Auto-Reply toggle from CRM client over WebSocket
+    socket.on('autoreply:toggle', (data, ack) => {
+        const newState = (data && data.enabled !== undefined) ? Boolean(data.enabled) : !autoReplyConfig.enabled;
+        autoReplyConfig.enabled = newState;
+        if (fs.existsSync(configFilePath)) {
+            try {
+                const currentCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+                currentCfg.autoReplyEnabled = autoReplyConfig.enabled;
+                fs.writeFileSync(configFilePath, JSON.stringify(currentCfg, null, 2), 'utf8');
+            } catch (e) {}
+        }
+        io.emit('autoreply:updated', { enabled: autoReplyConfig.enabled });
+        console.log(`[Auto-Reply Engine] 🔄 Auto-Reply socket toggle: ${autoReplyConfig.enabled ? 'ON' : 'OFF'}`);
+        if (typeof ack === 'function') ack({ status: 'success', enabled: autoReplyConfig.enabled });
+    });
+
+    // Handle real-time Q&A Rules Save from CRM client over WebSocket
+    socket.on('autoreply:save_rules', (data, ack) => {
+        try {
+            const rules = data?.rules;
+            if (Array.isArray(rules)) {
+                autoReplyRules = rules;
+                if (fs.existsSync(configFilePath)) {
+                    try {
+                        const currentCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+                        currentCfg.autoReplyRules = rules;
+                        fs.writeFileSync(configFilePath, JSON.stringify(currentCfg, null, 2), 'utf8');
+                    } catch (e) {
+                        console.warn('[Socket Rules Save Warning]:', e.message);
+                    }
+                }
+                io.emit('autoreply:rules_updated', { rules: autoReplyRules });
+                console.log(`[Auto-Reply Engine] 💾 Saved ${autoReplyRules.length} rules via Socket.IO from CRM Client.`);
+                if (typeof ack === 'function') ack({ status: 'success', count: autoReplyRules.length });
+            }
+        } catch (err) {
+            if (typeof ack === 'function') ack({ status: 'error', message: err.message });
+        }
+    });
+
     socket.on('disconnect', () => {});
 });
 
 // -------------------------------------------------------------
 // REST API ENDPOINTS
 // -------------------------------------------------------------
+
+app.get('/api/autoreply/status', (req, res) => {
+    loadBrandConfig();
+    res.json({
+        status: 'success',
+        enabled: Boolean(autoReplyConfig.enabled),
+        cooldownMinutes: autoReplyConfig.cooldownMinutes,
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.post('/api/autoreply/toggle', (req, res) => {
+    try {
+        const { enabled } = req.body || {};
+        autoReplyConfig.enabled = (enabled !== undefined) ? Boolean(enabled) : !autoReplyConfig.enabled;
+
+        // Persist to whatsapp_account_config.json
+        if (fs.existsSync(configFilePath)) {
+            try {
+                const currentCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+                currentCfg.autoReplyEnabled = autoReplyConfig.enabled;
+                fs.writeFileSync(configFilePath, JSON.stringify(currentCfg, null, 2), 'utf8');
+            } catch (err) {}
+        }
+
+        // Broadcast to connected Socket.IO CRM clients
+        io.emit('autoreply:updated', { enabled: autoReplyConfig.enabled });
+
+        console.log(`[Auto-Reply Engine] 🔄 Auto-Reply REST toggle set to: ${autoReplyConfig.enabled ? 'ON' : 'OFF'}`);
+        res.json({
+            status: 'success',
+            enabled: autoReplyConfig.enabled,
+            message: `Auto-reply successfully toggled ${autoReplyConfig.enabled ? 'ON' : 'OFF'}`
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
+app.get('/api/autoreply/rules', (req, res) => {
+    loadBrandConfig();
+    res.json({
+        status: 'success',
+        rules: autoReplyRules,
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.post('/api/autoreply/rules', (req, res) => {
+    try {
+        const { rules } = req.body || {};
+        if (!Array.isArray(rules)) {
+            return res.status(400).json({ status: 'error', message: 'Rules must be an array.' });
+        }
+        autoReplyRules = rules;
+
+        // Persist to whatsapp_account_config.json
+        if (fs.existsSync(configFilePath)) {
+            try {
+                const currentCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+                currentCfg.autoReplyRules = rules;
+                fs.writeFileSync(configFilePath, JSON.stringify(currentCfg, null, 2), 'utf8');
+            } catch (err) {
+                console.warn('[Bridge Rules Save Warning]:', err.message);
+            }
+        }
+
+        // Broadcast to connected Socket.IO CRM clients
+        io.emit('autoreply:rules_updated', { rules: autoReplyRules });
+
+        console.log(`[Auto-Reply Engine] 📋 Updated ${autoReplyRules.length} pre-set template rules from CRM.`);
+        res.json({
+            status: 'success',
+            message: `Successfully saved ${autoReplyRules.length} auto-reply rules.`,
+            rules: autoReplyRules
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
 
 app.get('/api/accounts', (req, res) => {
     res.json({
@@ -1316,8 +1517,71 @@ app.get('/api/brand/config', (req, res) => {
     res.json({
         status: 'success',
         brand_name: BRAND_NAME,
-        brand_tagline: BRAND_TAGLINE
+        brand_tagline: BRAND_TAGLINE,
+        autoReplyEnabled: autoReplyConfig.enabled,
+        cooldownMinutes: autoReplyConfig.cooldownMinutes,
+        keywordMatching: autoReplyConfig.keywordMatching
     });
+});
+
+// GET current auto-reply configuration & status
+app.get('/api/autoreply/status', (req, res) => {
+    loadBrandConfig();
+    res.json({
+        status: 'success',
+        enabled: autoReplyConfig.enabled,
+        cooldownMinutes: autoReplyConfig.cooldownMinutes,
+        keywordMatching: autoReplyConfig.keywordMatching
+    });
+});
+
+// POST toggle or configure auto-reply in real-time
+app.post('/api/autoreply/toggle', (req, res) => {
+    try {
+        const { enabled, cooldownMinutes, keywordMatching } = req.body;
+        if (typeof enabled === 'boolean') {
+            autoReplyConfig.enabled = enabled;
+        }
+        if (typeof cooldownMinutes !== 'undefined') {
+            autoReplyConfig.cooldownMinutes = Number(cooldownMinutes);
+        }
+        if (typeof keywordMatching === 'boolean') {
+            autoReplyConfig.keywordMatching = keywordMatching;
+        }
+
+        // Persist to whatsapp_account_config.json
+        const configFilePath = path.join(__dirname, '..', 'whatsapp_account_config.json');
+        if (fs.existsSync(configFilePath)) {
+            try {
+                const rawCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+                rawCfg.autoReplyEnabled = autoReplyConfig.enabled;
+                rawCfg.autoReplyCooldownMinutes = autoReplyConfig.cooldownMinutes;
+                rawCfg.autoReplyKeywordMatching = autoReplyConfig.keywordMatching;
+                fs.writeFileSync(configFilePath, JSON.stringify(rawCfg, null, 4), 'utf8');
+            } catch (err) {
+                console.warn('[AutoReply Config Save Warning]:', err.message);
+            }
+        }
+
+        console.log(`[AutoReply Bridge] Updated Status: ${autoReplyConfig.enabled ? 'ACTIVE (ON)' : 'PAUSED (OFF)'}`);
+
+        // Broadcast to any connected websocket clients
+        io.emit('autoreply:status', {
+            enabled: autoReplyConfig.enabled,
+            cooldownMinutes: autoReplyConfig.cooldownMinutes,
+            keywordMatching: autoReplyConfig.keywordMatching
+        });
+
+        res.json({
+            status: 'success',
+            enabled: autoReplyConfig.enabled,
+            cooldownMinutes: autoReplyConfig.cooldownMinutes,
+            keywordMatching: autoReplyConfig.keywordMatching,
+            message: `Auto-reply is now ${autoReplyConfig.enabled ? 'ON' : 'OFF'}`
+        });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
 });
 
 app.get('/api/qr/status', (req, res) => {

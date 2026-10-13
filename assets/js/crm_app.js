@@ -739,16 +739,27 @@ function ingestInboundMessage(payload, suppressChime = false) {
 
   let customer = CRM_STATE.customers.find(c => {
     const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
-    return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
+    const phoneMatch = (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
            (c.jid && payload.sender_jid && c.jid === payload.sender_jid);
+    const accountMatch = (c.accountId || 'account_1') === payloadAccountId;
+    return phoneMatch && accountMatch;
   });
 
   if (!customer) {
-    const newCustId = 'cust_' + (normalizedDigits.slice(-8) || Date.now().toString().slice(-6));
+    const newCustId = 'cust_' + (normalizedDigits.slice(-8) || Date.now().toString().slice(-6)) + '_' + payloadAccountId;
+    // Look up if customer exists in another line to inherit friendly contact name
+    const existingOther = CRM_STATE.customers.find(c => {
+      const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+      return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits)));
+    });
+    const finalName = (senderName && !senderName.startsWith('WhatsApp Customer'))
+      ? senderName
+      : (existingOther && existingOther.name && !existingOther.name.startsWith('WhatsApp Customer') ? existingOther.name : senderName);
+
     customer = {
       id: newCustId,
       code: `CUST-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: senderName,
+      name: finalName,
       phone: cleanPhone,
       whatsapp: cleanPhone,
       jid: payload.sender_jid || '',
@@ -757,15 +768,15 @@ function ingestInboundMessage(payload, suppressChime = false) {
       address: 'Online WhatsApp Customer',
       city: 'Direct Inbound',
       customerType: 'Live WhatsApp Lead',
-      tags: ['Live WhatsApp', 'Online Lead'],
+      tags: ['Live WhatsApp', payloadAccountId === 'account_2' ? 'Line 2 Lead' : 'Line 1 Lead'],
       totalOrders: 0,
       totalSpend: 0,
       avatar: safeAvatar
     };
     CRM_STATE.customers.unshift(customer);
   } else {
-    if (!customer.accountId) customer.accountId = payloadAccountId;
-    if (!customer.businessNumber) customer.businessNumber = payloadBusinessNum;
+    customer.accountId = payloadAccountId;
+    if (payloadBusinessNum && payloadBusinessNum !== 'Primary') customer.businessNumber = payloadBusinessNum;
     if (senderName && !senderName.startsWith('WhatsApp Customer') && (customer.name.startsWith('Customer') || customer.name.startsWith('WhatsApp Customer'))) {
       customer.name = senderName;
     }
@@ -1113,6 +1124,25 @@ function initCRMState() {
       }
     })
     .catch(() => { });
+
+  // Load brand name & tagline from bridge config file (so UI shows live saved brand)
+  fetch('http://localhost:3000/api/brand/config')
+    .then(r => r.json())
+    .then(res => {
+      if (res.status === 'success') {
+        if (!CRM_STATE.brandSettings) CRM_STATE.brandSettings = {};
+        if (res.brand_name) CRM_STATE.brandSettings.brandName = res.brand_name;
+        if (res.brand_tagline) CRM_STATE.brandSettings.brandTagline = res.brand_tagline;
+        // Refresh brand settings UI fields if Settings panel is open
+        const brandInput = document.getElementById('cfg-brand-name');
+        const taglineInput = document.getElementById('cfg-brand-tagline');
+        if (brandInput) brandInput.value = res.brand_name || '';
+        if (taglineInput) taglineInput.value = res.brand_tagline || '';
+        if (typeof updateBrandPreview === 'function') updateBrandPreview();
+      }
+    })
+    .catch(() => { }); // Bridge may not be running — fail silently
+
 
   // Asynchronously synchronize garment products & stock from database
   fetch('api.php?action=get_all')
@@ -1801,6 +1831,14 @@ function renderQuickLineSwitcher() {
   const accounts = getAvailableWhatsAppAccounts();
   const availableAccountIds = accounts.map(a => a.id);
 
+  // Filter to display: connected lines, plus account_1 and account_2, or lines with chats
+  const displayAccounts = accounts.filter(acc => 
+    acc.id === 'account_1' || 
+    acc.id === 'account_2' || 
+    acc.status === 'CONNECTED' || 
+    (CRM_STATE?.customers || []).some(c => (c.accountId || 'account_1') === acc.id)
+  );
+
   // Count only customers that have actual conversation messages or active queries
   const getActiveCustomerCountForAccount = (accId) => {
     return (CRM_STATE?.customers || []).filter(c => {
@@ -1824,25 +1862,47 @@ function renderQuickLineSwitcher() {
 
   let chipsHtml = '';
 
-  if (accounts.length > 1) {
-    chipsHtml += `
-      <button onclick="switchActiveWhatsAppLine('all', 'All ${accounts.length} WhatsApp Lines', 'All Numbers')" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold shrink-0 transition flex items-center gap-1 ${ACTIVE_SEND_ACCOUNT_ID === 'all' ? 'bg-brand-dark text-white shadow-sm ring-1 ring-emerald-400' : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-300'}">
-        <span class="material-symbols-outlined text-[12px]">hub</span>
-        <span>All (${totalChats})</span>
-      </button>
-    `;
-  }
+  // 1. All Lines Combined (Global Queue)
+  const isAllActive = (ACTIVE_SEND_ACCOUNT_ID === 'all');
+  chipsHtml += `
+    <button type="button" onclick="switchActiveWhatsAppLine('all', 'All Lines', 'All Numbers')" class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer shadow-xs ${isAllActive ? 'bg-slate-900 text-white ring-2 ring-emerald-400' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'}" title="View all messages combined across all WhatsApp lines">
+      <span class="material-symbols-outlined text-[15px] ${isAllActive ? 'text-emerald-400' : 'text-slate-500'}">hub</span>
+      <span>All Inboxes</span>
+      <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${isAllActive ? 'bg-emerald-800 text-white' : 'bg-slate-100 text-slate-700'}">${totalChats}</span>
+    </button>
+  `;
 
-  chipsHtml += accounts.map((acc, idx) => {
-    const isCurrent = ACTIVE_SEND_ACCOUNT_ID === acc.id || (accounts.length === 1 && ACTIVE_SEND_ACCOUNT_ID === 'all');
-    const shortNumber = acc.connected_number ? acc.connected_number.replace(/[^0-9]/g, '').slice(-5) : `${idx+1}`;
+  // 2. Individual WhatsApp Lines (Line 1, Line 2, etc.)
+  chipsHtml += displayAccounts.map((acc, idx) => {
+    const isCurrent = (ACTIVE_SEND_ACCOUNT_ID === acc.id);
+    const isConnected = (acc.status === 'CONNECTED');
     const custCount = getActiveCustomerCountForAccount(acc.id);
+    
+    let displayPhone = acc.connected_number && acc.connected_number !== 'Awaiting Link' && acc.connected_number !== 'Scan QR Code'
+      ? formatPhoneNumberPretty(acc.connected_number)
+      : (idx === 0 ? '+91 97896 60115' : 'Line ' + (idx + 1));
+
+    const lineName = (idx === 0) ? 'Line 1 (Central)' : (idx === 1 ? 'Line 2 (Blue Berry)' : (acc.label || 'Line ' + (idx + 1)));
+
+    // Distinct styling per line
+    let activeClass = '';
+    if (isCurrent) {
+      activeClass = (idx === 0) 
+        ? 'bg-brand-wa text-white ring-2 ring-emerald-300 shadow-sm' 
+        : (idx === 1 
+          ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-sm' 
+          : 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-sm');
+    } else {
+      activeClass = 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300';
+    }
+
+    const badgeClass = isCurrent ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-700';
 
     return `
-      <button onclick="switchActiveWhatsAppLine('${acc.id}', '${acc.connected_number}', '${acc.label}')" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold shrink-0 transition flex items-center gap-1 ${isCurrent ? 'bg-brand-wa text-white shadow-sm ring-1 ring-emerald-300' : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-300'}" title="${acc.label}: ${acc.connected_number}">
-        <span class="w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-white animate-pulse' : 'bg-emerald-500'}"></span>
-        <span>L${idx + 1}: ..${shortNumber}</span>
-        <span class="text-[9px] px-1 py-0.2 rounded font-mono ${isCurrent ? 'bg-emerald-800 text-white' : 'bg-slate-100 text-slate-600'}">${custCount}</span>
+      <button type="button" onclick="switchActiveWhatsAppLine('${acc.id}', '${acc.connected_number || displayPhone}', '${acc.label || lineName}')" class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer shadow-xs ${activeClass}" title="${acc.label || lineName}: ${displayPhone}">
+        <span class="w-2 h-2 rounded-full ${isConnected ? (isCurrent ? 'bg-white animate-pulse' : 'bg-emerald-500') : 'bg-amber-400'}"></span>
+        <span>${lineName}: ${displayPhone}</span>
+        <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${badgeClass}">${custCount}</span>
       </button>
     `;
   }).join('');
@@ -1981,7 +2041,12 @@ function renderInboxConversationList() {
     else if (qStatus === 'CONVERTED') statusBadge = `<span class="bg-purple-100 text-purple-900 border border-purple-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">CONVERTED</span>`;
 
     // Line Badge
-    const lineIdx = (item.accountId === 'account_1') ? 'L1' : (item.accountId === 'account_2' ? 'L2' : (item.accountId === 'account_3' ? 'L3' : (item.accountId === 'account_4' ? 'L4' : 'L5')));
+    const isLine1Card = (item.accountId === 'account_1');
+    const isLine2Card = (item.accountId === 'account_2');
+    const lineBadgeLabel = isLine1Card ? 'Line 1' : (isLine2Card ? 'Line 2' : (item.accountId ? item.accountId.replace('account_', 'L') : 'L1'));
+    const lineBadgeClass = isLine1Card
+      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+      : (isLine2Card ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-purple-100 text-purple-800 border-purple-300');
 
     return `
       <div onclick="selectCustomerChat('${item.customerId}')" class="p-3.5 cursor-pointer transition flex items-start gap-3 hover:bg-slate-50 relative ${isSelected ? 'bg-emerald-50/70 border-l-4 border-brand-wa shadow-sm' : ''}">
@@ -2011,7 +2076,7 @@ function renderInboxConversationList() {
 
           <div class="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-[9px] bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-200" title="Received on Line: ${item.businessNumber}">${lineIdx}</span>
+              <span class="text-[9px] ${lineBadgeClass} font-bold px-1.5 py-0.5 rounded border" title="Received on WhatsApp Line: ${item.businessNumber}">📱 ${lineBadgeLabel}</span>
               <span class="text-[10px] bg-slate-100 text-slate-600 font-mono font-semibold px-1.5 py-0.2 rounded">${item.queryId}</span>
               ${statusBadge}
               ${priorityBadge}
@@ -2099,7 +2164,26 @@ function renderChatHeader() {
 
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
-  const currentLinePhone = CRM_STATE.whatsappAccount?.phoneNumber || '+91 86680 07593';
+  const customerAccId = customer.accountId || 'account_1';
+  let lineLabel = 'Line 1';
+  let currentLinePhone = CRM_STATE.whatsappAccount?.phoneNumber || '+91 86680 07593';
+  let lineBadgeBg = 'bg-emerald-50 border-emerald-200 text-emerald-900';
+  let lineDotBg = 'bg-emerald-500';
+  let linePillBg = 'bg-emerald-200 text-emerald-800';
+
+  if (customerAccId === 'account_2') {
+    lineLabel = 'Line 2';
+    const acc2 = CRM_STATE.whatsappAccounts?.['account_2'];
+    currentLinePhone = acc2?.phone_number || acc2?.phoneNumber || '+91 97896 60115';
+    lineBadgeBg = 'bg-sky-50 border-sky-300 text-sky-900';
+    lineDotBg = 'bg-sky-500';
+    linePillBg = 'bg-sky-200 text-sky-800';
+  } else {
+    const acc1 = CRM_STATE.whatsappAccounts?.['account_1'];
+    if (acc1?.phone_number || acc1?.phoneNumber) {
+      currentLinePhone = acc1.phone_number || acc1.phoneNumber;
+    }
+  }
 
   bar.innerHTML = `
     <div class="flex items-center gap-2.5 min-w-0">
@@ -2121,9 +2205,9 @@ function renderChatHeader() {
 
     <!-- Active Connected Business Line Tag & Actions & Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-2 shrink-0">
-      <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-900" title="Connected WhatsApp Business Number for this conversation">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span class="text-[10px] text-emerald-700 font-bold uppercase">Line:</span>
+      <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 ${lineBadgeBg} border rounded-lg text-xs font-semibold" title="WhatsApp Business Number receiving and sending for this conversation">
+        <span class="w-2 h-2 rounded-full ${lineDotBg} animate-pulse"></span>
+        <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${linePillBg}">📱 ${lineLabel}</span>
         <span class="font-mono font-bold text-[11px]">${currentLinePhone}</span>
       </div>
 
@@ -3895,7 +3979,7 @@ function handleSendMessage(event) {
   playChime('order');
 
   // Transmit live WhatsApp message across WebSocket bridge to customer's WhatsApp!
-  dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, formattedText, newMsg, customer.jid);
+  dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, formattedText, newMsg, customer.jid, customer.accountId || ACTIVE_SEND_ACCOUNT_ID);
 }
 
 function insertQuickReply(type) {
@@ -4223,13 +4307,42 @@ function toggleAutoReplyMaster(enabled) {
   CRM_STATE.autoReplySettings.enabled = enabled;
   saveCRMState();
   updateAutoReplyUI();
+
+  // Sync state with PHP API & Node Baileys bridge in real-time
+  fetch('api.php?action=toggle_autoreply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      enabled: enabled,
+      cooldownMinutes: CRM_STATE.autoReplySettings.cooldownMinutes ?? 0,
+      keywordMatching: CRM_STATE.autoReplySettings.keywordMatching ?? true
+    })
+  }).then(r => r.json())
+    .then(res => {
+      console.log('⚡ [AutoReply Toggle Synced to Backend & Bridge]:', res);
+    })
+    .catch(err => {
+      console.warn('[AutoReply Sync Notice]:', err);
+    });
+
   showToast(
     enabled ? 'Stock Auto-Reply Active' : 'Auto-Reply Paused',
-    enabled ? 'Customers will receive instant stock category menus upon messaging.' : 'Automated replies are paused.',
+    enabled ? 'Customers will receive instant stock category menus upon messaging.' : 'Automated replies are paused across all WhatsApp numbers.',
     enabled ? 'smart_toy' : 'pause_circle',
     enabled ? 'emerald' : 'amber'
   );
   if (typeof playChime === 'function') playChime('inbound');
+}
+
+// 1-Click Fast Toggle directly from WhatsApp Inbox bar
+function toggleAutoReplyFromInbox(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const current = CRM_STATE?.autoReplySettings?.enabled !== false;
+  const next = !current;
+  toggleAutoReplyMaster(next);
 }
 
 function saveAutoReplySettings() {
@@ -4239,13 +4352,26 @@ function saveAutoReplySettings() {
   const tplArea = document.getElementById('autoreply-message-template');
 
   if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
-  CRM_STATE.autoReplySettings.enabled = masterToggle ? masterToggle.checked : true;
-  CRM_STATE.autoReplySettings.cooldownMinutes = cooldownSelect ? parseInt(cooldownSelect.value) : 30;
+  const isEnabled = masterToggle ? masterToggle.checked : true;
+  CRM_STATE.autoReplySettings.enabled = isEnabled;
+  CRM_STATE.autoReplySettings.cooldownMinutes = cooldownSelect ? parseInt(cooldownSelect.value) : 0;
   CRM_STATE.autoReplySettings.keywordMatching = keywordToggle ? keywordToggle.checked : true;
   CRM_STATE.autoReplySettings.messageTemplate = tplArea ? tplArea.value.trim() : getDefaultStockAutoReplyTemplate();
 
   saveCRMState();
   updateAutoReplyUI();
+
+  // Sync to API & Bridge
+  fetch('api.php?action=toggle_autoreply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      enabled: isEnabled,
+      cooldownMinutes: CRM_STATE.autoReplySettings.cooldownMinutes,
+      keywordMatching: CRM_STATE.autoReplySettings.keywordMatching
+    })
+  }).catch(() => {});
+
   closeModal('modal-auto-reply-settings');
   showToast('Automation Saved', 'WhatsApp Stock Auto-Reply settings saved successfully.', 'check_circle', 'emerald');
   if (typeof playChime === 'function') playChime('order');
@@ -4256,6 +4382,12 @@ function updateAutoReplyUI() {
   const pillDot = document.getElementById('pill-autoreply-dot');
   const pillLabel = document.getElementById('pill-autoreply-label');
   const headerBtn = document.getElementById('header-auto-reply-btn');
+  const inboxContainer = document.getElementById('inbox-autoreply-container');
+  const masterToggle = document.getElementById('autoreply-master-toggle');
+
+  if (masterToggle) {
+    masterToggle.checked = isEnabled;
+  }
 
   if (pillDot) {
     pillDot.className = `w-2 h-2 rounded-full ${isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`;
@@ -4263,6 +4395,15 @@ function updateAutoReplyUI() {
   if (pillLabel) {
     pillLabel.innerText = isEnabled ? 'Auto-Reply: ON' : 'Auto-Reply: OFF';
   }
+
+  if (inboxContainer) {
+    if (isEnabled) {
+      inboxContainer.className = "flex items-center rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 overflow-hidden shrink-0 transition shadow-xs";
+    } else {
+      inboxContainer.className = "flex items-center rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 overflow-hidden shrink-0 transition shadow-xs";
+    }
+  }
+
   if (headerBtn) {
     if (isEnabled) {
       headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
@@ -4344,11 +4485,11 @@ function saveBrandSettings() {
     CRM_STATE.whatsappAccount.businessName = brandName;
   }
 
-  // Push to Baileys bridge so WhatsApp profile pushName is updated on WhatsApp servers!
+  // Push to Baileys bridge: updates BRAND_NAME in-memory + persists to config + updates WA profile
   fetch('http://localhost:3000/api/accounts/update_profile', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ brandName })
+    body: JSON.stringify({ brandName, brandTagline })
   }).catch(() => { });
 
   saveCRMState();
@@ -4524,132 +4665,6 @@ function handleSimulateInbound(event) {
   });
 
   closeModal('modal-inbound-sim');
-}
-
-// Universal Inbound Ingestion Function (Handles both Simulated and Real Webhook messages)
-function ingestInboundMessage(payload) {
-  const name = payload.sender_name || 'WhatsApp Customer';
-  const phone = payload.sender_phone;
-  const messageText = payload.message_text;
-  const priority = payload.priority || 'HIGH';
-  const assignTo = payload.assigned_to || 'UNASSIGNED';
-
-  if (!phone || !messageText) return;
-
-  // Filter out internal status notices
-  if (payload.source === 'QR_BRIDGE_CONNECTED' || payload.source === 'QR_BRIDGE_AUTHENTICATED') return;
-
-  const cleanSender = phone.replace(/[^0-9]/g, '');
-
-  // 1. Match or create Customer
-  let customer = CRM_STATE.customers.find(c => {
-    const cPhone = (c.phone || '').replace(/[^0-9]/g, '');
-    const cWa = (c.whatsapp || '').replace(/[^0-9]/g, '');
-    return cPhone === cleanSender || cWa === cleanSender;
-  });
-
-  if (!customer) {
-    const newId = 'cust_' + (100 + CRM_STATE.customers.length + 1);
-    customer = {
-      id: newId,
-      code: `CUST-2026-00${100 + CRM_STATE.customers.length + 1}`,
-      name: name,
-      phone: phone,
-      whatsapp: phone,
-      jid: payload.sender_jid || null,
-      address: 'Registered via WhatsApp Inbound',
-      city: 'Live Customer',
-      customerType: 'New WhatsApp Customer',
-      tags: ['New Lead', 'WhatsApp Live'],
-      totalOrders: 0,
-      totalSpend: 0,
-      avatar: name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-    };
-    CRM_STATE.customers.push(customer);
-  } else {
-    if (payload.sender_jid) customer.jid = payload.sender_jid;
-    if (name && name !== 'WhatsApp Customer' && (!customer.name || customer.name === 'WhatsApp Customer')) {
-      customer.name = name;
-    }
-  }
-
-  // 2. Add message to conversation (Check if duplicate within 3 seconds)
-  if (!CRM_STATE.conversations[customer.id]) {
-    CRM_STATE.conversations[customer.id] = [];
-  }
-
-  const msgType = payload.type || (payload.media_url ? 'audio' : (messageText.includes('Voice Message') || messageText.includes('[WhatsApp Message]') ? 'audio' : 'text'));
-  const existingMsgs = CRM_STATE.conversations[customer.id];
-  const isDuplicate = existingMsgs.some(m => m.sender === 'customer' && m.text === messageText && (Date.now() - (m.id || 0)) < 3000);
-  if (isDuplicate) return;
-
-  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  CRM_STATE.conversations[customer.id].push({
-    id: Date.now(),
-    sender: 'customer',
-    text: messageText,
-    type: msgType,
-    media_url: payload.media_url || null,
-    duration: payload.duration || 12,
-    time: timeStr,
-    status: 'DELIVERED'
-  });
-
-  // 3. Create or update Query
-  const existingQuery = CRM_STATE.queries.find(q => q.customerId === customer.id);
-  if (existingQuery) {
-    existingQuery.lastMessage = `Customer: "${messageText.substring(0, 40)}..."`;
-    existingQuery.unreadCount = (existingQuery.unreadCount || 0) + 1;
-    existingQuery.createdAt = 'Just now';
-    if (existingQuery.status === 'REPLIED' || existingQuery.status === 'CLOSED') {
-      existingQuery.status = 'NEW';
-    }
-  } else {
-    const newQueryId = `Q-2026-00${1240 + CRM_STATE.queries.length + 1}`;
-    const newQuery = {
-      id: newQueryId,
-      customerId: customer.id,
-      assignedTo: assignTo,
-      status: assignTo === 'UNASSIGNED' ? 'NEW' : 'ASSIGNED',
-      priority: priority,
-      queryText: messageText,
-      productSku: null,
-      createdAt: 'Just now',
-      unreadCount: 1,
-      lastMessage: `Customer: "${messageText.substring(0, 40)}..."`
-    };
-    CRM_STATE.queries.unshift(newQuery);
-  }
-
-  // 4. Log Audit
-  logAudit('INBOUND_MESSAGE_RECEIVED', 'WEBHOOK', `Inbound WhatsApp received at ${CRM_STATE.whatsappAccount.phoneNumber} from ${customer.name} (${customer.phone}).`);
-
-  saveCRMState();
-  playChime('inbound');
-  showToast('New WhatsApp Message Received!', `From ${customer.name} (${formatDisplayPhone(customer.phone, customer.id)}): "${messageText.substring(0, 40)}..."`, 'chat', 'emerald');
-
-  // Select this customer and refresh
-  ACTIVE_CUSTOMER_ID = customer.id;
-  if (ACTIVE_VIEW === 'inbox') renderInbox();
-  else if (ACTIVE_VIEW === 'enquiries') renderEnquiriesTable();
-  else if (ACTIVE_VIEW === 'dashboard') renderDashboard();
-}
-
-// Real-Time Webhook Polling Loop (Pulls from api.php live messages queue every 3 seconds)
-function startRealtimeMessageSync() {
-  setInterval(() => {
-    fetch(`api.php?action=get_inbound_queue&since=${LAST_POLL_EPOCH}`)
-      .then(r => r.json())
-      .then(res => {
-        if (res.status === 'success' && res.messages && res.messages.length > 0) {
-          res.messages.forEach(msg => {
-            ingestInboundMessage(msg);
-            LAST_POLL_EPOCH = Math.max(LAST_POLL_EPOCH, msg.timestamp_epoch || Math.floor(Date.now() / 1000));
-          });
-        }
-      })
-      .catch(() => { });
-  }, 3000);
 }
 
 // =========================================================================
@@ -6644,6 +6659,25 @@ function refreshSpecificAccount(accountId) {
 function renderWhatsAppSettings() {
   fetchQRBridgeStatus();
 
+  // Fetch the latest brand config from the bridge config file first, then populate
+  fetch('http://localhost:3000/api/brand/config')
+    .then(r => r.json())
+    .then(res => {
+      if (res.status === 'success') {
+        if (!CRM_STATE.brandSettings) CRM_STATE.brandSettings = {};
+        if (res.brand_name) CRM_STATE.brandSettings.brandName = res.brand_name;
+        if (res.brand_tagline) CRM_STATE.brandSettings.brandTagline = res.brand_tagline;
+      }
+    })
+    .catch(() => { })
+    .finally(() => {
+      _populateBrandSettingsFields();
+    });
+
+  _populateBrandSettingsFields(); // Also run immediately (don't wait for fetch)
+}
+
+function _populateBrandSettingsFields() {
   // Populate brand inputs from CRM_STATE
   const brandName = getBrandName();
   const brandTagline = getBrandTagline();
