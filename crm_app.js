@@ -782,17 +782,22 @@ function ingestInboundMessage(payload, suppressChime = false) {
     CRM_STATE.conversations[customer.id] = [];
   }
   
+  const isOutboundMsg = Boolean(payload.is_outbound || payload.source === 'AUTOREPLY_BOT' || payload.source === 'STAFF_OUTBOUND');
+  const isBotMsg = payload.source === 'AUTOREPLY_BOT';
+  const msgSender = isOutboundMsg ? 'staff' : 'customer';
+
   // Deduplicate against existing messages
   const existingMsgs = CRM_STATE.conversations[customer.id];
   const isDuplicate = existingMsgs.some(m => 
     (payload.id && m.id === payload.id) ||
-    (m.sender === 'customer' && m.text === messageText && Math.abs(msgTimestamp - (m.timestamp || 0)) < 3000)
+    (m.sender === msgSender && m.text === messageText && Math.abs(msgTimestamp - (m.timestamp || 0)) < 3000)
   );
 
   if (!isDuplicate) {
     const newMsg = {
       id: payload.id || msgTimestamp,
-      sender: 'customer',
+      sender: msgSender,
+      isBot: isBotMsg,
       text: messageText,
       time: timeStr,
       status: 'DELIVERED',
@@ -802,6 +807,9 @@ function ingestInboundMessage(payload, suppressChime = false) {
       timestamp: msgTimestamp
     };
     CRM_STATE.conversations[customer.id].push(newMsg);
+
+    // Dynamic Bot Automation & Chosen Products Activity Tracker
+    syncCustomerAutomationHistory(customer);
   }
 
   // 4. Match or Create Lead / Query Card
@@ -809,11 +817,13 @@ function ingestInboundMessage(payload, suppressChime = false) {
   if (query) {
     if (!query.accountId) query.accountId = payloadAccountId;
     if (!query.businessNumber) query.businessNumber = payloadBusinessNum;
-    if (!isDuplicate) {
+    if (!isDuplicate && !isOutboundMsg) {
       query.unreadCount = (query.unreadCount || 0) + 1;
     }
-    query.lastMessage = `Customer: "${messageText}"`;
-    query.status = (query.status === 'CLOSED' || query.status === 'RESOLVED') ? 'NEW' : query.status;
+    query.lastMessage = isBotMsg ? `Bot: "${messageText.slice(0, 35)}..."` : (isOutboundMsg ? `Staff: "${messageText.slice(0, 35)}..."` : `Customer: "${messageText}"`);
+    if (!isOutboundMsg) {
+      query.status = (query.status === 'CLOSED' || query.status === 'RESOLVED') ? 'NEW' : query.status;
+    }
     query.createdAt = timeStr;
     query.lastTimeEpoch = msgTimestamp;
     
@@ -831,8 +841,8 @@ function ingestInboundMessage(payload, suppressChime = false) {
       queryText: messageText,
       productSku: null,
       createdAt: timeStr,
-      unreadCount: 1,
-      lastMessage: `Customer: "${messageText}"`,
+      unreadCount: isOutboundMsg ? 0 : 1,
+      lastMessage: isBotMsg ? `Bot: "${messageText.slice(0, 35)}..."` : (isOutboundMsg ? `Staff: "${messageText.slice(0, 35)}..."` : `Customer: "${messageText}"`),
       lastTimeEpoch: msgTimestamp
     };
     CRM_STATE.queries.unshift(query);
@@ -1041,7 +1051,7 @@ function initCRMState() {
       if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
       if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.products));
 
-      if (!CRM_STATE.autoReplySettings || typeof CRM_STATE.autoReplySettings !== 'object') {
+      if (!CRM_STATE.autoReplySettings || typeof CRM_STATE.autoReplySettings !== 'object' || !CRM_STATE.autoReplySettings.messageTemplate || CRM_STATE.autoReplySettings.messageTemplate.includes('wa.me')) {
         CRM_STATE.autoReplySettings = {
           enabled: true,
           cooldownMinutes: 0,
@@ -1103,6 +1113,25 @@ function initCRMState() {
       }
     })
     .catch(() => { });
+
+  // Load brand name & tagline from bridge config file (so UI shows live saved brand)
+  fetch('http://localhost:3000/api/brand/config')
+    .then(r => r.json())
+    .then(res => {
+      if (res.status === 'success') {
+        if (!CRM_STATE.brandSettings) CRM_STATE.brandSettings = {};
+        if (res.brand_name) CRM_STATE.brandSettings.brandName = res.brand_name;
+        if (res.brand_tagline) CRM_STATE.brandSettings.brandTagline = res.brand_tagline;
+        // Refresh brand settings UI fields if Settings panel is open
+        const brandInput = document.getElementById('cfg-brand-name');
+        const taglineInput = document.getElementById('cfg-brand-tagline');
+        if (brandInput) brandInput.value = res.brand_name || '';
+        if (taglineInput) taglineInput.value = res.brand_tagline || '';
+        if (typeof updateBrandPreview === 'function') updateBrandPreview();
+      }
+    })
+    .catch(() => { }); // Bridge may not be running — fail silently
+
 
   // Asynchronously synchronize garment products & stock from database
   fetch('api.php?action=get_all')
@@ -2246,16 +2275,12 @@ function renderChatMessages() {
         .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
         .replace(/_(.*?)_/g, '<em>$1</em>')
         .replace(/`(.*?)`/g, '<code class="bg-slate-100 text-slate-900 px-1 py-0.2 rounded text-[10px] font-mono font-bold">$1</code>')
-        .replace(/(https:\/\/wa\.me\/[^\s<?]+(?:\?text=([1-6]))?)/g, function(match, fullUrl, catNum) {
-          if (catNum) {
-            return `<a href="javascript:void(0)" onclick="triggerCategorySelection('${catNum}', '${ACTIVE_CUSTOMER_ID}')" class="inline-flex items-center gap-1 text-emerald-800 hover:text-emerald-950 font-bold bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded-lg border border-emerald-300 text-[11px] transition shadow-2xs cursor-pointer"><span class="material-symbols-outlined text-[13px] text-emerald-600">touch_app</span> Tap to View Option ${catNum}</a>`;
-          }
-          return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="text-teal-600 hover:text-teal-800 font-bold underline break-all inline-flex items-center gap-0.5">${fullUrl} <span class="material-symbols-outlined text-[11px]">open_in_new</span></a>`;
-        })
-        .replace(/(https?:\/\/(?!wa\.me\/)[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-teal-600 hover:text-teal-800 font-bold underline break-all inline-flex items-center gap-0.5">$1 <span class="material-symbols-outlined text-[11px]">open_in_new</span></a>')
+        .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-teal-600 hover:text-teal-800 font-bold underline break-all inline-flex items-center gap-0.5">$1 <span class="material-symbols-outlined text-[11px]">open_in_new</span></a>')
         .replace(/\n/g, '<br>');
 
       const isStockMenu = msg.text && (
+        msg.text.includes('Ready-Stock Collections:') ||
+        msg.text.includes('Reply with 1 to 6') ||
         msg.text.includes('Live Stock') || 
         msg.text.includes('Category Number') || 
         msg.text.includes('Baby Collection (0-3 Years)') || 
@@ -3057,6 +3082,213 @@ function appendCustomerMindsetTag(customerId, tagText) {
   if (typeof playChime === 'function') playChime('order');
 }
 
+// Master GRM Catalog lookup for bot automation tracking & auto-recognition
+const GRM_BOT_CATALOG = {
+  '1': {
+    categoryName: 'Baby Collection (0–3 Years)',
+    icon: '👗',
+    items: {
+      '1': { name: 'Embroidered Cotton Baby Frock (Pink)', price: '₹599', sku: 'BF-001-PK', size: '2–3 Years', image: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=800&auto=format&fit=crop&q=80' },
+      '2': { name: 'Embroidered Cotton Baby Frock (Sunshine Yellow)', price: '₹599', sku: 'BF-001-YL', size: '1–2 Years', image: 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=800&auto=format&fit=crop&q=80' }
+    }
+  },
+  '2': {
+    categoryName: 'Maternity & Feeding Wear',
+    icon: '🤰',
+    items: {
+      '1': { name: 'Pure Cotton Tiered Feeding Gown', price: '₹1,299', sku: 'MD-102-BL', size: 'L / XL', image: 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=800&auto=format&fit=crop&q=80' },
+      '2': { name: 'Maternity Tiered Cotton Floral Dress', price: '₹1,450', sku: 'MD-103-PK', size: 'M / L', image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80' }
+    }
+  },
+  '3': {
+    categoryName: 'Newborn Gift Sets (0–6 Months)',
+    icon: '🎁',
+    items: {
+      '1': { name: 'Newborn 5-Piece Organic Romper Gift Set', price: '₹799', sku: 'BB-301-WH', size: '0–6 Months', image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=800&auto=format&fit=crop&q=80' },
+      '2': { name: 'Newborn Organic Muslin Swaddle & Cap Set', price: '₹499', sku: 'BB-302-SW', size: '0–6 Months', image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80' }
+    }
+  },
+  '4': {
+    categoryName: 'Kids Everyday Wear (4–5 Years)',
+    icon: '👕',
+    items: {
+      '1': { name: 'Kids Organic Cotton T-Shirt Set (Pack of 3)', price: '₹450', sku: 'KD-204-YL', size: '4–5 Years', image: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=800&auto=format&fit=crop&q=80' },
+      '2': { name: 'Kids Denim Shorts & Cotton Tee Combo', price: '₹599', sku: 'KD-205-BL', size: '4–5 Years', image: 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=800&auto=format&fit=crop&q=80' }
+    }
+  },
+  '5': {
+    categoryName: 'Wholesale & Bulk Bundles',
+    icon: '📦',
+    items: {
+      '1': { name: 'Wholesale Baby Rompers Bulk Box (50 Pcs Assorted)', price: '₹8,500', sku: 'WS-701-BX', size: '0–24 Months', image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800&auto=format&fit=crop&q=80' },
+      '2': { name: 'Wholesale Pure Cotton Frocks Bundle (25 Pcs)', price: '₹7,200', sku: 'WS-702-BX', size: '2–5 Years', image: 'https://images.unsplash.com/photo-1471286174890-9c112ffca56a?w=800&auto=format&fit=crop&q=80' }
+    }
+  },
+  '6': {
+    categoryName: 'Festive & VIP Silk Collection',
+    icon: '🥻',
+    items: {
+      '1': { name: 'Girls Festive Silk Lehenga Choli', price: '₹899', sku: 'GL-505-RD', size: '6–7 Years', image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=800&auto=format&fit=crop&q=80' },
+      '2': { name: 'Handcrafted Kanjivaram Silk Pattu Pavadai Set', price: '₹2,499', sku: 'VIP-901-GL', size: '3–4 Years', image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80' }
+    }
+  }
+};
+
+function syncCustomerAutomationHistory(customer) {
+  if (!customer) return;
+  if (!Array.isArray(customer.automationHistory)) customer.automationHistory = [];
+  if (!Array.isArray(customer.adminNotes)) customer.adminNotes = [];
+
+  const conv = CRM_STATE?.conversations?.[customer.id] || [];
+  if (conv.length === 0) return;
+
+  const actions = [];
+  let currentCategoryKey = null;
+
+  for (let i = 0; i < conv.length; i++) {
+    const msg = conv[i];
+    const txt = (msg.text || '').trim();
+    const timeStr = msg.time || (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:00 PM');
+    const msgEpoch = msg.timestamp || (Date.now() - (conv.length - i) * 60000);
+
+    // 1. Check if message is a Category Catalog Menu (sent by Bot or Staff)
+    let matchedCatKey = null;
+    if (txt.includes('• Baby Collection') || txt.includes('Baby Collection')) matchedCatKey = '1';
+    else if (txt.includes('• Maternity') || txt.includes('Maternity & Feeding') || txt.includes('Maternity Wear')) matchedCatKey = '2';
+    else if (txt.includes('• Newborn') || txt.includes('Newborn Gift')) matchedCatKey = '3';
+    else if (txt.includes('• Kids Everyday') || txt.includes('Kids Everyday Wear')) matchedCatKey = '4';
+    else if (txt.includes('• Wholesale') || txt.includes('Wholesale & Bulk Bundles') || txt.includes('Wholesale Bundles')) matchedCatKey = '5';
+    else if (txt.includes('• Festive') || txt.includes('Festive & VIP Silk') || txt.includes('Festive Silk Sets')) matchedCatKey = '6';
+
+    if (matchedCatKey) {
+      currentCategoryKey = matchedCatKey;
+      const catObj = GRM_BOT_CATALOG[matchedCatKey];
+      actions.push({
+        id: 'cat_' + (msg.id || i),
+        timestamp: msgEpoch,
+        time: timeStr,
+        type: 'CATEGORY_VIEWED',
+        title: `${catObj.icon} ${catObj.categoryName}`,
+        price: '',
+        sku: `CAT-${matchedCatKey}`,
+        image: null,
+        badge: '👗 Category Menu'
+      });
+    }
+
+    // 2. Check if customer sent a category or product choice number
+    if (msg.sender === 'customer' || !msg.isBot) {
+      const trimmed = txt.trim();
+      if (/^[1-6]$/.test(trimmed)) {
+        if (!currentCategoryKey || currentCategoryKey === null) {
+          // Category selection
+          const catObj = GRM_BOT_CATALOG[trimmed];
+          if (catObj) {
+            currentCategoryKey = trimmed;
+            actions.push({
+              id: 'pick_cat_' + (msg.id || i),
+              timestamp: msgEpoch,
+              time: timeStr,
+              type: 'CATEGORY_VIEWED',
+              title: `Selected: ${catObj.icon} ${catObj.categoryName}`,
+              price: '',
+              sku: `CAT-${trimmed}`,
+              image: null,
+              badge: '💬 Customer Choice'
+            });
+          }
+        } else {
+          // Product selection within category
+          const catObj = GRM_BOT_CATALOG[currentCategoryKey];
+          const prodObj = catObj?.items?.[trimmed];
+          if (prodObj) {
+            actions.push({
+              id: 'pick_prod_' + (msg.id || i),
+              timestamp: msgEpoch,
+              time: timeStr,
+              type: 'PRODUCT_VIEWED',
+              title: prodObj.name,
+              price: prodObj.price,
+              sku: prodObj.sku,
+              size: prodObj.size,
+              image: prodObj.image,
+              badge: '🛍️ Chosen by Customer'
+            });
+          }
+        }
+      }
+    }
+
+    // 3. Check for specific catalog products in the message
+    for (const [catKey, catData] of Object.entries(GRM_BOT_CATALOG)) {
+      for (const [pNum, prod] of Object.entries(catData.items)) {
+        const isMatched = (
+          (prod.sku && txt.includes(prod.sku)) ||
+          (prod.name && txt.includes(prod.name)) ||
+          (msg.media_url && msg.media_url === prod.image)
+        );
+
+        if (isMatched) {
+          actions.push({
+            id: 'prod_' + prod.sku + '_' + (msg.id || i),
+            timestamp: msgEpoch,
+            time: timeStr,
+            type: 'PRODUCT_VIEWED',
+            title: prod.name,
+            price: prod.price,
+            sku: prod.sku,
+            size: prod.size,
+            image: msg.media_url || prod.image,
+            badge: '📸 Product Photo Viewed'
+          });
+        }
+      }
+    }
+
+    // 4. Generic Product Card / Photo detection (if not in hardcoded catalog)
+    const skuMatch = txt.match(/SKU:\s*`?([A-Z0-9_-]+)`?/i);
+    const priceMatch = txt.match(/(?:💰 Price:|Price:|₹)\s*[*]?:?\s*₹?([0-9,]+)/i);
+    const headerMatch = txt.match(/•\s*([^\n\r]+)/);
+
+    if ((msg.type === 'image' || msg.media_url || (skuMatch && priceMatch)) && headerMatch) {
+      const headerTitle = headerMatch[1].replace(/[*_#]/g, '').trim();
+      const skuVal = skuMatch ? skuMatch[1] : '';
+      const priceVal = priceMatch ? `₹${priceMatch[1]}` : '';
+
+      if (!actions.some(a => (a.sku && a.sku === skuVal) || a.title === headerTitle)) {
+        actions.push({
+          id: 'dyn_prod_' + (msg.id || i),
+          timestamp: msgEpoch,
+          time: timeStr,
+          type: 'PRODUCT_VIEWED',
+          title: headerTitle,
+          price: priceVal,
+          sku: skuVal,
+          image: msg.media_url || null,
+          badge: '📸 Product Viewed'
+        });
+      }
+    }
+  }
+
+  // Deduplicate and sort newest first
+  const seenKeys = new Set();
+  const uniqueActions = [];
+
+  for (let j = actions.length - 1; j >= 0; j--) {
+    const act = actions[j];
+    const key = (act.sku ? act.sku : act.title) + '_' + act.type;
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      uniqueActions.push(act);
+    }
+  }
+
+  customer.automationHistory = uniqueActions.slice(0, 25);
+}
+window.GRM_BOT_CATALOG = GRM_BOT_CATALOG;
+window.syncCustomerAutomationHistory = syncCustomerAutomationHistory;
+
 function renderCustomer360Panel() {
   const panel = document.getElementById('chat-right-panel');
   if (!panel) return;
@@ -3070,6 +3302,9 @@ function renderCustomer360Panel() {
     panel.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">Customer profile details will appear here</div>`;
     return;
   }
+
+  // Live Sync & Parse Automation History from Conversations
+  syncCustomerAutomationHistory(customer);
 
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
@@ -3257,31 +3492,116 @@ function renderCustomer360Panel() {
       </form>
     </div>
 
-    <!-- 2. PROMINENT CUSTOMER MINDSET & BEHAVIORAL NOTES CARD (1-Click Quick Update) -->
-    <div class="p-4 border-b border-slate-200 bg-amber-50/40 space-y-2.5">
+    <!-- 2. DYNAMIC BOT AUTOMATION & CHOSEN PRODUCTS TRACKER CARD -->
+    <div class="p-4 border-b border-slate-200 bg-sky-50/40 space-y-2.5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-1.5">
-          <span class="material-symbols-outlined text-[16px] text-amber-600">psychology</span>
-          <span class="text-[11px] font-extrabold uppercase text-amber-950">Customer Mindset &amp; Notes</span>
+          <span class="material-symbols-outlined text-[16px] text-sky-600">smart_toy</span>
+          <span class="text-[11px] font-extrabold uppercase text-sky-950">Bot Automation &amp; Chosen Products</span>
         </div>
-        <button type="button" onclick="openCustomerQuickNotesModal('${customer.id}')" class="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 flex items-center gap-0.5 transition" title="Edit Customer Mindset Notes">
-          <span class="material-symbols-outlined text-[13px]">edit_note</span> Quick Edit
-        </button>
+        <div class="flex items-center gap-1">
+          <span class="text-[9px] bg-sky-100 text-sky-800 font-mono font-bold px-2 py-0.5 rounded-full border border-sky-200">
+            ${(customer.automationHistory || []).length} Actions
+          </span>
+          <button type="button" onclick="syncCustomerAutomationHistory(CRM_STATE.customers.find(c => c.id === '${customer.id}')); renderCustomer360Panel();" class="p-1 hover:bg-sky-200/60 rounded text-sky-700 transition" title="Re-sync chat actions">
+            <span class="material-symbols-outlined text-[13px]">sync</span>
+          </button>
+        </div>
       </div>
 
-      <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs space-y-2">
-        <p class="text-xs text-slate-800 font-medium leading-relaxed italic ${customer.notes ? '' : 'text-slate-400 font-normal'}">
-          ${customer.notes ? `"${customer.notes}"` : 'No mindset notes recorded yet. Record their fabric preference, wholesale budget, sizing, or buying behavior.'}
-        </p>
+      <div class="space-y-2">
+        ${(!customer.automationHistory || customer.automationHistory.length === 0) ? `
+          <div class="bg-white p-3 rounded-xl border border-sky-200 text-center text-xs text-slate-400 space-y-1">
+            <span class="material-symbols-outlined text-[20px] text-sky-400 block mx-auto">track_changes</span>
+            <p>No automation activity yet. As customer chooses categories or products on WhatsApp, they will appear here automatically.</p>
+          </div>
+        ` : `
+          <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+            ${customer.automationHistory.map(item => `
+              <div class="bg-white p-2.5 rounded-xl border border-sky-200 shadow-2xs flex items-start gap-2.5 transition hover:border-sky-300 hover:shadow-xs">
+                ${item.image ? `
+                  <div class="relative shrink-0 group">
+                    <img src="${item.image}" alt="${item.title}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 cursor-pointer transition group-hover:opacity-90" onclick="openImageLightbox('${item.image}', '${item.title.replace(/'/g, "\\'")}')">
+                    <span class="material-symbols-outlined absolute bottom-0.5 right-0.5 text-[11px] bg-black/60 text-white rounded p-0.5 pointer-events-none">zoom_in</span>
+                  </div>
+                ` : `
+                  <div class="w-10 h-10 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[18px]">${item.type === 'PRODUCT_VIEWED' ? 'checkroom' : 'category'}</span>
+                  </div>
+                `}
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-1">
+                    <h5 class="text-xs font-bold text-slate-900 truncate" title="${item.title}">${item.title}</h5>
+                    <span class="text-[9px] text-slate-400 font-mono shrink-0">${item.time}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                    ${item.price ? `<span class="text-[11px] font-extrabold text-emerald-700">${item.price}</span>` : ''}
+                    ${item.sku ? `<span class="text-[9px] font-mono bg-slate-100 text-slate-700 px-1 rounded font-bold">${item.sku}</span>` : ''}
+                    ${item.size ? `<span class="text-[9px] text-slate-500 font-medium">${item.size}</span>` : ''}
+                    <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded-full font-bold ml-auto">${item.badge || 'Browsed'}</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+    </div>
 
-        <!-- Quick Mindset Badges / Chips -->
-        <div class="flex items-center gap-1 flex-wrap pt-1.5 border-t border-slate-100">
-          <span class="text-[9px] font-bold uppercase text-slate-400">Quick Tags:</span>
-          <button type="button" onclick="appendCustomerMindsetTag('${customer.id}', '🛍️ Bulk Wholesale Buyer')" class="px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-[9px] font-bold transition">+ Bulk Buyer</button>
-          <button type="button" onclick="appendCustomerMindsetTag('${customer.id}', '✨ Premium Quality Focus')" class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded text-[9px] font-bold transition">+ Premium Quality</button>
-          <button type="button" onclick="appendCustomerMindsetTag('${customer.id}', '🏷️ Price Sensitive')" class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[9px] font-bold transition">+ Price Sensitive</button>
-          <button type="button" onclick="appendCustomerMindsetTag('${customer.id}', '👶 Newborn Size Focus')" class="px-1.5 py-0.5 bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 rounded text-[9px] font-bold transition">+ Newborn 0-6M</button>
+    <!-- 3. DEDICATED ADMIN & STAFF INTERNAL NOTES ENGINE (Multi-Entry & Timestamped) -->
+    <div class="p-4 border-b border-slate-200 bg-amber-50/50 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px] text-amber-700">edit_note</span>
+          <span class="text-[11px] font-extrabold uppercase text-amber-950">Admin &amp; Staff Internal Notes</span>
         </div>
+        <span class="text-[9px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
+          ${(customer.adminNotes || []).length} Notes
+        </span>
+      </div>
+
+      <!-- In-Place Note Composer -->
+      <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs space-y-2">
+        <textarea id="quick-admin-note-input" rows="2" placeholder="Write an internal note about customer preference, wholesale inquiry, sizing..." class="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-1 focus:ring-amber-500 focus:outline-none resize-none"></textarea>
+        
+        <!-- Quick Note Tags -->
+        <div class="flex items-center gap-1 flex-wrap pt-0.5">
+          <span class="text-[9px] font-bold text-slate-400">Quick Tags:</span>
+          <button type="button" onclick="insertAdminNoteTag('🛍️ Bulk Wholesale Buyer')" class="px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-[9px] font-bold transition">+ Bulk Buyer</button>
+          <button type="button" onclick="insertAdminNoteTag('✨ Premium Focus')" class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded text-[9px] font-bold transition">+ Premium</button>
+          <button type="button" onclick="insertAdminNoteTag('🏷️ Price Sensitive')" class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[9px] font-bold transition">+ Price Sensitive</button>
+          <button type="button" onclick="insertAdminNoteTag('📦 Ready for Dispatch')" class="px-1.5 py-0.5 bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 rounded text-[9px] font-bold transition">+ Ready to Ship</button>
+        </div>
+
+        <div class="flex items-center justify-end pt-1 border-t border-slate-100">
+          <button type="button" onclick="addAdminInternalNote('${customer.id}')" class="px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center gap-1 active:scale-[0.98]">
+            <span class="material-symbols-outlined text-[14px]">save</span>
+            <span>Save Internal Note</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Notes History Stream -->
+      <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+        ${(!customer.adminNotes || customer.adminNotes.length === 0) ? `
+          <p class="text-[11px] text-slate-400 italic text-center py-1">No admin notes logged yet. Type above to record custom notes.</p>
+        ` : customer.adminNotes.map(n => `
+          <div class="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-2xs space-y-1 relative group">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-extrabold text-amber-900 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px] text-amber-600">person</span>
+                <span>${n.author || 'Admin'}</span>
+              </span>
+              <div class="flex items-center gap-1">
+                <span class="text-[9px] text-slate-400 font-mono">${n.time}</span>
+                <button type="button" onclick="deleteAdminInternalNote('${customer.id}', '${n.id}')" class="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 p-0.5 rounded transition" title="Delete note">
+                  <span class="material-symbols-outlined text-[13px]">delete</span>
+                </button>
+              </div>
+            </div>
+            <p class="text-xs text-slate-800 leading-relaxed font-normal">${n.text}</p>
+          </div>
+        `).join('')}
       </div>
     </div>
 
@@ -3403,6 +3723,73 @@ function renderCustomer360Panel() {
     </div>
   `;
 }
+
+// Dedicated Admin & Staff Internal Notes Controllers
+window.addAdminInternalNote = function(customerId) {
+  const custId = customerId || ACTIVE_CUSTOMER_ID;
+  const customer = CRM_STATE.customers.find(c => c.id === custId);
+  if (!customer) return;
+
+  const noteInput = document.getElementById('quick-admin-note-input');
+  const text = (noteInput ? noteInput.value : '').trim();
+
+  if (!text) {
+    showToast('Empty Note', 'Please type a note before saving.', 'warning', 'amber');
+    if (noteInput) noteInput.focus();
+    return;
+  }
+
+  if (!Array.isArray(customer.adminNotes)) {
+    customer.adminNotes = [];
+  }
+
+  const currentUser = getCurrentUser();
+  const authorName = currentUser?.name || (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff');
+  const now = new Date();
+  const dateStr = now.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const newNote = {
+    id: 'note_' + Date.now(),
+    author: authorName,
+    text: text,
+    time: `${dateStr}, ${timeStr}`,
+    timestamp: Date.now()
+  };
+
+  customer.adminNotes.unshift(newNote);
+  customer.notes = text; // Keep summary notes updated as well
+
+  saveCRMState();
+  renderCustomer360Panel();
+  if (typeof logAudit === 'function') {
+    logAudit('ADMIN_NOTE_ADDED', 'CUSTOMER', `Added internal note for ${customer.name}: "${text.slice(0, 40)}..."`);
+  }
+  showToast('Note Saved', `Internal admin note added for ${customer.name}`, 'check_circle', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+};
+
+window.deleteAdminInternalNote = function(customerId, noteId) {
+  const custId = customerId || ACTIVE_CUSTOMER_ID;
+  const customer = CRM_STATE.customers.find(c => c.id === custId);
+  if (!customer || !Array.isArray(customer.adminNotes)) return;
+
+  customer.adminNotes = customer.adminNotes.filter(n => n.id !== noteId);
+  saveCRMState();
+  renderCustomer360Panel();
+  showToast('Note Deleted', 'Internal note removed.', 'delete', 'slate');
+};
+
+window.insertAdminNoteTag = function(tagText) {
+  const noteInput = document.getElementById('quick-admin-note-input');
+  if (!noteInput) return;
+  if (noteInput.value) {
+    noteInput.value += ' ' + tagText;
+  } else {
+    noteInput.value = tagText + ': ';
+  }
+  noteInput.focus();
+};
 
 // =========================================================================
 // 4. SEND MESSAGE & REAL-TIME OUTBOUND DISPATCH
@@ -3555,30 +3942,24 @@ function insertQuickReply(type) {
 // =========================================================================
 
 function getDefaultStockAutoReplyTemplate() {
-  return `🛍️ *{brand_name}* • Live Stock & Collections
-━━━━━━━━━━━━━━━━━━━━
-Hello {customer_name}! 👋 Thank you for messaging us.
+  return `✨ *{brand_name}* ✨
+Hello *{customer_name}*! 👋 Welcome to our store.
 
-Here is our live available stock & collections today:
-
+👗 *Ready-Stock Collections:*
 {stock_categories}
 
-━━━━━━━━━━━━━━━━━━━━
-👉 *Tap any link above (or reply with 1–6) to view ready-stock photos & prices instantly!*`;
+💬 *Reply with 1 to 6* to see photos & sizes!`;
 }
 
-// Dynamically aggregates live stock and price ranges from CRM_STATE.products with 1-tap wa.me links
+// Dynamically aggregates live stock in ultra-compact format without Read More truncation
 function generateLiveCategoryStockText(rawPhone) {
-  const phoneVal = rawPhone || CRM_STATE?.whatsappAccount?.phoneNumber || '919789660115';
-  const cleanPhone = phoneVal.replace(/[^0-9]/g, '') || '919789660115';
-
   const categories = [
-    { num: 1, name: 'Baby Collection (0-3 Years)', key: 'Baby Collection', desc: 'Embroidered Cotton Frocks & Soft Sets' },
-    { num: 2, name: 'Maternity & Feeding Gowns', key: 'Maternity', desc: 'Tiered Cotton Maxi & Feeding Gowns' },
-    { num: 3, name: 'Newborn Gift Sets (0-6 Months)', key: 'Newborn', desc: '5-Piece Organic Romper Gift Sets' },
-    { num: 4, name: 'Kids Everyday Wear (4-5 Years)', key: 'Kids', desc: 'Pure Cotton T-Shirts Pack & Daily Sets' },
-    { num: 5, name: 'Wholesale & Bulk Bundles', key: 'Wholesale', desc: 'Bulk 25 & 50 Pcs Assorted Boxes' },
-    { num: 6, name: 'Festive & VIP Silk Collection', key: 'Festive', desc: 'Girls Silk Lehengas & Pattu Pavadai Sets' }
+    { num: '1️⃣', name: 'Baby Collection (0–3Y)', key: 'Baby Collection' },
+    { num: '2️⃣', name: 'Maternity & Feeding', key: 'Maternity' },
+    { num: '3️⃣', name: 'Newborn Gift Sets (0–6M)', key: 'Newborn' },
+    { num: '4️⃣', name: 'Kids Daily Wear (4–5Y)', key: 'Kids' },
+    { num: '5️⃣', name: 'Wholesale Bundles', key: 'Wholesale' },
+    { num: '6️⃣', name: 'Festive Silk Sets', key: 'Festive' }
   ];
 
   let text = '';
@@ -3591,10 +3972,10 @@ function generateLiveCategoryStockText(rawPhone) {
       const maxP = Math.max(...prices);
       priceInfo = minP === maxP ? `₹${minP}` : `₹${minP} - ₹${maxP}`;
     } else {
-      priceInfo = '₹450 - ₹1,450';
+      priceInfo = '₹499';
     }
 
-    text += `📦 *${cat.num}. ${cat.name}*\n• ${cat.desc} — *${priceInfo}*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=${cat.num}\n\n`;
+    text += `${cat.num} ${cat.name} — *${priceInfo}*\n`;
   });
 
   return text.trim();
@@ -3627,13 +4008,16 @@ function getSpecificCategoryStockCard(categoryName, customer) {
     return `🛍️ *${brand}* • Stock Update\n━━━━━━━━━━━━━━━━━━━━\nHello ${custName}! 👋 Here are our latest *${categoryName}* items in stock. Please let us know your preferred size and our team will share ready-stock photos!`;
   }
 
-  let itemsList = prods.slice(0, 5).map(p => {
+  const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'];
+  let itemsList = prods.slice(0, 5).map((p, idx) => {
     const avail = (p.physicalStock || 0) - (p.reservedStock || 0);
-    const stockStatus = avail > 0 ? `✅ Ready Stock (${avail} pcs)` : `⏳ Reserved (${avail} left)`;
-    return `• *${p.name}* (${p.size || 'Standard'})\n  Price: *₹${p.price}* | SKU: \`${p.sku}\` | ${stockStatus}`;
+    const stockStatus = avail > 0 ? `✅ *${avail} Pcs Ready*` : `⏳ Reserved`;
+    return `${numEmojis[idx] || (idx + 1 + '.')} *${p.name}*\n   💰 *₹${p.price}* | 📏 Size: *${p.size || 'Standard'}* | ${stockStatus}`;
   }).join('\n\n');
 
-  return `🛍️ *${brand}* • ${categoryName} Live Stock\n━━━━━━━━━━━━━━━━━━━━\nHello ${custName}! 👋 Here is our current live stock for *${categoryName}*:\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with the *SKU or Product Name* and your delivery pincode to book your order instantly!`;
+  const replyCount = prods.length > 1 ? `1 to ${prods.length}` : '1';
+
+  return `👗 *${brand} • ${categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${custName}! 👋 Here are our ready-stock items:\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *Reply with ${replyCount}* to view the photo, sizes & order!\n(Reply *0* for Main Menu)`;
 }
 
 // Inbound Automated Response Dispatcher
@@ -3714,17 +4098,9 @@ function handleAutomatedInboundResponse(customer, messageText, payload) {
     if (stream) stream.scrollTop = stream.scrollHeight;
   }
 
-  // Dispatch live WhatsApp message via bridge
-  dispatchWhatsAppOutbound(
-    customer.whatsapp || customer.phone,
-    replyText,
-    autoMsg,
-    customer.jid || payload.sender_jid,
-    customer.accountId || payload.account_id,
-    true
-  );
-
-  console.log(`[Auto-Reply Bot] Sent ${responseType} to ${customer.name} (${customer.phone})`);
+  // Note: Outbound delivery is autonomously handled by bridge/server.js to prevent duplicate sends
+  // The server emits the bot response back to all connected CRM clients for instant rendering
+  console.log(`[Auto-Reply Bot] Server handling auto-reply response (${responseType}) for ${customer.name}`);
 }
 
 // 1-Click Share Stock Category Menu from Chat Quick Action Tray
@@ -3987,11 +4363,11 @@ function saveBrandSettings() {
     CRM_STATE.whatsappAccount.businessName = brandName;
   }
 
-  // Push to Baileys bridge so WhatsApp profile pushName is updated on WhatsApp servers!
+  // Push to Baileys bridge: updates BRAND_NAME in-memory + persists to config + updates WA profile
   fetch('http://localhost:3000/api/accounts/update_profile', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ brandName })
+    body: JSON.stringify({ brandName, brandTagline })
   }).catch(() => { });
 
   saveCRMState();
@@ -6287,6 +6663,25 @@ function refreshSpecificAccount(accountId) {
 function renderWhatsAppSettings() {
   fetchQRBridgeStatus();
 
+  // Fetch the latest brand config from the bridge config file first, then populate
+  fetch('http://localhost:3000/api/brand/config')
+    .then(r => r.json())
+    .then(res => {
+      if (res.status === 'success') {
+        if (!CRM_STATE.brandSettings) CRM_STATE.brandSettings = {};
+        if (res.brand_name) CRM_STATE.brandSettings.brandName = res.brand_name;
+        if (res.brand_tagline) CRM_STATE.brandSettings.brandTagline = res.brand_tagline;
+      }
+    })
+    .catch(() => { })
+    .finally(() => {
+      _populateBrandSettingsFields();
+    });
+
+  _populateBrandSettingsFields(); // Also run immediately (don't wait for fetch)
+}
+
+function _populateBrandSettingsFields() {
   // Populate brand inputs from CRM_STATE
   const brandName = getBrandName();
   const brandTagline = getBrandTagline();

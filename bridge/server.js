@@ -71,6 +71,7 @@ const accounts = new Map(); // accountId -> AccountObject
 const jidMap = new Map();
 const LID_TO_PHONE_MAP = new Map();
 const PHONE_TO_LID_MAP = new Map();
+const PROCESSED_MESSAGE_IDS = new Set();
 
 // Scan and index all Baileys LID <-> Phone mappings
 function indexAllLidMappings() {
@@ -117,41 +118,312 @@ function indexAllLidMappings() {
 indexAllLidMappings();
 
 // Brand Configuration
-let BRAND_NAME = 'Blue Berry 💙';
+let BRAND_NAME = 'GRM Garments'; // Overridden by whatsapp_account_config.json on load
 let BRAND_TAGLINE = 'Premium Kids & Maternity Wear';
 
 // Autonomous Server-Side Auto-Responder Configuration & Cache
 const lastAutoReplyMap = new Map();
+const customerCategoryState = new Map(); // senderPhone -> categoryId ('1', '2', etc.)
 let autoReplyConfig = {
     enabled: true,
     cooldownMinutes: 0, // 0 = Instant reply on every message
     keywordMatching: true
 };
 
-function getStockAutoReplyTemplate(customerName, botPhone) {
-    const brand = BRAND_NAME || 'Blue Berry 💙';
+const PRODUCTS_CATALOG = {
+    '1': {
+        categoryName: 'Baby Collection (0–3 Years)',
+        categoryIcon: '👗',
+        items: [
+            {
+                num: '1',
+                name: 'Embroidered Cotton Baby Frock (Pink)',
+                size: '2–3 Years',
+                color: 'Pink',
+                price: 599,
+                stock: 12,
+                sku: 'BF-001-PK',
+                image: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=800&auto=format&fit=crop&q=80',
+                desc: '100% Breathable Combed Cotton with fine needle embroidery. Soft inner lining, skin-friendly for babies.'
+            },
+            {
+                num: '2',
+                name: 'Embroidered Cotton Baby Frock (Sunshine Yellow)',
+                size: '1–2 Years',
+                color: 'Sunshine Yellow',
+                price: 599,
+                stock: 8,
+                sku: 'BF-001-YL',
+                image: 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=800&auto=format&fit=crop&q=80',
+                desc: 'Bright festive yellow frock with contrast floral yoke and flared hem.'
+            }
+        ]
+    },
+    '2': {
+        categoryName: 'Maternity & Feeding Wear',
+        categoryIcon: '🤰',
+        items: [
+            {
+                num: '1',
+                name: 'Pure Cotton Tiered Feeding Gown',
+                size: 'L / XL',
+                color: 'Sky Blue',
+                price: 1299,
+                stock: 10,
+                sku: 'MD-102-BL',
+                image: 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=800&auto=format&fit=crop&q=80',
+                desc: 'Concealed double invisible feeding zips. 100% pure premium mulmul cotton, ultra-comfortable.'
+            },
+            {
+                num: '2',
+                name: 'Maternity Tiered Cotton Floral Dress',
+                size: 'M / L',
+                color: 'Blush Pink',
+                price: 1450,
+                stock: 14,
+                sku: 'MD-103-PK',
+                image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80',
+                desc: 'Graceful floral flare with maternity empire waist and comfortable all-day fit.'
+            }
+        ]
+    },
+    '3': {
+        categoryName: 'Newborn Gift Sets (0–6 Months)',
+        categoryIcon: '🎁',
+        items: [
+            {
+                num: '1',
+                name: 'Newborn 5-Piece Organic Romper Gift Set',
+                size: '0–6 Months',
+                color: 'Pure White / Mint',
+                price: 799,
+                stock: 15,
+                sku: 'BB-301-WH',
+                image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=800&auto=format&fit=crop&q=80',
+                desc: 'Includes 1 Full Romper, 1 Bib, 1 Cap, 1 Pair Booties & Mittens in luxury gift box.'
+            },
+            {
+                num: '2',
+                name: 'Newborn Organic Muslin Swaddle & Cap Set',
+                size: '0–6 Months',
+                color: 'Pastel Mint',
+                price: 499,
+                stock: 20,
+                sku: 'BB-302-SW',
+                image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80',
+                desc: 'Pack of 2 ultra-soft 100% organic cotton muslin swaddles with matching adjustable knot cap.'
+            }
+        ]
+    },
+    '4': {
+        categoryName: 'Kids Everyday Wear (4–5 Years)',
+        categoryIcon: '👕',
+        items: [
+            {
+                num: '1',
+                name: 'Kids Organic Cotton T-Shirt Set (Pack of 3)',
+                size: '4–5 Years',
+                color: 'Multi Yellow / Green / Blue',
+                price: 450,
+                stock: 25,
+                sku: 'KD-204-YL',
+                image: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=800&auto=format&fit=crop&q=80',
+                desc: 'Pack of 3 everyday Bio-washed cotton round-neck tees for active kids.'
+            },
+            {
+                num: '2',
+                name: 'Kids Denim Shorts & Cotton Tee Combo',
+                size: '4–5 Years',
+                color: 'Navy & White',
+                price: 599,
+                stock: 18,
+                sku: 'KD-205-BL',
+                image: 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=800&auto=format&fit=crop&q=80',
+                desc: 'Breathable soft denim shorts paired with printed combed cotton crew neck tee.'
+            }
+        ]
+    },
+    '5': {
+        categoryName: 'Wholesale & Bulk Bundles',
+        categoryIcon: '📦',
+        items: [
+            {
+                num: '1',
+                name: 'Wholesale Baby Rompers Bulk Box (50 Pcs Assorted)',
+                size: '0–24 Months',
+                color: 'Assorted Prints',
+                price: 8500,
+                stock: 18,
+                sku: 'WS-701-BX',
+                image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800&auto=format&fit=crop&q=80',
+                desc: 'Master carton containing 50 individual polybag packed baby rompers ready for resale.'
+            },
+            {
+                num: '2',
+                name: 'Wholesale Pure Cotton Frocks Bundle (25 Pcs)',
+                size: '2–5 Years',
+                color: 'Multi Pastel Colors',
+                price: 7200,
+                stock: 12,
+                sku: 'WS-702-BX',
+                image: 'https://images.unsplash.com/photo-1471286174890-9c112ffca56a?w=800&auto=format&fit=crop&q=80',
+                desc: '25 premium partywear and daily cotton frocks with retail hangers.'
+            }
+        ]
+    },
+    '6': {
+        categoryName: 'Festive & VIP Silk Collection',
+        categoryIcon: '🥻',
+        items: [
+            {
+                num: '1',
+                name: 'Girls Festive Silk Lehenga Choli',
+                size: '6–7 Years',
+                color: 'Ruby Red & Gold',
+                price: 899,
+                stock: 6,
+                sku: 'GL-505-RD',
+                image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=800&auto=format&fit=crop&q=80',
+                desc: 'Art silk lehenga with golden zari border and matching stitched choli.'
+            },
+            {
+                num: '2',
+                name: 'Handcrafted Kanjivaram Silk Pattu Pavadai Set',
+                size: '3–4 Years',
+                color: 'Emerald Green & Gold',
+                price: 2499,
+                stock: 8,
+                sku: 'VIP-901-GL',
+                image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80',
+                desc: 'Traditional South Indian pure zari pattu pavadai with rich pallu pattern.'
+            }
+        ]
+    }
+};
+
+function getStockAutoReplyTemplate(customerName) {
+    const brand = BRAND_NAME || 'GRM Garments Official';
     const cName = customerName ? customerName.split(' ')[0] : 'there';
-    const rawPhone = botPhone || (accounts.get('account_1')?.connectedNumber) || '919789660115';
-    const cleanPhone = String(rawPhone).replace(/[^0-9]/g, '') || '919789660115';
     
-    return `🛍️ *${brand}* • Live Stock & Collections\n━━━━━━━━━━━━━━━━━━━━\nHello ${cName}! 👋 Thank you for messaging us.\n\nHere is our live available stock & collections today:\n\n📦 *1. Baby Collection (0-3 Years)*\n• Embroidered Cotton Frocks & Soft Sets — *₹599*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=1\n\n📦 *2. Maternity & Feeding Gowns*\n• Tiered Cotton Maxi & Feeding Gowns — *₹1299 - ₹1450*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=2\n\n📦 *3. Newborn Gift Sets (0-6 Months)*\n• 5-Piece Organic Romper Gift Sets — *₹799*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=3\n\n📦 *4. Kids Everyday Wear (4-5 Years)*\n• Pure Cotton T-Shirts Pack & Daily Sets — *₹450*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=4\n\n📦 *5. Wholesale & Bulk Bundles*\n• Bulk 25 & 50 Pcs Assorted Boxes — *₹7200 - ₹8500*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=5\n\n📦 *6. Festive & VIP Silk Collection*\n• Girls Silk Lehengas & Pattu Pavadai Sets — *₹899*\n👉 *Tap to View:* https://wa.me/${cleanPhone}?text=6\n\n━━━━━━━━━━━━━━━━━━━━\n👉 *Tap any link above (or reply with 1–6) to view ready-stock photos & prices instantly!*`;
+    return {
+        text: `✨ *${brand}* ✨\nHello *${cName}*! 👋 Welcome to our store.\n\n👗 *Ready-Stock Collections:*\n1️⃣ Baby Collection (0–3Y) — *₹599*\n2️⃣ Maternity & Feeding — *₹1,299*\n3️⃣ Newborn Gift Sets (0–6M) — *₹799*\n4️⃣ Kids Daily Wear (4–5Y) — *₹450*\n5️⃣ Wholesale Bundles — *₹7,200*\n6️⃣ Festive Silk Sets — *₹899*\n\n💬 *Reply with 1 to 6* to see photos & sizes!`
+    };
 }
 
-function getKeywordResponse(key, custName) {
-    const brand = BRAND_NAME || 'Blue Berry 💙';
+function getCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber) {
+    const keys = [senderKey, senderNumber, senderJid, cleanNumber, (senderNumber || '').replace(/[^0-9]/g, ''), (cleanNumber || '').replace(/[^0-9]/g, '')];
+    for (const k of keys) {
+        if (k && customerCategoryState.has(k)) return customerCategoryState.get(k);
+    }
+    return null;
+}
+
+function setCustomerCategory(stateObj, senderKey, senderNumber, senderJid, cleanNumber) {
+    const keys = [senderKey, senderNumber, senderJid, cleanNumber, (senderNumber || '').replace(/[^0-9]/g, ''), (cleanNumber || '').replace(/[^0-9]/g, '')];
+    for (const k of keys) {
+        if (k) customerCategoryState.set(k, stateObj);
+    }
+}
+
+function clearCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber) {
+    const keys = [senderKey, senderNumber, senderJid, cleanNumber, (senderNumber || '').replace(/[^0-9]/g, ''), (cleanNumber || '').replace(/[^0-9]/g, '')];
+    for (const k of keys) {
+        if (k) customerCategoryState.delete(k);
+    }
+}
+
+function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, senderJid, cleanNumber) {
+    const brand = BRAND_NAME || 'GRM Garments Official';
     const name = custName ? custName.split(' ')[0] : 'there';
-    if (key === '1' || key.includes('baby') || key.includes('frock')) {
-        return `🛍️ *${brand}* • Baby Collection (0-3 Years)\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Here are our top Baby Collection items in ready stock:\n\n• *Embroidered Cotton Baby Frock* (0-1 Yrs)\n  Price: *₹599* | SKU: \`BABY-FRK-01\` | ✅ Ready Stock\n\n• *Soft Cotton Romper Daily Set* (1-2 Yrs)\n  Price: *₹499* | SKU: \`BABY-RMP-02\` | ✅ Ready Stock\n\n• *Organic Cotton Dungaree Set* (2-3 Yrs)\n  Price: *₹699* | SKU: \`BABY-DNG-03\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with the *SKU or Size* to reserve this item instantly!`;
-    } else if (key === '2' || key.includes('maternity') || key.includes('feeding') || key.includes('gown')) {
-        return `🛍️ *${brand}* • Maternity & Feeding Wear\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Here are our top Maternity gowns in ready stock:\n\n• *Pure Cotton Tiered Feeding Gown* (M / L / XL / XXL)\n  Price: *₹1299* | SKU: \`MAT-GWN-01\` | ✅ Ready Stock (Concealed Zips)\n\n• *Floral Pure Rayon Maxi Gown* (Free Size)\n  Price: *₹1450* | SKU: \`MAT-MAXI-02\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with the *SKU & Size* to place your order!`;
-    } else if (key === '3' || key.includes('newborn') || key.includes('romper')) {
-        return `🛍️ *${brand}* • Newborn Gift Sets (0-6 Months)\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Newborn items in ready stock:\n\n• *5-Piece Organic Newborn Gift Box* (0-3M)\n  Price: *₹799* | SKU: \`NB-BOX-01\` | ✅ Ready Stock\n\n• *Newborn Pure Cotton Rompers (Pack of 3)* (3-6M)\n  Price: *₹599* | SKU: \`NB-RMP-03\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *SKU* to book!`;
-    } else if (key === '4' || key.includes('kids') || key.includes('tshirt') || key.includes('t-shirt')) {
-        return `🛍️ *${brand}* • Kids Everyday Wear (4-5 Years)\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Kids wear in ready stock:\n\n• *Pure Cotton Printed T-Shirt Pack (Pack of 2)*\n  Price: *₹450* | SKU: \`KID-TEE-04\` | ✅ Ready Stock\n\n• *Everyday Shorts & Top Co-ord Set*\n  Price: *₹650* | SKU: \`KID-SET-05\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *SKU & Size* to book!`;
-    } else if (key === '5' || key.includes('wholesale') || key.includes('bulk')) {
-        return `🛍️ *${brand}* • Wholesale & Bulk Bundles\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Wholesale packages available for boutique resellers:\n\n• *Assorted 25-Piece Baby Frocks Box*\n  Price: *₹7200* | SKU: \`WS-BOX-25\` | ✅ Ready for Dispatch\n\n• *Assorted 50-Piece Maternity & Kids Combo Box*\n  Price: *₹14000* | SKU: \`WS-BOX-50\` | ✅ Ready for Dispatch\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with your *Shop Name & GST Number* for wholesale dispatch!`;
-    } else if (key === '6' || key.includes('festive') || key.includes('silk') || key.includes('lehenga')) {
-        return `🛍️ *${brand}* • Festive & VIP Silk Collection\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Festive items in ready stock:\n\n• *Girls Pattu Pavadai Silk Set* (2-4 Yrs)\n  Price: *₹899* | SKU: \`FEST-SILK-01\` | ✅ Ready Stock\n\n• *Festive Jacquard Lehenga Choli* (4-6 Yrs)\n  Price: *₹1199* | SKU: \`FEST-LHG-02\` | ✅ Ready Stock\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *SKU & Age* to order!`;
+    const key = cleanMsg.trim().toLowerCase();
+
+    // 1. Check for Reset / Main Menu / Direct Greetings
+    if (key === '0' || key === 'menu' || key === 'catalog' || key === 'catalogue' || key === 'main' || key === 'home' || key === 'hi' || key === 'hii' || key === 'hiii' || key === 'hello' || key === 'start') {
+        clearCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber);
+        return getStockAutoReplyTemplate(custName);
+    }
+
+    const state = getCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber);
+    const activeCatId = typeof state === 'object' ? state?.catId : state;
+    const isAwaitingProduct = typeof state === 'object' ? Boolean(state?.awaitingProduct) : false;
+
+    // 2. If customer is currently viewing a Category Menu and awaiting product choice:
+    if (activeCatId && isAwaitingProduct && PRODUCTS_CATALOG[activeCatId]) {
+        const catData = PRODUCTS_CATALOG[activeCatId];
+        const itemIdx = parseInt(key) - 1;
+
+        // If user replies with a valid product number inside this category (e.g., 1 or 2)
+        if (/^[1-9]$/.test(key) && !isNaN(itemIdx) && catData.items[itemIdx]) {
+            const item = catData.items[itemIdx];
+            console.log(`[Auto-Reply Engine] 🎯 Customer chosen Item #${key} (${item.name}) from Active Category #${activeCatId} (${catData.categoryName})`);
+            
+            // Mark product viewed (reset awaitingProduct so next number 1-6 can select a category or view other items)
+            setCustomerCategory({ catId: activeCatId, awaitingProduct: false, lastProductSku: item.sku }, senderKey, senderNumber, senderJid, cleanNumber);
+            
+            return {
+                type: 'image',
+                image: item.image,
+                caption: `${catData.categoryIcon} *${item.name}*\n━━━━━━━━━━━━━━━━━━━━\n💰 Price: *₹${item.price}* (All Taxes Incl.)\n📏 Available Size: *${item.size}*\n🎨 Color: *${item.color}*\n📦 Ready Stock: *${item.stock} Units* (Ready to Dispatch)\n🏷️ SKU: \`${item.sku}\`\n\n📝 *Details:*\n${item.desc}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *To Order:* Reply with your *Quantity & Delivery Address* to reserve your parcel!\n(Reply *1* to *6* to browse other collections, or *0* for Main Menu)`
+            };
+        }
+    }
+
+    // 3. Category selection (1 to 6 or keywords)
+    let selectedCat = null;
+    if (key === '1') selectedCat = '1';
+    else if (key === '2') selectedCat = '2';
+    else if (key === '3') selectedCat = '3';
+    else if (key === '4') selectedCat = '4';
+    else if (key === '5') selectedCat = '5';
+    else if (key === '6') selectedCat = '6';
+    // Keyword matching
+    else if (key.includes('wholesale') || key.includes('bulk') || key.includes('bundle')) selectedCat = '5';
+    else if (key.includes('maternity') || key.includes('feeding') || key.includes('gown')) selectedCat = '2';
+    else if (key.includes('baby') || key.includes('frock')) selectedCat = '1';
+    else if (key.includes('newborn') || key.includes('gift') || key.includes('born')) selectedCat = '3';
+    else if (key.includes('kids') || key.includes('tshirt') || key.includes('daily')) selectedCat = '4';
+    else if (key.includes('festive') || key.includes('silk') || key.includes('pattu') || key.includes('lehenga')) selectedCat = '6';
+
+    // If Category selected (1 to 6)
+    if (selectedCat && PRODUCTS_CATALOG[selectedCat]) {
+        // Set state to active category and awaitingProduct = true
+        setCustomerCategory({ catId: selectedCat, awaitingProduct: true }, senderKey, senderNumber, senderJid, cleanNumber);
+        
+        const cat = PRODUCTS_CATALOG[selectedCat];
+        const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣'];
+
+        let itemsText = cat.items.map((it, idx) => {
+            return `${numEmojis[idx] || (idx + 1 + '.')} *${it.name}*\n   💰 *₹${it.price}* | 📏 Size: *${it.size}* | ✅ *${it.stock} Pcs Ready*`;
+        }).join('\n\n');
+
+        const replyNumbersText = cat.items.length > 1 ? `1 to ${cat.items.length}` : '1';
+        console.log(`[Auto-Reply Engine] 📂 Customer opened Category #${selectedCat} (${cat.categoryName})`);
+
+        return {
+            type: 'text',
+            text: `${cat.categoryIcon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Here are our ready-stock items:\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *Reply with ${replyNumbersText}* to view the photo, sizes & order!\n(Reply *0* to return to Main Menu)`
+        };
+    }
+
+    return null;
+}
+
+async function getImageBuffer(url) {
+    if (!url) return null;
+    try {
+        if (typeof fetch === 'function') {
+            const res = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                }
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const arrayBuf = await res.arrayBuffer();
+            return Buffer.from(arrayBuf);
+        }
+    } catch (e) {
+        console.warn(`[Image Buffer Fetch Failed for ${url}]:`, e.message);
     }
     return null;
 }
@@ -411,6 +683,16 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             if (m.type === 'notify') {
                 for (const msg of m.messages) {
                     if (!msg.key.fromMe) {
+                        const msgId = msg.key?.id;
+                        if (msgId) {
+                            if (PROCESSED_MESSAGE_IDS.has(msgId)) continue;
+                            PROCESSED_MESSAGE_IDS.add(msgId);
+                            if (PROCESSED_MESSAGE_IDS.size > 5000) {
+                                const firstVal = PROCESSED_MESSAGE_IDS.values().next().value;
+                                PROCESSED_MESSAGE_IDS.delete(firstVal);
+                            }
+                        }
+
                         const senderJid = msg.key.remoteJid;
                         if (!senderJid) continue;
                         if (senderJid.includes('@g.us') || senderJid === 'status@broadcast') continue;
@@ -607,54 +889,99 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         // 2. Forward to CRM PHP API for persistent file storage
                         forwardToCRM(payload);
 
-                        // 3. Server-Side Autonomous Instant Auto-Responder Engine
+                        // 3. Server-Side Autonomous Intelligent Auto-Responder Engine
                         if (autoReplyConfig.enabled) {
-                            const lastEpoch = lastAutoReplyMap.get(senderNumber) || 0;
-                            const cooldownMs = (parseInt(autoReplyConfig.cooldownMinutes) || 0) * 60 * 1000;
-                            const isCooldownPassed = cooldownMs === 0 || (Date.now() - lastEpoch) >= cooldownMs;
+                            const senderKey = cleanNumber || senderNumber || senderJid;
+                            const lastMenuEpoch = lastAutoReplyMap.get(cleanNumber) || lastAutoReplyMap.get(senderNumber) || 0;
+                            const configuredMinutes = typeof autoReplyConfig.cooldownMinutes !== 'undefined' ? Number(autoReplyConfig.cooldownMinutes) : 0;
+                            const cooldownMs = configuredMinutes * 60 * 1000;
+                            const isMenuCooldownPassed = (Date.now() - lastMenuEpoch) >= (cooldownMs || 3000); // minimal 3s debounce
 
-                            let autoReplyText = null;
+                            let replyObj = null;
                             const cleanMsg = (messageText || '').trim().toLowerCase();
 
+                            // 1. Check for interactive category/product responses (Level 2 & Level 3 photo card)
                             if (autoReplyConfig.keywordMatching) {
-                                autoReplyText = getKeywordResponse(cleanMsg, senderName);
+                                replyObj = getInteractiveResponse(cleanMsg, senderName, senderKey, senderNumber, senderJid, cleanNumber);
                             }
 
-                            if (!autoReplyText && isCooldownPassed) {
-                                autoReplyText = getStockAutoReplyTemplate(senderName);
-                            }
+                            // 2. Greetings and full catalog triggers
+                            const isGreetingOrMenu = cleanMsg === 'hi' || cleanMsg === 'hii' || cleanMsg === 'hiii' || 
+                                                     cleanMsg === 'hello' || cleanMsg === 'hellow' || cleanMsg === 'helo' || 
+                                                     cleanMsg === 'hey' || cleanMsg === 'vanakkam' || cleanMsg === 'namaste' ||
+                                                     cleanMsg === 'start' || cleanMsg === 'menu' || cleanMsg === 'catalog' || 
+                                                     cleanMsg === 'catalogue' || cleanMsg === 'stock' || cleanMsg === 'price' || 
+                                                     cleanMsg === 'rate' || cleanMsg === 'help' || lastMenuEpoch === 0;
 
-                            if (autoReplyText) {
+                            if (!replyObj && (isGreetingOrMenu || cleanMsg.length <= 10) && isMenuCooldownPassed) {
+                                clearCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber);
+                                replyObj = getStockAutoReplyTemplate(senderName);
                                 lastAutoReplyMap.set(senderNumber, Date.now());
                                 lastAutoReplyMap.set(cleanNumber, Date.now());
                                 if (senderJid) lastAutoReplyMap.set(senderJid, Date.now());
-
-                                setTimeout(async () => {
-                                    try {
-                                        const targetJid = resolveDestinationJid(senderNumber || senderJid);
-                                        console.log(`[Auto-Reply Engine] 🤖 Dispatching automated stock reply to ${senderName} (${targetJid})...`);
-                                        const sentRes = await sock.sendMessage(targetJid, { text: autoReplyText });
-                                        console.log(`[Auto-Reply Engine] ✅ Successfully delivered automated stock reply to ${targetJid} (ID: ${sentRes?.key?.id})`);
-
-                                        const botPayload = {
-                                            sender_name: 'Bot (Auto-Reply)',
-                                            sender_phone: senderNumber,
-                                            sender_jid: targetJid,
-                                            message_text: autoReplyText,
-                                            type: 'text',
-                                            account_id: accountId,
-                                            source: 'AUTOREPLY_BOT',
-                                            is_outbound: true,
-                                            timestamp_epoch: Math.floor(Date.now() / 1000),
-                                            received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                        };
-                                        io.emit('whatsapp:inbound', botPayload);
-                                        forwardToCRM(botPayload);
-                                    } catch (err) {
-                                        console.error('[Auto-Reply Send Error]:', err.message);
-                                    }
-                                }, 800);
                             }
+
+                            if (replyObj) {
+                                setTimeout(async () => {
+                                        try {
+                                            const targetJid = resolveDestinationJid(senderNumber || senderJid);
+                                            let sentRes = null;
+                                            let botText = '';
+                                            let botType = 'text';
+                                            let botMediaUrl = null;
+
+                                            if (replyObj.type === 'image' && replyObj.image) {
+                                                botType = 'image';
+                                                botMediaUrl = replyObj.image;
+                                                botText = replyObj.caption;
+                                                console.log(`[Auto-Reply Engine] 📸 Sending Product Photo to ${senderName} (${targetJid}): "${replyObj.caption.slice(0, 40)}..."`);
+                                                
+                                                const imgBuf = await getImageBuffer(replyObj.image);
+                                                if (imgBuf) {
+                                                    try {
+                                                        sentRes = await sock.sendMessage(targetJid, {
+                                                            image: imgBuf,
+                                                            caption: replyObj.caption
+                                                        });
+                                                    } catch (imgErr) {
+                                                        console.warn('[Image Send Failed, Falling back to Text]:', imgErr.message);
+                                                    }
+                                                }
+
+                                                if (!sentRes) {
+                                                    sentRes = await sock.sendMessage(targetJid, {
+                                                        text: `${replyObj.caption}\n\n🖼️ *Product Image:* ${replyObj.image}`
+                                                    });
+                                                }
+                                            } else {
+                                                botText = replyObj.text || replyObj;
+                                                console.log(`[Auto-Reply Engine] 🤖 Dispatching response to ${senderName} (${targetJid}): "${cleanMsg}"`);
+                                                sentRes = await sock.sendMessage(targetJid, { text: botText });
+                                            }
+
+                                            console.log(`[Auto-Reply Engine] ✅ Delivered to ${targetJid} (ID: ${sentRes?.key?.id})`);
+
+                                            const botPayload = {
+                                                id: sentRes?.key?.id || ('bot_' + Date.now()),
+                                                sender_name: 'Bot (Auto-Reply)',
+                                                sender_phone: senderNumber,
+                                                sender_jid: targetJid,
+                                                message_text: botText,
+                                                type: botType,
+                                                media_url: botMediaUrl,
+                                                account_id: accountId,
+                                                source: 'AUTOREPLY_BOT',
+                                                is_outbound: true,
+                                                timestamp_epoch: Math.floor(Date.now() / 1000),
+                                                received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                            };
+                                            io.emit('whatsapp:inbound', botPayload);
+                                            forwardToCRM(botPayload);
+                                        } catch (err) {
+                                            console.error('[Auto-Reply Send Error]:', err.message);
+                                        }
+                                    }, 500);
+                                }
                         }
                     }
                 }
@@ -942,8 +1269,28 @@ app.post('/api/accounts/disconnect', async (req, res) => {
 
 app.post('/api/accounts/update_profile', async (req, res) => {
     try {
-        const { brandName } = req.body;
+        const { brandName, brandTagline } = req.body;
         if (brandName) {
+            // 1. Update in-memory BRAND_NAME so auto-replies immediately use new name
+            BRAND_NAME = brandName;
+            if (brandTagline) BRAND_TAGLINE = brandTagline;
+            console.log(`[Brand Config] BRAND_NAME updated to: "${BRAND_NAME}"`);
+
+            // 2. Persist to whatsapp_account_config.json
+            try {
+                let cfgData = {};
+                if (fs.existsSync(configFilePath)) {
+                    cfgData = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+                }
+                cfgData.brand_name = BRAND_NAME;
+                if (brandTagline) cfgData.brand_tagline = BRAND_TAGLINE;
+                fs.writeFileSync(configFilePath, JSON.stringify(cfgData, null, 4), 'utf8');
+                console.log(`[Brand Config] Persisted brand_name to whatsapp_account_config.json`);
+            } catch (saveErr) {
+                console.warn('[Brand Config] Failed to persist brand name to config:', saveErr.message);
+            }
+
+            // 3. Update WhatsApp profile pushName on all connected accounts
             for (const [id, acc] of accounts.entries()) {
                 if (acc.sock && acc.status === 'CONNECTED') {
                     try {
@@ -957,10 +1304,20 @@ app.post('/api/accounts/update_profile', async (req, res) => {
             }
             broadcastAccountsUpdate();
         }
-        res.json({ status: 'success', brandName });
+        res.json({ status: 'success', brandName, brandTagline });
     } catch (e) {
         res.status(500).json({ status: 'error', message: e.message });
     }
+});
+
+// GET current brand config (so CRM UI can populate brand settings fields on load)
+app.get('/api/brand/config', (req, res) => {
+    loadBrandConfig(); // Always read latest from file
+    res.json({
+        status: 'success',
+        brand_name: BRAND_NAME,
+        brand_tagline: BRAND_TAGLINE
+    });
 });
 
 app.get('/api/qr/status', (req, res) => {
