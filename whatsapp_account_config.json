@@ -1,17 +1,17 @@
 {
     "id": 1,
     "business_name": "GRM Garments Business Hub",
-    "display_name": "GRM Garments Official",
-    "brand_name": "GRM Garments 💙",
+    "display_name": "Primary WhatsApp",
+    "brand_name": "GRM Garments \ud83d\udc99",
     "brand_tagline": "Premium Kids & Maternity Wear",
-    "phone_number": null,
+    "phone_number": "+91 97896 60115",
     "phone_number_id": "109823471928374",
     "waba_id": "982374619283745",
     "access_token": "",
     "webhook_verify_token": "GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026",
     "provider": "QR_CODE_BRIDGE",
-    "status": "DISCONNECTED",
-    "last_sync": "2026-10-08 09:30:00",
+    "status": "CONNECTED",
+    "last_sync": "2026-10-13 07:36:16",
     "connected_lines": [
         {
             "id": "account_1",
