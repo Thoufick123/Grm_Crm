@@ -646,6 +646,8 @@ function initSocketIO() {
     SOCKET_IO.on('connect', () => {
       console.log('⚡ Socket.IO Connected to Bridge (ID: ' + SOCKET_IO.id + ')');
       showToast('WebSocket Connected', 'Live WhatsApp synchronization active', 'bolt', 'emerald');
+      
+      // 1. Fetch latest rules
       fetch('http://localhost:3000/api/autoreply/rules')
         .then(r => r.json())
         .then(data => {
@@ -655,6 +657,19 @@ function initSocketIO() {
             if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
             if (typeof renderInboxPresetTemplatesBar === 'function') renderInboxPresetTemplatesBar();
             if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
+          }
+        }).catch(() => {});
+
+      // 2. Fetch live Auto-Reply master status from Bridge
+      fetch('http://localhost:3000/api/autoreply/status')
+        .then(r => r.json())
+        .then(data => {
+          if (data && typeof data.enabled === 'boolean') {
+            if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
+            CRM_STATE.autoReplySettings.enabled = data.enabled;
+            saveCRMState();
+            updateAutoReplyUI();
+            console.log('⚡ [Auto-Reply Sync] Live Status from Bridge on connect:', data.enabled ? 'ON' : 'OFF');
           }
         }).catch(() => {});
     });
@@ -674,6 +689,26 @@ function initSocketIO() {
         if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
         if (typeof renderInboxPresetTemplatesBar === 'function') renderInboxPresetTemplatesBar();
         if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
+      }
+    });
+
+    // Real-time Auto-Reply Master Toggle Sync from Bridge
+    SOCKET_IO.on('autoreply:updated', (data) => {
+      if (data && typeof data.enabled === 'boolean') {
+        console.log('⚡ [Socket.IO Auto-Reply Updated]:', data.enabled ? 'ON' : 'OFF');
+        if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
+        CRM_STATE.autoReplySettings.enabled = data.enabled;
+        saveCRMState();
+        updateAutoReplyUI();
+      }
+    });
+
+    SOCKET_IO.on('autoreply:status', (data) => {
+      if (data && typeof data.enabled === 'boolean') {
+        if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
+        CRM_STATE.autoReplySettings.enabled = data.enabled;
+        saveCRMState();
+        updateAutoReplyUI();
       }
     });
 
@@ -2160,8 +2195,13 @@ function selectCustomerChat(customerId) {
 
 // Slide / Hide Toggle State for Right Customer 360 Panel
 let IS_RIGHT_PANEL_OPEN = true;
+let USER_MANUAL_PANEL_TOGGLE = false;
 
-function toggleRightPanel(forceState = null) {
+function toggleRightPanel(forceState = null, isUserAction = false) {
+  if (isUserAction) {
+    USER_MANUAL_PANEL_TOGGLE = true;
+  }
+
   if (forceState !== null) {
     IS_RIGHT_PANEL_OPEN = forceState;
   } else {
@@ -2184,10 +2224,10 @@ function toggleRightPanel(forceState = null) {
 
   if (toggleBtn) {
     if (IS_RIGHT_PANEL_OPEN) {
-      toggleBtn.className = "px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-emerald-100";
+      toggleBtn.className = "px-2 sm:px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-emerald-100 shrink-0";
       toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_right</span><span class="hidden sm:inline">Hide Profile</span>`;
     } else {
-      toggleBtn.className = "px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-slate-200";
+      toggleBtn.className = "px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-slate-200 shrink-0";
       toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_left</span><span class="hidden sm:inline">Customer Profile</span>`;
     }
   }
@@ -2199,6 +2239,26 @@ function toggleRightPanel(forceState = null) {
       floatingToggle.classList.remove('hidden');
     }
   }
+}
+
+// Auto-adjust layout dynamically based on Viewport Width (vpw)
+function handleResponsiveLayout() {
+  const vpw = window.innerWidth;
+  if (!USER_MANUAL_PANEL_TOGGLE) {
+    if (vpw < 1180 && IS_RIGHT_PANEL_OPEN) {
+      toggleRightPanel(false, false);
+    } else if (vpw >= 1180 && !IS_RIGHT_PANEL_OPEN) {
+      toggleRightPanel(true, false);
+    }
+  }
+}
+
+window.addEventListener('resize', handleResponsiveLayout);
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(handleResponsiveLayout, 100);
+});
+if (typeof document !== 'undefined' && (document.readyState === 'complete' || document.readyState === 'interactive')) {
+  setTimeout(handleResponsiveLayout, 50);
 }
 
 function renderChatHeader() {
@@ -2239,40 +2299,39 @@ function renderChatHeader() {
   }
 
   bar.innerHTML = `
-    <div class="flex items-center gap-2.5 min-w-0">
+    <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
       <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
         ${customer.avatar}
       </div>
-      <div class="min-w-0">
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate max-w-[140px] sm:max-w-[200px]" title="${customer.name}">${customer.name}</h3>
-          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0">${customer.customerType}</span>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-1.5 min-w-0">
+          <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate" title="${customer.name}">${customer.name}</h3>
+          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0 hidden sm:inline-block">${customer.customerType}</span>
         </div>
         <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium truncate mt-0.5">
-          <span class="font-mono text-emerald-700 font-bold">${displayPhone}</span>
+          <span class="font-mono text-emerald-700 font-bold truncate">${displayPhone}</span>
           <span class="text-slate-300">&bull;</span>
-          <span class="font-mono text-slate-600 bg-slate-100 px-1 py-0.2 rounded text-[10px]">${query ? query.id : 'No Query'}</span>
+          <span class="font-mono text-slate-600 bg-slate-100 px-1 py-0.2 rounded text-[10px] shrink-0">${query ? query.id : 'No Query'}</span>
         </div>
       </div>
     </div>
 
     <!-- Active Connected Business Line Tag & Actions & Slide-Hide Toggle Button in Header -->
-    <div class="flex items-center gap-2 shrink-0">
-      <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 ${lineBadgeBg} border rounded-lg text-xs font-semibold" title="WhatsApp Business Number receiving and sending for this conversation">
+    <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      <div class="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 ${lineBadgeBg} border rounded-lg text-xs font-semibold shrink-0" title="WhatsApp Business Number receiving and sending for this conversation">
         <span class="w-2 h-2 rounded-full ${lineDotBg} animate-pulse"></span>
         <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${linePillBg}">📱 ${lineLabel}</span>
         <span class="font-mono font-bold text-[11px]">${currentLinePhone}</span>
       </div>
 
       ${isUnassigned ? `
-        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 animate-pulse">
+        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2 sm:px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 animate-pulse shrink-0" title="Assign Staff Member">
           <span class="material-symbols-outlined text-[15px]">person_add</span>
-          <span class="hidden sm:inline">Assign Staff</span>
-          <span class="sm:hidden">Assign</span>
+          <span class="hidden lg:inline">Assign</span>
         </button>
       ` : `
-        <div class="flex items-center gap-1 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
-          <span class="text-slate-500 hidden sm:inline">Handled by:</span>
+        <div class="hidden xl:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0">
+          <span class="text-slate-500 hidden 2xl:inline">Handled by:</span>
           <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : 'Assigned'}</span>
           ${ACTIVE_ROLE === 'admin' ? `
             <button onclick="openStaffAssignModal('${query ? query.id : ''}')" class="text-brand-wa hover:underline font-bold text-[11px] ml-1">Reassign</button>
@@ -2281,19 +2340,19 @@ function renderChatHeader() {
       `}
       
       <!-- BRAND-MASKED WHATSAPP CALL BUTTON -->
-      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98]" title="Call customer via Brand Masked Line (Customer receives call as: ${getBrandName()})">
-        <span class="material-symbols-outlined text-[15px] animate-pulse">call</span>
-        <span class="hidden sm:inline">Brand Call</span>
+      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] shrink-0" title="Call customer via Brand Masked Line (Customer receives call as: ${getBrandName()})">
+        <span class="material-symbols-outlined text-[15px]">call</span>
+        <span class="hidden 2xl:inline">Brand Call</span>
       </button>
 
-      <a href="https://wa.me/${(customer.phone || '').replace(/[^0-9]/g, '')}" target="_blank" class="p-1.5 text-slate-600 hover:text-brand-wa hover:bg-emerald-50 rounded-lg transition" title="Open Native WhatsApp Web">
+      <a href="https://wa.me/${(customer.phone || '').replace(/[^0-9]/g, '')}" target="_blank" class="p-1.5 text-slate-600 hover:text-brand-wa hover:bg-emerald-50 rounded-lg transition shrink-0" title="Open Native WhatsApp Web">
         <span class="material-symbols-outlined text-[18px]">open_in_new</span>
       </a>
 
       <!-- Slide Hide / Show Toggle Button for Customer Profile Panel -->
-      <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel()" class="px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition" title="Slide Hide / Show Customer Profile Panel">
+      <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel(null, true)" class="px-2 sm:px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition shrink-0" title="Slide Hide / Show Customer Profile Panel">
         <span class="material-symbols-outlined text-[16px]">${IS_RIGHT_PANEL_OPEN ? 'dock_to_right' : 'dock_to_left'}</span>
-        <span class="hidden sm:inline">${IS_RIGHT_PANEL_OPEN ? 'Hide Profile' : 'Customer Profile'}</span>
+        <span class="hidden xl:inline">${IS_RIGHT_PANEL_OPEN ? 'Hide Profile' : 'Profile'}</span>
       </button>
     </div>
   `;
@@ -2317,7 +2376,7 @@ function renderChatMessages() {
     return;
   }
 
-  stream.innerHTML = `
+  const messagesContent = `
     <!-- Encryption & Source of truth Notice -->
     <div class="flex justify-center my-2">
       <div class="bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-medium px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
@@ -2479,6 +2538,8 @@ function renderChatMessages() {
       </div>
     `;
   }).join('');
+
+  stream.innerHTML = `<div class="max-w-3xl xl:max-w-4xl mx-auto w-full space-y-3 min-w-0">${messagesContent}</div>`;
 
   // Auto-scroll to bottom
   stream.scrollTop = stream.scrollHeight;
@@ -3463,7 +3524,7 @@ function renderCustomer360Panel() {
         <span class="material-symbols-outlined text-[16px] text-emerald-700">account_box</span>
         <span>Customer 360 Details</span>
       </span>
-      <button type="button" onclick="toggleRightPanel(false)" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-[10px] font-bold shadow-sm" title="Slide Hide Customer Profile Panel">
+      <button type="button" onclick="toggleRightPanel(false, true)" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-[10px] font-bold shadow-sm" title="Slide Hide Customer Profile Panel">
         <span>Hide</span>
         <span class="material-symbols-outlined text-[16px]">chevron_right</span>
       </button>
@@ -4362,10 +4423,7 @@ function getDefaultAutoReplyRules() {
 function openAutoReplyModal(activeTab = 'rules') {
   if (!CRM_STATE.autoReplySettings) {
     CRM_STATE.autoReplySettings = {
-      enabled: true,
-      cooldownMinutes: 0,
-      keywordMatching: true,
-      messageTemplate: getDefaultStockAutoReplyTemplate()
+      enabled: true
     };
   }
   if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
@@ -4374,42 +4432,18 @@ function openAutoReplyModal(activeTab = 'rules') {
 
   const settings = CRM_STATE.autoReplySettings;
   const masterToggle = document.getElementById('autoreply-master-toggle');
-  const cooldownSelect = document.getElementById('autoreply-cooldown-select');
-  const keywordToggle = document.getElementById('autoreply-keyword-toggle');
-  const tplArea = document.getElementById('autoreply-message-template');
-
   if (masterToggle) masterToggle.checked = settings.enabled !== false;
-  if (cooldownSelect) cooldownSelect.value = String(settings.cooldownMinutes ?? '0');
-  if (keywordToggle) keywordToggle.checked = settings.keywordMatching !== false;
-  if (tplArea) tplArea.value = settings.messageTemplate || getDefaultStockAutoReplyTemplate();
 
-  updateAutoReplyLivePreview();
   renderAutoReplyRulesList();
   updateRulesCountBadge();
-  switchAutoReplyTab(activeTab);
   openModal('modal-auto-reply-settings');
 }
 
 function switchAutoReplyTab(tabName) {
-  const tabs = ['rules', 'general', 'tester'];
-  tabs.forEach(t => {
-    const btn = document.getElementById(`tab-btn-ar-${t}`);
-    const panel = document.getElementById(`tab-panel-ar-${t}`);
-    if (btn) {
-      if (t === tabName) {
-        btn.className = "px-3.5 py-1.5 rounded-lg bg-white text-emerald-800 shadow-xs border border-slate-200 flex items-center gap-1.5 transition";
-      } else {
-        btn.className = "px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 flex items-center gap-1.5 transition";
-      }
-    }
-    if (panel) {
-      if (t === tabName) panel.classList.remove('hidden');
-      else panel.classList.add('hidden');
-    }
-  });
-
-  if (tabName === 'rules') renderAutoReplyRulesList();
-  if (tabName === 'tester') testMatchAutoReplyQuestion();
+  // Kept for backward compatibility with unified rules view
+  if (typeof renderAutoReplyRulesList === 'function') {
+    renderAutoReplyRulesList();
+  }
 }
 
 function updateRulesCountBadge() {
@@ -4526,11 +4560,7 @@ function renderAutoReplyRulesList() {
               <span class="material-symbols-outlined text-[14px] text-slate-600">edit</span>
               <span>Edit Question &amp; Answer</span>
             </button>
-            <button type="button" onclick="testRuleInTester('${rule.id}')" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-lg flex items-center gap-1 transition">
-              <span class="material-symbols-outlined text-[14px]">science</span>
-              <span>Test Match</span>
-            </button>
-            <button type="button" onclick="applyRuleToActiveChat('${rule.id}')" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg flex items-center gap-1 transition" title="Insert or Send to active customer chat">
+            <button type="button" onclick="applyRuleToActiveChat('${rule.id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg flex items-center gap-1 transition border border-emerald-200" title="Insert or Send to active customer chat">
               <span class="material-symbols-outlined text-[14px]">send</span>
               <span>Send to Chat</span>
             </button>
@@ -5142,27 +5172,44 @@ function regenerateLiveStockMenuTemplate() {
 }
 
 function toggleAutoReplyMaster(enabled) {
+  const boolState = Boolean(enabled);
   if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
-  CRM_STATE.autoReplySettings.enabled = enabled;
+  CRM_STATE.autoReplySettings.enabled = boolState;
   saveCRMState();
   updateAutoReplyUI();
 
-  // Sync state with PHP API & Node Baileys bridge in real-time
+  // 1. Direct Socket.IO emit to live Node Baileys bridge
+  if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+    SOCKET_IO.emit('autoreply:toggle', { enabled: boolState }, (ack) => {
+      console.log('⚡ [AutoReply Toggle Ack via Socket]:', ack);
+    });
+  }
+
+  // 2. Direct HTTP POST to Node Baileys bridge REST endpoint (Port 3000)
+  fetch('http://localhost:3000/api/autoreply/toggle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: boolState })
+  }).then(r => r.json()).then(res => {
+    console.log('⚡ [AutoReply Toggle Bridge HTTP]:', res);
+  }).catch(err => {
+    console.warn('Bridge HTTP toggle endpoint unreachable:', err);
+  });
+
+  // 3. Fallback sync with PHP API
   fetch('api.php?action=toggle_autoreply', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      enabled: enabled,
-      cooldownMinutes: CRM_STATE.autoReplySettings.cooldownMinutes ?? 0,
-      keywordMatching: CRM_STATE.autoReplySettings.keywordMatching ?? true
+      enabled: boolState
     })
   }).catch(() => {});
 
   showToast(
-    enabled ? 'Auto-Reply Active' : 'Auto-Reply Paused',
-    enabled ? 'Customers will receive instant answers for pre-set questions & categories.' : 'Automated replies are paused across all WhatsApp lines.',
-    enabled ? 'smart_toy' : 'pause_circle',
-    enabled ? 'emerald' : 'amber'
+    boolState ? 'Auto-Reply Active' : 'Auto-Reply Paused',
+    boolState ? 'Customers will receive instant answers for pre-set questions & categories.' : 'Automated replies are PAUSED. Customer messages require manual reply.',
+    boolState ? 'smart_toy' : 'pause_circle',
+    boolState ? 'emerald' : 'amber'
   );
   if (typeof playChime === 'function') playChime('inbound');
 }
@@ -5180,43 +5227,43 @@ function toggleAutoReplyFromInbox(event) {
 
 function saveAutoReplySettings() {
   const masterToggle = document.getElementById('autoreply-master-toggle');
-  const cooldownSelect = document.getElementById('autoreply-cooldown-select');
-  const keywordToggle = document.getElementById('autoreply-keyword-toggle');
-  const tplArea = document.getElementById('autoreply-message-template');
 
   if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
-  const isEnabled = masterToggle ? masterToggle.checked : true;
+  const isEnabled = masterToggle ? Boolean(masterToggle.checked) : true;
   CRM_STATE.autoReplySettings.enabled = isEnabled;
-  CRM_STATE.autoReplySettings.cooldownMinutes = cooldownSelect ? parseInt(cooldownSelect.value) : 0;
-  CRM_STATE.autoReplySettings.keywordMatching = keywordToggle ? keywordToggle.checked : true;
-  CRM_STATE.autoReplySettings.messageTemplate = tplArea ? tplArea.value.trim() : getDefaultStockAutoReplyTemplate();
 
   saveCRMState();
   updateAutoReplyUI();
   renderAutoReplyRulesList();
   renderInboxPresetTemplatesBar();
 
-  // Sync to API & Bridge
+  // 1. Direct Socket.IO emit
+  if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+    SOCKET_IO.emit('autoreply:toggle', { enabled: isEnabled });
+  }
+
+  // 2. Direct HTTP POST to Node Baileys bridge
+  fetch('http://localhost:3000/api/autoreply/toggle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: isEnabled })
+  }).catch(() => {});
+
+  // 3. Sync to PHP API
   fetch('api.php?action=toggle_autoreply', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      enabled: isEnabled,
-      cooldownMinutes: CRM_STATE.autoReplySettings.cooldownMinutes,
-      keywordMatching: CRM_STATE.autoReplySettings.keywordMatching
+      enabled: isEnabled
     })
   }).catch(() => {});
 
   if (Array.isArray(CRM_STATE.autoReplyRules)) {
-    fetch('api.php?action=save_autoreply_rules', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rules: CRM_STATE.autoReplyRules })
-    }).catch(() => {});
+    syncAutoReplyRulesToBackend();
   }
 
   closeModal('modal-auto-reply-settings');
-  showToast('Settings Saved', 'All WhatsApp pre-set templates & auto-reply rules saved successfully.', 'check_circle', 'emerald');
+  showToast('Settings Saved', isEnabled ? 'WhatsApp auto-reply rules & templates saved (Active).' : 'Auto-reply rules saved (Currently Paused).', 'check_circle', 'emerald');
   if (typeof playChime === 'function') playChime('order');
 }
 
@@ -5224,34 +5271,69 @@ function updateAutoReplyUI() {
   const isEnabled = CRM_STATE?.autoReplySettings?.enabled !== false;
   const pillDot = document.getElementById('pill-autoreply-dot');
   const pillLabel = document.getElementById('pill-autoreply-label');
+  const pillIcon = document.getElementById('pill-autoreply-icon');
   const headerBtn = document.getElementById('header-auto-reply-btn');
   const inboxContainer = document.getElementById('inbox-autoreply-container');
+  const inboxToggleBtn = document.getElementById('btn-inbox-autoreply-toggle');
+  const inboxSettingsBtn = document.getElementById('btn-inbox-autoreply-settings');
   const masterToggle = document.getElementById('autoreply-master-toggle');
+  const pausedBanner = document.getElementById('inbox-autoreply-paused-banner');
 
   if (masterToggle) {
     masterToggle.checked = isEnabled;
   }
 
-  if (pillDot) {
-    pillDot.className = `w-2 h-2 rounded-full ${isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`;
-  }
-  if (pillLabel) {
-    pillLabel.innerText = isEnabled ? 'Auto-Reply: ON' : 'Auto-Reply: OFF';
-  }
-
-  if (inboxContainer) {
+  // 1. Paused Notice Banner in Chat Viewport
+  if (pausedBanner) {
     if (isEnabled) {
-      inboxContainer.className = "flex items-center rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 overflow-hidden shrink-0 transition shadow-xs";
+      pausedBanner.classList.add('hidden');
     } else {
-      inboxContainer.className = "flex items-center rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 overflow-hidden shrink-0 transition shadow-xs";
+      pausedBanner.classList.remove('hidden');
     }
   }
 
+  // 2. Quick Actions Pill in WhatsApp Inbox
+  if (pillDot) {
+    pillDot.className = `w-2 h-2 rounded-full ${isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`;
+  }
+  if (pillIcon) {
+    pillIcon.textContent = isEnabled ? 'smart_toy' : 'pause_circle';
+    pillIcon.className = `material-symbols-outlined text-[14px] ${isEnabled ? 'text-emerald-600' : 'text-amber-700 animate-pulse'}`;
+  }
+  if (pillLabel) {
+    pillLabel.innerText = isEnabled ? 'Auto-Reply: ON' : 'Auto-Reply: OFF (Paused)';
+    pillLabel.className = isEnabled ? 'text-teal-900 font-bold' : 'text-amber-950 font-extrabold';
+  }
+  if (inboxContainer) {
+    if (isEnabled) {
+      inboxContainer.className = "inline-flex items-center rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 shadow-xs shrink-0 overflow-hidden transition-all duration-200";
+    } else {
+      inboxContainer.className = "inline-flex items-center rounded-lg border border-amber-400 bg-amber-50 hover:bg-amber-100 shadow-xs shrink-0 overflow-hidden ring-2 ring-amber-300/70 transition-all duration-200";
+    }
+  }
+  if (inboxToggleBtn) {
+    if (isEnabled) {
+      inboxToggleBtn.className = "px-2.5 py-1 hover:bg-teal-100 text-teal-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer";
+    } else {
+      inboxToggleBtn.className = "px-2.5 py-1 hover:bg-amber-100 text-amber-900 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer";
+    }
+  }
+  if (inboxSettingsBtn) {
+    if (isEnabled) {
+      inboxSettingsBtn.className = "px-1.5 py-1 hover:bg-teal-200/60 text-teal-700 border-l border-teal-300 text-xs transition cursor-pointer";
+    } else {
+      inboxSettingsBtn.className = "px-1.5 py-1 hover:bg-amber-200/60 text-amber-800 border-l border-amber-300 text-xs transition cursor-pointer";
+    }
+  }
+
+  // 3. Top Navigation Header Button
   if (headerBtn) {
     if (isEnabled) {
       headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
+      headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span><span>Auto-Reply: ON</span>';
     } else {
-      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-lg transition shadow-sm";
+      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-lg transition shadow-sm border border-amber-500 ring-2 ring-amber-400/50";
+      headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-amber-200 animate-pulse">pause_circle</span><span>Auto-Reply: PAUSED</span>';
     }
   }
 }
