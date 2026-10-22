@@ -1,0 +1,1128 @@
+- generic [active] [ref=f15e1]:
+  - generic [ref=f15e8]:
+    - generic [aria-hidden] [ref=f15e9]: 🚚
+    - generic [ref=f15e10]: Welcome to GRM B2B We Working 5 Years Here And Trustable Parter
+  - generic [ref=f15e13]:
+    - link [ref=f15e16] [cursor=pointer]:
+      - /url: /
+      - img "Navbar Logo" [ref=f15e17]
+    - generic [ref=f15e18]:
+      - link "HOME" [ref=f15e20] [cursor=pointer]:
+        - /url: /
+      - link "ABOUT US" [ref=f15e23] [cursor=pointer]:
+        - /url: /about
+      - link "CATEGORIES" [ref=f15e26] [cursor=pointer]:
+        - /url: /catalog
+      - link "OUR SERVICE" [ref=f15e31] [cursor=pointer]:
+        - /url: /project
+      - link "CUSTOMIZE" [ref=f15e36] [cursor=pointer]:
+        - /url: /customize
+      - link "SIZE CHART" [ref=f15e39] [cursor=pointer]:
+        - /url: /size-chart
+    - generic [ref=f15e42]:
+      - link "Search" [ref=f15e43] [cursor=pointer]:
+        - /url: javascript:void(0)
+      - generic [ref=f15e46]:
+        - link "Wishlist" [ref=f15e47] [cursor=pointer]:
+          - /url: javascript:void(0)
+        - link "Cart" [ref=f15e50] [cursor=pointer]:
+          - /url: javascript:void(0)
+      - link "P" [ref=f15e54] [cursor=pointer]:
+        - /url: http://localhost:8000/dashboard
+  - main [ref=f15e56]:
+    - generic [ref=f15e57]:
+      - generic [ref=f15e62]:
+        - link "Shop Now" [ref=f15e66] [cursor=pointer]:
+          - /url: http://localhost:8000/
+        - button "Previous Slide" [ref=f15e68] [cursor=pointer]
+        - button "Next Slide" [ref=f15e71] [cursor=pointer]
+        - button "Slide 1" [ref=f15e75] [cursor=pointer]
+      - generic [ref=f15e80]:
+        - generic [ref=f15e81]:
+          - heading "PRODUCT CAROUSEL" [level=2] [ref=f15e82]
+          - link "VIEW ALL" [ref=f15e84] [cursor=pointer]:
+            - /url: /catalog
+        - generic [ref=f15e85]:
+          - generic [ref=f15e87]:
+            - generic [ref=f15e89]:
+              - button [ref=f15e90] [cursor=pointer]
+              - link [ref=f15e93] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30041
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 100%
+                      - generic: "OFF"
+                - img "Feeding T-Shirt - Style 5" [ref=f15e94]
+              - generic [ref=f15e95]:
+                - link [ref=f15e96] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30041
+                  - heading "Feeding T-Shirt - Style 5" [level=3] [ref=f15e97]
+                - generic [ref=f15e98]:
+                  - generic [ref=f15e99]:
+                    - generic [ref=f15e100]: ₹1
+                    - generic [ref=f15e101]: ₹399
+                  - paragraph [ref=f15e102]:
+                    - generic [ref=f15e105]: "Min. Order: 1 Pcs"
+                  - button "Add to Cart" [ref=f15e107] [cursor=pointer]
+            - generic [ref=f15e112]:
+              - button [ref=f15e113] [cursor=pointer]
+              - link [ref=f15e116] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30039
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 50%
+                      - generic: "OFF"
+                - img "Feeding T-Shirt - Style 4" [ref=f15e117]
+              - generic [ref=f15e118]:
+                - link [ref=f15e119] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30039
+                  - heading "Feeding T-Shirt - Style 4" [level=3] [ref=f15e120]
+                - generic [ref=f15e121]:
+                  - generic [ref=f15e122]:
+                    - generic [ref=f15e123]: ₹200
+                    - generic [ref=f15e124]: ₹399
+                  - paragraph [ref=f15e125]:
+                    - generic [ref=f15e128]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e130] [cursor=pointer]
+            - generic [ref=f15e135]:
+              - button [ref=f15e136] [cursor=pointer]
+              - link [ref=f15e139] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30037
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 50%
+                      - generic: "OFF"
+                - img "Feeding T-Shirt - Style 3" [ref=f15e140]
+              - generic [ref=f15e141]:
+                - link [ref=f15e142] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30037
+                  - heading "Feeding T-Shirt - Style 3" [level=3] [ref=f15e143]
+                - generic [ref=f15e144]:
+                  - generic [ref=f15e145]:
+                    - generic [ref=f15e146]: ₹200
+                    - generic [ref=f15e147]: ₹399
+                  - paragraph [ref=f15e148]:
+                    - generic [ref=f15e151]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e153] [cursor=pointer]
+            - generic [ref=f15e158]:
+              - button [ref=f15e159] [cursor=pointer]
+              - link [ref=f15e162] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30035
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 50%
+                      - generic: "OFF"
+                - img "Feeding T-Shirt - Style 2" [ref=f15e163]
+              - generic [ref=f15e164]:
+                - link [ref=f15e165] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30035
+                  - heading "Feeding T-Shirt - Style 2" [level=3] [ref=f15e166]
+                - generic [ref=f15e167]:
+                  - generic [ref=f15e168]:
+                    - generic [ref=f15e169]: ₹200
+                    - generic [ref=f15e170]: ₹399
+                  - paragraph [ref=f15e171]:
+                    - generic [ref=f15e174]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e176] [cursor=pointer]
+            - generic [ref=f15e181]:
+              - button [ref=f15e182] [cursor=pointer]
+              - link [ref=f15e185] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30033
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 50%
+                      - generic: "OFF"
+                - img "Feeding T-Shirt - Style 1" [ref=f15e186]
+              - generic [ref=f15e187]:
+                - link [ref=f15e188] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30033
+                  - heading "Feeding T-Shirt - Style 1" [level=3] [ref=f15e189]
+                - generic [ref=f15e190]:
+                  - generic [ref=f15e191]:
+                    - generic [ref=f15e192]: ₹200
+                    - generic [ref=f15e193]: ₹399
+                  - paragraph [ref=f15e194]:
+                    - generic [ref=f15e197]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e199] [cursor=pointer]
+            - generic [ref=f15e204]:
+              - button [ref=f15e205] [cursor=pointer]
+              - link [ref=f15e208] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30031
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 33%
+                      - generic: "OFF"
+                - img "Feeding Shawl Maxi - Style 5" [ref=f15e209]
+              - generic [ref=f15e210]:
+                - link [ref=f15e211] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30031
+                  - heading "Feeding Shawl Maxi - Style 5" [level=3] [ref=f15e212]
+                - generic [ref=f15e213]:
+                  - generic [ref=f15e214]:
+                    - generic [ref=f15e215]: ₹399
+                    - generic [ref=f15e216]: ₹599
+                  - paragraph [ref=f15e217]:
+                    - generic [ref=f15e220]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e222] [cursor=pointer]
+            - generic [ref=f15e227]:
+              - button [ref=f15e228] [cursor=pointer]
+              - link [ref=f15e231] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30029
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 33%
+                      - generic: "OFF"
+                - img "Feeding Shawl Maxi - Style 4" [ref=f15e232]
+              - generic [ref=f15e233]:
+                - link [ref=f15e234] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30029
+                  - heading "Feeding Shawl Maxi - Style 4" [level=3] [ref=f15e235]
+                - generic [ref=f15e236]:
+                  - generic [ref=f15e237]:
+                    - generic [ref=f15e238]: ₹399
+                    - generic [ref=f15e239]: ₹599
+                  - paragraph [ref=f15e240]:
+                    - generic [ref=f15e243]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e245] [cursor=pointer]
+            - generic [ref=f15e250]:
+              - button [ref=f15e251] [cursor=pointer]
+              - link [ref=f15e254] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30028
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 33%
+                      - generic: "OFF"
+                - img "Feeding Shawl Maxi - Style 3" [ref=f15e255]
+              - generic [ref=f15e256]:
+                - link [ref=f15e257] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30028
+                  - heading "Feeding Shawl Maxi - Style 3" [level=3] [ref=f15e258]
+                - generic [ref=f15e259]:
+                  - generic [ref=f15e260]:
+                    - generic [ref=f15e261]: ₹399
+                    - generic [ref=f15e262]: ₹599
+                  - paragraph [ref=f15e263]:
+                    - generic [ref=f15e266]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e268] [cursor=pointer]
+            - generic [ref=f15e273]:
+              - button [ref=f15e274] [cursor=pointer]
+              - link [ref=f15e277] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30027
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 33%
+                      - generic: "OFF"
+                - img "Feeding Shawl Maxi - Style 2" [ref=f15e278]
+              - generic [ref=f15e279]:
+                - link [ref=f15e280] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30027
+                  - heading "Feeding Shawl Maxi - Style 2" [level=3] [ref=f15e281]
+                - generic [ref=f15e282]:
+                  - generic [ref=f15e283]:
+                    - generic [ref=f15e284]: ₹399
+                    - generic [ref=f15e285]: ₹599
+                  - paragraph [ref=f15e286]:
+                    - generic [ref=f15e289]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e291] [cursor=pointer]
+            - generic [ref=f15e296]:
+              - button [ref=f15e297] [cursor=pointer]
+              - link [ref=f15e300] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30026
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 20%
+                      - generic: "OFF"
+                - img "Feeding Brazier - Style 5" [ref=f15e301]
+              - generic [ref=f15e302]:
+                - link [ref=f15e303] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30026
+                  - heading "Feeding Brazier - Style 5" [level=3] [ref=f15e304]
+                - generic [ref=f15e305]:
+                  - generic [ref=f15e306]:
+                    - generic [ref=f15e307]: ₹1,199
+                    - generic [ref=f15e308]: ₹1,500
+                  - paragraph [ref=f15e309]:
+                    - generic [ref=f15e312]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e314] [cursor=pointer]
+            - generic [ref=f15e319]:
+              - button [ref=f15e320] [cursor=pointer]
+              - link [ref=f15e323] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30025
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 20%
+                      - generic: "OFF"
+                - img "Feeding Brazier - Style 4" [ref=f15e324]
+              - generic [ref=f15e325]:
+                - link [ref=f15e326] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30025
+                  - heading "Feeding Brazier - Style 4" [level=3] [ref=f15e327]
+                - generic [ref=f15e328]:
+                  - generic [ref=f15e329]:
+                    - generic [ref=f15e330]: ₹1,199
+                    - generic [ref=f15e331]: ₹1,500
+                  - paragraph [ref=f15e332]:
+                    - generic [ref=f15e335]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e337] [cursor=pointer]
+            - generic [ref=f15e342]:
+              - button [ref=f15e343] [cursor=pointer]
+              - link [ref=f15e346] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30024
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 50%
+                      - generic: "OFF"
+                - img "Feeding Brazier - Style 3" [ref=f15e347]
+              - generic [ref=f15e348]:
+                - link [ref=f15e349] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30024
+                  - heading "Feeding Brazier - Style 3" [level=3] [ref=f15e350]
+                - generic [ref=f15e351]:
+                  - generic [ref=f15e352]:
+                    - generic [ref=f15e353]: ₹1
+                    - generic [ref=f15e354]: ₹2
+                  - paragraph [ref=f15e355]:
+                    - generic [ref=f15e358]: "Min. Order: 1 Pcs"
+                  - button "Add to Cart" [ref=f15e360] [cursor=pointer]
+            - generic [ref=f15e365]:
+              - button [ref=f15e366] [cursor=pointer]
+              - link [ref=f15e369] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30023
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 20%
+                      - generic: "OFF"
+                - img "Feeding Brazier - Style 2" [ref=f15e370]
+              - generic [ref=f15e371]:
+                - link [ref=f15e372] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30023
+                  - heading "Feeding Brazier - Style 2" [level=3] [ref=f15e373]
+                - generic [ref=f15e374]:
+                  - generic [ref=f15e375]:
+                    - generic [ref=f15e376]: ₹1,199
+                    - generic [ref=f15e377]: ₹1,500
+                  - paragraph [ref=f15e378]:
+                    - generic [ref=f15e381]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e383] [cursor=pointer]
+            - generic [ref=f15e388]:
+              - button [ref=f15e389] [cursor=pointer]
+              - link [ref=f15e392] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30022
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 63%
+                      - generic: "OFF"
+                - img "Feeding Brazier - Style 1" [ref=f15e393]
+              - generic [ref=f15e394]:
+                - link [ref=f15e395] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30022
+                  - heading "Feeding Brazier - Style 1" [level=3] [ref=f15e396]
+                - generic [ref=f15e397]:
+                  - generic [ref=f15e398]:
+                    - generic [ref=f15e399]: ₹750
+                    - generic [ref=f15e400]: ₹2,000
+                  - paragraph [ref=f15e401]:
+                    - generic [ref=f15e404]: "Min. Order: 10 Pcs"
+                  - button "Add to Cart" [ref=f15e406] [cursor=pointer]
+            - generic [ref=f15e411]:
+              - button [ref=f15e412] [cursor=pointer]
+              - link [ref=f15e415] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30021
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: 33%
+                      - generic: "OFF"
+                - img "Feeding Shawl Maxi - Style 1" [ref=f15e416]
+              - generic [ref=f15e417]:
+                - link [ref=f15e418] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30021
+                  - heading "Feeding Shawl Maxi - Style 1" [level=3] [ref=f15e419]
+                - generic [ref=f15e420]:
+                  - generic [ref=f15e421]:
+                    - generic [ref=f15e422]: ₹399
+                    - generic [ref=f15e423]: ₹599
+                  - paragraph [ref=f15e424]:
+                    - generic [ref=f15e427]: "Min. Order: 4 Pcs"
+                  - button "Add to Cart" [ref=f15e429] [cursor=pointer]
+          - button [disabled] [ref=f15e433]
+          - button [ref=f15e436] [cursor=pointer]
+      - generic [ref=f15e443]:
+        - generic [ref=f15e444]:
+          - button "Previous Slide" [ref=f15e447] [cursor=pointer]
+          - button "Next Slide" [ref=f15e450] [cursor=pointer]
+          - button "Slide 1" [ref=f15e454] [cursor=pointer]
+          - link "Shop Now" [ref=f15e455] [cursor=pointer]:
+            - /url: /
+        - generic [ref=f15e457]:
+          - generic [ref=f15e458]:
+            - generic [ref=f15e459]:
+              - generic [ref=f15e460]:
+                - group "1 / 3" [ref=f15e461]:
+                  - link [ref=f15e462] [cursor=pointer]:
+                    - /url: http://localhost:8000/customize?category_id=5
+                    - img "Red Mickey cotton" [ref=f15e463]
+                - group "2 / 3" [ref=f15e465]:
+                  - link [ref=f15e466] [cursor=pointer]:
+                    - /url: http://localhost:8000/customize?category_id=7
+                    - img "Red with Strawberry" [ref=f15e467]
+                - group "3 / 3" [ref=f15e469]:
+                  - link [ref=f15e470] [cursor=pointer]:
+                    - /url: http://localhost:8000/customize?category_id=8
+                    - img "blue with bird design" [ref=f15e471]
+              - button "Previous slide" [ref=f15e473] [cursor=pointer]
+              - button "Next slide" [ref=f15e476] [cursor=pointer]
+              - generic [ref=f15e479]:
+                - button "Slide 1" [ref=f15e480] [cursor=pointer]
+                - button "Slide 2" [ref=f15e481] [cursor=pointer]
+                - button "Slide 3" [ref=f15e482] [cursor=pointer]
+            - link "Shop Now" [ref=f15e483] [cursor=pointer]:
+              - /url: /
+          - generic [ref=f15e485]:
+            - generic [ref=f15e486]:
+              - generic [ref=f15e487]:
+                - group "1 / 3" [ref=f15e488]:
+                  - link [ref=f15e489] [cursor=pointer]:
+                    - /url: http://localhost:8000/fabrics/customize?fabric_id=60002
+                    - img "Feeding Maxi" [ref=f15e490]
+                - group "2 / 3" [ref=f15e492]:
+                  - link [ref=f15e493] [cursor=pointer]:
+                    - /url: http://localhost:8000/fabrics/customize?fabric_id=60001
+                    - img "MATERNITY MAXI" [ref=f15e494]
+                - group "3 / 3" [ref=f15e496]:
+                  - link [ref=f15e497] [cursor=pointer]:
+                    - /url: http://localhost:8000/fabrics/customize?fabric_id=7
+                    - img "MATERNITY MAXI" [ref=f15e498]
+              - button "Previous slide" [ref=f15e500] [cursor=pointer]
+              - button "Next slide" [ref=f15e503] [cursor=pointer]
+              - generic [ref=f15e506]:
+                - button "Slide 1" [ref=f15e507] [cursor=pointer]
+                - button "Slide 2" [ref=f15e508] [cursor=pointer]
+                - button "Slide 3" [ref=f15e509] [cursor=pointer]
+            - link "Shop Now" [ref=f15e510] [cursor=pointer]:
+              - /url: /
+      - generic [ref=f15e516]:
+        - generic [ref=f15e517]:
+          - heading "Customize Products" [level=2] [ref=f15e518]
+          - link "View All" [ref=f15e520] [cursor=pointer]:
+            - /url: /customize
+        - generic [ref=f15e521]:
+          - generic [ref=f15e523]:
+            - generic [ref=f15e525]:
+              - link [ref=f15e526] [cursor=pointer]:
+                - /url: http://localhost:8000/fabrics/customize?fabric_id=60002
+                - img "Feeding Maxi" [ref=f15e527]
+                - generic:
+                  - generic: CUSTOM
+                  - generic: Custom Garment
+                - generic: 100 Qty
+              - generic [ref=f15e529]:
+                - generic [ref=f15e530]:
+                  - generic [ref=f15e531]: blue with bird design
+                  - heading [level=3] [ref=f15e532]:
+                    - link "Feeding Maxi" [ref=f15e533] [cursor=pointer]:
+                      - /url: http://localhost:8000/fabrics/customize?fabric_id=60002
+                  - paragraph [ref=f15e534]: 🤱 Feeding Maternity Maxi Dress - 🌸 Stylish all-over printed design - 👗 Elegant full-length maxi style - 🤱 Convenient breastfeeding access - 💕 Comfortable maternity-friendly fit - ✨ Perfect for everyday wear - 🛍️ A must-have for moms-to-be and new moms
+                  - generic [ref=f15e536]:
+                    - generic [ref=f15e537]: Custom Stitching
+                    - generic [ref=f15e541]:
+                      - generic [ref=f15e542]: Min Stitch
+                      - generic [ref=f15e543]: 35 Pcs
+                  - generic [ref=f15e545]:
+                    - generic [ref=f15e546]: 3XL
+                    - generic [ref=f15e547]: 4XL
+                    - generic [ref=f15e548]: L
+                    - generic [ref=f15e549]: M
+                    - generic [ref=f15e550]: XL
+                    - generic [ref=f15e551]: XXL
+                - link "Customize & Stitch" [ref=f15e553] [cursor=pointer]:
+                  - /url: http://localhost:8000/fabrics/customize?fabric_id=60002
+            - generic [ref=f15e558]:
+              - link [ref=f15e559] [cursor=pointer]:
+                - /url: http://localhost:8000/fabrics/customize?fabric_id=60001
+                - img "MATERNITY MAXI" [ref=f15e560]
+                - generic:
+                  - generic: CUSTOM
+                  - generic: Custom Garment
+                - generic: 100 Qty
+              - generic [ref=f15e562]:
+                - generic [ref=f15e563]:
+                  - generic [ref=f15e564]: Red with Strawberry
+                  - heading [level=3] [ref=f15e565]:
+                    - link "MATERNITY MAXI" [ref=f15e566] [cursor=pointer]:
+                      - /url: http://localhost:8000/fabrics/customize?fabric_id=60001
+                  - paragraph [ref=f15e567]: 🤱 Feeding Maternity Maxi Dress - 🌸 Stylish all-over printed design - 👗 Elegant full-length maxi style - 🤱 Convenient breastfeeding access - 💕 Comfortable maternity-friendly fit - ✨ Perfect for everyday wear - 🛍️ A must-have for moms-to-be and new moms
+                  - generic [ref=f15e569]:
+                    - generic [ref=f15e570]: Custom Stitching
+                    - generic [ref=f15e574]:
+                      - generic [ref=f15e575]: Min Stitch
+                      - generic [ref=f15e576]: 35 Pcs
+                  - generic [ref=f15e578]:
+                    - generic [ref=f15e579]: 3XL
+                    - generic [ref=f15e580]: 4XL
+                    - generic [ref=f15e581]: L
+                    - generic [ref=f15e582]: M
+                    - generic [ref=f15e583]: XL
+                    - generic [ref=f15e584]: XXL
+                - link "Customize & Stitch" [ref=f15e586] [cursor=pointer]:
+                  - /url: http://localhost:8000/fabrics/customize?fabric_id=60001
+            - generic [ref=f15e591]:
+              - link [ref=f15e592] [cursor=pointer]:
+                - /url: http://localhost:8000/fabrics/customize?fabric_id=7
+                - img "MATERNITY MAXI" [ref=f15e593]
+                - generic:
+                  - generic: CUSTOM
+                  - generic: Custom Garment
+                - generic: 26 Qty
+              - generic [ref=f15e595]:
+                - generic [ref=f15e596]:
+                  - generic [ref=f15e597]: Red Mickey cotton
+                  - heading [level=3] [ref=f15e598]:
+                    - link "MATERNITY MAXI" [ref=f15e599] [cursor=pointer]:
+                      - /url: http://localhost:8000/fabrics/customize?fabric_id=7
+                  - paragraph [ref=f15e600]: 🤱 Feeding Maternity Maxi Dress - 🌸 Stylish all-over printed design - 👗 Elegant full-length maxi style - 🤱 Convenient breastfeeding access - 💕 Comfortable maternity-friendly fit - ✨ Perfect for everyday wear - 🛍️ A must-have for moms-to-be and new moms
+                  - generic [ref=f15e602]:
+                    - generic [ref=f15e603]: Custom Stitching
+                    - generic [ref=f15e607]:
+                      - generic [ref=f15e608]: Min Stitch
+                      - generic [ref=f15e609]: 1 Pcs
+                  - generic [ref=f15e611]:
+                    - generic [ref=f15e612]: 3XL
+                    - generic [ref=f15e613]: 4XL
+                    - generic [ref=f15e614]: L
+                    - generic [ref=f15e615]: M
+                    - generic [ref=f15e616]: XL
+                    - generic [ref=f15e617]: XXL
+                - link "Customize & Stitch" [ref=f15e619] [cursor=pointer]:
+                  - /url: http://localhost:8000/fabrics/customize?fabric_id=7
+          - button [disabled] [ref=f15e623]
+          - button [disabled] [ref=f15e626]
+      - generic [ref=f15e631]:
+        - generic [ref=f15e632]:
+          - heading "Watch & Shop Latest Trending Looks" [level=2] [ref=f15e635]
+          - paragraph [ref=f15e636]: Explore our trending ethnic & festive collections in real-time action
+        - generic [ref=f15e637]:
+          - button "Previous Reels" [ref=f15e638] [cursor=pointer]
+          - generic [ref=f15e641]:
+            - generic [ref=f15e642] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f15e644]
+              - generic:
+                - heading "Production Unit" [level=3]
+            - generic [ref=f15e648] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f15e650]
+              - generic:
+                - heading "Maternity Feeding Maxi" [level=3]
+            - generic [ref=f15e654] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f15e656]
+              - generic:
+                - heading "Maternity Co-Ord Set" [level=3]
+            - generic [ref=f15e660] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f15e662]
+              - generic:
+                - heading "Feeding Maxi" [level=3]
+          - button "Next Reels" [ref=f15e666] [cursor=pointer]
+      - generic [ref=f15e672]:
+        - generic [ref=f15e673]:
+          - heading "CATEGORIES GRID" [level=2] [ref=f15e674]
+          - link "VIEW ALL" [ref=f15e675] [cursor=pointer]:
+            - /url: /catalog
+        - generic [ref=f15e676]:
+          - button [ref=f15e679] [cursor=pointer]:
+            - img "Maternity" [ref=f15e681]
+            - generic [ref=f15e682]:
+              - heading "Maternity" [level=4] [ref=f15e684]
+              - paragraph [ref=f15e685]: 15 products
+          - generic [ref=f15e688]:
+            - button "Previous" [ref=f15e689] [cursor=pointer]
+            - button "Next" [ref=f15e692] [cursor=pointer]
+            - generic [ref=f15e695]:
+              - generic [ref=f15e696]:
+                - button [ref=f15e697] [cursor=pointer]
+                - link [ref=f15e700] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30041
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 100%
+                        - generic: "OFF"
+                  - img "Feeding T-Shirt - Style 5" [ref=f15e701]
+                - generic [ref=f15e702]:
+                  - link [ref=f15e703] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30041
+                    - heading "Feeding T-Shirt - Style 5" [level=3] [ref=f15e704]
+                  - generic [ref=f15e705]:
+                    - generic [ref=f15e706]:
+                      - generic [ref=f15e707]: ₹1
+                      - generic [ref=f15e708]: ₹399
+                    - paragraph [ref=f15e709]: "Min. Order: 1 Pcs"
+                    - button "Add to Cart" [ref=f15e713] [cursor=pointer]
+              - generic [ref=f15e716]:
+                - button [ref=f15e717] [cursor=pointer]
+                - link [ref=f15e720] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30039
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 50%
+                        - generic: "OFF"
+                  - img "Feeding T-Shirt - Style 4" [ref=f15e721]
+                - generic [ref=f15e722]:
+                  - link [ref=f15e723] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30039
+                    - heading "Feeding T-Shirt - Style 4" [level=3] [ref=f15e724]
+                  - generic [ref=f15e725]:
+                    - generic [ref=f15e726]:
+                      - generic [ref=f15e727]: ₹200
+                      - generic [ref=f15e728]: ₹399
+                    - paragraph [ref=f15e729]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e733] [cursor=pointer]
+              - generic [ref=f15e736]:
+                - button [ref=f15e737] [cursor=pointer]
+                - link [ref=f15e740] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30037
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 50%
+                        - generic: "OFF"
+                  - img "Feeding T-Shirt - Style 3" [ref=f15e741]
+                - generic [ref=f15e742]:
+                  - link [ref=f15e743] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30037
+                    - heading "Feeding T-Shirt - Style 3" [level=3] [ref=f15e744]
+                  - generic [ref=f15e745]:
+                    - generic [ref=f15e746]:
+                      - generic [ref=f15e747]: ₹200
+                      - generic [ref=f15e748]: ₹399
+                    - paragraph [ref=f15e749]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e753] [cursor=pointer]
+              - generic [ref=f15e756]:
+                - button [ref=f15e757] [cursor=pointer]
+                - link [ref=f15e760] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30035
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 50%
+                        - generic: "OFF"
+                  - img "Feeding T-Shirt - Style 2" [ref=f15e761]
+                - generic [ref=f15e762]:
+                  - link [ref=f15e763] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30035
+                    - heading "Feeding T-Shirt - Style 2" [level=3] [ref=f15e764]
+                  - generic [ref=f15e765]:
+                    - generic [ref=f15e766]:
+                      - generic [ref=f15e767]: ₹200
+                      - generic [ref=f15e768]: ₹399
+                    - paragraph [ref=f15e769]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e773] [cursor=pointer]
+              - generic [ref=f15e776]:
+                - button [ref=f15e777] [cursor=pointer]
+                - link [ref=f15e780] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30033
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 50%
+                        - generic: "OFF"
+                  - img "Feeding T-Shirt - Style 1" [ref=f15e781]
+                - generic [ref=f15e782]:
+                  - link [ref=f15e783] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30033
+                    - heading "Feeding T-Shirt - Style 1" [level=3] [ref=f15e784]
+                  - generic [ref=f15e785]:
+                    - generic [ref=f15e786]:
+                      - generic [ref=f15e787]: ₹200
+                      - generic [ref=f15e788]: ₹399
+                    - paragraph [ref=f15e789]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e793] [cursor=pointer]
+              - generic [ref=f15e796]:
+                - button [ref=f15e797] [cursor=pointer]
+                - link [ref=f15e800] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30031
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 33%
+                        - generic: "OFF"
+                  - img "Feeding Shawl Maxi - Style 5" [ref=f15e801]
+                - generic [ref=f15e802]:
+                  - link [ref=f15e803] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30031
+                    - heading "Feeding Shawl Maxi - Style 5" [level=3] [ref=f15e804]
+                  - generic [ref=f15e805]:
+                    - generic [ref=f15e806]:
+                      - generic [ref=f15e807]: ₹399
+                      - generic [ref=f15e808]: ₹599
+                    - paragraph [ref=f15e809]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e813] [cursor=pointer]
+              - generic [ref=f15e816]:
+                - button [ref=f15e817] [cursor=pointer]
+                - link [ref=f15e820] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30029
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 33%
+                        - generic: "OFF"
+                  - img "Feeding Shawl Maxi - Style 4" [ref=f15e821]
+                - generic [ref=f15e822]:
+                  - link [ref=f15e823] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30029
+                    - heading "Feeding Shawl Maxi - Style 4" [level=3] [ref=f15e824]
+                  - generic [ref=f15e825]:
+                    - generic [ref=f15e826]:
+                      - generic [ref=f15e827]: ₹399
+                      - generic [ref=f15e828]: ₹599
+                    - paragraph [ref=f15e829]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e833] [cursor=pointer]
+              - generic [ref=f15e836]:
+                - button [ref=f15e837] [cursor=pointer]
+                - link [ref=f15e840] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30028
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 33%
+                        - generic: "OFF"
+                  - img "Feeding Shawl Maxi - Style 3" [ref=f15e841]
+                - generic [ref=f15e842]:
+                  - link [ref=f15e843] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30028
+                    - heading "Feeding Shawl Maxi - Style 3" [level=3] [ref=f15e844]
+                  - generic [ref=f15e845]:
+                    - generic [ref=f15e846]:
+                      - generic [ref=f15e847]: ₹399
+                      - generic [ref=f15e848]: ₹599
+                    - paragraph [ref=f15e849]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e853] [cursor=pointer]
+              - generic [ref=f15e856]:
+                - button [ref=f15e857] [cursor=pointer]
+                - link [ref=f15e860] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30027
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 33%
+                        - generic: "OFF"
+                  - img "Feeding Shawl Maxi - Style 2" [ref=f15e861]
+                - generic [ref=f15e862]:
+                  - link [ref=f15e863] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30027
+                    - heading "Feeding Shawl Maxi - Style 2" [level=3] [ref=f15e864]
+                  - generic [ref=f15e865]:
+                    - generic [ref=f15e866]:
+                      - generic [ref=f15e867]: ₹399
+                      - generic [ref=f15e868]: ₹599
+                    - paragraph [ref=f15e869]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e873] [cursor=pointer]
+              - generic [ref=f15e876]:
+                - button [ref=f15e877] [cursor=pointer]
+                - link [ref=f15e880] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30026
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 20%
+                        - generic: "OFF"
+                  - img "Feeding Brazier - Style 5" [ref=f15e881]
+                - generic [ref=f15e882]:
+                  - link [ref=f15e883] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30026
+                    - heading "Feeding Brazier - Style 5" [level=3] [ref=f15e884]
+                  - generic [ref=f15e885]:
+                    - generic [ref=f15e886]:
+                      - generic [ref=f15e887]: ₹1,199
+                      - generic [ref=f15e888]: ₹1,500
+                    - paragraph [ref=f15e889]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e893] [cursor=pointer]
+              - generic [ref=f15e896]:
+                - button [ref=f15e897] [cursor=pointer]
+                - link [ref=f15e900] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30025
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 20%
+                        - generic: "OFF"
+                  - img "Feeding Brazier - Style 4" [ref=f15e901]
+                - generic [ref=f15e902]:
+                  - link [ref=f15e903] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30025
+                    - heading "Feeding Brazier - Style 4" [level=3] [ref=f15e904]
+                  - generic [ref=f15e905]:
+                    - generic [ref=f15e906]:
+                      - generic [ref=f15e907]: ₹1,199
+                      - generic [ref=f15e908]: ₹1,500
+                    - paragraph [ref=f15e909]: "Min. Order: 4 Pcs"
+                    - button "Add to Cart" [ref=f15e913] [cursor=pointer]
+              - generic [ref=f15e916]:
+                - button [ref=f15e917] [cursor=pointer]
+                - link [ref=f15e920] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30024
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic: 50%
+                        - generic: "OFF"
+                  - img "Feeding Brazier - Style 3" [ref=f15e921]
+                - generic [ref=f15e922]:
+                  - link [ref=f15e923] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30024
+                    - heading "Feeding Brazier - Style 3" [level=3] [ref=f15e924]
+                  - generic [ref=f15e925]:
+                    - generic [ref=f15e926]:
+                      - generic [ref=f15e927]: ₹1
+                      - generic [ref=f15e928]: ₹2
+                    - paragraph [ref=f15e929]: "Min. Order: 1 Pcs"
+                    - button "Add to Cart" [ref=f15e933] [cursor=pointer]
+      - generic [ref=f15e938]:
+        - generic [ref=f15e939]:
+          - heading "Watch & Shop Trending Collections" [level=2] [ref=f15e942]
+          - paragraph [ref=f15e943]: Real fabric drape, fit previews, and instant wholesale ordering
+        - generic [ref=f15e944]:
+          - button "Previous Reels" [ref=f15e945] [cursor=pointer]
+          - generic [ref=f15e948]:
+            - generic [ref=f15e949] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f15e951]
+              - generic:
+                - heading "Review Videos" [level=3]
+            - generic [ref=f15e955] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f15e957]
+              - generic:
+                - heading "Feeding Puff Sleeve" [level=3]
+            - generic [ref=f15e961] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f15e963]
+              - generic:
+                - heading "Non Feeding Maxi" [level=3]
+            - generic [ref=f15e967] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f15e969]
+              - generic:
+                - heading "Baby Product" [level=3]
+          - button "Next Reels" [ref=f15e973] [cursor=pointer]
+      - generic [ref=f15e979]:
+        - generic [ref=f15e981]:
+          - generic [ref=f15e982]: Customer Feedback
+          - heading "What Our Customers Say" [level=2] [ref=f15e985]
+          - paragraph [ref=f15e986]: Real experiences and verified reviews from mothers and families across the country
+        - generic [ref=f15e987]:
+          - button "Previous Reviews" [ref=f15e988] [cursor=pointer]
+          - button "Next Reviews" [ref=f15e991] [cursor=pointer]
+          - generic [ref=f15e995]:
+            - generic [ref=f15e997]:
+              - generic [ref=f15e998]:
+                - generic [ref=f15e999]: "5.0"
+                - paragraph [ref=f15e1015]: "\"awesome\""
+              - generic [ref=f15e1016]:
+                - generic [ref=f15e1018]:
+                  - generic [ref=f15e1019]: M
+                  - generic [ref=f15e1020]:
+                    - heading "Mekha" [level=4] [ref=f15e1021]:
+                      - generic "Verified Buyer" [ref=f15e1023]
+                    - generic [ref=f15e1026]: Oct 21, 2026
+                - link "MATERNITY MAXI MATERNITY MAXI" [ref=f15e1027] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=7
+                  - img "MATERNITY MAXI" [ref=f15e1028]
+                  - generic "MATERNITY MAXI" [ref=f15e1029]
+            - generic [ref=f15e1031]:
+              - generic [ref=f15e1032]:
+                - generic [ref=f15e1033]: "3.0"
+                - paragraph [ref=f15e1049]: "\"sad\""
+              - generic [ref=f15e1050]:
+                - generic [ref=f15e1052]:
+                  - generic [ref=f15e1053]: A
+                  - generic [ref=f15e1054]:
+                    - heading "abi" [level=4] [ref=f15e1055]:
+                      - generic "Verified Buyer" [ref=f15e1057]
+                    - generic [ref=f15e1060]: Oct 20, 2026
+                - link "Feeding Brazier - Style 1 Feeding Brazier - Style 1" [ref=f15e1061] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30022
+                  - img "Feeding Brazier - Style 1" [ref=f15e1062]
+                  - generic "Feeding Brazier - Style 1" [ref=f15e1063]
+            - generic [ref=f15e1065]:
+              - generic [ref=f15e1066]:
+                - generic [ref=f15e1067]: "5.0"
+                - paragraph [ref=f15e1083]: "\"good\""
+              - generic [ref=f15e1084]:
+                - generic [ref=f15e1086]:
+                  - generic [ref=f15e1087]: M
+                  - generic [ref=f15e1088]:
+                    - heading "Mekha" [level=4] [ref=f15e1089]:
+                      - generic "Verified Buyer" [ref=f15e1091]
+                    - generic [ref=f15e1094]: Oct 17, 2026
+                - link "Feeding T-Shirt - Style 5 Feeding T-Shirt - Style 5" [ref=f15e1095] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30041
+                  - img "Feeding T-Shirt - Style 5" [ref=f15e1096]
+                  - generic "Feeding T-Shirt - Style 5" [ref=f15e1097]
+  - generic [ref=f15e1098]:
+    - generic [ref=f15e1099]:
+      - heading "Shopping Cart (0)" [level=2] [ref=f15e1100]
+      - button "Close cart" [ref=f15e1104] [cursor=pointer]
+    - generic [ref=f15e1107]:
+      - generic [ref=f15e1108]: Your cart is empty
+      - generic [ref=f15e1111]:
+        - heading "You may also like View all" [level=3] [ref=f15e1112]:
+          - generic [ref=f15e1113]: You may also like
+          - generic [ref=f15e1115]:
+            - generic [ref=f15e1116]:
+              - button "Previous" [ref=f15e1117] [cursor=pointer]
+              - button "Next" [ref=f15e1120] [cursor=pointer]
+            - link "View all" [ref=f15e1123] [cursor=pointer]:
+              - /url: http://localhost:8000/catalog
+        - generic [ref=f15e1124]:
+          - generic [ref=f15e1125]:
+            - button "Wishlist" [ref=f15e1126] [cursor=pointer]
+            - link [ref=f15e1129] [cursor=pointer]:
+              - /url: http://localhost:8000/product?id=30041
+              - generic:
+                - img:
+                  - generic:
+                    - generic: 100%
+                    - generic: "OFF"
+              - img "Feeding T-Shirt - Style 5" [ref=f15e1130]
+            - generic [ref=f15e1131]:
+              - link [ref=f15e1132] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30041
+                - heading "Feeding T-Shirt - Style 5" [level=4] [ref=f15e1133]
+              - generic [ref=f15e1134]:
+                - generic [ref=f15e1135]:
+                  - generic [ref=f15e1136]: ₹1
+                  - generic [ref=f15e1137]: ₹399
+                - paragraph [ref=f15e1138]:
+                  - generic [ref=f15e1141]: "Min. Order: 1 Pcs"
+                - button "Add to Cart" [ref=f15e1142] [cursor=pointer]
+          - generic [ref=f15e1146]:
+            - button "Wishlist" [ref=f15e1147] [cursor=pointer]
+            - link [ref=f15e1150] [cursor=pointer]:
+              - /url: http://localhost:8000/product?id=30037
+              - generic:
+                - img:
+                  - generic:
+                    - generic: 50%
+                    - generic: "OFF"
+              - img "Feeding T-Shirt - Style 3" [ref=f15e1151]
+            - generic [ref=f15e1152]:
+              - link [ref=f15e1153] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30037
+                - heading "Feeding T-Shirt - Style 3" [level=4] [ref=f15e1154]
+              - generic [ref=f15e1155]:
+                - generic [ref=f15e1156]:
+                  - generic [ref=f15e1157]: ₹200
+                  - generic [ref=f15e1158]: ₹399
+                - paragraph [ref=f15e1159]:
+                  - generic [ref=f15e1162]: "Min. Order: 4 Pcs"
+                - button "Add to Cart" [ref=f15e1163] [cursor=pointer]
+          - generic [ref=f15e1167]:
+            - button "Wishlist" [ref=f15e1168] [cursor=pointer]
+            - link [ref=f15e1171] [cursor=pointer]:
+              - /url: http://localhost:8000/product?id=30031
+              - generic:
+                - img:
+                  - generic:
+                    - generic: 33%
+                    - generic: "OFF"
+              - img "Feeding Shawl Maxi - Style 5" [ref=f15e1172]
+            - generic [ref=f15e1173]:
+              - link [ref=f15e1174] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30031
+                - heading "Feeding Shawl Maxi - Style 5" [level=4] [ref=f15e1175]
+              - generic [ref=f15e1176]:
+                - generic [ref=f15e1177]:
+                  - generic [ref=f15e1178]: ₹399
+                  - generic [ref=f15e1179]: ₹599
+                - paragraph [ref=f15e1180]:
+                  - generic [ref=f15e1183]: "Min. Order: 4 Pcs"
+                - button "Add to Cart" [ref=f15e1184] [cursor=pointer]
+          - generic [ref=f15e1188]:
+            - button "Wishlist" [ref=f15e1189] [cursor=pointer]
+            - link [ref=f15e1192] [cursor=pointer]:
+              - /url: http://localhost:8000/product?id=30026
+              - generic:
+                - img:
+                  - generic:
+                    - generic: 20%
+                    - generic: "OFF"
+              - img "Feeding Brazier - Style 5" [ref=f15e1193]
+            - generic [ref=f15e1194]:
+              - link [ref=f15e1195] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30026
+                - heading "Feeding Brazier - Style 5" [level=4] [ref=f15e1196]
+              - generic [ref=f15e1197]:
+                - generic [ref=f15e1198]:
+                  - generic [ref=f15e1199]: ₹1,199
+                  - generic [ref=f15e1200]: ₹1,500
+                - paragraph [ref=f15e1201]:
+                  - generic [ref=f15e1204]: "Min. Order: 4 Pcs"
+                - button "Add to Cart" [ref=f15e1205] [cursor=pointer]
+          - generic [ref=f15e1209]:
+            - button "Wishlist" [ref=f15e1210] [cursor=pointer]
+            - link [ref=f15e1213] [cursor=pointer]:
+              - /url: http://localhost:8000/product?id=30039
+              - generic:
+                - img:
+                  - generic:
+                    - generic: 50%
+                    - generic: "OFF"
+              - img "Feeding T-Shirt - Style 4" [ref=f15e1214]
+            - generic [ref=f15e1215]:
+              - link [ref=f15e1216] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30039
+                - heading "Feeding T-Shirt - Style 4" [level=4] [ref=f15e1217]
+              - generic [ref=f15e1218]:
+                - generic [ref=f15e1219]:
+                  - generic [ref=f15e1220]: ₹200
+                  - generic [ref=f15e1221]: ₹399
+                - paragraph [ref=f15e1222]:
+                  - generic [ref=f15e1225]: "Min. Order: 4 Pcs"
+                - button "Add to Cart" [ref=f15e1226] [cursor=pointer]
+          - generic [ref=f15e1230]:
+            - button "Wishlist" [ref=f15e1231] [cursor=pointer]
+            - link [ref=f15e1234] [cursor=pointer]:
+              - /url: http://localhost:8000/product?id=30035
+              - generic:
+                - img:
+                  - generic:
+                    - generic: 50%
+                    - generic: "OFF"
+              - img "Feeding T-Shirt - Style 2" [ref=f15e1235]
+            - generic [ref=f15e1236]:
+              - link [ref=f15e1237] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30035
+                - heading "Feeding T-Shirt - Style 2" [level=4] [ref=f15e1238]
+              - generic [ref=f15e1239]:
+                - generic [ref=f15e1240]:
+                  - generic [ref=f15e1241]: ₹200
+                  - generic [ref=f15e1242]: ₹399
+                - paragraph [ref=f15e1243]:
+                  - generic [ref=f15e1246]: "Min. Order: 4 Pcs"
+                - button "Add to Cart" [ref=f15e1247] [cursor=pointer]
+          - generic [ref=f15e1251]:
+            - button "Wishlist" [ref=f15e1252] [cursor=pointer]
+            - link [ref=f15e1255] [cursor=pointer]:
+              - /url: http://localhost:8000/product?id=30033
+              - generic:
+                - img:
+                  - generic:
+                    - generic: 50%
+                    - generic: "OFF"
+              - img "Feeding T-Shirt - Style 1" [ref=f15e1256]
+            - generic [ref=f15e1257]:
+              - link [ref=f15e1258] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30033
+                - heading "Feeding T-Shirt - Style 1" [level=4] [ref=f15e1259]
+              - generic [ref=f15e1260]:
+                - generic [ref=f15e1261]:
+                  - generic [ref=f15e1262]: ₹200
+                  - generic [ref=f15e1263]: ₹399
+                - paragraph [ref=f15e1264]:
+                  - generic [ref=f15e1267]: "Min. Order: 4 Pcs"
+                - button "Add to Cart" [ref=f15e1268] [cursor=pointer]
+          - generic [ref=f15e1272]:
+            - button "Wishlist" [ref=f15e1273] [cursor=pointer]
+            - link [ref=f15e1276] [cursor=pointer]:
+              - /url: http://localhost:8000/product?id=30029
+              - generic:
+                - img:
+                  - generic:
+                    - generic: 33%
+                    - generic: "OFF"
+              - img "Feeding Shawl Maxi - Style 4" [ref=f15e1277]
+            - generic [ref=f15e1278]:
+              - link [ref=f15e1279] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30029
+                - heading "Feeding Shawl Maxi - Style 4" [level=4] [ref=f15e1280]
+              - generic [ref=f15e1281]:
+                - generic [ref=f15e1282]:
+                  - generic [ref=f15e1283]: ₹399
+                  - generic [ref=f15e1284]: ₹599
+                - paragraph [ref=f15e1285]:
+                  - generic [ref=f15e1288]: "Min. Order: 4 Pcs"
+                - button "Add to Cart" [ref=f15e1289] [cursor=pointer]
+    - generic [ref=f15e1293]:
+      - generic [ref=f15e1294]:
+        - generic [ref=f15e1295]: Subtotal
+        - generic [ref=f15e1296]: ₹0
+      - paragraph [ref=f15e1297]: Shipping and taxes calculated at checkout.
+      - link "BUY NOW":
+        - /url: http://localhost:8000/cart
+      - button "or Continue Shopping →" [ref=f15e1298] [cursor=pointer]
+  - generic [ref=f15e1299]:
+    - generic [ref=f15e1300]:
+      - heading "Your Wishlist" [level=2] [ref=f15e1301]
+      - button "Close wishlist" [ref=f15e1305] [cursor=pointer]
+    - generic [ref=f15e1310]:
+      - paragraph [ref=f15e1313]: Your wishlist is empty.
+      - link "Browse Products" [ref=f15e1314] [cursor=pointer]:
+        - /url: http://localhost:8000/catalog
+  - contentinfo [ref=f15e1316]:
+    - generic [ref=f15e1318]:
+      - generic [ref=f15e1319]:
+        - img "Store Logo" [ref=f15e1320]
+        - paragraph [ref=f15e1321]: Your one-stop destination for quality products, custom solutions, and innovative website development to bring your ideas to life.
+        - link "Instagram" [ref=f15e1323] [cursor=pointer]:
+          - /url: https://www.instagram.com/grm_garments?stkn=YnZ1b2hscXJwa2xu
+      - generic [ref=f15e1326]:
+        - heading "Website" [level=3] [ref=f15e1327]
+        - list [ref=f15e1328]:
+          - listitem [ref=f15e1329]:
+            - link "Home" [ref=f15e1330] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f15e1331]:
+            - link "About Us" [ref=f15e1332] [cursor=pointer]:
+              - /url: /about
+          - listitem [ref=f15e1333]:
+            - link "Categories" [ref=f15e1334] [cursor=pointer]:
+              - /url: /catalog
+      - generic [ref=f15e1335]:
+        - heading "Policies" [level=3] [ref=f15e1336]
+        - list [ref=f15e1337]:
+          - listitem [ref=f15e1338]:
+            - link "Terms & Conditions" [ref=f15e1339] [cursor=pointer]:
+              - /url: /terms
+          - listitem [ref=f15e1340]:
+            - link "Privacy Policy" [ref=f15e1341] [cursor=pointer]:
+              - /url: /return-policies
+      - generic [ref=f15e1342]:
+        - heading "Contact" [level=3] [ref=f15e1343]
+        - list [ref=f15e1344]:
+          - listitem [ref=f15e1345]:
+            - generic [ref=f15e1348]: +91 9944323726
+          - listitem [ref=f15e1349]:
+            - link "grmb2bsupport@gmail.com" [ref=f15e1352] [cursor=pointer]:
+              - /url: mailto:grmb2bsupport@gmail.com
+      - iframe [ref=f15e1355]
+    - generic [ref=f15e1357]:
+      - paragraph [ref=f15e1358]: © 2026 GRM Garments B2B. All rights reserved.
+      - paragraph [ref=f15e1359]: Global Shipping Available
+  - link "Chat on WhatsApp" [ref=f15e1362] [cursor=pointer]:
+    - /url: https://api.whatsapp.com/send/?phone=919944323726&text=Hello%20GRM%20B2B,%20I%20have%20an%20inquiry%20from%20http%3A%2F%2Flocalhost%3A8000

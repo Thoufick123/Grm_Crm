@@ -282,11 +282,12 @@ function initializeDatabaseSchema($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
-    // 8. Follow-ups Table
+    // 8. Follow-ups Table (Full Lifecycle Tracking & Outcomes)
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS `followups` (
             `id` VARCHAR(50) PRIMARY KEY,
             `query_id` VARCHAR(50) NULL,
+            `rescheduled_from_id` VARCHAR(50) NULL,
             `customer_id` VARCHAR(50) NOT NULL,
             `customer_name` VARCHAR(100) NOT NULL,
             `assigned_to` VARCHAR(50) NOT NULL,
@@ -294,9 +295,37 @@ function initializeDatabaseSchema($pdo) {
             `time_str` VARCHAR(50) NOT NULL,
             `reason` TEXT NOT NULL,
             `status` ENUM('PENDING', 'COMPLETED', 'CANCELLED') DEFAULT 'PENDING',
+            `outcome` ENUM('PENDING', 'INTERESTED', 'NO_RESPONSE', 'FOLLOWUP_AGAIN', 'ORDER_PLACED', 'LOST') DEFAULT 'PENDING',
+            `priority` ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT') DEFAULT 'NORMAL',
+            `contact_channel` ENUM('WHATSAPP', 'CALL', 'STORE_VISIT') DEFAULT 'WHATSAPP',
+            `outcome_notes` TEXT NULL,
+            `completed_at` DATETIME NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
+
+    // Dynamic Alter for Follow-ups & Queries Schema Migration
+    try {
+        $existingFuCols = $pdo->query("SHOW COLUMNS FROM `followups`")->fetchAll(PDO::FETCH_COLUMN);
+        $fuColDefs = [
+            'rescheduled_from_id' => "ALTER TABLE `followups` ADD COLUMN `rescheduled_from_id` VARCHAR(50) NULL AFTER `query_id`",
+            'outcome'             => "ALTER TABLE `followups` ADD COLUMN `outcome` ENUM('PENDING', 'INTERESTED', 'NO_RESPONSE', 'FOLLOWUP_AGAIN', 'ORDER_PLACED', 'LOST') DEFAULT 'PENDING' AFTER `status`",
+            'priority'            => "ALTER TABLE `followups` ADD COLUMN `priority` ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT') DEFAULT 'NORMAL' AFTER `outcome`",
+            'contact_channel'     => "ALTER TABLE `followups` ADD COLUMN `contact_channel` ENUM('WHATSAPP', 'CALL', 'STORE_VISIT') DEFAULT 'WHATSAPP' AFTER `priority`",
+            'outcome_notes'       => "ALTER TABLE `followups` ADD COLUMN `outcome_notes` TEXT NULL AFTER `reason`",
+            'completed_at'        => "ALTER TABLE `followups` ADD COLUMN `completed_at` DATETIME NULL AFTER `outcome_notes`"
+        ];
+        foreach ($fuColDefs as $cName => $sql) {
+            if (!in_array($cName, $existingFuCols)) {
+                $pdo->exec($sql);
+            }
+        }
+
+        // Ensure queries table status supports FOLLOW_UP, CONVERTED, LOST
+        $pdo->exec("ALTER TABLE `queries` MODIFY COLUMN `status` VARCHAR(50) DEFAULT 'NEW'");
+    } catch (Exception $e) {
+        error_log("Follow-up migration note: " . $e->getMessage());
+    }
 
     // 9. Audit Logs Table
     $pdo->exec("
@@ -531,5 +560,30 @@ function seedDefaultDataIfEmpty($pdo) {
             $pStmt->execute($dp);
         }
     }
+
+    // Check Follow-ups
+    $fCount = $pdo->query("SELECT COUNT(*) FROM `followups`")->fetchColumn();
+    if ($fCount == 0) {
+        $today = date('Y-m-d');
+        $tomorrow = date('Y-m-d', strtotime('+1 day'));
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+
+        $stmt = $pdo->prepare("
+            INSERT INTO `followups` (`id`, `query_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $defaultFollowups = [
+            ['FU-2026-0001', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', 'staff_01', $today, '11:30 AM', 'Customer asked to confirm pure cotton frock BF-001 pink size availability for 2-year-old before ordering.', 'PENDING', 'PENDING', 'HIGH', 'WHATSAPP'],
+            ['FU-2026-0002', 'Q-2026-001246', 'cust_102', 'Ananya Sharma', 'staff_02', $today, '04:00 PM', 'Call to discuss feeding gown MD-102 fabric details & COD shipping options to Bengaluru.', 'PENDING', 'PENDING', 'URGENT', 'CALL'],
+            ['FU-2026-0003', 'Q-2026-001247', 'cust_103', 'Kavitha Ramachandran', 'staff_03', $yesterday, '10:00 AM', 'Follow up regarding wholesale 25-piece bulk frock lot inquiry and payment quotation.', 'PENDING', 'PENDING', 'NORMAL', 'CALL'],
+            ['FU-2026-0004', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', 'staff_01', $tomorrow, '02:30 PM', 'Check if customer received catalog photos of newborn gift sets.', 'PENDING', 'PENDING', 'NORMAL', 'WHATSAPP'],
+        ];
+
+        foreach ($defaultFollowups as $fu) {
+            $stmt->execute($fu);
+        }
+    }
 }
+
 

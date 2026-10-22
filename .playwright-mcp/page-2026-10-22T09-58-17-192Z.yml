@@ -1,0 +1,98 @@
+- generic [active] [ref=f11e1]:
+  - generic [ref=f11e8]:
+    - generic [aria-hidden] [ref=f11e9]: 🚚
+    - generic [ref=f11e10]: Welcome to GRM B2B We Working 5 Years Here And Trustable Parter
+  - generic [ref=f11e13]:
+    - link [ref=f11e16] [cursor=pointer]:
+      - /url: /
+      - img "Navbar Logo" [ref=f11e17]
+    - generic [ref=f11e18]:
+      - link "HOME" [ref=f11e20] [cursor=pointer]:
+        - /url: /
+      - link "ABOUT US" [ref=f11e23] [cursor=pointer]:
+        - /url: /about
+      - link "CATEGORIES" [ref=f11e26] [cursor=pointer]:
+        - /url: /catalog
+      - link "OUR SERVICE" [ref=f11e31] [cursor=pointer]:
+        - /url: /project
+      - link "CUSTOMIZE" [ref=f11e36] [cursor=pointer]:
+        - /url: /customize
+      - link "SIZE CHART" [ref=f11e39] [cursor=pointer]:
+        - /url: /size-chart
+    - generic [ref=f11e42]:
+      - link "Search" [ref=f11e43] [cursor=pointer]:
+        - /url: javascript:void(0)
+      - link "LOG IN" [ref=f11e47] [cursor=pointer]:
+        - /url: http://localhost:8000/login
+  - main [ref=f11e51]:
+    - generic [ref=f11e52]:
+      - generic [ref=f11e53]:
+        - heading "Log in to your account" [level=2] [ref=f11e54]
+        - paragraph [ref=f11e55]:
+          - text: Or
+          - link "register as a new B2B buyer" [ref=f11e56] [cursor=pointer]:
+            - /url: http://localhost:8000/register?redirect=%2Ffabrics%2Fcustomize%3Ffabric_id%3D60002
+      - generic [ref=f11e58]:
+        - generic [ref=f11e59]:
+          - generic [ref=f11e60]:
+            - generic [ref=f11e61]: Email address or Mobile number
+            - textbox "Email address or Mobile number" [ref=f11e63]:
+              - /placeholder: Enter email or 10-digit mobile
+          - generic [ref=f11e64]:
+            - generic [ref=f11e65]: Password
+            - generic [ref=f11e66]:
+              - textbox "Password" [ref=f11e67]
+              - button [ref=f11e68] [cursor=pointer]
+          - generic [ref=f11e72]:
+            - generic [ref=f11e73]:
+              - checkbox "Remember me" [ref=f11e74] [cursor=pointer]
+              - generic [ref=f11e75] [cursor=pointer]: Remember me
+            - link "Forgot your password?" [ref=f11e77] [cursor=pointer]:
+              - /url: http://localhost:8000/forgot-password
+          - button "Sign in" [ref=f11e79] [cursor=pointer]
+        - generic [ref=f11e80]:
+          - paragraph [ref=f11e81]: Don't have an account?
+          - link "Join as Buyer" [ref=f11e83] [cursor=pointer]:
+            - /url: http://localhost:8000/register?redirect=%2Ffabrics%2Fcustomize%3Ffabric_id%3D60002
+  - contentinfo [ref=f11e87]:
+    - generic [ref=f11e89]:
+      - generic [ref=f11e90]:
+        - img "Store Logo" [ref=f11e91]
+        - paragraph [ref=f11e92]: Your one-stop destination for quality products, custom solutions, and innovative website development to bring your ideas to life.
+        - link "Instagram" [ref=f11e94] [cursor=pointer]:
+          - /url: https://www.instagram.com/grm_garments?stkn=YnZ1b2hscXJwa2xu
+      - generic [ref=f11e97]:
+        - heading "Website" [level=3] [ref=f11e98]
+        - list [ref=f11e99]:
+          - listitem [ref=f11e100]:
+            - link "Home" [ref=f11e101] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f11e102]:
+            - link "About Us" [ref=f11e103] [cursor=pointer]:
+              - /url: /about
+          - listitem [ref=f11e104]:
+            - link "Categories" [ref=f11e105] [cursor=pointer]:
+              - /url: /catalog
+      - generic [ref=f11e106]:
+        - heading "Policies" [level=3] [ref=f11e107]
+        - list [ref=f11e108]:
+          - listitem [ref=f11e109]:
+            - link "Terms & Conditions" [ref=f11e110] [cursor=pointer]:
+              - /url: /terms
+          - listitem [ref=f11e111]:
+            - link "Privacy Policy" [ref=f11e112] [cursor=pointer]:
+              - /url: /return-policies
+      - generic [ref=f11e113]:
+        - heading "Contact" [level=3] [ref=f11e114]
+        - list [ref=f11e115]:
+          - listitem [ref=f11e116]:
+            - generic [ref=f11e119]: +91 9944323726
+          - listitem [ref=f11e120]:
+            - link "grmb2bsupport@gmail.com" [ref=f11e123] [cursor=pointer]:
+              - /url: mailto:grmb2bsupport@gmail.com
+      - iframe [ref=f11e126]
+    - generic [ref=f11e128]:
+      - paragraph [ref=f11e129]: © 2026 GRM Garments B2B. All rights reserved.
+      - paragraph [ref=f11e130]: Global Shipping Available
+  - link "Chat on WhatsApp" [ref=f11e133] [cursor=pointer]:
+    - /url: https://api.whatsapp.com/send/?phone=919944323726&text=Hello%20GRM%20B2B,%20I%20have%20an%20inquiry%20from%20http%3A%2F%2Flocalhost%3A8000

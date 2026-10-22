@@ -1,0 +1,626 @@
+- generic [active] [ref=f11e1]:
+  - generic [ref=f11e8]:
+    - generic [aria-hidden] [ref=f11e9]: 🚚
+    - generic [ref=f11e10]: Welcome to GRM B2B We Working 5 Years Here And Trustable Parter
+  - generic [ref=f11e13]:
+    - link [ref=f11e15] [cursor=pointer]:
+      - /url: /
+      - img "Navbar Logo" [ref=f11e16]
+    - generic [ref=f11e17]:
+      - link "Search" [ref=f11e18] [cursor=pointer]:
+        - /url: javascript:void(0)
+      - link "Log In" [ref=f11e21] [cursor=pointer]:
+        - /url: http://localhost:8000/login
+      - button "Toggle navigation menu" [ref=f11e24] [cursor=pointer]
+  - main [ref=f11e27]:
+    - generic [ref=f11e28]:
+      - generic [ref=f11e33]:
+        - link "Shop Now" [ref=f11e37] [cursor=pointer]:
+          - /url: http://localhost:8000/
+        - button "Previous Slide" [ref=f11e39] [cursor=pointer]
+        - button "Next Slide" [ref=f11e42] [cursor=pointer]
+        - button "Slide 1" [ref=f11e46] [cursor=pointer]
+      - generic [ref=f11e51]:
+        - generic [ref=f11e52]:
+          - heading "PRODUCT CAROUSEL" [level=2] [ref=f11e53]
+          - link "VIEW ALL" [ref=f11e55] [cursor=pointer]:
+            - /url: /catalog
+        - generic [ref=f11e56]:
+          - generic [ref=f11e58]:
+            - generic [ref=f11e60]:
+              - link [ref=f11e61] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30041
+                - img "Feeding T-Shirt - Style 5" [ref=f11e62]
+              - generic [ref=f11e63]:
+                - link [ref=f11e64] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30041
+                  - heading "Feeding T-Shirt - Style 5" [level=3] [ref=f11e65]
+                - link "Register to view price" [ref=f11e67] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e72]:
+              - link [ref=f11e73] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30039
+                - img "Feeding T-Shirt - Style 4" [ref=f11e74]
+              - generic [ref=f11e75]:
+                - link [ref=f11e76] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30039
+                  - heading "Feeding T-Shirt - Style 4" [level=3] [ref=f11e77]
+                - link "Register to view price" [ref=f11e79] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e84]:
+              - link [ref=f11e85] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30037
+                - img "Feeding T-Shirt - Style 3" [ref=f11e86]
+              - generic [ref=f11e87]:
+                - link [ref=f11e88] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30037
+                  - heading "Feeding T-Shirt - Style 3" [level=3] [ref=f11e89]
+                - link "Register to view price" [ref=f11e91] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e96]:
+              - link [ref=f11e97] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30035
+                - img "Feeding T-Shirt - Style 2" [ref=f11e98]
+              - generic [ref=f11e99]:
+                - link [ref=f11e100] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30035
+                  - heading "Feeding T-Shirt - Style 2" [level=3] [ref=f11e101]
+                - link "Register to view price" [ref=f11e103] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e108]:
+              - link [ref=f11e109] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30033
+                - img "Feeding T-Shirt - Style 1" [ref=f11e110]
+              - generic [ref=f11e111]:
+                - link [ref=f11e112] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30033
+                  - heading "Feeding T-Shirt - Style 1" [level=3] [ref=f11e113]
+                - link "Register to view price" [ref=f11e115] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e120]:
+              - link [ref=f11e121] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30031
+                - img "Feeding Shawl Maxi - Style 5" [ref=f11e122]
+              - generic [ref=f11e123]:
+                - link [ref=f11e124] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30031
+                  - heading "Feeding Shawl Maxi - Style 5" [level=3] [ref=f11e125]
+                - link "Register to view price" [ref=f11e127] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e132]:
+              - link [ref=f11e133] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30029
+                - img "Feeding Shawl Maxi - Style 4" [ref=f11e134]
+              - generic [ref=f11e135]:
+                - link [ref=f11e136] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30029
+                  - heading "Feeding Shawl Maxi - Style 4" [level=3] [ref=f11e137]
+                - link "Register to view price" [ref=f11e139] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e144]:
+              - link [ref=f11e145] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30028
+                - img "Feeding Shawl Maxi - Style 3" [ref=f11e146]
+              - generic [ref=f11e147]:
+                - link [ref=f11e148] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30028
+                  - heading "Feeding Shawl Maxi - Style 3" [level=3] [ref=f11e149]
+                - link "Register to view price" [ref=f11e151] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e156]:
+              - link [ref=f11e157] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30027
+                - img "Feeding Shawl Maxi - Style 2" [ref=f11e158]
+              - generic [ref=f11e159]:
+                - link [ref=f11e160] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30027
+                  - heading "Feeding Shawl Maxi - Style 2" [level=3] [ref=f11e161]
+                - link "Register to view price" [ref=f11e163] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e168]:
+              - link [ref=f11e169] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30026
+                - img "Feeding Brazier - Style 5" [ref=f11e170]
+              - generic [ref=f11e171]:
+                - link [ref=f11e172] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30026
+                  - heading "Feeding Brazier - Style 5" [level=3] [ref=f11e173]
+                - link "Register to view price" [ref=f11e175] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e180]:
+              - link [ref=f11e181] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30025
+                - img "Feeding Brazier - Style 4" [ref=f11e182]
+              - generic [ref=f11e183]:
+                - link [ref=f11e184] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30025
+                  - heading "Feeding Brazier - Style 4" [level=3] [ref=f11e185]
+                - link "Register to view price" [ref=f11e187] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e192]:
+              - link [ref=f11e193] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30024
+                - img "Feeding Brazier - Style 3" [ref=f11e194]
+              - generic [ref=f11e195]:
+                - link [ref=f11e196] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30024
+                  - heading "Feeding Brazier - Style 3" [level=3] [ref=f11e197]
+                - link "Register to view price" [ref=f11e199] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e204]:
+              - link [ref=f11e205] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30023
+                - img "Feeding Brazier - Style 2" [ref=f11e206]
+              - generic [ref=f11e207]:
+                - link [ref=f11e208] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30023
+                  - heading "Feeding Brazier - Style 2" [level=3] [ref=f11e209]
+                - link "Register to view price" [ref=f11e211] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e216]:
+              - link [ref=f11e217] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30022
+                - img "Feeding Brazier - Style 1" [ref=f11e218]
+              - generic [ref=f11e219]:
+                - link [ref=f11e220] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30022
+                  - heading "Feeding Brazier - Style 1" [level=3] [ref=f11e221]
+                - link "Register to view price" [ref=f11e223] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+            - generic [ref=f11e228]:
+              - link [ref=f11e229] [cursor=pointer]:
+                - /url: http://localhost:8000/product?id=30021
+                - img "Feeding Shawl Maxi - Style 1" [ref=f11e230]
+              - generic [ref=f11e231]:
+                - link [ref=f11e232] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30021
+                  - heading "Feeding Shawl Maxi - Style 1" [level=3] [ref=f11e233]
+                - link "Register to view price" [ref=f11e235] [cursor=pointer]:
+                  - /url: http://localhost:8000/login
+          - button [disabled] [ref=f11e239]
+          - button [ref=f11e242] [cursor=pointer]
+      - generic [ref=f11e249]:
+        - generic [ref=f11e250]:
+          - button "Previous Slide" [ref=f11e253] [cursor=pointer]
+          - button "Next Slide" [ref=f11e256] [cursor=pointer]
+          - button "Slide 1" [ref=f11e260] [cursor=pointer]
+          - link "Shop Now" [ref=f11e261] [cursor=pointer]:
+            - /url: /
+        - generic [ref=f11e263]:
+          - generic [ref=f11e264]:
+            - generic [ref=f11e265]:
+              - generic [ref=f11e266]:
+                - group "1 / 3" [ref=f11e267]:
+                  - link [ref=f11e268] [cursor=pointer]:
+                    - /url: http://localhost:8000/customize?category_id=5
+                    - img "Red Mickey cotton" [ref=f11e269]
+                - group "2 / 3" [ref=f11e271]:
+                  - link [ref=f11e272] [cursor=pointer]:
+                    - /url: http://localhost:8000/customize?category_id=7
+                    - img "Red with Strawberry" [ref=f11e273]
+                - group "3 / 3" [ref=f11e275]:
+                  - link [ref=f11e276] [cursor=pointer]:
+                    - /url: http://localhost:8000/customize?category_id=8
+                    - img "blue with bird design" [ref=f11e277]
+              - button "Previous slide" [ref=f11e279] [cursor=pointer]
+              - button "Next slide" [ref=f11e282] [cursor=pointer]
+              - generic [ref=f11e285]:
+                - button "Slide 1" [ref=f11e286] [cursor=pointer]
+                - button "Slide 2" [ref=f11e287] [cursor=pointer]
+                - button "Slide 3" [ref=f11e288] [cursor=pointer]
+            - link "Shop Now" [ref=f11e289] [cursor=pointer]:
+              - /url: /
+          - generic [ref=f11e291]:
+            - generic [ref=f11e292]:
+              - generic [ref=f11e293]:
+                - group "1 / 3" [ref=f11e294]:
+                  - link [ref=f11e295] [cursor=pointer]:
+                    - /url: http://localhost:8000/fabrics/customize?fabric_id=60002
+                    - img "Feeding Maxi" [ref=f11e296]
+                - group "2 / 3" [ref=f11e298]:
+                  - link [ref=f11e299] [cursor=pointer]:
+                    - /url: http://localhost:8000/fabrics/customize?fabric_id=60001
+                    - img "MATERNITY MAXI" [ref=f11e300]
+                - group "3 / 3" [ref=f11e302]:
+                  - link [ref=f11e303] [cursor=pointer]:
+                    - /url: http://localhost:8000/fabrics/customize?fabric_id=7
+                    - img "MATERNITY MAXI" [ref=f11e304]
+              - button "Previous slide" [ref=f11e306] [cursor=pointer]
+              - button "Next slide" [ref=f11e309] [cursor=pointer]
+              - generic [ref=f11e312]:
+                - button "Slide 1" [ref=f11e313] [cursor=pointer]
+                - button "Slide 2" [ref=f11e314] [cursor=pointer]
+                - button "Slide 3" [ref=f11e315] [cursor=pointer]
+            - link "Shop Now" [ref=f11e316] [cursor=pointer]:
+              - /url: /
+      - generic [ref=f11e322]:
+        - generic [ref=f11e323]:
+          - heading "Customize Products" [level=2] [ref=f11e324]
+          - link "View All" [ref=f11e326] [cursor=pointer]:
+            - /url: /customize
+        - generic [ref=f11e327]:
+          - generic [ref=f11e329]:
+            - generic [ref=f11e331]:
+              - generic [ref=f11e332]:
+                - img "Feeding Maxi" [ref=f11e333]
+                - generic:
+                  - generic: CUSTOM
+                  - generic: Custom Garment
+                - generic [ref=f11e334]: 100 Qty
+              - generic [ref=f11e338]:
+                - generic [ref=f11e339]:
+                  - generic [ref=f11e340]: blue with bird design
+                  - heading [level=3] [ref=f11e341]:
+                    - link "Feeding Maxi" [ref=f11e342] [cursor=pointer]:
+                      - /url: http://localhost:8000/fabrics/customize?fabric_id=60002
+                  - paragraph [ref=f11e343]: 🤱 Feeding Maternity Maxi Dress - 🌸 Stylish all-over printed design - 👗 Elegant full-length maxi style - 🤱 Convenient breastfeeding access - 💕 Comfortable maternity-friendly fit - ✨ Perfect for everyday wear - 🛍️ A must-have for moms-to-be and new moms
+                  - generic [ref=f11e345]:
+                    - generic [ref=f11e346]: Custom Stitching
+                    - generic [ref=f11e350]:
+                      - generic [ref=f11e351]: Min Stitch
+                      - generic [ref=f11e352]: 35 Pcs
+                  - generic [ref=f11e354]:
+                    - generic [ref=f11e355]: 3XL
+                    - generic [ref=f11e356]: 4XL
+                    - generic [ref=f11e357]: L
+                    - generic [ref=f11e358]: M
+                    - generic [ref=f11e359]: XL
+                    - generic [ref=f11e360]: XXL
+                - link "Customize & Stitch" [ref=f11e362] [cursor=pointer]:
+                  - /url: http://localhost:8000/fabrics/customize?fabric_id=60002
+            - generic [ref=f11e367]:
+              - generic [ref=f11e368]:
+                - img "MATERNITY MAXI" [ref=f11e369]
+                - generic:
+                  - generic: CUSTOM
+                  - generic: Custom Garment
+                - generic [ref=f11e370]: 100 Qty
+              - generic [ref=f11e374]:
+                - generic [ref=f11e375]:
+                  - generic [ref=f11e376]: Red with Strawberry
+                  - heading [level=3] [ref=f11e377]:
+                    - link "MATERNITY MAXI" [ref=f11e378] [cursor=pointer]:
+                      - /url: http://localhost:8000/fabrics/customize?fabric_id=60001
+                  - paragraph [ref=f11e379]: 🤱 Feeding Maternity Maxi Dress - 🌸 Stylish all-over printed design - 👗 Elegant full-length maxi style - 🤱 Convenient breastfeeding access - 💕 Comfortable maternity-friendly fit - ✨ Perfect for everyday wear - 🛍️ A must-have for moms-to-be and new moms
+                  - generic [ref=f11e381]:
+                    - generic [ref=f11e382]: Custom Stitching
+                    - generic [ref=f11e386]:
+                      - generic [ref=f11e387]: Min Stitch
+                      - generic [ref=f11e388]: 35 Pcs
+                  - generic [ref=f11e390]:
+                    - generic [ref=f11e391]: 3XL
+                    - generic [ref=f11e392]: 4XL
+                    - generic [ref=f11e393]: L
+                    - generic [ref=f11e394]: M
+                    - generic [ref=f11e395]: XL
+                    - generic [ref=f11e396]: XXL
+                - link "Customize & Stitch" [ref=f11e398] [cursor=pointer]:
+                  - /url: http://localhost:8000/fabrics/customize?fabric_id=60001
+            - generic [ref=f11e403]:
+              - generic [ref=f11e404]:
+                - img "MATERNITY MAXI" [ref=f11e405]
+                - generic:
+                  - generic: CUSTOM
+                  - generic: Custom Garment
+                - generic [ref=f11e406]: 26 Qty
+              - generic [ref=f11e410]:
+                - generic [ref=f11e411]:
+                  - generic [ref=f11e412]: Red Mickey cotton
+                  - heading [level=3] [ref=f11e413]:
+                    - link "MATERNITY MAXI" [ref=f11e414] [cursor=pointer]:
+                      - /url: http://localhost:8000/fabrics/customize?fabric_id=7
+                  - paragraph [ref=f11e415]: 🤱 Feeding Maternity Maxi Dress - 🌸 Stylish all-over printed design - 👗 Elegant full-length maxi style - 🤱 Convenient breastfeeding access - 💕 Comfortable maternity-friendly fit - ✨ Perfect for everyday wear - 🛍️ A must-have for moms-to-be and new moms
+                  - generic [ref=f11e417]:
+                    - generic [ref=f11e418]: Custom Stitching
+                    - generic [ref=f11e422]:
+                      - generic [ref=f11e423]: Min Stitch
+                      - generic [ref=f11e424]: 1 Pcs
+                  - generic [ref=f11e426]:
+                    - generic [ref=f11e427]: 3XL
+                    - generic [ref=f11e428]: 4XL
+                    - generic [ref=f11e429]: L
+                    - generic [ref=f11e430]: M
+                    - generic [ref=f11e431]: XL
+                    - generic [ref=f11e432]: XXL
+                - link "Customize & Stitch" [ref=f11e434] [cursor=pointer]:
+                  - /url: http://localhost:8000/fabrics/customize?fabric_id=7
+          - button [disabled] [ref=f11e438]
+          - button [disabled] [ref=f11e441]
+      - generic [ref=f11e446]:
+        - generic [ref=f11e447]:
+          - heading "Watch & Shop Latest Trending Looks" [level=2] [ref=f11e450]
+          - paragraph [ref=f11e451]: Explore our trending ethnic & festive collections in real-time action
+        - generic [ref=f11e452]:
+          - button "Previous Reels" [ref=f11e453] [cursor=pointer]
+          - generic [ref=f11e456]:
+            - generic [ref=f11e457] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f11e459]
+              - generic:
+                - heading "Production Unit" [level=3]
+            - generic [ref=f11e463] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f11e465]
+              - generic:
+                - heading "Maternity Feeding Maxi" [level=3]
+            - generic [ref=f11e469] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f11e471]
+              - generic:
+                - heading "Maternity Co-Ord Set" [level=3]
+            - generic [ref=f11e475] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f11e477]
+              - generic:
+                - heading "Feeding Maxi" [level=3]
+          - button "Next Reels" [ref=f11e481] [cursor=pointer]
+      - generic [ref=f11e487]:
+        - generic [ref=f11e488]:
+          - heading "CATEGORIES GRID" [level=2] [ref=f11e489]
+          - link "VIEW ALL" [ref=f11e490] [cursor=pointer]:
+            - /url: /catalog
+        - generic [ref=f11e491]:
+          - button [ref=f11e494] [cursor=pointer]:
+            - img "Maternity" [ref=f11e496]
+            - generic [ref=f11e497]:
+              - heading "Maternity" [level=4] [ref=f11e499]
+              - paragraph [ref=f11e500]: 15 products
+          - generic [ref=f11e503]:
+            - button "Previous" [ref=f11e504] [cursor=pointer]
+            - button "Next" [ref=f11e507] [cursor=pointer]
+            - generic [ref=f11e510]:
+              - generic [ref=f11e511]:
+                - link [ref=f11e512] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30041
+                  - img "Feeding T-Shirt - Style 5" [ref=f11e513]
+                - generic [ref=f11e514]:
+                  - link [ref=f11e515] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30041
+                    - heading "Feeding T-Shirt - Style 5" [level=3] [ref=f11e516]
+                  - link "Register to view price" [ref=f11e518] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e522]:
+                - link [ref=f11e523] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30039
+                  - img "Feeding T-Shirt - Style 4" [ref=f11e524]
+                - generic [ref=f11e525]:
+                  - link [ref=f11e526] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30039
+                    - heading "Feeding T-Shirt - Style 4" [level=3] [ref=f11e527]
+                  - link "Register to view price" [ref=f11e529] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e533]:
+                - link [ref=f11e534] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30037
+                  - img "Feeding T-Shirt - Style 3" [ref=f11e535]
+                - generic [ref=f11e536]:
+                  - link [ref=f11e537] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30037
+                    - heading "Feeding T-Shirt - Style 3" [level=3] [ref=f11e538]
+                  - link "Register to view price" [ref=f11e540] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e544]:
+                - link [ref=f11e545] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30035
+                  - img "Feeding T-Shirt - Style 2" [ref=f11e546]
+                - generic [ref=f11e547]:
+                  - link [ref=f11e548] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30035
+                    - heading "Feeding T-Shirt - Style 2" [level=3] [ref=f11e549]
+                  - link "Register to view price" [ref=f11e551] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e555]:
+                - link [ref=f11e556] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30033
+                  - img "Feeding T-Shirt - Style 1" [ref=f11e557]
+                - generic [ref=f11e558]:
+                  - link [ref=f11e559] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30033
+                    - heading "Feeding T-Shirt - Style 1" [level=3] [ref=f11e560]
+                  - link "Register to view price" [ref=f11e562] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e566]:
+                - link [ref=f11e567] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30031
+                  - img "Feeding Shawl Maxi - Style 5" [ref=f11e568]
+                - generic [ref=f11e569]:
+                  - link [ref=f11e570] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30031
+                    - heading "Feeding Shawl Maxi - Style 5" [level=3] [ref=f11e571]
+                  - link "Register to view price" [ref=f11e573] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e577]:
+                - link [ref=f11e578] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30029
+                  - img "Feeding Shawl Maxi - Style 4" [ref=f11e579]
+                - generic [ref=f11e580]:
+                  - link [ref=f11e581] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30029
+                    - heading "Feeding Shawl Maxi - Style 4" [level=3] [ref=f11e582]
+                  - link "Register to view price" [ref=f11e584] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e588]:
+                - link [ref=f11e589] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30028
+                  - img "Feeding Shawl Maxi - Style 3" [ref=f11e590]
+                - generic [ref=f11e591]:
+                  - link [ref=f11e592] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30028
+                    - heading "Feeding Shawl Maxi - Style 3" [level=3] [ref=f11e593]
+                  - link "Register to view price" [ref=f11e595] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e599]:
+                - link [ref=f11e600] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30027
+                  - img "Feeding Shawl Maxi - Style 2" [ref=f11e601]
+                - generic [ref=f11e602]:
+                  - link [ref=f11e603] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30027
+                    - heading "Feeding Shawl Maxi - Style 2" [level=3] [ref=f11e604]
+                  - link "Register to view price" [ref=f11e606] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e610]:
+                - link [ref=f11e611] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30026
+                  - img "Feeding Brazier - Style 5" [ref=f11e612]
+                - generic [ref=f11e613]:
+                  - link [ref=f11e614] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30026
+                    - heading "Feeding Brazier - Style 5" [level=3] [ref=f11e615]
+                  - link "Register to view price" [ref=f11e617] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e621]:
+                - link [ref=f11e622] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30025
+                  - img "Feeding Brazier - Style 4" [ref=f11e623]
+                - generic [ref=f11e624]:
+                  - link [ref=f11e625] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30025
+                    - heading "Feeding Brazier - Style 4" [level=3] [ref=f11e626]
+                  - link "Register to view price" [ref=f11e628] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+              - generic [ref=f11e632]:
+                - link [ref=f11e633] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30024
+                  - img "Feeding Brazier - Style 3" [ref=f11e634]
+                - generic [ref=f11e635]:
+                  - link [ref=f11e636] [cursor=pointer]:
+                    - /url: http://localhost:8000/product?id=30024
+                    - heading "Feeding Brazier - Style 3" [level=3] [ref=f11e637]
+                  - link "Register to view price" [ref=f11e639] [cursor=pointer]:
+                    - /url: http://localhost:8000/login
+      - generic [ref=f11e645]:
+        - generic [ref=f11e646]:
+          - heading "Watch & Shop Trending Collections" [level=2] [ref=f11e649]
+          - paragraph [ref=f11e650]: Real fabric drape, fit previews, and instant wholesale ordering
+        - generic [ref=f11e651]:
+          - button "Previous Reels" [ref=f11e652] [cursor=pointer]
+          - generic [ref=f11e655]:
+            - generic [ref=f11e656] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f11e658]
+              - generic:
+                - heading "Review Videos" [level=3]
+            - generic [ref=f11e662] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f11e664]
+              - generic:
+                - heading "Feeding Puff Sleeve" [level=3]
+            - generic [ref=f11e668] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f11e670]
+              - generic:
+                - heading "Non Feeding Maxi" [level=3]
+            - generic [ref=f11e674] [cursor=pointer]:
+              - generic:
+                - generic: Reel
+                - button "Toggle Sound" [ref=f11e676]
+              - generic:
+                - heading "Baby Product" [level=3]
+          - button "Next Reels" [ref=f11e680] [cursor=pointer]
+      - generic [ref=f11e686]:
+        - generic [ref=f11e688]:
+          - generic [ref=f11e689]: Customer Feedback
+          - heading "What Our Customers Say" [level=2] [ref=f11e692]
+          - paragraph [ref=f11e693]: Real experiences and verified reviews from mothers and families across the country
+        - generic [ref=f11e694]:
+          - button "Previous Reviews" [ref=f11e695] [cursor=pointer]
+          - button "Next Reviews" [ref=f11e698] [cursor=pointer]
+          - generic [ref=f11e702]:
+            - generic [ref=f11e704]:
+              - generic [ref=f11e705]:
+                - generic [ref=f11e706]: "5.0"
+                - paragraph [ref=f11e722]: "\"awesome\""
+              - generic [ref=f11e723]:
+                - generic [ref=f11e725]:
+                  - generic [ref=f11e726]: M
+                  - generic [ref=f11e727]:
+                    - heading "Mekha" [level=4] [ref=f11e728]:
+                      - generic "Verified Buyer" [ref=f11e730]
+                    - generic [ref=f11e733]: Oct 21, 2026
+                - link "MATERNITY MAXI MATERNITY MAXI" [ref=f11e734] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=7
+                  - img "MATERNITY MAXI" [ref=f11e735]
+                  - generic "MATERNITY MAXI" [ref=f11e736]
+            - generic [ref=f11e738]:
+              - generic [ref=f11e739]:
+                - generic [ref=f11e740]: "3.0"
+                - paragraph [ref=f11e756]: "\"sad\""
+              - generic [ref=f11e757]:
+                - generic [ref=f11e759]:
+                  - generic [ref=f11e760]: A
+                  - generic [ref=f11e761]:
+                    - heading "abi" [level=4] [ref=f11e762]:
+                      - generic "Verified Buyer" [ref=f11e764]
+                    - generic [ref=f11e767]: Oct 20, 2026
+                - link "Feeding Brazier - Style 1 Feeding Brazier - Style 1" [ref=f11e768] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30022
+                  - img "Feeding Brazier - Style 1" [ref=f11e769]
+                  - generic "Feeding Brazier - Style 1" [ref=f11e770]
+            - generic [ref=f11e772]:
+              - generic [ref=f11e773]:
+                - generic [ref=f11e774]: "5.0"
+                - paragraph [ref=f11e790]: "\"good\""
+              - generic [ref=f11e791]:
+                - generic [ref=f11e793]:
+                  - generic [ref=f11e794]: M
+                  - generic [ref=f11e795]:
+                    - heading "Mekha" [level=4] [ref=f11e796]:
+                      - generic "Verified Buyer" [ref=f11e798]
+                    - generic [ref=f11e801]: Oct 17, 2026
+                - link "Feeding T-Shirt - Style 5 Feeding T-Shirt - Style 5" [ref=f11e802] [cursor=pointer]:
+                  - /url: http://localhost:8000/product?id=30041
+                  - img "Feeding T-Shirt - Style 5" [ref=f11e803]
+                  - generic "Feeding T-Shirt - Style 5" [ref=f11e804]
+        - generic [ref=f11e805]:
+          - button "Go to slide 1" [ref=f11e806] [cursor=pointer]
+          - button "Go to slide 2" [ref=f11e807] [cursor=pointer]
+  - contentinfo [ref=f11e809]:
+    - generic [ref=f11e811]:
+      - generic [ref=f11e812]:
+        - img "Store Logo" [ref=f11e813]
+        - paragraph [ref=f11e814]: Your one-stop destination for quality products, custom solutions, and innovative website development to bring your ideas to life.
+        - link "Instagram" [ref=f11e816] [cursor=pointer]:
+          - /url: https://www.instagram.com/grm_garments?stkn=YnZ1b2hscXJwa2xu
+      - generic [ref=f11e819]:
+        - heading "Website" [level=3] [ref=f11e820]
+        - list [ref=f11e821]:
+          - listitem [ref=f11e822]:
+            - link "Home" [ref=f11e823] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f11e824]:
+            - link "About Us" [ref=f11e825] [cursor=pointer]:
+              - /url: /about
+          - listitem [ref=f11e826]:
+            - link "Categories" [ref=f11e827] [cursor=pointer]:
+              - /url: /catalog
+      - generic [ref=f11e828]:
+        - heading "Policies" [level=3] [ref=f11e829]
+        - list [ref=f11e830]:
+          - listitem [ref=f11e831]:
+            - link "Terms & Conditions" [ref=f11e832] [cursor=pointer]:
+              - /url: /terms
+          - listitem [ref=f11e833]:
+            - link "Privacy Policy" [ref=f11e834] [cursor=pointer]:
+              - /url: /return-policies
+      - generic [ref=f11e835]:
+        - heading "Contact" [level=3] [ref=f11e836]
+        - list [ref=f11e837]:
+          - listitem [ref=f11e838]:
+            - generic [ref=f11e841]: +91 9944323726
+          - listitem [ref=f11e842]:
+            - link "grmb2bsupport@gmail.com" [ref=f11e845] [cursor=pointer]:
+              - /url: mailto:grmb2bsupport@gmail.com
+      - iframe [ref=f11e848]
+    - generic [ref=f11e850]:
+      - paragraph [ref=f11e851]: © 2026 GRM Garments B2B. All rights reserved.
+      - paragraph [ref=f11e852]: Global Shipping Available
+  - link "Chat on WhatsApp" [ref=f11e855] [cursor=pointer]:
+    - /url: https://api.whatsapp.com/send/?phone=919944323726&text=Hello%20GRM%20B2B,%20I%20have%20an%20inquiry%20from%20http%3A%2F%2Flocalhost%3A8000

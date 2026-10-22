@@ -123,9 +123,33 @@ if ($action === 'get_state' || $action === 'get_all') {
             }
         }
 
-        // 8. Followups
+        // 8. Followups (Normalized with lifecycle & RBAC fields)
         $fStmt = $pdo->query("SELECT * FROM `followups` ORDER BY `created_at` DESC");
-        $followups = $fStmt->fetchAll();
+        $rawFollowups = $fStmt->fetchAll();
+        $followups = array_map(function($fu) {
+            return [
+                'id'                => $fu['id'],
+                'queryId'           => $fu['query_id'] ?? '',
+                'customerId'        => $fu['customer_id'] ?? '',
+                'customerName'      => $fu['customer_name'] ?? 'Customer',
+                'assignedTo'        => $fu['assigned_to'] ?? 'staff_01',
+                'date'              => $fu['date_str'] ?? '',
+                'date_str'          => $fu['date_str'] ?? '',
+                'time'              => $fu['time_str'] ?? '',
+                'time_str'          => $fu['time_str'] ?? '',
+                'reason'            => $fu['reason'] ?? '',
+                'status'            => $fu['status'] ?? 'PENDING',
+                'outcome'           => $fu['outcome'] ?? 'PENDING',
+                'priority'          => $fu['priority'] ?? 'NORMAL',
+                'channel'           => $fu['contact_channel'] ?? 'WHATSAPP',
+                'contact_channel'   => $fu['contact_channel'] ?? 'WHATSAPP',
+                'outcomeNotes'      => $fu['outcome_notes'] ?? '',
+                'outcome_notes'     => $fu['outcome_notes'] ?? '',
+                'completedAt'       => $fu['completed_at'] ?? null,
+                'rescheduledFromId' => $fu['rescheduled_from_id'] ?? null,
+                'createdAt'         => $fu['created_at'] ?? ''
+            ];
+        }, $rawFollowups);
 
         // 9. Audit Logs
         $aStmt = $pdo->query("SELECT * FROM `audit_logs` ORDER BY `id` DESC LIMIT 100");
@@ -1789,6 +1813,38 @@ if ($action === 'update_order_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
 // =========================================================================
 // 7. FOLLOW-UPS SCHEDULING & MANAGEMENT
 // =========================================================================
+if ($action === 'check_duplicate_followup') {
+    $cId = $_GET['customer_id'] ?? '';
+    if (!$cId) {
+        echo json_encode(["status" => "success", "has_active" => false]);
+        exit;
+    }
+    if ($pdo) {
+        try {
+            $chk = $pdo->prepare("SELECT id, date_str, time_str, assigned_to, reason FROM `followups` WHERE `customer_id` = ? AND `status` = 'PENDING' LIMIT 1");
+            $chk->execute([$cId]);
+            $existing = $chk->fetch();
+            if ($existing) {
+                echo json_encode([
+                    "status" => "warning",
+                    "has_active" => true,
+                    "existing" => [
+                        "id" => $existing['id'],
+                        "date" => $existing['date_str'],
+                        "time" => $existing['time_str'],
+                        "assignedTo" => $existing['assigned_to'],
+                        "reason" => $existing['reason']
+                    ],
+                    "message" => "Customer already has an active pending follow-up."
+                ]);
+                exit;
+            }
+        } catch (Exception $e) {}
+    }
+    echo json_encode(["status" => "success", "has_active" => false]);
+    exit;
+}
+
 if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
     $fu = json_decode($input, true);
@@ -1799,36 +1855,60 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    $cId = $fu['customerId'] ?? ($fu['customer_id'] ?? '');
+    $cName = $fu['customerName'] ?? ($fu['customer_name'] ?? 'Customer');
+    $qId = $fu['queryId'] ?? ($fu['query_id'] ?? null);
+    $assignedTo = $fu['assignedTo'] ?? ($fu['assigned_to'] ?? 'staff_01');
+    $dateStr = $fu['date'] ?? ($fu['date_str'] ?? date('Y-m-d'));
+    $timeStr = $fu['time'] ?? ($fu['time_str'] ?? '11:00 AM');
+    $reason = $fu['reason'] ?? ($fu['notes'] ?? 'Follow-up callback');
+    $priority = $fu['priority'] ?? 'NORMAL';
+    $channel = $fu['channel'] ?? ($fu['contact_channel'] ?? 'WHATSAPP');
+    $rescheduledFrom = $fu['rescheduledFromId'] ?? ($fu['rescheduled_from_id'] ?? null);
+
     if ($pdo) {
         try {
             $stmt = $pdo->prepare("
-                INSERT INTO `followups` (`id`, `query_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO `followups` (`id`, `query_id`, `rescheduled_from_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', ?, ?)
                 ON DUPLICATE KEY UPDATE
                     `date_str` = VALUES(`date_str`),
                     `time_str` = VALUES(`time_str`),
                     `reason` = VALUES(`reason`),
-                    `status` = VALUES(`status`),
-                    `assigned_to` = VALUES(`assigned_to`)
+                    `assigned_to` = VALUES(`assigned_to`),
+                    `priority` = VALUES(`priority`),
+                    `contact_channel` = VALUES(`contact_channel`)
             ");
             $stmt->execute([
                 $fu['id'],
-                $fu['queryId'] ?? ($fu['query_id'] ?? null),
-                $fu['customerId'] ?? ($fu['customer_id'] ?? ''),
-                $fu['customerName'] ?? ($fu['customer_name'] ?? 'Customer'),
-                $fu['assignedTo'] ?? ($fu['assigned_to'] ?? 'staff_01'),
-                $fu['date'] ?? ($fu['date_str'] ?? date('Y-m-d')),
-                $fu['time'] ?? ($fu['time_str'] ?? '11:00 AM'),
-                $fu['reason'] ?? ($fu['notes'] ?? 'Follow-up callback'),
-                $fu['status'] ?? 'PENDING'
+                $qId,
+                $rescheduledFrom,
+                $cId,
+                $cName,
+                $assignedTo,
+                $dateStr,
+                $timeStr,
+                $reason,
+                $priority,
+                $channel
             ]);
 
-            $qId = $fu['queryId'] ?? ($fu['query_id'] ?? null);
             if ($qId && $qId !== 'N/A') {
                 $pdo->prepare("UPDATE `queries` SET `status` = 'FOLLOW_UP' WHERE `id` = ?")->execute([$qId]);
             }
 
-            echo json_encode(["status" => "success", "message" => "Follow-up saved in database"]);
+            // Record in audit log
+            $actor = $_SESSION['user']['name'] ?? ($fu['actor'] ?? 'Staff');
+            $pdo->prepare("
+                INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+                VALUES (?, 'FOLLOWUP_SCHEDULED', 'FOLLOWUP', ?, ?)
+            ")->execute([
+                $actor,
+                "Follow-up {$fu['id']} scheduled for {$cName} on {$dateStr} at {$timeStr} via {$channel} (Priority: {$priority})",
+                date('Y-m-d H:i:s')
+            ]);
+
+            echo json_encode(["status" => "success", "message" => "Follow-up saved in database", "id" => $fu['id']]);
             exit;
         } catch (Exception $e) {
             http_response_code(500);
@@ -1837,6 +1917,146 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     echo json_encode(["status" => "success", "message" => "Follow-up saved locally"]);
+    exit;
+}
+
+if ($action === 'log_followup_outcome' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    $fuId = $data['id'] ?? null;
+    $outcome = $data['outcome'] ?? 'INTERESTED';
+    $notes = trim($data['notes'] ?? '');
+    $user = $_SESSION['user']['name'] ?? ($data['user'] ?? 'Staff Member');
+
+    if (!$fuId) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Follow-up ID is required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $pdo->beginTransaction();
+
+            $fStmt = $pdo->prepare("SELECT * FROM `followups` WHERE `id` = ?");
+            $fStmt->execute([$fuId]);
+            $currentFu = $fStmt->fetch();
+
+            if (!$currentFu) {
+                throw new Exception("Follow-up record {$fuId} not found");
+            }
+
+            // 1. Mark current follow-up as COMPLETED with the chosen outcome
+            $upStmt = $pdo->prepare("
+                UPDATE `followups` 
+                SET `status` = 'COMPLETED', `outcome` = ?, `outcome_notes` = ?, `completed_at` = NOW() 
+                WHERE `id` = ?
+            ");
+            $upStmt->execute([$outcome, $notes, $fuId]);
+
+            $qId = $currentFu['query_id'];
+            $nextFuId = null;
+
+            // 2. Handle outcome side effects
+            if ($outcome === 'ORDER_PLACED') {
+                if ($qId) {
+                    $pdo->prepare("UPDATE `queries` SET `status` = 'CONVERTED' WHERE `id` = ?")->execute([$qId]);
+                }
+            } elseif ($outcome === 'LOST') {
+                if ($qId) {
+                    $pdo->prepare("UPDATE `queries` SET `status` = 'LOST' WHERE `id` = ?")->execute([$qId]);
+                }
+            } elseif ($outcome === 'FOLLOWUP_AGAIN' && !empty($data['next_followup'])) {
+                $next = $data['next_followup'];
+                $nextFuId = 'FU-2026-00' . rand(1000, 9999);
+                $insNext = $pdo->prepare("
+                    INSERT INTO `followups` (`id`, `query_id`, `rescheduled_from_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', ?, ?)
+                ");
+                $insNext->execute([
+                    $nextFuId,
+                    $qId,
+                    $fuId,
+                    $currentFu['customer_id'],
+                    $currentFu['customer_name'],
+                    $next['assigned_to'] ?? $currentFu['assigned_to'],
+                    $next['date'] ?? date('Y-m-d', strtotime('+1 day')),
+                    $next['time'] ?? '11:00 AM',
+                    $next['reason'] ?? 'Follow-up callback',
+                    $next['priority'] ?? $currentFu['priority'],
+                    $next['channel'] ?? $currentFu['contact_channel']
+                ]);
+                if ($qId) {
+                    $pdo->prepare("UPDATE `queries` SET `status` = 'FOLLOW_UP' WHERE `id` = ?")->execute([$qId]);
+                }
+            }
+
+            // 3. Tamper-evident Audit Log
+            $auditStmt = $pdo->prepare("
+                INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+                VALUES (?, 'FOLLOWUP_OUTCOME_LOGGED', 'FOLLOWUP', ?, ?)
+            ");
+            $auditStmt->execute([
+                $user,
+                "Follow-up {$fuId} ({$currentFu['customer_name']}) completed with outcome: {$outcome}. Notes: {$notes}" . ($nextFuId ? " (Next scheduled: {$nextFuId})" : ""),
+                date('Y-m-d H:i:s')
+            ]);
+
+            $pdo->commit();
+            echo json_encode([
+                "status" => "success", 
+                "message" => "Outcome saved successfully", 
+                "outcome" => $outcome, 
+                "next_followup_id" => $nextFuId
+            ]);
+            exit;
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Outcome saved locally"]);
+    exit;
+}
+
+if ($action === 'reassign_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    $fuId = $data['id'] ?? null;
+    $newStaff = $data['assigned_to'] ?? null;
+    $user = $_SESSION['user']['name'] ?? ($data['user'] ?? 'Admin');
+
+    if (!$fuId || !$newStaff) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Follow-up ID and new staff ID are required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("UPDATE `followups` SET `assigned_to` = ? WHERE `id` = ?");
+            $stmt->execute([$newStaff, $fuId]);
+
+            $pdo->prepare("
+                INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+                VALUES (?, 'FOLLOWUP_REASSIGNED', 'FOLLOWUP', ?, ?)
+            ")->execute([
+                $user,
+                "Follow-up {$fuId} reassigned to staff: {$newStaff}",
+                date('Y-m-d H:i:s')
+            ]);
+
+            echo json_encode(["status" => "success", "message" => "Follow-up reassigned successfully"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Reassigned locally"]);
     exit;
 }
 

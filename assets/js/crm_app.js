@@ -84,7 +84,64 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
   queries: [],
   conversations: {},
   orders: [],
-  followups: [],
+  followups: [
+    {
+      id: 'FU-2026-0001',
+      queryId: 'Q-2026-001245',
+      customerId: 'cust_101',
+      customerName: 'Priya Sundaram',
+      assignedTo: 'staff_01',
+      date: new Date().toISOString().split('T')[0],
+      time: '11:30 AM',
+      reason: 'Customer asked to confirm pure cotton frock BF-001 pink size availability for 2-year-old before ordering.',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'HIGH',
+      channel: 'WHATSAPP'
+    },
+    {
+      id: 'FU-2026-0002',
+      queryId: 'Q-2026-001246',
+      customerId: 'cust_102',
+      customerName: 'Ananya Sharma',
+      assignedTo: 'staff_02',
+      date: new Date().toISOString().split('T')[0],
+      time: '04:00 PM',
+      reason: 'Call to discuss feeding gown MD-102 fabric details & COD shipping options to Bengaluru.',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'URGENT',
+      channel: 'CALL'
+    },
+    {
+      id: 'FU-2026-0003',
+      queryId: 'Q-2026-001247',
+      customerId: 'cust_103',
+      customerName: 'Kavitha Ramachandran',
+      assignedTo: 'staff_03',
+      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      time: '10:00 AM',
+      reason: 'Follow up regarding wholesale 25-piece bulk frock lot inquiry and payment quotation.',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'NORMAL',
+      channel: 'CALL'
+    },
+    {
+      id: 'FU-2026-0004',
+      queryId: 'Q-2026-001245',
+      customerId: 'cust_101',
+      customerName: 'Priya Sundaram',
+      assignedTo: 'staff_01',
+      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+      time: '02:30 PM',
+      reason: 'Check if customer received catalog photos of newborn gift sets.',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'NORMAL',
+      channel: 'WHATSAPP'
+    }
+  ],
   auditLogs: [],
   categories: [
     { id: 1, name: 'Baby Collection', slug: 'baby_collection', icon: 'child_care', description: 'Pure cotton frocks, rompers & soft babywear (0–3 Years)' },
@@ -201,6 +258,7 @@ window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
 // Global App State (Safely Initialized Immediately)
 var CRM_STATE = window.CRM_STATE || JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
 window.CRM_STATE = CRM_STATE;
+<<<<<<< HEAD
 function getPersistedActiveView() {
   try {
     const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
@@ -219,6 +277,46 @@ function getPersistedActiveView() {
 }
 
 var ACTIVE_VIEW = window.ACTIVE_VIEW || getPersistedActiveView();
+=======
+var CURRENT_USER = window.CURRENT_USER || null; // Currently logged in user profile
+var CRM_AUTH_SESSION = window.CRM_AUTH_SESSION || null; // Normalized Auth Session reference
+
+// Standardized session retrieval helper across Admin & Staff operations
+function getCurrentUser() {
+  let user = null;
+  if (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) {
+    user = CURRENT_USER;
+  } else if (typeof window !== 'undefined' && window.CURRENT_USER) {
+    user = window.CURRENT_USER;
+  } else if (typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) {
+    user = CRM_AUTH_SESSION;
+  } else if (typeof window !== 'undefined' && window.CRM_AUTH_SESSION) {
+    user = window.CRM_AUTH_SESSION;
+  } else {
+    try {
+      const sessionStr = localStorage.getItem('GRM_CRM_SESSION') || sessionStorage.getItem('GRM_CRM_SESSION');
+      if (sessionStr) {
+        user = JSON.parse(sessionStr);
+        CURRENT_USER = user;
+      }
+    } catch (e) {}
+  }
+
+  if (!user) {
+    user = { id: 'admin', staffId: 'admin', username: 'admin', role: 'admin', name: 'Super Admin' };
+  }
+
+  if (!user.id) user.id = user.staffId || user.username || 'admin';
+  if (!user.staffId) user.staffId = user.id;
+
+  window.CURRENT_USER = user;
+  window.CRM_AUTH_SESSION = user;
+  CRM_AUTH_SESSION = user;
+  return user;
+}
+
+var ACTIVE_VIEW = window.ACTIVE_VIEW || 'inbox';
+>>>>>>> db0958dadb057634312f8abf3968621e2c6c15df
 var ACTIVE_ROLE = window.ACTIVE_ROLE || 'admin'; // 'admin', 'staff_01', 'staff_02', 'staff_03', etc.
 var ACTIVE_CUSTOMER_ID = window.ACTIVE_CUSTOMER_ID || 'cust_100';
 var INBOX_FILTER = window.INBOX_FILTER || 'all'; // 'all', 'unassigned', 'my', 'urgent'
@@ -1325,8 +1423,10 @@ function initCRMState() {
       if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
       if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object') CRM_STATE.conversations = {};
       if (!Array.isArray(CRM_STATE.orders)) CRM_STATE.orders = [];
-      if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
       if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = [];
+      if (!Array.isArray(CRM_STATE.followups) || CRM_STATE.followups.length === 0) {
+        CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
+      }
       // Keep existing products intact without destructive mock filtering
       if (!Array.isArray(CRM_STATE.categories) || CRM_STATE.categories.length === 0) {
         CRM_STATE.categories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.categories || []));
@@ -1467,6 +1567,29 @@ function initCRMState() {
         CRM_STATE.attributes = data.attributes;
       }
 
+      if (data && data.followups && Array.isArray(data.followups) && data.followups.length > 0) {
+        CRM_STATE.followups = data.followups.map(fu => ({
+          id: fu.id,
+          queryId: fu.queryId || fu.query_id || '',
+          customerId: fu.customerId || fu.customer_id || '',
+          customerName: fu.customerName || fu.customer_name || 'Customer',
+          assignedTo: fu.assignedTo || fu.assigned_to || 'staff_01',
+          date: fu.date || fu.date_str || '',
+          time: fu.time || fu.time_str || '11:00 AM',
+          reason: fu.reason || '',
+          status: fu.status || 'PENDING',
+          outcome: fu.outcome || 'PENDING',
+          priority: fu.priority || 'NORMAL',
+          channel: fu.channel || fu.contact_channel || 'WHATSAPP',
+          outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
+          completedAt: fu.completedAt || fu.completed_at || null,
+          rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
+          createdAt: fu.createdAt || fu.created_at || ''
+        }));
+        if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+        if (ACTIVE_VIEW === 'followups' && typeof filterFollowupsCards === 'function') filterFollowupsCards();
+      }
+
       if (typeof populateCatalogCategoryFilters === 'function') {
         populateCatalogCategoryFilters();
       }
@@ -1488,6 +1611,7 @@ function initCRMState() {
   initSocketIO();
   fetchQRBridgeStatus();
   startRealtimeMessageSync();
+  startFollowupReminderTicker();
 }
 
 function purgeStaticMockData() {
@@ -2165,6 +2289,9 @@ function quickLogin(accountKey) {
 // Logout handler
 function handleLogout() {
   CURRENT_USER = null;
+  CRM_AUTH_SESSION = null;
+  window.CURRENT_USER = null;
+  window.CRM_AUTH_SESSION = null;
   localStorage.removeItem('GRM_CRM_SESSION');
   sessionStorage.removeItem('GRM_CRM_SESSION');
   localStorage.removeItem('GRM_REMEMBER_FLAG');
@@ -2179,6 +2306,9 @@ function handleLogout() {
 // Apply granular Role-Based Access Control and update UI
 function applyRoleBasedAccessControl(user) {
   if (!user) return;
+  CRM_AUTH_SESSION = user;
+  window.CRM_AUTH_SESSION = user;
+  window.CURRENT_USER = user;
   ACTIVE_ROLE = user.role || 'admin';
 
   const isAdmin = user.role === 'admin';
@@ -7700,10 +7830,100 @@ function handleCreateOrder(event) {
 // =========================================================================
 // 9. FOLLOW-UP SCHEDULER (12-HOUR TIME, CALENDAR & RICH NOTES)
 // =========================================================================
-function openFollowUpModal() {
+// =========================================================================
+// 9. UNIFIED FOLLOW-UP WORKSTATION ENGINE (ADMIN & STAFF RBAC)
+// =========================================================================
+
+var ACTIVE_FOLLOWUP_TAB = 'ALL';
+var NOTIFIED_FOLLOWUP_IDS = new Set();
+var FOLLOWUP_TICKER_INTERVAL = null;
+
+function isFollowupOverdue(fu) {
+  if (!fu || fu.status !== 'PENDING') return false;
+  if (!fu.date) return false;
+  try {
+    const [y, m, d] = fu.date.split('-').map(Number);
+    if (!y || !m || !d) return false;
+    
+    let hours = 11;
+    let minutes = 0;
+    const timeStr = fu.time || '11:00 AM';
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+      hours = parseInt(match[1], 10);
+      minutes = parseInt(match[2], 10);
+      const ampm = match[3].toUpperCase();
+      if (ampm === 'PM' && hours < 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+    }
+    
+    const scheduled = new Date(y, m - 1, d, hours, minutes);
+    return scheduled < new Date();
+  } catch (e) {
+    return false;
+  }
+}
+
+function getFollowupDueStatus(fu) {
+  if (!fu) return 'PENDING';
+  if (fu.status === 'COMPLETED') {
+    return fu.outcome === 'LOST' ? 'LOST' : 'COMPLETED';
+  }
+  if (isFollowupOverdue(fu)) return 'OVERDUE';
+  const today = new Date().toISOString().split('T')[0];
+  if (fu.date === today) return 'TODAY';
+  if (fu.date > today) return 'UPCOMING';
+  return 'OVERDUE';
+}
+
+function openFollowUpModal(prefillCustomerId = null) {
+  const currentUser = getCurrentUser();
+  const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
+
+  const cId = prefillCustomerId || ACTIVE_CUSTOMER_ID || (CRM_STATE.customers[0] ? CRM_STATE.customers[0].id : null);
+  ACTIVE_CUSTOMER_ID = cId;
+  const customer = (CRM_STATE.customers || []).find(c => c.id === cId);
+  const query = (CRM_STATE.queries || []).find(q => q.customerId === cId);
+
+  // Set Customer Display
+  const custDisplay = document.getElementById('followup-customer-display');
+  if (custDisplay) {
+    custDisplay.innerText = customer ? `${customer.name} (${customer.whatsapp || customer.phone})` : 'New WhatsApp Customer';
+  }
+
+  // Pre-fill Assigned Staff Dropdown
+  const staffSelect = document.getElementById('followup-staff-select');
+  if (staffSelect) {
+    const currentStaffId = !isAdmin 
+      ? (currentUser.staffId || currentUser.id) 
+      : (query ? query.assignedTo : 'staff_01');
+    staffSelect.value = currentStaffId || 'staff_01';
+
+    // If current user is not admin, lock the staff selector to themselves
+    if (!isAdmin) {
+      staffSelect.disabled = true;
+      staffSelect.classList.add('opacity-75', 'cursor-not-allowed');
+    } else {
+      staffSelect.disabled = false;
+      staffSelect.classList.remove('opacity-75', 'cursor-not-allowed');
+    }
+  }
+
+  // Duplicate Active Follow-up Pre-Flight Check
+  const dupWarning = document.getElementById('followup-duplicate-warning');
+  const dupText = document.getElementById('followup-duplicate-text');
+  if (dupWarning && dupText) {
+    const existing = (CRM_STATE.followups || []).find(f => f.customerId === cId && f.status === 'PENDING');
+    if (existing) {
+      dupWarning.classList.remove('hidden');
+      dupText.innerText = `Customer already has an active follow-up (${existing.id}) scheduled for ${existing.date} at ${existing.time} with ${existing.assignedTo}. You may reschedule or create an additional follow-up.`;
+    } else {
+      dupWarning.classList.add('hidden');
+    }
+  }
+
+  // Set default date to today
   const now = new Date();
-  
-  // Format local date YYYY-MM-DD
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
@@ -7712,32 +7932,31 @@ function openFollowUpModal() {
   const dateInput = document.getElementById('followup-date');
   if (dateInput) {
     dateInput.value = dateStr;
-    dateInput.min = dateStr; // Avoid selecting past dates
+    dateInput.min = dateStr;
   }
 
-  // Calculate 12-hour time: current local time rounded to next 5 minutes
+  // 12-hour time calculation rounded to next 5 minutes
   let hours = now.getHours();
-  let minutes = now.getMinutes();
-  
-  minutes = Math.ceil(minutes / 5) * 5;
+  let minutes = Math.ceil(now.getMinutes() / 5) * 5;
   if (minutes >= 60) {
     hours = (hours + 1) % 24;
     minutes = 0;
   }
-  
   const ampm = hours >= 12 ? 'PM' : 'AM';
-  let hour12 = hours % 12;
-  hour12 = hour12 === 0 ? 12 : hour12;
-  const hourStr = String(hour12).padStart(2, '0');
-  const minStr = String(minutes).padStart(2, '0');
+  let hour12 = hours % 12 || 12;
 
   const hourEl = document.getElementById('followup-hour');
   const minEl = document.getElementById('followup-minute');
   const ampmEl = document.getElementById('followup-ampm');
-
-  if (hourEl) hourEl.value = hourStr;
-  if (minEl) minEl.value = minStr;
+  if (hourEl) hourEl.value = String(hour12).padStart(2, '0');
+  if (minEl) minEl.value = String(minutes).padStart(2, '0');
   if (ampmEl) ampmEl.value = ampm;
+
+  // Defaults for Priority and Channel
+  const prioEl = document.getElementById('followup-priority');
+  if (prioEl) prioEl.value = 'NORMAL';
+  const chanEl = document.getElementById('followup-channel');
+  if (chanEl) chanEl.value = 'WHATSAPP';
 
   updateFollowUpTimePreview();
   openModal('modal-followup');
@@ -7755,7 +7974,7 @@ function updateFollowUpTimePreview() {
   if (dateVal) {
     const parts = dateVal.split('-');
     if (parts.length === 3) {
-      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
       const dayName = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
       previewEl.innerText = `${dayName} at ${hourVal}:${minVal} ${ampmVal}`;
     } else {
@@ -7786,7 +8005,6 @@ function setFollowUpQuickTime(preset) {
   if (!hourEl || !minEl || !ampmEl) return;
 
   const now = new Date();
-
   if (preset === 'NOW') {
     let h = now.getHours();
     let m = Math.ceil(now.getMinutes() / 5) * 5;
@@ -7812,7 +8030,6 @@ function setFollowUpQuickTime(preset) {
     minEl.value = '00';
     ampmEl.value = 'PM';
   }
-
   updateFollowUpTimePreview();
 }
 
@@ -7842,32 +8059,41 @@ function appendFollowUpNoteTemplate(text) {
 
 function handleCreateFollowup(event) {
   event.preventDefault();
+  const currentUser = getCurrentUser();
   const date = document.getElementById('followup-date')?.value || new Date().toISOString().split('T')[0];
   const hour = document.getElementById('followup-hour')?.value || '11';
   const min = document.getElementById('followup-minute')?.value || '00';
   const ampm = document.getElementById('followup-ampm')?.value || 'AM';
   const formattedTime = `${hour}:${min} ${ampm}`;
   const notes = document.getElementById('followup-notes')?.value?.trim() || 'Follow-up callback scheduled';
+  const priority = document.getElementById('followup-priority')?.value || 'NORMAL';
+  const channel = document.getElementById('followup-channel')?.value || 'WHATSAPP';
+  const assignedStaff = document.getElementById('followup-staff-select')?.value || (currentUser.staffId || currentUser.id || 'staff_01');
 
-  const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
-  const query = CRM_STATE.queries.find(q => q.customerId === ACTIVE_CUSTOMER_ID);
+  const customer = (CRM_STATE.customers || []).find(c => c.id === ACTIVE_CUSTOMER_ID) || CRM_STATE.customers[0] || { id: 'cust_101', name: 'Customer' };
+  const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
 
   const newFollowup = {
-    id: `FU-2026-00${245 + CRM_STATE.followups.length + 1}`,
+    id: `FU-2026-00${(CRM_STATE.followups || []).length + 101}`,
     queryId: query ? query.id : 'Q-2026-0000',
-    customerId: customer ? customer.id : 'cust_101',
-    customerName: customer ? customer.name : 'Customer',
-    assignedTo: query ? query.assignedTo : 'staff_01',
+    customerId: customer.id,
+    customerName: customer.name,
+    assignedTo: assignedStaff,
     date: date,
     time: formattedTime,
     reason: notes,
-    status: 'PENDING'
+    status: 'PENDING',
+    outcome: 'PENDING',
+    priority: priority,
+    channel: channel,
+    createdAt: new Date().toISOString()
   };
 
-  CRM_STATE.followups.unshift(newFollowup);
+  (CRM_STATE.followups = CRM_STATE.followups || []).unshift(newFollowup);
   if (query) query.status = 'FOLLOW_UP';
 
-  logAudit('FOLLOWUP_SCHEDULED', 'FOLLOWUP', `Scheduled follow-up for ${customer ? customer.name : 'Customer'} on ${date} at ${formattedTime}. Notes: ${notes}`);
+  const actor = currentUser.name || 'Staff';
+  logAudit('FOLLOWUP_SCHEDULED', 'FOLLOWUP', `Scheduled follow-up for ${customer.name} on ${date} at ${formattedTime} via ${channel} (Priority: ${priority}, Staff: ${assignedStaff})`);
 
   // Asynchronously synchronize follow-up with MySQL Database
   fetch('api.php?action=save_followup', {
@@ -7878,9 +8104,541 @@ function handleCreateFollowup(event) {
 
   saveCRMState();
   closeModal('modal-followup');
-  showToast('Follow-up Scheduled', `Reminder set for ${date} at ${formattedTime}`, 'event', 'blue');
+  showToast('Follow-up Scheduled', `Reminder set for ${date} at ${formattedTime} (${assignedStaff})`, 'event', 'blue');
+  
+  updateFollowupsKPICounters();
+  filterFollowupsCards();
   renderInbox();
-  if (typeof renderFollowupsTable === 'function') renderFollowupsTable();
+}
+
+function openFollowupOutcomeModal(fuId) {
+  const fu = (CRM_STATE.followups || []).find(f => f.id === fuId);
+  if (!fu) return;
+
+  const idInput = document.getElementById('outcome-followup-id');
+  const badgeId = document.getElementById('outcome-badge-id');
+  const custName = document.getElementById('outcome-customer-name');
+  const reasonEl = document.getElementById('outcome-original-reason');
+  const staffBadge = document.getElementById('outcome-assigned-badge');
+  const notesText = document.getElementById('outcome-notes');
+  const nextDateInput = document.getElementById('outcome-next-date');
+  const nextTimeInput = document.getElementById('outcome-next-time');
+
+  if (idInput) idInput.value = fu.id;
+  if (badgeId) badgeId.innerText = fu.id;
+  if (custName) custName.innerText = fu.customerName;
+  if (reasonEl) reasonEl.innerText = `Note: ${fu.reason}`;
+  if (staffBadge) staffBadge.innerText = `Assigned: ${fu.assignedTo}`;
+  if (notesText) notesText.value = '';
+
+  // Default next follow-up date to tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (nextDateInput) nextDateInput.value = tomorrow.toISOString().split('T')[0];
+  if (nextTimeInput) nextTimeInput.value = '11:00 AM';
+
+  // Reset radio cards
+  const radios = document.getElementsByName('followup_outcome');
+  radios.forEach(r => { r.checked = (r.value === 'INTERESTED'); });
+  toggleOutcomeNextScheduler('INTERESTED');
+
+  openModal('modal-followup-outcome');
+}
+
+function toggleOutcomeNextScheduler(val) {
+  const scheduler = document.getElementById('outcome-next-scheduler');
+  if (!scheduler) return;
+  if (val === 'FOLLOWUP_AGAIN') {
+    scheduler.classList.remove('hidden');
+  } else {
+    scheduler.classList.add('hidden');
+  }
+}
+
+function handleSaveFollowupOutcome(event) {
+  event.preventDefault();
+  const fuId = document.getElementById('outcome-followup-id')?.value;
+  const radios = document.getElementsByName('followup_outcome');
+  let chosenOutcome = 'INTERESTED';
+  for (const r of radios) {
+    if (r.checked) { chosenOutcome = r.value; break; }
+  }
+  const notes = document.getElementById('outcome-notes')?.value?.trim() || 'Follow-up completed';
+
+  const fu = (CRM_STATE.followups || []).find(f => f.id === fuId);
+  if (!fu) return;
+
+  // 1. Update current follow-up
+  fu.status = 'COMPLETED';
+  fu.outcome = chosenOutcome;
+  fu.outcomeNotes = notes;
+  fu.completedAt = new Date().toISOString();
+
+  // 2. Query status side-effects
+  const query = CRM_STATE.queries.find(q => q.id === fu.queryId || q.customerId === fu.customerId);
+  let nextFuPayload = null;
+
+  if (chosenOutcome === 'ORDER_PLACED') {
+    if (query) query.status = 'CONVERTED';
+    showToast('Customer Lead Converted!', 'Customer placed order! Opening order booking...', 'verified', 'emerald');
+  } else if (chosenOutcome === 'LOST') {
+    if (query) query.status = 'LOST';
+  } else if (chosenOutcome === 'FOLLOWUP_AGAIN') {
+    const nextDate = document.getElementById('outcome-next-date')?.value || new Date().toISOString().split('T')[0];
+    const nextTime = document.getElementById('outcome-next-time')?.value || '11:00 AM';
+    const nextFu = {
+      id: `FU-2026-00${CRM_STATE.followups.length + 102}`,
+      queryId: fu.queryId,
+      customerId: fu.customerId,
+      customerName: fu.customerName,
+      assignedTo: fu.assignedTo,
+      date: nextDate,
+      time: nextTime,
+      reason: `Follow-up again: ${notes}`,
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: fu.priority || 'NORMAL',
+      channel: fu.channel || 'WHATSAPP',
+      rescheduledFromId: fu.id,
+      createdAt: new Date().toISOString()
+    };
+    CRM_STATE.followups.unshift(nextFu);
+    nextFuPayload = nextFu;
+    if (query) query.status = 'FOLLOW_UP';
+  }
+
+  // 3. Post to backend API
+  const currentUser = getCurrentUser();
+  fetch('api.php?action=log_followup_outcome', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: fuId,
+      outcome: chosenOutcome,
+      notes: notes,
+      user: currentUser.name || 'Staff',
+      next_followup: nextFuPayload
+    })
+  }).catch(() => {});
+
+  saveCRMState();
+  closeModal('modal-followup-outcome');
+  showToast('Follow-up Result Saved', `Outcome marked as ${chosenOutcome}`, 'check_circle', 'emerald');
+
+  updateFollowupsKPICounters();
+  filterFollowupsCards();
+
+  // If order placed, prompt to book order
+  if (chosenOutcome === 'ORDER_PLACED') {
+    setTimeout(() => {
+      ACTIVE_CUSTOMER_ID = fu.customerId;
+      if (typeof openConvertOrderModal === 'function') openConvertOrderModal();
+    }, 600);
+  }
+}
+
+function handleReassignFollowup(fuId, newStaffId) {
+  const fu = (CRM_STATE.followups || []).find(f => f.id === fuId);
+  if (!fu) return;
+
+  const prevStaff = fu.assignedTo;
+  fu.assignedTo = newStaffId;
+
+  logAudit('FOLLOWUP_REASSIGNED', 'FOLLOWUP', `Reassigned follow-up ${fuId} from ${prevStaff} to ${newStaffId}`);
+
+  const currentUser = getCurrentUser();
+  fetch('api.php?action=reassign_followup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: fuId,
+      assigned_to: newStaffId,
+      user: currentUser.name || 'Admin'
+    })
+  }).catch(() => {});
+
+  saveCRMState();
+  showToast('Follow-up Reassigned', `Assigned to ${newStaffId}`, 'published_with_changes', 'blue');
+  updateFollowupsKPICounters();
+  filterFollowupsCards();
+}
+
+function setFollowupTabFilter(tab) {
+  ACTIVE_FOLLOWUP_TAB = tab;
+
+  // Highlight tab buttons
+  const tabs = ['ALL', 'TODAY', 'UPCOMING', 'OVERDUE', 'COMPLETED', 'LOST'];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`tab-fu-${t.toLowerCase()}`);
+    if (btn) {
+      if (t === tab) {
+        btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-blue-600 text-white shadow-sm transition shrink-0 flex items-center gap-1";
+      } else {
+        btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0 flex items-center gap-1";
+      }
+    }
+  });
+
+  filterFollowupsCards();
+}
+
+function updateFollowupsKPICounters() {
+  const all = CRM_STATE.followups || [];
+  const currentUser = getCurrentUser();
+  const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
+
+  // Scoped list for current user view
+  const scopedList = isAdmin ? all : all.filter(f => f.assignedTo === currentUser.id || f.assignedTo === currentUser.staffId);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const total = scopedList.length;
+  const todayDue = scopedList.filter(f => f.status === 'PENDING' && f.date === todayStr).length;
+  const upcoming = scopedList.filter(f => f.status === 'PENDING' && f.date > todayStr).length;
+  const overdue = scopedList.filter(f => isFollowupOverdue(f)).length;
+  const converted = scopedList.filter(f => f.status === 'COMPLETED' && f.outcome !== 'LOST').length;
+  const lost = scopedList.filter(f => f.outcome === 'LOST').length;
+
+  // Update Top Metric Cards
+  const elTotal = document.getElementById('kpi-fu-total');
+  const elToday = document.getElementById('kpi-fu-today');
+  const elUpcoming = document.getElementById('kpi-fu-upcoming');
+  const elOverdue = document.getElementById('kpi-fu-overdue');
+  const elConverted = document.getElementById('kpi-fu-converted');
+  const elLost = document.getElementById('kpi-fu-lost');
+
+  if (elTotal) elTotal.innerText = total;
+  if (elToday) elToday.innerText = todayDue;
+  if (elUpcoming) elUpcoming.innerText = upcoming;
+  if (elOverdue) elOverdue.innerText = overdue;
+  if (elConverted) elConverted.innerText = converted;
+  if (elLost) elLost.innerText = lost;
+
+  // Update Tab Badges
+  const tabBadgeToday = document.getElementById('tab-badge-today');
+  const tabBadgeOverdue = document.getElementById('tab-badge-overdue');
+  if (tabBadgeToday) tabBadgeToday.innerText = todayDue;
+  if (tabBadgeOverdue) tabBadgeOverdue.innerText = overdue;
+
+  // Sidebar Follow-up Counter
+  const badgeSidebar = document.getElementById('badge-followup-count');
+  if (badgeSidebar) {
+    const dueCount = overdue + todayDue;
+    badgeSidebar.innerText = dueCount > 0 ? `${dueCount} Due` : `${todayDue} Today`;
+    if (overdue > 0) {
+      badgeSidebar.className = "bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-400/40 animate-pulse";
+    } else {
+      badgeSidebar.className = "bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full";
+    }
+  }
+
+  // Role Header Banner update
+  const roleBadge = document.getElementById('followup-role-badge');
+  const roleSubtitle = document.getElementById('followup-role-subtitle');
+  const staffFilterContainer = document.getElementById('followup-staff-filter-container');
+
+  if (roleBadge) {
+    roleBadge.innerText = isAdmin ? '👑 Admin Overview (All Staff)' : `👩‍💼 Staff Workstation (${currentUser.name || currentUser.id})`;
+    roleBadge.className = isAdmin 
+      ? 'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200'
+      : 'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200';
+  }
+  if (roleSubtitle) {
+    roleSubtitle.innerText = isAdmin
+      ? 'Admin Control: Full visibility across all 4 staff queues, customer promises, response rates & conversions.'
+      : `Staff View: Displaying customer follow-ups and inquiries assigned to you (${currentUser.name || currentUser.id}).`;
+  }
+  if (staffFilterContainer) {
+    if (!isAdmin) {
+      staffFilterContainer.innerHTML = `
+        <span class="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-2xl">
+          <span class="material-symbols-outlined text-[15px] text-emerald-600">lock</span>
+          <span>${currentUser.name || currentUser.id}</span>
+        </span>
+      `;
+    }
+  }
+}
+
+function filterFollowupsCards() {
+  const container = document.getElementById('followups-cards-grid');
+  const emptyState = document.getElementById('followups-empty-state');
+  if (!container) return;
+
+  const currentUser = getCurrentUser();
+  const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
+
+  const searchKeyword = (document.getElementById('followup-search-input')?.value || '').toLowerCase().trim();
+  const staffFilter = document.getElementById('followup-filter-staff')?.value || 'ALL';
+  const priorityFilter = document.getElementById('followup-filter-priority')?.value || 'ALL';
+  const channelFilter = document.getElementById('followup-filter-channel')?.value || 'ALL';
+  const tabFilter = ACTIVE_FOLLOWUP_TAB || 'ALL';
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  let list = (CRM_STATE.followups || []);
+
+  // 1. RBAC Isolation
+  if (!isAdmin) {
+    list = list.filter(fu => fu.assignedTo === currentUser.id || fu.assignedTo === currentUser.staffId);
+  } else if (staffFilter !== 'ALL') {
+    list = list.filter(fu => fu.assignedTo === staffFilter);
+  }
+
+  // 2. Status / Due Tab Filter
+  if (tabFilter === 'TODAY') {
+    list = list.filter(fu => fu.status === 'PENDING' && fu.date === todayStr);
+  } else if (tabFilter === 'UPCOMING') {
+    list = list.filter(fu => fu.status === 'PENDING' && fu.date > todayStr);
+  } else if (tabFilter === 'OVERDUE') {
+    list = list.filter(fu => isFollowupOverdue(fu));
+  } else if (tabFilter === 'COMPLETED') {
+    list = list.filter(fu => fu.status === 'COMPLETED' && fu.outcome !== 'LOST');
+  } else if (tabFilter === 'LOST') {
+    list = list.filter(fu => fu.outcome === 'LOST');
+  }
+
+  // 3. Priority Filter
+  if (priorityFilter !== 'ALL') {
+    list = list.filter(fu => (fu.priority || 'NORMAL') === priorityFilter);
+  }
+
+  // 4. Channel Filter
+  if (channelFilter !== 'ALL') {
+    list = list.filter(fu => (fu.channel || 'WHATSAPP') === channelFilter);
+  }
+
+  // 5. Search Keyword
+  if (searchKeyword) {
+    list = list.filter(fu => {
+      const matchName = (fu.customerName || '').toLowerCase().includes(searchKeyword);
+      const matchReason = (fu.reason || '').toLowerCase().includes(searchKeyword);
+      const matchId = (fu.id || '').toLowerCase().includes(searchKeyword);
+      const matchNotes = (fu.outcomeNotes || '').toLowerCase().includes(searchKeyword);
+      return matchName || matchReason || matchId || matchNotes;
+    });
+  }
+
+  // Render cards or empty state
+  if (list.length === 0) {
+    container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+    return;
+  }
+
+  if (emptyState) emptyState.classList.add('hidden');
+
+  container.innerHTML = list.map(fu => {
+    const isOverdue = isFollowupOverdue(fu);
+    const isCompleted = fu.status === 'COMPLETED';
+    const isLost = fu.outcome === 'LOST';
+    const priority = fu.priority || 'NORMAL';
+    const channel = fu.channel || 'WHATSAPP';
+
+    // Priority Styling
+    let prioBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">Normal</span>';
+    if (priority === 'URGENT') prioBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300">🔥 Urgent</span>';
+    else if (priority === 'HIGH') prioBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">⚡ High</span>';
+    else if (priority === 'LOW') prioBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500">Low</span>';
+
+    // Channel Icon
+    let chanIcon = '<span class="material-symbols-outlined text-[16px] text-emerald-600" title="WhatsApp Chat">chat</span>';
+    if (channel === 'CALL') chanIcon = '<span class="material-symbols-outlined text-[16px] text-blue-600" title="Direct Phone Call">call</span>';
+    else if (channel === 'STORE_VISIT') chanIcon = '<span class="material-symbols-outlined text-[16px] text-purple-600" title="Store Visit">store</span>';
+
+    // Status Badge
+    let statusPill = `<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full ${isOverdue ? 'bg-rose-100 text-rose-800 border border-rose-300 font-extrabold animate-pulse' : 'bg-blue-100 text-blue-800'}">` +
+      (isOverdue ? '⚠️ Overdue' : 'Pending') + '</span>';
+
+    if (isCompleted) {
+      if (fu.outcome === 'ORDER_PLACED') {
+        statusPill = '<span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">verified</span> Order Placed</span>';
+      } else if (fu.outcome === 'LOST') {
+        statusPill = '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">Lost</span>';
+      } else {
+        statusPill = `<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">${fu.outcome || 'Completed'}</span>`;
+      }
+    }
+
+    // Staff Reassign Control (Admin gets interactive select, Staff gets static tag)
+    let staffPill = '';
+    if (isAdmin && !isCompleted) {
+      staffPill = `
+        <select onchange="handleReassignFollowup('${fu.id}', this.value)" class="text-[11px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg px-2 py-1 focus:outline-none cursor-pointer">
+          <option value="staff_01" ${fu.assignedTo === 'staff_01' ? 'selected' : ''}>Priya</option>
+          <option value="staff_02" ${fu.assignedTo === 'staff_02' ? 'selected' : ''}>Rahul</option>
+          <option value="staff_03" ${fu.assignedTo === 'staff_03' ? 'selected' : ''}>Sneha</option>
+          <option value="admin" ${fu.assignedTo === 'admin' ? 'selected' : ''}>Admin</option>
+        </select>
+      `;
+    } else {
+      staffPill = `<span class="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-mono">${fu.assignedTo}</span>`;
+    }
+
+    return `
+      <div class="bg-white p-5 rounded-3xl border ${isOverdue ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200/90'} shadow-sm hover:shadow-md transition space-y-3 flex flex-col justify-between">
+        <!-- Top Metadata Row -->
+        <div>
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <span class="font-mono text-xs font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">${fu.id}</span>
+              ${chanIcon}
+              ${prioBadge}
+            </div>
+            ${statusPill}
+          </div>
+
+          <!-- Overdue Warning Pill -->
+          ${isOverdue ? `
+            <div class="mt-2 bg-rose-50 border border-rose-200 p-2 rounded-xl flex items-center gap-1.5 text-rose-800 text-[11px] font-bold">
+              <span class="material-symbols-outlined text-[16px] text-rose-600 animate-pulse">alarm</span>
+              <span>Callback time was ${fu.date} at ${fu.time}</span>
+            </div>
+          ` : `
+            <div class="mt-2 flex items-center justify-between text-xs text-slate-500 font-medium">
+              <span class="flex items-center gap-1 font-mono font-bold text-slate-700">
+                <span class="material-symbols-outlined text-[14px] text-blue-600">event</span>
+                ${fu.date} at ${fu.time}
+              </span>
+              ${staffPill}
+            </div>
+          `}
+
+          <!-- Customer Info -->
+          <div class="mt-3 pt-2.5 border-t border-slate-100">
+            <h4 class="font-bold text-slate-900 text-sm flex items-center justify-between">
+              <span>${fu.customerName}</span>
+              ${isOverdue ? staffPill : ''}
+            </h4>
+            <div class="bg-slate-50 border border-slate-100 p-3 rounded-2xl mt-2 text-xs text-slate-700 leading-relaxed font-medium">
+              "${fu.reason}"
+            </div>
+          </div>
+
+          <!-- Outcome Notes if Completed -->
+          ${fu.outcomeNotes ? `
+            <div class="mt-2.5 bg-emerald-50/60 border border-emerald-200 p-2.5 rounded-xl text-[11px] text-emerald-950">
+              <div class="font-bold text-emerald-800 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">task_alt</span>
+                <span>Outcome: ${fu.outcome}</span>
+              </div>
+              <p class="mt-0.5 text-slate-600 leading-tight">${fu.outcomeNotes}</p>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Action Footer -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-1.5 flex-wrap">
+          <!-- WhatsApp Chat -->
+          <button type="button" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-[15px]">chat</span>
+            <span>Chat</span>
+          </button>
+
+          <!-- Direct Phone Call Trigger -->
+          <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center gap-1" title="Call Customer">
+            <span class="material-symbols-outlined text-[15px]">call</span>
+            <span>Call</span>
+          </button>
+
+          <!-- Log Outcome Button (Only if pending) -->
+          ${!isCompleted ? `
+            <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px]">check_circle</span>
+              <span>Outcome</span>
+            </button>
+          ` : `
+            <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px]">repeat</span>
+              <span>Follow-up Again</span>
+            </button>
+          `}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function handleFollowupCallCustomer(customerId) {
+  const cust = (CRM_STATE.customers || []).find(c => c.id === customerId);
+  const phone = cust ? (cust.phone || cust.whatsapp) : '';
+  if (!phone) {
+    showToast('Customer Phone Unavailable', 'No valid contact phone registered.', 'error', 'rose');
+    return;
+  }
+  // If in-CRM softphone dialer function exists, invoke it; otherwise open tel:
+  if (typeof initiateTelephonyCall === 'function') {
+    initiateTelephonyCall(phone, cust.name);
+  } else {
+    window.open(`tel:${phone.replace(/\s+/g, '')}`, '_self');
+  }
+}
+
+function refreshFollowupsState() {
+  showToast('Syncing Follow-ups', 'Fetching latest database records...', 'sync', 'blue');
+  fetch('api.php?action=get_all')
+    .then(r => r.json())
+    .then(res => {
+      const data = res.data || res;
+      if (data && data.followups && Array.isArray(data.followups)) {
+        CRM_STATE.followups = data.followups.map(fu => ({
+          id: fu.id,
+          queryId: fu.queryId || fu.query_id || '',
+          customerId: fu.customerId || fu.customer_id || '',
+          customerName: fu.customerName || fu.customer_name || 'Customer',
+          assignedTo: fu.assignedTo || fu.assigned_to || 'staff_01',
+          date: fu.date || fu.date_str || '',
+          time: fu.time || fu.time_str || '11:00 AM',
+          reason: fu.reason || '',
+          status: fu.status || 'PENDING',
+          outcome: fu.outcome || 'PENDING',
+          priority: fu.priority || 'NORMAL',
+          channel: fu.channel || fu.contact_channel || 'WHATSAPP',
+          outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
+          completedAt: fu.completedAt || fu.completed_at || null,
+          rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
+          createdAt: fu.createdAt || fu.created_at || ''
+        }));
+      }
+      updateFollowupsKPICounters();
+      filterFollowupsCards();
+      saveCRMState();
+      showToast('Follow-ups Synchronized', 'All follow-up queues and outcomes are live.', 'check_circle', 'emerald');
+    })
+    .catch(() => {
+      updateFollowupsKPICounters();
+      filterFollowupsCards();
+    });
+}
+
+function startFollowupReminderTicker() {
+  if (FOLLOWUP_TICKER_INTERVAL) clearInterval(FOLLOWUP_TICKER_INTERVAL);
+
+  FOLLOWUP_TICKER_INTERVAL = setInterval(() => {
+    const list = CRM_STATE.followups || [];
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+
+    const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
+
+    list.forEach(fu => {
+      if (fu.status === 'PENDING' && isFollowupOverdue(fu)) {
+        // Only alert if assigned to current user, or if admin
+        const shouldAlert = isAdmin || (fu.assignedTo === currentUser.id || fu.assignedTo === currentUser.staffId);
+        if (shouldAlert && !NOTIFIED_FOLLOWUP_IDS.has(fu.id)) {
+          NOTIFIED_FOLLOWUP_IDS.add(fu.id);
+          try {
+            if (typeof playChime === 'function') playChime('message');
+          } catch (e) {}
+          showToast('⏰ Follow-up Due!', `Callback due for ${fu.customerName} (${fu.time}). Context: ${fu.reason}`, 'alarm', 'rose');
+          updateFollowupsKPICounters();
+        }
+      }
+    });
+  }, 30000); // 30-second interval ticker
+}
+
+function renderFollowupsCards() {
+  updateFollowupsKPICounters();
+  filterFollowupsCards();
 }
 
 // =========================================================================
@@ -14273,26 +15031,8 @@ function renderOrdersTable() {
 }
 
 function renderFollowupsCards() {
-  const container = document.getElementById('followups-cards-grid');
-  if (!container) return;
-
-  container.innerHTML = CRM_STATE.followups.map(fu => `
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-      <div class="flex items-center justify-between">
-        <span class="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">${fu.id}</span>
-        <span class="text-xs font-bold text-slate-500">${fu.date} at ${fu.time}</span>
-      </div>
-      <div>
-        <h4 class="font-bold text-slate-900 text-sm">${fu.customerName}</h4>
-        <p class="text-xs text-slate-600 mt-1 leading-relaxed">${fu.reason}</p>
-      </div>
-      <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
-        <button onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="text-xs bg-brand-wa hover:bg-brand-waDark text-white px-3 py-1.5 rounded-lg font-bold shadow-sm">
-          Open Customer Chat &rarr;
-        </button>
-      </div>
-    </div>
-  `).join('');
+  if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+  if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
 }
 
 function renderCustomersGrid() {
