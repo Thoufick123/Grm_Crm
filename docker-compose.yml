@@ -1,0 +1,90 @@
+# =========================================================================
+# GRM WHATSAPP CRM — FULL PRODUCTION DOCKER COMPOSE ORCHESTRATION
+# =========================================================================
+# Services:
+#   1. crm-web:    Apache + PHP 8.2 (Port 8080)
+#   2. crm-bridge: Node.js 20 Baileys Multi-Account QR Bridge (Port 3000)
+#   3. crm-db:     MariaDB 10.11 InnoDB (Port 3306)
+# =========================================================================
+
+version: '3.8'
+
+services:
+  # Database Service
+  crm-db:
+    image: mariadb:10.11
+    container_name: grm_crm_mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_crm_password_2026
+      MYSQL_DATABASE: grm_crm_db
+      MYSQL_USER: crm_user
+      MYSQL_PASSWORD: crm_password_2026
+    ports:
+      - "3306:3306"
+    volumes:
+      - crm_mysql_data:/var/lib/mysql
+      - ./database/database.sql:/docker-entrypoint-initdb.d/01_database.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm_network
+
+  # Node.js Baileys WhatsApp Bridge
+  crm-bridge:
+    build:
+      context: ./bridge
+      dockerfile: Dockerfile
+    container_name: grm_crm_bridge
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./bridge/auth_sessions:/app/auth_sessions
+      - ./whatsapp_account_config.json:/app/whatsapp_account_config.json
+      - ./live_messages_queue.json:/app/live_messages_queue.json
+    networks:
+      - crm_network
+
+  # PHP-Apache Web Application
+  crm-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: grm_crm_webapp
+    restart: always
+    environment:
+      DB_HOST: crm-db
+      DB_PORT: 3306
+      DB_NAME: grm_crm_db
+      DB_USER: root
+      DB_PASS: root_crm_password_2026
+      APP_URL: http://localhost:8080
+      BRIDGE_URL: http://crm-bridge:3000
+    ports:
+      - "8080:80"
+    volumes:
+      - ./uploads:/var/www/html/uploads
+      - ./logs:/var/www/html/logs
+      - ./whatsapp_account_config.json:/var/www/html/whatsapp_account_config.json
+      - ./live_messages_queue.json:/var/www/html/live_messages_queue.json
+    depends_on:
+      crm-db:
+        condition: service_healthy
+      crm-bridge:
+        condition: service_started
+    networks:
+      - crm_network
+
+volumes:
+  crm_mysql_data:
+
+networks:
+  crm_network:
+    driver: bridge

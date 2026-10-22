@@ -4,6 +4,9 @@
  * Staff Assignment, Product Stock Reservation & Customer 360
  */
 
+// Global SVG Garment Image Placeholder (Safely available everywhere)
+var DEFAULT_GARMENT_PLACEHOLDER = window.DEFAULT_GARMENT_PLACEHOLDER || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300' fill='none'><rect width='400' height='300' fill='%23f8fafc'/><g fill='%2394a3b8'><path d='M200 95c-11.05 0-20 8.95-20 20 0 7.42 4.05 13.9 10.05 17.37v6.63h-34.1l-24 42h136.1l-24-42h-34.05v-6.63c6-3.47 10-9.95 10-17.37 0-11.05-8.95-20-20-20zm0 8c6.63 0 12 5.37 12 12s-5.37 12-12 12-12-5.37-12-12 5.37-12 12-12z'/><path d='M132 185h136v4H132z' fill='%23cbd5e1'/><text x='200' y='215' font-family='sans-serif' font-size='13' font-weight='600' text-anchor='middle' fill='%2364748b'>No Image Uploaded</text></g></svg>";
+
 // Initial Garment CRM Mock State (Stores in LocalStorage for 100% persistent cost-free operation)
 var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
   // 1. Configured WhatsApp Business Account (Dynamic Phone Configuration)
@@ -30,24 +33,54 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
     { id: 'staff_02', name: 'Rahul Verma', role: 'Enquiry Specialist (Maternity & Kids)', avatar: 'RV', activeQueries: 2, converted: 9, dailyQuota: 70, todayHandled: 14, email: 'rahul.verma@grmgarments.com', phone: '+91 98450 11222', specialization: 'Maternity & Kids', status: 'ACTIVE' },
     { id: 'staff_03', name: 'Sneha Patel', role: 'Order Fulfillment & Support', avatar: 'SP', activeQueries: 1, converted: 11, dailyQuota: 60, todayHandled: 8, email: 'sneha.patel@grmgarments.com', phone: '+91 98450 11223', specialization: 'Order Fulfillment', status: 'ACTIVE' }
   ],
-  products: [
-    { id: 1, sku: 'BF-001-PK', name: 'Baby Frock (Embroidered Cotton)', category: 'Baby Collection', size: '2-3 Years', color: 'Pink', price: 599, physicalStock: 12, reservedStock: 4, accountId: 'account_1', image: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60' },
-    { id: 2, sku: 'BF-001-YL', name: 'Baby Frock (Embroidered Cotton)', category: 'Baby Collection', size: '1-2 Years', color: 'Sunshine Yellow', price: 599, physicalStock: 8, reservedStock: 1, accountId: 'account_1', image: 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=400&auto=format&fit=crop&q=60' },
-    { id: 3, sku: 'MD-102-BL', name: 'Maternity Maxi Feeding Gown', category: 'Maternity', size: 'L / XL', color: 'Sky Blue', price: 1299, physicalStock: 10, reservedStock: 5, accountId: 'account_2', image: 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=400&auto=format&fit=crop&q=60' },
-    { id: 4, sku: 'MD-103-PK', name: 'Maternity Tiered Cotton Floral Dress', category: 'Maternity', size: 'M / L', color: 'Blush Pink', price: 1450, physicalStock: 14, reservedStock: 3, accountId: 'account_2', image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&auto=format&fit=crop&q=60' },
-    { id: 5, sku: 'BB-301-WH', name: 'Newborn 5-Piece Organic Romper Gift Set', category: 'Newborn', size: '0-6 Months', color: 'Pure White / Mint', price: 799, physicalStock: 15, reservedStock: 2, accountId: 'account_3', image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&auto=format&fit=crop&q=60' },
-    { id: 6, sku: 'KD-204-YL', name: 'Kids Organic Cotton T-Shirt Set (Pack of 3)', category: 'Kids', size: '4-5 Years', color: 'Multi Yellow/Green', price: 450, physicalStock: 25, reservedStock: 8, accountId: 'account_3', image: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400&auto=format&fit=crop&q=60' },
-    { id: 7, sku: 'WS-701-BX', name: 'Wholesale Baby Rompers Bulk Box (50 Pcs Assorted)', category: 'Wholesale', size: '0-24 Months', color: 'Assorted Prints', price: 8500, physicalStock: 18, reservedStock: 6, accountId: 'account_4', image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=400&auto=format&fit=crop&q=60' },
-    { id: 8, sku: 'WS-702-BX', name: 'Wholesale Pure Cotton Frocks Bundle (25 Pcs)', category: 'Wholesale', size: '2-5 Years', color: 'Multi Pastel Colors', price: 7200, physicalStock: 12, reservedStock: 3, accountId: 'account_4', image: 'https://images.unsplash.com/photo-1471286174890-9c112ffca56a?w=400&auto=format&fit=crop&q=60' },
-    { id: 9, sku: 'GL-505-RD', name: 'Girls Festive Silk Lehenga Choli', category: 'Girls Festive', size: '6-7 Years', color: 'Ruby Red & Gold', price: 899, physicalStock: 6, reservedStock: 0, accountId: 'account_5', image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=400&auto=format&fit=crop&q=60' },
-    { id: 10, sku: 'VIP-901-GL', name: 'Handcrafted Kanjivaram Silk Pattu Pavadai Set', category: 'VIP Collection', size: '3-4 Years', color: 'Emerald Green & Gold', price: 2499, physicalStock: 8, reservedStock: 2, accountId: 'account_5', image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&auto=format&fit=crop&q=60' }
-  ],
+  products: [],
   customers: [],
   queries: [],
   conversations: {},
   orders: [],
   followups: [],
-  auditLogs: []
+  auditLogs: [],
+  categories: [
+    { id: 1, name: 'Baby Collection', slug: 'baby_collection', icon: 'child_care', description: 'Pure cotton frocks, rompers & soft babywear (0–3 Years)' },
+    { id: 2, name: 'Maternity & Feeding', slug: 'maternity_wear', icon: 'pregnant_woman', description: 'Feeding kurtis, maxi gowns & maternity comfort dresses' },
+    { id: 3, name: 'Newborn Essentials', slug: 'newborn_care', icon: 'crib', description: '5-piece organic gift sets, swaddle wraps & rompers' },
+    { id: 4, name: 'Kids Everyday Wear', slug: 'kids_wear', icon: 'styler', description: 'Cotton T-shirt packs, dungarees & nightwear (4–8 Years)' },
+    { id: 5, name: 'Girls Festive & Ethnic', slug: 'girls_festive', icon: 'celebration', description: 'Silk lehenga choli, handcrafted pattu pavadai sets' },
+    { id: 6, name: 'Wholesale & Bulk Bundles', slug: 'wholesale_bulk', icon: 'inventory', description: 'Factory wholesale bundles (Erode/Tirupur manufacturing)' }
+  ],
+  subcategories: [
+    { id: 1, category_name: 'Baby Collection', name: 'Baby Frocks (Embroidered Cotton)', slug: 'baby_frocks', sku_prefix: 'BF' },
+    { id: 2, category_name: 'Baby Collection', name: 'Cotton Newborn Rompers', slug: 'cotton_rompers', sku_prefix: 'BR' },
+    { id: 3, category_name: 'Baby Collection', name: '2-Piece Tops & Bloomers Set', slug: 'baby_sets', sku_prefix: 'BS' },
+    { id: 4, category_name: 'Maternity & Feeding', name: 'Feeding Kurtis & Anarkalis', slug: 'feeding_kurtis', sku_prefix: 'FK' },
+    { id: 5, category_name: 'Maternity & Feeding', name: 'Maternity Maxi Feeding Gowns', slug: 'maxi_gowns', sku_prefix: 'MD' },
+    { id: 6, category_name: 'Maternity & Feeding', name: 'Maternity Comfort Pants', slug: 'maternity_bottoms', sku_prefix: 'MP' },
+    { id: 7, category_name: 'Newborn Essentials', name: '5-Piece Organic Romper Gift Sets', slug: 'gift_sets', sku_prefix: 'BB' },
+    { id: 8, category_name: 'Newborn Essentials', name: 'Muslin Swaddle Wraps', slug: 'swaddles', sku_prefix: 'SW' },
+    { id: 9, category_name: 'Newborn Essentials', name: 'Booties, Mittens & Cap Sets', slug: 'mittens_caps', sku_prefix: 'MC' },
+    { id: 10, category_name: 'Kids Everyday Wear', name: 'Cotton T-Shirt Packs (Pack of 3)', slug: 'tshirts_pack', sku_prefix: 'KD' },
+    { id: 11, category_name: 'Kids Everyday Wear', name: 'Denim & Cotton Dungarees', slug: 'dungarees', sku_prefix: 'DG' },
+    { id: 12, category_name: 'Kids Everyday Wear', name: 'Nightwear Pajama Sets', slug: 'nightwear', sku_prefix: 'NW' },
+    { id: 13, category_name: 'Girls Festive & Ethnic', name: 'Festive Silk Lehenga Choli', slug: 'lehenga_choli', sku_prefix: 'GL' },
+    { id: 14, category_name: 'Girls Festive & Ethnic', name: 'Handcrafted Silk Pattu Pavadai', slug: 'pattu_pavadai', sku_prefix: 'VIP' },
+    { id: 15, category_name: 'Girls Festive & Ethnic', name: 'Party Wear Anarkalis', slug: 'anarkali_ethnic', sku_prefix: 'AK' },
+    { id: 16, category_name: 'Wholesale & Bulk Bundles', name: '25-Pc Assorted Frock Bundles', slug: 'frock_bundles', sku_prefix: 'WS-F' },
+    { id: 17, category_name: 'Wholesale & Bulk Bundles', name: '50-Pc Rompers Bulk Box', slug: 'romper_boxes', sku_prefix: 'WS-R' },
+    { id: 18, category_name: 'Wholesale & Bulk Bundles', name: 'Mixed Garment Lots', slug: 'mixed_lots', sku_prefix: 'WS-M' }
+  ],
+  attributes: {
+    sizes: ['0-6 Months', '6-12 Months', '1-2 Years', '2-3 Years', '3-4 Years', '4-5 Years', '6-7 Years', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size', 'Assorted Bulk Lot'],
+    colors: ['Pink', 'Red', 'Maroon', 'Sunshine Yellow', 'Sky Blue', 'Mint Green', 'Blush Pink', 'Ruby Red & Gold', 'Emerald Green & Gold', 'Pure White', 'Multi Pastel', 'Navy Blue', 'Royal Maroon'],
+    specifications: [
+      { id: 34, label: 'Sleeve Length', content: 'Full Sleeve' },
+      { id: 35, label: 'Occasion', content: 'Festive & Party Wear' },
+      { id: 36, label: 'Pattern', content: 'Floral Printed' },
+      { id: 37, label: 'Wash Care', content: 'Gentle Machine Wash' },
+      { id: 38, label: 'Fit', content: 'Regular Fit' },
+      { id: 39, label: 'Neck Type', content: 'Round Neck' }
+    ],
+    custom: {}
+  }
 };
 window.INITIAL_CRM_DATA = INITIAL_CRM_DATA;
 
@@ -780,7 +813,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
   const cleanPhone = rawPhone.startsWith('+') ? rawPhone : ('+' + rawPhone);
   const normalizedDigits = cleanPhone.replace(/[^0-9]/g, '');
   const senderName = payload.sender_name || `WhatsApp Customer (${cleanPhone.slice(-4)})`;
-  const messageText = payload.message_text || payload.text || '[WhatsApp Message]';
+  const messageText = payload.message_text || payload.text || 'Message';
   const timeStr = payload.received_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const msgType = payload.type || 'text';
   const mediaUrl = payload.media_url || null;
@@ -961,8 +994,12 @@ function ingestInboundMessage(payload, suppressChime = false) {
   }
 
   // 9. Automated Stock Category Instant Auto-Responder Engine
+  // For live WhatsApp messages, bridge/server.js handles actual WhatsApp dispatch via Baileys and emits the real bot reply.
+  // Frontend only simulates for offline TEST or SIMULATOR mode to prevent phantom "Sent Auto" bubbles.
   if (!suppressChime && !isDuplicate && payload.source !== 'STAFF_OUTBOUND' && payload.source !== 'AUTOREPLY_BOT') {
-    handleAutomatedInboundResponse(customer, messageText, payload);
+    if (payload.source === 'SIMULATOR' || payload.source === 'TEST') {
+      handleAutomatedInboundResponse(customer, messageText, payload);
+    }
   }
 }
 
@@ -1106,6 +1143,93 @@ function cleanupAndDeduplicateCRMState() {
 
 
 
+// Robust two-way synchronization and non-destructive merge of catalog products
+function mergeCatalogProductsWithDB(dbRawProducts) {
+  if (!Array.isArray(dbRawProducts)) return;
+
+  const mappedDb = dbRawProducts.map(p => ({
+    id: p.id,
+    sku: p.sku,
+    name: p.name,
+    category: p.category,
+    subcategory: p.subcategory || '',
+    size: p.size,
+    color: p.color,
+    fabric: p.fabric || '',
+    specifications: (() => {
+      if (!p.specifications) return [];
+      if (Array.isArray(p.specifications)) return p.specifications;
+      try { return JSON.parse(p.specifications); } catch (e) { return []; }
+    })(),
+    customAttributes: (() => {
+      if (!p.custom_attributes && !p.customAttributes) return {};
+      const ca = p.custom_attributes || p.customAttributes;
+      if (typeof ca === 'object') return ca;
+      try { return JSON.parse(ca); } catch (e) { return {}; }
+    })(),
+    price: parseFloat(p.price) || 0,
+    mrp: parseFloat(p.mrp) || parseFloat(p.price) || 0,
+    physicalStock: parseInt(p.physical_stock ?? p.physicalStock) || 0,
+    reservedStock: parseInt(p.reserved_stock ?? p.reservedStock) || 0,
+    image: p.image || '',
+    description: p.description || '',
+    custom_caption: p.custom_caption || p.customCaption || '',
+    customCaption: p.custom_caption || p.customCaption || '',
+    accountId: p.account_id || p.accountId || 'account_1'
+  }));
+
+  const localProducts = Array.isArray(CRM_STATE.products) ? [...CRM_STATE.products] : [];
+  
+  // Merge DB products: if a matching local product exists, merge non-empty fields/specs
+  const merged = mappedDb.map(dbP => {
+    const localMatch = localProducts.find(lp => lp && (lp.sku === dbP.sku || (lp.id && String(lp.id) === String(dbP.id))));
+    if (localMatch) {
+      return {
+        ...localMatch,
+        ...dbP,
+        image: dbP.image || localMatch.image || '',
+        customAttributes: (dbP.customAttributes && Object.keys(dbP.customAttributes).length > 0) ? dbP.customAttributes : (localMatch.customAttributes || {}),
+        specifications: (dbP.specifications && dbP.specifications.length > 0) ? dbP.specifications : (localMatch.specifications || [])
+      };
+    }
+    return dbP;
+  });
+
+  // Preserve any local products that are not yet in MySQL DB
+  const unsyncedLocals = [];
+  localProducts.forEach(localP => {
+    if (!localP || !localP.sku) return;
+    const exists = merged.some(m => m.sku === localP.sku || (localP.id && String(m.id) === String(localP.id)));
+    if (!exists) {
+      merged.push(localP);
+      unsyncedLocals.push(localP);
+    }
+  });
+
+  CRM_STATE.products = merged;
+  saveCRMState();
+
+  // Background auto-sync of unpersisted local products into MySQL database
+  if (unsyncedLocals.length > 0) {
+    fetch('api.php?action=save_product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ variants: unsyncedLocals })
+    })
+    .then(r => r.json())
+    .then(resp => {
+      if (resp && resp.products && Array.isArray(resp.products)) {
+        resp.products.forEach(sp => {
+          const matched = CRM_STATE.products.find(p => p.sku === sp.sku);
+          if (matched && sp.id) matched.id = sp.id;
+        });
+        saveCRMState();
+      }
+    })
+    .catch(e => console.warn('Background sync of local products failed:', e));
+  }
+}
+
 // Load State from LocalStorage or Initialise (100% Persistent across page reloads)
 function initCRMState() {
   const saved = localStorage.getItem('GRM_CRM_STATE_V2_5');
@@ -1125,7 +1249,24 @@ function initCRMState() {
       if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object') CRM_STATE.conversations = {};
       if (!Array.isArray(CRM_STATE.orders)) CRM_STATE.orders = [];
       if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
-      if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.products));
+      if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = [];
+      // Keep existing products intact without destructive mock filtering
+      if (!Array.isArray(CRM_STATE.categories) || CRM_STATE.categories.length === 0) {
+        CRM_STATE.categories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.categories || []));
+      }
+      if (!Array.isArray(CRM_STATE.subcategories) || CRM_STATE.subcategories.length === 0) {
+        CRM_STATE.subcategories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.subcategories || []));
+      }
+      if (!CRM_STATE.attributes || typeof CRM_STATE.attributes !== 'object' || !Array.isArray(CRM_STATE.attributes.sizes)) {
+        CRM_STATE.attributes = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.attributes || { sizes: [], colors: [], fabrics: [], specifications: [], custom: {} }));
+      }
+      if (!CRM_STATE.attributes.custom || typeof CRM_STATE.attributes.custom !== 'object' || Array.isArray(CRM_STATE.attributes.custom)) {
+        CRM_STATE.attributes.custom = {};
+      }
+      // Clean up previous test mock Memory if present
+      if (CRM_STATE.attributes.custom['Memory']) {
+        delete CRM_STATE.attributes.custom['Memory'];
+      }
 
       if (!CRM_STATE.autoReplySettings || typeof CRM_STATE.autoReplySettings !== 'object' || !CRM_STATE.autoReplySettings.messageTemplate || CRM_STATE.autoReplySettings.messageTemplate.includes('wa.me')) {
         CRM_STATE.autoReplySettings = {
@@ -1230,31 +1371,41 @@ function initCRMState() {
     .catch(() => { }); // Bridge may not be running — fail silently
 
 
-  // Asynchronously synchronize garment products & stock from database
+  // Asynchronously synchronize garment products, catalog taxonomy & stock from database
   fetch('api.php?action=get_all')
     .then(r => r.json())
     .then(res => {
       const data = res.data || res;
-      if (data && data.products && Array.isArray(data.products) && data.products.length > 0) {
-        CRM_STATE.products = data.products.map(p => ({
-          id: p.id,
-          sku: p.sku,
-          name: p.name,
-          category: p.category,
-          size: p.size,
-          color: p.color,
-          price: parseFloat(p.price) || 0,
-          physicalStock: parseInt(p.physical_stock ?? p.physicalStock) || 0,
-          reservedStock: parseInt(p.reserved_stock ?? p.reservedStock) || 0,
-          image: p.image
-        }));
-        if (ACTIVE_VIEW === 'catalog') filterCatalogGrid();
-        updateOrderProductDropdown();
+      if (data && data.products && Array.isArray(data.products)) {
+        mergeCatalogProductsWithDB(data.products);
       }
+
+      if (data && data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+        CRM_STATE.categories = data.categories;
+      }
+      if (data && data.subcategories && Array.isArray(data.subcategories) && data.subcategories.length > 0) {
+        CRM_STATE.subcategories = data.subcategories;
+      }
+      if (data && data.attributes) {
+        CRM_STATE.attributes = data.attributes;
+      }
+
+      if (typeof populateCatalogCategoryFilters === 'function') {
+        populateCatalogCategoryFilters();
+      }
+      if (typeof populateProductFormCategories === 'function') {
+        populateProductFormCategories();
+      }
+      if (ACTIVE_VIEW === 'catalog') filterCatalogGrid();
+      updateOrderProductDropdown();
+      saveCRMState();
     })
     .catch(() => { });
 
   cleanupAndDeduplicateCRMState();
+  if (typeof populateCatalogCategoryFilters === 'function') {
+    populateCatalogCategoryFilters();
+  }
   updateConfiguredPhoneDisplays();
   updateAutoReplyUI();
   initSocketIO();
@@ -1273,6 +1424,8 @@ function saveCRMState() {
   updateBadgeCounters();
   updateConfiguredPhoneDisplays();
 }
+window.saveCRMState = saveCRMState;
+window.saveStateToStorage = saveCRMState;
 
 // 5 Connected WhatsApp Business Numbers Engine
 function getAvailableWhatsAppAccounts() {
@@ -1560,7 +1713,74 @@ function updateConfiguredPhoneDisplays() {
 // =========================================================================
 // 1. NAVIGATION & VIEW SWITCHER (RBAC ENFORCED)
 // =========================================================================
-function switchView(viewName) {
+var ACTIVE_INBOX_SUBMODULE = 'chats';
+
+function switchInboxSubmodule(submodule) {
+  ACTIVE_INBOX_SUBMODULE = submodule || 'chats';
+
+  const chatSub = document.getElementById('submodule-inbox-chats');
+  const autoSub = document.getElementById('submodule-inbox-autoreply');
+  const bcastSub = document.getElementById('submodule-inbox-broadcast');
+
+  const tabChat = document.getElementById('tab-sub-inbox-chats');
+  const tabAuto = document.getElementById('tab-sub-inbox-autoreply');
+  const tabBcast = document.getElementById('tab-sub-inbox-broadcast');
+
+  const navSubChat = document.getElementById('nav-inbox-sub-chats');
+  const navSubAuto = document.getElementById('nav-inbox-sub-autoreply');
+  const navSubBcast = document.getElementById('nav-inbox-sub-broadcast');
+
+  // Hide all submodules
+  if (chatSub) chatSub.classList.add('hidden');
+  if (autoSub) autoSub.classList.add('hidden');
+  if (bcastSub) bcastSub.classList.add('hidden');
+
+  // Reset tab classes
+  const inactiveTabClass = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer";
+  if (tabChat) tabChat.className = inactiveTabClass;
+  if (tabAuto) tabAuto.className = inactiveTabClass;
+  if (tabBcast) tabBcast.className = inactiveTabClass;
+
+  // Reset sidebar subnav classes
+  const inactiveNavClass = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-[11px] font-medium transition group";
+  if (navSubChat) navSubChat.className = inactiveNavClass;
+  if (navSubAuto) navSubAuto.className = inactiveNavClass;
+  if (navSubBcast) navSubBcast.className = inactiveNavClass;
+
+  const pTitle = document.getElementById('page-title');
+  const pSub = document.getElementById('page-subtitle');
+
+  if (submodule === 'chats') {
+    if (chatSub) chatSub.classList.remove('hidden');
+    if (tabChat) tabChat.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer";
+    if (navSubChat) navSubChat.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
+    if (pTitle) pTitle.innerText = 'WhatsApp Inbox & Customer Queue';
+    if (pSub) pSub.innerText = `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`;
+  } else if (submodule === 'autoreply') {
+    if (autoSub) autoSub.classList.remove('hidden');
+    if (tabAuto) tabAuto.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-teal-600 to-emerald-600 text-white cursor-pointer";
+    if (navSubAuto) navSubAuto.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-teal-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
+    if (pTitle) pTitle.innerText = 'WhatsApp Inbox — Pre-Set Templates & Auto-Reply Hub';
+    if (pSub) pSub.innerText = 'Configure automated responses, stock catalog links, trigger keywords & smart question answering';
+
+    if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
+    if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
+  } else if (submodule === 'broadcast') {
+    if (bcastSub) bcastSub.classList.remove('hidden');
+    if (tabBcast) tabBcast.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white cursor-pointer";
+    if (navSubBcast) navSubBcast.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-purple-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
+    if (pTitle) pTitle.innerText = 'WhatsApp Inbox — Automated Template Broadcast';
+    if (pSub) pSub.innerText = 'Send personalized promotional templates & announcements to customer chats with variable tags';
+
+    if (typeof renderBroadcastTemplateDropdown === 'function') renderBroadcastTemplateDropdown('festive_offer');
+    if (typeof applyBroadcastPreset === 'function') applyBroadcastPreset('festive_offer');
+    if (typeof refreshBroadcastAutoFetchedNumbers === 'function') refreshBroadcastAutoFetchedNumbers();
+    if (typeof renderDynamicTemplateFields === 'function') renderDynamicTemplateFields();
+    if (typeof updateBroadcastPreview === 'function') updateBroadcastPreview();
+  }
+}
+
+function switchView(viewName, subName) {
   // Enforce Role-Based Access Control: Admin-only modules
   const adminOnlyViews = ['settings', 'backup', 'staff', 'audit', 'analytics'];
   if (ACTIVE_ROLE !== 'admin' && adminOnlyViews.includes(viewName)) {
@@ -1590,6 +1810,12 @@ function switchView(viewName) {
     }
   });
 
+  // Handle inbox sub-modules menu arrow indicator
+  const subnavArrow = document.getElementById('inbox-subnav-arrow');
+  if (subnavArrow) {
+    subnavArrow.style.transform = (viewName === 'inbox') ? 'rotate(180deg)' : 'rotate(0deg)';
+  }
+
   // Update Topbar page titles
   const titles = {
     inbox: { title: 'WhatsApp Inbox & Customer Queue', sub: `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking` },
@@ -1607,6 +1833,15 @@ function switchView(viewName) {
     backup: { title: 'Data Backup & Recovery Hub', sub: 'Full database snapshot export, restore, and zero-data-loss protection (Section 53)' }
   };
 
+  const titleContainer = document.getElementById('header-title-container');
+  if (titleContainer) {
+    if (viewName === 'inbox') {
+      titleContainer.classList.add('hidden');
+    } else {
+      titleContainer.classList.remove('hidden');
+    }
+  }
+
   if (titles[viewName]) {
     const pTitle = document.getElementById('page-title');
     const pSub = document.getElementById('page-subtitle');
@@ -1615,10 +1850,16 @@ function switchView(viewName) {
   }
 
   // Trigger specific view renders
-  if (viewName === 'inbox') renderInbox();
+  if (viewName === 'inbox') {
+    switchInboxSubmodule(subName || ACTIVE_INBOX_SUBMODULE || 'chats');
+    renderInbox();
+  }
   if (viewName === 'enquiries') renderEnquiriesTable();
   if (viewName === 'dashboard') renderDashboard();
-  if (viewName === 'catalog') renderCatalogGrid('');
+  if (viewName === 'catalog') {
+    if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
+    renderCatalogGrid('');
+  }
   if (viewName === 'orders') renderOrdersTable();
   if (viewName === 'followups') renderFollowupsCards();
   if (viewName === 'customers') renderCustomersGrid();
@@ -1641,14 +1882,30 @@ function initAuthSystem() {
   if (sessionStr) {
     try {
       CURRENT_USER = JSON.parse(sessionStr);
-      applyRoleBasedAccessControl(CURRENT_USER);
-      return;
     } catch (e) {
       console.error('Session parse error:', e);
+      CURRENT_USER = null;
+    }
+
+    if (CURRENT_USER && (CURRENT_USER.username || CURRENT_USER.id || CURRENT_USER.role)) {
+      // Ensure session is synchronized in both storage containers
+      try {
+        localStorage.setItem('GRM_CRM_SESSION', JSON.stringify(CURRENT_USER));
+        sessionStorage.setItem('GRM_CRM_SESSION', JSON.stringify(CURRENT_USER));
+        localStorage.setItem('GRM_REMEMBER_FLAG', 'true');
+      } catch (e) {}
+
+      // Apply RBAC UI safely — any rendering error must NEVER boot user to login page
+      try {
+        applyRoleBasedAccessControl(CURRENT_USER);
+      } catch (uiErr) {
+        console.error('RBAC UI layout notice (retained user session):', uiErr);
+      }
+      return;
     }
   }
 
-  // If no saved session, redirect to separate login page
+  // If no saved session, redirect cleanly to separate login page
   const currentPath = window.location.pathname.toLowerCase();
   if (!currentPath.endsWith('login.html') && !currentPath.endsWith('login.php')) {
     window.location.href = 'login.html';
@@ -2386,8 +2643,7 @@ function renderChatMessages() {
     </div>
   ` + messages.map((msg, idx) => {
     const isOut = msg.sender === 'staff';
-    const msgId = msg.id || ('msg_' + idx);
-    const isAudio = msg.type === 'audio' || (msg.media_url && msg.media_url.includes('audio')) || (msg.text && (msg.text.includes('Voice Message') || msg.text.includes('[WhatsApp Message]')));
+    const isAudio = msg.type === 'audio' || (msg.media_url && (msg.media_url.includes('audio') || msg.media_url.startsWith('data:audio') || msg.media_url.includes('.ogg') || msg.media_url.includes('.mp3') || msg.media_url.includes('.m4a'))) || (msg.text && (msg.text.includes('Voice Message') || msg.text.includes('Audio Message')));
     const isImage = msg.type === 'image' || (msg.media_url && (msg.media_url.startsWith('data:image') || msg.media_url.includes('http') || msg.media_url.includes('.png') || msg.media_url.includes('.jpg') || msg.media_url.includes('blob:')));
     const duration = msg.duration || 12;
 
@@ -3119,6 +3375,19 @@ function quickReassignQueryStaff(queryId, newStaffId) {
   }
 
   logAudit('STAFF_ASSIGNMENT', 'INBOX_PANEL', `Query ${query.id} assigned to ${staff ? staff.name : 'Unassigned'}`);
+  
+  // Asynchronously sync query assignment to MySQL Database
+  fetch('api.php?action=assign_query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: query.id,
+      assigned_to: newStaffId,
+      status: query.status,
+      user: CURRENT_USER?.name || 'Admin'
+    })
+  }).catch(() => {});
+
   saveCRMState();
   renderInbox();
   renderCustomer360Panel();
@@ -3984,25 +4253,61 @@ window.insertAdminNoteTag = function(tagText) {
 // =========================================================================
 
 // Dispatches live message to customer's WhatsApp via Node Baileys QR Bridge (Method 3)
-async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false) {
+async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false, mediaUrl = null, customerId = null) {
   const targetAccId = accountId || ACTIVE_SEND_ACCOUNT_ID || 'account_1';
+  const targetMedia = mediaUrl || (msgRef && msgRef.media_url ? msgRef.media_url : null);
+
+  // Clean and normalize phone number
+  let cleanPhone = (phone || '').toString().trim().replace(/[\s\-\(\)]/g, '');
+  if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.substring(1);
+  if (/^\d{10}$/.test(cleanPhone)) {
+    cleanPhone = '91' + cleanPhone;
+  }
 
   // 1. Try Instant WebSocket (Socket.IO) Dispatch
-  if (SOCKET_IO && SOCKET_IO.connected) {
-    return new Promise((resolve) => {
-      SOCKET_IO.emit('whatsapp:send', { phone, text, jid, accountId: targetAccId }, (res) => {
-        if (res && res.status === 'success') {
-          if (msgRef) msgRef.status = 'DELIVERED';
-          if (typeof renderChatMessages === 'function') renderChatMessages();
-          if (!silent) showToast('WhatsApp Delivered', `Live message sent to customer (${phone})!`, 'done_all', 'emerald');
-          resolve(true);
-        } else {
-          console.warn('[Socket Send Notice]:', res);
-          if (!silent) showToast('WhatsApp Notice', res?.message || 'Message queued', 'info', 'amber');
-          resolve(false);
+  if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+    const socketDelivered = await new Promise((resolve) => {
+      let resolved = false;
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          console.warn('[Socket Dispatch Timeout] Falling back to direct HTTP bridge');
+          resolve(null); // triggers HTTP fallback
         }
-      });
+      }, 4000);
+
+      try {
+        SOCKET_IO.emit('whatsapp:send', { 
+          phone: cleanPhone, 
+          text, 
+          jid, 
+          accountId: targetAccId,
+          mediaUrl: targetMedia,
+          customerId
+        }, (res) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timer);
+          if (res && res.status === 'success') {
+            if (msgRef) msgRef.status = 'DELIVERED';
+            if (typeof renderChatMessages === 'function') renderChatMessages();
+            if (!silent) showToast('WhatsApp Delivered', `Live message sent to (${phone})!`, 'done_all', 'emerald');
+            resolve(true);
+          } else {
+            console.warn('[Socket Send Notice]:', res);
+            resolve(null); // triggers HTTP fallback
+          }
+        });
+      } catch (err) {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          resolve(null);
+        }
+      }
     });
+
+    if (socketDelivered === true) return true;
   }
 
   // 2. HTTP Fallback to Node.js Bridge
@@ -4010,39 +4315,56 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     let resp = await fetch('http://localhost:3000/api/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, text, jid, accountId: targetAccId })
+      body: JSON.stringify({ 
+        phone: cleanPhone, 
+        text, 
+        jid, 
+        accountId: targetAccId,
+        mediaUrl: targetMedia,
+        customerId
+      })
     });
     let result = await resp.json();
-    if (result.status === 'success') {
+    if (result && result.status === 'success') {
       if (msgRef) msgRef.status = 'DELIVERED';
       if (typeof renderChatMessages === 'function') renderChatMessages();
-      if (!silent) showToast('WhatsApp Delivered', `Live message sent to customer (${phone})!`, 'done_all', 'emerald');
+      if (!silent) showToast('WhatsApp Delivered', `Live message sent to (${phone})!`, 'done_all', 'emerald');
       return true;
     } else {
       console.warn('[Bridge Send Notice]:', result);
-      if (!silent) showToast('Saved to CRM', result.message || 'Stored in CRM', 'info', 'amber');
-      return false;
     }
   } catch (err) {
-    // 3. Fallback via PHP backend proxy
-    try {
-      let fResp = await fetch('api.php?action=send_message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, text, jid, accountId: targetAccId })
-      });
-      let fResult = await fResp.json();
-      if (fResult.status === 'success') {
-        if (msgRef) msgRef.status = 'DELIVERED';
-        if (typeof renderChatMessages === 'function') renderChatMessages();
-        if (!silent) showToast('WhatsApp Delivered', `Live message sent to customer (${phone})!`, 'done_all', 'emerald');
-        return true;
-      }
-    } catch (e) { }
-    console.warn('[Bridge Offline]:', err);
-    if (!silent) showToast('Saved in CRM', 'Recorded locally. Connect QR in WhatsApp Settings for live delivery.', 'info', 'blue');
-    return false;
+    console.warn('[Bridge Direct HTTP Error]:', err);
   }
+
+  // 3. Fallback via PHP backend proxy
+  try {
+    let fResp = await fetch('api.php?action=send_message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        phone: cleanPhone, 
+        text, 
+        jid, 
+        accountId: targetAccId,
+        media_url: targetMedia,
+        customer_id: customerId
+      })
+    });
+    let fResult = await fResp.json();
+    if (fResult && fResult.status === 'success') {
+      if (msgRef) msgRef.status = 'DELIVERED';
+      if (typeof renderChatMessages === 'function') renderChatMessages();
+      if (!silent) showToast('WhatsApp Delivered', `Live message sent to (${phone})!`, 'done_all', 'emerald');
+      return true;
+    }
+  } catch (e) {
+    console.warn('[PHP Send Proxy Error]:', e);
+  }
+
+  if (msgRef) msgRef.status = 'SENT';
+  if (!silent) showToast('Saved in CRM', 'Recorded locally in customer chat history.', 'info', 'blue');
+  return false;
 }
 
 function formatOutboundBrandMessage(text) {
@@ -4436,7 +4758,11 @@ function openAutoReplyModal(activeTab = 'rules') {
 
   renderAutoReplyRulesList();
   updateRulesCountBadge();
-  openModal('modal-auto-reply-settings');
+  switchView('inbox', 'autoreply');
+}
+
+function closeAutoReplyModal() {
+  switchInboxSubmodule('chats');
 }
 
 function switchAutoReplyTab(tabName) {
@@ -5326,16 +5652,33 @@ function updateAutoReplyUI() {
     }
   }
 
-  // 3. Top Navigation Header Button
-  if (headerBtn) {
-    if (isEnabled) {
-      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
-      headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span><span>Auto-Reply: ON</span>';
-    } else {
-      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-lg transition shadow-sm border border-amber-500 ring-2 ring-amber-400/50";
-      headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-amber-200 animate-pulse">pause_circle</span><span>Auto-Reply: PAUSED</span>';
+    if (headerBtn) {
+      if (isEnabled) {
+        headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
+        headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span><span>Auto-Reply: ON</span>';
+      } else {
+        headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-lg transition shadow-sm border border-amber-500 ring-2 ring-amber-400/50";
+        headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-amber-200 animate-pulse">pause_circle</span><span>Auto-Reply: PAUSED</span>';
+      }
     }
-  }
+
+    // 4. Sub-Module Header Tab Pill in WhatsApp Inbox
+    const subtabStatus = document.getElementById('subtab-autoreply-status');
+    if (subtabStatus) {
+      subtabStatus.innerText = isEnabled ? 'ON' : 'PAUSED';
+      subtabStatus.className = isEnabled 
+        ? 'bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-emerald-300'
+        : 'bg-amber-100 text-amber-900 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-amber-300 animate-pulse';
+    }
+
+    // 5. Sidebar Navigation Sub-Module Pill
+    const navPill = document.getElementById('nav-autoreply-pill');
+    if (navPill) {
+      navPill.innerText = isEnabled ? 'ON' : 'PAUSED';
+      navPill.className = isEnabled 
+        ? 'text-[9px] font-extrabold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30'
+        : 'text-[9px] font-extrabold px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/40 animate-pulse';
+    }
 }
 
 function testSendStockAutoReplyToCurrentChat() {
@@ -5472,6 +5815,18 @@ function handleConfirmAssignment(event) {
     query.assignedTo = staffId;
     if (query.status === 'NEW') query.status = 'ASSIGNED';
     staff.activeQueries += 1;
+
+    // Asynchronously sync query assignment to MySQL Database
+    fetch('api.php?action=assign_query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: query.id,
+        assigned_to: staffId,
+        status: query.status,
+        user: CURRENT_USER?.name || 'Admin'
+      })
+    }).catch(() => {});
 
     // Log audit
     logAudit('STAFF_ASSIGNMENT', 'STAFF_ASSIGN', `Assigned query ${query.id} to ${staff.name} by Admin. Note: ${note || 'None'}`);
@@ -5662,21 +6017,26 @@ function renderModalProductList(query) {
 }
 
 function shareProductCardToChat(productId) {
-  const p = CRM_STATE.products.find(prod => prod.id === productId);
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
   if (!p) return;
 
   const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
-  const available = p.physicalStock - p.reservedStock;
-  const shareText = `🛍️ *${p.name}*\n🏷️ *SKU:* ${p.sku}\n📏 *Size:* ${p.size}\n🎨 *Color:* ${p.color}\n💰 *Price:* ₹${p.price}\n📦 *Stock Status:* ${available > 0 ? 'Ready Stock Available' : 'Limited/Out of Stock'}\n\nWould you like to confirm this order? Reply with your delivery address!`;
+  const shareText = typeof generateProductWhatsAppText === 'function' 
+    ? generateProductWhatsAppText(p) 
+    : `🛍️ *${p.name}*\n🏷️ *SKU:* ${p.sku}\n📏 *Size:* ${p.size}\n🎨 *Color:* ${p.color}\n💰 *Price:* ₹${p.price}\n\nWould you like to confirm this order? Reply with your delivery address!`;
 
   if (!CRM_STATE.conversations[ACTIVE_CUSTOMER_ID]) {
     CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] = [];
   }
 
+  const validImg = (p.image && !p.image.includes('photo-1518831959646-742c3a14ebf7')) ? p.image : null;
+
   const newMsg = {
     id: Date.now(),
     sender: 'staff',
     text: shareText,
+    type: validImg ? 'image' : 'text',
+    media_url: validImg,
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     status: 'SENDING'
   };
@@ -5686,10 +6046,10 @@ function shareProductCardToChat(productId) {
   closeModal('modal-product-search');
   renderChatMessages();
   playChime('order');
-  showToast('Product Shared', `Sent ${p.sku} card to customer on WhatsApp.`, 'share', 'emerald');
+  showToast('Product Shared', `Sent ${p.sku} photo & details to customer on WhatsApp.`, 'share', 'emerald');
 
   if (customer) {
-    dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, shareText, newMsg);
+    dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, shareText, newMsg, customer.jid, customer.accountId, false, validImg);
   }
 }
 
@@ -5698,7 +6058,12 @@ function shareProductCardToChat(productId) {
 // =========================================================================
 function updateOrderProductDropdown() {
   const select = document.getElementById('order-product-select');
-  if (!select || !CRM_STATE.products) return;
+  if (!select) return;
+
+  if (!CRM_STATE.products || CRM_STATE.products.length === 0) {
+    select.innerHTML = '<option value="">No products in catalog yet (Add via Live Stock)</option>';
+    return;
+  }
 
   const currentVal = select.value;
   select.innerHTML = CRM_STATE.products.map(p => {
@@ -5812,6 +6177,19 @@ function handleCreateOrder(event) {
 
   // 6. Log Audit
   logAudit('ORDER_CREATED', 'ORDERS', `Created order ${newOrderId} for ${customer.name}. Stock reserved: ${qty} units of ${sku}`);
+
+  // 7. Asynchronously synchronize order & stock reservation with MySQL Database
+  fetch('api.php?action=save_order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newOrder)
+  }).then(r => r.json()).then(res => {
+    if (res && res.status === 'success') {
+      console.log('[Order DB Sync Success]:', res.order_id);
+    }
+  }).catch(err => {
+    console.warn('[Order DB Sync Notice]: Saved locally, will sync on next refresh.');
+  });
 
   saveCRMState();
   closeModal('modal-convert-order');
@@ -5993,6 +6371,13 @@ function handleCreateFollowup(event) {
 
   logAudit('FOLLOWUP_SCHEDULED', 'FOLLOWUP', `Scheduled follow-up for ${customer ? customer.name : 'Customer'} on ${date} at ${formattedTime}. Notes: ${notes}`);
 
+  // Asynchronously synchronize follow-up with MySQL Database
+  fetch('api.php?action=save_followup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newFollowup)
+  }).catch(() => {});
+
   saveCRMState();
   closeModal('modal-followup');
   showToast('Follow-up Scheduled', `Reminder set for ${date} at ${formattedTime}`, 'event', 'blue');
@@ -6165,6 +6550,74 @@ function setStockStatusFilter(filter) {
     }
   });
 
+  // Highlight active metric card
+  const cardAll = document.getElementById('catalog-card-all');
+  const cardIn = document.getElementById('catalog-card-instock');
+  const cardLow = document.getElementById('catalog-card-lowstock');
+
+  if (cardAll) {
+    if (filter === 'ALL') {
+      cardAll.classList.add('ring-2', 'ring-teal-500', 'shadow-md');
+    } else {
+      cardAll.classList.remove('ring-2', 'ring-teal-500', 'shadow-md');
+    }
+  }
+  if (cardIn) {
+    if (filter === 'IN_STOCK') {
+      cardIn.classList.add('ring-2', 'ring-emerald-500', 'shadow-md');
+    } else {
+      cardIn.classList.remove('ring-2', 'ring-emerald-500', 'shadow-md');
+    }
+  }
+  if (cardLow) {
+    if (filter === 'LOW_STOCK') {
+      cardLow.classList.add('ring-2', 'ring-rose-500', 'shadow-md');
+    } else {
+      cardLow.classList.remove('ring-2', 'ring-rose-500', 'shadow-md');
+    }
+  }
+
+  filterCatalogGrid();
+}
+
+let CATALOG_VIEW_MODE = 'grid'; // 'grid' | 'table'
+let IS_BULK_PRICE_MODE = false;
+let BULK_SELECTED_PRODUCT_IDS = new Set();
+let CURRENT_CATALOG_FILTERED_LIST = [];
+
+function setCatalogViewMode(mode) {
+  CATALOG_VIEW_MODE = mode;
+  
+  const btnGrid = document.getElementById('btn-catalog-view-grid');
+  const btnTable = document.getElementById('btn-catalog-view-table');
+  const gridContainer = document.getElementById('catalog-grid-container');
+  const tableContainer = document.getElementById('catalog-table-container');
+  const thCol = document.getElementById('th-bulk-checkbox-col');
+
+  if (mode === 'table') {
+    if (btnGrid) {
+      btnGrid.className = 'px-3 py-1.5 rounded-lg font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition';
+    }
+    if (btnTable) {
+      btnTable.className = 'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition bg-white text-slate-900 shadow-sm border border-slate-200';
+    }
+    if (gridContainer) gridContainer.classList.add('hidden');
+    if (tableContainer) tableContainer.classList.remove('hidden');
+    if (thCol) {
+      if (IS_BULK_PRICE_MODE) thCol.classList.remove('hidden');
+      else thCol.classList.add('hidden');
+    }
+  } else {
+    if (btnGrid) {
+      btnGrid.className = 'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition bg-white text-slate-900 shadow-sm border border-slate-200';
+    }
+    if (btnTable) {
+      btnTable.className = 'px-3 py-1.5 rounded-lg font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition';
+    }
+    if (gridContainer) gridContainer.classList.remove('hidden');
+    if (tableContainer) tableContainer.classList.add('hidden');
+  }
+
   filterCatalogGrid();
 }
 
@@ -6178,6 +6631,11 @@ function updateCatalogMetrics() {
     const avail = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
     return avail <= 5;
   }).length;
+  const elSkus = document.getElementById('catalog-stat-skus');
+  const elPhys = document.getElementById('catalog-stat-physical');
+  const elRes = document.getElementById('catalog-stat-reserved');
+  const elAvail = document.getElementById('catalog-stat-available');
+  const elAlerts = document.getElementById('catalog-stat-alerts');
 
   if (elSkus) elSkus.innerText = totalSkus;
   if (elPhys) elPhys.innerText = totalPhysical;
@@ -6203,15 +6661,9 @@ async function syncWhatsAppBusinessCatalog() {
     if (bridgeResp && bridgeResp.products && bridgeResp.products.length > 0) {
       CRM_STATE.products = bridgeResp.products;
     } else {
-      // 2. Local fallback sync: merge initial catalog & refresh stock
-      if (!Array.isArray(CRM_STATE.products) || CRM_STATE.products.length === 0) {
-        CRM_STATE.products = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.products));
-      } else {
-        INITIAL_CRM_DATA.products.forEach(p => {
-          if (!CRM_STATE.products.some(existing => existing.sku === p.sku)) {
-            CRM_STATE.products.push(p);
-          }
-        });
+      // 2. Database fallback sync: refresh stock from MySQL
+      if (typeof refreshCatalogStockFromAPI === 'function') {
+        await refreshCatalogStockFromAPI();
       }
     }
 
@@ -6237,24 +6689,138 @@ async function syncWhatsAppBusinessCatalog() {
   }
 }
 
+function populateCatalogCategoryFilters() {
+  const catSelect = document.getElementById('catalog-category-filter');
+  if (!catSelect) return;
+
+  const currentVal = catSelect.value || 'ALL';
+  
+  // Combine categories from CRM_STATE, INITIAL_CRM_DATA and any existing in products
+  const baseCategories = (CRM_STATE.categories && Array.isArray(CRM_STATE.categories) && CRM_STATE.categories.length > 0)
+    ? CRM_STATE.categories
+    : (INITIAL_CRM_DATA.categories || []);
+
+  const catNamesSet = new Set();
+  baseCategories.forEach(c => {
+    if (c && c.name && typeof c.name === 'string' && c.name.trim()) {
+      catNamesSet.add(c.name.trim());
+    }
+  });
+
+  (CRM_STATE.products || []).forEach(p => {
+    if (p && p.category && typeof p.category === 'string' && p.category.trim()) {
+      catNamesSet.add(p.category.trim());
+    }
+  });
+
+  let html = '<option value="ALL">📁 All Categories</option>';
+  catNamesSet.forEach(name => {
+    const isSelected = name === currentVal ? 'selected' : '';
+    html += `<option value="${name}" ${isSelected}>${name}</option>`;
+  });
+  catSelect.innerHTML = html;
+
+  if ([...catSelect.options].some(o => o.value === currentVal)) {
+    catSelect.value = currentVal;
+  } else {
+    catSelect.value = 'ALL';
+  }
+
+  onCatalogCategoryFilterChange();
+}
+
+function onCatalogCategoryFilterChange() {
+  const catSelect = document.getElementById('catalog-category-filter');
+  const subcatSelect = document.getElementById('catalog-subcategory-filter');
+  if (!subcatSelect) return;
+
+  const currentSubVal = subcatSelect.value || 'ALL';
+  const selectedCat = catSelect ? catSelect.value : 'ALL';
+  
+  // Combine subcategories from CRM_STATE, INITIAL_CRM_DATA and any existing in products
+  const baseSubcategories = (CRM_STATE.subcategories && Array.isArray(CRM_STATE.subcategories) && CRM_STATE.subcategories.length > 0)
+    ? CRM_STATE.subcategories
+    : (INITIAL_CRM_DATA.subcategories || []);
+
+  const subNamesSet = new Set();
+
+  if (selectedCat === 'ALL') {
+    // Show all available subcategories across all categories
+    baseSubcategories.forEach(s => {
+      if (s && s.name && typeof s.name === 'string' && s.name.trim()) {
+        subNamesSet.add(s.name.trim());
+      }
+    });
+    (CRM_STATE.products || []).forEach(p => {
+      if (p && p.subcategory && typeof p.subcategory === 'string' && p.subcategory.trim()) {
+        subNamesSet.add(p.subcategory.trim());
+      }
+    });
+  } else {
+    // Filter to subcategories belonging to the selected category
+    const selCatLower = selectedCat.trim().toLowerCase();
+
+    baseSubcategories.forEach(s => {
+      const catName = (s.category_name || s.category || '').toString().trim().toLowerCase();
+      if (catName === selCatLower) {
+        if (s && s.name && typeof s.name === 'string' && s.name.trim()) {
+          subNamesSet.add(s.name.trim());
+        }
+      }
+    });
+
+    (CRM_STATE.products || []).forEach(p => {
+      const pCatLower = (p.category || '').toString().trim().toLowerCase();
+      if (pCatLower === selCatLower && p.subcategory && typeof p.subcategory === 'string' && p.subcategory.trim()) {
+        subNamesSet.add(p.subcategory.trim());
+      }
+    });
+  }
+
+  let html = '<option value="ALL">🏷️ All Subcategories</option>';
+  subNamesSet.forEach(name => {
+    const isSelected = name === currentSubVal ? 'selected' : '';
+    html += `<option value="${name}" ${isSelected}>${name}</option>`;
+  });
+  subcatSelect.innerHTML = html;
+
+  if ([...subcatSelect.options].some(o => o.value === currentSubVal)) {
+    subcatSelect.value = currentSubVal;
+  } else {
+    subcatSelect.value = 'ALL';
+  }
+
+  filterCatalogGrid();
+}
+
 function filterCatalogGrid() {
   const searchInput = document.getElementById('catalog-search-input');
-  const lineSelect = document.getElementById('catalog-line-filter');
   const categorySelect = document.getElementById('catalog-category-filter');
+  const subcategorySelect = document.getElementById('catalog-subcategory-filter');
   const sortSelect = document.getElementById('catalog-sort-select');
 
   const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
-  const line = lineSelect ? lineSelect.value : 'ALL';
   const category = categorySelect ? categorySelect.value : 'ALL';
-  const sortBy = sortSelect ? sortSelect.value : 'id-asc';
+  const subcategory = subcategorySelect ? subcategorySelect.value : 'ALL';
+  const sortBy = sortSelect ? sortSelect.value : 'lifo';
+
+  const categoryLower = category.trim().toLowerCase();
+  const subcategoryLower = subcategory.trim().toLowerCase();
 
   let list = (CRM_STATE.products || []).filter(p => {
     const matchQuery = !q || (p.name && p.name.toLowerCase().includes(q)) || 
                              (p.sku && p.sku.toLowerCase().includes(q)) || 
                              (p.color && p.color.toLowerCase().includes(q)) || 
-                             (p.size && p.size.toLowerCase().includes(q));
-    const matchLine = line === 'ALL' || (p.accountId || 'account_1') === line;
-    const matchCategory = category === 'ALL' || p.category === category;
+                             (p.size && p.size.toLowerCase().includes(q)) || 
+                             (p.fabric && p.fabric.toLowerCase().includes(q)) || 
+                             (p.category && p.category.toLowerCase().includes(q)) || 
+                             (p.subcategory && p.subcategory.toLowerCase().includes(q));
+
+    const pCatLower = (p.category || '').toString().trim().toLowerCase();
+    const matchCategory = category === 'ALL' || pCatLower === categoryLower;
+
+    const pSubLower = (p.subcategory || '').toString().trim().toLowerCase();
+    const matchSubcategory = subcategory === 'ALL' || pSubLower === subcategoryLower;
     
     const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
     let matchStock = true;
@@ -6262,26 +6828,42 @@ function filterCatalogGrid() {
     else if (CATALOG_STOCK_STATUS_FILTER === 'LOW_STOCK') matchStock = available > 0 && available <= 5;
     else if (CATALOG_STOCK_STATUS_FILTER === 'OUT_OF_STOCK') matchStock = available <= 0;
 
-    return matchQuery && matchLine && matchCategory && matchStock;
+    return matchQuery && matchCategory && matchSubcategory && matchStock;
   });
 
-  // Sorting
+  // Sorting: FIFO vs LIFO and Stock / Price
   list.sort((a, b) => {
     const availA = (parseInt(a.physicalStock) || 0) - (parseInt(a.reservedStock) || 0);
     const availB = (parseInt(b.physicalStock) || 0) - (parseInt(b.reservedStock) || 0);
+    if (sortBy === 'fifo') return (a.id || 0) - (b.id || 0); // FIFO: Oldest listed first
+    if (sortBy === 'lifo') return (b.id || 0) - (a.id || 0); // LIFO: Newest/recently listed first
     if (sortBy === 'avail-asc') return availA - availB;
     if (sortBy === 'avail-desc') return availB - availA;
     if (sortBy === 'price-asc') return (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0);
     if (sortBy === 'price-desc') return (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0);
     if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
-    return (a.id || 0) - (b.id || 0);
+    if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '');
+    return (b.id || 0) - (a.id || 0); // Default to Recently Listed (LIFO)
   });
 
-  renderCatalogGridFromList(list);
+  CURRENT_CATALOG_FILTERED_LIST = list;
+
+  if (CATALOG_VIEW_MODE === 'table') {
+    renderCatalogTableFromList(list);
+  } else {
+    renderCatalogGridFromList(list);
+  }
   updateCatalogMetrics();
 }
 
 function renderCatalogGrid(search) {
+  if (typeof populateCatalogCategoryFilters === 'function') {
+    const catSelect = document.getElementById('catalog-category-filter');
+    const subcatSelect = document.getElementById('catalog-subcategory-filter');
+    if (!catSelect || !subcatSelect || catSelect.options.length <= 1 || subcatSelect.options.length <= 1) {
+      populateCatalogCategoryFilters();
+    }
+  }
   if (search !== undefined && document.getElementById('catalog-search-input')) {
     document.getElementById('catalog-search-input').value = search;
   }
@@ -6294,15 +6876,20 @@ function renderCatalogGridFromList(list) {
 
   if (!list || list.length === 0) {
     container.innerHTML = `
-      <div class="col-span-full py-16 text-center bg-white rounded-2xl border border-dashed border-slate-300 p-8">
-        <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
-          <span class="material-symbols-outlined text-[32px]">inventory_2</span>
+      <div class="col-span-full py-16 text-center bg-white rounded-3xl border border-dashed border-slate-300 p-8 shadow-sm">
+        <div class="w-16 h-16 bg-emerald-50 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-sm">
+          <span class="material-symbols-outlined text-[34px]">inventory_2</span>
         </div>
-        <h3 class="text-sm font-bold text-slate-700">No garment items matched your criteria</h3>
-        <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Try clearing search filters or add a new garment product to the inventory database.</p>
-        <button onclick="openAddProductModal()" class="mt-4 px-4 py-2 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition">
-          + Add New Garment
-        </button>
+        <h3 class="text-sm font-bold text-slate-800">No garment items matched your criteria</h3>
+        <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Try clearing search filters or add a new garment product with the website catalog flow.</p>
+        <div class="flex items-center justify-center gap-2 mt-4">
+          <button onclick="openManageCategoriesModal()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+            📁 Categories
+          </button>
+          <button onclick="openAddProductModal()" class="px-4 py-2 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition">
+            + Add Product (Catalog Flow)
+          </button>
+        </div>
       </div>
     `;
     return;
@@ -6315,33 +6902,71 @@ function renderCatalogGridFromList(list) {
 
     let stockBadge = '';
     if (available > 5) {
-      stockBadge = `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> In Stock (${available})</span>`;
+      stockBadge = `<span class="bg-emerald-100/90 backdrop-blur-sm text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> In Stock (${available})</span>`;
     } else if (available > 0) {
-      stockBadge = `<span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 flex items-center gap-1 animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Only ${available} Left</span>`;
+      stockBadge = `<span class="bg-amber-100/90 backdrop-blur-sm text-amber-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 flex items-center gap-1 animate-pulse shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Only ${available} Left</span>`;
     } else {
-      stockBadge = `<span class="bg-rose-100 text-rose-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-rose-300 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Out of Stock</span>`;
+      stockBadge = `<span class="bg-rose-100/90 backdrop-blur-sm text-rose-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-rose-300 flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Out of Stock</span>`;
     }
 
-    const imgUrl = p.image && p.image.startsWith('http') 
+    const imgUrl = (p.image && (p.image.startsWith('http') || p.image.startsWith('uploads/') || p.image.startsWith('data:image')) && !p.image.includes('photo-1518831959646-742c3a14ebf7'))
       ? p.image 
-      : 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60';
+      : DEFAULT_GARMENT_PLACEHOLDER;
 
     const lineTag = p.accountId === 'account_1' ? 'L1 Central' : (p.accountId === 'account_2' ? 'L2 Maternity' : (p.accountId === 'account_3' ? 'L3 Support' : (p.accountId === 'account_4' ? 'L4 Wholesale' : 'L5 VIP')));
 
+    // Category & Subcategory display
+    const catBreadcrumb = p.subcategory 
+      ? `${p.category || 'Garments'} &rsaquo; ${p.subcategory}`
+      : (p.category || 'Garments');
+
+    // MRP discount calculation
+    const priceNum = parseFloat(p.price) || 0;
+    const mrpNum = parseFloat(p.mrp) || 0;
+    let priceDisplay = `<span class="font-extrabold text-emerald-700 font-mono text-sm shrink-0">₹${priceNum}</span>`;
+    if (mrpNum > priceNum) {
+      const discountPct = Math.round(((mrpNum - priceNum) / mrpNum) * 100);
+      priceDisplay = `
+        <div class="text-right shrink-0">
+          <div class="font-extrabold text-emerald-700 font-mono text-sm leading-tight">₹${priceNum}</div>
+          <div class="flex items-center gap-1 justify-end">
+            <span class="text-[10px] text-slate-400 line-through">₹${mrpNum}</span>
+            <span class="text-[9px] font-extrabold text-emerald-800 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-300">${discountPct}% OFF</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const isSelected = BULK_SELECTED_PRODUCT_IDS.has(String(p.id));
+    const cardSelectedClass = isSelected ? 'ring-2 ring-emerald-600 bg-emerald-50/20 shadow-md' : '';
+
     return `
-      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+      <div id="catalog-card-${p.id}" class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group ${cardSelectedClass}">
         <!-- Image & Badges -->
         <div class="relative h-44 bg-slate-100 overflow-hidden">
           <img src="${imgUrl}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-          <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-            <span class="bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shadow">${p.sku}</span>
-            <span class="bg-emerald-800/90 backdrop-blur-sm text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow">${lineTag}</span>
-          </div>
+          
+          ${IS_BULK_PRICE_MODE ? `
+            <!-- Bulk Price Mode Checkbox Overlay -->
+            <div class="absolute top-2.5 left-2.5 z-10 flex items-center">
+              <label class="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-xl border-2 ${isSelected ? 'border-emerald-600 shadow-md ring-2 ring-emerald-200' : 'border-slate-300 shadow-sm'} cursor-pointer hover:border-emerald-600 transition" onclick="event.stopPropagation()">
+                <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBulkProductSelected('${p.id}', this.checked)" class="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
+                <span class="font-mono text-[11px] font-extrabold text-slate-800">${p.sku}</span>
+              </label>
+            </div>
+          ` : `
+            <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+              <span class="bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shadow">${p.sku}</span>
+            </div>
+          `}
+
           <div class="absolute top-2.5 right-2.5">
             ${stockBadge}
           </div>
-          <div class="absolute bottom-2 left-2.5">
-            <span class="text-[10px] bg-white/90 backdrop-blur-sm text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm">${p.category || 'Garments'}</span>
+          <div class="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between">
+            <span class="text-[9px] bg-white/95 backdrop-blur-sm text-slate-800 font-bold px-2 py-0.5 rounded-md shadow-sm truncate max-w-[200px]" title="${catBreadcrumb}">
+              ${catBreadcrumb}
+            </span>
           </div>
         </div>
 
@@ -6350,13 +6975,36 @@ function renderCatalogGridFromList(list) {
           <div>
             <div class="flex items-start justify-between gap-2">
               <h4 class="font-bold text-slate-800 text-xs leading-snug line-clamp-2" title="${p.name}">${p.name}</h4>
-              <span class="font-extrabold text-emerald-700 font-mono text-sm shrink-0">₹${p.price}</span>
+              <div onclick="openSinglePriceModal('${p.id}')" class="cursor-pointer group/price flex items-center gap-1 hover:bg-emerald-50 px-1.5 py-0.5 rounded-lg border border-transparent hover:border-emerald-200 transition" title="Click to edit price for ${p.sku}">
+                ${priceDisplay}
+                <span class="material-symbols-outlined text-[13px] text-slate-400 group-hover/price:text-emerald-700 transition">edit</span>
+              </div>
             </div>
-            <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5">
+            
+            <p class="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5 flex-wrap">
               <span>📏 ${p.size || 'Standard'}</span>
               <span>&bull;</span>
               <span>🎨 ${p.color || 'Default'}</span>
+              ${p.fabric ? `<span>&bull;</span> <span class="text-teal-700 font-medium">🧵 ${p.fabric}</span>` : ''}
             </p>
+            ${(() => {
+              let sList = p.specifications;
+              if (typeof sList === 'string') {
+                try { sList = JSON.parse(sList); } catch (e) { sList = []; }
+              }
+              if (Array.isArray(sList) && sList.length > 0) {
+                const validSpecs = sList.filter(s => s && s.label && s.content);
+                if (validSpecs.length > 0) {
+                  return `
+                    <div class="flex flex-wrap gap-1 mt-1.5">
+                      ${validSpecs.slice(0, 2).map(sp => `<span class="text-[9px] bg-indigo-50 border border-indigo-200 text-indigo-800 font-semibold px-1.5 py-0.5 rounded-md">📌 ${sp.label}: ${sp.content}</span>`).join('')}
+                      ${validSpecs.length > 2 ? `<span class="text-[9px] text-slate-400 font-medium">+${validSpecs.length - 2} more</span>` : ''}
+                    </div>
+                  `;
+                }
+              }
+              return '';
+            })()}
           </div>
 
           <!-- Live Stock Stepper & Reservation Box -->
@@ -6379,23 +7027,25 @@ function renderCatalogGridFromList(list) {
               </div>
             </div>
 
-            <!-- Action Toolbar (1-Click Sharing, Direct WhatsApp, Restock, Edit) -->
-            <div class="grid grid-cols-2 gap-1.5 pt-1">
-              <button onclick="shareProductCardToChat(${p.id}); switchView('inbox');" class="px-2 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg font-bold text-[11px] shadow-sm flex items-center justify-center gap-1 transition" title="Insert into active customer chat">
-                <span class="material-symbols-outlined text-[14px]">chat</span> Active Chat
+            <!-- Action Toolbar (Direct WA, Edit Price, Restock, Edit Details) -->
+            <div class="space-y-1.5 pt-1">
+              <button onclick="openDirectShareModal('${p.id}')" class="w-full px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer" title="Send direct to any WhatsApp phone number">
+                <span class="material-symbols-outlined text-[15px]">send</span> Direct WA
               </button>
 
-              <button onclick="openDirectShareModal(${p.id})" class="px-2 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold text-[11px] shadow-sm flex items-center justify-center gap-1 transition" title="Send direct to any WhatsApp phone number">
-                <span class="material-symbols-outlined text-[14px]">send</span> Direct WA
-              </button>
+              <div class="grid grid-cols-3 gap-1.5">
+                <button onclick="openSinglePriceModal('${p.id}')" class="px-1.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer" title="Edit individual product price">
+                  <span class="material-symbols-outlined text-[14px]">payments</span> Price
+                </button>
 
-              <button onclick="openQuickStockModal(${p.id})" class="px-2 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-semibold text-[11px] flex items-center justify-center gap-1 transition" title="Quick restock & reason notes">
-                <span class="material-symbols-outlined text-[14px]">warehouse</span> Restock
-              </button>
+                <button onclick="openQuickStockModal('${p.id}')" class="px-1.5 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer" title="Quick restock & reason notes">
+                  <span class="material-symbols-outlined text-[14px]">warehouse</span> Stock
+                </button>
 
-              <button onclick="openEditProductModal(${p.id})" class="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-semibold text-[11px] flex items-center justify-center gap-1 transition" title="Edit product details & pricing">
-                <span class="material-symbols-outlined text-[14px]">edit</span> Edit Details
-              </button>
+                <button onclick="openEditProductModal('${p.id}')" class="px-1.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer" title="Overall Edit: Full Product Master (Name, Category, Stock, Price, Specs)">
+                  <span class="material-symbols-outlined text-[14px] text-amber-700">edit_note</span> Overall Edit
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -6404,11 +7054,197 @@ function renderCatalogGridFromList(list) {
   }).join('');
 }
 
+function renderCatalogTableFromList(list) {
+  const tbody = document.getElementById('catalog-table-tbody');
+  if (!tbody) return;
+
+  const thCol = document.getElementById('th-bulk-checkbox-col');
+  if (thCol) {
+    if (IS_BULK_PRICE_MODE) {
+      thCol.classList.remove('hidden');
+    } else {
+      thCol.classList.add('hidden');
+    }
+  }
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="${IS_BULK_PRICE_MODE ? 9 : 8}" class="py-16 text-center bg-white">
+          <div class="flex flex-col items-center justify-center gap-2">
+            <div class="w-14 h-14 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-1 shadow-sm">
+              <span class="material-symbols-outlined text-[30px]">inventory_2</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-800">No garment items matched your criteria</h3>
+            <p class="text-xs text-slate-400 max-w-sm mx-auto">Try clearing search filters or add a new garment product with the website catalog flow.</p>
+            <div class="flex items-center justify-center gap-2 mt-3">
+              <button onclick="openManageCategoriesModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+                📁 Categories
+              </button>
+              <button onclick="openAddProductModal()" class="px-3.5 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition">
+                + Add Product
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = list.map(p => {
+    const physical = parseInt(p.physicalStock) || 0;
+    const reserved = parseInt(p.reservedStock) || 0;
+    const available = physical - reserved;
+
+    let stockBadge = '';
+    if (available > 5) {
+      stockBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> In Stock (${available})</span>`;
+    } else if (available > 0) {
+      stockBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Low (${available})</span>`;
+    } else {
+      stockBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Out of Stock</span>`;
+    }
+
+    const imgUrl = (p.image && (p.image.startsWith('http') || p.image.startsWith('uploads/') || p.image.startsWith('data:image')) && !p.image.includes('photo-1518831959646-742c3a14ebf7'))
+      ? p.image 
+      : DEFAULT_GARMENT_PLACEHOLDER;
+
+    const lineTag = p.accountId === 'account_1' ? 'L1 Central' : (p.accountId === 'account_2' ? 'L2 Maternity' : (p.accountId === 'account_3' ? 'L3 Support' : (p.accountId === 'account_4' ? 'L4 Wholesale' : 'L5 VIP')));
+
+    // MRP discount calculation
+    const priceNum = parseFloat(p.price) || 0;
+    const mrpNum = parseFloat(p.mrp) || 0;
+    let priceDisplay = `<div class="font-extrabold text-emerald-700 font-mono text-xs">₹${priceNum}</div>`;
+    if (mrpNum > priceNum) {
+      const discountPct = Math.round(((mrpNum - priceNum) / mrpNum) * 100);
+      priceDisplay = `
+        <div>
+          <div class="font-extrabold text-emerald-700 font-mono text-xs">₹${priceNum}</div>
+          <div class="flex items-center gap-1 mt-0.5">
+            <span class="text-[10px] text-slate-400 line-through">₹${mrpNum}</span>
+            <span class="text-[9px] font-extrabold text-emerald-800 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-300">${discountPct}% OFF</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Specifications
+    let sList = p.specifications;
+    if (typeof sList === 'string') {
+      try { sList = JSON.parse(sList); } catch (e) { sList = []; }
+    }
+    let specsHtml = '';
+    if (Array.isArray(sList) && sList.length > 0) {
+      const validSpecs = sList.filter(s => s && s.label && s.content);
+      if (validSpecs.length > 0) {
+        specsHtml = `
+          <div class="flex flex-wrap gap-1 mt-1">
+            ${validSpecs.slice(0, 3).map(sp => `<span class="text-[9px] bg-indigo-50 border border-indigo-200 text-indigo-800 font-semibold px-1.5 py-0.5 rounded-md">📌 ${sp.label}: ${sp.content}</span>`).join('')}
+            ${validSpecs.length > 3 ? `<span class="text-[9px] text-slate-400 font-medium">+${validSpecs.length - 3}</span>` : ''}
+          </div>
+        `;
+      }
+    }
+
+    const isSelected = BULK_SELECTED_PRODUCT_IDS.has(String(p.id));
+
+    return `
+      <tr id="catalog-row-${p.id}" class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 ${isSelected ? 'bg-emerald-50/50' : ''}">
+        ${IS_BULK_PRICE_MODE ? `
+          <!-- Checkbox column -->
+          <td class="py-3 px-3 text-center whitespace-nowrap">
+            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBulkProductSelected('${p.id}', this.checked)" class="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
+          </td>
+        ` : ''}
+
+        <!-- Product & SKU -->
+        <td class="py-3 px-4">
+          <div class="flex items-center gap-3">
+            <img src="${imgUrl}" alt="${p.name}" class="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm">
+            <div class="min-w-0">
+              <div class="font-bold text-slate-900 text-xs hover:text-emerald-700 cursor-pointer transition line-clamp-1" onclick="openEditProductModal('${p.id}')" title="${p.name}">${p.name}</div>
+              <div class="flex items-center gap-1.5 mt-1">
+                <span class="bg-slate-900 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">${p.sku}</span>
+              </div>
+            </div>
+          </div>
+        </td>
+
+        <!-- Category -->
+        <td class="py-3 px-4 whitespace-nowrap">
+          <div class="font-semibold text-slate-800 text-xs">${p.category || 'Garments'}</div>
+          ${p.subcategory ? `<div class="text-[10px] text-slate-400 font-medium flex items-center gap-0.5 mt-0.5"><span class="text-slate-300">&rsaquo;</span> ${p.subcategory}</div>` : ''}
+        </td>
+
+        <!-- Attributes & Specs -->
+        <td class="py-3 px-4">
+          <div class="flex items-center gap-1 flex-wrap">
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px] border border-slate-200">📏 ${p.size || 'Std'}</span>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px] border border-slate-200">🎨 ${p.color || 'Default'}</span>
+            ${p.fabric ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 font-semibold text-[10px] border border-teal-200">🧵 ${p.fabric}</span>` : ''}
+          </div>
+          ${specsHtml}
+        </td>
+
+        <!-- Price (Clickable to edit) -->
+        <td class="py-3 px-4 whitespace-nowrap">
+          <div onclick="openSinglePriceModal('${p.id}')" class="cursor-pointer inline-flex items-center gap-1.5 hover:bg-emerald-50 px-2 py-1 rounded-lg border border-transparent hover:border-emerald-200 transition group/tblprice" title="Click to edit price for ${p.sku}">
+            ${priceDisplay}
+            <span class="material-symbols-outlined text-[13px] text-slate-400 group-hover/tblprice:text-emerald-700 transition">edit</span>
+          </div>
+        </td>
+
+        <!-- Physical Stock Stepper -->
+        <td class="py-3 px-4 text-center whitespace-nowrap">
+          <div class="flex items-center justify-center gap-1">
+            <button onclick="quickAdjustStock(${p.id}, -1)" class="w-6 h-6 rounded-lg bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 font-extrabold text-xs flex items-center justify-center transition shadow-sm" title="Reduce physical stock by 1">-</button>
+            <span class="font-mono font-extrabold text-xs text-slate-900 px-1.5 min-w-[28px] text-center">${physical}</span>
+            <button onclick="quickAdjustStock(${p.id}, 1)" class="w-6 h-6 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 font-extrabold text-xs flex items-center justify-center transition shadow-sm" title="Increase physical stock by 1">+</button>
+          </div>
+        </td>
+
+        <!-- Sellable Stock -->
+        <td class="py-3 px-4 text-center whitespace-nowrap">
+          <div class="font-mono font-extrabold text-xs ${available > 0 ? 'text-emerald-800' : 'text-rose-600'}">
+            ${available}
+          </div>
+          <div class="text-[9px] font-normal text-slate-400">(${reserved} res)</div>
+        </td>
+
+        <!-- Status -->
+        <td class="py-3 px-4 whitespace-nowrap">
+          ${stockBadge}
+        </td>
+
+        <!-- Actions -->
+        <td class="py-3 px-4 text-right whitespace-nowrap">
+          <div class="flex items-center justify-end gap-1.5">
+            <button onclick="openEditProductModal('${p.id}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 font-bold text-xs cursor-pointer group/editbtn" title="Overall Edit: Edit all garment details, photos, sizing, categories & pricing">
+              <span class="material-symbols-outlined text-[15px] text-amber-700 group-hover/editbtn:scale-110 transition-transform">edit_note</span>
+              <span>Overall Edit</span>
+            </button>
+            <button onclick="openSinglePriceModal('${p.id}')" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick Price Edit for ${p.sku}">
+              <span class="material-symbols-outlined text-[15px]">currency_rupee</span>
+            </button>
+            <button onclick="openDirectShareModal('${p.id}')" class="p-1.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Send direct to any WhatsApp phone number">
+              <span class="material-symbols-outlined text-[15px]">send</span>
+            </button>
+            <button onclick="openQuickStockModal('${p.id}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick restock & reason notes">
+              <span class="material-symbols-outlined text-[15px]">warehouse</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
 // -------------------------------------------------------------------------
 // LIVE QUICK STOCK ADJUSTMENT (+ / - STEPPER)
 // -------------------------------------------------------------------------
 async function quickAdjustStock(productId, delta) {
-  const p = (CRM_STATE.products || []).find(prod => prod.id === productId);
+  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId));
   if (!p) return;
 
   const currentPhysical = parseInt(p.physicalStock) || 0;
@@ -6417,6 +7253,7 @@ async function quickAdjustStock(productId, delta) {
   if (newPhysical === currentPhysical) return;
 
   p.physicalStock = newPhysical;
+  saveCRMState();
 
   // Re-render UI immediately
   filterCatalogGrid();
@@ -6429,6 +7266,7 @@ async function quickAdjustStock(productId, delta) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: p.id,
+        sku: p.sku,
         physical_stock: newPhysical,
         reserved_stock: p.reservedStock || 0
       })
@@ -6441,11 +7279,623 @@ async function quickAdjustStock(productId, delta) {
 }
 
 // -------------------------------------------------------------------------
+// PRICE EDITING CONTROLLERS: INDIVIDUAL & BULK/OVERALL WORKFLOWS
+// -------------------------------------------------------------------------
+
+function toggleBulkPriceEditMode(forceState) {
+  if (typeof forceState === 'boolean') {
+    IS_BULK_PRICE_MODE = forceState;
+  } else {
+    IS_BULK_PRICE_MODE = !IS_BULK_PRICE_MODE;
+  }
+
+  const btn = document.getElementById('btn-toggle-bulk-price');
+  const tbBtn = document.getElementById('btn-toolbar-bulk-price');
+  const bar = document.getElementById('catalog-bulk-price-bar');
+  const dock = document.getElementById('catalog-bulk-floating-dock');
+  const thCol = document.getElementById('th-bulk-checkbox-col');
+
+  if (IS_BULK_PRICE_MODE) {
+    if (btn) {
+      btn.classList.add('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
+      btn.classList.remove('bg-amber-50', 'text-amber-900', 'border-amber-300');
+      btn.innerHTML = `<span class="material-symbols-outlined text-[15px]">check_box</span> <span>Bulk Edit Active</span>`;
+    }
+    if (tbBtn) {
+      tbBtn.classList.add('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
+      tbBtn.classList.remove('bg-amber-50', 'text-amber-900', 'border-amber-300');
+      tbBtn.innerHTML = `<span class="material-symbols-outlined text-[15px]">check_box</span> <span>Bulk Edit Active</span>`;
+    }
+    if (bar) bar.classList.remove('hidden');
+    if (dock) dock.classList.remove('hidden');
+    if (thCol && CATALOG_VIEW_MODE === 'table') thCol.classList.remove('hidden');
+    showToast('Overall Price Edit Mode', 'Checkboxes active. Select items and click "Proceed to Price Edit".', 'tune', 'emerald');
+  } else {
+    BULK_SELECTED_PRODUCT_IDS.clear();
+    if (btn) {
+      btn.classList.remove('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
+      btn.classList.add('bg-amber-50', 'text-amber-900', 'border-amber-300');
+      btn.innerHTML = `<span class="material-symbols-outlined text-[15px] text-amber-700">price_change</span> <span>Edit Price (Overall)</span>`;
+    }
+    if (tbBtn) {
+      tbBtn.classList.remove('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
+      tbBtn.classList.add('bg-amber-50', 'text-amber-900', 'border-amber-300');
+      tbBtn.innerHTML = `<span class="material-symbols-outlined text-[15px] text-amber-700">price_change</span> <span>Overall Price Edit</span>`;
+    }
+    if (bar) bar.classList.add('hidden');
+    if (dock) dock.classList.add('hidden');
+    if (thCol) thCol.classList.add('hidden');
+  }
+
+  updateBulkSelectedCountUI();
+  filterCatalogGrid();
+}
+
+function toggleBulkProductSelected(productId, isChecked) {
+  const idStr = String(productId);
+  if (isChecked) {
+    BULK_SELECTED_PRODUCT_IDS.add(idStr);
+  } else {
+    BULK_SELECTED_PRODUCT_IDS.delete(idStr);
+  }
+
+  updateBulkSelectedCountUI();
+
+  // Visual highlight for card
+  const card = document.getElementById(`catalog-card-${idStr}`);
+  if (card) {
+    if (isChecked) {
+      card.classList.add('ring-2', 'ring-emerald-600', 'bg-emerald-50/20', 'shadow-md');
+    } else {
+      card.classList.remove('ring-2', 'ring-emerald-600', 'bg-emerald-50/20', 'shadow-md');
+    }
+  }
+
+  // Visual highlight for table row
+  const row = document.getElementById(`catalog-row-${idStr}`);
+  if (row) {
+    if (isChecked) {
+      row.classList.add('bg-emerald-50/50');
+    } else {
+      row.classList.remove('bg-emerald-50/50');
+    }
+  }
+}
+
+function selectAllBulkCatalogProducts(selectAll) {
+  const currentList = (CURRENT_CATALOG_FILTERED_LIST && CURRENT_CATALOG_FILTERED_LIST.length > 0)
+    ? CURRENT_CATALOG_FILTERED_LIST
+    : (CRM_STATE.products || []);
+
+  if (selectAll) {
+    currentList.forEach(p => {
+      BULK_SELECTED_PRODUCT_IDS.add(String(p.id));
+    });
+    showToast('All Visible Selected', `Selected ${currentList.length} products for bulk price editing.`, 'check_box', 'emerald');
+  } else {
+    BULK_SELECTED_PRODUCT_IDS.clear();
+    showToast('Selection Cleared', 'Deselected all products.', 'check_box_outline_blank', 'slate');
+  }
+
+  updateBulkSelectedCountUI();
+  filterCatalogGrid();
+}
+
+function updateBulkSelectedCountUI() {
+  const count = BULK_SELECTED_PRODUCT_IDS.size;
+  const countText = `${count} Garment${count === 1 ? '' : 's'} Selected`;
+
+  // Top Bar count
+  const countBar = document.getElementById('bulk-selected-count-text') || document.getElementById('bulk-selected-count');
+  if (countBar) countBar.innerText = countText;
+
+  // Floating dock count badge
+  const dockBadge = document.getElementById('bulk-dock-count-badge');
+  if (dockBadge) dockBadge.innerText = countText;
+
+  // Modal chips count badge
+  const modalCount = document.getElementById('bulk-modal-chips-count');
+  if (modalCount) modalCount.innerText = count;
+
+  // Next Process button in dock
+  const dockProceedBtn = document.getElementById('btn-dock-proceed-bulk');
+  const dockProceedText = document.getElementById('btn-dock-proceed-text');
+  if (dockProceedBtn) {
+    if (count > 0) {
+      dockProceedBtn.disabled = false;
+      dockProceedBtn.classList.remove('opacity-60');
+      if (dockProceedText) dockProceedText.innerText = `Proceed to Price Edit (${count})`;
+    } else {
+      dockProceedBtn.disabled = false;
+      if (dockProceedText) dockProceedText.innerText = `Proceed to Price Edit`;
+    }
+  }
+
+  // Next Process button in top bar
+  const barProceedBtn = document.getElementById('btn-open-bulk-modal');
+  const barProceedText = document.getElementById('btn-open-bulk-modal-text');
+  if (barProceedBtn) {
+    if (barProceedText) barProceedText.innerText = count > 0 ? `Proceed to Price Edit (${count})` : `Proceed to Price Edit`;
+  }
+
+  // Toolbar button text update
+  const tbBtnText = document.getElementById('btn-toolbar-bulk-price-text');
+  if (tbBtnText && IS_BULK_PRICE_MODE) {
+    tbBtnText.innerText = count > 0 ? `Overall Edit (${count})` : `Bulk Edit Active`;
+  }
+
+  // Sync Master Checkbox in table header
+  const thCheck = document.querySelector('#th-bulk-checkbox-col input[type="checkbox"]');
+  if (thCheck) {
+    const currentList = (CURRENT_CATALOG_FILTERED_LIST && CURRENT_CATALOG_FILTERED_LIST.length > 0)
+      ? CURRENT_CATALOG_FILTERED_LIST
+      : (CRM_STATE.products || []);
+    const visibleCount = currentList.length;
+    thCheck.checked = (visibleCount > 0 && count >= visibleCount);
+    thCheck.indeterminate = (count > 0 && count < visibleCount);
+  }
+}
+
+// -------------------------------------------------------------------------
+// UNIFIED PRICE CHANGE STRATEGY CONFIGURATION & LOGIC
+// -------------------------------------------------------------------------
+
+const PRICE_STRATEGY_CONFIG = {
+  fixed: {
+    label: 'Fixed Selling Price (₹):',
+    prefix: '₹',
+    placeholder: 'e.g. 599',
+    hint: "Each product's selling price will be set to this fixed amount.",
+    defaultValue: 599
+  },
+  discount_pct: {
+    label: 'Discount Percentage (%) on current price:',
+    prefix: '%',
+    placeholder: '15',
+    hint: "Each product's current price will be reduced by this percentage.",
+    defaultValue: 15
+  },
+  increase_pct: {
+    label: 'Price Hike Percentage (%) on current price:',
+    prefix: '%',
+    placeholder: '20',
+    hint: "Each product's current price will be increased by this percentage.",
+    defaultValue: 20
+  },
+  increase_amt: {
+    label: 'Price Increase (+₹) on current price:',
+    prefix: '+₹',
+    placeholder: '50',
+    hint: "This rupee amount will be added to each product's current price.",
+    defaultValue: 50
+  },
+  decrease_amt: {
+    label: 'Price Decrease (-₹) on current price:',
+    prefix: '-₹',
+    placeholder: '50',
+    hint: "This rupee amount will be deducted from each product's current price.",
+    defaultValue: 50
+  }
+};
+
+let ACTIVE_SINGLE_PRICE_STRATEGY = 'fixed';
+let ACTIVE_BULK_PRICE_STRATEGY = 'increase_pct';
+
+function calculatePriceByStrategy(basePrice, strategy, rawValue) {
+  const p = parseFloat(basePrice) || 0;
+  const val = parseFloat(rawValue);
+  if (isNaN(val)) return p;
+
+  let newPrice = p;
+  switch (strategy) {
+    case 'fixed':
+      newPrice = Math.max(0, val);
+      break;
+    case 'discount_pct':
+      newPrice = Math.max(0, p * (1 - (val / 100)));
+      break;
+    case 'increase_pct':
+      newPrice = Math.max(0, p * (1 + (val / 100)));
+      break;
+    case 'increase_amt':
+      newPrice = Math.max(0, p + val);
+      break;
+    case 'decrease_amt':
+      newPrice = Math.max(0, p - val);
+      break;
+    default:
+      newPrice = Math.max(0, val);
+  }
+  return Math.round(newPrice);
+}
+
+// -------------------------------------------------------------------------
+// SINGLE PRODUCT EDIT PRICE MODAL (STRATEGY CARDS TEMPLATE)
+// -------------------------------------------------------------------------
+
+function openSinglePriceModal(productId) {
+  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId));
+  if (!p) {
+    showToast('Product Not Found', 'Could not locate the selected product.', 'error', 'rose');
+    return;
+  }
+
+  const idInput = document.getElementById('single-price-product-id');
+  const subLabel = document.getElementById('single-price-product-sub');
+  const mrpInput = document.getElementById('single-mrp-input');
+
+  if (idInput) idInput.value = p.id;
+  if (subLabel) {
+    subLabel.innerText = `Updating price for ${p.sku || 'Garment'} • ${p.name || ''}`;
+  }
+  if (mrpInput) {
+    mrpInput.value = (p.mrp && parseFloat(p.mrp) > 0) ? parseFloat(p.mrp) : '';
+  }
+
+  // Default to 'fixed' strategy with current product price
+  setSinglePriceStrategy('fixed', false);
+  const inputElem = document.getElementById('single-price-input');
+  if (inputElem) {
+    inputElem.value = (p.price !== undefined && p.price !== null) ? parseFloat(p.price) : 0;
+  }
+
+  renderSinglePriceLivePreview();
+  openModal('modal-single-edit-price');
+
+  setTimeout(() => {
+    if (inputElem) {
+      inputElem.focus();
+      inputElem.select();
+    }
+  }, 100);
+}
+
+function setSinglePriceStrategy(strategyKey, resetDefaultValue = true) {
+  if (!PRICE_STRATEGY_CONFIG[strategyKey]) strategyKey = 'fixed';
+  ACTIVE_SINGLE_PRICE_STRATEGY = strategyKey;
+
+  const cfg = PRICE_STRATEGY_CONFIG[strategyKey];
+  const labelElem = document.getElementById('single-price-value-label');
+  const prefixElem = document.getElementById('single-price-value-prefix');
+  const hintElem = document.getElementById('single-price-value-hint');
+  const inputElem = document.getElementById('single-price-input');
+
+  if (labelElem) labelElem.innerText = cfg.label;
+  if (prefixElem) prefixElem.innerText = cfg.prefix;
+  if (hintElem) hintElem.innerText = cfg.hint;
+  if (inputElem) inputElem.placeholder = cfg.placeholder;
+
+  if (resetDefaultValue && inputElem) {
+    const pId = document.getElementById('single-price-product-id')?.value;
+    const p = (CRM_STATE.products || []).find(item => String(item.id) === String(pId));
+    if (strategyKey === 'fixed' && p) {
+      inputElem.value = parseFloat(p.price) || 0;
+    } else {
+      inputElem.value = cfg.defaultValue;
+    }
+  }
+
+  // Update visual buttons styling
+  const buttons = document.querySelectorAll('.single-strat-btn');
+  buttons.forEach(btn => {
+    const isTarget = btn.id === `btn-single-strat-${strategyKey}`;
+    if (isTarget) {
+      btn.className = 'single-strat-btn p-2.5 rounded-xl border-2 border-amber-400 bg-amber-50/70 text-amber-950 font-bold shadow-xs flex flex-col items-center justify-center gap-1 transition text-center cursor-pointer';
+    } else {
+      btn.className = 'single-strat-btn p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold flex flex-col items-center justify-center gap-1 transition text-center cursor-pointer shadow-2xs';
+    }
+  });
+
+  renderSinglePriceLivePreview();
+}
+
+function renderSinglePriceLivePreview() {
+  const pId = document.getElementById('single-price-product-id')?.value;
+  const p = (CRM_STATE.products || []).find(item => String(item.id) === String(pId));
+  const listElem = document.getElementById('single-price-impact-list');
+  const inputElem = document.getElementById('single-price-input');
+
+  if (!listElem) return;
+  if (!p) {
+    listElem.innerHTML = `<div class="text-[11px] text-slate-400 italic py-1 text-center">No garment selected</div>`;
+    return;
+  }
+
+  const rawVal = inputElem ? inputElem.value : 0;
+  const oldPrice = parseFloat(p.price) || 0;
+  const newPrice = calculatePriceByStrategy(oldPrice, ACTIVE_SINGLE_PRICE_STRATEGY, rawVal);
+  const diff = newPrice - oldPrice;
+
+  let diffBadge = '';
+  if (diff > 0) {
+    diffBadge = `<span class="ml-2 font-bold text-[10px] text-emerald-800 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md font-mono">+₹${diff}</span>`;
+  } else if (diff < 0) {
+    diffBadge = `<span class="ml-2 font-bold text-[10px] text-rose-800 bg-rose-100 border border-rose-200 px-2 py-0.5 rounded-md font-mono">-₹${Math.abs(diff)}</span>`;
+  } else {
+    diffBadge = `<span class="ml-2 font-bold text-[10px] text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md font-mono">₹0</span>`;
+  }
+
+  listElem.innerHTML = `
+    <div class="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="bg-slate-900 text-white font-mono font-black text-[10px] px-2 py-0.5 rounded-md shrink-0 shadow-2xs">${p.sku || 'SKU'}</span>
+        <span class="font-bold text-xs text-slate-800 truncate">${p.name || 'Garment'}</span>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0 font-mono text-xs">
+        <span class="text-slate-400 line-through">₹${oldPrice}</span>
+        <span class="text-slate-400 font-bold mx-1">&rarr;</span>
+        <span class="font-black text-emerald-700 text-sm">₹${newPrice}</span>
+        ${diffBadge}
+      </div>
+    </div>
+  `;
+}
+
+async function handleSinglePriceSave(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  const idInput = document.getElementById('single-price-product-id');
+  const pId = idInput ? idInput.value : null;
+  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(pId));
+
+  if (!p) {
+    showToast('Not Found', 'Product record not found.', 'error', 'rose');
+    return;
+  }
+
+  const inputElem = document.getElementById('single-price-input');
+  const rawVal = inputElem ? parseFloat(inputElem.value) : NaN;
+  if (isNaN(rawVal) || rawVal < 0) {
+    showToast('Invalid Value', 'Please enter a valid numeric value.', 'error', 'rose');
+    return;
+  }
+
+  const mrpInput = document.getElementById('single-mrp-input');
+  const mrpVal = (mrpInput && mrpInput.value !== '') ? parseFloat(mrpInput.value) : null;
+
+  const oldPrice = parseFloat(p.price) || 0;
+  const newPrice = calculatePriceByStrategy(oldPrice, ACTIVE_SINGLE_PRICE_STRATEGY, rawVal);
+
+  p.price = newPrice;
+  if (mrpVal !== null && !isNaN(mrpVal) && mrpVal > 0) {
+    p.mrp = mrpVal;
+  } else if (mrpVal === null && p.mrp) {
+    // Keep existing MRP
+  }
+
+  saveCRMState();
+
+  closeModal('modal-single-edit-price');
+  if (typeof filterCatalogGrid === 'function') filterCatalogGrid();
+  if (typeof renderCatalogGrid === 'function') renderCatalogGrid('');
+  if (typeof updateOrderProductDropdown === 'function') updateOrderProductDropdown();
+
+  if (typeof playChime === 'function') playChime('order');
+  showToast('Price Updated', `${p.sku} price changed from ₹${oldPrice} to ₹${newPrice}.`, 'payments', 'emerald');
+
+  try {
+    const res = await fetch('api.php?action=update_price', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: p.id,
+        sku: p.sku,
+        price: newPrice,
+        mrp: mrpVal
+      })
+    });
+    const result = await res.json();
+    console.log('Single price updated in DB:', result);
+  } catch (err) {
+    console.warn('API update_price error:', err);
+  }
+
+  if (typeof logAudit === 'function') {
+    logAudit('PRICE_UPDATE', 'CATALOG', `${p.sku} price updated to ₹${newPrice} using ${ACTIVE_SINGLE_PRICE_STRATEGY}`);
+  }
+}
+
+// -------------------------------------------------------------------------
+// BULK / OVERALL PRODUCT EDIT PRICE MODAL (STRATEGY CARDS TEMPLATE)
+// -------------------------------------------------------------------------
+
+function openBulkPriceModal() {
+  if (BULK_SELECTED_PRODUCT_IDS.size === 0) {
+    showToast('Select Products First', 'Please check at least 1 garment using the checkboxes to bulk edit prices.', 'warning', 'amber');
+    return;
+  }
+
+  const selectedProducts = (CRM_STATE.products || []).filter(p => BULK_SELECTED_PRODUCT_IDS.has(String(p.id)));
+
+  const countSub = document.getElementById('bulk-price-modal-count-sub');
+  if (countSub) {
+    countSub.innerText = `Updating prices for ${selectedProducts.length} selected garment${selectedProducts.length === 1 ? '' : 's'} simultaneously`;
+  }
+
+  const mrpInput = document.getElementById('bulk-mrp-input');
+  if (mrpInput) mrpInput.value = '';
+
+  // Default to 'increase_pct' with 20% (matching the exact user screenshot template)
+  setBulkPriceStrategy('increase_pct', false);
+  const inputElem = document.getElementById('bulk-price-input');
+  if (inputElem) inputElem.value = 20;
+
+  renderBulkPriceLivePreview();
+  openModal('modal-bulk-edit-price');
+
+  setTimeout(() => {
+    if (inputElem) {
+      inputElem.focus();
+      inputElem.select();
+    }
+  }, 100);
+}
+
+function setBulkPriceStrategy(strategyKey, resetDefaultValue = true) {
+  if (!PRICE_STRATEGY_CONFIG[strategyKey]) strategyKey = 'increase_pct';
+  ACTIVE_BULK_PRICE_STRATEGY = strategyKey;
+
+  const cfg = PRICE_STRATEGY_CONFIG[strategyKey];
+  const labelElem = document.getElementById('bulk-price-value-label');
+  const prefixElem = document.getElementById('bulk-price-value-prefix');
+  const hintElem = document.getElementById('bulk-price-value-hint');
+  const inputElem = document.getElementById('bulk-price-input');
+
+  if (labelElem) labelElem.innerText = cfg.label;
+  if (prefixElem) prefixElem.innerText = cfg.prefix;
+  if (hintElem) hintElem.innerText = cfg.hint;
+  if (inputElem) inputElem.placeholder = cfg.placeholder;
+
+  if (resetDefaultValue && inputElem) {
+    if (strategyKey === 'fixed') {
+      const selectedProducts = (CRM_STATE.products || []).filter(p => BULK_SELECTED_PRODUCT_IDS.has(String(p.id)));
+      inputElem.value = selectedProducts.length > 0 ? (parseFloat(selectedProducts[0].price) || 499) : 499;
+    } else {
+      inputElem.value = cfg.defaultValue;
+    }
+  }
+
+  // Update visual buttons styling
+  const buttons = document.querySelectorAll('.bulk-strat-btn');
+  buttons.forEach(btn => {
+    const isTarget = btn.id === `btn-bulk-strat-${strategyKey}`;
+    if (isTarget) {
+      btn.className = 'bulk-strat-btn p-2.5 rounded-xl border-2 border-amber-400 bg-amber-50/70 text-amber-950 font-bold shadow-xs flex flex-col items-center justify-center gap-1 transition text-center cursor-pointer';
+    } else {
+      btn.className = 'bulk-strat-btn p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold flex flex-col items-center justify-center gap-1 transition text-center cursor-pointer shadow-2xs';
+    }
+  });
+
+  renderBulkPriceLivePreview();
+}
+
+function renderBulkPriceLivePreview() {
+  const selectedProducts = (CRM_STATE.products || []).filter(p => BULK_SELECTED_PRODUCT_IDS.has(String(p.id)));
+  const listElem = document.getElementById('bulk-price-impact-list');
+  const inputElem = document.getElementById('bulk-price-input');
+
+  if (!listElem) return;
+  if (selectedProducts.length === 0) {
+    listElem.innerHTML = `<div class="text-[11px] text-slate-400 italic py-1 text-center">No garments selected</div>`;
+    return;
+  }
+
+  const rawVal = inputElem ? inputElem.value : 0;
+
+  listElem.innerHTML = selectedProducts.map(p => {
+    const oldPrice = parseFloat(p.price) || 0;
+    const newPrice = calculatePriceByStrategy(oldPrice, ACTIVE_BULK_PRICE_STRATEGY, rawVal);
+    const diff = newPrice - oldPrice;
+
+    let diffBadge = '';
+    if (diff > 0) {
+      diffBadge = `<span class="ml-2 font-bold text-[10px] text-emerald-800 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md font-mono">+₹${diff}</span>`;
+    } else if (diff < 0) {
+      diffBadge = `<span class="ml-2 font-bold text-[10px] text-rose-800 bg-rose-100 border border-rose-200 px-2 py-0.5 rounded-md font-mono">-₹${Math.abs(diff)}</span>`;
+    } else {
+      diffBadge = `<span class="ml-2 font-bold text-[10px] text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md font-mono">₹0</span>`;
+    }
+
+    return `
+      <div class="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="bg-slate-900 text-white font-mono font-black text-[10px] px-2 py-0.5 rounded-md shrink-0 shadow-2xs">${p.sku || 'SKU'}</span>
+          <span class="font-bold text-xs text-slate-800 truncate">${p.name || 'Garment'}</span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0 font-mono text-xs">
+          <span class="text-slate-400 line-through">₹${oldPrice}</span>
+          <span class="text-slate-400 font-bold mx-1">&rarr;</span>
+          <span class="font-black text-emerald-700 text-sm">₹${newPrice}</span>
+          ${diffBadge}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function handleBulkPriceSave(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  if (BULK_SELECTED_PRODUCT_IDS.size === 0) {
+    showToast('No Selection', 'Please select garments to update.', 'warning', 'amber');
+    return;
+  }
+
+  const inputElem = document.getElementById('bulk-price-input');
+  const rawVal = inputElem ? parseFloat(inputElem.value) : NaN;
+  if (isNaN(rawVal) || rawVal < 0) {
+    showToast('Invalid Value', 'Please enter a valid numeric value.', 'error', 'rose');
+    return;
+  }
+
+  const mrpInput = document.getElementById('bulk-mrp-input');
+  const mrpVal = (mrpInput && mrpInput.value !== '') ? parseFloat(mrpInput.value) : null;
+
+  const selectedIds = Array.from(BULK_SELECTED_PRODUCT_IDS);
+  const affectedProducts = (CRM_STATE.products || []).filter(p => BULK_SELECTED_PRODUCT_IDS.has(String(p.id)));
+
+  // Update in-memory state for all selected products using active strategy
+  affectedProducts.forEach(p => {
+    const oldPrice = parseFloat(p.price) || 0;
+    const newPrice = calculatePriceByStrategy(oldPrice, ACTIVE_BULK_PRICE_STRATEGY, rawVal);
+    p.price = newPrice;
+    if (mrpVal !== null && !isNaN(mrpVal) && mrpVal > 0) {
+      p.mrp = mrpVal;
+    }
+  });
+
+  saveCRMState();
+
+  // 1. Close the bulk modal immediately
+  closeModal('modal-bulk-edit-price');
+
+  // 2. CRITICAL USER REQUIREMENT:
+  // Automatically close and exit Bulk Mode after save!
+  // Unchecks all boxes, closes floating bottom dock, hides top bar, restores normal table actions
+  toggleBulkPriceEditMode(false);
+
+  // 3. Audio & Toast feedback
+  if (typeof playChime === 'function') playChime('order');
+  showToast('Bulk Prices Updated', `Successfully updated prices for ${affectedProducts.length} garments.`, 'price_check', 'emerald');
+
+  // 4. Async persist via API
+  try {
+    const res = await fetch('api.php?action=bulk_update_prices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids: selectedIds,
+        product_ids: selectedIds,
+        skus: affectedProducts.map(p => p.sku),
+        mode: ACTIVE_BULK_PRICE_STRATEGY,
+        value: rawVal,
+        mrp: mrpVal
+      })
+    });
+    const result = await res.json();
+    console.log('Bulk prices persisted to DB:', result);
+  } catch (err) {
+    console.warn('API bulk_update_prices error:', err);
+  }
+
+  // Audit log
+  if (typeof logAudit === 'function') {
+    logAudit('BULK_PRICE_UPDATE', 'CATALOG', `Bulk updated prices for ${affectedProducts.length} products using strategy ${ACTIVE_BULK_PRICE_STRATEGY}`);
+  }
+}
+
+// -------------------------------------------------------------------------
 // ADD / EDIT PRODUCT MODAL & IMAGE UPLOAD LOGIC
 // -------------------------------------------------------------------------
 
 let CURRENT_PRODUCT_IMAGE_DATA = '';
-const DEFAULT_GARMENT_PLACEHOLDER = 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60';
+// Uses global DEFAULT_GARMENT_PLACEHOLDER declared at top of file
 
 function switchProductImageSourceTab(tab) {
   const tabUpload = document.getElementById('tab-img-upload');
@@ -6486,6 +7936,7 @@ function handleProductImageFileSelect(event) {
     if (previewImg) previewImg.src = dataUrl;
     if (previewName) previewName.innerText = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
     if (previewStatus) previewStatus.innerText = 'Uploading to server...';
+    updateProductFormPreview();
 
     // Upload to server via FormData
     const formData = new FormData();
@@ -6507,6 +7958,7 @@ function handleProductImageFileSelect(event) {
     } catch (err) {
       if (previewStatus) previewStatus.innerText = 'Ready (cached in session)';
     }
+    updateProductFormPreview();
   };
   reader.readAsDataURL(file);
 }
@@ -6518,15 +7970,17 @@ function handleProductImageURLChange(url) {
   const previewName = document.getElementById('prod-preview-filename');
   const previewStatus = document.getElementById('prod-preview-status');
 
-  if (url && (url.startsWith('http') || url.startsWith('uploads/'))) {
+  if (url && (url.startsWith('http') || url.startsWith('uploads/') || url.startsWith('data:image'))) {
     if (previewImg) previewImg.src = url;
     if (previewName) previewName.innerText = 'External Web Image';
     if (previewStatus) previewStatus.innerText = 'Loaded from URL';
   } else {
+    CURRENT_PRODUCT_IMAGE_DATA = '';
     if (previewImg) previewImg.src = DEFAULT_GARMENT_PLACEHOLDER;
-    if (previewName) previewName.innerText = 'Default Garment Photo';
-    if (previewStatus) previewStatus.innerText = 'Standard placeholder';
+    if (previewName) previewName.innerText = 'No image selected';
+    if (previewStatus) previewStatus.innerText = 'Upload a photo or enter URL';
   }
+  updateProductFormPreview();
 }
 
 function clearProductImagePreview() {
@@ -6540,25 +7994,1255 @@ function clearProductImagePreview() {
   if (fileInput) fileInput.value = '';
   if (urlInput) urlInput.value = '';
   if (previewImg) previewImg.src = DEFAULT_GARMENT_PLACEHOLDER;
-  if (previewName) previewName.innerText = 'Default Garment Photo';
-  if (previewStatus) previewStatus.innerText = 'Standard placeholder';
+  if (previewName) previewName.innerText = 'No image selected';
+  if (previewStatus) previewStatus.innerText = 'Upload a photo or enter URL';
+  updateProductFormPreview();
 }
 
+// =========================================================================
+// E-COMMERCE WEBSITE CATALOG FLOW & TAXONOMY / ATTRIBUTES SYSTEM
+// =========================================================================
+
+// Color Hex Helper for Visual Color Swatches
+const COLOR_HEX_MAP = {
+  'pink': '#f472b6',
+  'blush pink': '#fbcfe8',
+  'sunshine yellow': '#facc15',
+  'yellow': '#fde047',
+  'red': '#ef4444',
+  'ruby red': '#e11d48',
+  'ruby red & gold': '#be123c',
+  'pink': '#f472b6',
+  'blush pink': '#fbcfe8',
+  'maroon': '#800000',
+  'royal maroon': '#881337',
+  'sunshine yellow': '#facc15',
+  'yellow': '#fde047',
+  'sky blue': '#38bdf8',
+  'blue': '#3b82f6',
+  'mint green': '#86efac',
+  'emerald green': '#10b981',
+  'emerald green & gold': '#059669',
+  'pure white': '#f8fafc',
+  'white': '#ffffff',
+  'multi pastel': '#c084fc',
+  'navy blue': '#1e3a8a',
+  'jet black': '#0f172a',
+  'black': '#1e293b',
+  'peach': '#fed7aa',
+  'lavender': '#e9d5ff',
+  'mustard': '#eab308'
+};
+
+function getColorHex(colorName) {
+  if (!colorName) return '#94a3b8';
+  const clean = colorName.toLowerCase().trim();
+  for (const key in COLOR_HEX_MAP) {
+    if (clean.includes(key)) return COLOR_HEX_MAP[key];
+  }
+  return '#94a3b8';
+}
+
+// -------------------------------------------------------------------------
+// DYNAMIC DROPDOWNS & ATTRIBUTE CHIPS IN PRODUCT FORM
+// -------------------------------------------------------------------------
+
+function populateProductFormCategories(selectedCat, selectedSubcat) {
+  const catSelect = document.getElementById('prod-form-category');
+  if (!catSelect) return;
+
+  const categories = CRM_STATE.categories || INITIAL_CRM_DATA.categories || [];
+  let html = '<option value="" disabled' + (!selectedCat ? ' selected' : '') + '>-- Select Main Category --</option>';
+  categories.forEach(c => {
+    const isSel = selectedCat && selectedCat === c.name ? ' selected' : '';
+    html += `<option value="${c.name}"${isSel}>${c.name}</option>`;
+  });
+  catSelect.innerHTML = html;
+
+  if (selectedCat && [...catSelect.options].some(o => o.value === selectedCat)) {
+    catSelect.value = selectedCat;
+  } else {
+    catSelect.value = '';
+  }
+
+  onProductFormCategoryChange(selectedSubcat);
+}
+
+function onProductFormCategoryChange(preserveSubcat) {
+  const catSelect = document.getElementById('prod-form-category');
+  const subcatSelect = document.getElementById('prod-form-subcategory');
+  if (!catSelect || !subcatSelect) return;
+
+  const selectedCat = catSelect.value;
+  if (!selectedCat) {
+    subcatSelect.innerHTML = '<option value="" disabled selected>-- Select Subcategory --</option>';
+    subcatSelect.value = '';
+    updateProductFormPreview();
+    return;
+  }
+
+  const subcategories = CRM_STATE.subcategories || INITIAL_CRM_DATA.subcategories || [];
+  const filtered = subcategories.filter(s => s.category_name === selectedCat || s.category === selectedCat);
+
+  let html = '<option value="" disabled' + (!preserveSubcat ? ' selected' : '') + '>-- Select Subcategory --</option>';
+  if (filtered.length === 0) {
+    html += `<option value="General" data-prefix="GRM">General Apparel (Prefix: GRM)</option>`;
+  } else {
+    filtered.forEach(s => {
+      const prefix = s.sku_prefix || 'GRM';
+      const isSel = preserveSubcat && preserveSubcat === s.name ? ' selected' : '';
+      html += `<option value="${s.name}" data-prefix="${prefix}"${isSel}>${s.name} (Prefix: ${prefix})</option>`;
+    });
+  }
+  subcatSelect.innerHTML = html;
+
+  if (preserveSubcat && [...subcatSelect.options].some(o => o.value === preserveSubcat)) {
+    subcatSelect.value = preserveSubcat;
+  } else {
+    subcatSelect.value = '';
+  }
+
+  updateProductFormPreview();
+}
+
+function onProductFormSubcategoryChange() {
+  const idVal = document.getElementById('prod-form-id')?.value;
+  const skuInput = document.getElementById('prod-form-sku');
+  if (!idVal || !skuInput?.value) {
+    autoGenerateProductSKU();
+  }
+  updateProductFormPreview();
+}
+
+// Multi-Selection Attribute State & Variant Matrix
+let SELECTED_PRODUCT_SIZES = [];
+let SELECTED_PRODUCT_COLORS = [];
+let SELECTED_PRODUCT_SPECS = [];
+let SELECTED_CUSTOM_ATTRIBUTES = {}; // { [attrName]: ['val1', 'val2'] }
+let PRODUCT_VARIANTS_MATRIX = [];
+
+function toggleProductFormSize(val) {
+  if (!val) return;
+  const trimmed = val.trim();
+  const lower = trimmed.toLowerCase();
+  const idx = SELECTED_PRODUCT_SIZES.findIndex(s => s.toLowerCase() === lower);
+  if (idx >= 0) {
+    SELECTED_PRODUCT_SIZES.splice(idx, 1);
+  } else {
+    SELECTED_PRODUCT_SIZES.push(trimmed);
+  }
+  const input = document.getElementById('prod-form-size');
+  if (input) input.value = SELECTED_PRODUCT_SIZES.join(', ');
+  renderProductFormAttributeChips();
+  calculateProductVariantMatrix();
+  updateProductFormPreview();
+}
+
+function handleSizeInputManual(val) {
+  if (typeof val !== 'string') return;
+  SELECTED_PRODUCT_SIZES = val.split(',').map(s => s.trim()).filter(Boolean);
+  renderProductFormAttributeChips();
+  calculateProductVariantMatrix();
+  updateProductFormPreview();
+}
+
+function toggleProductFormColor(val) {
+  if (!val) return;
+  const trimmed = val.trim();
+  const lower = trimmed.toLowerCase();
+  const idx = SELECTED_PRODUCT_COLORS.findIndex(c => c.toLowerCase() === lower);
+  if (idx >= 0) {
+    SELECTED_PRODUCT_COLORS.splice(idx, 1);
+  } else {
+    SELECTED_PRODUCT_COLORS.push(trimmed);
+  }
+  const input = document.getElementById('prod-form-color');
+  if (input) input.value = SELECTED_PRODUCT_COLORS.join(', ');
+  renderProductFormAttributeChips();
+  calculateProductVariantMatrix();
+  updateProductFormPreview();
+}
+
+function handleColorInputManual(val) {
+  if (typeof val !== 'string') return;
+  SELECTED_PRODUCT_COLORS = val.split(',').map(c => c.trim()).filter(Boolean);
+  renderProductFormAttributeChips();
+  calculateProductVariantMatrix();
+  updateProductFormPreview();
+}
+
+function toggleProductFormCustomAttr(attrName, val) {
+  if (!attrName || !val) return;
+  const trimmed = val.trim();
+  const lower = trimmed.toLowerCase();
+  if (!SELECTED_CUSTOM_ATTRIBUTES[attrName]) {
+    SELECTED_CUSTOM_ATTRIBUTES[attrName] = [];
+  }
+  const idx = SELECTED_CUSTOM_ATTRIBUTES[attrName].findIndex(s => s.toLowerCase() === lower);
+  if (idx >= 0) {
+    SELECTED_CUSTOM_ATTRIBUTES[attrName].splice(idx, 1);
+  } else {
+    SELECTED_CUSTOM_ATTRIBUTES[attrName].push(trimmed);
+  }
+  const input = document.getElementById(`prod-form-custom-${attrName}`);
+  if (input) input.value = SELECTED_CUSTOM_ATTRIBUTES[attrName].join(', ');
+  renderProductFormAttributeChips();
+  calculateProductVariantMatrix();
+  updateProductFormPreview();
+}
+
+function handleCustomAttrInputManual(attrName, val) {
+  if (typeof val !== 'string' || !attrName) return;
+  SELECTED_CUSTOM_ATTRIBUTES[attrName] = val.split(',').map(s => s.trim()).filter(Boolean);
+  renderProductFormAttributeChips();
+  calculateProductVariantMatrix();
+  updateProductFormPreview();
+}
+
+function toggleProductFormSpec(lbl, cnt) {
+  if (!lbl && !cnt) return;
+  const targetLbl = (lbl || '').trim();
+  const targetCnt = (cnt || '').trim();
+  const targetDisplay = (targetLbl && targetLbl !== 'Specification') ? `${targetLbl}: ${targetCnt}` : (targetCnt || targetLbl);
+  const targetLower = targetDisplay.toLowerCase();
+
+  const idx = SELECTED_PRODUCT_SPECS.findIndex(s => {
+    const sLbl = (typeof s === 'object' ? s.label : s) || '';
+    const sCnt = (typeof s === 'object' ? s.content : '') || '';
+    const sDisplay = (sLbl && sLbl !== 'Specification') ? `${sLbl}: ${sCnt}` : (sCnt || sLbl);
+    return sDisplay.toLowerCase() === targetLower || 
+           (sLbl.toLowerCase() === targetLbl.toLowerCase() && sCnt.toLowerCase() === targetCnt.toLowerCase());
+  });
+
+  if (idx >= 0) {
+    SELECTED_PRODUCT_SPECS.splice(idx, 1);
+  } else {
+    SELECTED_PRODUCT_SPECS.push({ label: targetLbl || 'Specification', content: targetCnt || targetLbl });
+  }
+
+  const input = document.getElementById('prod-form-specifications');
+  if (input) {
+    input.value = SELECTED_PRODUCT_SPECS.map(s => (s.label && s.label !== 'Specification') ? `${s.label}: ${s.content}` : (s.content || s.label)).join(', ');
+  }
+  renderProductFormAttributeChips();
+  updateProductFormPreview();
+}
+
+function handleSpecsInputManual(val) {
+  if (typeof val !== 'string') return;
+  const parts = val.split(',').map(s => s.trim()).filter(Boolean);
+  SELECTED_PRODUCT_SPECS = parts.map(p => {
+    if (p.includes(':')) {
+      const sp = p.split(':');
+      return { label: sp[0].trim(), content: sp.slice(1).join(':').trim() };
+    }
+    return { label: 'Specification', content: p };
+  });
+  renderProductFormAttributeChips();
+  updateProductFormPreview();
+}
+
+function selectProductFormSize(val) {
+  toggleProductFormSize(val);
+}
+
+function selectProductFormColor(val) {
+  toggleProductFormColor(val);
+}
+
+function selectProductFormFabric(val) {
+  // Fabric removed as per user instruction
+}
+
+function renderProductFormAttributeChips(selectedSizesArg, selectedColorsArg, selectedSpecsArg) {
+  const sizeCont = document.getElementById('prod-size-chips-container');
+  const colorCont = document.getElementById('prod-color-swatches-container');
+  const specCont = document.getElementById('prod-spec-chips-container');
+  const customCont = document.getElementById('prod-custom-attributes-container');
+
+  const attrs = CRM_STATE.attributes || INITIAL_CRM_DATA.attributes || { sizes: [], colors: [], specifications: [], custom: {} };
+
+  // Sync state if explicit arguments provided
+  if (typeof selectedSizesArg === 'string') {
+    SELECTED_PRODUCT_SIZES = selectedSizesArg.split(',').map(s => s.trim()).filter(Boolean);
+  } else if (Array.isArray(selectedSizesArg)) {
+    SELECTED_PRODUCT_SIZES = selectedSizesArg.map(s => (typeof s === 'string' ? s.trim() : String(s))).filter(Boolean);
+  } else if (document.getElementById('prod-form-size')) {
+    const raw = document.getElementById('prod-form-size').value;
+    SELECTED_PRODUCT_SIZES = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  }
+
+  if (typeof selectedColorsArg === 'string') {
+    SELECTED_PRODUCT_COLORS = selectedColorsArg.split(',').map(c => c.trim()).filter(Boolean);
+  } else if (Array.isArray(selectedColorsArg)) {
+    SELECTED_PRODUCT_COLORS = selectedColorsArg.map(c => (typeof c === 'string' ? c.trim() : String(c))).filter(Boolean);
+  } else if (document.getElementById('prod-form-color')) {
+    const raw = document.getElementById('prod-form-color').value;
+    SELECTED_PRODUCT_COLORS = raw ? raw.split(',').map(c => c.trim()).filter(Boolean) : [];
+  }
+
+  if (typeof selectedSpecsArg === 'string') {
+    handleSpecsInputManual(selectedSpecsArg);
+  } else if (Array.isArray(selectedSpecsArg)) {
+    SELECTED_PRODUCT_SPECS = selectedSpecsArg.map(s => {
+      if (typeof s === 'string') {
+        if (s.includes(':')) {
+          const sp = s.split(':');
+          return { label: sp[0].trim(), content: sp.slice(1).join(':').trim() };
+        }
+        return { label: 'Specification', content: s.trim() };
+      }
+      return { label: s.label || 'Specification', content: s.content || '' };
+    });
+  }
+
+  const activeSizesLower = SELECTED_PRODUCT_SIZES.map(s => s.toLowerCase());
+  const activeColorsLower = SELECTED_PRODUCT_COLORS.map(c => c.toLowerCase());
+
+  // 1. Sizes Chips (Multi-Selection with checkmark)
+  if (sizeCont) {
+    sizeCont.innerHTML = (attrs.sizes || []).map(s => {
+      const isSelected = activeSizesLower.includes(s.toLowerCase());
+      const escapedS = s.replace(/'/g, "\\'");
+      return `
+        <button type="button" onclick="toggleProductFormSize('${escapedS}')" class="chip-size px-2.5 py-1 rounded-lg text-[11px] font-bold border transition flex items-center gap-1 cursor-pointer ${isSelected ? 'bg-teal-700 text-white border-teal-800 shadow-sm ring-1 ring-teal-500' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'}">
+          ${isSelected ? '<span class="text-teal-200 text-[11px] font-extrabold">✓</span>' : ''}
+          <span>${s}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  // 2. Colors & Swatches (Multi-Selection with checkmark & color circle)
+  if (colorCont) {
+    colorCont.innerHTML = (attrs.colors || []).map(c => {
+      const hex = getColorHex(c);
+      const isSelected = activeColorsLower.includes(c.toLowerCase());
+      const escapedC = c.replace(/'/g, "\\'");
+      return `
+        <button type="button" onclick="toggleProductFormColor('${escapedC}')" class="chip-color px-2.5 py-1 rounded-lg text-[11px] font-bold border transition flex items-center gap-1.5 cursor-pointer ${isSelected ? 'bg-amber-100 text-amber-950 border-amber-400 ring-2 ring-amber-400 shadow-sm font-extrabold' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'}">
+          <span class="w-3 h-3 rounded-full border border-black/20 shrink-0" style="background-color: ${hex}"></span>
+          ${isSelected ? '<span class="text-amber-800 text-[11px] font-extrabold">✓</span>' : ''}
+          <span>${c}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  // 3. Dynamic Custom Attributes (e.g. Memory, Storage, RAM, etc.)
+  if (customCont) {
+    const customAttrs = (attrs && attrs.custom) ? attrs.custom : {};
+    const customNames = Object.keys(customAttrs);
+    if (customNames.length === 0) {
+      customCont.innerHTML = '';
+    } else {
+      customCont.innerHTML = customNames.map(attrName => {
+        const vals = customAttrs[attrName] || [];
+        const selectedVals = SELECTED_CUSTOM_ATTRIBUTES[attrName] || [];
+        const selectedLower = selectedVals.map(v => v.toLowerCase());
+        const escapedAttrName = attrName.replace(/'/g, "\\'");
+
+        const chipsHtml = vals.length === 0 
+          ? `<span class="text-slate-400 italic text-[10px]">No values yet. Click "Manage ${attrName}" to add values.</span>`
+          : vals.map(v => {
+              const isSel = selectedLower.includes(v.toLowerCase());
+              const escapedV = v.replace(/'/g, "\\'");
+              return `
+                <button type="button" onclick="toggleProductFormCustomAttr('${escapedAttrName}', '${escapedV}')" class="chip-custom px-2.5 py-1 rounded-lg text-[11px] font-bold border transition flex items-center gap-1 cursor-pointer ${isSel ? 'bg-purple-700 text-white border-purple-800 shadow-sm ring-1 ring-purple-500' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'}">
+                  ${isSel ? '<span class="text-purple-200 text-[11px] font-extrabold">✓</span>' : ''}
+                  <span>${v}</span>
+                </button>
+              `;
+            }).join('');
+
+        return `
+          <div class="pt-3 border-t border-slate-200/80">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="font-bold text-slate-700 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-purple-600 text-[16px]">tune</span>
+                <span>${attrName} (Multiple Selection):</span>
+              </label>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] text-purple-700 font-bold">Click options to select</span>
+                <button type="button" onclick="openManageAttributesModal(); switchAttributeManagerTab('${escapedAttrName}');" class="text-[10px] text-purple-700 hover:text-purple-900 font-bold hover:underline flex items-center gap-0.5">
+                  <span class="material-symbols-outlined text-[12px]">add_circle</span> Manage ${attrName}
+                </button>
+              </div>
+            </div>
+            <div id="prod-custom-chips-${attrName}" class="flex flex-wrap gap-1.5 mb-2">
+              ${chipsHtml}
+            </div>
+            <input type="text" id="prod-form-custom-${attrName}" oninput="handleCustomAttrInputManual('${escapedAttrName}', this.value)" value="${selectedVals.join(', ')}" placeholder="Selected ${attrName} (e.g. ${vals.slice(0, 3).join(', ')})" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-semibold focus:ring-2 focus:ring-brand-wa shadow-sm">
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // 4. Garment Specifications Preset Chips (Same Attribute Flow: Multi-Selection with checkmark)
+  if (specCont) {
+    const specsList = attrs.specifications || [];
+    if (specsList.length === 0) {
+      specCont.innerHTML = `<span class="text-slate-400 italic text-[10px]">No specifications available. Click "Manage Specs" to add.</span>`;
+    } else {
+      specCont.innerHTML = specsList.map(s => {
+        const lbl = (typeof s === 'object' ? s.label : s) || '';
+        const cnt = (typeof s === 'object' ? s.content : '') || '';
+        const displayTxt = (lbl && lbl !== 'Specification') ? `${lbl}: ${cnt}` : cnt;
+        const targetStr = displayTxt.toLowerCase();
+
+        const isSelected = SELECTED_PRODUCT_SPECS.some(as => {
+          const asLbl = (typeof as === 'object' ? as.label : as) || '';
+          const asCnt = (typeof as === 'object' ? as.content : '') || '';
+          const asDisplay = (asLbl && asLbl !== 'Specification') ? `${asLbl}: ${asCnt}` : (asCnt || asLbl);
+          return asDisplay.toLowerCase() === targetStr || 
+                 (asLbl.toLowerCase() === lbl.toLowerCase() && asCnt.toLowerCase() === cnt.toLowerCase());
+        });
+
+        const escapedLbl = lbl.replace(/'/g, "\\'");
+        const escapedCnt = cnt.replace(/'/g, "\\'");
+        return `
+          <button type="button" onclick="toggleProductFormSpec('${escapedLbl}', '${escapedCnt}')" class="chip-spec px-2.5 py-1 rounded-lg text-[11px] font-bold border transition flex items-center gap-1.5 cursor-pointer ${isSelected ? 'bg-indigo-700 text-white border-indigo-800 shadow-sm ring-1 ring-indigo-500' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'}">
+            ${isSelected ? '<span class="text-indigo-200 text-[11px] font-extrabold">✓</span>' : '<span class="text-indigo-400 text-[10px]">📌</span>'}
+            <span>${displayTxt}</span>
+          </button>
+        `;
+      }).join('');
+    }
+  }
+}
+
+// -------------------------------------------------------------------------
+// MATRIX CALCULATION (Sizes x Colors x Custom Attributes Cartesian Multiplier)
+// -------------------------------------------------------------------------
+function calculateProductVariantMatrix() {
+  const singleSec = document.getElementById('prod-single-pricing-section');
+  const matrixSec = document.getElementById('prod-matrix-pricing-section');
+  const matrixPill = document.getElementById('matrix-indicator-pill');
+  const statusText = document.getElementById('matrix-status-text');
+  const statusBadge = document.getElementById('matrix-status-badge');
+
+  // Collect active attribute dimensions
+  const dimensions = [];
+  if (SELECTED_PRODUCT_SIZES.length > 0) {
+    dimensions.push({ key: 'size', name: 'Size', values: SELECTED_PRODUCT_SIZES });
+  }
+  if (SELECTED_PRODUCT_COLORS.length > 0) {
+    dimensions.push({ key: 'color', name: 'Color', values: SELECTED_PRODUCT_COLORS });
+  }
+  Object.keys(SELECTED_CUSTOM_ATTRIBUTES || {}).forEach(attrName => {
+    const vals = (SELECTED_CUSTOM_ATTRIBUTES[attrName] || []).filter(Boolean);
+    if (vals.length > 0) {
+      dimensions.push({ key: attrName, name: attrName, values: vals });
+    }
+  });
+
+  // Calculate Cartesian product across all active dimensions
+  let combinations = [];
+  if (dimensions.length > 0) {
+    combinations = dimensions.reduce((acc, dim) => {
+      const res = [];
+      acc.forEach(prev => {
+        dim.values.forEach(val => {
+          const custom = { ...(prev._custom || {}) };
+          if (dim.key !== 'size' && dim.key !== 'color') {
+            custom[dim.name] = val;
+          }
+          res.push({
+            ...prev,
+            [dim.key]: val,
+            _custom: custom
+          });
+        });
+      });
+      return res;
+    }, [{}]);
+  }
+
+  const count = combinations.length;
+
+  if (count <= 1) {
+    if (singleSec) singleSec.classList.remove('hidden');
+    if (matrixSec) matrixSec.classList.add('hidden');
+    if (matrixPill) matrixPill.classList.add('hidden');
+    PRODUCT_VARIANTS_MATRIX = [];
+    return;
+  }
+
+  // Count > 1: Activate Multi-Field Matrix Mode
+  if (singleSec) singleSec.classList.add('hidden');
+  if (matrixSec) matrixSec.classList.remove('hidden');
+  if (matrixPill) {
+    matrixPill.classList.remove('hidden');
+    matrixPill.innerText = `Matrix Active: ${count} Variants`;
+  }
+  if (statusText) statusText.innerText = `Variant Matrix: ${count} Fields Generated`;
+  if (statusBadge) statusBadge.innerText = `${count} Variants`;
+
+  const basePrice = parseFloat(document.getElementById('prod-form-price')?.value) || parseFloat(document.getElementById('matrix-bulk-price')?.value) || 0;
+  const baseMrp = parseFloat(document.getElementById('prod-form-mrp')?.value) || parseFloat(document.getElementById('matrix-bulk-mrp')?.value) || (basePrice ? Math.round(basePrice * 1.5) : 0);
+  const basePhysical = parseInt(document.getElementById('prod-form-physical')?.value) || parseInt(document.getElementById('matrix-bulk-stock')?.value) || 0;
+  const baseReserved = parseInt(document.getElementById('prod-form-reserved')?.value) || 0;
+
+  const baseSku = (document.getElementById('prod-form-sku')?.value || '').trim();
+  const catSelect = document.getElementById('prod-form-category');
+  const subcatSelect = document.getElementById('prod-form-subcategory');
+  let prefix = 'GRM';
+  const catVal = (catSelect ? catSelect.value : '').trim();
+  let subcatPrefix = '';
+  if (subcatSelect && subcatSelect.selectedOptions && subcatSelect.selectedOptions[0]) {
+    subcatPrefix = (subcatSelect.selectedOptions[0].getAttribute('data-prefix') || '').trim();
+  }
+
+  if (subcatPrefix && subcatPrefix !== 'GRM') {
+    prefix = subcatPrefix;
+  } else if (catVal) {
+    prefix = catVal.slice(0, 3).toUpperCase();
+  }
+
+  if (catVal && subcatPrefix && subcatPrefix !== 'GRM') {
+    if (!subcatPrefix.includes('-')) {
+      const catCode = catVal.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase();
+      if (catCode && !subcatPrefix.startsWith(catCode)) {
+        prefix = `${catCode}-${subcatPrefix}`;
+      }
+    }
+  }
+
+  // Preserve existing matrix entries if already filled
+  const previousMap = {};
+  PRODUCT_VARIANTS_MATRIX.forEach(v => {
+    const customKeys = Object.entries(v.customAttributes || {}).map(([k, val]) => `${k}:${val}`).sort().join('_');
+    const key = `${(v.size || '').toLowerCase()}_${(v.color || '').toLowerCase()}_${customKeys.toLowerCase()}`;
+    previousMap[key] = v;
+  });
+
+  PRODUCT_VARIANTS_MATRIX = combinations.map((combo, idx) => {
+    const customKeys = Object.entries(combo._custom || {}).map(([k, val]) => `${k}:${val}`).sort().join('_');
+    const key = `${(combo.size || '').toLowerCase()}_${(combo.color || '').toLowerCase()}_${customKeys.toLowerCase()}`;
+    const prev = previousMap[key];
+
+    const szCode = combo.size ? combo.size.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase() : '';
+    const colCode = combo.color ? combo.color.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() : '';
+    const customCode = Object.values(combo._custom || {}).map(v => v.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase()).filter(Boolean).join('-');
+    const parts = [szCode, colCode, customCode].filter(Boolean);
+    const skuSuffix = parts.join('-');
+    const seq = String(idx + 1).padStart(2, '0');
+    const defaultSku = baseSku ? `${baseSku}-${skuSuffix || seq}` : `${prefix}-${skuSuffix || 'VAR'}-${seq}`;
+
+    return {
+      index: idx,
+      size: combo.size || '',
+      color: combo.color || '',
+      customAttributes: combo._custom || {},
+      sku: (prev && prev.sku) ? prev.sku : defaultSku,
+      image: (prev && prev.image) ? prev.image : '',
+      price: (prev && prev.price !== undefined && prev.price !== null && prev.price !== '') ? prev.price : basePrice,
+      mrp: (prev && prev.mrp !== undefined && prev.mrp !== null && prev.mrp !== '') ? prev.mrp : baseMrp,
+      physicalStock: (prev && prev.physicalStock !== undefined && prev.physicalStock !== null && prev.physicalStock !== '') ? prev.physicalStock : basePhysical
+    };
+  });
+
+  renderMatrixVariantRows();
+}
+
+function renderMatrixVariantRows() {
+  const container = document.getElementById('prod-matrix-variants-container');
+  if (!container) return;
+
+  const baseImg = (CURRENT_PRODUCT_IMAGE_DATA && !CURRENT_PRODUCT_IMAGE_DATA.includes('photo-1518831959646-742c3a14ebf7'))
+    ? CURRENT_PRODUCT_IMAGE_DATA
+    : DEFAULT_GARMENT_PLACEHOLDER;
+
+  container.innerHTML = PRODUCT_VARIANTS_MATRIX.map((v, i) => {
+    const colorHex = getColorHex(v.color);
+    const price = parseFloat(v.price) || 0;
+    const mrp = parseFloat(v.mrp) || 0;
+    const discount = (mrp > price && price > 0) ? Math.round(((mrp - price) / mrp) * 100) : 0;
+    const stock = (v.physicalStock !== undefined && v.physicalStock !== null) ? v.physicalStock : '';
+    const variantImg = v.image || baseImg;
+
+    // Badges for size, color, and each custom attribute (e.g. Memory: 4GB)
+    const badgesHtml = [];
+    if (v.size) {
+      badgesHtml.push(`
+        <span class="px-2 py-0.5 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 font-extrabold text-xs">
+          📏 Size: ${v.size}
+        </span>
+      `);
+    }
+    if (v.color) {
+      badgesHtml.push(`
+        <span class="px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-bold text-xs flex items-center gap-1">
+          <span class="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0" style="background-color: ${colorHex}"></span>
+          <span>${v.color}</span>
+        </span>
+      `);
+    }
+    if (v.customAttributes) {
+      Object.entries(v.customAttributes).forEach(([attrK, attrV]) => {
+        badgesHtml.push(`
+          <span class="px-2 py-0.5 rounded-lg bg-purple-50 border border-purple-200 text-purple-900 font-bold text-xs flex items-center gap-1 shadow-2xs">
+            <span class="material-symbols-outlined text-[13px] text-purple-600">tune</span>
+            <span>${attrK}: <strong>${attrV}</strong></span>
+          </span>
+        `);
+      });
+    }
+
+    return `
+      <div class="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-xs hover:border-emerald-300 transition space-y-2.5">
+        <!-- Variant Header: ID, Badges, and Variant SKU Input -->
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-emerald-700 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0">#${i + 1}</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${badgesHtml.join('')}
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Variant SKU *:</label>
+            <input type="text" id="matrix-sku-${i}" value="${v.sku}" onchange="updateMatrixVariantField(${i}, 'sku', this.value)" class="w-44 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold uppercase focus:bg-white focus:ring-2 focus:ring-brand-wa shadow-xs">
+          </div>
+        </div>
+
+        <!-- Variant Body: Variant Image + Price + MRP + Discount + Stock -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
+          
+          <!-- Variant Photo Picker -->
+          <div class="md:col-span-5 flex items-center gap-2 bg-slate-50/80 p-1.5 rounded-xl border border-slate-200">
+            <div class="relative w-12 h-12 rounded-lg bg-slate-200 overflow-hidden border border-slate-300 shrink-0 group cursor-pointer" onclick="document.getElementById('matrix-img-file-${i}').click()" title="Click to upload variant photo">
+              <img id="matrix-thumb-${i}" src="${variantImg}" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white">
+                <span class="material-symbols-outlined text-[18px]">photo_camera</span>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-0.5">
+                <span class="text-[10px] font-bold text-slate-700 uppercase tracking-tight">Variant Photo:</span>
+                <button type="button" onclick="document.getElementById('matrix-img-file-${i}').click()" class="text-[10px] text-teal-700 hover:text-teal-900 font-bold underline cursor-pointer">
+                  Upload Photo
+                </button>
+              </div>
+              <input type="file" id="matrix-img-file-${i}" accept="image/*" class="hidden" onchange="handleMatrixVariantImageUpload(${i}, this)">
+              <input type="text" id="matrix-img-url-${i}" value="${(v.image && !v.image.startsWith('data:')) ? v.image : ''}" oninput="updateMatrixVariantField(${i}, 'image', this.value)" placeholder="Photo URL or Upload..." class="w-full bg-white border border-slate-300 rounded-md px-1.5 py-1 text-[11px] font-mono focus:ring-1 focus:ring-brand-wa truncate">
+            </div>
+          </div>
+
+          <!-- Pricing & Stock Fields -->
+          <div class="md:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-700 uppercase mb-0.5">Price (₹) *</label>
+              <input type="number" id="matrix-price-${i}" value="${v.price || ''}" min="0" step="1" oninput="updateMatrixVariantField(${i}, 'price', this.value)" placeholder="₹" class="w-full bg-slate-50 border border-emerald-300 rounded-lg p-1.5 text-xs font-mono font-extrabold text-emerald-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-700 uppercase mb-0.5">MRP (₹)</label>
+              <input type="number" id="matrix-mrp-${i}" value="${v.mrp || ''}" min="0" step="1" oninput="updateMatrixVariantField(${i}, 'mrp', this.value)" placeholder="₹" class="w-full bg-slate-50 border border-emerald-300 rounded-lg p-1.5 text-xs font-mono font-bold text-slate-600 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Discount</label>
+              <div id="matrix-discount-badge-${i}" class="h-[31px] px-2 bg-slate-100 rounded-lg border border-slate-200 text-slate-600 text-[11px] font-bold flex items-center justify-center">
+                ${discount > 0 ? `<span class="text-emerald-700 font-extrabold">${discount}% OFF</span>` : '—'}
+              </div>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-800 uppercase mb-0.5">Stock (Units) *</label>
+              <input type="number" id="matrix-stock-${i}" value="${stock}" min="0" step="1" oninput="updateMatrixVariantField(${i}, 'physicalStock', this.value)" placeholder="Units" class="w-full bg-slate-50 border border-emerald-300 rounded-lg p-1.5 text-xs font-mono font-extrabold text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function handleMatrixVariantImageUpload(index, fileInput) {
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('File Too Large', 'Please select an image smaller than 5MB.', 'warning', 'rose');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const dataUrl = e.target.result;
+    if (PRODUCT_VARIANTS_MATRIX[index]) {
+      PRODUCT_VARIANTS_MATRIX[index].image = dataUrl;
+    }
+    const thumb = document.getElementById(`matrix-thumb-${index}`);
+    if (thumb) thumb.src = dataUrl;
+
+    const urlInput = document.getElementById(`matrix-img-url-${index}`);
+    if (urlInput) urlInput.value = `${file.name} (${(file.size / 1024).toFixed(0)}KB)`;
+
+    // Upload to server via FormData
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch('api.php?action=upload_product_image', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data && data.status === 'success' && data.url) {
+        if (PRODUCT_VARIANTS_MATRIX[index]) {
+          PRODUCT_VARIANTS_MATRIX[index].image = data.url;
+        }
+        if (urlInput) urlInput.value = data.url;
+        showToast('Variant Photo Uploaded', `Photo for variant #${index + 1} saved!`, 'cloud_done', 'emerald');
+      }
+    } catch (err) {
+      console.warn('Variant image upload failed, using local preview:', err);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateMatrixVariantField(index, field, value) {
+  if (!PRODUCT_VARIANTS_MATRIX[index]) return;
+  if (field === 'price' || field === 'mrp') {
+    PRODUCT_VARIANTS_MATRIX[index][field] = parseFloat(value) || 0;
+  } else if (field === 'physicalStock') {
+    PRODUCT_VARIANTS_MATRIX[index][field] = parseInt(value) || 0;
+  } else if (field === 'image') {
+    PRODUCT_VARIANTS_MATRIX[index][field] = value;
+    const thumb = document.getElementById(`matrix-thumb-${index}`);
+    if (thumb && value) {
+      thumb.src = value;
+    }
+  } else {
+    PRODUCT_VARIANTS_MATRIX[index][field] = value;
+  }
+
+  const v = PRODUCT_VARIANTS_MATRIX[index];
+  const price = parseFloat(v.price) || 0;
+  const mrp = parseFloat(v.mrp) || 0;
+  const discount = (mrp > price && price > 0) ? Math.round(((mrp - price) / mrp) * 100) : 0;
+
+  const discBadge = document.getElementById(`matrix-discount-badge-${index}`);
+  if (discBadge) {
+    discBadge.innerHTML = discount > 0 ? `<span class="text-emerald-700 font-extrabold">${discount}% OFF</span>` : '—';
+  }
+}
+
+function applyBulkToVariantMatrix() {
+  const bulkPrice = parseFloat(document.getElementById('matrix-bulk-price')?.value);
+  const bulkMrp = parseFloat(document.getElementById('matrix-bulk-mrp')?.value);
+  const bulkStock = parseInt(document.getElementById('matrix-bulk-stock')?.value);
+
+  if (isNaN(bulkPrice) && isNaN(bulkMrp) && isNaN(bulkStock)) {
+    showToast('Bulk Values Needed', 'Please enter Price, MRP, or Stock in the bulk toolbar to apply.', 'info', 'amber');
+    return;
+  }
+
+  PRODUCT_VARIANTS_MATRIX.forEach((v, i) => {
+    if (!isNaN(bulkPrice)) {
+      v.price = bulkPrice;
+      const el = document.getElementById(`matrix-price-${i}`);
+      if (el) el.value = bulkPrice;
+    }
+    if (!isNaN(bulkMrp)) {
+      v.mrp = bulkMrp;
+      const el = document.getElementById(`matrix-mrp-${i}`);
+      if (el) el.value = bulkMrp;
+    }
+    if (!isNaN(bulkStock)) {
+      v.physicalStock = bulkStock;
+      const el = document.getElementById(`matrix-stock-${i}`);
+      if (el) el.value = bulkStock;
+    }
+    updateMatrixVariantField(i, 'price', v.price);
+  });
+
+}
+
+// -------------------------------------------------------------------------
+// PRODUCT SPECIFICATIONS (SAME ATTRIBUTE FLOW: CHIPS & MULTI-SELECT)
+// -------------------------------------------------------------------------
+let PRODUCT_SPECS_ROW_COUNTER = 0;
+
+function addProductSpecificationRow(label = '', content = '') {
+  if (label || content) {
+    toggleProductFormSpec(label, content);
+  }
+}
+
+function removeProductSpecificationRow(rowId) {
+  // Compatibility no-op
+}
+
+function getProductSpecificationsFromForm() {
+  if (Array.isArray(SELECTED_PRODUCT_SPECS) && SELECTED_PRODUCT_SPECS.length > 0) {
+    return SELECTED_PRODUCT_SPECS;
+  }
+  const input = document.getElementById('prod-form-specifications');
+  if (input && input.value.trim()) {
+    return input.value.split(',').map(s => {
+      const tr = s.trim();
+      if (tr.includes(':')) {
+        const sp = tr.split(':');
+        return { label: sp[0].trim(), content: sp.slice(1).join(':').trim() };
+      }
+      return { label: 'Specification', content: tr };
+    }).filter(s => s.content || s.label);
+  }
+  return [];
+}
+
+function setProductSpecificationsInForm(specs) {
+  let parsed = specs;
+  if (typeof specs === 'string') {
+    try { parsed = JSON.parse(specs); } catch (e) {
+      parsed = specs.split(',').map(s => {
+        const tr = s.trim();
+        if (tr.includes(':')) {
+          const sp = tr.split(':');
+          return { label: sp[0].trim(), content: sp.slice(1).join(':').trim() };
+        }
+        return { label: 'Specification', content: tr };
+      }).filter(Boolean);
+    }
+  }
+  if (!Array.isArray(parsed)) parsed = [];
+  SELECTED_PRODUCT_SPECS = parsed.map(s => {
+    if (typeof s === 'string') {
+      if (s.includes(':')) {
+        const sp = s.split(':');
+        return { label: sp[0].trim(), content: sp.slice(1).join(':').trim() };
+      }
+      return { label: 'Specification', content: s.trim() };
+    }
+    return { label: s.label || 'Specification', content: s.content || '' };
+  });
+
+  const input = document.getElementById('prod-form-specifications');
+  if (input) {
+    input.value = SELECTED_PRODUCT_SPECS.map(s => (s.label && s.label !== 'Specification') ? `${s.label}: ${s.content}` : (s.content || s.label)).join(', ');
+  }
+  renderProductFormAttributeChips();
+  updateProductFormPreview();
+}
+
+function toggleProductSpecificationPreset(lbl, cnt) {
+  toggleProductFormSpec(lbl, cnt);
+}
+
+function selectPresetGarmentPhoto(url, sampleTitle) {
+  CURRENT_PRODUCT_IMAGE_DATA = url;
+  const previewImg = document.getElementById('prod-form-img-preview');
+  const previewName = document.getElementById('prod-preview-filename');
+  const previewStatus = document.getElementById('prod-preview-status');
+  const urlInput = document.getElementById('prod-form-image');
+
+  if (previewImg) previewImg.src = url;
+  if (previewName) previewName.innerText = sampleTitle || 'Curated Garment Photo';
+  if (previewStatus) previewStatus.innerText = 'Preset photo selected';
+  if (urlInput) urlInput.value = url;
+
+  const titleInput = document.getElementById('prod-form-name');
+  if (titleInput && !titleInput.value.trim() && sampleTitle) {
+    titleInput.value = sampleTitle;
+  }
+
+  updateProductFormPreview();
+}
+
+// -------------------------------------------------------------------------
+// 1-CLICK AUTOMATIC SKU GENERATOR (E-COMMERCE CATALOG LOGIC)
+// -------------------------------------------------------------------------
+function autoGenerateProductSKU() {
+  const subcatSelect = document.getElementById('prod-form-subcategory');
+  const catSelect = document.getElementById('prod-form-category');
+  const sizeInput = document.getElementById('prod-form-size');
+  const colorInput = document.getElementById('prod-form-color');
+  const skuInput = document.getElementById('prod-form-sku');
+
+  if (!skuInput) return;
+
+  // 1. SKU Prefix based on Category and Subcategory
+  let prefix = 'GRM';
+  const catVal = (catSelect ? catSelect.value : '').trim();
+  let subcatPrefix = '';
+  if (subcatSelect && subcatSelect.selectedOptions && subcatSelect.selectedOptions[0]) {
+    subcatPrefix = (subcatSelect.selectedOptions[0].getAttribute('data-prefix') || '').trim();
+  }
+
+  if (subcatPrefix && subcatPrefix !== 'GRM') {
+    prefix = subcatPrefix;
+  } else if (catVal) {
+    prefix = catVal.slice(0, 3).toUpperCase();
+  }
+
+  // Ensure prefix is based on both Category and Subcategory if both exist
+  if (catVal && subcatPrefix && subcatPrefix !== 'GRM') {
+    if (!subcatPrefix.includes('-')) {
+      const catCode = catVal.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase();
+      if (catCode && !subcatPrefix.startsWith(catCode)) {
+        prefix = `${catCode}-${subcatPrefix}`;
+      }
+    }
+  }
+
+  // 2. Clean Size Code (e.g. "2-3 Years" -> "2Y", "0-6 Months" -> "06M", "XL" -> "XL")
+  let sizeCode = 'STD';
+  const sizeVal = (sizeInput ? sizeInput.value : '').trim().toUpperCase();
+  if (sizeVal) {
+    const yrMatch = sizeVal.match(/(\d+)\s*(?:-|TO)?\s*(\d*)\s*Y/i);
+    const moMatch = sizeVal.match(/(\d+)\s*(?:-|TO)?\s*(\d*)\s*M/i);
+    if (yrMatch) {
+      sizeCode = `${yrMatch[1]}Y`;
+    } else if (moMatch) {
+      sizeCode = `${moMatch[1]}M`;
+    } else if (['S', 'M', 'L', 'XL', 'XXL', '3XL', 'FREE'].some(tag => sizeVal.startsWith(tag))) {
+      sizeCode = sizeVal.split(' ')[0].replace(/[^A-Z0-9]/g, '');
+    } else {
+      sizeCode = sizeVal.replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'STD';
+    }
+  }
+
+  // 3. Clean Color Code (e.g. "Pink" -> "PK", "Yellow" -> "YL", "Sky Blue" -> "BL")
+  let colorCode = 'CL';
+  const colorVal = (colorInput ? colorInput.value : '').trim().toUpperCase();
+  if (colorVal) {
+    if (colorVal.includes('PINK')) colorCode = 'PK';
+    else if (colorVal.includes('YELLOW')) colorCode = 'YL';
+    else if (colorVal.includes('BLUE')) colorCode = 'BL';
+    else if (colorVal.includes('GREEN')) colorCode = 'GR';
+    else if (colorVal.includes('RED')) colorCode = 'RD';
+    else if (colorVal.includes('WHITE')) colorCode = 'WH';
+    else if (colorVal.includes('BLACK')) colorCode = 'BK';
+    else if (colorVal.includes('PEACH')) colorCode = 'PC';
+    else if (colorVal.includes('LAVENDER')) colorCode = 'LV';
+    else if (colorVal.includes('MAROON')) colorCode = 'MR';
+    else {
+      colorCode = colorVal.replace(/[^A-Z]/g, '').slice(0, 2) || 'CL';
+    }
+  }
+
+  // 4. Sequential 2-digit index based on existing inventory count
+  const matchingSkus = (CRM_STATE.products || []).filter(p => p.sku && p.sku.startsWith(prefix));
+  const seqNum = String(matchingSkus.length + 1).padStart(2, '0');
+
+  const generatedSKU = `${prefix}-${sizeCode}-${colorCode}-${seqNum}`;
+  skuInput.value = generatedSKU;
+
+  if (PRODUCT_VARIANTS_MATRIX.length > 1) {
+    calculateProductVariantMatrix();
+  }
+
+  updateProductFormPreview();
+  showToast('SKU Auto-Generated', `Generated unique SKU: ${generatedSKU}`, 'bolt', 'emerald');
+  return generatedSKU;
+}
+
+// -------------------------------------------------------------------------
+// PRICING MARGINS & REALTIME STOCK CALCULATION
+// -------------------------------------------------------------------------
+function calculateDiscountAndPreview() {
+  const priceInput = document.getElementById('prod-form-price');
+  const mrpInput = document.getElementById('prod-form-mrp');
+  const badge = document.getElementById('prod-form-discount-badge');
+
+  const priceVal = priceInput ? priceInput.value.trim() : '';
+  const mrpVal = mrpInput ? mrpInput.value.trim() : '';
+  const price = parseFloat(priceVal) || 0;
+  const mrp = parseFloat(mrpVal) || 0;
+
+  if (badge) {
+    if (price <= 0 && !priceVal) {
+      badge.className = 'h-[38px] px-3 bg-slate-100 rounded-xl border border-slate-200 text-slate-400 font-medium flex items-center justify-center text-[11px]';
+      badge.innerHTML = 'Enter Selling Price';
+    } else if (mrp > price && price > 0) {
+      const discount = Math.round(((mrp - price) / mrp) * 100);
+      const savings = Math.round(mrp - price);
+      badge.className = 'h-[38px] px-3 bg-emerald-100 rounded-xl border border-emerald-300 text-emerald-800 font-extrabold flex items-center justify-center text-[11px] shadow-sm';
+      badge.innerHTML = `Save ₹${savings} (${discount}% OFF)`;
+    } else {
+      badge.className = 'h-[38px] px-3 bg-slate-100 rounded-xl border border-slate-200 text-slate-500 font-bold flex items-center justify-center text-[11px]';
+      badge.innerHTML = 'Standard Price';
+    }
+  }
+
+  updateProductFormPreview();
+}
+
+function calculateSellableAndPreview() {
+  const physInput = document.getElementById('prod-form-physical');
+  const resInput = document.getElementById('prod-form-reserved');
+  const badge = document.getElementById('prod-form-sellable-badge');
+
+  const physVal = physInput ? physInput.value.trim() : '';
+  const resVal = resInput ? resInput.value.trim() : '';
+  const physical = parseInt(physVal) || 0;
+  const reserved = parseInt(resVal) || 0;
+  const sellable = Math.max(0, physical - reserved);
+
+  if (badge) {
+    if (physVal === '') {
+      badge.innerText = 'Enter Stock';
+      badge.className = 'h-[38px] px-3 bg-slate-100 rounded-xl border border-slate-200 text-slate-400 font-medium font-mono flex items-center justify-center text-xs';
+    } else if (sellable > 0) {
+      badge.innerText = `${sellable} Ready to Ship`;
+      badge.className = 'h-[38px] px-3 bg-white rounded-xl border border-emerald-300 text-emerald-800 font-extrabold font-mono flex items-center justify-center text-xs shadow-sm';
+    } else {
+      badge.innerText = `0 Ready to Ship`;
+      badge.className = 'h-[38px] px-3 bg-rose-50 rounded-xl border border-rose-300 text-rose-700 font-extrabold font-mono flex items-center justify-center text-xs shadow-sm';
+    }
+  }
+
+  updateProductFormPreview();
+}
+
+// -------------------------------------------------------------------------
+// REALTIME WHATSAPP DISPATCH CARD PREVIEW
+// -------------------------------------------------------------------------
+function updateProductFormPreview() {
+  const name = (document.getElementById('prod-form-name')?.value || '').trim();
+  const sku = (document.getElementById('prod-form-sku')?.value || '').trim().toUpperCase();
+  const cat = (document.getElementById('prod-form-category')?.value || '').trim();
+  const subcat = (document.getElementById('prod-form-subcategory')?.value || '').trim();
+  const size = (document.getElementById('prod-form-size')?.value || '').trim();
+  const color = (document.getElementById('prod-form-color')?.value || '').trim();
+  const fabric = (document.getElementById('prod-form-fabric')?.value || '').trim();
+  const desc = (document.getElementById('prod-form-desc')?.value || '').trim();
+  const priceVal = (document.getElementById('prod-form-price')?.value || '').trim();
+  const mrpVal = (document.getElementById('prod-form-mrp')?.value || '').trim();
+  const physVal = (document.getElementById('prod-form-physical')?.value || '').trim();
+  const resVal = (document.getElementById('prod-form-reserved')?.value || '').trim();
+
+  const price = parseFloat(priceVal) || 0;
+  const mrp = parseFloat(mrpVal) || 0;
+  const physical = physVal !== '' ? (parseInt(physVal) || 0) : null;
+  const reserved = resVal !== '' ? (parseInt(resVal) || 0) : 0;
+  const available = physical !== null ? Math.max(0, physical - reserved) : null;
+  const accountId = document.getElementById('prod-form-account-id')?.value || 'account_1';
+
+  const img = (CURRENT_PRODUCT_IMAGE_DATA && !CURRENT_PRODUCT_IMAGE_DATA.includes('photo-1518831959646-742c3a14ebf7'))
+    ? CURRENT_PRODUCT_IMAGE_DATA
+    : DEFAULT_GARMENT_PLACEHOLDER;
+
+  // 1. Card Image & Badges
+  const prevImg = document.getElementById('prev-card-img');
+  if (prevImg) prevImg.src = img;
+
+  const prevSku = document.getElementById('prev-card-sku');
+  if (prevSku) {
+    if (sku) {
+      prevSku.innerText = sku;
+      prevSku.className = 'bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow';
+    } else {
+      prevSku.innerHTML = '<span class="text-slate-400 italic font-normal">SKU PENDING</span>';
+      prevSku.className = 'bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] px-2 py-0.5 rounded shadow';
+    }
+  }
+
+  const prevStock = document.getElementById('prev-card-stock-badge');
+  if (prevStock) {
+    if (physical === null) {
+      prevStock.className = 'bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-slate-300 flex items-center gap-1 shadow';
+      prevStock.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Stock: 0';
+    } else if (available > 5) {
+      prevStock.className = 'bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1 shadow';
+      prevStock.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> In Stock (${available})`;
+    } else if (available > 0) {
+      prevStock.className = 'bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 flex items-center gap-1 animate-pulse shadow';
+      prevStock.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Only ${available} Left`;
+    } else {
+      prevStock.className = 'bg-rose-100 text-rose-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-rose-300 flex items-center gap-1 shadow';
+      prevStock.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Out of Stock`;
+    }
+  }
+
+  const prevCat = document.getElementById('prev-card-cat');
+  if (prevCat) {
+    if (cat && subcat) {
+      prevCat.innerHTML = `${cat} &rsaquo; ${subcat}`;
+      prevCat.className = 'text-[10px] bg-white/95 backdrop-blur-sm text-slate-800 font-bold px-2 py-0.5 rounded shadow-sm';
+    } else if (cat) {
+      prevCat.innerHTML = cat;
+      prevCat.className = 'text-[10px] bg-white/95 backdrop-blur-sm text-slate-800 font-bold px-2 py-0.5 rounded shadow-sm';
+    } else {
+      prevCat.innerHTML = '<span class="text-slate-400 italic font-normal">Select Category</span>';
+      prevCat.className = 'text-[10px] bg-white/95 backdrop-blur-sm text-slate-600 font-normal px-2 py-0.5 rounded shadow-sm';
+    }
+  }
+
+  const prevTitle = document.getElementById('prev-card-title');
+  if (prevTitle) {
+    if (name) {
+      prevTitle.innerText = name;
+      prevTitle.className = 'font-bold text-xs text-slate-900 line-clamp-2';
+    } else {
+      prevTitle.innerHTML = '<span class="text-slate-400 italic font-normal">Garment Product Name</span>';
+      prevTitle.className = 'text-xs text-slate-400 line-clamp-2';
+    }
+  }
+
+  const prevPrice = document.getElementById('prev-card-price');
+  if (prevPrice) {
+    if (priceVal !== '' && price > 0) {
+      prevPrice.innerText = `₹${price}`;
+      prevPrice.className = 'font-extrabold text-emerald-700 font-mono text-sm';
+    } else {
+      prevPrice.innerHTML = '<span class="text-xs text-slate-400 font-normal">₹—</span>';
+      prevPrice.className = 'font-bold text-slate-400 font-mono text-sm';
+    }
+  }
+
+  const prevMrp = document.getElementById('prev-card-mrp');
+  if (prevMrp) {
+    if (price > 0 && mrp > price) {
+      prevMrp.innerText = `₹${mrp}`;
+      prevMrp.classList.remove('hidden');
+    } else {
+      prevMrp.classList.add('hidden');
+    }
+  }
+
+  const prevAttrs = document.getElementById('prev-card-attrs');
+  const activeSpecs = getProductSpecificationsFromForm();
+  if (prevAttrs) {
+    const attrItems = [];
+    if (size) {
+      attrItems.push(`<span>📏 ${size}</span>`);
+    }
+    if (color) {
+      const hex = getColorHex(color);
+      attrItems.push(`<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full border border-black/20" style="background-color: ${hex}"></span>${color}</span>`);
+    }
+    if (fabric) {
+      attrItems.push(`<span class="text-teal-700 font-semibold">🧵 ${fabric}</span>`);
+    }
+    if (activeSpecs && activeSpecs.length > 0) {
+      activeSpecs.forEach(sp => {
+        if (sp.label && sp.content) {
+          attrItems.push(`<span class="text-indigo-800 font-semibold bg-indigo-50/90 px-1.5 py-0.5 rounded border border-indigo-200/60 text-[10px]">📌 ${sp.label}: ${sp.content}</span>`);
+        }
+      });
+    }
+
+    if (attrItems.length > 0) {
+      prevAttrs.innerHTML = attrItems.join('<span>&bull;</span>');
+      prevAttrs.className = 'text-[11px] text-slate-600 flex items-center gap-1.5 flex-wrap';
+    } else {
+      prevAttrs.innerHTML = '<span class="text-slate-400 italic">No attributes selected</span>';
+      prevAttrs.className = 'text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap';
+    }
+  }
+
+  const prevSellable = document.getElementById('prev-card-sellable');
+  if (prevSellable) {
+    if (physical !== null) {
+      prevSellable.innerText = `${available} Units in Warehouse`;
+      prevSellable.className = 'text-emerald-700 font-mono font-extrabold';
+    } else {
+      prevSellable.innerHTML = '<span class="text-slate-400 italic font-normal">Not set</span>';
+      prevSellable.className = 'text-slate-400 font-mono font-normal';
+    }
+  }
+
+  // 2. WhatsApp Message Text Preview
+  const msgTextEl = document.getElementById('prev-wa-message-text');
+  if (msgTextEl) {
+    const hasAnyContent = name || sku || cat || size || color || fabric || (activeSpecs && activeSpecs.length > 0) || priceVal !== '' || physVal !== '';
+    if (!hasAnyContent) {
+      msgTextEl.innerHTML = '<span class="text-emerald-300/60 italic font-sans text-xs">Enter product details on the left to preview the live WhatsApp dispatch message here in real-time...</span>';
+    } else {
+      const lines = [];
+      lines.push(name ? `🛍️ *${name}*` : `🛍️ *[Product Name]*`);
+      if (sku) lines.push(`🏷️ *SKU:* ${sku}`);
+      if (cat && subcat) lines.push(`📁 *Catalog:* ${cat} › ${subcat}`);
+      else if (cat) lines.push(`📁 *Catalog:* ${cat}`);
+      if (size) lines.push(`📏 *Size / Age:* ${size}`);
+      if (color) lines.push(`🎨 *Color:* ${color}`);
+      if (fabric) lines.push(`🧵 *Fabric:* ${fabric}`);
+      if (activeSpecs && activeSpecs.length > 0) {
+        activeSpecs.forEach(sp => {
+          if (sp.label && sp.content) {
+            lines.push(`📌 *${sp.label}:* ${sp.content}`);
+          }
+        });
+      }
+
+      if (price > 0) {
+        if (mrp > price) {
+          lines.push(`💰 *Price:* ₹${price} ~₹${mrp}~ (*${Math.round(((mrp - price) / mrp) * 100)}% OFF*)`);
+        } else {
+          lines.push(`💰 *Price:* ₹${price}`);
+        }
+      }
+
+      if (physical !== null && physical > 0) {
+        const stockNote = available > 5 
+          ? `✅ *In Stock* (${available} units ready for immediate dispatch)`
+          : (available > 0 ? `⚡ *Limited Stock* (Only ${available} units remaining!)` : `⚠️ *Made to Order* (Available on booking)`);
+        lines.push(`📦 *Stock:* ${stockNote}`);
+      }
+
+      if (desc) {
+        lines.push(`\n✨ *Product Highlights:*\n${desc}`);
+      }
+
+      lines.push(`\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n👉 *Reply 'YES' to confirm your order booking!*`);
+      msgTextEl.innerText = lines.join('\n');
+    }
+  }
+}
+
+// -------------------------------------------------------------------------
+// OPEN ADD / EDIT PRODUCT MODALS
+// -------------------------------------------------------------------------
 function openAddProductModal() {
-  document.getElementById('modal-product-title').innerText = 'Add New Garment Product';
-  document.getElementById('modal-product-icon').innerText = 'add_shopping_cart';
+  const title = document.getElementById('modal-product-title');
+  if (title) title.innerText = 'Add New Garment Product (Catalog Flow)';
+
+  const icon = document.getElementById('modal-product-icon');
+  if (icon) icon.innerText = 'shopping_bag';
+
   document.getElementById('prod-form-id').value = '';
   document.getElementById('prod-form-sku').value = '';
-  document.getElementById('prod-form-category').value = 'Baby Collection';
   document.getElementById('prod-form-name').value = '';
+  document.getElementById('prod-form-desc').value = '';
   document.getElementById('prod-form-size').value = '';
   document.getElementById('prod-form-color').value = '';
+  if (document.getElementById('prod-form-fabric')) document.getElementById('prod-form-fabric').value = '';
   document.getElementById('prod-form-price').value = '';
-  document.getElementById('prod-form-physical').value = '10';
+  document.getElementById('prod-form-mrp').value = '';
+  document.getElementById('prod-form-physical').value = '';
   document.getElementById('prod-form-reserved').value = '0';
+
+  if (document.getElementById('matrix-bulk-price')) document.getElementById('matrix-bulk-price').value = '';
+  if (document.getElementById('matrix-bulk-mrp')) document.getElementById('matrix-bulk-mrp').value = '';
+  if (document.getElementById('matrix-bulk-stock')) document.getElementById('matrix-bulk-stock').value = '';
+
+  const lineSelect = document.getElementById('prod-form-account-id');
+  if (lineSelect) lineSelect.value = ACTIVE_SEND_ACCOUNT_ID || 'account_1';
 
   clearProductImagePreview();
   switchProductImageSourceTab('upload');
+
+  // Populate dynamic category & subcategory dropdowns with blank default
+  populateProductFormCategories('', '');
+
+  // Reset specifications
+  SELECTED_PRODUCT_SPECS = [];
+  setProductSpecificationsInForm([]);
+
+  // Reset multi-select attributes & matrix
+  SELECTED_PRODUCT_SIZES = [];
+  SELECTED_PRODUCT_COLORS = [];
+  SELECTED_CUSTOM_ATTRIBUTES = {};
+  PRODUCT_VARIANTS_MATRIX = [];
+  renderProductFormAttributeChips([], [], [], {});
+  calculateProductVariantMatrix();
+
+  calculateDiscountAndPreview();
+  calculateSellableAndPreview();
+  updateProductFormPreview();
 
   const delBtn = document.getElementById('prod-delete-btn');
   if (delBtn) delBtn.classList.add('hidden');
@@ -6567,39 +9251,98 @@ function openAddProductModal() {
 }
 
 function openEditProductModal(productId) {
-  const p = (CRM_STATE.products || []).find(prod => prod.id === productId);
-  if (!p) return;
+  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId));
+  if (!p) {
+    showToast('Product Not Found', 'Could not locate product details.', 'error', 'rose');
+    return;
+  }
 
-  document.getElementById('modal-product-title').innerText = `Edit Garment: ${p.sku}`;
-  document.getElementById('modal-product-icon').innerText = 'edit_note';
+  const title = document.getElementById('modal-product-title');
+  if (title) title.innerText = `Edit Garment: ${p.sku}`;
+
+  const icon = document.getElementById('modal-product-icon');
+  if (icon) icon.innerText = 'edit_note';
+
   document.getElementById('prod-form-id').value = p.id;
   document.getElementById('prod-form-sku').value = p.sku || '';
-  document.getElementById('prod-form-category').value = p.category || 'Baby Collection';
   document.getElementById('prod-form-name').value = p.name || '';
+  document.getElementById('prod-form-desc').value = p.description || '';
   document.getElementById('prod-form-size').value = p.size || '';
   document.getElementById('prod-form-color').value = p.color || '';
-  document.getElementById('prod-form-price').value = p.price || 0;
-  document.getElementById('prod-form-physical').value = p.physicalStock || 0;
+  if (document.getElementById('prod-form-fabric')) document.getElementById('prod-form-fabric').value = '';
+  document.getElementById('prod-form-price').value = p.price || '';
+  document.getElementById('prod-form-mrp').value = p.mrp || '';
+  document.getElementById('prod-form-physical').value = p.physicalStock || '';
   document.getElementById('prod-form-reserved').value = p.reservedStock || 0;
 
+  const lineSelect = document.getElementById('prod-form-account-id');
+  if (lineSelect) lineSelect.value = p.accountId || 'account_1';
+
   // Set image preview
-  CURRENT_PRODUCT_IMAGE_DATA = p.image || '';
+  const validImg = (p.image && !p.image.includes('photo-1518831959646-742c3a14ebf7')) ? p.image : '';
+  CURRENT_PRODUCT_IMAGE_DATA = validImg;
   const urlInput = document.getElementById('prod-form-image');
-  if (urlInput) urlInput.value = (p.image && p.image.startsWith('http')) ? p.image : '';
+  if (urlInput) urlInput.value = (validImg && validImg.startsWith('http')) ? validImg : '';
 
   const previewImg = document.getElementById('prod-form-img-preview');
   const previewName = document.getElementById('prod-preview-filename');
   const previewStatus = document.getElementById('prod-preview-status');
 
-  if (previewImg) previewImg.src = p.image || DEFAULT_GARMENT_PLACEHOLDER;
-  if (previewName) previewName.innerText = `${p.sku} Photo`;
-  if (previewStatus) previewStatus.innerText = 'Active garment image';
+  if (previewImg) previewImg.src = validImg || DEFAULT_GARMENT_PLACEHOLDER;
+  if (previewName) previewName.innerText = validImg ? `${p.sku} Photo` : 'No image selected';
+  if (previewStatus) previewStatus.innerText = validImg ? 'Active garment image' : 'Upload a photo or enter URL';
 
-  if (p.image && p.image.startsWith('http')) {
+  if (validImg && validImg.startsWith('http')) {
     switchProductImageSourceTab('url');
   } else {
     switchProductImageSourceTab('upload');
   }
+
+  // Populate dynamic categories with active product category and subcategory
+  populateProductFormCategories(p.category, p.subcategory);
+  setProductSpecificationsInForm(p.specifications || []);
+
+  // Multi-select attributes & matrix init
+  SELECTED_PRODUCT_SIZES = p.size ? p.size.split(',').map(s => s.trim()).filter(Boolean) : [];
+  SELECTED_PRODUCT_COLORS = p.color ? p.color.split(',').map(c => c.trim()).filter(Boolean) : [];
+
+  // Custom attributes extraction
+  SELECTED_CUSTOM_ATTRIBUTES = {};
+  if (p.customAttributes && typeof p.customAttributes === 'object') {
+    SELECTED_CUSTOM_ATTRIBUTES = JSON.parse(JSON.stringify(p.customAttributes));
+  } else if (p.custom_attributes) {
+    if (typeof p.custom_attributes === 'object') {
+      SELECTED_CUSTOM_ATTRIBUTES = JSON.parse(JSON.stringify(p.custom_attributes));
+    } else {
+      try {
+        SELECTED_CUSTOM_ATTRIBUTES = JSON.parse(p.custom_attributes);
+      } catch (e) {}
+    }
+  }
+
+  // Also extract from specifications if any spec matches custom attribute names
+  const registeredCustomTypes = Object.keys(CRM_STATE.attributes?.custom || {});
+  (p.specifications || []).forEach(spec => {
+    const lbl = (typeof spec === 'object' ? spec.label : spec) || '';
+    const cnt = (typeof spec === 'object' ? spec.content : '') || '';
+    if (lbl && cnt) {
+      const matchType = registeredCustomTypes.find(t => t.toLowerCase() === lbl.toLowerCase());
+      if (matchType) {
+        if (!SELECTED_CUSTOM_ATTRIBUTES[matchType]) SELECTED_CUSTOM_ATTRIBUTES[matchType] = [];
+        if (!SELECTED_CUSTOM_ATTRIBUTES[matchType].includes(cnt)) {
+          SELECTED_CUSTOM_ATTRIBUTES[matchType].push(cnt);
+        }
+      }
+    }
+  });
+
+  PRODUCT_VARIANTS_MATRIX = [];
+  renderProductFormAttributeChips(SELECTED_PRODUCT_SIZES, SELECTED_PRODUCT_COLORS, SELECTED_PRODUCT_SPECS, SELECTED_CUSTOM_ATTRIBUTES);
+  calculateProductVariantMatrix();
+
+  calculateDiscountAndPreview();
+  calculateSellableAndPreview();
+  updateProductFormPreview();
 
   const delBtn = document.getElementById('prod-delete-btn');
   if (delBtn) delBtn.classList.remove('hidden');
@@ -6607,24 +9350,144 @@ function openEditProductModal(productId) {
   openModal('modal-product-edit');
 }
 
+// -------------------------------------------------------------------------
+// SAVE & DELETE PRODUCT API HANDLERS
+// -------------------------------------------------------------------------
 async function handleProductFormSubmit(e) {
   e.preventDefault();
 
   const idVal = document.getElementById('prod-form-id').value;
-  const sku = document.getElementById('prod-form-sku').value.trim().toUpperCase();
+  let sku = (document.getElementById('prod-form-sku')?.value || '').trim().toUpperCase();
+  if (!sku) {
+    sku = autoGenerateProductSKU() || `GRM-${Date.now().toString().slice(-6)}`;
+  }
   const category = document.getElementById('prod-form-category').value;
+  const subcategory = document.getElementById('prod-form-subcategory').value;
   const name = document.getElementById('prod-form-name').value.trim();
+  const description = (document.getElementById('prod-form-desc')?.value || '').trim();
+  const specifications = getProductSpecificationsFromForm();
+  const accountId = document.getElementById('prod-form-account-id')?.value || 'account_1';
+
+  let image = CURRENT_PRODUCT_IMAGE_DATA || '';
+  if (!image) {
+    const urlVal = document.getElementById('prod-form-image') ? document.getElementById('prod-form-image').value.trim() : '';
+    image = urlVal || '';
+  }
+  if (image && image.includes('photo-1518831959646-742c3a14ebf7')) {
+    image = '';
+  }
+
+  // Check if Multi-Field Matrix Mode is Active (> 1 combinations)
+  if (PRODUCT_VARIANTS_MATRIX.length > 1) {
+    const variantsPayload = PRODUCT_VARIANTS_MATRIX.map(v => {
+      const varSku = (document.getElementById(`matrix-sku-${v.index}`)?.value || v.sku || '').trim().toUpperCase();
+      const varPrice = parseFloat(document.getElementById(`matrix-price-${v.index}`)?.value) || v.price || 0;
+      const varMrp = parseFloat(document.getElementById(`matrix-mrp-${v.index}`)?.value) || v.mrp || varPrice;
+      const stockInput = document.getElementById(`matrix-stock-${v.index}`);
+      const varStock = stockInput ? (parseInt(stockInput.value) || 0) : (parseInt(v.physicalStock) || 0);
+
+      // Variant-specific photo: priority to variant image, fallback to general image
+      let varImage = v.image || document.getElementById(`matrix-img-url-${v.index}`)?.value || '';
+      if (!varImage) {
+        varImage = image;
+      }
+
+      // Build descriptive name including custom attributes (e.g. Memory: 4GB)
+      const customParts = Object.values(v.customAttributes || {}).filter(Boolean);
+      const nameParts = [v.size, v.color, ...customParts].filter(Boolean);
+      const variantName = nameParts.length > 0 ? `${name} (${nameParts.join(' / ')})` : name;
+
+      // Merge custom attributes into specifications so they are visible everywhere in catalog
+      const varSpecs = [...(specifications || [])];
+      if (v.customAttributes) {
+        Object.entries(v.customAttributes).forEach(([k, val]) => {
+          if (!varSpecs.some(s => (s.label || '').toLowerCase() === k.toLowerCase() && (s.content || '').toLowerCase() === String(val).toLowerCase())) {
+            varSpecs.push({ label: k, content: val });
+          }
+        });
+      }
+
+      return {
+        sku: varSku,
+        name: variantName,
+        category,
+        subcategory,
+        size: v.size,
+        color: v.color,
+        fabric: '',
+        specifications: varSpecs,
+        customAttributes: v.customAttributes || {},
+        custom_attributes: JSON.stringify(v.customAttributes || {}),
+        price: varPrice,
+        mrp: varMrp,
+        physicalStock: varStock,
+        reservedStock: 0,
+        accountId,
+        image: varImage,
+        description
+      };
+    });
+
+    // Update in CRM_STATE memory
+    variantsPayload.forEach(vp => {
+      const existingIdx = CRM_STATE.products.findIndex(p => p.sku === vp.sku);
+      if (existingIdx >= 0) {
+        CRM_STATE.products[existingIdx] = { ...CRM_STATE.products[existingIdx], ...vp };
+      } else {
+        const nextId = CRM_STATE.products.length > 0 
+          ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1 
+          : 1;
+        CRM_STATE.products.push({ id: nextId, ...vp });
+      }
+    });
+
+    saveCRMState();
+
+    try {
+      const res = await fetch('api.php?action=save_product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ variants: variantsPayload })
+      });
+      if (res.ok) {
+        const respData = await res.json();
+        if (respData.products && Array.isArray(respData.products)) {
+          respData.products.forEach(sp => {
+            const p = CRM_STATE.products.find(cp => cp.sku === sp.sku);
+            if (p && sp.id) p.id = sp.id;
+          });
+          saveCRMState();
+        }
+      }
+    } catch (err) {
+      console.warn('API save_product matrix batch failed:', err);
+    }
+
+    closeModal('modal-product-edit');
+    filterCatalogGrid();
+    updateOrderProductDropdown();
+    showToast('Matrix Saved', `Saved ${variantsPayload.length} product variants with individual pricing & inventory!`, 'check_circle', 'emerald');
+    return;
+  }
+
+  // Single Product Mode (1 Variant)
   const size = document.getElementById('prod-form-size').value.trim();
   const color = document.getElementById('prod-form-color').value.trim();
+  const fabric = '';
   const price = parseFloat(document.getElementById('prod-form-price').value) || 0;
+  const mrp = parseFloat(document.getElementById('prod-form-mrp').value) || price;
   const physical = parseInt(document.getElementById('prod-form-physical').value) || 0;
   const reserved = parseInt(document.getElementById('prod-form-reserved').value) || 0;
 
-  let image = CURRENT_PRODUCT_IMAGE_DATA;
-  if (!image) {
-    const urlVal = document.getElementById('prod-form-image') ? document.getElementById('prod-form-image').value.trim() : '';
-    image = urlVal || DEFAULT_GARMENT_PLACEHOLDER;
-  }
+  // Merge any SELECTED_CUSTOM_ATTRIBUTES into specifications
+  const singleSpecs = [...(specifications || [])];
+  Object.entries(SELECTED_CUSTOM_ATTRIBUTES || {}).forEach(([k, vals]) => {
+    (vals || []).forEach(val => {
+      if (!singleSpecs.some(s => (s.label || '').toLowerCase() === k.toLowerCase() && (s.content || '').toLowerCase() === String(val).toLowerCase())) {
+        singleSpecs.push({ label: k, content: val });
+      }
+    });
+  });
 
   let existing = null;
   if (idVal) {
@@ -6634,12 +9497,20 @@ async function handleProductFormSubmit(e) {
   if (existing) {
     existing.sku = sku;
     existing.category = category;
+    existing.subcategory = subcategory;
     existing.name = name;
+    existing.description = description;
     existing.size = size;
     existing.color = color;
+    existing.fabric = fabric;
+    existing.specifications = singleSpecs;
+    existing.customAttributes = SELECTED_CUSTOM_ATTRIBUTES || {};
+    existing.custom_attributes = JSON.stringify(SELECTED_CUSTOM_ATTRIBUTES || {});
     existing.price = price;
+    existing.mrp = mrp;
     existing.physicalStock = physical;
     existing.reservedStock = reserved;
+    existing.accountId = accountId;
     existing.image = image;
   } else {
     const newId = CRM_STATE.products.length > 0 
@@ -6650,24 +9521,45 @@ async function handleProductFormSubmit(e) {
       id: newId,
       sku,
       category,
+      subcategory,
       name,
+      description,
       size,
       color,
+      fabric,
+      specifications: singleSpecs,
+      customAttributes: SELECTED_CUSTOM_ATTRIBUTES || {},
+      custom_attributes: JSON.stringify(SELECTED_CUSTOM_ATTRIBUTES || {}),
       price,
+      mrp,
       physicalStock: physical,
       reservedStock: reserved,
+      accountId,
       image
     };
     CRM_STATE.products.push(existing);
   }
 
-  // API Call
+  saveCRMState();
+
+  // API Call to database
   try {
-    await fetch('api.php?action=save_product', {
+    const payload = { ...existing };
+    if (!idVal) {
+      delete payload.id;
+    }
+    const res = await fetch('api.php?action=save_product', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(existing)
+      body: JSON.stringify(payload)
     });
+    if (res.ok) {
+      const respData = await res.json();
+      if (respData.id) {
+        existing.id = respData.id;
+        saveCRMState();
+      }
+    }
   } catch (err) {
     console.warn('API save_product failed, state updated in RAM:', err);
   }
@@ -6675,7 +9567,7 @@ async function handleProductFormSubmit(e) {
   closeModal('modal-product-edit');
   filterCatalogGrid();
   updateOrderProductDropdown();
-  showToast('Garment Saved', `${sku} - ${name} inventory successfully updated!`, 'check_circle', 'emerald');
+  showToast('Garment Catalog Updated', `${sku} (${name}) saved with live WhatsApp dispatch card!`, 'check_circle', 'emerald');
 }
 
 async function handleDeleteProduct() {
@@ -6685,9 +9577,10 @@ async function handleDeleteProduct() {
   const p = CRM_STATE.products.find(prod => String(prod.id) === String(idVal));
   if (!p) return;
 
-  if (!confirm(`Are you sure you want to delete product ${p.sku} (${p.name})?`)) return;
+  if (!confirm(`Are you sure you want to delete product ${p.sku} (${p.name}) from the catalog?`)) return;
 
   CRM_STATE.products = CRM_STATE.products.filter(prod => String(prod.id) !== String(idVal));
+  saveCRMState();
 
   try {
     await fetch('api.php?action=delete_product', {
@@ -6706,25 +9599,1264 @@ async function handleDeleteProduct() {
 }
 
 // -------------------------------------------------------------------------
+// CATEGORIES & SUBCATEGORIES MANAGEMENT MODAL
+// -------------------------------------------------------------------------
+
+let ACTIVE_MANAGER_CATEGORY = '';
+
+function openManageCategoriesModal() {
+  const categories = CRM_STATE.categories || INITIAL_CRM_DATA.categories || [];
+  if (!ACTIVE_MANAGER_CATEGORY && categories.length > 0) {
+    ACTIVE_MANAGER_CATEGORY = categories[0].name;
+  }
+  renderCategoriesManager();
+  openModal('modal-manage-categories');
+}
+
+function renderCategoriesManager() {
+  const categories = CRM_STATE.categories || INITIAL_CRM_DATA.categories || [];
+  const subcategories = CRM_STATE.subcategories || INITIAL_CRM_DATA.subcategories || [];
+
+  const catListCont = document.getElementById('categories-manager-list');
+  const subcatListCont = document.getElementById('subcategories-manager-list');
+  const catBadge = document.getElementById('cat-count-badge');
+  const subcatBadge = document.getElementById('subcat-count-badge');
+  const parentLabel = document.getElementById('subcat-parent-label');
+  const formCatName = document.getElementById('form-subcat-cat-name');
+
+  if (catBadge) catBadge.innerText = `${categories.length} Categories`;
+
+  // Render left column: categories
+  if (catListCont) {
+    catListCont.innerHTML = categories.map(c => {
+      const subCount = subcategories.filter(s => s.category_name === c.name || s.category === c.name).length;
+      const isSelected = ACTIVE_MANAGER_CATEGORY === c.name;
+      return `
+        <div onclick="selectCategoryInManager('${c.name}')" class="p-3 rounded-2xl border cursor-pointer transition flex items-center justify-between ${isSelected ? 'bg-teal-50 border-teal-500 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300'}">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="material-symbols-outlined text-[20px] ${isSelected ? 'text-teal-700' : 'text-slate-400'}">${c.icon || 'checkroom'}</span>
+            <div class="min-w-0">
+              <h5 class="font-bold text-slate-900 text-xs truncate">${c.name}</h5>
+              <p class="text-[10px] text-slate-400 truncate">${c.description || (subCount + ' subcategories')}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-teal-200/80 text-teal-900' : 'bg-slate-100 text-slate-600'}">
+              ${subCount}
+            </span>
+            <button type="button" onclick="event.stopPropagation(); deleteCategory(${c.id}, '${c.name}')" class="p-1 text-slate-300 hover:text-rose-600 transition" title="Delete Category">
+              <span class="material-symbols-outlined text-[16px]">delete</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Update right column labels
+  if (parentLabel) parentLabel.innerText = ACTIVE_MANAGER_CATEGORY || 'Selected Category';
+  if (formCatName) formCatName.innerText = ACTIVE_MANAGER_CATEGORY || 'Selected Category';
+
+  // Render right column: subcategories
+  const currentSubs = subcategories.filter(s => s.category_name === ACTIVE_MANAGER_CATEGORY || s.category === ACTIVE_MANAGER_CATEGORY);
+  if (subcatBadge) subcatBadge.innerText = `${currentSubs.length} Subcategories`;
+
+  if (subcatListCont) {
+    if (currentSubs.length === 0) {
+      subcatListCont.innerHTML = `
+        <div class="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+          <p class="font-bold text-slate-500 text-xs">No subcategories under "${ACTIVE_MANAGER_CATEGORY}" yet</p>
+          <p class="text-[10px] text-slate-400 mt-1">Use the form above to add a subcategory with its unique SKU prefix.</p>
+        </div>
+      `;
+    } else {
+      subcatListCont.innerHTML = currentSubs.map(s => {
+        return `
+          <div class="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                ${s.sku_prefix || 'GRM'}
+              </span>
+              <span class="font-bold text-slate-800 text-xs truncate">${s.name}</span>
+            </div>
+            <button type="button" onclick="deleteSubcategory(${s.id}, '${s.name}')" class="p-1 text-slate-300 hover:text-rose-600 transition" title="Delete Subcategory">
+              <span class="material-symbols-outlined text-[16px]">delete</span>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+// =========================================================================
+// LIVE VALIDATION & SMART SUGGESTIONS: CATEGORIES, SUBCATEGORIES & SKU PREFIXES
+// =========================================================================
+
+function generateCategorySuggestions(name) {
+  const clean = (name || '').trim();
+  if (!clean) return [];
+
+  const existing = new Set((CRM_STATE.categories || []).map(c => (c.name || '').trim().toLowerCase()));
+
+  const templates = [
+    `${clean} Collection`,
+    `${clean} Wear`,
+    `${clean} Essentials`,
+    `${clean} Special`,
+    `${clean} Premium`,
+    `${clean} 2`
+  ];
+
+  return templates.filter(t => !existing.has(t.toLowerCase())).slice(0, 4);
+}
+
+function handleCategoryNameInput(val) {
+  const input = document.getElementById('new-cat-name');
+  const box = document.getElementById('cat-name-suggestions');
+  if (!input || !box) return;
+
+  const clean = (val || '').trim();
+  if (!clean) {
+    box.className = 'hidden';
+    box.innerHTML = '';
+    input.classList.remove('border-amber-500', 'ring-2', 'ring-amber-400', 'bg-amber-50/20');
+    return;
+  }
+
+  const existingCat = (CRM_STATE.categories || []).find(c => (c.name || '').trim().toLowerCase() === clean.toLowerCase());
+
+  if (existingCat) {
+    input.classList.add('border-amber-500', 'ring-2', 'ring-amber-400', 'bg-amber-50/20');
+    const suggestions = generateCategorySuggestions(clean);
+
+    box.className = 'p-3 bg-amber-50/90 border border-amber-200 rounded-xl text-amber-950 text-xs space-y-2 mt-2 shadow-sm animate-in fade-in duration-150';
+    box.innerHTML = `
+      <div class="flex items-start gap-2">
+        <span class="material-symbols-outlined text-[18px] text-amber-600 shrink-0 mt-0.5">warning</span>
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-amber-900 leading-snug">Category "<span class="underline">${existingCat.name}</span>" already exists!</p>
+          <p class="text-[11px] text-amber-700/90 mt-0.5">Please choose a unique name to avoid duplicate catalog groups. Click a suggestion below:</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 flex-wrap pt-1 border-t border-amber-200/60">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-800">Suggestions:</span>
+        ${suggestions.map(s => `
+          <button type="button" onclick="applyCategorySuggestion('${s.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-white hover:bg-amber-100 hover:border-amber-400 text-amber-900 border border-amber-300 rounded-lg font-bold text-xs shadow-2xs transition active:scale-95 flex items-center gap-1 cursor-pointer">
+            <span class="material-symbols-outlined text-[13px] text-amber-600">add</span> ${s}
+          </button>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    box.className = 'hidden';
+    box.innerHTML = '';
+    input.classList.remove('border-amber-500', 'ring-2', 'ring-amber-400', 'bg-amber-50/20');
+  }
+}
+
+function applyCategorySuggestion(name) {
+  const input = document.getElementById('new-cat-name');
+  if (input) {
+    input.value = name;
+    handleCategoryNameInput(name);
+    input.focus();
+  }
+}
+
+function generateSubcategorySuggestions(name, categoryName) {
+  const clean = (name || '').trim();
+  if (!clean) return [];
+
+  const existing = new Set((CRM_STATE.subcategories || []).filter(s => 
+    (s.category_name || s.category || '').toLowerCase() === (categoryName || '').toLowerCase()
+  ).map(s => (s.name || '').trim().toLowerCase()));
+
+  const templates = [
+    `${clean} Set`,
+    `${clean} Wear`,
+    `${clean} Collection`,
+    `${clean} Casual`,
+    `${clean} Special`,
+    `${clean} 2`
+  ];
+
+  return templates.filter(t => !existing.has(t.toLowerCase())).slice(0, 4);
+}
+
+
+
+function generateUniqueSkuPrefixes(catName, subcatName, currentPrefix) {
+  const existingPrefixes = new Set();
+  (CRM_STATE.subcategories || []).forEach(s => {
+    if (s.sku_prefix) existingPrefixes.add(s.sku_prefix.toUpperCase().trim());
+  });
+  (CRM_STATE.products || []).forEach(p => {
+    if (p.sku) {
+      const parts = p.sku.split('-');
+      if (parts[0]) existingPrefixes.add(parts[0].toUpperCase().trim());
+    }
+  });
+
+  const parentCat = (catName || ACTIVE_MANAGER_CATEGORY || document.getElementById('subcat-parent-label')?.innerText || '').replace(/[^a-zA-Z0-9\s]/g, '').trim().toUpperCase();
+  const catWords = parentCat.split(/\s+/).filter(Boolean);
+
+  const cleanSub = (subcatName || '').replace(/[^a-zA-Z0-9\s]/g, '').trim().toUpperCase();
+  const subWords = cleanSub.split(/\s+/).filter(Boolean);
+
+  // Category candidate codes (e.g. "SAMPLE" -> "S", "SAM", "SMP", "SA"; "BABY COLLECTION" -> "BC", "B")
+  const catCodes = [];
+  if (catWords.length >= 2) {
+    catCodes.push(catWords.map(w => w[0]).join(''));
+    catCodes.push(catWords[0][0]);
+  } else if (catWords.length === 1 && catWords[0]) {
+    const w = catWords[0];
+    catCodes.push(w[0]); // e.g. "S"
+    if (w.length >= 3) {
+      catCodes.push(w.slice(0, 3)); // e.g. "SAM"
+      catCodes.push(w.replace(/[AEIOU]/g, '').slice(0, 3)); // e.g. "SMP"
+    }
+    if (w.length >= 2) {
+      catCodes.push(w.slice(0, 2)); // e.g. "SA"
+    }
+  } else {
+    catCodes.push('G');
+  }
+
+  // Subcategory candidate codes (e.g. "TEST" -> "TST", "T", "TES", "TE")
+  const subCodes = [];
+  if (subWords.length >= 2) {
+    subCodes.push(subWords.map(w => w[0]).join(''));
+    subCodes.push(subWords[0][0] + subWords[1].slice(0, 2));
+    subCodes.push(subWords[0][0]);
+  } else if (subWords.length === 1 && subWords[0]) {
+    const w = subWords[0];
+    if (w.length >= 3) {
+      subCodes.push(w.replace(/[AEIOU]/g, '').slice(0, 3)); // "TST"
+      subCodes.push(w.slice(0, 3)); // "TES"
+    }
+    if (w.length >= 2) {
+      subCodes.push(w.slice(0, 2)); // "TE"
+    }
+    subCodes.push(w[0]); // "T"
+  } else {
+    subCodes.push('01');
+  }
+
+  const rawCandidates = [];
+
+  // 1. Dash-separated combined prefix (e.g. S-TST, SAM-TST, S-T, S-TE)
+  catCodes.forEach(cc => {
+    subCodes.forEach(sc => {
+      if (cc && sc) {
+        rawCandidates.push(`${cc}-${sc}`);
+      }
+    });
+  });
+
+  // 2. Direct joined combined prefix (e.g. ST, STST, SAMTST, BCF)
+  catCodes.forEach(cc => {
+    subCodes.forEach(sc => {
+      if (cc && sc && (cc + sc).length <= 6) {
+        rawCandidates.push(`${cc}${sc}`);
+      }
+    });
+  });
+
+  // 3. Variations if user typed a specific prefix (e.g. user typed TTT -> S-TTT, STTT)
+  if (currentPrefix && currentPrefix.trim()) {
+    const pfx = currentPrefix.trim().toUpperCase();
+    const c0 = catCodes[0] || 'C';
+    rawCandidates.push(`${c0}-${pfx}`);
+    rawCandidates.push(`${c0}${pfx}`);
+    rawCandidates.push(`${pfx}1`);
+  }
+
+  // 4. Numbered suffixes of combined seeds: e.g. S-TST1, ST1, ST2
+  const seed = rawCandidates[0] || `${(catCodes[0] || 'C')}-${(subCodes[0] || 'S')}`;
+  for (let i = 1; i <= 9; i++) {
+    rawCandidates.push(`${seed}${i}`);
+    rawCandidates.push(`${seed}-${i}`);
+  }
+
+  // Filter out any prefixes already in use across subcategories and products
+  const suggestions = [];
+  for (const c of rawCandidates) {
+    const cleanCandidate = (c || '').replace(/[^A-Z0-9-]/g, '').slice(0, 8);
+    if (cleanCandidate.length >= 2 && !existingPrefixes.has(cleanCandidate) && !suggestions.includes(cleanCandidate)) {
+      suggestions.push(cleanCandidate);
+      if (suggestions.length >= 5) break;
+    }
+  }
+
+  return suggestions;
+}
+
+function handleSubcategoryNameInput(val) {
+  const input = document.getElementById('new-subcat-name');
+  const box = document.getElementById('subcat-name-suggestions');
+  const prefixInput = document.getElementById('new-subcat-prefix');
+  if (!input || !box) return;
+
+  const clean = (val || '').trim();
+  if (!clean) {
+    box.className = 'hidden';
+    box.innerHTML = '';
+    input.classList.remove('border-amber-500', 'ring-2', 'ring-amber-400', 'bg-amber-50/20');
+    return;
+  }
+
+  const catName = ACTIVE_MANAGER_CATEGORY || document.getElementById('subcat-parent-label')?.innerText || '';
+
+  // Auto-generate suggested SKU prefix based on BOTH Category and Subcategory!
+  if (prefixInput && (!prefixInput.value || prefixInput.dataset.autogen === 'true')) {
+    const suggestedPrefixes = generateUniqueSkuPrefixes(catName, clean, '');
+    if (suggestedPrefixes.length > 0) {
+      prefixInput.value = suggestedPrefixes[0];
+      prefixInput.dataset.autogen = 'true';
+      handleSubcategoryPrefixInput(suggestedPrefixes[0]);
+    }
+  }
+
+  const existingSub = (CRM_STATE.subcategories || []).find(s => 
+    (s.category_name === catName || s.category === catName) && 
+    (s.name || '').trim().toLowerCase() === clean.toLowerCase()
+  );
+
+  if (existingSub) {
+    input.classList.add('border-amber-500', 'ring-2', 'ring-amber-400', 'bg-amber-50/20');
+    const suggestions = generateSubcategorySuggestions(clean, catName);
+
+    box.className = 'p-3 bg-amber-50/90 border border-amber-200 rounded-xl text-amber-950 text-xs space-y-2 mt-2 shadow-sm animate-in fade-in duration-150';
+    box.innerHTML = `
+      <div class="flex items-start gap-2">
+        <span class="material-symbols-outlined text-[18px] text-amber-600 shrink-0 mt-0.5">warning</span>
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-amber-900 leading-snug">Subcategory "<span class="underline">${existingSub.name}</span>" already exists under ${catName}!</p>
+          <p class="text-[11px] text-amber-700/90 mt-0.5">Please choose a distinct subcategory name. Click any suggestion below:</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 flex-wrap pt-1 border-t border-amber-200/60">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-800">Suggestions:</span>
+        ${suggestions.map(s => `
+          <button type="button" onclick="applySubcategorySuggestion('${s.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-white hover:bg-amber-100 hover:border-amber-400 text-amber-900 border border-amber-300 rounded-lg font-bold text-xs shadow-2xs transition active:scale-95 flex items-center gap-1 cursor-pointer">
+            <span class="material-symbols-outlined text-[13px] text-amber-600">add</span> ${s}
+          </button>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    box.className = 'hidden';
+    box.innerHTML = '';
+    input.classList.remove('border-amber-500', 'ring-2', 'ring-amber-400', 'bg-amber-50/20');
+  }
+}
+
+function applySubcategorySuggestion(name) {
+  const input = document.getElementById('new-subcat-name');
+  const prefixInput = document.getElementById('new-subcat-prefix');
+  if (input) {
+    input.value = name;
+    if (prefixInput) prefixInput.dataset.autogen = 'true';
+    handleSubcategoryNameInput(name);
+    input.focus();
+  }
+}
+
+function handleSubcategoryPrefixInput(val) {
+  const input = document.getElementById('new-subcat-prefix');
+  const box = document.getElementById('subcat-prefix-suggestions');
+  const nameInput = document.getElementById('new-subcat-name');
+  if (!input || !box) return;
+
+  const prefix = (val || '').trim().toUpperCase();
+  if (!prefix) {
+    box.className = 'hidden';
+    box.innerHTML = '';
+    input.classList.remove('border-rose-500', 'ring-2', 'ring-rose-400', 'bg-rose-50/20', 'border-emerald-500', 'ring-emerald-300');
+    return;
+  }
+
+  const catName = ACTIVE_MANAGER_CATEGORY || document.getElementById('subcat-parent-label')?.innerText || '';
+
+  // Check if prefix already exists
+  const existingSub = (CRM_STATE.subcategories || []).find(s => 
+    (s.sku_prefix || '').toUpperCase().trim() === prefix
+  );
+
+  const existingProd = (CRM_STATE.products || []).find(p => 
+    (p.sku || '').toUpperCase().startsWith(prefix + '-') || (p.sku || '').toUpperCase() === prefix
+  );
+
+  if (existingSub || existingProd) {
+    input.classList.remove('border-emerald-500', 'ring-emerald-300');
+    input.classList.add('border-rose-500', 'ring-2', 'ring-rose-400', 'bg-rose-50/20');
+
+    const ownerName = existingSub 
+      ? `Subcategory "<b>${existingSub.name}</b>" (under ${existingSub.category_name || existingSub.category || 'Category'})`
+      : `Product "<b>${existingProd.sku}</b>" (${existingProd.name || 'Garment'})`;
+
+    const subName = nameInput ? nameInput.value : '';
+    // Generate suggestions combining BOTH Category and Subcategory!
+    const suggestions = generateUniqueSkuPrefixes(catName, subName, prefix);
+
+    box.className = 'p-3 bg-rose-50/95 border border-rose-200 rounded-xl text-rose-950 text-xs space-y-2 mt-2 shadow-sm animate-in fade-in duration-150';
+    box.innerHTML = `
+      <div class="flex items-start gap-2">
+        <span class="material-symbols-outlined text-[18px] text-rose-600 shrink-0 mt-0.5">block</span>
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-rose-900 leading-snug">
+            SKU Prefix "<span class="font-mono bg-rose-200/80 px-1.5 py-0.5 rounded text-rose-950 font-black">${prefix}</span>" is already in use by ${ownerName}!
+          </p>
+          <p class="text-[11px] text-rose-700/90 mt-0.5">
+            Prefixes must combine <b>Category ("${catName}")</b> + <b>Subcategory ("${subName || 'test'}")</b>. Click a unique suggestion below:
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 flex-wrap pt-1 border-t border-rose-200/60">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-rose-800">Suggested (Category + Subcategory):</span>
+        ${suggestions.map(s => `
+          <button type="button" onclick="applyPrefixSuggestion('${s}')" class="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-300 hover:border-emerald-500 rounded-lg font-mono font-black text-xs shadow-2xs transition active:scale-95 flex items-center gap-1 cursor-pointer">
+            <span class="material-symbols-outlined text-[13px] text-emerald-600">check_circle</span> ${s}
+          </button>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    // Unique and available!
+    input.classList.remove('border-rose-500', 'ring-2', 'ring-rose-400', 'bg-rose-50/20');
+    if (prefix.length >= 2) {
+      input.classList.add('border-emerald-500');
+      box.className = 'p-2 bg-emerald-50/80 border border-emerald-200 rounded-xl text-emerald-900 text-xs mt-1.5 flex items-center gap-1.5 animate-in fade-in duration-150';
+      box.innerHTML = `
+        <span class="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
+        <span class="font-semibold text-[11px]">SKU Prefix <b class="font-mono font-bold text-emerald-900">[${prefix}]</b> is unique &amp; available! (Category: ${catName})</span>
+      `;
+    } else {
+      box.className = 'hidden';
+      box.innerHTML = '';
+    }
+  }
+}
+
+function applyPrefixSuggestion(prefix) {
+  const input = document.getElementById('new-subcat-prefix');
+  if (input) {
+    input.value = prefix;
+    delete input.dataset.autogen;
+    handleSubcategoryPrefixInput(prefix);
+    input.focus();
+  }
+}
+
+window.handleCategoryNameInput = handleCategoryNameInput;
+window.applyCategorySuggestion = applyCategorySuggestion;
+window.handleSubcategoryNameInput = handleSubcategoryNameInput;
+window.applySubcategorySuggestion = applySubcategorySuggestion;
+window.handleSubcategoryPrefixInput = handleSubcategoryPrefixInput;
+window.applyPrefixSuggestion = applyPrefixSuggestion;
+
+function selectCategoryInManager(catName) {
+  ACTIVE_MANAGER_CATEGORY = catName;
+  const subNameInput = document.getElementById('new-subcat-name');
+  const subPrefixInput = document.getElementById('new-subcat-prefix');
+  if (subNameInput) subNameInput.value = '';
+  if (subPrefixInput) {
+    subPrefixInput.value = '';
+    delete subPrefixInput.dataset.autogen;
+  }
+  const nameBox = document.getElementById('subcat-name-suggestions');
+  if (nameBox) { nameBox.className = 'hidden'; nameBox.innerHTML = ''; }
+  const prefixBox = document.getElementById('subcat-prefix-suggestions');
+  if (prefixBox) { prefixBox.className = 'hidden'; prefixBox.innerHTML = ''; }
+  renderCategoriesManager();
+}
+
+async function saveCategorySubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const name = document.getElementById('new-cat-name').value.trim();
+  const icon = (document.getElementById('new-cat-icon')?.value || '').trim() || 'checkroom';
+  const desc = document.getElementById('new-cat-desc').value.trim();
+
+  if (!name) return;
+
+  if (!CRM_STATE.categories || !Array.isArray(CRM_STATE.categories) || CRM_STATE.categories.length === 0) {
+    CRM_STATE.categories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.categories || []));
+  }
+  
+  const existIdx = CRM_STATE.categories.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
+  if (existIdx >= 0) {
+    handleCategoryNameInput(name);
+    showToast('Category Exists', `Category "${name}" already exists! Please choose one of the suggested names.`, 'warning', 'amber');
+    document.getElementById('new-cat-name')?.focus();
+    return;
+  }
+
+  const newCat = {
+    id: Date.now(),
+    name,
+    icon,
+    description: desc,
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+  };
+
+  CRM_STATE.categories.push(newCat);
+  ACTIVE_MANAGER_CATEGORY = name;
+
+  try {
+    const res = await fetch('api.php?action=save_category', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCat)
+    });
+    if (res.ok) {
+      const respData = await res.json();
+      if (respData.id) newCat.id = respData.id;
+    }
+  } catch (err) {
+    console.warn('API save_category failed:', err);
+  }
+
+  saveCRMState();
+  document.getElementById('new-cat-name').value = '';
+  document.getElementById('new-cat-desc').value = '';
+  const catBox = document.getElementById('cat-name-suggestions');
+  if (catBox) { catBox.className = 'hidden'; catBox.innerHTML = ''; }
+
+  renderCategoriesManager();
+  populateCatalogCategoryFilters();
+  populateProductFormCategories(name);
+  showToast('Category Created', `Category "${name}" created successfully!`, 'check_circle', 'teal');
+}
+
+async function deleteCategory(catId, catName) {
+  if (!confirm(`Delete category "${catName}" and all associated catalog groupings?`)) return;
+
+  CRM_STATE.categories = (CRM_STATE.categories || []).filter(c => c.name !== catName && c.id != catId);
+  CRM_STATE.subcategories = (CRM_STATE.subcategories || []).filter(s => s.category_name !== catName && s.category !== catName);
+
+  if (ACTIVE_MANAGER_CATEGORY === catName) {
+    ACTIVE_MANAGER_CATEGORY = (CRM_STATE.categories[0] && CRM_STATE.categories[0].name) || '';
+  }
+
+  try {
+    await fetch('api.php?action=delete_category', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: catId, name: catName })
+    });
+  } catch (err) {
+    console.warn('API delete_category failed:', err);
+  }
+
+  saveCRMState();
+  renderCategoriesManager();
+  populateCatalogCategoryFilters();
+  populateProductFormCategories();
+  showToast('Category Deleted', `Category "${catName}" removed.`, 'delete', 'rose');
+}
+
+async function saveSubcategorySubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const name = document.getElementById('new-subcat-name').value.trim();
+  let prefix = document.getElementById('new-subcat-prefix').value.trim().toUpperCase();
+
+  if (!name || !ACTIVE_MANAGER_CATEGORY) {
+    showToast('Missing Category', 'Please select a parent category first.', 'warning', 'amber');
+    return;
+  }
+
+  if (!CRM_STATE.subcategories || !Array.isArray(CRM_STATE.subcategories) || CRM_STATE.subcategories.length === 0) {
+    CRM_STATE.subcategories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.subcategories || []));
+  }
+  
+  // 1. Check if subcategory already exists under this category
+  const existSubIdx = CRM_STATE.subcategories.findIndex(s => 
+    s.name.toLowerCase() === name.toLowerCase() && 
+    (s.category_name === ACTIVE_MANAGER_CATEGORY || s.category === ACTIVE_MANAGER_CATEGORY)
+  );
+  if (existSubIdx >= 0) {
+    handleSubcategoryNameInput(name);
+    showToast('Subcategory Exists', `Subcategory "${name}" already exists under ${ACTIVE_MANAGER_CATEGORY}! Please pick a suggested unique name.`, 'warning', 'amber');
+    document.getElementById('new-subcat-name')?.focus();
+    return;
+  }
+
+  // 2. Check if SKU prefix is taken or empty
+  const prefixTakenSub = (CRM_STATE.subcategories || []).find(s => 
+    (s.sku_prefix || '').toUpperCase().trim() === prefix
+  );
+  const prefixTakenProd = (CRM_STATE.products || []).find(p => 
+    (p.sku || '').toUpperCase().startsWith(prefix + '-') || (p.sku || '').toUpperCase() === prefix
+  );
+
+  let wasAutoResolved = false;
+  if (!prefix || prefixTakenSub || prefixTakenProd) {
+    // Generate unique category + subcategory combined prefix
+    const suggestions = generateUniqueSkuPrefixes(ACTIVE_MANAGER_CATEGORY, name, prefix);
+    if (suggestions.length > 0) {
+      prefix = suggestions[0];
+      wasAutoResolved = true;
+    } else {
+      handleSubcategoryPrefixInput(prefix);
+      showToast('SKU Prefix Taken', `SKU Prefix [${prefix}] is already in use! Click a suggested unique prefix below.`, 'block', 'rose');
+      document.getElementById('new-subcat-prefix')?.focus();
+      return;
+    }
+  }
+
+  const newSub = {
+    id: Date.now(),
+    category_name: ACTIVE_MANAGER_CATEGORY,
+    name,
+    sku_prefix: prefix,
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+  };
+
+  CRM_STATE.subcategories.push(newSub);
+
+  try {
+    const res = await fetch('api.php?action=save_subcategory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSub)
+    });
+    if (res.ok) {
+      const respData = await res.json();
+      if (respData.id) newSub.id = respData.id;
+    }
+  } catch (err) {
+    console.warn('API save_subcategory failed:', err);
+  }
+
+  saveCRMState();
+  document.getElementById('new-subcat-name').value = '';
+  document.getElementById('new-subcat-prefix').value = '';
+  const subBox = document.getElementById('subcat-name-suggestions');
+  if (subBox) { subBox.className = 'hidden'; subBox.innerHTML = ''; }
+  const prefixBox = document.getElementById('subcat-prefix-suggestions');
+  if (prefixBox) { prefixBox.className = 'hidden'; prefixBox.innerHTML = ''; }
+
+  renderCategoriesManager();
+  populateCatalogCategoryFilters();
+  populateProductFormCategories(ACTIVE_MANAGER_CATEGORY, name);
+
+  if (wasAutoResolved) {
+    showToast('Subcategory Saved', `Added "${name}" with auto-assigned combined prefix [${prefix}] (Category: ${ACTIVE_MANAGER_CATEGORY})!`, 'check_circle', 'emerald');
+  } else {
+    showToast('Subcategory Added', `Added "${name}" with prefix [${prefix}] to ${ACTIVE_MANAGER_CATEGORY}!`, 'check_circle', 'emerald');
+  }
+}
+
+async function deleteSubcategory(subId, subName) {
+  if (!confirm(`Delete subcategory "${subName}"?`)) return;
+
+  CRM_STATE.subcategories = (CRM_STATE.subcategories || []).filter(s => s.name !== subName && s.id != subId);
+
+  try {
+    await fetch('api.php?action=delete_subcategory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: subId, name: subName })
+    });
+  } catch (err) {
+    console.warn('API delete_subcategory failed:', err);
+  }
+
+  saveCRMState();
+  renderCategoriesManager();
+  populateCatalogCategoryFilters();
+  populateProductFormCategories(ACTIVE_MANAGER_CATEGORY);
+  showToast('Subcategory Deleted', `Subcategory "${subName}" removed.`, 'delete', 'rose');
+}
+
+// -------------------------------------------------------------------------
+// ATTRIBUTES SYSTEM MANAGEMENT MODAL (SIZES, COLORS, FABRICS)
+// -------------------------------------------------------------------------
+
+let ACTIVE_ATTRIBUTE_TAB = 'sizes';
+let ACTIVE_CUSTOM_ATTR_NAME = '';
+
+function openManageAttributesModal() {
+  renderAttributesManager();
+  switchAttributeManagerTab('sizes');
+  openModal('modal-manage-attributes');
+}
+
+function switchAttributeManagerTab(tab) {
+  ACTIVE_ATTRIBUTE_TAB = tab;
+
+  const tabSizes = document.getElementById('tab-attr-sizes');
+  const tabColors = document.getElementById('tab-attr-colors');
+  const tabSpecs = document.getElementById('tab-attr-specs');
+  const tabAddNew = document.getElementById('tab-attr-add-new');
+
+  const viewSizes = document.getElementById('view-attr-sizes');
+  const viewColors = document.getElementById('view-attr-colors');
+  const viewSpecs = document.getElementById('view-attr-specs');
+  const viewCustom = document.getElementById('view-attr-custom');
+  const viewAddNew = document.getElementById('view-attr-add-new');
+
+  // Reset standard tab styles
+  [tabSizes, tabColors, tabSpecs, tabAddNew].forEach(btn => {
+    if (btn) btn.className = 'px-3.5 py-2 rounded-xl font-semibold text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition shrink-0';
+  });
+
+  // Reset custom tab styles in #attr-custom-tabs-container
+  const customTabsCont = document.getElementById('attr-custom-tabs-container');
+  if (customTabsCont) {
+    const customBtns = customTabsCont.querySelectorAll('button');
+    customBtns.forEach(btn => {
+      btn.className = 'px-3.5 py-2 rounded-xl font-semibold text-xs text-slate-600 hover:text-purple-900 hover:bg-purple-50 flex items-center gap-1.5 transition shrink-0 border border-transparent';
+    });
+  }
+
+  // Hide all views
+  [viewSizes, viewColors, viewSpecs, viewCustom, viewAddNew].forEach(view => {
+    if (view) view.classList.add('hidden');
+  });
+
+  if (tab === 'sizes') {
+    if (tabSizes) tabSizes.className = 'px-4 py-2 rounded-xl font-bold text-xs bg-white text-slate-900 shadow-sm border border-slate-200 flex items-center gap-1.5 transition shrink-0';
+    if (viewSizes) viewSizes.classList.remove('hidden');
+  } else if (tab === 'colors') {
+    if (tabColors) tabColors.className = 'px-4 py-2 rounded-xl font-bold text-xs bg-white text-slate-900 shadow-sm border border-slate-200 flex items-center gap-1.5 transition shrink-0';
+    if (viewColors) viewColors.classList.remove('hidden');
+  } else if (tab === 'specs') {
+    if (tabSpecs) tabSpecs.className = 'px-4 py-2 rounded-xl font-bold text-xs bg-white text-indigo-900 shadow-sm border border-indigo-200 flex items-center gap-1.5 transition shrink-0';
+    if (viewSpecs) viewSpecs.classList.remove('hidden');
+  } else if (tab === 'add_new') {
+    if (tabAddNew) tabAddNew.className = 'px-3.5 py-2 rounded-xl font-bold text-xs bg-amber-700 text-white shadow-sm border border-amber-800 flex items-center gap-1.5 transition shrink-0';
+    if (viewAddNew) {
+      viewAddNew.classList.remove('hidden');
+      const nameInput = document.getElementById('new-attr-type-name');
+      const valsInput = document.getElementById('new-attr-type-initial-vals');
+      if (nameInput) {
+        nameInput.value = '';
+        setTimeout(() => nameInput.focus(), 100);
+      }
+      if (valsInput) valsInput.value = '';
+    }
+  } else {
+    // Custom Attribute Tab (e.g. 'Memory' or 'custom:Memory')
+    const attrName = tab.startsWith('custom:') ? tab.slice(7) : tab;
+    ACTIVE_CUSTOM_ATTR_NAME = attrName;
+    const activeCustomBtn = document.getElementById(`tab-attr-custom-${attrName}`);
+    if (activeCustomBtn) {
+      activeCustomBtn.className = 'px-3.5 py-2 rounded-xl font-bold text-xs bg-white text-purple-950 shadow-sm border border-purple-300 flex items-center gap-1.5 transition shrink-0';
+    }
+    if (viewCustom) {
+      viewCustom.classList.remove('hidden');
+      renderCustomAttributeView(attrName);
+    }
+  }
+}
+
+function renderAttributesManager() {
+  const attrs = CRM_STATE.attributes || INITIAL_CRM_DATA.attributes || { sizes: [], colors: [], specifications: [], custom: {} };
+  if (!attrs.custom) attrs.custom = {};
+
+  const sizesCont = document.getElementById('attr-manager-sizes-list');
+  const colorsCont = document.getElementById('attr-manager-colors-list');
+  const specsCont = document.getElementById('attr-manager-specs-list');
+  const customTabsCont = document.getElementById('attr-custom-tabs-container');
+
+  // 1. Sizes List
+  if (sizesCont) {
+    sizesCont.innerHTML = (attrs.sizes || []).map(s => {
+      const escapedS = s.replace(/'/g, "\\'");
+      return `
+        <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm">
+          <span>${s}</span>
+          <button type="button" onclick="deleteAttribute('size', '${escapedS}')" class="text-slate-400 hover:text-rose-600 font-extrabold text-sm">&times;</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 2. Colors List
+  if (colorsCont) {
+    colorsCont.innerHTML = (attrs.colors || []).map(c => {
+      const hex = getColorHex(c);
+      const escapedC = c.replace(/'/g, "\\'");
+      return `
+        <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm">
+          <span class="w-3 h-3 rounded-full border border-black/20" style="background-color: ${hex}"></span>
+          <span>${c}</span>
+          <button type="button" onclick="deleteAttribute('color', '${escapedC}')" class="text-slate-400 hover:text-rose-600 font-extrabold text-sm">&times;</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 3. Specifications List (Same Attribute Flow: Clean Chips matching Sizes & Colors)
+  if (specsCont) {
+    const specs = attrs.specifications || [];
+    if (specs.length === 0) {
+      specsCont.innerHTML = `<span class="text-slate-400 italic text-[11px]">No specifications registered yet. Add one above!</span>`;
+    } else {
+      specsCont.innerHTML = specs.map(s => {
+        const lbl = (typeof s === 'object' ? s.label : s) || '';
+        const cnt = (typeof s === 'object' ? s.content : '') || '';
+        const id = (typeof s === 'object' && s.id) ? s.id : null;
+        const escapedLbl = lbl.replace(/'/g, "\\'");
+        const escapedCnt = cnt.replace(/'/g, "\\'");
+        const displayLabel = (lbl && lbl !== 'Specification') ? `${lbl}: ${cnt}` : cnt;
+        return `
+          <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm">
+            <span class="text-indigo-600 text-[10px]">📌</span>
+            <span>${displayLabel}</span>
+            <button type="button" onclick="deleteAttribute('specification', '${escapedLbl}', ${id}, '${escapedCnt}')" class="text-slate-400 hover:text-rose-600 font-extrabold text-sm" title="Delete Specification">&times;</button>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // 4. Dynamic Custom Attribute Tabs in Attribute Manager
+  if (customTabsCont) {
+    const customTypes = Object.keys(attrs.custom || {});
+    customTabsCont.innerHTML = customTypes.map(attrName => {
+      const vals = attrs.custom[attrName] || [];
+      const isCurrentActive = ACTIVE_CUSTOM_ATTR_NAME === attrName && ACTIVE_ATTRIBUTE_TAB.includes(attrName);
+      const escapedName = attrName.replace(/'/g, "\\'");
+      return `
+        <button type="button" id="tab-attr-custom-${attrName}" onclick="switchAttributeManagerTab('custom:${escapedName}')" class="px-3.5 py-2 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition shrink-0 ${isCurrentActive ? 'bg-white text-purple-950 font-bold shadow-sm border border-purple-300' : 'text-slate-600 hover:text-purple-900 hover:bg-purple-50 border border-transparent'}">
+          <span class="material-symbols-outlined text-[16px] text-purple-600">tune</span>
+          <span>${attrName}</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-900 font-bold">${vals.length}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  // If a custom attribute is currently active, refresh its view
+  if (ACTIVE_CUSTOM_ATTR_NAME && (ACTIVE_ATTRIBUTE_TAB === ACTIVE_CUSTOM_ATTR_NAME || ACTIVE_ATTRIBUTE_TAB === 'custom:' + ACTIVE_CUSTOM_ATTR_NAME)) {
+    renderCustomAttributeView(ACTIVE_CUSTOM_ATTR_NAME);
+  }
+}
+
+function renderCustomAttributeView(attrName) {
+  if (!attrName) return;
+  const attrs = CRM_STATE.attributes || INITIAL_CRM_DATA.attributes || { custom: {} };
+  if (!attrs.custom) attrs.custom = {};
+  const vals = attrs.custom[attrName] || [];
+
+  const titleEl = document.getElementById('custom-attr-view-title');
+  const countBadge = document.getElementById('custom-attr-values-count-badge');
+  const descEl = document.getElementById('custom-attr-view-desc');
+  const inputEl = document.getElementById('new-attr-custom-val');
+  const listTitleEl = document.getElementById('custom-attr-list-title');
+  const listCont = document.getElementById('attr-manager-custom-list');
+
+  if (titleEl) titleEl.innerText = attrName;
+  if (countBadge) countBadge.innerText = `${vals.length} ${vals.length === 1 ? 'Value' : 'Values'}`;
+  if (descEl) descEl.innerText = `Manage clickable chips & product matrix variants for ${attrName}`;
+  if (inputEl) {
+    inputEl.placeholder = `New ${attrName} value (e.g. 4GB, 8GB, 16GB - comma-separated supported)`;
+    inputEl.value = '';
+  }
+  if (listTitleEl) listTitleEl.innerText = `ACTIVE ${attrName.toUpperCase()} VALUES IN CATALOG:`;
+
+  if (listCont) {
+    if (vals.length === 0) {
+      listCont.innerHTML = `<span class="text-slate-400 italic text-[11px]">No values registered yet for "${attrName}". Enter values above to add!</span>`;
+    } else {
+      const escapedAttrName = attrName.replace(/'/g, "\\'");
+      listCont.innerHTML = vals.map(v => {
+        const escapedV = v.replace(/'/g, "\\'");
+        return `
+          <div class="px-3 py-1.5 bg-purple-50/80 border border-purple-200 text-purple-950 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs hover:border-purple-300 transition">
+            <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+            <span>${v}</span>
+            <button type="button" onclick="deleteCustomAttributeValue('${escapedAttrName}', '${escapedV}')" class="text-slate-400 hover:text-rose-600 font-extrabold text-sm ml-0.5 cursor-pointer" title="Delete ${v}">&times;</button>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+function setQuickAttributeSuggestion(name, vals) {
+  const nameInput = document.getElementById('new-attr-type-name');
+  const valsInput = document.getElementById('new-attr-type-initial-vals');
+  if (nameInput) nameInput.value = name;
+  if (valsInput) valsInput.value = vals;
+}
+
+function openAddAttributeTypePrompt() {
+  openManageAttributesModal();
+  switchAttributeManagerTab('add_new');
+}
+
+async function handleCreateAttributeTypeSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const nameInput = document.getElementById('new-attr-type-name');
+  const valsInput = document.getElementById('new-attr-type-initial-vals');
+  const attrName = (nameInput ? nameInput.value : '').trim();
+  const initialValsStr = (valsInput ? valsInput.value : '').trim();
+
+  if (!attrName) {
+    showToast('Attribute Name Required', 'Please enter an attribute name (e.g. Memory, Storage).', 'warning', 'amber');
+    return;
+  }
+
+  if (!CRM_STATE.attributes) CRM_STATE.attributes = { sizes: [], colors: [], specifications: [], custom: {} };
+  if (!CRM_STATE.attributes.custom) CRM_STATE.attributes.custom = {};
+
+  // Case-insensitive match check
+  const existingKey = Object.keys(CRM_STATE.attributes.custom).find(k => k.toLowerCase() === attrName.toLowerCase());
+  const finalAttrName = existingKey || attrName;
+
+  if (!CRM_STATE.attributes.custom[finalAttrName]) {
+    CRM_STATE.attributes.custom[finalAttrName] = [];
+  }
+
+  // Parse comma-separated initial values
+  if (initialValsStr) {
+    const parts = initialValsStr.split(',').map(s => s.trim()).filter(Boolean);
+    parts.forEach(p => {
+      if (!CRM_STATE.attributes.custom[finalAttrName].includes(p)) {
+        CRM_STATE.attributes.custom[finalAttrName].push(p);
+      }
+    });
+  }
+
+  saveCRMState();
+
+  // Persist to MySQL database via api.php
+  try {
+    await fetch('api.php?action=save_attribute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'attribute_type',
+        value: finalAttrName,
+        extra: initialValsStr
+      })
+    });
+    if (initialValsStr) {
+      await fetch('api.php?action=save_attribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'attribute_value',
+          value: initialValsStr,
+          extra: finalAttrName
+        })
+      });
+    }
+  } catch (err) {
+    console.warn('API save_attribute for new type failed:', err);
+  }
+
+  if (nameInput) nameInput.value = '';
+  if (valsInput) valsInput.value = '';
+  renderAttributesManager();
+  switchAttributeManagerTab('custom:' + finalAttrName);
+  renderProductFormAttributeChips();
+  showToast('Attribute Feature Added', `Added "${finalAttrName}" attribute feature with dynamic product chips!`, 'check_circle', 'purple');
+}
+
+async function handleCustomAttributeValueSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  if (!ACTIVE_CUSTOM_ATTR_NAME) {
+    showToast('No Attribute Selected', 'Please select or create an attribute first.', 'warning', 'amber');
+    return;
+  }
+
+  const input = document.getElementById('new-attr-custom-val');
+  const rawVal = (input ? input.value : '').trim();
+  if (!rawVal) return;
+
+  if (!CRM_STATE.attributes) CRM_STATE.attributes = { sizes: [], colors: [], specifications: [], custom: {} };
+  if (!CRM_STATE.attributes.custom) CRM_STATE.attributes.custom = {};
+  if (!CRM_STATE.attributes.custom[ACTIVE_CUSTOM_ATTR_NAME]) {
+    CRM_STATE.attributes.custom[ACTIVE_CUSTOM_ATTR_NAME] = [];
+  }
+
+  const parts = rawVal.split(',').map(s => s.trim()).filter(Boolean);
+  let addedCount = 0;
+  parts.forEach(p => {
+    if (!CRM_STATE.attributes.custom[ACTIVE_CUSTOM_ATTR_NAME].includes(p)) {
+      CRM_STATE.attributes.custom[ACTIVE_CUSTOM_ATTR_NAME].push(p);
+      addedCount++;
+    }
+  });
+
+  saveCRMState();
+
+  try {
+    await fetch('api.php?action=save_attribute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'attribute_value',
+        value: rawVal,
+        extra: ACTIVE_CUSTOM_ATTR_NAME
+      })
+    });
+  } catch (err) {
+    console.warn('API save_attribute value failed:', err);
+  }
+
+  if (input) input.value = '';
+  renderCustomAttributeView(ACTIVE_CUSTOM_ATTR_NAME);
+  renderAttributesManager();
+  renderProductFormAttributeChips();
+  showToast('Values Added', `Added ${addedCount} value(s) to ${ACTIVE_CUSTOM_ATTR_NAME}!`, 'check_circle', 'purple');
+}
+
+async function deleteCustomAttributeValue(attrName, val) {
+  if (!CRM_STATE.attributes || !CRM_STATE.attributes.custom || !CRM_STATE.attributes.custom[attrName]) return;
+
+  CRM_STATE.attributes.custom[attrName] = CRM_STATE.attributes.custom[attrName].filter(v => v !== val);
+
+  // Also remove from SELECTED_CUSTOM_ATTRIBUTES if selected
+  if (SELECTED_CUSTOM_ATTRIBUTES && SELECTED_CUSTOM_ATTRIBUTES[attrName]) {
+    SELECTED_CUSTOM_ATTRIBUTES[attrName] = SELECTED_CUSTOM_ATTRIBUTES[attrName].filter(v => v !== val);
+  }
+
+  saveCRMState();
+
+  try {
+    await fetch('api.php?action=delete_attribute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'attribute_value',
+        value: val,
+        extra: attrName
+      })
+    });
+  } catch (err) {
+    console.warn('API delete_attribute value failed:', err);
+  }
+
+  renderCustomAttributeView(attrName);
+  renderAttributesManager();
+  renderProductFormAttributeChips();
+  calculateProductVariantMatrix();
+  showToast('Value Removed', `Removed "${val}" from ${attrName}.`, 'delete', 'slate');
+}
+
+async function confirmDeleteCurrentAttributeType() {
+  if (!ACTIVE_CUSTOM_ATTR_NAME) return;
+  const attrName = ACTIVE_CUSTOM_ATTR_NAME;
+
+  if (!confirm(`Are you sure you want to permanently delete the "${attrName}" attribute and all its values from the catalog?`)) {
+    return;
+  }
+
+  if (CRM_STATE.attributes && CRM_STATE.attributes.custom) {
+    delete CRM_STATE.attributes.custom[attrName];
+  }
+  if (SELECTED_CUSTOM_ATTRIBUTES) {
+    delete SELECTED_CUSTOM_ATTRIBUTES[attrName];
+  }
+
+  saveCRMState();
+
+  try {
+    await fetch('api.php?action=delete_attribute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'attribute_type',
+        value: attrName
+      })
+    });
+  } catch (err) {
+    console.warn('API delete_attribute type failed:', err);
+  }
+
+  ACTIVE_CUSTOM_ATTR_NAME = '';
+  switchAttributeManagerTab('sizes');
+  renderAttributesManager();
+  renderProductFormAttributeChips();
+  calculateProductVariantMatrix();
+  showToast('Attribute Deleted', `Deleted attribute "${attrName}".`, 'delete', 'rose');
+}
+
+async function saveAttributeSubmit(e, type) {
+  if (e && e.preventDefault) e.preventDefault();
+  let val = '';
+  let extra = '';
+
+  if (type === 'size') {
+    val = document.getElementById('new-attr-size-val').value.trim();
+  } else if (type === 'color') {
+    val = document.getElementById('new-attr-color-val').value.trim();
+    extra = document.getElementById('new-attr-color-hex').value;
+    if (extra && val) {
+      COLOR_HEX_MAP[val.toLowerCase()] = extra;
+    }
+  } else if (type === 'specification') {
+    let specLabel = (document.getElementById('new-attr-spec-label')?.value || '').trim();
+    let specVal = (document.getElementById('new-attr-spec-content')?.value || '').trim();
+
+    if (!specVal && specLabel) {
+      specVal = specLabel;
+      specLabel = '';
+    }
+
+    if (!specVal) {
+      showToast('Missing Specification', 'Please enter specification content / value.', 'warning', 'amber');
+      return;
+    }
+
+    // Auto-detect label and content if colon used in input
+    if (!specLabel && specVal.includes(':')) {
+      const parts = specVal.split(':');
+      specLabel = parts[0].trim();
+      specVal = parts.slice(1).join(':').trim();
+    }
+
+    if (!specLabel) specLabel = 'Specification';
+    val = specLabel;
+    extra = specVal;
+  }
+
+  if (!val && !extra) return;
+
+  if (!CRM_STATE.attributes) CRM_STATE.attributes = { sizes: [], colors: [], specifications: [] };
+  if (!CRM_STATE.attributes.specifications) CRM_STATE.attributes.specifications = [];
+
+  if (type === 'specification') {
+    // Automatically split comma-separated content into single-single items
+    const parts = extra.split(',').map(s => s.trim()).filter(Boolean);
+    const addedCount = parts.length;
+
+    for (const p of parts) {
+      const already = CRM_STATE.attributes.specifications.some(
+        s => (s.label || '').toLowerCase() === val.toLowerCase() && (s.content || '').toLowerCase() === p.toLowerCase()
+      );
+      if (!already) {
+        CRM_STATE.attributes.specifications.push({
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          label: val,
+          content: p
+        });
+      }
+    }
+
+    saveCRMState();
+
+    try {
+      const resp = await fetch('api.php?action=save_attribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'specification', value: val, extra })
+      });
+      const resData = await resp.json();
+      if (resData && resData.id) {
+        const last = CRM_STATE.attributes.specifications[CRM_STATE.attributes.specifications.length - 1];
+        if (last) last.id = resData.id;
+        saveCRMState();
+      }
+    } catch (err) {
+      console.warn('API save_attribute failed:', err);
+    }
+
+    if (document.getElementById('new-attr-spec-label')) document.getElementById('new-attr-spec-label').value = '';
+    if (document.getElementById('new-attr-spec-content')) document.getElementById('new-attr-spec-content').value = '';
+    renderAttributesManager();
+    renderProductFormAttributeChips();
+    showToast('Specifications Added', `Added ${addedCount} single specification badge(s) for "${val}"!`, 'check_circle', 'indigo');
+    return;
+  }
+
+  // Sizes or Colors
+  const key = type + 's';
+  if (!CRM_STATE.attributes[key]) CRM_STATE.attributes[key] = [];
+  if (!CRM_STATE.attributes[key].includes(val)) {
+    CRM_STATE.attributes[key].push(val);
+  }
+
+  saveCRMState();
+
+  try {
+    await fetch('api.php?action=save_attribute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, value: val, extra })
+    });
+  } catch (err) {
+    console.warn('API save_attribute failed:', err);
+  }
+
+  if (type === 'size') document.getElementById('new-attr-size-val').value = '';
+  if (type === 'color') document.getElementById('new-attr-color-val').value = '';
+
+  renderAttributesManager();
+  renderProductFormAttributeChips();
+  showToast('Attribute Added', `Added ${type}: "${val}" to catalog attributes!`, 'check_circle', 'amber');
+}
+
+async function deleteAttribute(type, val, id, extra) {
+  if (!CRM_STATE.attributes) return;
+
+  if (type === 'specification') {
+    if (CRM_STATE.attributes.specifications) {
+      CRM_STATE.attributes.specifications = CRM_STATE.attributes.specifications.filter(s => {
+        if (id && s.id && String(s.id) === String(id)) return false;
+        if (extra && s.content && s.label === val && s.content === extra) return false;
+        if (!extra && (s.label === val || s.content === val)) return false;
+        return true;
+      });
+    }
+  } else {
+    const key = type + 's';
+    if (CRM_STATE.attributes[key]) {
+      CRM_STATE.attributes[key] = CRM_STATE.attributes[key].filter(item => item !== val);
+    }
+  }
+
+  saveCRMState();
+
+  try {
+    await fetch('api.php?action=delete_attribute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, value: val, id: id || undefined, extra: extra || undefined })
+    });
+  } catch (err) {
+    console.warn('API delete_attribute failed:', err);
+  }
+
+  renderAttributesManager();
+  renderProductFormAttributeChips();
+  showToast('Attribute Removed', `Removed ${type} "${val}".`, 'delete', 'slate');
+}
+
+// -------------------------------------------------------------------------
 // QUICK RESTOCK MODAL
 // -------------------------------------------------------------------------
 function openQuickStockModal(productId) {
-  const p = CRM_STATE.products.find(prod => prod.id === productId);
-  if (!p) return;
+  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId));
+  if (!p) {
+    if (typeof showToast === 'function') {
+      showToast('Product Not Found', `Unable to find product with ID ${productId}`, 'alert-triangle', 'amber');
+    }
+    return;
+  }
 
-  document.getElementById('quick-stock-product-id').value = p.id;
-  document.getElementById('quick-stock-physical-input').value = p.physicalStock || 0;
+  const idEl = document.getElementById('quick-stock-product-id');
+  if (idEl) idEl.value = p.id;
+  const stockEl = document.getElementById('quick-stock-physical-input');
+  if (stockEl) stockEl.value = p.physicalStock || 0;
 
   const info = document.getElementById('quick-stock-product-info');
   if (info) {
+    const imgSrc = p.image || p.imageUrl || DEFAULT_GARMENT_PLACEHOLDER;
     info.innerHTML = `
-      <img src="${p.image}" class="w-12 h-12 object-cover rounded-xl border border-slate-200">
+      <img src="${imgSrc}" onerror="this.onerror=null;this.src='${DEFAULT_GARMENT_PLACEHOLDER}';" class="w-12 h-12 object-cover rounded-xl border border-slate-200">
       <div>
         <div class="flex items-center gap-2">
-          <span class="font-mono font-bold text-xs bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">${p.sku}</span>
-          <span class="font-bold text-slate-900 text-xs">${p.name}</span>
+          <span class="font-mono font-bold text-xs bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">${p.sku || 'NO-SKU'}</span>
+          <span class="font-bold text-slate-900 text-xs">${escapeHtml(p.name || 'Unnamed')}</span>
         </div>
-        <p class="text-[11px] text-slate-500 mt-0.5">Current: <b>${p.physicalStock}</b> physical &bull; <b>${p.reservedStock}</b> reserved</p>
+        <p class="text-[11px] text-slate-500 mt-0.5">Current: <b>${p.physicalStock || 0}</b> physical &bull; <b>${p.reservedStock || 0}</b> reserved</p>
       </div>
     `;
   }
@@ -6786,19 +10918,55 @@ function generateProductWhatsAppText(p) {
       ? `⚡ *Limited Stock Alert* (Only ${available} units remaining!)`
       : `⚠️ *Made to Order* (Available on booking)`;
 
-  return `🛍️ *${p.name}*\n🏷️ *SKU Code:* ${p.sku}\n📏 *Size / Age:* ${p.size || 'Standard'}\n🎨 *Color:* ${p.color || 'Default'}\n💰 *Price:* ₹${p.price}\n📦 *Warehouse Stock:* ${stockText}\n\n✨ *GRM Garments Premium Quality Promise*\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n\n👉 *Reply 'YES' with your delivery address to confirm your booking!*`;
+  const priceNum = parseFloat(p.price) || 0;
+  const mrpNum = parseFloat(p.mrp) || 0;
+  let priceLine = `💰 *Price:* ₹${priceNum}`;
+  if (mrpNum > priceNum) {
+    const discount = Math.round(((mrpNum - priceNum) / mrpNum) * 100);
+    priceLine = `💰 *Offer Price:* ₹${priceNum} ~₹${mrpNum}~ (*${discount}% OFF*)`;
+  }
+
+  const catLine = p.subcategory 
+    ? `📁 *Catalog:* ${p.category || 'Garments'} › ${p.subcategory}\n` 
+    : (p.category ? `📁 *Category:* ${p.category}\n` : '');
+
+  const fabricLine = p.fabric ? `🧵 *Fabric:* ${p.fabric}\n` : '';
+
+  let specsLines = '';
+  if (p.specifications) {
+    let sList = p.specifications;
+    if (typeof sList === 'string') {
+      try { sList = JSON.parse(sList); } catch (e) { sList = []; }
+    }
+    if (Array.isArray(sList) && sList.length > 0) {
+      specsLines = sList.filter(s => s && s.label && s.content).map(s => `📌 *${s.label}:* ${s.content}\n`).join('');
+    }
+  }
+
+  const descLine = p.description ? `\n✨ *Product Highlights:*\n${p.description}\n` : '';
+
+  return `🛍️ *${p.name}*\n🏷️ *SKU Code:* ${p.sku}\n${catLine}📏 *Size / Age:* ${p.size || 'Standard'}\n🎨 *Color:* ${p.color || 'Default'}\n${fabricLine}${specsLines}${priceLine}\n📦 *Warehouse Stock:* ${stockText}${descLine}\n✨ *GRM Garments Premium Quality Promise*\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n\n👉 *Reply 'YES' with your delivery address to confirm your booking!*`;
 }
 
+// -------------------------------------------------------------------------
+// DIRECT WHATSAPP SHARING MODAL & BROADCAST LOGIC (MULTI-RECIPIENT & PERSISTENT CAPTION)
+// -------------------------------------------------------------------------
+let DIRECT_SHARE_SELECTED_CUSTOMERS = new Set();
+let DIRECT_SHARE_SEARCH_QUERY = '';
+
 function openDirectShareModal(productId) {
-  const p = CRM_STATE.products.find(prod => prod.id === productId);
-  if (!p) return;
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
+  if (!p) {
+    showToast('Product Error', 'Product not found in catalog state.', 'error', 'rose');
+    return;
+  }
 
   document.getElementById('direct-share-product-id').value = p.id;
 
   const preview = document.getElementById('direct-share-product-preview');
   if (preview) {
     preview.innerHTML = `
-      <img src="${p.image}" class="w-12 h-12 object-cover rounded-xl border border-slate-200">
+      <img src="${(p.image && !p.image.includes('photo-1518831959646-742c3a14ebf7')) ? p.image : DEFAULT_GARMENT_PLACEHOLDER}" class="w-12 h-12 object-cover rounded-xl border border-slate-200 shadow-xs shrink-0">
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between">
           <span class="font-mono font-bold text-xs bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">${p.sku}</span>
@@ -6809,103 +10977,528 @@ function openDirectShareModal(productId) {
     `;
   }
 
-  // Populate recipient selector
-  const select = document.getElementById('direct-share-recipient-select');
-  if (select) {
-    let html = '';
-    if (ACTIVE_CUSTOMER_ID) {
-      const activeCust = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
-      if (activeCust) {
-        html += `<option value="${activeCust.id}">Active Chat: ${activeCust.name} (${activeCust.whatsapp || activeCust.phone})</option>`;
-      }
-    }
+  // 1. Initialize Recipient Selection
+  DIRECT_SHARE_SELECTED_CUSTOMERS.clear();
+  DIRECT_SHARE_SEARCH_QUERY = '';
+  const searchInput = document.getElementById('direct-share-search-input');
+  if (searchInput) searchInput.value = '';
 
-    CRM_STATE.customers.forEach(c => {
-      if (c.id !== ACTIVE_CUSTOMER_ID) {
-        html += `<option value="${c.id}">${c.name} — ${c.whatsapp || c.phone}</option>`;
-      }
-    });
+  const customPhoneInput = document.getElementById('direct-share-custom-phone');
+  if (customPhoneInput) customPhoneInput.value = '';
 
-    html += `<option value="CUSTOM">➕ Send to New WhatsApp Phone Number...</option>`;
-    select.innerHTML = html;
+  // By default, pre-select the active chat if available, or first customer
+  if (ACTIVE_CUSTOMER_ID && CRM_STATE.customers.some(c => String(c.id) === String(ACTIVE_CUSTOMER_ID))) {
+    DIRECT_SHARE_SELECTED_CUSTOMERS.add(String(ACTIVE_CUSTOMER_ID));
+  } else if (CRM_STATE.customers.length > 0) {
+    DIRECT_SHARE_SELECTED_CUSTOMERS.add(String(CRM_STATE.customers[0].id));
   }
 
-  // Set message text
-  document.getElementById('direct-share-message-text').value = generateProductWhatsAppText(p);
+  // Render contacts list
+  renderDirectShareContactsList();
+  updateDirectShareSummary();
+  closeDirectShareDropdown();
 
-  handleDirectShareRecipientChange(select ? select.value : '');
+  // 2. Load Message Content: check persistent edited content first, else generate default
+  loadProductShareCaption(p);
+
   openModal('modal-direct-share-product');
 }
 
-function handleDirectShareRecipientChange(val) {
-  const customWrapper = document.getElementById('direct-share-custom-phone-wrapper');
-  if (!customWrapper) return;
-  if (val === 'CUSTOM') {
-    customWrapper.classList.remove('hidden');
-    document.getElementById('direct-share-custom-phone').focus();
+function loadProductShareCaption(p) {
+  const localSaved = localStorage.getItem('CRM_PRODUCT_CAPTION_' + p.id);
+  const dbSaved = p.custom_caption || p.customCaption;
+  const savedContent = (dbSaved && dbSaved.trim()) ? dbSaved.trim() : (localSaved && localSaved.trim() ? localSaved.trim() : null);
+
+  const textarea = document.getElementById('direct-share-message-text');
+  if (!textarea) return;
+
+  if (savedContent) {
+    textarea.value = savedContent;
+    updateDirectShareCaptionBadge(true);
   } else {
-    customWrapper.classList.add('hidden');
+    textarea.value = generateProductWhatsAppText(p);
+    updateDirectShareCaptionBadge(false);
   }
 }
 
-async function handleDirectShareSubmit(e) {
-  e.preventDefault();
+function updateDirectShareCaptionBadge(isCustom) {
+  const badge = document.getElementById('direct-share-caption-badge');
+  const hint = document.getElementById('direct-share-caption-hint');
+  if (!badge) return;
 
-  const idVal = document.getElementById('direct-share-product-id').value;
-  const p = CRM_STATE.products.find(prod => String(prod.id) === String(idVal));
-  if (!p) return;
-
-  const recipientVal = document.getElementById('direct-share-recipient-select').value;
-  let targetPhone = '';
-  let customerObj = null;
-
-  if (recipientVal === 'CUSTOM') {
-    targetPhone = document.getElementById('direct-share-custom-phone').value.trim();
-    if (!targetPhone) {
-      alert('Please enter a valid WhatsApp phone number');
-      return;
+  if (isCustom) {
+    badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1';
+    badge.innerHTML = `<span class="material-symbols-outlined text-[12px]">bookmark</span> Custom Saved Caption`;
+    if (hint) {
+      hint.innerHTML = `✅ <strong>Custom saved content is active:</strong> This edited content will be automatically loaded and dispatched every time you share this product.`;
     }
   } else {
-    customerObj = CRM_STATE.customers.find(c => c.id === recipientVal);
-    if (customerObj) {
-      targetPhone = customerObj.whatsapp || customerObj.phone;
+    badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200';
+    badge.innerText = 'Default Product Details';
+    if (hint) {
+      hint.innerHTML = `💡 Edit the content above and click <strong>"Save Edited Content"</strong> (or Send). Next time, this edited content will be automatically loaded and shared every time!`;
+    }
+  }
+}
+
+function handleDirectShareCaptionInput() {
+  const badge = document.getElementById('direct-share-caption-badge');
+  if (badge && !badge.innerText.includes('Unsaved')) {
+    badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1';
+    badge.innerHTML = `<span class="material-symbols-outlined text-[12px]">edit</span> Edited Content (Unsaved)`;
+  }
+}
+
+async function saveDirectShareCustomCaption(silent = false) {
+  const productId = document.getElementById('direct-share-product-id').value;
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
+  if (!p) return;
+
+  const text = (document.getElementById('direct-share-message-text').value || '').trim();
+  if (!text) {
+    if (!silent) showToast('Notice', 'Caption cannot be empty.', 'warning', 'amber');
+    return;
+  }
+
+  // 1. Save in-memory
+  p.custom_caption = text;
+  p.customCaption = text;
+
+  // 2. Save in localStorage for instant retrieval across browser reloads
+  try {
+    localStorage.setItem('CRM_PRODUCT_CAPTION_' + p.id, text);
+  } catch (e) {}
+
+  // 3. Persist to MySQL database via API
+  try {
+    fetch('api.php?action=save_product_caption', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: p.id, custom_caption: text })
+    }).catch(err => console.warn('[Caption Save API Warning]:', err));
+  } catch (e) {}
+
+  updateDirectShareCaptionBadge(true);
+
+  if (!silent) {
+    showToast('Content Saved', `Edited caption saved! This content will now be used for every share of ${p.sku}.`, 'bookmark', 'purple');
+    playChime('order');
+  }
+}
+
+async function resetDirectShareCaptionToDefault() {
+  const productId = document.getElementById('direct-share-product-id').value;
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
+  if (!p) return;
+
+  if (!confirm(`Reset message caption for ${p.sku} back to auto-generated product details?`)) {
+    return;
+  }
+
+  p.custom_caption = '';
+  p.customCaption = '';
+  try {
+    localStorage.removeItem('CRM_PRODUCT_CAPTION_' + p.id);
+    fetch('api.php?action=save_product_caption', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: p.id, custom_caption: '' })
+    }).catch(e => {});
+  } catch (e) {}
+
+  document.getElementById('direct-share-message-text').value = generateProductWhatsAppText(p);
+  updateDirectShareCaptionBadge(false);
+  showToast('Caption Reset', `Restored auto-generated specifications for ${p.sku}.`, 'restart_alt', 'blue');
+}
+
+// -------------------------------------------------------------------------
+// MULTI-CONTACT CHECKBOX DROPDOWN LOGIC
+// -------------------------------------------------------------------------
+function toggleDirectShareDropdown(e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('direct-share-dropdown-panel');
+  const chevron = document.getElementById('direct-share-dropdown-chevron');
+  if (!panel) return;
+
+  const isHidden = panel.classList.contains('hidden');
+  if (isHidden) {
+    panel.classList.remove('hidden');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+    renderDirectShareContactsList();
+    const search = document.getElementById('direct-share-search-input');
+    if (search) search.focus();
+  } else {
+    closeDirectShareDropdown();
+  }
+}
+
+function closeDirectShareDropdown() {
+  const panel = document.getElementById('direct-share-dropdown-panel');
+  const chevron = document.getElementById('direct-share-dropdown-chevron');
+  if (panel) panel.classList.add('hidden');
+  if (chevron) chevron.style.transform = 'rotate(0deg)';
+}
+
+function filterDirectShareContactsList(query) {
+  DIRECT_SHARE_SEARCH_QUERY = (query || '').toLowerCase().trim();
+  renderDirectShareContactsList();
+}
+
+function clearDirectShareSearch() {
+  DIRECT_SHARE_SEARCH_QUERY = '';
+  const input = document.getElementById('direct-share-search-input');
+  if (input) input.value = '';
+  renderDirectShareContactsList();
+}
+
+function renderDirectShareContactsList() {
+  const container = document.getElementById('direct-share-contacts-list');
+  const countLabel = document.getElementById('direct-share-matching-count');
+  if (!container) return;
+
+  const query = DIRECT_SHARE_SEARCH_QUERY;
+  let customers = CRM_STATE.customers || [];
+
+  // Filter based on search query
+  if (query) {
+    customers = customers.filter(c => {
+      const name = (c.name || '').toLowerCase();
+      const phone = (c.whatsapp || c.phone || '').toLowerCase();
+      return name.includes(query) || phone.includes(query);
+    });
+  }
+
+  if (countLabel) {
+    countLabel.innerText = query ? `Matching: ${customers.length}` : `All (${customers.length})`;
+  }
+
+  if (customers.length === 0) {
+    container.innerHTML = `
+      <div class="py-6 text-center text-slate-400">
+        <span class="material-symbols-outlined text-[24px] mb-1">person_search</span>
+        <p class="text-xs font-semibold">No contacts found</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Pin Active Customer to top if in list
+  const activeCust = ACTIVE_CUSTOMER_ID ? customers.find(c => String(c.id) === String(ACTIVE_CUSTOMER_ID)) : null;
+  const otherCusts = customers.filter(c => String(c.id) !== String(ACTIVE_CUSTOMER_ID));
+  const orderedList = activeCust ? [activeCust, ...otherCusts] : otherCusts;
+
+  container.innerHTML = orderedList.map(c => {
+    const isChecked = DIRECT_SHARE_SELECTED_CUSTOMERS.has(String(c.id));
+    const isActive = String(c.id) === String(ACTIVE_CUSTOMER_ID);
+    const phone = c.whatsapp || c.phone || 'No phone';
+
+    return `
+      <div onclick="toggleDirectShareCustomer('${c.id}')" class="flex items-center justify-between p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition select-none ${isActive ? 'bg-emerald-50/60 border border-emerald-200/80' : ''}">
+        <div class="flex items-center gap-2.5 min-w-0 pr-2">
+          <input type="checkbox" 
+                 id="ds-chk-${c.id}" 
+                 ${isChecked ? 'checked' : ''} 
+                 onclick="event.stopPropagation(); toggleDirectShareCustomer('${c.id}', this.checked)"
+                 class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer">
+          <div class="w-7 h-7 rounded-lg ${isActive ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'} flex items-center justify-center font-bold text-[10px] shrink-0">
+            ${(c.name || 'C').charAt(0).toUpperCase()}
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-slate-800 text-xs truncate max-w-[170px]">${c.name}</span>
+              ${isActive ? '<span class="px-1.5 py-0.2 bg-emerald-600 text-white font-extrabold text-[9px] rounded shadow-2xs shrink-0">Active Chat</span>' : ''}
+            </div>
+            <span class="font-mono text-[10px] text-slate-400 block">${phone}</span>
+          </div>
+        </div>
+        <div>
+          ${isChecked 
+            ? '<span class="text-emerald-700 font-bold text-[10px] px-1.5 py-0.5 bg-emerald-100 rounded-md">Selected</span>' 
+            : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleDirectShareCustomer(customerId, forceChecked = null) {
+  const cidStr = String(customerId);
+  if (forceChecked !== null) {
+    if (forceChecked) DIRECT_SHARE_SELECTED_CUSTOMERS.add(cidStr);
+    else DIRECT_SHARE_SELECTED_CUSTOMERS.delete(cidStr);
+  } else {
+    if (DIRECT_SHARE_SELECTED_CUSTOMERS.has(cidStr)) {
+      DIRECT_SHARE_SELECTED_CUSTOMERS.delete(cidStr);
+    } else {
+      DIRECT_SHARE_SELECTED_CUSTOMERS.add(cidStr);
     }
   }
 
-  const messageText = document.getElementById('direct-share-message-text').value.trim();
-  if (!messageText) return;
+  // Update checkbox in DOM if visible
+  const chk = document.getElementById(`ds-chk-${cidStr}`);
+  if (chk) chk.checked = DIRECT_SHARE_SELECTED_CUSTOMERS.has(cidStr);
 
-  const newMsg = {
-    id: Date.now(),
-    sender: 'staff',
-    text: messageText,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    status: 'SENDING'
-  };
+  renderDirectShareContactsList();
+  updateDirectShareSummary();
+}
 
-  if (customerObj) {
-    if (!CRM_STATE.conversations[customerObj.id]) {
-      CRM_STATE.conversations[customerObj.id] = [];
+function selectAllDirectShareContacts(selectAll) {
+  const customers = CRM_STATE.customers || [];
+  if (selectAll) {
+    customers.forEach(c => DIRECT_SHARE_SELECTED_CUSTOMERS.add(String(c.id)));
+  } else {
+    DIRECT_SHARE_SELECTED_CUSTOMERS.clear();
+  }
+  renderDirectShareContactsList();
+  updateDirectShareSummary();
+}
+
+function selectActiveChatOnly() {
+  DIRECT_SHARE_SELECTED_CUSTOMERS.clear();
+  if (ACTIVE_CUSTOMER_ID) {
+    DIRECT_SHARE_SELECTED_CUSTOMERS.add(String(ACTIVE_CUSTOMER_ID));
+  } else if (CRM_STATE.customers.length > 0) {
+    DIRECT_SHARE_SELECTED_CUSTOMERS.add(String(CRM_STATE.customers[0].id));
+  }
+  renderDirectShareContactsList();
+  updateDirectShareSummary();
+}
+
+function getDirectShareCustomNumbers() {
+  const input = document.getElementById('direct-share-custom-phone');
+  if (!input) return [];
+  const val = input.value.trim();
+  if (!val) return [];
+  return val.split(',').map(s => s.trim()).filter(s => s.length >= 7);
+}
+
+function updateDirectShareSummary() {
+  const countBadge = document.getElementById('direct-share-selected-count-badge');
+  const summaryText = document.getElementById('direct-share-dropdown-summary');
+  const submitBtnText = document.getElementById('direct-share-submit-btn-text');
+
+  const customerCount = DIRECT_SHARE_SELECTED_CUSTOMERS.size;
+  const customNumbers = getDirectShareCustomNumbers();
+  const totalRecipients = customerCount + customNumbers.length;
+
+  if (countBadge) {
+    countBadge.innerText = `${totalRecipients} Recipient${totalRecipients === 1 ? '' : 's'}`;
+  }
+
+  if (summaryText) {
+    if (customerCount === 0) {
+      summaryText.innerText = customNumbers.length > 0 ? `Custom Number(s) Only (${customNumbers.length})` : 'Choose contacts from list...';
+    } else if (customerCount === 1) {
+      const singleId = Array.from(DIRECT_SHARE_SELECTED_CUSTOMERS)[0];
+      const cust = (CRM_STATE.customers || []).find(c => String(c.id) === String(singleId));
+      const isAct = String(singleId) === String(ACTIVE_CUSTOMER_ID);
+      summaryText.innerText = `${isAct ? 'Active Chat: ' : ''}${cust ? cust.name : '1 Contact'}`;
+    } else {
+      summaryText.innerText = `${customerCount} Contacts Selected`;
     }
-    CRM_STATE.conversations[customerObj.id].push(newMsg);
-    if (ACTIVE_CUSTOMER_ID === customerObj.id) {
-      renderChatMessages();
+  }
+
+  if (submitBtnText) {
+    submitBtnText.innerText = `Send to WhatsApp (${totalRecipients} Recipient${totalRecipients === 1 ? '' : 's'})`;
+  }
+}
+
+// Global click outside listener to close dropdown
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('direct-share-dropdown-panel');
+  const trigger = document.getElementById('direct-share-dropdown-trigger');
+  if (panel && !panel.classList.contains('hidden')) {
+    if (!panel.contains(e.target) && !trigger.contains(e.target)) {
+      closeDirectShareDropdown();
     }
+  }
+});
+
+// -------------------------------------------------------------------------
+// DIRECT WHATSAPP MULTI-DISPATCH SUBMISSION
+// -------------------------------------------------------------------------
+async function handleDirectShareSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const idVal = document.getElementById('direct-share-product-id').value;
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(idVal));
+  if (!p) {
+    showToast('Product Error', 'Product details not loaded. Please select product again.', 'error', 'rose');
+    return;
+  }
+
+  const messageText = (document.getElementById('direct-share-message-text').value || '').trim();
+  if (!messageText) {
+    showToast('Notice', 'Please enter or generate a message caption before sending.', 'warning', 'amber');
+    return;
+  }
+
+  // 1. Gather all selected recipients
+  const selectedCustIds = Array.from(DIRECT_SHARE_SELECTED_CUSTOMERS);
+  const customPhones = getDirectShareCustomNumbers();
+  const totalCount = selectedCustIds.length + customPhones.length;
+
+  if (totalCount === 0) {
+    showToast('Select Recipients', 'Please select at least one contact or enter a custom phone number.', 'warning', 'amber');
+    return;
+  }
+
+  // 2. Automatically save the edited content so subsequent shares reuse this exact caption!
+  saveDirectShareCustomCaption(true); // silent = true
+
+  const validImg = (p.image && !p.image.includes('photo-1518831959646-742c3a14ebf7')) ? p.image : null;
+  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Disable button to prevent double-clicks
+  const submitBtn = document.getElementById('direct-share-submit-btn');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
   }
 
   closeModal('modal-direct-share-product');
   playChime('order');
-  showToast('WhatsApp Dispatching', `Sending ${p.sku} card to ${targetPhone}...`, 'send', 'emerald');
+  showToast('WhatsApp Dispatching', `Broadcasting ${p.sku} to ${totalCount} recipient(s)...`, 'send', 'emerald');
 
-  // Send via live Baileys WhatsApp Bridge
-  dispatchWhatsAppOutbound(targetPhone, messageText, newMsg);
+  let successCount = 0;
+  let failCount = 0;
+
+  // 3. Dispatch to all selected CRM Customers SEQUENTIALLY
+  for (let i = 0; i < selectedCustIds.length; i++) {
+    const cid = selectedCustIds[i];
+    const cust = (CRM_STATE.customers || []).find(c => String(c.id) === String(cid));
+    if (!cust) continue;
+
+    const rawPhone = cust.whatsapp || cust.phone;
+    if (!rawPhone) continue;
+
+    // Create optimistic message in CRM State
+    const msgId = Date.now() + Math.floor(Math.random() * 1000) + i;
+    const newMsg = {
+      id: msgId,
+      sender: 'staff',
+      text: messageText,
+      type: validImg ? 'image' : 'text',
+      media_url: validImg,
+      time: timeStr,
+      status: 'SENDING'
+    };
+
+    if (!CRM_STATE.conversations[cust.id]) {
+      CRM_STATE.conversations[cust.id] = [];
+    }
+    CRM_STATE.conversations[cust.id].push(newMsg);
+
+    // Update active query in CRM_STATE to REPLIED
+    const query = (CRM_STATE.queries || []).find(q => String(q.customerId) === String(cust.id));
+    if (query) {
+      query.lastMessage = `Staff: "${messageText.slice(0, 45)}..."`;
+      query.status = 'REPLIED';
+      query.unreadCount = 0;
+    }
+
+    if (String(ACTIVE_CUSTOMER_ID) === String(cust.id)) {
+      renderChatMessages();
+    }
+
+    try {
+      const delivered = await dispatchWhatsAppOutbound(
+        rawPhone, 
+        messageText, 
+        newMsg, 
+        cust.jid || null, 
+        cust.accountId || null, 
+        true, // silent individual toasts
+        validImg, 
+        cust.id
+      );
+      if (delivered) {
+        newMsg.status = 'DELIVERED';
+        successCount++;
+      } else {
+        newMsg.status = 'SENT';
+        successCount++;
+      }
+    } catch (err) {
+      console.warn(`[Direct WA Dispatch Error for ${rawPhone}]:`, err);
+      newMsg.status = 'FAILED';
+      failCount++;
+    }
+
+    // Small delay between sends to prevent Baileys socket congestion
+    if (i < selectedCustIds.length - 1) {
+      await new Promise(r => setTimeout(r, 350));
+    }
+  }
+
+  // 4. Dispatch to any Custom Phone Numbers SEQUENTIALLY
+  for (let j = 0; j < customPhones.length; j++) {
+    const phone = customPhones[j];
+    const customMsg = {
+      id: Date.now() + Math.floor(Math.random() * 1000) + 100 + j,
+      sender: 'staff',
+      text: messageText,
+      type: validImg ? 'image' : 'text',
+      media_url: validImg,
+      time: timeStr,
+      status: 'SENDING'
+    };
+
+    try {
+      const delivered = await dispatchWhatsAppOutbound(
+        phone, 
+        messageText, 
+        customMsg, 
+        null, 
+        ACTIVE_SEND_ACCOUNT_ID || 'account_1', 
+        true, 
+        validImg, 
+        null
+      );
+      if (delivered) {
+        customMsg.status = 'DELIVERED';
+        successCount++;
+      } else {
+        customMsg.status = 'SENT';
+        successCount++;
+      }
+    } catch (err) {
+      console.warn(`[Direct WA Custom Phone Error for ${phone}]:`, err);
+      failCount++;
+    }
+
+    if (j < customPhones.length - 1) {
+      await new Promise(r => setTimeout(r, 350));
+    }
+  }
+
+  // 5. CRITICAL: Persist CRM State to localStorage & sync all UI elements
+  saveCRMState();
+  if (typeof renderInboxConversationList === 'function') renderInboxConversationList();
+  if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+  if (typeof renderChatMessages === 'function' && ACTIVE_CUSTOMER_ID) renderChatMessages();
+
+  // Re-enable submit button
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+  }
+
+  // 6. Comprehensive Result Toast
+  if (failCount === 0) {
+    showToast('Product Dispatched! 🚀', `Successfully sent ${p.sku} to ${successCount} recipient(s)!`, 'done_all', 'emerald');
+    playChime('delivered');
+  } else {
+    showToast('Dispatch Completed', `Sent to ${successCount} recipient(s). ${failCount} recipient(s) failed.`, 'warning', 'amber');
+  }
 }
 
 function copyProductWhatsAppText(productId) {
   const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
   if (!p) return;
 
-  const text = generateProductWhatsAppText(p);
+  const currentArea = document.getElementById('direct-share-message-text');
+  const text = (currentArea && currentArea.value) ? currentArea.value : (p.custom_caption || p.customCaption || generateProductWhatsAppText(p));
   navigator.clipboard.writeText(text).then(() => {
     showToast('Copied to Clipboard', `Formatted WhatsApp card for ${p.sku} copied!`, 'content_copy', 'emerald');
   }).catch(() => {
@@ -6913,25 +11506,61 @@ function copyProductWhatsAppText(productId) {
   });
 }
 
+// 1-Click direct fallback to WhatsApp Web / App
+function openDirectWhatsAppWeb(productId) {
+  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
+  if (!p) return;
+
+  const currentArea = document.getElementById('direct-share-message-text');
+  const text = (currentArea && currentArea.value) ? currentArea.value : (p.custom_caption || p.customCaption || generateProductWhatsAppText(p));
+
+  // Determine phone to open
+  let targetPhone = '';
+  const selectedCustIds = Array.from(DIRECT_SHARE_SELECTED_CUSTOMERS);
+  const customPhones = getDirectShareCustomNumbers();
+
+  if (customPhones.length > 0) {
+    targetPhone = customPhones[0];
+  } else if (selectedCustIds.length > 0) {
+    const cust = (CRM_STATE.customers || []).find(c => String(c.id) === String(selectedCustIds[0]));
+    if (cust) targetPhone = cust.whatsapp || cust.phone;
+  } else if (ACTIVE_CUSTOMER_ID) {
+    const cust = (CRM_STATE.customers || []).find(c => String(c.id) === String(ACTIVE_CUSTOMER_ID));
+    if (cust) targetPhone = cust.whatsapp || cust.phone;
+  }
+
+  let cleanPhone = (targetPhone || '').replace(/[^0-9]/g, '');
+  if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+
+  const waUrl = cleanPhone 
+    ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`
+    : `https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+
+  window.open(waUrl, '_blank');
+  showToast('WhatsApp Web Opened', 'Opening direct chat preview in WhatsApp Web!', 'open_in_new', 'emerald');
+}
+
 async function refreshCatalogStockFromAPI() {
-  showToast('Syncing Stock', 'Fetching latest warehouse stock from database...', 'sync', 'blue');
+  showToast('Syncing Stock', 'Fetching latest warehouse stock and catalog from database...', 'sync', 'blue');
   try {
     const res = await fetch('api.php?action=get_all');
     if (res.ok) {
       const data = await res.json();
-      if (data.products && Array.isArray(data.products) && data.products.length > 0) {
-        CRM_STATE.products = data.products.map(p => ({
-          id: p.id,
-          sku: p.sku,
-          name: p.name,
-          category: p.category,
-          size: p.size,
-          color: p.color,
-          price: parseFloat(p.price) || 0,
-          physicalStock: parseInt(p.physical_stock ?? p.physicalStock) || 0,
-          reservedStock: parseInt(p.reserved_stock ?? p.reservedStock) || 0,
-          image: p.image
-        }));
+      const payload = data.data || data;
+      if (payload.products && Array.isArray(payload.products)) {
+        mergeCatalogProductsWithDB(payload.products);
+      }
+      if (payload.categories && Array.isArray(payload.categories) && payload.categories.length > 0) {
+        CRM_STATE.categories = payload.categories;
+      }
+      if (payload.subcategories && Array.isArray(payload.subcategories) && payload.subcategories.length > 0) {
+        CRM_STATE.subcategories = payload.subcategories;
+      }
+      if (payload.attributes) {
+        CRM_STATE.attributes = payload.attributes;
+      }
+      if (typeof populateCatalogCategoryFilters === 'function') {
+        populateCatalogCategoryFilters();
       }
     }
   } catch (err) {
@@ -6939,7 +11568,7 @@ async function refreshCatalogStockFromAPI() {
   }
   filterCatalogGrid();
   updateOrderProductDropdown();
-  showToast('Stock Synchronized', 'All garment inventory levels are live and up to date.', 'check_circle', 'emerald');
+  showToast('Stock Synchronized', 'All garment inventory levels and catalog taxonomy are live.', 'check_circle', 'emerald');
 }
 
 function renderOrdersTable() {
@@ -8324,11 +12953,23 @@ function deleteStaffMember(staffId) {
 // 14. UTILITY & MODAL CONTROLLERS
 // =========================================================================
 function openModal(id) {
+  if (id === 'modal-auto-reply-settings') {
+    openAutoReplyModal();
+    return;
+  }
+  if (id === 'modal-broadcast-template') {
+    openBroadcastModal();
+    return;
+  }
   const el = document.getElementById(id);
   if (el) el.classList.remove('hidden');
 }
 
 function closeModal(id) {
+  if (id === 'modal-auto-reply-settings' || id === 'modal-broadcast-template') {
+    switchInboxSubmodule('chats');
+    return;
+  }
   const el = document.getElementById(id);
   if (el) el.classList.add('hidden');
 }
@@ -8337,6 +12978,13 @@ function logAudit(action, module, details) {
   const user = ACTIVE_ROLE === 'admin' ? 'Super Admin' : (CRM_STATE.staffList.find(s => s.id === ACTIVE_ROLE)?.name || 'Staff');
   const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   CRM_STATE.auditLogs.unshift({ timestamp, user, action, module, details });
+
+  // Asynchronously persist audit log to MySQL Database
+  fetch('api.php?action=save_audit_log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user, action, module, details, timestamp })
+  }).catch(() => {});
 }
 
 function updateBadgeCounters() {
@@ -8587,8 +13235,8 @@ function openBroadcastModal() {
 
   renderBroadcastTemplateDropdown('festive_offer');
   applyBroadcastPreset('festive_offer');
-  renderCustomTagsTray();
   refreshBroadcastAutoFetchedNumbers();
+  renderDynamicTemplateFields();
   updateBroadcastPreview();
 
   // Reset Broadcast Progress UI
@@ -8606,7 +13254,15 @@ function openBroadcastModal() {
   const cancelBtn = document.getElementById('btn-bcast-cancel');
   if (cancelBtn) cancelBtn.disabled = false;
 
-  openModal('modal-broadcast-template');
+  // Reset collapsible numbers editor
+  const collapseNumbers = document.getElementById('bcast-numbers-editor-collapse');
+  if (collapseNumbers) collapseNumbers.classList.add('hidden');
+  const toggleIcon = document.getElementById('bcast-numbers-toggle-icon');
+  if (toggleIcon) toggleIcon.innerText = 'expand_more';
+  const toggleText = document.getElementById('bcast-numbers-toggle-text');
+  if (toggleText) toggleText.innerText = 'View / Paste Custom Numbers';
+
+  switchView('inbox', 'broadcast');
 }
 
 function closeBroadcastModal() {
@@ -8616,30 +13272,13 @@ function closeBroadcastModal() {
     }
     BROADCAST_CANCEL_FLAG = true;
   }
-  closeModal('modal-broadcast-template');
+  switchInboxSubmodule('chats');
 }
 
 let CURRENT_BROADCAST_TEMPLATE_TITLE = 'Template Message Text';
 
 function editBroadcastTemplateTitle() {
-  const currentTitle = CURRENT_BROADCAST_TEMPLATE_TITLE || 'Template Message Text';
-  const newTitle = prompt('Edit Template Heading / Title Name:', currentTitle);
-  if (newTitle !== null && newTitle.trim() !== '') {
-    CURRENT_BROADCAST_TEMPLATE_TITLE = newTitle.trim();
-    updateBroadcastTemplateTitleUI();
-    
-    // Also sync selected preset label if applicable
-    const presetSelect = document.getElementById('bcast-preset-select');
-    if (presetSelect && presetSelect.value && BROADCAST_PRESETS_DATA[presetSelect.value]) {
-      BROADCAST_PRESETS_DATA[presetSelect.value].label = `📋 ${CURRENT_BROADCAST_TEMPLATE_TITLE}`;
-      renderBroadcastTemplateDropdown(presetSelect.value);
-      try {
-        localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-      } catch (e) {}
-    }
-    showToast('Template Title Updated', `Heading changed to "${CURRENT_BROADCAST_TEMPLATE_TITLE}"`, 'edit_note', 'indigo');
-    if (typeof playChime === 'function') playChime('order');
-  }
+  handleRenameCurrentTemplate();
 }
 
 function updateBroadcastTemplateTitleUI() {
@@ -8659,6 +13298,7 @@ function applyBroadcastPreset(presetKey) {
     CURRENT_BROADCAST_TEMPLATE_TITLE = cleanLabel || 'Template Message Text';
     updateBroadcastTemplateTitleUI();
   }
+  renderDynamicTemplateFields();
   updateBroadcastPreview();
 }
 
@@ -8679,44 +13319,43 @@ function insertBroadcastVariable(varTag) {
   } else {
     msgInput.value += formattedTag;
   }
+  renderDynamicTemplateFields();
   updateBroadcastPreview();
 }
 
-// Manual Custom Tag Handler: Adds/Updates a user-defined placeholder & replacement value
-function handleApplyManualCustomTag() {
-  const nameInput = document.getElementById('manual-tag-name');
-  const valInput = document.getElementById('manual-tag-value');
-  if (!nameInput) return;
+// Toggle Collapsible Phone Numbers Textarea
+function toggleBroadcastNumbersEditor() {
+  const container = document.getElementById('bcast-numbers-editor-collapse');
+  const icon = document.getElementById('bcast-numbers-toggle-icon');
+  const text = document.getElementById('bcast-numbers-toggle-text');
+  if (!container) return;
 
-  let rawKey = nameInput.value.trim().replace(/^\{\{|\}\}$/g, '').trim();
-  if (!rawKey) {
-    alert('Please enter a tag name (e.g. discount, offer_code, product_name, event_date).');
-    nameInput.focus();
-    return;
+  const isHidden = container.classList.contains('hidden');
+  if (isHidden) {
+    container.classList.remove('hidden');
+    if (icon) icon.innerText = 'expand_less';
+    if (text) text.innerText = 'Hide Phone Numbers Editor';
+    const ta = document.getElementById('bcast-target-numbers');
+    if (ta) ta.focus();
+  } else {
+    container.classList.add('hidden');
+    if (icon) icon.innerText = 'expand_more';
+    if (text) text.innerText = 'View / Paste Custom Numbers';
   }
-
-  // Normalize tag identifier (lowercase alphanumeric with underscores)
-  const cleanKey = rawKey.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-  const tagVal = valInput ? valInput.value.trim() : '';
-
-  if (!cleanKey) {
-    alert('Please enter a valid tag name containing letters or numbers.');
-    return;
-  }
-
-  BROADCAST_CUSTOM_TAGS[cleanKey] = tagVal || `[${cleanKey}]`;
-
-  // Insert tag into textarea at cursor position
-  insertBroadcastVariable(`{{${cleanKey}}}`);
-
-  // Re-render tray & preview
-  renderCustomTagsTray();
-  updateBroadcastPreview();
-
-  showToast('Custom Tag Applied', `Tag "{{${cleanKey}}}" set to "${BROADCAST_CUSTOM_TAGS[cleanKey]}" and inserted!`, 'check_circle', 'indigo');
-  if (typeof playChime === 'function') playChime('order');
 }
 
+// Real-Time Composer Input Listener
+function handleBroadcastMessageInput() {
+  const msgInput = document.getElementById('bcast-message-text');
+  const msgCharCount = document.getElementById('bcast-message-char-count');
+  if (msgCharCount && msgInput) {
+    msgCharCount.innerText = `${msgInput.value.length} chars`;
+  }
+  renderDynamicTemplateFields(true);
+  updateBroadcastPreview();
+}
+
+// Default values for common tags
 function getDefaultTagValue(key) {
   const brand = (typeof getBrandName === 'function') ? getBrandName() : 'Blue Berry 💙';
   const line = (CRM_STATE && CRM_STATE.whatsappAccount && CRM_STATE.whatsappAccount.phoneNumber) ? CRM_STATE.whatsappAccount.phoneNumber : '+91 86680 07593';
@@ -8734,7 +13373,9 @@ function getDefaultTagValue(key) {
     case 'business_name': return brand;
     case 'line_phone': return line;
     case 'customer_phone': return 'Auto per Customer';
+    case 'phone': return 'Auto per Customer';
     case 'today_date': return todayStr;
+    case 'date': return todayStr;
     case 'staff_name': return staff;
     case 'offer_discount': return '15% OFF';
     case 'product_name': return 'Festive Garments Collection';
@@ -8743,71 +13384,183 @@ function getDefaultTagValue(key) {
   }
 }
 
-// Render active custom & system tags pills in the broadcast modal with 1-click edit & insert
-function renderCustomTagsTray() {
-  const tray = document.getElementById('manual-custom-tags-tray');
-  if (!tray) return;
+// RENDER INTUITIVE DYNAMIC VALUE INPUTS (Easily Set Values)
+function renderDynamicTemplateFields(preserveActiveFocus = false) {
+  const container = document.getElementById('bcast-dynamic-fields-container');
+  if (!container) return;
 
-  const entries = Object.entries(BROADCAST_CUSTOM_TAGS || {});
-  if (entries.length === 0) {
-    tray.innerHTML = `<span class="text-[10px] text-slate-400 italic">No tags defined yet.</span>`;
+  const msgInput = document.getElementById('bcast-message-text');
+  const rawText = msgInput ? msgInput.value : '';
+
+  // Extract all {{tag}} occurrences
+  const matches = Array.from(rawText.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)).map(m => m[1].toLowerCase());
+  const uniqueTags = [...new Set(matches)];
+
+  if (uniqueTags.length === 0) {
+    container.innerHTML = `
+      <div class="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-center text-slate-400 text-xs flex items-center justify-center gap-1.5">
+        <span class="material-symbols-outlined text-[16px]">info</span>
+        <span>No dynamic placeholders found in message. Use the Quick Insert buttons above to insert tags.</span>
+      </div>
+    `;
     return;
   }
 
-  tray.innerHTML = entries.map(([key, val]) => {
-    const isSys = SYSTEM_TAG_KEYS.includes(key);
-    const borderCls = isSys ? 'border-indigo-200 bg-white hover:border-indigo-400' : 'border-emerald-200 bg-white hover:border-emerald-400';
-    const tagCls = isSys ? 'text-indigo-700 hover:text-indigo-950' : 'text-emerald-800 hover:text-emerald-950';
+  // Pre-seed any new tag with default if not existing in BROADCAST_CUSTOM_TAGS
+  uniqueTags.forEach(tag => {
+    if (BROADCAST_CUSTOM_TAGS[tag] === undefined) {
+      BROADCAST_CUSTOM_TAGS[tag] = getDefaultTagValue(tag) || `[${tag}]`;
+    }
+  });
+
+  // Preserve active input focus if re-rendering during keystroke
+  let activeTag = null;
+  let activeCursorPos = 0;
+  if (preserveActiveFocus && document.activeElement && document.activeElement.id && document.activeElement.id.startsWith('dyn-tag-input-')) {
+    activeTag = document.activeElement.id.replace('dyn-tag-input-', '');
+    activeCursorPos = document.activeElement.selectionStart || 0;
+  }
+
+  const html = uniqueTags.map(tag => {
+    const isCustomerName = (tag === 'customer_name');
+    const isCustomerPhone = (tag === 'customer_phone' || tag === 'phone');
+    const isSystem = SYSTEM_TAG_KEYS.includes(tag);
+    const rawVal = BROADCAST_CUSTOM_TAGS[tag] !== undefined ? BROADCAST_CUSTOM_TAGS[tag] : getDefaultTagValue(tag);
+    const safeVal = String(rawVal || '').replace(/"/g, '&quot;');
+
+    if (isCustomerName) {
+      return `
+        <div class="flex items-center justify-between p-2 px-3 rounded-lg bg-emerald-50/70 border border-emerald-200 shadow-2xs">
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-bold text-xs text-emerald-950 bg-white border border-emerald-300 px-2 py-0.5 rounded shadow-2xs">{{${tag}}}</span>
+            <span class="text-[11px] text-emerald-800 font-semibold flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-emerald-600">auto_awesome</span>
+              <span>Automatically filled with each customer's name</span>
+            </span>
+          </div>
+          <span class="text-[10px] text-emerald-700 font-mono bg-emerald-100/80 px-2 py-0.5 rounded-full font-bold">Auto-Personalized</span>
+        </div>
+      `;
+    }
+
+    if (isCustomerPhone) {
+      return `
+        <div class="flex items-center justify-between p-2 px-3 rounded-lg bg-emerald-50/70 border border-emerald-200 shadow-2xs">
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-bold text-xs text-emerald-950 bg-white border border-emerald-300 px-2 py-0.5 rounded shadow-2xs">{{${tag}}}</span>
+            <span class="text-[11px] text-emerald-800 font-semibold flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-emerald-600">phone</span>
+              <span>Recipient's WhatsApp Phone Number</span>
+            </span>
+          </div>
+          <span class="text-[10px] text-emerald-700 font-mono bg-emerald-100/80 px-2 py-0.5 rounded-full font-bold">Auto-Resolved</span>
+        </div>
+      `;
+    }
+
+    // Friendly display label for tag
+    let friendlyLabel = tag.replace(/_/g, ' ');
+    friendlyLabel = friendlyLabel.charAt(0).toUpperCase() + friendlyLabel.slice(1);
 
     return `
-      <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${borderCls} shadow-2xs text-xs transition">
-        <button type="button" onclick="insertBroadcastVariable('{{${key}}}')" class="font-mono font-bold ${tagCls} transition flex items-center gap-1" title="Click to insert {{${key}}} into message text at cursor">
-          <span class="${isSys ? 'text-indigo-400' : 'text-emerald-500'} font-bold">+</span>
-          <span>{{${key}}}</span>
-        </button>
-        <span class="text-slate-400 text-[10px] select-none">=</span>
-        <span class="font-semibold text-slate-800 text-[11px] truncate max-w-[130px] bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200" title="${val}">"${val}"</span>
-        <button type="button" onclick="editManualCustomTag('${key}')" class="text-slate-400 hover:text-indigo-600 p-0.5 rounded transition" title="Change / edit replacement value for {{${key}}}">
-          <span class="material-symbols-outlined text-[14px]">edit</span>
-        </button>
-        ${isSys ? `
-          <button type="button" onclick="resetSystemTagValue('${key}')" class="text-slate-300 hover:text-amber-600 p-0.5 rounded transition" title="Reset {{${key}}} to default live value">
-            <span class="material-symbols-outlined text-[14px]">restart_alt</span>
-          </button>
-        ` : `
-          <button type="button" onclick="removeManualCustomTag('${key}')" class="text-slate-400 hover:text-rose-600 p-0.5 rounded transition" title="Remove custom tag">
-            <span class="material-symbols-outlined text-[14px]">close</span>
-          </button>
-        `}
+      <div class="flex flex-col sm:flex-row sm:items-center gap-2 p-2 px-3 rounded-lg bg-white border border-slate-200 hover:border-emerald-300 transition shadow-2xs focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-400">
+        <div class="flex items-center gap-1.5 shrink-0 min-w-[140px]">
+          <span class="font-mono font-bold text-xs text-emerald-900 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">{{${tag}}}</span>
+          <span class="text-[11px] font-semibold text-slate-500 truncate max-w-[110px]">${friendlyLabel}:</span>
+        </div>
+        <div class="flex-1 flex items-center gap-1">
+          <input type="text"
+                 id="dyn-tag-input-${tag}"
+                 class="w-full bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1 text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
+                 value="${safeVal}"
+                 placeholder="Enter value for {{${tag}}}..."
+                 oninput="handleDynamicTagChange('${tag}', this.value)" />
+          ${isSystem ? `
+            <button type="button" onclick="resetDynamicTagValue('${tag}')" class="p-1 text-slate-400 hover:text-amber-600 rounded transition shrink-0" title="Reset {{${tag}}} to default">
+              <span class="material-symbols-outlined text-[15px]">restart_alt</span>
+            </button>
+          ` : `
+            <button type="button" onclick="removeDynamicTag('${tag}')" class="p-1 text-slate-400 hover:text-rose-600 rounded transition shrink-0" title="Remove {{${tag}}} from template">
+              <span class="material-symbols-outlined text-[15px]">close</span>
+            </button>
+          `}
+        </div>
       </div>
     `;
   }).join('');
-}
 
-function editManualCustomTag(key) {
-  const currentVal = BROADCAST_CUSTOM_TAGS[key] || '';
-  const newVal = prompt(`Edit custom replacement value for dynamic tag {{${key}}}:`, currentVal);
-  if (newVal !== null) {
-    BROADCAST_CUSTOM_TAGS[key] = newVal.trim();
-    renderCustomTagsTray();
-    updateBroadcastPreview();
-    showToast('Tag Value Updated', `{{${key}}} will now be replaced with "${newVal.trim()}" in message broadcasts.`, 'tune', 'emerald');
-    if (typeof playChime === 'function') playChime('order');
+  container.innerHTML = html;
+
+  // Restore focus if needed
+  if (activeTag) {
+    const activeEl = document.getElementById(`dyn-tag-input-${activeTag}`);
+    if (activeEl) {
+      activeEl.focus();
+      try {
+        activeEl.setSelectionRange(activeCursorPos, activeCursorPos);
+      } catch (e) {}
+    }
   }
 }
 
-function resetSystemTagValue(key) {
-  const defVal = getDefaultTagValue(key);
-  BROADCAST_CUSTOM_TAGS[key] = defVal;
-  renderCustomTagsTray();
+// 1-Click Inline Value Change Handler
+function handleDynamicTagChange(tag, val) {
+  BROADCAST_CUSTOM_TAGS[tag] = val;
   updateBroadcastPreview();
-  showToast('Tag Reset', `{{${key}}} restored to default value: "${defVal}"`, 'restart_alt', 'blue');
 }
 
-function removeManualCustomTag(key) {
-  delete BROADCAST_CUSTOM_TAGS[key];
-  renderCustomTagsTray();
+// Reset dynamic tag to default value
+function resetDynamicTagValue(tag) {
+  const defVal = getDefaultTagValue(tag);
+  BROADCAST_CUSTOM_TAGS[tag] = defVal;
+  const inputEl = document.getElementById(`dyn-tag-input-${tag}`);
+  if (inputEl) inputEl.value = defVal;
   updateBroadcastPreview();
+  showToast('Value Restored', `{{${tag}}} restored to "${defVal}"`, 'restart_alt', 'blue');
+}
+
+// Remove tag from message text
+function removeDynamicTag(tag) {
+  const msgInput = document.getElementById('bcast-message-text');
+  if (msgInput) {
+    const reg = new RegExp(`\\{\\{\\s*${tag}\\s*\\}\\}`, 'gi');
+    msgInput.value = msgInput.value.replace(reg, '');
+  }
+  delete BROADCAST_CUSTOM_TAGS[tag];
+  renderDynamicTemplateFields();
+  updateBroadcastPreview();
+  showToast('Variable Removed', `Tag {{${tag}}} removed from template.`, 'delete', 'amber');
+}
+
+// Quick Prompt to Add Any Custom Variable
+function promptAddNewCustomTag() {
+  const tagKey = prompt('Enter a new variable name without curly braces (e.g. discount, product_name, coupon_code, delivery_date):');
+  if (!tagKey || !tagKey.trim()) return;
+
+  const cleanKey = tagKey.trim().toLowerCase().replace(/^\{\{|\}\}$/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  if (!cleanKey) {
+    alert('Invalid variable name. Please use letters and numbers only.');
+    return;
+  }
+
+  const defaultVal = BROADCAST_CUSTOM_TAGS[cleanKey] || 'SPECIAL VALUE';
+  const tagVal = prompt(`Enter value for {{${cleanKey}}}:`, defaultVal);
+  if (tagVal === null) return;
+
+  BROADCAST_CUSTOM_TAGS[cleanKey] = tagVal.trim();
+  insertBroadcastVariable(`{{${cleanKey}}}`);
+  renderDynamicTemplateFields();
+  updateBroadcastPreview();
+  showToast('Variable Added', `Tag {{${cleanKey}}} added and set to "${tagVal.trim()}".`, 'tune', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+
+// Compatibility alias for any legacy tray calls
+function renderCustomTagsTray() {
+  renderDynamicTemplateFields();
+}
+function handleApplyManualCustomTag() {
+  promptAddNewCustomTag();
 }
 
 // Universal Template Message Personalization Engine (Replaces System & Manual Custom Tags)
@@ -8981,6 +13734,11 @@ function updateBroadcastCustomNumbersCount() {
     countEl.innerText = `${numCount} Recipient${numCount === 1 ? '' : 's'}`;
   }
 
+  const startBtnText = document.getElementById('btn-bcast-start-text');
+  if (startBtnText) {
+    startBtnText.innerText = `Start Automated Broadcast (${numCount} Recipient${numCount === 1 ? '' : 's'})`;
+  }
+
   updateBroadcastPreview();
 }
 
@@ -8993,7 +13751,10 @@ function updateBroadcastPreview() {
   const msgInput = document.getElementById('bcast-message-text');
   const previewBox = document.getElementById('bcast-live-preview-box');
   const previewCustLabel = document.getElementById('bcast-preview-customer-label');
+  const previewCustName = document.getElementById('bcast-preview-customer-name');
+  const previewAvatar = document.getElementById('bcast-preview-avatar');
   const previewCharCount = document.getElementById('bcast-preview-char-count');
+  const msgCharCount = document.getElementById('bcast-message-char-count');
   if (!previewBox) return;
 
   const rawTemplate = (msgInput && msgInput.value.trim()) || "Hello {{customer_name}}, welcome to {{business_name}}! Reach us on {{line_phone}}.";
@@ -9013,14 +13774,25 @@ function updateBroadcastPreview() {
   const rendered = renderTemplateMessagePersonalized(rawTemplate, sampleCustomer, account, BROADCAST_CUSTOM_TAGS);
   previewBox.innerText = rendered;
 
+  const custName = sampleCustomer.name || 'Recipient';
+  const custPhone = sampleCustomer.whatsapp || sampleCustomer.phone || '+91 86680 07593';
+
   if (previewCustLabel) {
-    const custName = sampleCustomer.name || 'Recipient';
-    const custPhone = sampleCustomer.whatsapp || sampleCustomer.phone || '+91 86680 07593';
     previewCustLabel.innerText = `Sample Recipient: ${custName} (${custPhone})`;
+  }
+  if (previewCustName) {
+    previewCustName.innerText = `${custName} (${custPhone})`;
+  }
+  if (previewAvatar) {
+    const initials = custName.split(/\s+/).map(p => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'SM';
+    previewAvatar.innerText = initials;
   }
 
   if (previewCharCount) {
     previewCharCount.innerText = `${rendered.length} characters`;
+  }
+  if (msgCharCount && msgInput) {
+    msgCharCount.innerText = `${msgInput.value.length} chars`;
   }
 }
 
@@ -9231,7 +14003,14 @@ function stopAutomatedBroadcast() {
 }
 
 // INITIALIZE APP ON LOAD
-window.addEventListener('DOMContentLoaded', () => {
+function bootstrapCRMApp() {
   initCRMState();
   initAuthSystem();
-});
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  bootstrapCRMApp();
+} else {
+  window.addEventListener('DOMContentLoaded', bootstrapCRMApp);
+}
+

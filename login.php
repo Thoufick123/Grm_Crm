@@ -3,7 +3,16 @@
  * GRM WHATSAPP CRM — DEDICATED PHP LOGIN CONTROLLER & VIEW
  * Full server-side PHP logic integrated with HTML, CSS, JavaScript, and XAMPP MySQL.
  */
-session_start();
+ini_set('session.gc_maxlifetime', 2592000); // 30-day session duration
+session_set_cookie_params([
+    'lifetime' => 2592000,
+    'path' => '/',
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/config/db.php';
 
 // If already logged in, redirect straight to index.php
@@ -45,18 +54,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$username, $username, $username]);
                 $dbUser = $stmt->fetch();
 
-                if ($dbUser && ($dbUser['password'] === $password || password_verify($password, $dbUser['password']))) {
-                    $matchedUser = [
-                        'id' => $dbUser['id'],
-                        'username' => $dbUser['username'],
-                        'name' => $dbUser['name'],
-                        'role' => ($dbUser['id'] === 'admin' || $dbUser['role'] === 'admin') ? 'admin' : $dbUser['id'],
-                        'title' => $dbUser['role'],
-                        'avatar' => $dbUser['avatar'] ?: strtoupper(substr($dbUser['name'], 0, 2)),
-                        'staff_id' => $dbUser['id'],
-                        'email' => $dbUser['email'],
-                        'phone' => $dbUser['phone']
-                    ];
+                if ($dbUser) {
+                    $isPassValid = password_verify($password, $dbUser['password']);
+                    if (!$isPassValid && $dbUser['password'] === $password) {
+                        $isPassValid = true;
+                        // Auto-upgrade legacy plaintext password to secure Bcrypt hash
+                        try {
+                            $newHash = password_hash($password, PASSWORD_BCRYPT);
+                            $upStmt = $pdo->prepare("UPDATE `users` SET `password` = ? WHERE `id` = ?");
+                            $upStmt->execute([$newHash, $dbUser['id']]);
+                        } catch (Exception $e) {}
+                    }
+
+                    if ($isPassValid) {
+                        $matchedUser = [
+                            'id' => $dbUser['id'],
+                            'username' => $dbUser['username'],
+                            'name' => $dbUser['name'],
+                            'role' => ($dbUser['id'] === 'admin' || $dbUser['role'] === 'admin') ? 'admin' : $dbUser['id'],
+                            'title' => $dbUser['role'],
+                            'avatar' => $dbUser['avatar'] ?: strtoupper(substr($dbUser['name'], 0, 2)),
+                            'staff_id' => $dbUser['id'],
+                            'email' => $dbUser['email'],
+                            'phone' => $dbUser['phone']
+                        ];
+                    }
                 }
             } catch (Exception $e) {
                 error_log("DB Login Error: " . $e->getMessage());

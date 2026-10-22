@@ -480,19 +480,49 @@ function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, sen
 async function getImageBuffer(url) {
     if (!url) return null;
     try {
-        if (typeof fetch === 'function') {
-            const res = await fetch(url, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+        // 1. Data URL (Base64)
+        if (typeof url === 'string' && url.startsWith('data:image/')) {
+            const base64Data = url.split(',')[1] || url.replace(/^data:image\/\w+;base64,/, '');
+            return Buffer.from(base64Data, 'base64');
+        }
+
+        // 2. Local relative path or root path
+        if (typeof url === 'string') {
+            const cleanPath = url.replace(/^[/\\]+/, '').replace(/\//g, path.sep);
+            const candidates = [
+                path.resolve(__dirname, '..', cleanPath),
+                path.resolve(__dirname, cleanPath),
+                path.resolve('d:/CRM whatsapp/crm-app', cleanPath)
+            ];
+            // If it's a URL like http://localhost/crm-app/uploads/products/xyz.jpg
+            if (url.includes('/uploads/products/')) {
+                const fileName = path.basename(url.split('?')[0]);
+                candidates.unshift(path.resolve(__dirname, '..', 'uploads', 'products', fileName));
+            }
+
+            for (const candidate of candidates) {
+                if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+                    return fs.readFileSync(candidate);
                 }
-            });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const arrayBuf = await res.arrayBuffer();
-            return Buffer.from(arrayBuf);
+            }
+        }
+
+        // 3. Online Web URL (http / https)
+        if (typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))) {
+            if (typeof fetch === 'function') {
+                const res = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                    }
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const arrayBuf = await res.arrayBuffer();
+                return Buffer.from(arrayBuf);
+            }
         }
     } catch (e) {
-        console.warn(`[Image Buffer Fetch Failed for ${url}]:`, e.message);
+        console.warn(`[Image Buffer Fetch Failed for ${url?.slice?.(0, 80)}]:`, e.message);
     }
     return null;
 }
@@ -592,8 +622,9 @@ function resolveDestinationJid(phoneOrJid) {
     if (!phoneOrJid) return null;
     let target = phoneOrJid.toString().trim();
 
-    // 1. Check if target has @lid or is a pure 14+ digit privacy LID
-    if (target.includes('@lid') || (target.length >= 14 && (target.startsWith('156') || target.startsWith('235') || target.startsWith('253') || target.startsWith('275') || target.startsWith('967')))) {
+    // 1. Check if target has @lid or is a 14+ digit privacy LID
+    const cleanDigits = target.replace(/[^0-9]/g, '');
+    if (target.includes('@lid') || cleanDigits.length >= 14) {
         const lidDigits = target.split('@')[0].replace(/[^0-9]/g, '');
         if (LID_TO_PHONE_MAP.has(lidDigits)) {
             const mappedPhone = LID_TO_PHONE_MAP.get(lidDigits);
@@ -621,7 +652,7 @@ function resolveDestinationJid(phoneOrJid) {
                 }
             }
         } catch (e) {}
-        return target.includes('@lid') ? target : `${target}@lid`;
+        return `${lidDigits}@lid`;
     }
 
     // 2. Standard WhatsApp format
@@ -641,7 +672,7 @@ function resolveDestinationJid(phoneOrJid) {
         return cached;
     }
 
-    let clean = target.replace(/[^0-9]/g, '');
+    let clean = cleanDigits;
     if (jidMap.has(clean)) {
         return jidMap.get(clean);
     }
@@ -714,6 +745,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+                const isReplaced = statusCode === DisconnectReason.connectionReplaced || statusCode === 440;
                 console.log(`[QR Bridge - ${accountId}] Connection closed (status: ${statusCode}). Logged out: ${isLoggedOut}`);
                 accountObj.status = 'DISCONNECTED';
                 accountObj.qrImage = null;
@@ -735,11 +767,16 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     setTimeout(() => {
                         initAccountSession(accountId, label);
                     }, 1500);
+                } else if (isReplaced) {
+                    console.warn(`[QR Bridge - ${accountId}] Session replaced by another active connection (status: 440). Pausing auto-reconnect to prevent rapid loop...`);
+                    setTimeout(() => {
+                        initAccountSession(accountId, label);
+                    }, 15000);
                 } else {
                     // Reconnect on network drops
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-                    }, 4000);
+                    }, 5000);
                 }
             } else if (connection === 'open') {
                 accountObj.status = 'CONNECTED';
@@ -854,12 +891,28 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             jidMap.set(cleanNumber, senderJid);
                         }
 
-                        // Unwrap nested WhatsApp message formats (Ephemeral, ViewOnce, Document captions, etc.)
+                        // Unwrap nested WhatsApp message formats (Ephemeral, ViewOnce, Disappearing, Edited, Linked Device, etc.)
                         let rawMsg = msg.message || {};
-                        if (rawMsg.ephemeralMessage?.message) rawMsg = rawMsg.ephemeralMessage.message;
-                        if (rawMsg.viewOnceMessage?.message) rawMsg = rawMsg.viewOnceMessage.message;
-                        if (rawMsg.viewOnceMessageV2?.message) rawMsg = rawMsg.viewOnceMessageV2.message;
-                        if (rawMsg.documentWithCaptionMessage?.message) rawMsg = rawMsg.documentWithCaptionMessage.message;
+                        let unwrapCycles = 10;
+                        while (unwrapCycles-- > 0) {
+                            if (rawMsg.ephemeralMessage?.message) {
+                                rawMsg = rawMsg.ephemeralMessage.message;
+                            } else if (rawMsg.viewOnceMessage?.message) {
+                                rawMsg = rawMsg.viewOnceMessage.message;
+                            } else if (rawMsg.viewOnceMessageV2?.message) {
+                                rawMsg = rawMsg.viewOnceMessageV2.message;
+                            } else if (rawMsg.viewOnceMessageV2Extension?.message) {
+                                rawMsg = rawMsg.viewOnceMessageV2Extension.message;
+                            } else if (rawMsg.documentWithCaptionMessage?.message) {
+                                rawMsg = rawMsg.documentWithCaptionMessage.message;
+                            } else if (rawMsg.deviceSentMessage?.message) {
+                                rawMsg = rawMsg.deviceSentMessage.message;
+                            } else if (rawMsg.editedMessage?.message?.protocolMessage?.editedMessage) {
+                                rawMsg = rawMsg.editedMessage.message.protocolMessage.editedMessage;
+                            } else {
+                                break;
+                            }
+                        }
 
                         let messageText = '';
                         let msgType = 'text';
@@ -934,13 +987,32 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         else if (rawMsg.listResponseMessage) {
                             messageText = rawMsg.listResponseMessage.title || rawMsg.listResponseMessage.singleSelectReply?.selectedRowId || '[List Selected]';
                         }
-                        // 7. Regular text messages
-                        else if (rawMsg.conversation) {
+                        // 7. Regular text messages (Plain, formatted, interactive body, etc.)
+                        else if (typeof rawMsg.conversation === 'string' && rawMsg.conversation.trim()) {
                             messageText = rawMsg.conversation;
-                        } else if (rawMsg.extendedTextMessage?.text) {
+                        } else if (typeof rawMsg.extendedTextMessage?.text === 'string' && rawMsg.extendedTextMessage.text.trim()) {
                             messageText = rawMsg.extendedTextMessage.text;
+                        } else if (rawMsg.interactiveMessage?.body?.text) {
+                            messageText = rawMsg.interactiveMessage.body.text;
+                        } else if (rawMsg.interactiveResponseMessage?.body?.text) {
+                            messageText = rawMsg.interactiveResponseMessage.body.text;
+                        } else if (typeof rawMsg.text === 'string' && rawMsg.text.trim()) {
+                            messageText = rawMsg.text;
                         } else {
-                            messageText = '[WhatsApp Message]';
+                            // Inspect keys in rawMsg to find any text or caption field
+                            for (const k of Object.keys(rawMsg)) {
+                                if (rawMsg[k] && typeof rawMsg[k].text === 'string' && rawMsg[k].text.trim()) {
+                                    messageText = rawMsg[k].text;
+                                    break;
+                                }
+                                if (rawMsg[k] && typeof rawMsg[k].caption === 'string' && rawMsg[k].caption.trim()) {
+                                    messageText = rawMsg[k].caption;
+                                    break;
+                                }
+                            }
+                            if (!messageText) {
+                                messageText = 'Hi';
+                            }
                         }
 
                         console.log(`[Inbound on ${accountObj.connectedNumber || accountId}] From ${senderName} (${senderJid}): "${messageText}" [${msgType}]`);
@@ -984,15 +1056,15 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 replyObj = getInteractiveResponse(cleanMsg, senderName, senderKey, senderNumber, senderJid, cleanNumber);
                             }
 
-                            // 2. Greetings and full catalog triggers
-                            const isGreetingOrMenu = cleanMsg === 'hi' || cleanMsg === 'hii' || cleanMsg === 'hiii' || 
-                                                     cleanMsg === 'hello' || cleanMsg === 'hellow' || cleanMsg === 'helo' || 
-                                                     cleanMsg === 'hey' || cleanMsg === 'vanakkam' || cleanMsg === 'namaste' ||
-                                                     cleanMsg === 'start' || cleanMsg === 'menu' || cleanMsg === 'catalog' || 
-                                                     cleanMsg === 'catalogue' || cleanMsg === 'stock' || cleanMsg === 'price' || 
-                                                     cleanMsg === 'rate' || cleanMsg === 'help' || lastMenuEpoch === 0;
+                            // 2. Greetings and full catalog triggers (matches "hi", "hiiiii...", "hello...", "heyyy...", etc.)
+                            const isGreetingOrMenu = /^h+i+/i.test(cleanMsg) || 
+                                                     /^h+e+y+/i.test(cleanMsg) || 
+                                                     /^h+e+l+l+o+/i.test(cleanMsg) || 
+                                                     /^(vanakkam|namaste|start|menu|catalog|catalogue|stock|price|rate|help|order)/i.test(cleanMsg) ||
+                                                     cleanMsg.length <= 20 || 
+                                                     lastMenuEpoch === 0;
 
-                            if (!replyObj && (isGreetingOrMenu || cleanMsg.length <= 10) && isMenuCooldownPassed) {
+                            if (!replyObj && isGreetingOrMenu && isMenuCooldownPassed) {
                                 clearCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber);
                                 replyObj = getStockAutoReplyTemplate(senderName);
                                 lastAutoReplyMap.set(senderNumber, Date.now());
@@ -1079,8 +1151,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
     return accountObj;
 }
 
-// Core Function to Send WhatsApp Message
-async function sendWhatsAppMessage(target, text, accountId = null) {
+// Core Function to Send WhatsApp Message (Supports Text & Product Images)
+async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = null) {
     let activeAcc = null;
 
     if (accountId && accounts.has(accountId) && accounts.get(accountId).status === 'CONNECTED') {
@@ -1107,8 +1179,28 @@ async function sendWhatsAppMessage(target, text, accountId = null) {
     // Send exact message from CRM without duplicate brand wrapping or bottom tagline
     let finalText = typeof text === 'string' ? text.trim() : String(text || '');
 
-    console.log(`[Outbound Send via ${activeAcc.connectedNumber || activeAcc.id}] Dispatching to ${jid}: "${finalText}"`);
-    const sent = await activeAcc.sock.sendMessage(jid, { text: finalText });
+    let sent = null;
+    if (mediaUrl) {
+        console.log(`[Outbound Media Send via ${activeAcc.connectedNumber || activeAcc.id}] Dispatching image to ${jid} with caption: "${finalText.slice(0, 50)}..."`);
+        const imgBuf = await getImageBuffer(mediaUrl);
+        if (imgBuf) {
+            try {
+                sent = await activeAcc.sock.sendMessage(jid, {
+                    image: imgBuf,
+                    caption: finalText
+                });
+            } catch (err) {
+                console.warn('[Image Send Failed, Falling back to Text]:', err.message);
+            }
+        } else {
+            console.warn(`[Outbound Media] Could not buffer image ${mediaUrl.slice(0, 60)}, sending text fallback`);
+        }
+    }
+
+    if (!sent) {
+        console.log(`[Outbound Send via ${activeAcc.connectedNumber || activeAcc.id}] Dispatching to ${jid}: "${finalText}"`);
+        sent = await activeAcc.sock.sendMessage(jid, { text: finalText });
+    }
 
     return {
         status: 'success',
@@ -1117,6 +1209,7 @@ async function sendWhatsAppMessage(target, text, accountId = null) {
         sender_phone: activeAcc.connectedNumber,
         jid: jid,
         recipient: target,
+        media_url: mediaUrl || null,
         timestamp: new Date().toISOString()
     };
 }
@@ -1173,9 +1266,10 @@ io.on('connection', (socket) => {
     // Handle outbound message sending from CRM client over WebSocket
     socket.on('whatsapp:send', async (data, callback) => {
         try {
-            const { phone, text, jid, accountId } = data;
+            const { phone, text, jid, accountId, mediaUrl, media_url } = data;
             const target = jid || phone;
-            const result = await sendWhatsAppMessage(target, text, accountId);
+            const imageTarget = mediaUrl || media_url || null;
+            const result = await sendWhatsAppMessage(target, text, accountId, imageTarget);
 
             if (typeof callback === 'function') {
                 callback({ status: 'success', result });
@@ -1186,6 +1280,7 @@ io.on('connection', (socket) => {
                 jid: result.jid,
                 account_id: result.account_id,
                 text: text,
+                media_url: imageTarget,
                 status: 'DELIVERED',
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
@@ -1621,6 +1716,21 @@ app.get('/api/status', (req, res) => {
     });
 });
 
+app.get('/api/health', (req, res) => {
+    const summary = getAccountsSummary();
+    const connectedAccounts = summary.filter(a => a.status === 'CONNECTED');
+    res.json({
+        status: 'UP',
+        service: 'GRM_WHATSAPP_BAILEYS_BRIDGE',
+        uptime_seconds: Math.floor(process.uptime()),
+        memory_usage_mb: Math.round(process.memoryUsage().rss / (1024 * 1024)),
+        total_accounts: summary.length,
+        connected_accounts: connectedAccounts.length,
+        accounts: summary.map(a => ({ id: a.id, status: a.status, phone: a.connected_number })),
+        timestamp: new Date().toISOString()
+    });
+});
+
 app.post('/api/calls/initiate', async (req, res) => {
     try {
         const { customerPhone, customerName, staffName, accountId } = req.body;
@@ -1659,7 +1769,7 @@ app.post('/api/calls/initiate', async (req, res) => {
 
 app.post('/api/send', async (req, res) => {
     try {
-        const { phone, text, jid, accountId } = req.body;
+        const { phone, text, jid, accountId, mediaUrl, media_url } = req.body;
         if (!phone && !jid) {
             return res.status(400).json({ status: 'error', message: 'Phone or JID is required' });
         }
@@ -1667,7 +1777,8 @@ app.post('/api/send', async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Text is required' });
         }
 
-        const result = await sendWhatsAppMessage(jid || phone, text, accountId);
+        const imageTarget = mediaUrl || media_url || null;
+        const result = await sendWhatsAppMessage(jid || phone, text, accountId, imageTarget);
         res.json(result);
     } catch (err) {
         console.error('[REST Send Error]:', err.message);

@@ -249,6 +249,20 @@
 
   <!-- Login Logic Script -->
   <script>
+    // Auto-redirect to dashboard if user is already signed in
+    (function checkExistingSession() {
+      try {
+        const saved = localStorage.getItem('GRM_CRM_SESSION') || sessionStorage.getItem('GRM_CRM_SESSION');
+        if (saved) {
+          const user = JSON.parse(saved);
+          if (user && (user.username || user.id || user.role)) {
+            console.log('✅ Active session detected for ' + (user.name || user.username) + '. Redirecting to panel...');
+            window.location.replace('index.html');
+          }
+        }
+      } catch (e) {}
+    })();
+
     // Toggle password visibility
     function togglePasswordVisibility() {
       const passInput = document.getElementById('password');
@@ -301,21 +315,24 @@
           body: JSON.stringify({ username, password, remember })
         });
 
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: Server cannot process PHP POST on static port`);
+        }
+
         const data = await response.json();
 
         if (data.status === 'success' && data.user) {
-          // Save session to localStorage
+          // Save session to both localStorage and sessionStorage for bulletproof persistence
           localStorage.setItem('GRM_CRM_SESSION', JSON.stringify(data.user));
-          if (remember) {
-            localStorage.setItem('GRM_REMEMBER_FLAG', 'true');
-          }
+          sessionStorage.setItem('GRM_CRM_SESSION', JSON.stringify(data.user));
+          localStorage.setItem('GRM_REMEMBER_FLAG', 'true');
 
           successMsg.innerText = `Welcome, ${data.user.name}! Redirecting to your panel...`;
           successBox.classList.remove('hidden');
 
           setTimeout(() => {
             window.location.href = data.redirect_url || 'index.html';
-          }, 600);
+          }, 500);
         } else {
           errorMsg.innerText = data.message || 'Invalid username or password.';
           errorBox.classList.remove('hidden');
@@ -351,7 +368,11 @@
       };
 
       if (accounts[u] && accounts[u].password === password) {
+        // Save session to both localStorage and sessionStorage
         localStorage.setItem('GRM_CRM_SESSION', JSON.stringify(accounts[u]));
+        sessionStorage.setItem('GRM_CRM_SESSION', JSON.stringify(accounts[u]));
+        localStorage.setItem('GRM_REMEMBER_FLAG', 'true');
+
         successMsg.innerText = `Welcome, ${accounts[u].name}! Redirecting...`;
         successBox.classList.remove('hidden');
         setTimeout(() => { window.location.href = 'index.html'; }, 500);

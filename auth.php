@@ -4,7 +4,16 @@
  * Handles Login, Session Validation, Role-Based Access Checks, and Logout with MySQL Integration
  */
 
-session_start();
+ini_set('session.gc_maxlifetime', 2592000); // 30-day session duration
+session_set_cookie_params([
+    'lifetime' => 2592000,
+    'path' => '/',
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
@@ -96,7 +105,18 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($dbUser) {
                 // Check plain or hashed password
-                if ($dbUser['password'] === $password || password_verify($password, $dbUser['password'])) {
+                $isPassValid = password_verify($password, $dbUser['password']);
+                if (!$isPassValid && $dbUser['password'] === $password) {
+                    $isPassValid = true;
+                    // Auto-upgrade legacy plaintext password to secure Bcrypt hash
+                    try {
+                        $newHash = password_hash($password, PASSWORD_BCRYPT);
+                        $upStmt = $pdo->prepare("UPDATE `users` SET `password` = ? WHERE `id` = ?");
+                        $upStmt->execute([$newHash, $dbUser['id']]);
+                    } catch (Exception $e) {}
+                }
+
+                if ($isPassValid) {
                     $matchedUser = [
                         'id' => $dbUser['id'],
                         'username' => $dbUser['username'],

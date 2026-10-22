@@ -41,6 +41,8 @@ define('DB_USER', $envConfig['DB_USER']);
 define('DB_PASS', $envConfig['DB_PASS']);
 define('DB_NAME', $envConfig['DB_NAME']);
 define('DB_PORT', (int)$envConfig['DB_PORT']);
+define('BRIDGE_URL', $envConfig['BRIDGE_URL'] ?? 'http://localhost:3000');
+define('APP_URL', $envConfig['APP_URL'] ?? 'http://localhost:8080');
 
 function getDBConnection() {
     static $pdo = null;
@@ -190,13 +192,76 @@ function initializeDatabaseSchema($pdo) {
             `sku` VARCHAR(50) UNIQUE NOT NULL,
             `name` VARCHAR(150) NOT NULL,
             `category` VARCHAR(50) NOT NULL,
+            `subcategory` VARCHAR(100) NULL,
             `size` VARCHAR(50) NOT NULL,
             `color` VARCHAR(50) NOT NULL,
+            `fabric` VARCHAR(100) NULL,
             `price` DECIMAL(10,2) NOT NULL,
+            `mrp` DECIMAL(10,2) NULL,
             `physical_stock` INT DEFAULT 0,
             `reserved_stock` INT DEFAULT 0,
             `image` TEXT NULL,
+            `description` TEXT NULL,
+            `account_id` VARCHAR(50) DEFAULT 'account_1',
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // Dynamic Alter table to ensure new columns exist if table was already created
+    try {
+        $existingCols = $pdo->query("SHOW COLUMNS FROM `products`")->fetchAll(PDO::FETCH_COLUMN);
+        $colDefs = [
+            'subcategory' => "ALTER TABLE `products` ADD COLUMN `subcategory` VARCHAR(100) NULL AFTER `category`",
+            'fabric'      => "ALTER TABLE `products` ADD COLUMN `fabric` VARCHAR(100) NULL AFTER `color`",
+            'mrp'         => "ALTER TABLE `products` ADD COLUMN `mrp` DECIMAL(10,2) NULL AFTER `price`",
+            'description' => "ALTER TABLE `products` ADD COLUMN `description` TEXT NULL AFTER `image`",
+            'specifications' => "ALTER TABLE `products` ADD COLUMN `specifications` TEXT NULL AFTER `fabric`",
+            'account_id'  => "ALTER TABLE `products` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1' AFTER `description`"
+        ];
+        foreach ($colDefs as $cName => $sql) {
+            if (!in_array($cName, $existingCols)) {
+                $pdo->exec($sql);
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Product migration note: " . $e->getMessage());
+    }
+
+    // 6.1 Categories Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `categories` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `name` VARCHAR(100) NOT NULL,
+            `slug` VARCHAR(100) UNIQUE NOT NULL,
+            `icon` VARCHAR(50) DEFAULT 'checkroom',
+            `description` TEXT NULL,
+            `display_order` INT DEFAULT 0,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 6.2 Subcategories Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `subcategories` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `category_id` INT NULL,
+            `category_name` VARCHAR(100) NOT NULL,
+            `name` VARCHAR(100) NOT NULL,
+            `slug` VARCHAR(100) NOT NULL,
+            `sku_prefix` VARCHAR(20) NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 6.3 Attributes Table (Sizes, Colors, Fabrics, Specifications)
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `attributes` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `type` VARCHAR(50) NOT NULL,
+            `value` VARCHAR(150) NOT NULL,
+            `extra` TEXT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX(`type`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
@@ -260,10 +325,10 @@ function seedDefaultDataIfEmpty($pdo) {
         ");
 
         $defaultUsers = [
-            ['admin', 'admin', 'admin123', 'Super Admin', 'Admin Manager (Full Control)', 'admin@grmgarments.com', '+91 97896 60115', 'Full Control', 'SA', 'ACTIVE', 0, 0],
-            ['staff_01', 'priya', 'staff123', 'Priya Sharma', 'Sales Specialist (Baby Collection)', 'priya@grmgarments.com', '+91 98765 43211', 'Baby Collection', 'PS', 'ACTIVE', 3, 14],
-            ['staff_02', 'rahul', 'staff123', 'Rahul Verma', 'Enquiry Specialist (Maternity & Kids)', 'rahul@grmgarments.com', '+91 98765 43212', 'Maternity & Kids', 'RV', 'ACTIVE', 2, 9],
-            ['staff_03', 'sneha', 'staff123', 'Sneha Patel', 'Order Fulfillment & Support', 'sneha@grmgarments.com', '+91 98765 43213', 'Order Support', 'SP', 'ACTIVE', 1, 11]
+            ['admin', 'admin', password_hash('admin123', PASSWORD_BCRYPT), 'Super Admin', 'Admin Manager (Full Control)', 'admin@grmgarments.com', '+91 97896 60115', 'Full Control', 'SA', 'ACTIVE', 0, 0],
+            ['staff_01', 'priya', password_hash('staff123', PASSWORD_BCRYPT), 'Priya Sharma', 'Sales Specialist (Baby Collection)', 'priya@grmgarments.com', '+91 98765 43211', 'Baby Collection', 'PS', 'ACTIVE', 3, 14],
+            ['staff_02', 'rahul', password_hash('staff123', PASSWORD_BCRYPT), 'Rahul Verma', 'Enquiry Specialist (Maternity & Kids)', 'rahul@grmgarments.com', '+91 98765 43212', 'Maternity & Kids', 'RV', 'ACTIVE', 2, 9],
+            ['staff_03', 'sneha', password_hash('staff123', PASSWORD_BCRYPT), 'Sneha Patel', 'Order Fulfillment & Support', 'sneha@grmgarments.com', '+91 98765 43213', 'Order Support', 'SP', 'ACTIVE', 1, 11]
         ];
 
         foreach ($defaultUsers as $u) {
@@ -286,27 +351,7 @@ function seedDefaultDataIfEmpty($pdo) {
         ]);
     }
 
-    // Check Products
-    $pCount = $pdo->query("SELECT COUNT(*) FROM `products`")->fetchColumn();
-    if ($pCount == 0) {
-        $stmt = $pdo->prepare("
-            INSERT INTO `products` (`sku`, `name`, `category`, `size`, `color`, `price`, `physical_stock`, `reserved_stock`, `image`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
 
-        $defaultProducts = [
-            ['BF-001-PK', 'Baby Frock (Embroidered Cotton)', 'Baby Collection', '2-3 Years', 'Pink', 599.00, 12, 4, 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60'],
-            ['BF-001-YL', 'Baby Frock (Embroidered Cotton)', 'Baby Collection', '1-2 Years', 'Sunshine Yellow', 599.00, 8, 1, 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=400&auto=format&fit=crop&q=60'],
-            ['MD-102-BL', 'Maternity Maxi Feeding Gown', 'Maternity', 'L / XL', 'Sky Blue', 1299.00, 10, 5, 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=400&auto=format&fit=crop&q=60'],
-            ['KD-204-YL', 'Kids Organic Cotton T-Shirt Set (Pack of 3)', 'Kids', '4-5 Years', 'Multi Yellow/Green', 450.00, 25, 8, 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400&auto=format&fit=crop&q=60'],
-            ['GL-505-RD', 'Girls Festive Silk Lehenga Choli', 'Girls Festive', '6-7 Years', 'Ruby Red & Gold', 899.00, 6, 0, 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=400&auto=format&fit=crop&q=60'],
-            ['BB-301-WH', 'Newborn 5-Piece Organic Romper Gift Set', 'Newborn', '0-6 Months', 'Pure White / Mint', 799.00, 15, 2, 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&auto=format&fit=crop&q=60']
-        ];
-
-        foreach ($defaultProducts as $p) {
-            $stmt->execute($p);
-        }
-    }
 
     // Check Customers
     $cCount = $pdo->query("SELECT COUNT(*) FROM `customers`")->fetchColumn();
@@ -345,4 +390,146 @@ function seedDefaultDataIfEmpty($pdo) {
             $stmt->execute($q);
         }
     }
+
+    // Check Categories
+    $catCount = $pdo->query("SELECT COUNT(*) FROM `categories`")->fetchColumn();
+    if ($catCount == 0) {
+        $cStmt = $pdo->prepare("
+            INSERT INTO `categories` (`name`, `slug`, `icon`, `description`, `display_order`)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+
+        $defaultCats = [
+            ['Baby Collection', 'baby_collection', 'child_care', 'Pure cotton frocks, rompers & soft babywear (0–3 Years)', 1],
+            ['Maternity & Feeding', 'maternity_wear', 'pregnant_woman', 'Feeding kurtis, maxi gowns & maternity comfort dresses', 2],
+            ['Newborn Essentials', 'newborn_care', 'crib', '5-piece organic gift sets, swaddle wraps & rompers', 3],
+            ['Kids Everyday Wear', 'kids_wear', 'styler', 'Cotton T-shirt packs, dungarees & nightwear (4–8 Years)', 4],
+            ['Girls Festive & Ethnic', 'girls_festive', 'celebration', 'Silk lehenga choli, handcrafted pattu pavadai sets', 5],
+            ['Wholesale & Bulk Bundles', 'wholesale_bulk', 'inventory', 'Factory wholesale bundles (Erode/Tirupur manufacturing)', 6]
+        ];
+
+        foreach ($defaultCats as $c) {
+            $cStmt->execute($c);
+        }
+    }
+
+    // Check Subcategories
+    $subCount = $pdo->query("SELECT COUNT(*) FROM `subcategories`")->fetchColumn();
+    if ($subCount == 0) {
+        $sStmt = $pdo->prepare("
+            INSERT INTO `subcategories` (`category_name`, `name`, `slug`, `sku_prefix`)
+            VALUES (?, ?, ?, ?)
+        ");
+
+        $defaultSubs = [
+            ['Baby Collection', 'Baby Frocks (Embroidered Cotton)', 'baby_frocks', 'BF'],
+            ['Baby Collection', 'Cotton Newborn Rompers', 'cotton_rompers', 'BR'],
+            ['Baby Collection', '2-Piece Tops & Bloomers Set', 'baby_sets', 'BS'],
+            ['Maternity & Feeding', 'Feeding Kurtis & Anarkalis', 'feeding_kurtis', 'FK'],
+            ['Maternity & Feeding', 'Maternity Maxi Feeding Gowns', 'maxi_gowns', 'MD'],
+            ['Maternity & Feeding', 'Maternity Comfort Pants', 'maternity_bottoms', 'MP'],
+            ['Newborn Essentials', '5-Piece Organic Romper Gift Sets', 'gift_sets', 'BB'],
+            ['Newborn Essentials', 'Muslin Swaddle Wraps', 'swaddles', 'SW'],
+            ['Newborn Essentials', 'Booties, Mittens & Cap Sets', 'mittens_caps', 'MC'],
+            ['Kids Everyday Wear', 'Cotton T-Shirt Packs (Pack of 3)', 'tshirts_pack', 'KD'],
+            ['Kids Everyday Wear', 'Denim & Cotton Dungarees', 'dungarees', 'DG'],
+            ['Kids Everyday Wear', 'Nightwear Pajama Sets', 'nightwear', 'NW'],
+            ['Girls Festive & Ethnic', 'Festive Silk Lehenga Choli', 'lehenga_choli', 'GL'],
+            ['Girls Festive & Ethnic', 'Handcrafted Silk Pattu Pavadai', 'pattu_pavadai', 'VIP'],
+            ['Girls Festive & Ethnic', 'Party Wear Anarkalis', 'anarkali_ethnic', 'AK'],
+            ['Wholesale & Bulk Bundles', '25-Pc Assorted Frock Bundles', 'frock_bundles', 'WS-F'],
+            ['Wholesale & Bulk Bundles', '50-Pc Rompers Bulk Box', 'romper_boxes', 'WS-R'],
+            ['Wholesale & Bulk Bundles', 'Mixed Garment Lots', 'mixed_lots', 'WS-M']
+        ];
+
+        foreach ($defaultSubs as $s) {
+            $sStmt->execute($s);
+        }
+    }
+
+    // Check Attributes
+    $attrCount = $pdo->query("SELECT COUNT(*) FROM `attributes`")->fetchColumn();
+    if ($attrCount == 0) {
+        $aStmt = $pdo->prepare("
+            INSERT INTO `attributes` (`type`, `value`, `extra`)
+            VALUES (?, ?, ?)
+        ");
+
+        $defaultAttrs = [
+            // Sizes
+            ['size', '0-6 Months', 'Newborn'],
+            ['size', '6-12 Months', 'Infant'],
+            ['size', '1-2 Years', 'Toddler'],
+            ['size', '2-3 Years', 'Toddler'],
+            ['size', '3-4 Years', 'Kids'],
+            ['size', '4-5 Years', 'Kids'],
+            ['size', '6-7 Years', 'Pre-Teen'],
+            ['size', 'S', 'Standard'],
+            ['size', 'M', 'Standard'],
+            ['size', 'L', 'Standard'],
+            ['size', 'XL', 'Plus'],
+            ['size', 'XXL', 'Plus'],
+            ['size', 'Free Size', 'Universal'],
+            ['size', 'Assorted Bulk Lot', 'Wholesale'],
+            // Colors
+            ['color', 'Pink', '#f472b6'],
+            ['color', 'Sunshine Yellow', '#facc15'],
+            ['color', 'Sky Blue', '#38bdf8'],
+            ['color', 'Mint Green', '#4ade80'],
+            ['color', 'Blush Pink', '#fb7185'],
+            ['color', 'Ruby Red & Gold', '#dc2626'],
+            ['color', 'Emerald Green & Gold', '#059669'],
+            ['color', 'Pure White', '#ffffff'],
+            ['color', 'Multi Pastel', '#c084fc'],
+            ['color', 'Navy Blue', '#1e3a8a'],
+            ['color', 'Royal Maroon', '#881337'],
+            // Fabrics
+            ['fabric', '100% Pure Organic Cotton', 'Natural'],
+            ['fabric', 'Soft Breathable Hosiery', 'Stretch'],
+            ['fabric', 'Handcrafted Kanjivaram Silk', 'Festive Silk'],
+            ['fabric', 'Rayon Slub Feeding Cotton', 'Soft Drapery'],
+            ['fabric', 'Pure Cotton Muslin', 'Lightweight'],
+            ['fabric', 'Rich Art Silk & Zari', 'Ethnic'],
+            ['fabric', 'Combed Cotton Knit', 'Casual']
+        ];
+
+        foreach ($defaultAttrs as $a) {
+            $aStmt->execute($a);
+        }
+    }
+
+    // Check Products
+    $pCount = $pdo->query("SELECT COUNT(*) FROM `products`")->fetchColumn();
+    if ($pCount == 0) {
+        $pStmt = $pdo->prepare("
+            INSERT INTO `products` (`sku`, `name`, `category`, `subcategory`, `size`, `color`, `fabric`, `specifications`, `price`, `mrp`, `physical_stock`, `reserved_stock`, `image`, `description`, `account_id`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $defaultProducts = [
+            [
+                'BF-001-PK', 'Embroidered Cotton Baby Frock', 'Baby Collection', 'Baby Frocks (Embroidered Cotton)', '2–3 Years', 'Pink', '100% Breathable Combed Cotton',
+                json_encode([['label' => 'Sleeve Length', 'content' => 'Full Sleeve'], ['label' => 'Occasion', 'content' => 'Festive Wear']]),
+                599.00, 799.00, 12, 0, 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=800&auto=format&fit=crop&q=80',
+                '100% Breathable Combed Cotton with fine needle embroidery. Soft inner lining, skin-friendly for babies.', 'account_1'
+            ],
+            [
+                'BF-001-YL', 'Sunshine Flared Baby Frock', 'Baby Collection', 'Baby Frocks (Embroidered Cotton)', '1–2 Years', 'Sunshine Yellow', '100% Combed Cotton',
+                json_encode([['label' => 'Occasion', 'content' => 'Daily & Casual Wear'], ['label' => 'Fit', 'content' => 'Regular Flared']]),
+                599.00, 799.00, 8, 0, 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=800&auto=format&fit=crop&q=80',
+                'Bright festive yellow frock with contrast floral yoke and flared hem.', 'account_1'
+            ],
+            [
+                'MD-102-BL', 'Pure Cotton Tiered Feeding Gown', 'Maternity & Feeding', 'Maternity Maxi Feeding Gowns', 'L / XL', 'Sky Blue', 'Pure Mulmul Cotton',
+                json_encode([['label' => 'Feeding Access', 'content' => 'Concealed Double Zips'], ['label' => 'Pattern', 'content' => 'Tiered Flared']]),
+                1299.00, 1699.00, 10, 0, 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=800&auto=format&fit=crop&q=80',
+                'Concealed double invisible feeding zips. 100% pure premium mulmul cotton, ultra-comfortable.', 'account_2'
+            ]
+        ];
+
+        foreach ($defaultProducts as $dp) {
+            $pStmt->execute($dp);
+        }
+    }
 }
+

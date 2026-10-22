@@ -3,7 +3,16 @@
  * GRM WHATSAPP CRM — MAIN APPLICATION DASHBOARD (PHP + HTML INTEGRATION)
  * Enforces server-side authentication, loads initial database state, and renders the application view.
  */
-session_start();
+ini_set('session.gc_maxlifetime', 2592000); // 30-day session duration
+session_set_cookie_params([
+    'lifetime' => 2592000,
+    'path' => '/',
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/config/db.php';
 
 // Server-Side Authentication Verification
@@ -171,13 +180,49 @@ if ($pdo) {
         </div>
       </button>
 
-      <button onclick="switchView('inbox')" id="nav-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-[20px]">inbox</span>
-          <span>WhatsApp Inbox</span>
+      <!-- WhatsApp Inbox Module with Sub-Modules -->
+      <div class="space-y-1">
+        <button onclick="switchView('inbox', 'chats')" id="nav-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px]">inbox</span>
+            <span>WhatsApp Inbox</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span id="badge-total-unread" class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">3</span>
+            <span class="material-symbols-outlined text-[16px] text-white/70" id="inbox-subnav-arrow">expand_more</span>
+          </div>
+        </button>
+
+        <!-- WhatsApp Inbox Sub-Modules -->
+        <div id="inbox-submodules-menu" class="pl-3 pr-1 py-1 space-y-1 ml-3 border-l-2 border-emerald-600/40">
+          <!-- Sub-module 1: All Chats & Queue -->
+          <button onclick="switchView('inbox', 'chats')" id="nav-inbox-sub-chats" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group" title="Active WhatsApp Chats & Customer Queue">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">forum</span>
+              <span>All Chats &amp; Queue</span>
+            </div>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          </button>
+
+          <!-- Sub-module 2: Auto-Reply Hub -->
+          <button onclick="switchView('inbox', 'autoreply')" id="nav-inbox-sub-autoreply" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-[11px] font-medium transition group" title="Auto-Reply Bot Rules & Q&A Templates">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[15px] text-teal-400 group-hover:scale-110 transition">smart_toy</span>
+              <span>Auto-Reply Hub</span>
+            </div>
+            <span id="nav-autoreply-pill" class="text-[9px] font-extrabold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">ON</span>
+          </button>
+
+          <!-- Sub-module 3: Broadcast Templates -->
+          <button onclick="switchView('inbox', 'broadcast')" id="nav-inbox-sub-broadcast" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-[11px] font-medium transition group" title="Custom Broadcast Templates & Blast Engine">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[15px] text-purple-400 group-hover:scale-110 transition">campaign</span>
+              <span>Broadcast Templates</span>
+            </div>
+            <span class="text-[9px] font-bold px-1.5 py-0.2 bg-purple-500/20 text-purple-300 rounded-full">Blast</span>
+          </button>
         </div>
-        <span id="badge-total-unread" class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">3</span>
-      </button>
+      </div>
 
       <button onclick="switchView('enquiries')" id="nav-enquiries" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
@@ -300,8 +345,8 @@ if ($pdo) {
 
     <!-- Top Header (Clean Height & Responsive Layout to Prevent Text Cutoff) -->
     <header class="min-h-[64px] bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-20 gap-3">
-      <!-- Dynamic Header Title -->
-      <div class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg">
+      <!-- Dynamic Header Title (Hidden in WhatsApp Inbox) -->
+      <div id="header-title-container" class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg hidden">
         <div class="min-w-0">
           <h2 id="page-title" class="font-bold text-base sm:text-lg text-slate-900 leading-tight truncate">WhatsApp Inbox &amp; Customer Queue</h2>
           <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
@@ -361,11 +406,6 @@ if ($pdo) {
           <span>Receive WhatsApp Message</span>
         </button>
 
-        <!-- Broadcast Template to All Customers Button -->
-        <button onclick="openBroadcastModal()" id="header-broadcast-btn" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Send customized template message to all customer chats automatically">
-          <span class="material-symbols-outlined text-[16px]">campaign</span>
-          <span>Broadcast Template</span>
-        </button>
 
         <!-- Reset Test Inbox Messages Button -->
         <button onclick="confirmResetInboxMessages()" id="header-reset-inbox-btn" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-lg transition shadow-sm" title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">

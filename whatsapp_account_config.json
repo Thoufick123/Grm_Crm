@@ -2,7 +2,7 @@
   "id": 1,
   "business_name": "GRM Garments Business Hub",
   "display_name": "GRM Garments Official",
-  "brand_name": "mekha",
+  "brand_name": "TESTING",
   "brand_tagline": "Premium Kids & Maternity Wear",
   "phone_number": "+91 86680 07593",
   "phone_number_id": "109823471928374",
@@ -25,6 +25,21 @@
   "autoReplyCooldownMinutes": 0,
   "autoReplyKeywordMatching": true,
   "autoReplyRules": [
+    {
+      "id": "rule_1792127148863",
+      "name": "maternity",
+      "keywords": [
+        "feeding gown",
+        "testing the crm",
+        "testing",
+        "crm"
+      ],
+      "actionType": "custom_text",
+      "categoryId": null,
+      "replyText": "vvvhjjhjhjhjhhhhjh",
+      "enabled": true,
+      "autoSend": true
+    },
     {
       "id": "rule_testing_the_crm",
       "name": "enaku oru chocolate venum",
