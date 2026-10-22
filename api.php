@@ -834,6 +834,27 @@ if ($action === 'save_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $physical = (int)($p['physical_stock'] ?? ($p['physicalStock'] ?? 0));
                 $reserved = (int)($p['reserved_stock'] ?? ($p['reservedStock'] ?? 0));
                 $image = $p['image'] ?? '';
+
+                // If base64 data URL, automatically save as a file on disk to optimize storage
+                if (!empty($image) && str_starts_with($image, 'data:image/')) {
+                    $uploadDir = __DIR__ . '/uploads/products/';
+                    if (!is_dir($uploadDir)) {
+                        @mkdir($uploadDir, 0777, true);
+                    }
+                    if (preg_match('/^data:image\/(\w+);base64,/', $image, $typeMatch)) {
+                        $rawBase64 = substr($image, strpos($image, ',') + 1);
+                        $ext = strtolower($typeMatch[1]);
+                        if ($ext === 'jpeg') $ext = 'jpg';
+                        $decoded = base64_decode($rawBase64);
+                        if ($decoded !== false) {
+                            $imgName = 'prod_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+                            if (@file_put_contents($uploadDir . $imgName, $decoded)) {
+                                $image = 'uploads/products/' . $imgName;
+                            }
+                        }
+                    }
+                }
+
                 $description = $p['description'] ?? '';
                 $accountId = $p['account_id'] ?? ($p['accountId'] ?? 'account_1');
 

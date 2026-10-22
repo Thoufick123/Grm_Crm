@@ -163,9 +163,6 @@ if ($pdo) {
             <p id="sidebar-connected-phone" class="text-[10px] text-emerald-300/90 font-mono font-bold configured-business-phone"><?php echo htmlspecialchars($waPhone); ?></p>
           </div>
         </div>
-        <button onclick="event.stopPropagation(); openInboundSimulatorModal()" class="text-[11px] bg-brand-wa hover:bg-brand-waDark text-white px-2 py-1 rounded-lg font-medium transition flex items-center gap-1 shadow-sm <?php echo $isAdmin ? '' : 'hidden'; ?>" title="Simulate incoming WhatsApp query">
-          <span class="material-symbols-outlined text-[14px]">add_circle</span> Sim
-        </button>
       </div>
     </div>
 
@@ -182,14 +179,14 @@ if ($pdo) {
 
       <!-- WhatsApp Inbox Module with Sub-Modules -->
       <div class="space-y-1">
-        <button onclick="switchView('inbox', 'chats')" id="nav-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm">
+        <button onclick="toggleWhatsAppDropdown()" id="nav-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-[20px]">inbox</span>
             <span>WhatsApp Inbox</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span id="badge-total-unread" class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">3</span>
-            <span class="material-symbols-outlined text-[16px] text-white/70" id="inbox-subnav-arrow">expand_more</span>
+            <span class="material-symbols-outlined text-[16px] text-white/70 transition-transform duration-200" id="inbox-subnav-arrow">expand_more</span>
           </div>
         </button>
 
