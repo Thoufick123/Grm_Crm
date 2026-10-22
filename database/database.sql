@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS `queries` (
     `id` VARCHAR(50) PRIMARY KEY,
     `customer_id` VARCHAR(50) NOT NULL,
     `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED',
-    `status` ENUM('NEW', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED') DEFAULT 'NEW',
+    `status` VARCHAR(50) DEFAULT 'NEW',
     `priority` ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT') DEFAULT 'NORMAL',
     `query_text` TEXT NULL,
     `product_sku` VARCHAR(50) NULL,
@@ -155,10 +155,11 @@ CREATE TABLE IF NOT EXISTS `orders` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 8. Customer Follow-up Reminders
+-- 8. Customer Follow-up Reminders (Full Lifecycle Tracking & Outcomes)
 CREATE TABLE IF NOT EXISTS `followups` (
     `id` VARCHAR(50) PRIMARY KEY,
     `query_id` VARCHAR(50) NULL,
+    `rescheduled_from_id` VARCHAR(50) NULL,
     `customer_id` VARCHAR(50) NOT NULL,
     `customer_name` VARCHAR(100) NOT NULL,
     `assigned_to` VARCHAR(50) NOT NULL,
@@ -166,6 +167,11 @@ CREATE TABLE IF NOT EXISTS `followups` (
     `time_str` VARCHAR(50) NOT NULL,
     `reason` TEXT NOT NULL,
     `status` ENUM('PENDING', 'COMPLETED', 'CANCELLED') DEFAULT 'PENDING',
+    `outcome` ENUM('PENDING', 'INTERESTED', 'NO_RESPONSE', 'FOLLOWUP_AGAIN', 'ORDER_PLACED', 'LOST') DEFAULT 'PENDING',
+    `priority` ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT') DEFAULT 'NORMAL',
+    `contact_channel` ENUM('WHATSAPP', 'CALL', 'STORE_VISIT') DEFAULT 'WHATSAPP',
+    `outcome_notes` TEXT NULL,
+    `completed_at` DATETIME NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -201,3 +207,13 @@ VALUES
 ON DUPLICATE KEY UPDATE `brand_name`=VALUES(`brand_name`);
 
 -- Products Table is initialized empty for dynamic catalog management
+
+-- Seed Initial Customer Follow-ups (Today, Upcoming & Overdue)
+INSERT INTO `followups` (`id`, `query_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`)
+VALUES 
+('FU-2026-0001', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', 'staff_01', CURRENT_DATE(), '11:30 AM', 'Customer asked to confirm pure cotton frock BF-001 pink size availability for 2-year-old before ordering.', 'PENDING', 'PENDING', 'HIGH', 'WHATSAPP'),
+('FU-2026-0002', 'Q-2026-001246', 'cust_102', 'Ananya Sharma', 'staff_02', CURRENT_DATE(), '04:00 PM', 'Call to discuss feeding gown MD-102 fabric details & COD shipping options to Bengaluru.', 'PENDING', 'PENDING', 'URGENT', 'CALL'),
+('FU-2026-0003', 'Q-2026-001247', 'cust_103', 'Kavitha Ramachandran', 'staff_03', DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), '10:00 AM', 'Follow up regarding wholesale 25-piece bulk frock lot inquiry and payment quotation.', 'PENDING', 'PENDING', 'NORMAL', 'CALL'),
+('FU-2026-0004', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', 'staff_01', DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), '02:30 PM', 'Check if customer received catalog photos of newborn gift sets.', 'PENDING', 'PENDING', 'NORMAL', 'WHATSAPP')
+ON DUPLICATE KEY UPDATE `reason`=VALUES(`reason`);
+

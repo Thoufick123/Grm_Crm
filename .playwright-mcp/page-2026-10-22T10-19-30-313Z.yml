@@ -1,0 +1,77 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: chat
+      - generic [ref=e6]:
+        - heading "GRM CRM PHP Backend" [level=1] [ref=e7]:
+          - text: GRM CRM
+          - generic [ref=e8]: PHP Backend
+        - paragraph [ref=e9]: WhatsApp Business & Staff Workstation
+    - generic [ref=e10]: XAMPP PHP & MySQL Active
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: lock_person
+        - heading "GRM WhatsApp CRM Secure Login" [level=2] [ref=e23]:
+          - text: GRM WhatsApp CRM
+          - generic [ref=e24]: Secure Login
+        - paragraph [ref=e25]: Role-Based Authentication & Workstation Access
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - generic [ref=e30]: Username or Staff ID
+              - generic [ref=e31]: e.g. admin, priya, staff_01
+            - generic [ref=e32]:
+              - generic [ref=e33]: account_circle
+              - textbox "Enter username (e.g. admin or priya)" [ref=e34]
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: Password
+              - generic [ref=e38]: admin123 / staff123
+            - generic [ref=e39]:
+              - generic [ref=e40]: key
+              - textbox "Enter password" [ref=e41]
+              - button "visibility" [ref=e42] [cursor=pointer]
+          - generic [ref=e44]:
+            - generic [ref=e45] [cursor=pointer]:
+              - checkbox "Keep me signed in" [checked] [ref=e46]
+              - generic [ref=e47]: Keep me signed in
+            - generic [ref=e48]: 100% Cost-Free Local Auth
+          - button "login Sign In to Panel" [ref=e49] [cursor=pointer]:
+            - generic [ref=e50]: login
+            - text: Sign In to Panel
+        - generic [ref=e51]:
+          - paragraph [ref=e52]: ⚡ Quick 1-Click Fast Login
+          - generic [ref=e53]:
+            - button "👑 Super Admin Full Control Panel" [ref=e54] [cursor=pointer]:
+              - generic [ref=e55]: 👑
+              - generic [ref=e56]:
+                - generic [ref=e57]: Super Admin
+                - generic [ref=e58]: Full Control Panel
+            - button "PS Priya (Staff 01) Sales Specialist" [ref=e59] [cursor=pointer]:
+              - generic [ref=e60]: PS
+              - generic [ref=e61]:
+                - generic [ref=e62]: Priya (Staff 01)
+                - generic [ref=e63]: Sales Specialist
+            - button "RV Rahul (Staff 02) Enquiry Specialist" [ref=e64] [cursor=pointer]:
+              - generic [ref=e65]: RV
+              - generic [ref=e66]:
+                - generic [ref=e67]: Rahul (Staff 02)
+                - generic [ref=e68]: Enquiry Specialist
+            - button "SP Sneha (Staff 03) Order Fulfillment" [ref=e69] [cursor=pointer]:
+              - generic [ref=e70]: SP
+              - generic [ref=e71]:
+                - generic [ref=e72]: Sneha (Staff 03)
+                - generic [ref=e73]: Order Fulfillment
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - generic [ref=e76]: verified_user
+            - generic [ref=e77]: "Strict Role Access Control:"
+          - paragraph [ref=e78]:
+            - text: •
+            - strong [ref=e79]: "Admin:"
+            - text: Complete system control, WhatsApp QR management, backup, and staff creation. •
+            - strong [ref=e80]: "Staff:"
+            - text: Restricted workstation for assigned customer chats, stock check & order creation.
+  - contentinfo [ref=e81]: © 2026 GRM WhatsApp CRM • Powered by XAMPP PHP & MySQL

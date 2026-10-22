@@ -1050,19 +1050,173 @@
       </section>
 
       <!-- ========================================== -->
-      <!-- VIEW: FOLLOW-UPS -->
+      <!-- VIEW: FOLLOW-UPS (UNIFIED ADMIN & STAFF WORKSTATION) -->
       <!-- ========================================== -->
-      <section id="view-followups" class="h-full overflow-y-auto p-6 hidden">
-        <div class="max-w-7xl mx-auto space-y-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-xl font-bold text-slate-900">Follow-up Management Hub</h2>
-              <p class="text-xs text-slate-500">Never forget a customer promise (size checks, family confirmations, payment reminders)</p>
+      <section id="view-followups" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-5">
+          <!-- Hub Header with Dynamic Role Indicator -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-soft">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[22px]">event_repeat</span>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Follow-up Management Hub</h2>
+                <span id="followup-role-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Global Overview
+                </span>
+              </div>
+              <p id="followup-role-subtitle" class="text-xs text-slate-500 pl-11">
+                Admin Control: Full visibility across all 4 staff queues, customer promises, response rates &amp; conversions.
+              </p>
+            </div>
+            <div class="flex items-center gap-2 pl-11 sm:pl-0">
+              <button type="button" onclick="refreshFollowupsState()" class="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl border border-slate-200 transition flex items-center justify-center" title="Refresh Live Database Follow-ups">
+                <span class="material-symbols-outlined text-[18px]">sync</span>
+              </button>
+              <button type="button" onclick="openFollowUpModal()" class="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95">
+                <span class="material-symbols-outlined text-[18px]">add_alarm</span>
+                <span>Schedule Follow-up</span>
+              </button>
             </div>
           </div>
 
-          <div id="followups-cards-grid" class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <!-- Populated by JS -->
+          <!-- 1. Interactive KPI Metrics Dashboard (Click card to filter!) -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <!-- Total -->
+            <div onclick="setFollowupTabFilter('ALL')" id="kpi-card-all" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-slate-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                Total
+                <span class="material-symbols-outlined text-[16px] text-slate-400">stacked_bar_chart</span>
+              </span>
+              <p id="kpi-fu-total" class="text-2xl font-black text-slate-900 mt-2 font-mono">0</p>
+              <span class="text-[10px] text-slate-400 mt-0.5">All customer records</span>
+            </div>
+
+            <!-- Today -->
+            <div onclick="setFollowupTabFilter('TODAY')" id="kpi-card-today" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-blue-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-blue-700 uppercase tracking-wider flex items-center justify-between">
+                Today's Due
+                <span class="material-symbols-outlined text-[16px] text-blue-500">today</span>
+              </span>
+              <p id="kpi-fu-today" class="text-2xl font-black text-blue-600 mt-2 font-mono">0</p>
+              <span class="text-[10px] text-blue-500 font-medium mt-0.5">Scheduled for today</span>
+            </div>
+
+            <!-- Upcoming -->
+            <div onclick="setFollowupTabFilter('UPCOMING')" id="kpi-card-upcoming" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-indigo-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider flex items-center justify-between">
+                Upcoming
+                <span class="material-symbols-outlined text-[16px] text-indigo-500">upcoming</span>
+              </span>
+              <p id="kpi-fu-upcoming" class="text-2xl font-black text-indigo-600 mt-2 font-mono">0</p>
+              <span class="text-[10px] text-indigo-500 font-medium mt-0.5">Future dates</span>
+            </div>
+
+            <!-- Overdue -->
+            <div onclick="setFollowupTabFilter('OVERDUE')" id="kpi-card-overdue" class="bg-rose-50/50 p-3.5 rounded-2xl border-2 border-rose-200/60 hover:border-rose-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
+              <span class="text-[11px] font-extrabold text-rose-700 uppercase tracking-wider flex items-center justify-between">
+                Overdue
+                <span class="material-symbols-outlined text-[16px] text-rose-600 animate-pulse">warning</span>
+              </span>
+              <p id="kpi-fu-overdue" class="text-2xl font-black text-rose-600 mt-2 font-mono">0</p>
+              <span class="text-[10px] text-rose-600 font-bold mt-0.5">Immediate action</span>
+            </div>
+
+            <!-- Converted -->
+            <div onclick="setFollowupTabFilter('COMPLETED')" id="kpi-card-converted" class="bg-emerald-50/50 p-3.5 rounded-2xl border-2 border-emerald-200/60 hover:border-emerald-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+                Converted
+                <span class="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
+              </span>
+              <p id="kpi-fu-converted" class="text-2xl font-black text-emerald-700 mt-2 font-mono">0</p>
+              <span class="text-[10px] text-emerald-600 font-medium mt-0.5">Orders booked</span>
+            </div>
+
+            <!-- Lost -->
+            <div onclick="setFollowupTabFilter('LOST')" id="kpi-card-lost" class="bg-slate-50 p-3.5 rounded-2xl border-2 border-transparent hover:border-slate-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+              <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center justify-between">
+                Lost
+                <span class="material-symbols-outlined text-[16px] text-slate-500">cancel</span>
+              </span>
+              <p id="kpi-fu-lost" class="text-2xl font-black text-slate-600 mt-2 font-mono">0</p>
+              <span class="text-[10px] text-slate-500 font-medium mt-0.5">Cancelled / Closed</span>
+            </div>
+          </div>
+
+          <!-- 2. Filter & Search Toolbar -->
+          <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <!-- Search Bar -->
+              <div class="relative flex-1">
+                <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                <input type="text" id="followup-search-input" oninput="filterFollowupsCards()" placeholder="Search by customer name, phone, notes, or query ID..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+              </div>
+
+              <!-- Filters Row -->
+              <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <!-- Staff Filter (Admin sees all staff; Staff sees locked badge) -->
+                <div id="followup-staff-filter-container" class="shrink-0">
+                  <select id="followup-filter-staff" onchange="filterFollowupsCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    <option value="ALL">👥 All Staff Members</option>
+                    <option value="staff_01">Priya Sharma (Baby Collection)</option>
+                    <option value="staff_02">Rahul Verma (Maternity &amp; Kids)</option>
+                    <option value="staff_03">Sneha Patel (Order Support)</option>
+                    <option value="admin">Super Admin</option>
+                  </select>
+                </div>
+
+                <!-- Priority Filter -->
+                <select id="followup-filter-priority" onchange="filterFollowupsCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition shrink-0">
+                  <option value="ALL">All Priorities</option>
+                  <option value="URGENT">🔥 Urgent</option>
+                  <option value="HIGH">⚡ High</option>
+                  <option value="NORMAL">📌 Normal</option>
+                  <option value="LOW">☕ Low</option>
+                </select>
+
+                <!-- Channel Filter -->
+                <select id="followup-filter-channel" onchange="filterFollowupsCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition shrink-0">
+                  <option value="ALL">All Channels</option>
+                  <option value="WHATSAPP">💬 WhatsApp Chat</option>
+                  <option value="CALL">📞 Phone Call</option>
+                  <option value="STORE_VISIT">🏬 Store Visit</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Status Tabs Ribbon -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs border-t border-slate-100 pt-3">
+              <button type="button" onclick="setFollowupTabFilter('ALL')" id="tab-fu-all" class="px-3.5 py-1.5 rounded-xl font-bold bg-blue-600 text-white shadow-sm transition shrink-0">All Records</button>
+              <button type="button" onclick="setFollowupTabFilter('TODAY')" id="tab-fu-today" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0 flex items-center gap-1">
+                <span>Today's Due</span>
+                <span id="tab-badge-today" class="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono">0</span>
+              </button>
+              <button type="button" onclick="setFollowupTabFilter('UPCOMING')" id="tab-fu-upcoming" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Upcoming</button>
+              <button type="button" onclick="setFollowupTabFilter('OVERDUE')" id="tab-fu-overdue" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 transition shrink-0 flex items-center gap-1">
+                <span>Overdue</span>
+                <span id="tab-badge-overdue" class="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono">0</span>
+              </button>
+              <button type="button" onclick="setFollowupTabFilter('COMPLETED')" id="tab-fu-completed" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Converted / Done</button>
+              <button type="button" onclick="setFollowupTabFilter('LOST')" id="tab-fu-lost" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Lost Enquiries</button>
+            </div>
+          </div>
+
+          <!-- 3. Follow-up Cards Grid -->
+          <div id="followups-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Populated dynamically by JS with complete RBAC & actions -->
+          </div>
+
+          <!-- Empty State -->
+          <div id="followups-empty-state" class="hidden text-center py-16 bg-white rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
+            <div class="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              <span class="material-symbols-outlined text-[32px]">event_available</span>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">No follow-ups match your current filter</h3>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">All customer callbacks are up to date, or no records match the chosen search criteria.</p>
+            <button type="button" onclick="setFollowupTabFilter('ALL')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+              Reset Filters
+            </button>
           </div>
         </div>
       </section>
@@ -2132,9 +2286,9 @@
   </div>
 
   <!-- MODAL: CONVERT TO ORDER MODAL (Atomic Stock Reservation) -->
-  <div id="modal-convert-order" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-      <div class="bg-gradient-to-r from-emerald-800 to-brand-dark p-5 text-white flex items-center justify-between">
+  <div id="modal-convert-order" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] my-auto">
+      <div class="bg-gradient-to-r from-emerald-800 to-brand-dark p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
             <span class="material-symbols-outlined text-[22px]">shopping_cart_checkout</span>
@@ -2149,7 +2303,8 @@
         </button>
       </div>
 
-      <form onsubmit="handleCreateOrder(event)" class="p-6 space-y-4 text-xs">
+      <form onsubmit="handleCreateOrder(event)" class="flex flex-col flex-1 overflow-hidden min-h-0">
+        <div class="p-5 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
         <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
           <div>
             <span class="text-[10px] uppercase font-bold text-slate-400">Customer</span>
@@ -2203,8 +2358,10 @@
           <span id="order-grand-total" class="text-xl font-extrabold text-emerald-900 font-mono">₹1,198</span>
         </div>
 
-        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
-          <button type="button" onclick="closeModal('modal-convert-order')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
+        </div>
+
+        <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0 rounded-b-2xl">
+          <button type="button" onclick="closeModal('modal-convert-order')" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-semibold">Cancel</button>
           <button type="submit" class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[18px]">check_circle</span> Confirm Order & Reserve Stock
           </button>
@@ -2214,10 +2371,10 @@
   </div>
 
   <!-- MODAL: FOLLOW-UP SCHEDULER -->
-  <div id="modal-followup" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-200">
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-5 text-white flex items-center justify-between">
+  <div id="modal-followup" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-200 flex flex-col max-h-[90vh] my-auto">
+      <!-- Header (Fixed / Non-scrolling) -->
+      <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300">
             <span class="material-symbols-outlined text-[24px]">event_available</span>
@@ -2232,7 +2389,72 @@
         </button>
       </div>
 
-      <form onsubmit="handleCreateFollowup(event)" class="p-6 space-y-4 text-xs">
+      <form onsubmit="handleCreateFollowup(event)" class="flex flex-col flex-1 overflow-hidden min-h-0">
+        <!-- Scrollable Modal Body Container with custom scrollbar -->
+        <div class="p-5 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
+        <!-- Duplicate Active Follow-up Alert (Dynamic) -->
+        <div id="followup-duplicate-warning" class="hidden bg-amber-50 border border-amber-300 p-3 rounded-2xl flex items-start gap-2.5 text-amber-900">
+          <span class="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-0.5">warning</span>
+          <div class="flex-1">
+            <h5 class="font-extrabold text-amber-950">Active Follow-up Already Exists</h5>
+            <p id="followup-duplicate-text" class="text-[11px] text-amber-800 mt-0.5 leading-relaxed">This customer already has an active pending follow-up.</p>
+          </div>
+        </div>
+
+        <!-- Target Customer & Assigned Staff Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div class="space-y-1">
+            <label class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-blue-600">person</span>
+              <span>Customer</span>
+            </label>
+            <div id="followup-customer-display" class="w-full bg-slate-100 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-800 truncate">
+              Priya Sundaram (+91 98765 43210)
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-indigo-600">badge</span>
+              <span>Assigned Staff</span>
+            </label>
+            <select id="followup-staff-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+              <option value="staff_01">Priya Sharma (Baby Collection)</option>
+              <option value="staff_02">Rahul Verma (Maternity &amp; Kids)</option>
+              <option value="staff_03">Sneha Patel (Order Support)</option>
+              <option value="admin">Super Admin</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Priority & Contact Channel Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div class="space-y-1">
+            <label class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-rose-600">priority_high</span>
+              <span>Follow-up Priority *</span>
+            </label>
+            <select id="followup-priority" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+              <option value="NORMAL" selected>📌 Normal Priority</option>
+              <option value="HIGH">⚡ High Priority</option>
+              <option value="URGENT">🔥 Urgent (Top Priority)</option>
+              <option value="LOW">☕ Low Priority</option>
+            </select>
+          </div>
+
+          <div class="space-y-1">
+            <label class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-emerald-600">contact_phone</span>
+              <span>Contact Method *</span>
+            </label>
+            <select id="followup-channel" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+              <option value="WHATSAPP" selected>💬 WhatsApp Chat / Audio Note</option>
+              <option value="CALL">📞 Direct Phone Call</option>
+              <option value="STORE_VISIT">🏬 Showroom / Store Visit</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Date & 12-Hour Time Row -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           <!-- Calendar Date -->
@@ -2263,7 +2485,6 @@
             </div>
             
             <div class="grid grid-cols-3 gap-1.5">
-              <!-- Hour (01 - 12) -->
               <select id="followup-hour" onchange="updateFollowUpTimePreview()" class="bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
                 <option value="01">01</option>
                 <option value="02">02</option>
@@ -2279,7 +2500,6 @@
                 <option value="12">12</option>
               </select>
 
-              <!-- Minute (00 - 55) -->
               <select id="followup-minute" onchange="updateFollowUpTimePreview()" class="bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
                 <option value="00" selected>00</option>
                 <option value="05">05</option>
@@ -2295,14 +2515,12 @@
                 <option value="55">55</option>
               </select>
 
-              <!-- AM / PM -->
               <select id="followup-ampm" onchange="updateFollowUpTimePreview()" class="bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-bold text-indigo-900 focus:bg-white focus:ring-1 focus:ring-blue-600">
                 <option value="AM" selected>AM</option>
                 <option value="PM">PM</option>
               </select>
             </div>
 
-            <!-- Quick Time Presets -->
             <div class="flex items-center gap-1 pt-0.5">
               <button type="button" onclick="setFollowUpQuickTime('NOW')" class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md border border-slate-200 transition">Now</button>
               <button type="button" onclick="setFollowUpQuickTime('PLUS_1H')" class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md border border-slate-200 transition">+1 Hr</button>
@@ -2329,12 +2547,12 @@
           </div>
 
           <select id="followup-reason-select" onchange="handleFollowupReasonSelect(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
-            <option value="Customer will confirm required size after checking with family.">Customer will confirm required size after checking</option>
-            <option value="Customer asked to send product photos of alternative colors & designs.">Send product photos &amp; alternative catalog</option>
-            <option value="Customer promised to place order & complete payment by callback time.">Promised to place order &amp; pay</option>
-            <option value="Waiting for customer UPI / Bank transfer payment screenshot.">Waiting for UPI / Payment confirmation</option>
-            <option value="Price negotiation / Special festive discount inquiry.">Price negotiation / Discount inquiry</option>
-            <option value="Customer requested callback at a specific time.">Customer requested specific callback</option>
+            <option value="Customer will confirm required size after checking with family.">Customer will confirm required size after checking with family</option>
+            <option value="Customer asked to send product photos of alternative colors & designs.">Send product photos &amp; alternative garment catalog</option>
+            <option value="Customer promised to place order & complete payment by callback time.">Promised to place order &amp; pay by callback time</option>
+            <option value="Waiting for customer UPI / Bank transfer payment screenshot.">Waiting for UPI / Bank payment screenshot confirmation</option>
+            <option value="Price negotiation / Special festive bulk discount inquiry.">Price negotiation / Festive bulk discount inquiry</option>
+            <option value="Customer requested callback at a specific time.">Customer requested callback at specific time</option>
             <option value="other">✍️ Custom reason / custom notes...</option>
           </select>
 
@@ -2354,13 +2572,159 @@
           </div>
         </div>
 
-        <!-- Footer Actions -->
-        <div class="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-200">
-          <button type="button" onclick="closeModal('modal-followup')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">Cancel</button>
+        </div>
+
+        <!-- Sticky Fixed Footer Actions (Always visible) -->
+        <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 rounded-b-3xl">
+          <button type="button" onclick="closeModal('modal-followup')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition">Cancel</button>
           <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold shadow-md transition flex items-center gap-1.5 active:scale-[0.99]">
             <span class="material-symbols-outlined text-[18px]">alarm_on</span>
             <span>Save Follow-up</span>
           </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LOG FOLLOW-UP OUTCOME & NEXT ACTION -->
+  <div id="modal-followup-outcome" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-200 flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+            <span class="material-symbols-outlined text-[24px]">task_alt</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-base tracking-tight">Record Follow-up Result</h3>
+            <p class="text-xs text-indigo-200/80">Log outcome, record customer feedback &amp; schedule next action</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-followup-outcome')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-indigo-200 hover:text-white transition">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <form id="form-followup-outcome" onsubmit="handleSaveFollowupOutcome(event)" class="flex flex-col flex-1 overflow-hidden min-h-0">
+        <!-- Scrollable Modal Body Container -->
+        <div class="p-5 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
+        <input type="hidden" id="outcome-followup-id">
+
+        <!-- Active Follow-up Summary Banner -->
+        <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="outcome-badge-id" class="font-mono text-[11px] font-extrabold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">FU-2026-0001</span>
+              <strong id="outcome-customer-name" class="text-sm font-bold text-slate-900">Priya Sundaram</strong>
+            </div>
+            <p id="outcome-original-reason" class="text-[11px] text-slate-600 mt-1 line-clamp-1">Original note: Customer confirming pure cotton frock size.</p>
+          </div>
+          <span id="outcome-assigned-badge" class="px-2.5 py-1 rounded-xl bg-slate-200 text-slate-800 text-[10px] font-bold font-mono">Priya (staff_01)</span>
+        </div>
+
+        <!-- OUTCOME OPTIONS (Radio cards) -->
+        <div class="space-y-1.5">
+          <label class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-indigo-600">flag</span>
+            <span>Select Call / Interaction Result *</span>
+          </label>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <!-- Interested -->
+            <label class="cursor-pointer">
+              <input type="radio" name="followup_outcome" value="INTERESTED" class="peer sr-only" checked onchange="toggleOutcomeNextScheduler(this.value)">
+              <div class="p-3 rounded-2xl border-2 border-slate-200 peer-checked:border-emerald-500 peer-checked:bg-emerald-50/40 hover:bg-slate-50 transition text-center space-y-1">
+                <span class="material-symbols-outlined text-emerald-600 text-[20px]">thumb_up</span>
+                <p class="font-bold text-slate-800 text-xs">Interested</p>
+                <p class="text-[10px] text-slate-500">Positive response</p>
+              </div>
+            </label>
+
+            <!-- Follow-up Again -->
+            <label class="cursor-pointer">
+              <input type="radio" name="followup_outcome" value="FOLLOWUP_AGAIN" class="peer sr-only" onchange="toggleOutcomeNextScheduler(this.value)">
+              <div class="p-3 rounded-2xl border-2 border-slate-200 peer-checked:border-blue-500 peer-checked:bg-blue-50/40 hover:bg-slate-50 transition text-center space-y-1">
+                <span class="material-symbols-outlined text-blue-600 text-[20px]">event_repeat</span>
+                <p class="font-bold text-slate-800 text-xs">Follow-up Again</p>
+                <p class="text-[10px] text-slate-500">Schedule callback</p>
+              </div>
+            </label>
+
+            <!-- Order Placed -->
+            <label class="cursor-pointer">
+              <input type="radio" name="followup_outcome" value="ORDER_PLACED" class="peer sr-only" onchange="toggleOutcomeNextScheduler(this.value)">
+              <div class="p-3 rounded-2xl border-2 border-slate-200 peer-checked:border-brand-wa peer-checked:bg-emerald-50/50 hover:bg-slate-50 transition text-center space-y-1">
+                <span class="material-symbols-outlined text-brand-wa text-[20px]">shopping_bag</span>
+                <p class="font-bold text-slate-800 text-xs">Order Placed</p>
+                <p class="text-[10px] text-slate-500">Convert lead</p>
+              </div>
+            </label>
+
+            <!-- No Response -->
+            <label class="cursor-pointer">
+              <input type="radio" name="followup_outcome" value="NO_RESPONSE" class="peer sr-only" onchange="toggleOutcomeNextScheduler(this.value)">
+              <div class="p-3 rounded-2xl border-2 border-slate-200 peer-checked:border-amber-500 peer-checked:bg-amber-50/40 hover:bg-slate-50 transition text-center space-y-1">
+                <span class="material-symbols-outlined text-amber-600 text-[20px]">phone_missed</span>
+                <p class="font-bold text-slate-800 text-xs">No Response</p>
+                <p class="text-[10px] text-slate-500">Unanswered</p>
+              </div>
+            </label>
+
+            <!-- Lost -->
+            <label class="cursor-pointer">
+              <input type="radio" name="followup_outcome" value="LOST" class="peer sr-only" onchange="toggleOutcomeNextScheduler(this.value)">
+              <div class="p-3 rounded-2xl border-2 border-slate-200 peer-checked:border-rose-500 peer-checked:bg-rose-50/40 hover:bg-slate-50 transition text-center space-y-1">
+                <span class="material-symbols-outlined text-rose-600 text-[20px]">cancel</span>
+                <p class="font-bold text-slate-800 text-xs">Lost / Cancelled</p>
+                <p class="text-[10px] text-slate-500">Not purchasing</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- CONDITIONAL: NEXT FOLLOW-UP SCHEDULER (Only visible if FOLLOWUP_AGAIN is chosen) -->
+        <div id="outcome-next-scheduler" class="hidden bg-blue-50/60 border border-blue-200 p-4 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h5 class="font-bold text-blue-950 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-blue-700">alarm_add</span>
+              <span>Schedule Next Contact Time</span>
+            </h5>
+            <span class="text-[10px] text-blue-700 font-semibold">Previous activity retained in history</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Next Date *</label>
+              <input type="date" id="outcome-next-date" class="w-full bg-white border border-slate-300 rounded-xl p-2 font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Next Time (12-Hr) *</label>
+              <input type="text" id="outcome-next-time" value="11:00 AM" class="w-full bg-white border border-slate-300 rounded-xl p-2 font-mono font-bold text-slate-800">
+            </div>
+          </div>
+        </div>
+
+        <!-- Outcome Detailed Notes -->
+        <div class="space-y-1.5">
+          <label class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-slate-600">edit_note</span>
+            <span>Outcome &amp; Customer Conversation Summary *</span>
+          </label>
+          <textarea id="outcome-notes" rows="3" required placeholder="Write details about the call outcome, customer reply, objections, or next steps..." class="w-full bg-slate-50 border border-slate-300 rounded-2xl p-3 text-xs font-medium text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-600 leading-relaxed shadow-inner"></textarea>
+        </div>
+
+        </div>
+
+        <!-- Sticky Fixed Footer Actions (Always visible) -->
+        <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2.5 shrink-0 rounded-b-3xl">
+          <button type="button" onclick="closeModal('modal-followup-outcome')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition">Cancel</button>
+          
+          <div class="flex items-center gap-2">
+            <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl font-bold shadow-md transition flex items-center gap-1.5 active:scale-95">
+              <span class="material-symbols-outlined text-[18px]">check_circle</span>
+              <span>Save &amp; Complete Follow-up</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -4366,6 +4730,6 @@
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=5.8"></script>
+  <script src="crm_app.js?v=5.9"></script>
 </body>
 </html>
