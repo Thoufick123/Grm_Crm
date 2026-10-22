@@ -887,7 +887,7 @@ if ($action === 'save_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         $image, $description, $accountId, $targetId
                     ]);
                     $savedIds[] = (int)$targetId;
-                    $savedRows[] = ['id' => (int)$targetId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp];
+                    $savedRows[] = ['id' => (int)$targetId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp, 'image' => $image];
                 } else {
                     $stmt = $pdo->prepare("
                         INSERT INTO `products` (`sku`, `name`, `category`, `subcategory`, `size`, `color`, `fabric`, `specifications`, `price`, `mrp`, `physical_stock`, `reserved_stock`, `image`, `description`, `account_id`)
@@ -906,7 +906,7 @@ if ($action === 'save_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $insertedId = (int)($pdo->lastInsertId() ?: $targetId);
                     $savedIds[] = $insertedId;
-                    $savedRows[] = ['id' => $insertedId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp];
+                    $savedRows[] = ['id' => $insertedId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp, 'image' => $image];
                 }
             } catch (Exception $e) {
                 error_log("save_product exception for {$p['sku']}: " . $e->getMessage());
@@ -919,6 +919,7 @@ if ($action === 'save_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         "message" => count($savedIds) . " product variant(s) saved to catalog database", 
         "ids" => $savedIds,
         "id" => $savedIds[0] ?? null,
+        "image" => $savedRows[0]['image'] ?? '',
         "products" => $savedRows
     ]);
     exit;
@@ -1122,18 +1123,29 @@ if ($action === 'save_product_caption' && $_SERVER['REQUEST_METHOD'] === 'POST')
 if ($action === 'delete_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
     $p = json_decode($input, true);
-    $productId = $p['id'] ?? null;
+    $productId = $p['id'] ?? ($p['product_id'] ?? null);
+    $sku = !empty($p['sku']) ? trim($p['sku']) : null;
 
-    if (!$productId) {
+    if (!$productId && !$sku) {
         http_response_code(400);
-        echo json_encode(["status" => "error", "message" => "Product ID is required"]);
+        echo json_encode(["status" => "error", "message" => "Product ID or SKU is required"]);
         exit;
     }
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("DELETE FROM `products` WHERE `id` = ?");
-            $stmt->execute([$productId]);
+            $isNumericId = $productId && is_numeric($productId);
+            if ($isNumericId && !empty($sku)) {
+                $stmt = $pdo->prepare("DELETE FROM `products` WHERE `id` = ? OR `sku` = ?");
+                $stmt->execute([(int)$productId, $sku]);
+            } else if ($isNumericId) {
+                $stmt = $pdo->prepare("DELETE FROM `products` WHERE `id` = ?");
+                $stmt->execute([(int)$productId]);
+            } else {
+                $target = !empty($sku) ? $sku : (string)$productId;
+                $stmt = $pdo->prepare("DELETE FROM `products` WHERE `sku` = ? OR `id` = ?");
+                $stmt->execute([$target, $target]);
+            }
             echo json_encode(["status" => "success", "message" => "Product deleted from database"]);
             exit;
         } catch (Exception $e) {

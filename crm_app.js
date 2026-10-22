@@ -4,8 +4,54 @@
  * Staff Assignment, Product Stock Reservation & Customer 360
  */
 
-// Global SVG Garment Image Placeholder (Safely available everywhere)
-var DEFAULT_GARMENT_PLACEHOLDER = window.DEFAULT_GARMENT_PLACEHOLDER || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300' fill='none'><rect width='400' height='300' fill='%23f8fafc'/><g fill='%2394a3b8'><path d='M200 95c-11.05 0-20 8.95-20 20 0 7.42 4.05 13.9 10.05 17.37v6.63h-34.1l-24 42h136.1l-24-42h-34.05v-6.63c6-3.47 10-9.95 10-17.37 0-11.05-8.95-20-20-20zm0 8c6.63 0 12 5.37 12 12s-5.37 12-12 12-12-5.37-12-12 5.37-12 12-12z'/><path d='M132 185h136v4H132z' fill='%23cbd5e1'/><text x='200' y='215' font-family='sans-serif' font-size='13' font-weight='600' text-anchor='middle' fill='%2364748b'>No Image Uploaded</text></g></svg>";
+// Global Garment Image Placeholder & Smart Resolver (Guarantees elegant garment photos everywhere)
+var DEFAULT_GARMENT_PLACEHOLDER = window.DEFAULT_GARMENT_PLACEHOLDER || "uploads/products/sample_garment.jpg";
+
+function getSmartProductImage(p) {
+  if (!p) return 'uploads/products/sample_garment.jpg';
+
+  // 1. Direct photo if valid and not a 404/broken link or old SVG placeholder
+  let img = p.image || p.imageUrl || '';
+  if (img && typeof img === 'string') {
+    img = img.trim();
+    if (img && !img.includes('photo-1518831959646-742c3a14ebf7') && !img.includes('photo-1583846783977-d2b0993d4265') && !img.includes('No%20Image') && !img.includes('No Image')) {
+      if (img.startsWith('http') || img.startsWith('uploads/') || img.startsWith('assets/') || img.startsWith('data:image')) {
+        return img;
+      }
+    }
+  }
+
+  // 2. Sibling variant photo if this is a group or parent product
+  if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+    const validVar = p.variants.find(v => v.image && typeof v.image === 'string' && !v.image.includes('photo-1518831959646-742c3a14ebf7') && !v.image.includes('photo-1583846783977-d2b0993d4265') && !v.image.includes('No Image') && (v.image.startsWith('http') || v.image.startsWith('uploads/') || v.image.startsWith('data:image')));
+    if (validVar && validVar.image) {
+      return validVar.image;
+    }
+  }
+
+  // 3. Smart Category / Apparel Type Photography Fallback
+  const text = `${p.category || ''} ${p.subcategory || ''} ${p.name || ''} ${p.sku || ''}`.toLowerCase();
+  if (text.includes('baby') || text.includes('frock') || text.includes('bloomer') || text.includes('sleepsuit') || text.includes('romper')) {
+    return 'uploads/products/baby_frock.jpg';
+  }
+  if (text.includes('maternity') || text.includes('feeding') || text.includes('kurti') || text.includes('gown') || text.includes('anarkali')) {
+    return 'uploads/products/maternity_gown.jpg';
+  }
+  if (text.includes('newborn') || text.includes('swaddle') || text.includes('mitten') || text.includes('bootie') || text.includes('crib')) {
+    return 'uploads/products/newborn_care.jpg';
+  }
+  if (text.includes('festive') || text.includes('ethnic') || text.includes('lehenga') || text.includes('pattu') || text.includes('pavadai') || text.includes('choli') || text.includes('silk')) {
+    return 'uploads/products/girls_festive.jpg';
+  }
+  if (text.includes('kid') || text.includes('dungaree') || text.includes('t-shirt') || text.includes('tshirt') || text.includes('nightwear') || text.includes('pajama')) {
+    return 'uploads/products/kids_wear.jpg';
+  }
+
+  // 4. Default high-resolution garment apparel photography
+  return 'uploads/products/sample_garment.jpg';
+}
+window.getSmartProductImage = getSmartProductImage;
+
 
 // Initial Garment CRM Mock State (Stores in LocalStorage for 100% persistent cost-free operation)
 var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
@@ -155,8 +201,24 @@ window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
 // Global App State (Safely Initialized Immediately)
 var CRM_STATE = window.CRM_STATE || JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
 window.CRM_STATE = CRM_STATE;
-var CURRENT_USER = window.CURRENT_USER || null; // Currently logged in user profile
-var ACTIVE_VIEW = window.ACTIVE_VIEW || 'inbox';
+function getPersistedActiveView() {
+  try {
+    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
+    const hash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+    if (hash && validViews.includes(hash)) {
+      return hash;
+    }
+    const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_VIEW') : null;
+    if (stored && validViews.includes(stored)) {
+      return stored;
+    }
+  } catch (e) {
+    console.error('Error getting persisted view:', e);
+  }
+  return 'inbox';
+}
+
+var ACTIVE_VIEW = window.ACTIVE_VIEW || getPersistedActiveView();
 var ACTIVE_ROLE = window.ACTIVE_ROLE || 'admin'; // 'admin', 'staff_01', 'staff_02', 'staff_03', etc.
 var ACTIVE_CUSTOMER_ID = window.ACTIVE_CUSTOMER_ID || 'cust_100';
 var INBOX_FILTER = window.INBOX_FILTER || 'all'; // 'all', 'unassigned', 'my', 'urgent'
@@ -1134,6 +1196,15 @@ function cleanupAndDeduplicateCRMState() {
   });
   CRM_STATE.queries = dedupedQueries;
 
+  // 4. Ensure all catalog products have valid, non-broken, beautiful garment images
+  if (Array.isArray(CRM_STATE.products)) {
+    CRM_STATE.products.forEach(p => {
+      if (!p.image || p.image.includes('photo-1518831959646-742c3a14ebf7') || p.image.includes('photo-1583846783977-d2b0993d4265') || p.image.includes('No Image') || p.image.includes('No%20Image')) {
+        p.image = getSmartProductImage(p);
+      }
+    });
+  }
+
   saveCRMState();
 }
 
@@ -1167,7 +1238,7 @@ function mergeCatalogProductsWithDB(dbRawProducts) {
     mrp: parseFloat(p.mrp) || parseFloat(p.price) || 0,
     physicalStock: parseInt(p.physical_stock ?? p.physicalStock) || 0,
     reservedStock: parseInt(p.reserved_stock ?? p.reservedStock) || 0,
-    image: p.image || '',
+    image: p.image || getSmartProductImage(p),
     description: p.description || '',
     custom_caption: p.custom_caption || p.customCaption || '',
     customCaption: p.custom_caption || p.customCaption || '',
@@ -1180,10 +1251,13 @@ function mergeCatalogProductsWithDB(dbRawProducts) {
   const merged = mappedDb.map(dbP => {
     const localMatch = localProducts.find(lp => lp && (lp.sku === dbP.sku || (lp.id && String(lp.id) === String(dbP.id))));
     if (localMatch) {
+      const bestImg = (dbP.image && !dbP.image.includes('photo-1583846783977-d2b0993d4265') && !dbP.image.includes('photo-1518831959646-742c3a14ebf7'))
+        ? dbP.image 
+        : (localMatch.image || getSmartProductImage(dbP));
       return {
         ...localMatch,
         ...dbP,
-        image: dbP.image || localMatch.image || '',
+        image: bestImg,
         customAttributes: (dbP.customAttributes && Object.keys(dbP.customAttributes).length > 0) ? dbP.customAttributes : (localMatch.customAttributes || {}),
         specifications: (dbP.specifications && dbP.specifications.length > 0) ? dbP.specifications : (localMatch.specifications || [])
       };
@@ -1195,6 +1269,9 @@ function mergeCatalogProductsWithDB(dbRawProducts) {
   const unsyncedLocals = [];
   localProducts.forEach(localP => {
     if (!localP || !localP.sku) return;
+    if (!localP.image || localP.image.includes('No Image') || localP.image.includes('photo-1583846783977-d2b0993d4265')) {
+      localP.image = getSmartProductImage(localP);
+    }
     const exists = merged.some(m => m.sku === localP.sku || (localP.id && String(m.id) === String(localP.id)));
     if (!exists) {
       merged.push(localP);
@@ -1421,12 +1498,12 @@ function saveCRMState() {
   } catch (err) {
     console.warn('LocalStorage quota warning, pruning base64 images for storage:', err);
     try {
-      // Create lightweight copy without bulky data URLs
+      // Create lightweight copy with compact URLs instead of bulky base64 data URLs
       const safeState = { ...CRM_STATE };
       if (Array.isArray(safeState.products)) {
         safeState.products = safeState.products.map(p => {
           if (p.image && p.image.startsWith('data:image')) {
-            return { ...p, image: '' };
+            return { ...p, image: getSmartProductImage(p) };
           }
           return p;
         });
@@ -1729,6 +1806,12 @@ function updateConfiguredPhoneDisplays() {
 // 1. NAVIGATION & VIEW SWITCHER (RBAC ENFORCED)
 // =========================================================================
 function switchView(viewName) {
+  // Remove temporary instant-view-shield style if present so clean CSS classes take over
+  const shield = document.getElementById('instant-view-shield');
+  if (shield) {
+    shield.remove();
+  }
+
   // Enforce Role-Based Access Control: Admin-only modules
   const adminOnlyViews = ['settings', 'backup', 'staff', 'audit', 'analytics'];
   if (ACTIVE_ROLE !== 'admin' && adminOnlyViews.includes(viewName)) {
@@ -1737,6 +1820,12 @@ function switchView(viewName) {
   }
 
   ACTIVE_VIEW = viewName;
+  try {
+    localStorage.setItem('GRM_CRM_ACTIVE_VIEW', viewName);
+    if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', '#' + viewName);
+    }
+  } catch (e) {}
   const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
 
   views.forEach(v => {
@@ -1798,8 +1887,15 @@ function switchView(viewName) {
   if (viewName === 'audit') renderAuditTable();
   if (viewName === 'analytics') renderAnalyticsView();
   if (viewName === 'settings') renderWhatsAppSettings();
-  if (viewName === 'backup') renderBackupView();
 }
+
+window.addEventListener('hashchange', () => {
+  const hash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+  const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
+  if (hash && validViews.includes(hash) && hash !== ACTIVE_VIEW) {
+    switchView(hash);
+  }
+});
 
 // =========================================================================
 // 2. AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC) SYSTEM
@@ -2828,17 +2924,14 @@ window.openImageLightbox = function(msgIdOrSrc, customTitle) {
   if (zoomPctEl) zoomPctEl.innerText = '100%';
 
   if (modal) {
-    modal.classList.remove('hidden');
+    openModal('modal-image-lightbox');
     document.body.style.overflow = 'hidden';
   }
 };
 
 window.closeImageLightbox = function() {
-  const modal = document.getElementById('modal-image-lightbox');
-  if (modal) {
-    modal.classList.add('hidden');
-    document.body.style.overflow = '';
-  }
+  closeModal('modal-image-lightbox');
+  document.body.style.overflow = '';
   CURRENT_LIGHTBOX_ZOOM = 1.0;
 };
 
@@ -2912,12 +3005,17 @@ window.openLightboxImageInNewTab = function() {
   }
 };
 
-// Keyboard listener for Escape key to close lightbox
+// Keyboard listener for Escape key to close topmost modal or lightbox
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    const modal = document.getElementById('modal-image-lightbox');
-    if (modal && !modal.classList.contains('hidden')) {
-      closeImageLightbox();
+    if (typeof ACTIVE_MODAL_STACK !== 'undefined' && ACTIVE_MODAL_STACK.length > 0) {
+      const topModalId = ACTIVE_MODAL_STACK[ACTIVE_MODAL_STACK.length - 1];
+      closeModal(topModalId);
+    } else {
+      const modal = document.getElementById('modal-image-lightbox');
+      if (modal && !modal.classList.contains('hidden')) {
+        closeImageLightbox();
+      }
     }
   }
 });
@@ -6764,6 +6862,118 @@ function renderCatalogGrid(search) {
   filterCatalogGrid();
 }
 
+// -------------------------------------------------------------------------
+// GROUP CATALOG PRODUCTS (SINGLE CARD FOR MULTI-ATTRIBUTE VARIANT FAMILIES)
+// -------------------------------------------------------------------------
+function groupCatalogProducts(rawList) {
+  if (!Array.isArray(rawList)) return [];
+
+  const groupsMap = new Map();
+
+  rawList.forEach(p => {
+    let parentKey = '';
+    let baseName = (p.parentName || p.parent_name || '').trim();
+    if (!baseName && p.name) {
+      baseName = p.name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    }
+    if (!baseName) baseName = p.name || 'Product';
+
+    const parentSku = (p.parentSku || p.parent_sku || '').trim();
+    const category = (p.category || '').trim().toLowerCase();
+
+    // Grouping key: parentSku, or (category + baseName) if name has parentheses, else standalone
+    if (parentSku) {
+      parentKey = `parent_sku__${parentSku.toLowerCase()}`;
+    } else if (p.name && p.name.includes('(') && p.name.includes(')')) {
+      parentKey = `family__${category}__${baseName.toLowerCase()}`;
+    } else {
+      parentKey = `single__${p.id || p.sku}`;
+    }
+
+    if (!groupsMap.has(parentKey)) {
+      groupsMap.set(parentKey, {
+        key: parentKey,
+        baseName: baseName,
+        parentSku: parentSku || (p.sku ? p.sku.replace(/-[A-Z0-9]+-[A-Z0-9]+(-[0-9]+)?$/, '') : ''),
+        category: p.category,
+        subcategory: p.subcategory,
+        accountId: p.accountId,
+        items: []
+      });
+    }
+    groupsMap.get(parentKey).items.push(p);
+  });
+
+  const displayList = [];
+  groupsMap.forEach(group => {
+    if (group.items.length === 1) {
+      // Standalone single product (no variant siblings)
+      displayList.push({
+        ...group.items[0],
+        isGroup: false,
+        variantCount: 1,
+        groupKey: group.key
+      });
+    } else {
+      // Multi-attribute product group (multiple variants)
+      const items = group.items;
+      const totalPhysical = items.reduce((acc, v) => acc + (parseInt(v.physicalStock) || 0), 0);
+      const totalReserved = items.reduce((acc, v) => acc + (parseInt(v.reservedStock) || 0), 0);
+      const totalAvailable = totalPhysical - totalReserved;
+
+      const prices = items.map(v => parseFloat(v.price) || 0).filter(pr => pr > 0);
+      const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+
+      const mrps = items.map(v => parseFloat(v.mrp) || 0).filter(m => m > 0);
+      const minMrp = mrps.length > 0 ? Math.min(...mrps) : 0;
+      const maxMrp = mrps.length > 0 ? Math.max(...mrps) : 0;
+
+      const sizes = [...new Set(items.map(v => v.size).filter(Boolean))];
+      const colors = [...new Set(items.map(v => v.color).filter(Boolean))];
+      const fabrics = [...new Set(items.map(v => v.fabric).filter(Boolean))];
+
+      const repImg = getSmartProductImage({
+        ...items[0],
+        category: group.category || items[0].category,
+        subcategory: group.subcategory || items[0].subcategory,
+        name: group.baseName,
+        variants: items
+      });
+
+      displayList.push({
+        id: items[0].id,
+        groupKey: group.key,
+        isGroup: true,
+        variantCount: items.length,
+        variants: items,
+        sku: group.parentSku || items[0].sku,
+        name: group.baseName,
+        category: group.category || items[0].category,
+        subcategory: group.subcategory || items[0].subcategory,
+        accountId: group.accountId || items[0].accountId,
+        image: repImg,
+        physicalStock: totalPhysical,
+        reservedStock: totalReserved,
+        availableStock: totalAvailable,
+        minPrice,
+        maxPrice,
+        minMrp,
+        maxMrp,
+        price: minPrice,
+        mrp: maxMrp,
+        sizes,
+        colors,
+        fabrics,
+        specifications: items[0].specifications || []
+      });
+    }
+  });
+
+  return displayList;
+}
+window.groupCatalogProducts = groupCatalogProducts;
+
 function renderCatalogGridFromList(list) {
   const container = document.getElementById('catalog-grid-container');
   if (!container) return;
@@ -6789,10 +6999,12 @@ function renderCatalogGridFromList(list) {
     return;
   }
 
-  container.innerHTML = list.map(p => {
+  const displayList = groupCatalogProducts(list);
+
+  container.innerHTML = displayList.map(p => {
     const physical = parseInt(p.physicalStock) || 0;
     const reserved = parseInt(p.reservedStock) || 0;
-    const available = physical - reserved;
+    const available = p.availableStock !== undefined ? p.availableStock : (physical - reserved);
 
     let stockBadge = '';
     if (available > 5) {
@@ -6803,54 +7015,91 @@ function renderCatalogGridFromList(list) {
       stockBadge = `<span class="bg-rose-100/90 backdrop-blur-sm text-rose-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-rose-300 flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Out of Stock</span>`;
     }
 
-    const imgUrl = (p.image && (p.image.startsWith('http') || p.image.startsWith('uploads/') || p.image.startsWith('data:image')) && !p.image.includes('photo-1518831959646-742c3a14ebf7'))
-      ? p.image 
-      : DEFAULT_GARMENT_PLACEHOLDER;
+    const imgUrl = getSmartProductImage(p);
 
-    const lineTag = p.accountId === 'account_1' ? 'L1 Central' : (p.accountId === 'account_2' ? 'L2 Maternity' : (p.accountId === 'account_3' ? 'L3 Support' : (p.accountId === 'account_4' ? 'L4 Wholesale' : 'L5 VIP')));
-
-    // Category & Subcategory display
     const catBreadcrumb = p.subcategory 
       ? `${p.category || 'Garments'} &rsaquo; ${p.subcategory}`
       : (p.category || 'Garments');
 
-    // MRP discount calculation
-    const priceNum = parseFloat(p.price) || 0;
-    const mrpNum = parseFloat(p.mrp) || 0;
-    let priceDisplay = `<span class="font-extrabold text-emerald-700 font-mono text-sm shrink-0">₹${priceNum}</span>`;
-    if (mrpNum > priceNum) {
-      const discountPct = Math.round(((mrpNum - priceNum) / mrpNum) * 100);
-      priceDisplay = `
-        <div class="text-right shrink-0">
-          <div class="font-extrabold text-emerald-700 font-mono text-sm leading-tight">₹${priceNum}</div>
-          <div class="flex items-center gap-1 justify-end">
-            <span class="text-[10px] text-slate-400 line-through">₹${mrpNum}</span>
-            <span class="text-[9px] font-extrabold text-emerald-800 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-300">${discountPct}% OFF</span>
+    // Price Display (Single clean price without pencil icon)
+    let priceDisplay = '';
+    if (p.isGroup) {
+      if (p.minPrice === p.maxPrice || p.maxPrice === 0) {
+        priceDisplay = `<span class="font-extrabold text-emerald-700 font-mono text-sm shrink-0">₹${p.minPrice}</span>`;
+      } else {
+        priceDisplay = `<span class="font-extrabold text-emerald-700 font-mono text-sm shrink-0">₹${p.minPrice} – ₹${p.maxPrice}</span>`;
+      }
+    } else {
+      const priceNum = parseFloat(p.price) || 0;
+      const mrpNum = parseFloat(p.mrp) || 0;
+      priceDisplay = `<span class="font-extrabold text-emerald-700 font-mono text-sm shrink-0">₹${priceNum}</span>`;
+      if (mrpNum > priceNum) {
+        const discountPct = Math.round(((mrpNum - priceNum) / mrpNum) * 100);
+        priceDisplay = `
+          <div class="text-right shrink-0">
+            <div class="font-extrabold text-emerald-700 font-mono text-sm leading-tight">₹${priceNum}</div>
+            <div class="flex items-center gap-1 justify-end">
+              <span class="text-[10px] text-slate-400 line-through">₹${mrpNum}</span>
+              <span class="text-[9px] font-extrabold text-emerald-800 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-300">${discountPct}% OFF</span>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      }
     }
 
-    const isSelected = BULK_SELECTED_PRODUCT_IDS.has(String(p.id));
+    const isSelected = BULK_SELECTED_PRODUCT_IDS.has(String(p.id)) || (p.isGroup && p.variants && p.variants.some(v => BULK_SELECTED_PRODUCT_IDS.has(String(v.id))));
     const cardSelectedClass = isSelected ? 'ring-2 ring-emerald-600 bg-emerald-50/20 shadow-md' : '';
+
+    // Attributes summary
+    let attrsHtml = '';
+    if (p.isGroup) {
+      const attrParts = [];
+      if (p.sizes && p.sizes.length > 0) {
+        attrParts.push(`<span>📏 ${p.sizes.join(', ')}</span>`);
+      }
+      if (p.colors && p.colors.length > 0) {
+        attrParts.push(`<span>🎨 ${p.colors.join(', ')}</span>`);
+      }
+      if (p.fabrics && p.fabrics.length > 0) {
+        attrParts.push(`<span class="text-teal-700 font-medium">🧵 ${p.fabrics.join(', ')}</span>`);
+      }
+      attrsHtml = attrParts.join('<span>&bull;</span>');
+    } else {
+      attrsHtml = `
+        <span>📏 ${p.size || 'Standard'}</span>
+        <span>&bull;</span>
+        <span>🎨 ${p.color || 'Default'}</span>
+        ${p.fabric ? `<span>&bull;</span> <span class="text-teal-700 font-medium">🧵 ${p.fabric}</span>` : ''}
+      `;
+    }
 
     return `
       <div id="catalog-card-${p.id}" class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group ${cardSelectedClass}">
         <!-- Image & Badges -->
-        <div class="relative h-44 bg-slate-100 overflow-hidden">
-          <img src="${imgUrl}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+        <div class="relative h-44 bg-slate-100 overflow-hidden group/img">
+          <img src="${imgUrl}" alt="${p.name}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+          
+          <!-- Direct Quick Photo Upload Overlay on Card Hover -->
+          <button type="button" onclick="event.stopPropagation(); triggerCardPhotoUpload('${p.id}', '${p.sku}')" class="absolute bottom-2 right-2.5 z-10 opacity-0 group-hover/img:opacity-100 transition-all bg-slate-900/85 hover:bg-emerald-700 text-white text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm shadow flex items-center gap-1 cursor-pointer" title="Upload or change garment photo">
+            <span class="material-symbols-outlined text-[13px]">add_a_photo</span> Photo
+          </button>
           
           ${IS_BULK_PRICE_MODE ? `
-            <!-- Bulk Price Mode Checkbox Overlay -->
             <div class="absolute top-2.5 left-2.5 z-10 flex items-center">
               <label class="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-xl border-2 ${isSelected ? 'border-emerald-600 shadow-md ring-2 ring-emerald-200' : 'border-slate-300 shadow-sm'} cursor-pointer hover:border-emerald-600 transition" onclick="event.stopPropagation()">
-                <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBulkProductSelected('${p.id}', this.checked)" class="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
+                <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBulkProductSelected('${p.id}', this.checked, '${p.groupKey || ''}')" class="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
                 <span class="font-mono text-[11px] font-extrabold text-slate-800">${p.sku}</span>
+                ${p.isGroup ? `<span class="bg-indigo-900/90 text-indigo-100 text-[10px] font-extrabold px-1.5 py-0.5 rounded shadow-xs">${p.variantCount} Var</span>` : ''}
               </label>
             </div>
           ` : `
-            <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+            <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap max-w-[70%]">
               <span class="bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shadow">${p.sku}</span>
+              ${p.isGroup ? `
+                <span class="bg-indigo-900/90 backdrop-blur-sm text-indigo-100 font-extrabold text-[10px] px-2 py-0.5 rounded-md shadow flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[13px] text-indigo-300">layers</span> ${p.variantCount} Variants
+                </span>
+              ` : ''}
             </div>
           `}
 
@@ -6869,77 +7118,71 @@ function renderCatalogGridFromList(list) {
           <div>
             <div class="flex items-start justify-between gap-2">
               <h4 class="font-bold text-slate-800 text-xs leading-snug line-clamp-2" title="${p.name}">${p.name}</h4>
-              <div onclick="openSinglePriceModal('${p.id}')" class="cursor-pointer group/price flex items-center gap-1 hover:bg-emerald-50 px-1.5 py-0.5 rounded-lg border border-transparent hover:border-emerald-200 transition" title="Click to edit price for ${p.sku}">
+              <div class="shrink-0">
                 ${priceDisplay}
-                <span class="material-symbols-outlined text-[13px] text-slate-400 group-hover/price:text-emerald-700 transition">edit</span>
               </div>
             </div>
             
             <p class="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5 flex-wrap">
-              <span>📏 ${p.size || 'Standard'}</span>
-              <span>&bull;</span>
-              <span>🎨 ${p.color || 'Default'}</span>
-              ${p.fabric ? `<span>&bull;</span> <span class="text-teal-700 font-medium">🧵 ${p.fabric}</span>` : ''}
+              ${attrsHtml}
             </p>
-            ${(() => {
-              let sList = p.specifications;
-              if (typeof sList === 'string') {
-                try { sList = JSON.parse(sList); } catch (e) { sList = []; }
-              }
-              if (Array.isArray(sList) && sList.length > 0) {
-                const validSpecs = sList.filter(s => s && s.label && s.content);
-                if (validSpecs.length > 0) {
-                  return `
-                    <div class="flex flex-wrap gap-1 mt-1.5">
-                      ${validSpecs.slice(0, 2).map(sp => `<span class="text-[9px] bg-indigo-50 border border-indigo-200 text-indigo-800 font-semibold px-1.5 py-0.5 rounded-md">📌 ${sp.label}: ${sp.content}</span>`).join('')}
-                      ${validSpecs.length > 2 ? `<span class="text-[9px] text-slate-400 font-medium">+${validSpecs.length - 2} more</span>` : ''}
-                    </div>
-                  `;
-                }
-              }
-              return '';
-            })()}
           </div>
 
-          <!-- Live Stock Stepper & Reservation Box -->
+          <!-- Live Stock Info (NO increment/decrement buttons) -->
           <div class="mt-3.5 pt-3 border-t border-slate-100 bg-slate-50/80 -mx-4 -mb-4 p-3.5 space-y-3">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Physical Stock</p>
-                <div class="flex items-center gap-1 mt-0.5">
-                  <button onclick="quickAdjustStock(${p.id}, -1)" class="w-6 h-6 rounded-lg bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 font-extrabold text-xs flex items-center justify-center transition shadow-sm" title="Reduce physical stock by 1">-</button>
-                  <span class="font-mono font-extrabold text-xs text-slate-900 px-1.5 min-w-[24px] text-center">${physical}</span>
-                  <button onclick="quickAdjustStock(${p.id}, 1)" class="w-6 h-6 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 font-extrabold text-xs flex items-center justify-center transition shadow-sm" title="Increase physical stock by 1">+</button>
-                </div>
+                <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">${p.isGroup ? 'Total Physical' : 'Physical Stock'}</p>
+                <p class="font-mono font-extrabold text-xs text-slate-900 mt-0.5">${physical} <span class="text-[10px] font-normal text-slate-400">units</span></p>
               </div>
 
               <div class="text-right">
-                <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Sellable Stock</p>
+                <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">${p.isGroup ? 'Total Sellable' : 'Sellable Stock'}</p>
                 <p class="font-mono font-extrabold text-xs ${available > 0 ? 'text-emerald-800' : 'text-rose-600'}">
                   ${available} <span class="text-[10px] font-normal text-slate-400">(${reserved} res)</span>
                 </p>
               </div>
             </div>
 
-            <!-- Action Toolbar (Direct WA, Edit Price, Restock, Edit Details) -->
+            <!-- Action Toolbar -->
             <div class="space-y-1.5 pt-1">
-              <button onclick="openDirectShareModal('${p.id}')" class="w-full px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer" title="Send direct to any WhatsApp phone number">
-                <span class="material-symbols-outlined text-[15px]">send</span> Direct WA
-              </button>
-
-              <div class="grid grid-cols-3 gap-1.5">
-                <button onclick="openSinglePriceModal('${p.id}')" class="px-1.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer" title="Edit individual product price">
-                  <span class="material-symbols-outlined text-[14px]">payments</span> Price
+              ${p.isGroup ? `
+                <!-- View & Manage All Variants button -->
+                <button onclick="openProductVariantsModal('${p.groupKey}')" class="w-full px-3 py-2 bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer" title="View all ${p.variantCount} individual variants">
+                  <span class="material-symbols-outlined text-[16px]">visibility</span> View All ${p.variantCount} Variants
                 </button>
 
-                <button onclick="openQuickStockModal('${p.id}')" class="px-1.5 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer" title="Quick restock & reason notes">
-                  <span class="material-symbols-outlined text-[14px]">warehouse</span> Stock
+                <div class="grid grid-cols-2 gap-1.5">
+                  <button onclick="openDirectShareModal('${p.groupKey}', true)" class="px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer" title="Direct WhatsApp share: share all ${p.variantCount} variants">
+                    <span class="material-symbols-outlined text-[14px]">send</span> Share All Variants
+                  </button>
+                  <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer group/del" title="Delete product family and all its variants">
+                    <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
+                  </button>
+                </div>
+              ` : `
+                <button onclick="openDirectShareModal('${p.id}', false)" class="w-full px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer" title="Send direct to any WhatsApp phone number">
+                  <span class="material-symbols-outlined text-[15px]">send</span> Direct WA
                 </button>
 
-                <button onclick="openEditProductModal('${p.id}')" class="px-1.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer" title="Overall Edit: Full Product Master (Name, Category, Stock, Price, Specs)">
-                  <span class="material-symbols-outlined text-[14px] text-amber-700">edit_note</span> Overall Edit
-                </button>
-              </div>
+                <div class="grid grid-cols-4 gap-1.5">
+                  <button onclick="openSinglePriceModal('${p.id}')" class="px-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Edit individual product price">
+                    <span class="material-symbols-outlined text-[13px]">payments</span> Price
+                  </button>
+
+                  <button onclick="openQuickStockModal('${p.id}')" class="px-1 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Quick restock & reason notes">
+                    <span class="material-symbols-outlined text-[13px]">warehouse</span> Stock
+                  </button>
+
+                  <button onclick="openEditProductModal('${p.id}')" class="px-1 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Overall Edit: Full Product Master">
+                    <span class="material-symbols-outlined text-[13px] text-amber-700">edit_note</span> Edit
+                  </button>
+
+                  <button onclick="confirmDeleteProduct('${p.id}', false)" class="px-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer group/del" title="Delete product permanently from database">
+                    <span class="material-symbols-outlined text-[13px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
+                  </button>
+                </div>
+              `}
             </div>
           </div>
         </div>
@@ -6947,6 +7190,204 @@ function renderCatalogGridFromList(list) {
     `;
   }).join('');
 }
+
+// Instant 1-click photo upload directly from catalog card
+function triggerCardPhotoUpload(productId, sku) {
+  let fileInput = document.getElementById('catalog-quick-photo-input');
+  if (!fileInput) {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'catalog-quick-photo-input';
+    fileInput.accept = 'image/*';
+    fileInput.className = 'hidden';
+    document.body.appendChild(fileInput);
+  }
+
+  fileInput.onchange = async function(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    showToast('Uploading Photo', `Uploading photo for ${sku || 'item'}...`, 'cloud_upload', 'emerald');
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch('api.php?action=upload_product_image', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data && data.status === 'success' && data.url) {
+        const uploadedUrl = data.url;
+
+        // Update product in memory
+        const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId) || prod.sku === sku);
+        if (p) {
+          p.image = uploadedUrl;
+
+          // If product has sibling variants, update all variants that share the same parentSku
+          const parentSku = p.parentSku || p.parent_sku;
+          if (parentSku) {
+            (CRM_STATE.products || []).forEach(sibling => {
+              if (sibling.parentSku === parentSku || sibling.parent_sku === parentSku) {
+                sibling.image = uploadedUrl;
+              }
+            });
+          }
+
+          saveCRMState();
+
+          // Persist to database
+          await fetch('api.php?action=save_product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(p)
+          });
+
+          filterCatalogGrid();
+          showToast('Photo Saved', `Photo for ${sku || 'item'} updated successfully!`, 'check_circle', 'emerald');
+        }
+      } else {
+        showToast('Upload Failed', data.message || 'Could not upload photo', 'error', 'rose');
+      }
+    } catch (err) {
+      showToast('Upload Error', 'Failed to connect to server upload.', 'error', 'rose');
+    }
+  };
+
+  fileInput.value = '';
+  fileInput.click();
+}
+window.triggerCardPhotoUpload = triggerCardPhotoUpload;
+
+// Open modal to view and manage all individual variants of a product family
+var CURRENT_OPEN_VARIANTS_GROUP_KEY = null;
+function openProductVariantsModal(groupKey) {
+  CURRENT_OPEN_VARIANTS_GROUP_KEY = groupKey;
+  window.CURRENT_OPEN_VARIANTS_GROUP_KEY = groupKey;
+  const grouped = groupCatalogProducts(CRM_STATE.products || []);
+  const group = grouped.find(g => g.groupKey === groupKey);
+  if (!group || !group.variants || group.variants.length === 0) {
+    showToast('Variants Not Found', 'Could not locate variants for this product.', 'error', 'rose');
+    return;
+  }
+
+  const titleEl = document.getElementById('modal-variants-title');
+  const subEl = document.getElementById('modal-variants-subtitle');
+  const container = document.getElementById('modal-variants-container');
+  const footerEl = document.getElementById('modal-variants-footer-info');
+
+  if (titleEl) titleEl.innerText = `${group.name} (${group.variants.length} Variants)`;
+  if (subEl) subEl.innerText = `${group.category || 'Garments'}${group.subcategory ? ' › ' + group.subcategory : ''} • Parent SKU: ${group.sku} • Total Stock: ${group.physicalStock} units`;
+  if (footerEl) footerEl.innerHTML = `Showing <b>${group.variants.length}</b> individual variant combinations &bull; <b>${group.physicalStock}</b> total physical stock in warehouse`;
+
+  if (container) {
+    container.innerHTML = group.variants.map((v, i) => {
+      const vImg = getSmartProductImage(v);
+      const vPhys = parseInt(v.physicalStock) || 0;
+      const vRes = parseInt(v.reservedStock) || 0;
+      const vAvail = vPhys - vRes;
+      const vPrice = parseFloat(v.price) || 0;
+      const vMrp = parseFloat(v.mrp) || 0;
+      const discount = (vMrp > vPrice && vPrice > 0) ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
+      const colorHex = getColorHex(v.color);
+
+      const badges = [];
+      if (v.size) {
+        badges.push(`<span class="px-2 py-0.5 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 font-extrabold text-[11px]">📏 Size: ${v.size}</span>`);
+      }
+      if (v.color) {
+        badges.push(`
+          <span class="px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-bold text-[11px] flex items-center gap-1">
+            <span class="w-2.5 h-2.5 rounded-full border border-black/20" style="background-color: ${colorHex}"></span>
+            <span>${v.color}</span>
+          </span>
+        `);
+      }
+      if (v.fabric) {
+        badges.push(`<span class="px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold text-[11px]">🧵 ${v.fabric}</span>`);
+      }
+      if (v.customAttributes) {
+        Object.entries(v.customAttributes).forEach(([k, val]) => {
+          badges.push(`<span class="px-2 py-0.5 rounded-lg bg-purple-50 border border-purple-200 text-purple-900 font-bold text-[11px]">📌 ${k}: ${val}</span>`);
+        });
+      }
+
+      return `
+        <div class="p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-emerald-300 transition shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <!-- Thumbnail & Identity -->
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+              <img src="${vImg}" alt="${v.sku}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-full h-full object-cover">
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-mono font-extrabold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-300">${v.sku}</span>
+                <span class="text-xs font-bold text-slate-800 truncate">${v.name}</span>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                ${badges.join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Price, Stock & Actions -->
+          <div class="flex items-center gap-3 shrink-0 justify-between md:justify-end border-t md:border-t-0 pt-2 md:pt-0 border-slate-100 flex-wrap">
+            <div class="text-right">
+              <div class="font-extrabold text-emerald-700 font-mono text-sm leading-tight">₹${vPrice}</div>
+              ${vMrp > vPrice ? `<div class="text-[10px] text-slate-400 line-through">₹${vMrp} <span class="text-emerald-700 font-bold text-[9px]">${discount}% OFF</span></div>` : ''}
+            </div>
+
+            <div class="text-right border-l border-slate-200 pl-3">
+              <p class="text-[9px] text-slate-500 uppercase font-bold">Physical Stock</p>
+              <p class="font-mono font-extrabold text-xs ${vAvail > 0 ? 'text-emerald-800' : 'text-rose-600'}">
+                ${vPhys} <span class="text-[10px] font-normal text-slate-400">(${vAvail} sellable)</span>
+              </p>
+            </div>
+
+            <!-- Actions for this specific variant -->
+            <div class="flex items-center gap-1.5 border-l border-slate-200 pl-3 flex-wrap justify-end">
+              <button onclick="openDirectShareModal('${v.id}', false)" class="px-2 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Direct WhatsApp share this variant only">
+                <span class="material-symbols-outlined text-[14px]">send</span>
+                <span>WA</span>
+              </button>
+              <button onclick="openQuickStockModal('${v.id}')" class="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-semibold cursor-pointer" title="Quick restock this specific variant">
+                <span class="material-symbols-outlined text-[14px]">warehouse</span>
+                <span>Stock</span>
+              </button>
+              <button onclick="openEditProductModal('${v.id}')" class="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Edit full details of this variant">
+                <span class="material-symbols-outlined text-[14px] text-amber-700">edit_note</span>
+                <span>Edit</span>
+              </button>
+              <button onclick="confirmDeleteProduct('${v.id}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete this variant">
+                <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  openModal('modal-product-variants');
+}
+window.openProductVariantsModal = openProductVariantsModal;
+
+function refreshVariantsModalIfOpen() {
+  if (typeof window === 'undefined' || !window.CURRENT_OPEN_VARIANTS_GROUP_KEY) return;
+  const modal = document.getElementById('modal-product-variants');
+  if (modal && !modal.classList.contains('hidden')) {
+    const grouped = groupCatalogProducts(CRM_STATE.products || []);
+    const group = grouped.find(g => g.groupKey === window.CURRENT_OPEN_VARIANTS_GROUP_KEY);
+    if (group && group.variants && group.variants.length > 0) {
+      openProductVariantsModal(window.CURRENT_OPEN_VARIANTS_GROUP_KEY);
+    } else {
+      closeModal('modal-product-variants');
+    }
+  }
+}
+window.refreshVariantsModalIfOpen = refreshVariantsModalIfOpen;
 
 function renderCatalogTableFromList(list) {
   const tbody = document.getElementById('catalog-table-tbody');
@@ -6986,10 +7427,12 @@ function renderCatalogTableFromList(list) {
     return;
   }
 
-  tbody.innerHTML = list.map(p => {
+  const displayList = groupCatalogProducts(list);
+
+  tbody.innerHTML = displayList.map(p => {
     const physical = parseInt(p.physicalStock) || 0;
     const reserved = parseInt(p.reservedStock) || 0;
-    const available = physical - reserved;
+    const available = p.availableStock !== undefined ? p.availableStock : (physical - reserved);
 
     let stockBadge = '';
     if (available > 5) {
@@ -7000,45 +7443,52 @@ function renderCatalogTableFromList(list) {
       stockBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Out of Stock</span>`;
     }
 
-    const imgUrl = (p.image && (p.image.startsWith('http') || p.image.startsWith('uploads/') || p.image.startsWith('data:image')) && !p.image.includes('photo-1518831959646-742c3a14ebf7'))
-      ? p.image 
-      : DEFAULT_GARMENT_PLACEHOLDER;
+    const imgUrl = getSmartProductImage(p);
 
-    const lineTag = p.accountId === 'account_1' ? 'L1 Central' : (p.accountId === 'account_2' ? 'L2 Maternity' : (p.accountId === 'account_3' ? 'L3 Support' : (p.accountId === 'account_4' ? 'L4 Wholesale' : 'L5 VIP')));
-
-    // MRP discount calculation
-    const priceNum = parseFloat(p.price) || 0;
-    const mrpNum = parseFloat(p.mrp) || 0;
-    let priceDisplay = `<div class="font-extrabold text-emerald-700 font-mono text-xs">₹${priceNum}</div>`;
-    if (mrpNum > priceNum) {
-      const discountPct = Math.round(((mrpNum - priceNum) / mrpNum) * 100);
-      priceDisplay = `
-        <div>
-          <div class="font-extrabold text-emerald-700 font-mono text-xs">₹${priceNum}</div>
-          <div class="flex items-center gap-1 mt-0.5">
-            <span class="text-[10px] text-slate-400 line-through">₹${mrpNum}</span>
-            <span class="text-[9px] font-extrabold text-emerald-800 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-300">${discountPct}% OFF</span>
-          </div>
-        </div>
-      `;
-    }
-
-    // Specifications
-    let sList = p.specifications;
-    if (typeof sList === 'string') {
-      try { sList = JSON.parse(sList); } catch (e) { sList = []; }
-    }
-    let specsHtml = '';
-    if (Array.isArray(sList) && sList.length > 0) {
-      const validSpecs = sList.filter(s => s && s.label && s.content);
-      if (validSpecs.length > 0) {
-        specsHtml = `
-          <div class="flex flex-wrap gap-1 mt-1">
-            ${validSpecs.slice(0, 3).map(sp => `<span class="text-[9px] bg-indigo-50 border border-indigo-200 text-indigo-800 font-semibold px-1.5 py-0.5 rounded-md">📌 ${sp.label}: ${sp.content}</span>`).join('')}
-            ${validSpecs.length > 3 ? `<span class="text-[9px] text-slate-400 font-medium">+${validSpecs.length - 3}</span>` : ''}
+    // Price Display (Clean without edit pencil icon)
+    let priceDisplay = '';
+    if (p.isGroup) {
+      if (p.minPrice === p.maxPrice || p.maxPrice === 0) {
+        priceDisplay = `<div class="font-extrabold text-emerald-700 font-mono text-xs">₹${p.minPrice}</div>`;
+      } else {
+        priceDisplay = `<div class="font-extrabold text-emerald-700 font-mono text-xs">₹${p.minPrice} – ₹${p.maxPrice}</div>`;
+      }
+    } else {
+      const priceNum = parseFloat(p.price) || 0;
+      const mrpNum = parseFloat(p.mrp) || 0;
+      priceDisplay = `<div class="font-extrabold text-emerald-700 font-mono text-xs">₹${priceNum}</div>`;
+      if (mrpNum > priceNum) {
+        const discountPct = Math.round(((mrpNum - priceNum) / mrpNum) * 100);
+        priceDisplay = `
+          <div>
+            <div class="font-extrabold text-emerald-700 font-mono text-xs">₹${priceNum}</div>
+            <div class="flex items-center gap-1 mt-0.5">
+              <span class="text-[10px] text-slate-400 line-through">₹${mrpNum}</span>
+              <span class="text-[9px] font-extrabold text-emerald-800 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-300">${discountPct}% OFF</span>
+            </div>
           </div>
         `;
       }
+    }
+
+    // Attributes column display
+    let attrsSummary = '';
+    if (p.isGroup) {
+      attrsSummary = `
+        <div class="flex items-center gap-1 flex-wrap">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-800 font-extrabold text-[10px] border border-indigo-200">🗂️ ${p.variantCount} Variants</span>
+          ${p.sizes.length > 0 ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px] border border-slate-200">📏 ${p.sizes.join(', ')}</span>` : ''}
+          ${p.colors.length > 0 ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px] border border-slate-200">🎨 ${p.colors.join(', ')}</span>` : ''}
+        </div>
+      `;
+    } else {
+      attrsSummary = `
+        <div class="flex items-center gap-1 flex-wrap">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px] border border-slate-200">📏 ${p.size || 'Std'}</span>
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px] border border-slate-200">🎨 ${p.color || 'Default'}</span>
+          ${p.fabric ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 font-semibold text-[10px] border border-teal-200">🧵 ${p.fabric}</span>` : ''}
+        </div>
+      `;
     }
 
     const isSelected = BULK_SELECTED_PRODUCT_IDS.has(String(p.id));
@@ -7046,20 +7496,20 @@ function renderCatalogTableFromList(list) {
     return `
       <tr id="catalog-row-${p.id}" class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 ${isSelected ? 'bg-emerald-50/50' : ''}">
         ${IS_BULK_PRICE_MODE ? `
-          <!-- Checkbox column -->
           <td class="py-3 px-3 text-center whitespace-nowrap">
-            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBulkProductSelected('${p.id}', this.checked)" class="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
+            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBulkProductSelected('${p.id}', this.checked, '${p.groupKey || ''}')" class="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
           </td>
         ` : ''}
 
         <!-- Product & SKU -->
         <td class="py-3 px-4">
           <div class="flex items-center gap-3">
-            <img src="${imgUrl}" alt="${p.name}" class="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm">
+            <img src="${imgUrl}" alt="${p.name}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm">
             <div class="min-w-0">
-              <div class="font-bold text-slate-900 text-xs hover:text-emerald-700 cursor-pointer transition line-clamp-1" onclick="openEditProductModal('${p.id}')" title="${p.name}">${p.name}</div>
+              <div class="font-bold text-slate-900 text-xs hover:text-emerald-700 cursor-pointer transition line-clamp-1" onclick="${p.isGroup ? `openProductVariantsModal('${p.groupKey}')` : `openEditProductModal('${p.id}')`}" title="${p.name}">${p.name}</div>
               <div class="flex items-center gap-1.5 mt-1">
                 <span class="bg-slate-900 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">${p.sku}</span>
+                ${p.isGroup ? `<span class="bg-indigo-100 text-indigo-900 font-extrabold text-[9px] px-1.5 py-0.2 rounded-full border border-indigo-200">🗂️ ${p.variantCount} vars</span>` : ''}
               </div>
             </div>
           </div>
@@ -7073,29 +7523,19 @@ function renderCatalogTableFromList(list) {
 
         <!-- Attributes & Specs -->
         <td class="py-3 px-4">
-          <div class="flex items-center gap-1 flex-wrap">
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px] border border-slate-200">📏 ${p.size || 'Std'}</span>
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px] border border-slate-200">🎨 ${p.color || 'Default'}</span>
-            ${p.fabric ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 font-semibold text-[10px] border border-teal-200">🧵 ${p.fabric}</span>` : ''}
-          </div>
-          ${specsHtml}
+          ${attrsSummary}
         </td>
 
-        <!-- Price (Clickable to edit) -->
+        <!-- Price -->
         <td class="py-3 px-4 whitespace-nowrap">
-          <div onclick="openSinglePriceModal('${p.id}')" class="cursor-pointer inline-flex items-center gap-1.5 hover:bg-emerald-50 px-2 py-1 rounded-lg border border-transparent hover:border-emerald-200 transition group/tblprice" title="Click to edit price for ${p.sku}">
+          <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg">
             ${priceDisplay}
-            <span class="material-symbols-outlined text-[13px] text-slate-400 group-hover/tblprice:text-emerald-700 transition">edit</span>
           </div>
         </td>
 
-        <!-- Physical Stock Stepper -->
+        <!-- Physical Stock (Clean without stepper buttons) -->
         <td class="py-3 px-4 text-center whitespace-nowrap">
-          <div class="flex items-center justify-center gap-1">
-            <button onclick="quickAdjustStock(${p.id}, -1)" class="w-6 h-6 rounded-lg bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 font-extrabold text-xs flex items-center justify-center transition shadow-sm" title="Reduce physical stock by 1">-</button>
-            <span class="font-mono font-extrabold text-xs text-slate-900 px-1.5 min-w-[28px] text-center">${physical}</span>
-            <button onclick="quickAdjustStock(${p.id}, 1)" class="w-6 h-6 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 font-extrabold text-xs flex items-center justify-center transition shadow-sm" title="Increase physical stock by 1">+</button>
-          </div>
+          <div class="font-mono font-extrabold text-xs text-slate-900">${physical}</div>
         </td>
 
         <!-- Sellable Stock -->
@@ -7114,19 +7554,35 @@ function renderCatalogTableFromList(list) {
         <!-- Actions -->
         <td class="py-3 px-4 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1.5">
-            <button onclick="openEditProductModal('${p.id}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 font-bold text-xs cursor-pointer group/editbtn" title="Overall Edit: Edit all garment details, photos, sizing, categories & pricing">
-              <span class="material-symbols-outlined text-[15px] text-amber-700 group-hover/editbtn:scale-110 transition-transform">edit_note</span>
-              <span>Overall Edit</span>
-            </button>
-            <button onclick="openSinglePriceModal('${p.id}')" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick Price Edit for ${p.sku}">
-              <span class="material-symbols-outlined text-[15px]">currency_rupee</span>
-            </button>
-            <button onclick="openDirectShareModal('${p.id}')" class="p-1.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Send direct to any WhatsApp phone number">
-              <span class="material-symbols-outlined text-[15px]">send</span>
-            </button>
-            <button onclick="openQuickStockModal('${p.id}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick restock & reason notes">
-              <span class="material-symbols-outlined text-[15px]">warehouse</span>
-            </button>
+            ${p.isGroup ? `
+              <button onclick="openProductVariantsModal('${p.groupKey}')" class="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer shadow-xs" title="View all ${p.variantCount} individual variants">
+                <span class="material-symbols-outlined text-[15px]">visibility</span>
+                <span>View All ${p.variantCount} Variants</span>
+              </button>
+              <button onclick="openDirectShareModal('${p.groupKey}', true)" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Share all ${p.variantCount} variants on WhatsApp">
+                <span class="material-symbols-outlined text-[15px]">send</span>
+              </button>
+              <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete product family and all variants">
+                <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+              </button>
+            ` : `
+              <button onclick="openEditProductModal('${p.id}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 font-bold text-xs cursor-pointer group/editbtn" title="Overall Edit: Edit all garment details">
+                <span class="material-symbols-outlined text-[15px] text-amber-700 group-hover/editbtn:scale-110 transition-transform">edit_note</span>
+                <span>Overall Edit</span>
+              </button>
+              <button onclick="openSinglePriceModal('${p.id}')" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick Price Edit">
+                <span class="material-symbols-outlined text-[15px]">currency_rupee</span>
+              </button>
+              <button onclick="openDirectShareModal('${p.id}', false)" class="p-1.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Send direct to any WhatsApp phone number">
+                <span class="material-symbols-outlined text-[15px]">send</span>
+              </button>
+              <button onclick="openQuickStockModal('${p.id}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick restock & reason notes">
+                <span class="material-symbols-outlined text-[15px]">warehouse</span>
+              </button>
+              <button onclick="confirmDeleteProduct('${p.id}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Permanently delete product from database">
+                <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+              </button>
+            `}
           </div>
         </td>
       </tr>
@@ -7173,8 +7629,21 @@ async function quickAdjustStock(productId, delta) {
 }
 
 // -------------------------------------------------------------------------
-// PRICE EDITING CONTROLLERS: INDIVIDUAL & BULK/OVERALL WORKFLOWS
+// PRICE EDITING & DIRECT SHARE MULTI-SELECT CONTROLLERS
 // -------------------------------------------------------------------------
+
+function toggleBulkSelectionMode(forceState) {
+  toggleBulkPriceEditMode(forceState);
+}
+window.toggleBulkSelectionMode = toggleBulkSelectionMode;
+
+function handleToolbarSelectAllChange(isChecked) {
+  if (!IS_BULK_PRICE_MODE) {
+    toggleBulkPriceEditMode(true);
+  }
+  selectAllBulkCatalogProducts(isChecked);
+}
+window.handleToolbarSelectAllChange = handleToolbarSelectAllChange;
 
 function toggleBulkPriceEditMode(forceState) {
   if (typeof forceState === 'boolean') {
@@ -7185,6 +7654,7 @@ function toggleBulkPriceEditMode(forceState) {
 
   const btn = document.getElementById('btn-toggle-bulk-price');
   const tbBtn = document.getElementById('btn-toolbar-bulk-price');
+  const tbSelBtn = document.getElementById('btn-toolbar-bulk-select');
   const bar = document.getElementById('catalog-bulk-price-bar');
   const dock = document.getElementById('catalog-bulk-floating-dock');
   const thCol = document.getElementById('th-bulk-checkbox-col');
@@ -7193,17 +7663,21 @@ function toggleBulkPriceEditMode(forceState) {
     if (btn) {
       btn.classList.add('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
       btn.classList.remove('bg-amber-50', 'text-amber-900', 'border-amber-300');
-      btn.innerHTML = `<span class="material-symbols-outlined text-[15px]">check_box</span> <span>Bulk Edit Active</span>`;
+      btn.innerHTML = `<span class="material-symbols-outlined text-[15px]">check_box</span> <span>Selection Active</span>`;
     }
     if (tbBtn) {
-      tbBtn.classList.add('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
+      tbBtn.classList.add('bg-amber-600', 'text-white', 'border-amber-700', 'shadow-md');
       tbBtn.classList.remove('bg-amber-50', 'text-amber-900', 'border-amber-300');
-      tbBtn.innerHTML = `<span class="material-symbols-outlined text-[15px]">check_box</span> <span>Bulk Edit Active</span>`;
+    }
+    if (tbSelBtn) {
+      tbSelBtn.classList.add('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
+      tbSelBtn.classList.remove('bg-emerald-50', 'text-emerald-900', 'border-emerald-300');
+      tbSelBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">check_box</span> <span id="btn-toolbar-bulk-select-text">Selecting Active</span>`;
     }
     if (bar) bar.classList.remove('hidden');
     if (dock) dock.classList.remove('hidden');
     if (thCol && CATALOG_VIEW_MODE === 'table') thCol.classList.remove('hidden');
-    showToast('Overall Price Edit Mode', 'Checkboxes active. Select items and click "Proceed to Price Edit".', 'tune', 'emerald');
+    showToast('Selection Checkboxes Active', 'Select garments to Share on WhatsApp or Edit Prices.', 'checklist', 'emerald');
   } else {
     BULK_SELECTED_PRODUCT_IDS.clear();
     if (btn) {
@@ -7212,9 +7686,18 @@ function toggleBulkPriceEditMode(forceState) {
       btn.innerHTML = `<span class="material-symbols-outlined text-[15px] text-amber-700">price_change</span> <span>Edit Price (Overall)</span>`;
     }
     if (tbBtn) {
-      tbBtn.classList.remove('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
+      tbBtn.classList.remove('bg-amber-600', 'text-white', 'border-amber-700', 'shadow-md');
       tbBtn.classList.add('bg-amber-50', 'text-amber-900', 'border-amber-300');
-      tbBtn.innerHTML = `<span class="material-symbols-outlined text-[15px] text-amber-700">price_change</span> <span>Overall Price Edit</span>`;
+    }
+    if (tbSelBtn) {
+      tbSelBtn.classList.remove('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
+      tbSelBtn.classList.add('bg-emerald-50', 'text-emerald-900', 'border-emerald-300');
+      tbSelBtn.innerHTML = `<span class="material-symbols-outlined text-[16px] text-emerald-700">check_box</span> <span id="btn-toolbar-bulk-select-text">Select Checkbox</span>`;
+    }
+    const tbCheck = document.getElementById('toolbar-select-all-checkbox');
+    if (tbCheck) {
+      tbCheck.checked = false;
+      tbCheck.indeterminate = false;
     }
     if (bar) bar.classList.add('hidden');
     if (dock) dock.classList.add('hidden');
@@ -7224,13 +7707,39 @@ function toggleBulkPriceEditMode(forceState) {
   updateBulkSelectedCountUI();
   filterCatalogGrid();
 }
+window.toggleBulkPriceEditMode = toggleBulkPriceEditMode;
 
-function toggleBulkProductSelected(productId, isChecked) {
+function toggleBulkProductSelected(productId, isChecked, groupKey = '') {
   const idStr = String(productId);
-  if (isChecked) {
-    BULK_SELECTED_PRODUCT_IDS.add(idStr);
+
+  // If this belongs to a family group, select/deselect all variants in that group
+  let targetGroup = null;
+  const grouped = groupCatalogProducts(CRM_STATE.products || []);
+  if (groupKey) {
+    targetGroup = grouped.find(g => g.groupKey === groupKey);
   } else {
-    BULK_SELECTED_PRODUCT_IDS.delete(idStr);
+    targetGroup = grouped.find(g => g.groupKey === idStr || String(g.id) === idStr);
+  }
+
+  if (targetGroup && targetGroup.variants && targetGroup.variants.length > 0) {
+    targetGroup.variants.forEach(v => {
+      if (isChecked) {
+        BULK_SELECTED_PRODUCT_IDS.add(String(v.id));
+      } else {
+        BULK_SELECTED_PRODUCT_IDS.delete(String(v.id));
+      }
+    });
+    if (isChecked) {
+      BULK_SELECTED_PRODUCT_IDS.add(idStr);
+    } else {
+      BULK_SELECTED_PRODUCT_IDS.delete(idStr);
+    }
+  } else {
+    if (isChecked) {
+      BULK_SELECTED_PRODUCT_IDS.add(idStr);
+    } else {
+      BULK_SELECTED_PRODUCT_IDS.delete(idStr);
+    }
   }
 
   updateBulkSelectedCountUI();
@@ -7255,6 +7764,7 @@ function toggleBulkProductSelected(productId, isChecked) {
     }
   }
 }
+window.toggleBulkProductSelected = toggleBulkProductSelected;
 
 function selectAllBulkCatalogProducts(selectAll) {
   const currentList = (CURRENT_CATALOG_FILTERED_LIST && CURRENT_CATALOG_FILTERED_LIST.length > 0)
@@ -7263,9 +7773,12 @@ function selectAllBulkCatalogProducts(selectAll) {
 
   if (selectAll) {
     currentList.forEach(p => {
+      if (p.isGroup && p.variants && p.variants.length > 0) {
+        p.variants.forEach(v => BULK_SELECTED_PRODUCT_IDS.add(String(v.id)));
+      }
       BULK_SELECTED_PRODUCT_IDS.add(String(p.id));
     });
-    showToast('All Visible Selected', `Selected ${currentList.length} products for bulk price editing.`, 'check_box', 'emerald');
+    showToast('All Visible Selected', `Selected all ${currentList.length} products. Choose "Share on WhatsApp" or "Price Edit".`, 'check_box', 'emerald');
   } else {
     BULK_SELECTED_PRODUCT_IDS.clear();
     showToast('Selection Cleared', 'Deselected all products.', 'check_box_outline_blank', 'slate');
@@ -7274,6 +7787,7 @@ function selectAllBulkCatalogProducts(selectAll) {
   updateBulkSelectedCountUI();
   filterCatalogGrid();
 }
+window.selectAllBulkCatalogProducts = selectAllBulkCatalogProducts;
 
 function updateBulkSelectedCountUI() {
   const count = BULK_SELECTED_PRODUCT_IDS.size;
@@ -7291,44 +7805,64 @@ function updateBulkSelectedCountUI() {
   const modalCount = document.getElementById('bulk-modal-chips-count');
   if (modalCount) modalCount.innerText = count;
 
-  // Next Process button in dock
+  // Next Process button in dock (Price Edit)
   const dockProceedBtn = document.getElementById('btn-dock-proceed-bulk');
   const dockProceedText = document.getElementById('btn-dock-proceed-text');
   if (dockProceedBtn) {
-    if (count > 0) {
-      dockProceedBtn.disabled = false;
-      dockProceedBtn.classList.remove('opacity-60');
-      if (dockProceedText) dockProceedText.innerText = `Proceed to Price Edit (${count})`;
-    } else {
-      dockProceedBtn.disabled = false;
-      if (dockProceedText) dockProceedText.innerText = `Proceed to Price Edit`;
-    }
+    if (dockProceedText) dockProceedText.innerText = count > 0 ? `Price Edit (${count})` : `Price Edit`;
   }
 
-  // Next Process button in top bar
+  // Share button in dock
+  const dockShareBtn = document.getElementById('btn-dock-share-bulk');
+  const dockShareText = document.getElementById('btn-dock-share-text');
+  if (dockShareBtn) {
+    if (dockShareText) dockShareText.innerText = count > 0 ? `Share on WhatsApp (${count})` : `Share on WhatsApp`;
+  }
+
+  // Next Process button in top bar (Price Edit)
   const barProceedBtn = document.getElementById('btn-open-bulk-modal');
   const barProceedText = document.getElementById('btn-open-bulk-modal-text');
   if (barProceedBtn) {
-    if (barProceedText) barProceedText.innerText = count > 0 ? `Proceed to Price Edit (${count})` : `Proceed to Price Edit`;
+    if (barProceedText) barProceedText.innerText = count > 0 ? `Price Edit (${count})` : `Price Edit`;
+  }
+
+  // Share button in top bar
+  const barShareBtn = document.getElementById('btn-bar-share-bulk');
+  const barShareText = document.getElementById('btn-bar-share-text');
+  if (barShareBtn) {
+    if (barShareText) barShareText.innerText = count > 0 ? `Share on WhatsApp (${count})` : `Share on WhatsApp`;
   }
 
   // Toolbar button text update
   const tbBtnText = document.getElementById('btn-toolbar-bulk-price-text');
   if (tbBtnText && IS_BULK_PRICE_MODE) {
-    tbBtnText.innerText = count > 0 ? `Overall Edit (${count})` : `Bulk Edit Active`;
+    tbBtnText.innerText = count > 0 ? `Overall Edit (${count})` : `Overall Price Edit`;
+  }
+  const tbSelText = document.getElementById('btn-toolbar-bulk-select-text');
+  if (tbSelText && IS_BULK_PRICE_MODE) {
+    tbSelText.innerText = count > 0 ? `Selected (${count})` : `Selecting Active`;
+  }
+
+  // Sync Toolbar Master Checkbox
+  const tbSelectAllCheck = document.getElementById('toolbar-select-all-checkbox');
+  const currentList = (CURRENT_CATALOG_FILTERED_LIST && CURRENT_CATALOG_FILTERED_LIST.length > 0)
+    ? CURRENT_CATALOG_FILTERED_LIST
+    : (CRM_STATE.products || []);
+  const visibleCount = currentList.length;
+
+  if (tbSelectAllCheck) {
+    tbSelectAllCheck.checked = (visibleCount > 0 && count >= visibleCount);
+    tbSelectAllCheck.indeterminate = (count > 0 && count < visibleCount);
   }
 
   // Sync Master Checkbox in table header
   const thCheck = document.querySelector('#th-bulk-checkbox-col input[type="checkbox"]');
   if (thCheck) {
-    const currentList = (CURRENT_CATALOG_FILTERED_LIST && CURRENT_CATALOG_FILTERED_LIST.length > 0)
-      ? CURRENT_CATALOG_FILTERED_LIST
-      : (CRM_STATE.products || []);
-    const visibleCount = currentList.length;
     thCheck.checked = (visibleCount > 0 && count >= visibleCount);
     thCheck.indeterminate = (count > 0 && count < visibleCount);
   }
 }
+window.updateBulkSelectedCountUI = updateBulkSelectedCountUI;
 
 // -------------------------------------------------------------------------
 // UNIFIED PRICE CHANGE STRATEGY CONFIGURATION & LOGIC
@@ -7553,6 +8087,12 @@ async function handleSinglePriceSave(event) {
   const oldPrice = parseFloat(p.price) || 0;
   const newPrice = calculatePriceByStrategy(oldPrice, ACTIVE_SINGLE_PRICE_STRATEGY, rawVal);
 
+  if (mrpVal !== null && !isNaN(mrpVal) && mrpVal > 0 && newPrice > mrpVal) {
+    showToast('Invalid Pricing', `Selling price (₹${newPrice}) cannot be greater than MRP (₹${mrpVal}). Always MRP is bigger.`, 'error', 'rose');
+    if (mrpInput) mrpInput.focus();
+    return;
+  }
+
   p.price = newPrice;
   if (mrpVal !== null && !isNaN(mrpVal) && mrpVal > 0) {
     p.mrp = mrpVal;
@@ -7566,6 +8106,7 @@ async function handleSinglePriceSave(event) {
   if (typeof filterCatalogGrid === 'function') filterCatalogGrid();
   if (typeof renderCatalogGrid === 'function') renderCatalogGrid('');
   if (typeof updateOrderProductDropdown === 'function') updateOrderProductDropdown();
+  if (typeof refreshVariantsModalIfOpen === 'function') refreshVariantsModalIfOpen();
 
   if (typeof playChime === 'function') playChime('order');
   showToast('Price Updated', `${p.sku} price changed from ₹${oldPrice} to ₹${newPrice}.`, 'payments', 'emerald');
@@ -7936,6 +8477,12 @@ function getColorHex(colorName) {
   }
   return '#94a3b8';
 }
+
+function escapeHtml(str) {
+  if (typeof str !== 'string') return String(str || '');
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+window.escapeHtml = escapeHtml;
 
 // -------------------------------------------------------------------------
 // DYNAMIC DROPDOWNS & ATTRIBUTE CHIPS IN PRODUCT FORM
@@ -8444,9 +8991,20 @@ function renderMatrixVariantRows() {
   const container = document.getElementById('prod-matrix-variants-container');
   if (!container) return;
 
-  const baseImg = (CURRENT_PRODUCT_IMAGE_DATA && !CURRENT_PRODUCT_IMAGE_DATA.includes('photo-1518831959646-742c3a14ebf7'))
+  if (!PRODUCT_VARIANTS_MATRIX || PRODUCT_VARIANTS_MATRIX.length === 0) {
+    container.innerHTML = `
+      <div class="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-500">
+        <span class="material-symbols-outlined text-3xl text-slate-400 mb-1">dashboard_customize</span>
+        <p class="text-xs font-bold text-slate-700">No variants currently in matrix</p>
+        <p class="text-[11px] text-slate-500 mt-0.5">Select attributes above or use standard single product pricing.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const baseImg = (CURRENT_PRODUCT_IMAGE_DATA && !CURRENT_PRODUCT_IMAGE_DATA.includes('photo-1518831959646-742c3a14ebf7') && !CURRENT_PRODUCT_IMAGE_DATA.includes('photo-1583846783977-d2b0993d4265'))
     ? CURRENT_PRODUCT_IMAGE_DATA
-    : DEFAULT_GARMENT_PLACEHOLDER;
+    : 'uploads/products/sample_garment.jpg';
 
   container.innerHTML = PRODUCT_VARIANTS_MATRIX.map((v, i) => {
     const colorHex = getColorHex(v.color);
@@ -8486,7 +9044,7 @@ function renderMatrixVariantRows() {
 
     return `
       <div class="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-xs hover:border-emerald-300 transition space-y-2.5">
-        <!-- Variant Header: ID, Badges, and Variant SKU Input -->
+        <!-- Variant Header: ID, Badges, Variant SKU Input & Delete Button -->
         <div class="flex items-center justify-between pb-2 border-b border-slate-100 flex-wrap gap-2">
           <div class="flex items-center gap-2">
             <span class="w-6 h-6 rounded-lg bg-emerald-700 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0">#${i + 1}</span>
@@ -8494,9 +9052,15 @@ function renderMatrixVariantRows() {
               ${badgesHtml.join('')}
             </div>
           </div>
-          <div class="flex items-center gap-1.5">
-            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Variant SKU *:</label>
-            <input type="text" id="matrix-sku-${i}" value="${v.sku}" onchange="updateMatrixVariantField(${i}, 'sku', this.value)" class="w-44 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold uppercase focus:bg-white focus:ring-2 focus:ring-brand-wa shadow-xs">
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
+              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Variant SKU *:</label>
+              <input type="text" id="matrix-sku-${i}" value="${v.sku}" onchange="updateMatrixVariantField(${i}, 'sku', this.value)" class="w-36 sm:w-44 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold uppercase focus:bg-white focus:ring-2 focus:ring-brand-wa shadow-xs">
+            </div>
+            <button type="button" onclick="removeMatrixVariantRow(${i})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer group/del" title="Delete this selected variant row from matrix">
+              <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+              <span>Delete</span>
+            </button>
           </div>
         </div>
 
@@ -8506,7 +9070,7 @@ function renderMatrixVariantRows() {
           <!-- Variant Photo Picker -->
           <div class="md:col-span-5 flex items-center gap-2 bg-slate-50/80 p-1.5 rounded-xl border border-slate-200">
             <div class="relative w-12 h-12 rounded-lg bg-slate-200 overflow-hidden border border-slate-300 shrink-0 group cursor-pointer" onclick="document.getElementById('matrix-img-file-${i}').click()" title="Click to upload variant photo">
-              <img id="matrix-thumb-${i}" src="${variantImg}" class="w-full h-full object-cover">
+              <img id="matrix-thumb-${i}" src="${variantImg}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-full h-full object-cover">
               <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white">
                 <span class="material-symbols-outlined text-[18px]">photo_camera</span>
               </div>
@@ -8550,6 +9114,77 @@ function renderMatrixVariantRows() {
     `;
   }).join('');
 }
+
+// Synchronize all DOM input values of the variant matrix into the PRODUCT_VARIANTS_MATRIX memory array
+function syncMatrixInputsToState() {
+  if (!Array.isArray(PRODUCT_VARIANTS_MATRIX)) return;
+  PRODUCT_VARIANTS_MATRIX.forEach((v, idx) => {
+    const skuEl = document.getElementById(`matrix-sku-${idx}`);
+    if (skuEl && skuEl.value.trim()) v.sku = skuEl.value.trim().toUpperCase();
+
+    const priceEl = document.getElementById(`matrix-price-${idx}`);
+    if (priceEl && priceEl.value !== '') v.price = parseFloat(priceEl.value) || 0;
+
+    const mrpEl = document.getElementById(`matrix-mrp-${idx}`);
+    if (mrpEl && mrpEl.value !== '') v.mrp = parseFloat(mrpEl.value) || 0;
+
+    const stockEl = document.getElementById(`matrix-stock-${idx}`);
+    if (stockEl && stockEl.value !== '') v.physicalStock = parseInt(stockEl.value) || 0;
+
+    const imgEl = document.getElementById(`matrix-img-url-${idx}`);
+    if (imgEl && imgEl.value && !imgEl.value.includes('(')) v.image = imgEl.value.trim();
+  });
+}
+window.syncMatrixInputsToState = syncMatrixInputsToState;
+
+// Delete a selected variant combination row from the Attribute Matrix
+function removeMatrixVariantRow(index) {
+  if (!Array.isArray(PRODUCT_VARIANTS_MATRIX) || index < 0 || index >= PRODUCT_VARIANTS_MATRIX.length) return;
+
+  // 1. Sync live inputs before splicing so other rows retain user modifications
+  syncMatrixInputsToState();
+
+  const removed = PRODUCT_VARIANTS_MATRIX[index];
+  const customParts = Object.values(removed.customAttributes || {}).filter(Boolean);
+  const descParts = [removed.size ? `Size: ${removed.size}` : '', removed.color ? `Color: ${removed.color}` : '', ...customParts].filter(Boolean);
+  const variantDesc = descParts.join(', ') || `Variant #${index + 1}`;
+
+  // 2. Remove variant from array
+  PRODUCT_VARIANTS_MATRIX.splice(index, 1);
+
+  // 3. Re-index remaining variants
+  PRODUCT_VARIANTS_MATRIX.forEach((v, idx) => {
+    v.index = idx;
+  });
+
+  const count = PRODUCT_VARIANTS_MATRIX.length;
+  const singleSec = document.getElementById('prod-single-pricing-section');
+  const matrixSec = document.getElementById('prod-matrix-pricing-section');
+  const matrixPill = document.getElementById('matrix-indicator-pill');
+  const statusText = document.getElementById('matrix-status-text');
+  const statusBadge = document.getElementById('matrix-status-badge');
+
+  if (count === 0) {
+    if (singleSec) singleSec.classList.remove('hidden');
+    if (matrixSec) matrixSec.classList.add('hidden');
+    if (matrixPill) matrixPill.classList.add('hidden');
+    renderMatrixVariantRows();
+    showToast('Variant Matrix Cleared', `Removed ${variantDesc}. Switched to standard pricing section.`, 'info', 'amber');
+    return;
+  }
+
+  if (matrixPill) {
+    matrixPill.classList.remove('hidden');
+    matrixPill.innerText = `Matrix Active: ${count} Variants`;
+  }
+  if (statusText) statusText.innerText = `Variant Matrix: ${count} Fields Generated`;
+  if (statusBadge) statusBadge.innerText = `${count} Variants`;
+
+  // 4. Re-render matrix rows with updated indexes
+  renderMatrixVariantRows();
+  showToast('Variant Removed', `Removed ${variantDesc} (${count} variants remaining)`, 'delete', 'amber');
+}
+window.removeMatrixVariantRow = removeMatrixVariantRow;
 
 function handleMatrixVariantImageUpload(index, fileInput) {
   const file = fileInput.files && fileInput.files[0];
@@ -8615,11 +9250,25 @@ function updateMatrixVariantField(index, field, value) {
   const v = PRODUCT_VARIANTS_MATRIX[index];
   const price = parseFloat(v.price) || 0;
   const mrp = parseFloat(v.mrp) || 0;
-  const discount = (mrp > price && price > 0) ? Math.round(((mrp - price) / mrp) * 100) : 0;
-
   const discBadge = document.getElementById(`matrix-discount-badge-${index}`);
-  if (discBadge) {
-    discBadge.innerHTML = discount > 0 ? `<span class="text-emerald-700 font-extrabold">${discount}% OFF</span>` : '—';
+  const priceInput = document.getElementById(`matrix-price-${index}`);
+  const mrpInput = document.getElementById(`matrix-mrp-${index}`);
+
+  if (price > 0 && mrp > 0 && price > mrp) {
+    if (priceInput) priceInput.classList.add('border-rose-500', 'bg-rose-50');
+    if (mrpInput) mrpInput.classList.add('border-rose-500', 'bg-rose-50');
+    if (discBadge) {
+      discBadge.className = 'h-[31px] px-1.5 bg-rose-100 rounded-lg border border-rose-300 text-rose-800 text-[10px] font-extrabold flex items-center justify-center animate-pulse';
+      discBadge.innerHTML = `<span class="material-symbols-outlined text-[13px] text-rose-600 mr-0.5">warning</span> MRP &lt; Price`;
+    }
+  } else {
+    if (priceInput) priceInput.classList.remove('border-rose-500', 'bg-rose-50');
+    if (mrpInput) mrpInput.classList.remove('border-rose-500', 'bg-rose-50');
+    const discount = (mrp > price && price > 0) ? Math.round(((mrp - price) / mrp) * 100) : 0;
+    if (discBadge) {
+      discBadge.className = 'h-[31px] px-2 bg-slate-100 rounded-lg border border-slate-200 text-slate-600 text-[11px] font-bold flex items-center justify-center';
+      discBadge.innerHTML = discount > 0 ? `<span class="text-emerald-700 font-extrabold">${discount}% OFF</span>` : '—';
+    }
   }
 }
 
@@ -8630,6 +9279,11 @@ function applyBulkToVariantMatrix() {
 
   if (isNaN(bulkPrice) && isNaN(bulkMrp) && isNaN(bulkStock)) {
     showToast('Bulk Values Needed', 'Please enter Price, MRP, or Stock in the bulk toolbar to apply.', 'info', 'amber');
+    return;
+  }
+
+  if (!isNaN(bulkPrice) && !isNaN(bulkMrp) && bulkPrice > 0 && bulkMrp > 0 && bulkPrice > bulkMrp) {
+    showToast('Invalid Pricing', 'Bulk Selling Price cannot be greater than Bulk MRP. Always MRP is bigger.', 'error', 'rose');
     return;
   }
 
@@ -8836,33 +9490,102 @@ function autoGenerateProductSKU() {
 // -------------------------------------------------------------------------
 // PRICING MARGINS & REALTIME STOCK CALCULATION
 // -------------------------------------------------------------------------
+function applySuggestedPricing(newPrice, newMrp) {
+  const priceInput = document.getElementById('prod-form-price');
+  const mrpInput = document.getElementById('prod-form-mrp');
+  if (priceInput && newPrice !== undefined) priceInput.value = newPrice;
+  if (mrpInput && newMrp !== undefined) mrpInput.value = newMrp;
+  calculateDiscountAndPreview();
+  if (typeof playChime === 'function') playChime('pop');
+  if (typeof showToast === 'function') {
+    showToast('Price Corrected', `Applied MRP ₹${newMrp} & Selling Price ₹${newPrice}`, 'check_circle', 'emerald');
+  }
+}
+window.applySuggestedPricing = applySuggestedPricing;
+
 function calculateDiscountAndPreview() {
   const priceInput = document.getElementById('prod-form-price');
   const mrpInput = document.getElementById('prod-form-mrp');
   const badge = document.getElementById('prod-form-discount-badge');
+  const errContainer = document.getElementById('prod-form-price-error-container');
 
   const priceVal = priceInput ? priceInput.value.trim() : '';
   const mrpVal = mrpInput ? mrpInput.value.trim() : '';
   const price = parseFloat(priceVal) || 0;
   const mrp = parseFloat(mrpVal) || 0;
 
-  if (badge) {
-    if (price <= 0 && !priceVal) {
-      badge.className = 'h-[38px] px-3 bg-slate-100 rounded-xl border border-slate-200 text-slate-400 font-medium flex items-center justify-center text-[11px]';
-      badge.innerHTML = 'Enter Selling Price';
-    } else if (mrp > price && price > 0) {
-      const discount = Math.round(((mrp - price) / mrp) * 100);
-      const savings = Math.round(mrp - price);
-      badge.className = 'h-[38px] px-3 bg-emerald-100 rounded-xl border border-emerald-300 text-emerald-800 font-extrabold flex items-center justify-center text-[11px] shadow-sm';
-      badge.innerHTML = `Save ₹${savings} (${discount}% OFF)`;
-    } else {
-      badge.className = 'h-[38px] px-3 bg-slate-100 rounded-xl border border-slate-200 text-slate-500 font-bold flex items-center justify-center text-[11px]';
-      badge.innerHTML = 'Standard Price';
+  // Reset input styles
+  if (priceInput) priceInput.classList.remove('border-rose-500', 'bg-rose-50/40', 'ring-2', 'ring-rose-200');
+  if (mrpInput) mrpInput.classList.remove('border-rose-500', 'bg-rose-50/40', 'ring-2', 'ring-rose-200');
+
+  // Enforce: selling price must be smaller than MRP. Always MRP is bigger.
+  if (price > 0 && mrp > 0 && price > mrp) {
+    if (priceInput) priceInput.classList.add('border-rose-500', 'bg-rose-50/40', 'ring-2', 'ring-rose-200');
+    if (mrpInput) mrpInput.classList.add('border-rose-500', 'bg-rose-50/40', 'ring-2', 'ring-rose-200');
+
+    if (badge) {
+      badge.className = 'h-[38px] px-2.5 bg-rose-100 rounded-xl border border-rose-300 text-rose-800 font-extrabold flex items-center justify-center text-[11px] shadow-sm animate-pulse';
+      badge.innerHTML = `<span class="material-symbols-outlined text-[14px] text-rose-600 mr-1">warning</span> MRP &lt; Price Error`;
+    }
+
+    if (errContainer) {
+      const suggestedMrp20 = Math.ceil((price * 1.25) / 10) * 10;
+      errContainer.className = 'p-3 bg-rose-50/90 border border-rose-300 rounded-xl space-y-2 animate-in fade-in duration-150 text-xs shadow-2xs';
+      errContainer.innerHTML = `
+        <div class="flex items-start gap-2.5 text-rose-900">
+          <span class="material-symbols-outlined text-rose-600 text-[20px] shrink-0 mt-0.5">error</span>
+          <div class="space-y-1.5 flex-1">
+            <div class="font-extrabold text-xs text-rose-800">
+              ⚠️ Pricing Error: Selling Price (₹${price}) cannot be higher than MRP (₹${mrp}). Always MRP is bigger!
+            </div>
+            <p class="text-[11px] text-rose-700 leading-relaxed">
+              If entered by mistake lesser, please adjust the MRP or Selling Price. Click any suggestion below to fix automatically:
+            </p>
+            <div class="pt-1 flex items-center gap-2 flex-wrap text-[11px]">
+              <span class="font-bold text-slate-700">Quick Suggestions:</span>
+              <button type="button" onclick="applySuggestedPricing(${price}, ${price})" class="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg shadow-2xs transition font-bold flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[13px] text-emerald-600">check_circle</span> Set MRP = ₹${price} (0% Off)
+              </button>
+              <button type="button" onclick="applySuggestedPricing(${price}, ${suggestedMrp20})" class="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg shadow-2xs transition font-bold flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[13px] text-emerald-600">trending_up</span> Set MRP = ₹${suggestedMrp20} (Save ₹${suggestedMrp20 - price})
+              </button>
+              <button type="button" onclick="applySuggestedPricing(${mrp}, ${mrp})" class="px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-800 border border-blue-300 rounded-lg shadow-2xs transition font-bold flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[13px] text-blue-600">arrow_downward</span> Reduce Selling Price to ₹${mrp}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  } else {
+    // Valid pricing or empty
+    if (errContainer) {
+      errContainer.className = 'hidden';
+      errContainer.innerHTML = '';
+    }
+
+    if (badge) {
+      if (price <= 0 && !priceVal) {
+        badge.className = 'h-[38px] px-3 bg-slate-100 rounded-xl border border-slate-200 text-slate-400 font-medium flex items-center justify-center text-[11px]';
+        badge.innerHTML = 'Enter Selling Price';
+      } else if (mrp > price && price > 0) {
+        const discount = Math.round(((mrp - price) / mrp) * 100);
+        const savings = Math.round(mrp - price);
+        badge.className = 'h-[38px] px-3 bg-emerald-100 rounded-xl border border-emerald-300 text-emerald-800 font-extrabold flex items-center justify-center text-[11px] shadow-sm';
+        badge.innerHTML = `Save ₹${savings} (${discount}% OFF)`;
+      } else if (mrp === price && price > 0) {
+        badge.className = 'h-[38px] px-3 bg-slate-100 rounded-xl border border-slate-300 text-slate-700 font-bold flex items-center justify-center text-[11px]';
+        badge.innerHTML = 'MRP = Selling Price (0% OFF)';
+      } else {
+        badge.className = 'h-[38px] px-3 bg-slate-100 rounded-xl border border-slate-200 text-slate-500 font-bold flex items-center justify-center text-[11px]';
+        badge.innerHTML = price > 0 ? 'Standard Price' : 'Enter Price';
+      }
     }
   }
 
   updateProductFormPreview();
 }
+window.calculateDiscountAndPreview = calculateDiscountAndPreview;
 
 function calculateSellableAndPreview() {
   const physInput = document.getElementById('prod-form-physical');
@@ -8915,9 +9638,9 @@ function updateProductFormPreview() {
   const available = physical !== null ? Math.max(0, physical - reserved) : null;
   const accountId = document.getElementById('prod-form-account-id')?.value || 'account_1';
 
-  const img = (CURRENT_PRODUCT_IMAGE_DATA && !CURRENT_PRODUCT_IMAGE_DATA.includes('photo-1518831959646-742c3a14ebf7'))
+  const img = (CURRENT_PRODUCT_IMAGE_DATA && !CURRENT_PRODUCT_IMAGE_DATA.includes('photo-1518831959646-742c3a14ebf7') && !CURRENT_PRODUCT_IMAGE_DATA.includes('photo-1583846783977-d2b0993d4265'))
     ? CURRENT_PRODUCT_IMAGE_DATA
-    : DEFAULT_GARMENT_PLACEHOLDER;
+    : getSmartProductImage({ category: cat, subcategory: subcat, name, sku });
 
   // 1. Card Image & Badges
   const prevImg = document.getElementById('prev-card-img');
@@ -9173,18 +9896,18 @@ function openEditProductModal(productId) {
   if (lineSelect) lineSelect.value = p.accountId || 'account_1';
 
   // Set image preview
-  const validImg = (p.image && !p.image.includes('photo-1518831959646-742c3a14ebf7')) ? p.image : '';
+  const validImg = getSmartProductImage(p);
   CURRENT_PRODUCT_IMAGE_DATA = validImg;
   const urlInput = document.getElementById('prod-form-image');
-  if (urlInput) urlInput.value = (validImg && validImg.startsWith('http')) ? validImg : '';
+  if (urlInput) urlInput.value = (validImg && (validImg.startsWith('http') || validImg.startsWith('uploads/'))) ? validImg : '';
 
   const previewImg = document.getElementById('prod-form-img-preview');
   const previewName = document.getElementById('prod-preview-filename');
   const previewStatus = document.getElementById('prod-preview-status');
 
-  if (previewImg) previewImg.src = validImg || DEFAULT_GARMENT_PLACEHOLDER;
-  if (previewName) previewName.innerText = validImg ? `${p.sku} Photo` : 'No image selected';
-  if (previewStatus) previewStatus.innerText = validImg ? 'Active garment image' : 'Upload a photo or enter URL';
+  if (previewImg) previewImg.src = validImg;
+  if (previewName) previewName.innerText = `${p.sku || 'Garment'} Photo`;
+  if (previewStatus) previewStatus.innerText = 'Active garment image';
 
   if (validImg && validImg.startsWith('http')) {
     switchProductImageSourceTab('url');
@@ -9285,25 +10008,29 @@ async function handleProductFormSubmit(e) {
       const urlVal = document.getElementById('prod-form-image') ? document.getElementById('prod-form-image').value.trim() : '';
       image = urlVal || '';
     }
-    if (image && image.includes('photo-1518831959646-742c3a14ebf7')) {
-      image = '';
+    if (!image || image.includes('photo-1518831959646-742c3a14ebf7') || image.includes('No Image')) {
+      image = getSmartProductImage({ category, subcategory, name, sku });
     }
 
-    // Check if Multi-Field Matrix Mode is Active (> 1 combinations)
-    if (PRODUCT_VARIANTS_MATRIX.length > 1) {
+    // Check if Multi-Field Matrix Mode is Active
+    const matrixSec = document.getElementById('prod-matrix-pricing-section');
+    const isMatrixActive = matrixSec && !matrixSec.classList.contains('hidden') && PRODUCT_VARIANTS_MATRIX.length > 0;
+
+    if (isMatrixActive) {
+      syncMatrixInputsToState();
       const variantsPayload = PRODUCT_VARIANTS_MATRIX.map((v, idx) => {
         const fallbackSku = `${sku}-VAR-${idx + 1}`;
-        const inputSku = (document.getElementById(`matrix-sku-${v.index}`)?.value || '').trim().toUpperCase();
+        const inputSku = (document.getElementById(`matrix-sku-${idx}`)?.value || document.getElementById(`matrix-sku-${v.index}`)?.value || '').trim().toUpperCase();
         const varSku = inputSku || (v.sku ? v.sku.trim().toUpperCase() : fallbackSku);
-        const varPrice = parseFloat(document.getElementById(`matrix-price-${v.index}`)?.value) || v.price || 0;
-        const varMrp = parseFloat(document.getElementById(`matrix-mrp-${v.index}`)?.value) || v.mrp || varPrice;
-        const stockInput = document.getElementById(`matrix-stock-${v.index}`);
+        const varPrice = parseFloat(document.getElementById(`matrix-price-${idx}`)?.value || document.getElementById(`matrix-price-${v.index}`)?.value) || v.price || 0;
+        const varMrp = parseFloat(document.getElementById(`matrix-mrp-${idx}`)?.value || document.getElementById(`matrix-mrp-${v.index}`)?.value) || v.mrp || varPrice;
+        const stockInput = document.getElementById(`matrix-stock-${idx}`) || document.getElementById(`matrix-stock-${v.index}`);
         const varStock = stockInput ? (parseInt(stockInput.value) || 0) : (parseInt(v.physicalStock) || 0);
 
-        // Variant-specific photo: priority to variant image, fallback to general image
-        let varImage = v.image || document.getElementById(`matrix-img-url-${v.index}`)?.value || '';
-        if (!varImage) {
-          varImage = image;
+        // Variant-specific photo: priority to variant image, fallback to general image, fallback to smart apparel image
+        let varImage = v.image || document.getElementById(`matrix-img-url-${idx}`)?.value || document.getElementById(`matrix-img-url-${v.index}`)?.value || '';
+        if (!varImage || varImage.includes('No Image')) {
+          varImage = image || getSmartProductImage({ category, subcategory, name, sku });
         }
 
         // Build descriptive name including custom attributes (e.g. Memory: 4GB)
@@ -9323,6 +10050,10 @@ async function handleProductFormSubmit(e) {
 
         return {
           sku: varSku,
+          parentSku: sku,
+          parent_sku: sku,
+          parentName: name,
+          parent_name: name,
           name: variantName,
           category,
           subcategory,
@@ -9341,6 +10072,13 @@ async function handleProductFormSubmit(e) {
           description
         };
       });
+
+      // Enforce: selling price wants to be smaller than MRP. Always MRP is bigger!
+      const invalidVar = variantsPayload.find(v => (v.price || 0) > (v.mrp || 0) && (v.mrp || 0) > 0);
+      if (invalidVar) {
+        showToast('Pricing Error', `Variant ${invalidVar.sku} has Selling Price (₹${invalidVar.price}) greater than MRP (₹${invalidVar.mrp}). Always MRP is bigger!`, 'error', 'rose');
+        return;
+      }
 
       // Update in CRM_STATE memory
       variantsPayload.forEach(vp => {
@@ -9368,7 +10106,10 @@ async function handleProductFormSubmit(e) {
           if (respData.products && Array.isArray(respData.products)) {
             respData.products.forEach(sp => {
               const p = CRM_STATE.products.find(cp => cp.sku === sp.sku);
-              if (p && sp.id) p.id = sp.id;
+              if (p) {
+                if (sp.id) p.id = sp.id;
+                if (sp.image) p.image = sp.image;
+              }
             });
             saveCRMState();
           }
@@ -9392,6 +10133,17 @@ async function handleProductFormSubmit(e) {
     const mrp = parseFloat(document.getElementById('prod-form-mrp')?.value) || price;
     const physical = parseInt(document.getElementById('prod-form-physical')?.value) || 0;
     const reserved = parseInt(document.getElementById('prod-form-reserved')?.value) || 0;
+
+    // Validation: Selling price cannot exceed MRP. Always MRP is bigger!
+    if (price > 0 && mrp > 0 && price > mrp) {
+      showToast('Pricing Error', `Selling price (₹${price}) cannot be greater than MRP (₹${mrp}). Always MRP is bigger!`, 'error', 'rose');
+      const mrpInput = document.getElementById('prod-form-mrp');
+      if (mrpInput) {
+        mrpInput.focus();
+        mrpInput.classList.add('border-rose-500', 'ring-2', 'ring-rose-200');
+      }
+      return;
+    }
 
     // Merge any SELECTED_CUSTOM_ATTRIBUTES into specifications
     const singleSpecs = [...(specifications || [])];
@@ -9471,8 +10223,11 @@ async function handleProductFormSubmit(e) {
         const respData = await res.json();
         if (respData.id) {
           existing.id = respData.id;
-          saveCRMState();
         }
+        if (respData.image) {
+          existing.image = respData.image;
+        }
+        saveCRMState();
       }
     } catch (err) {
       console.warn('API save_product failed, state updated in RAM:', err);
@@ -9481,6 +10236,7 @@ async function handleProductFormSubmit(e) {
     closeModal('modal-product-edit');
     filterCatalogGrid();
     updateOrderProductDropdown();
+    if (typeof refreshVariantsModalIfOpen === 'function') refreshVariantsModalIfOpen();
     showToast('Garment Catalog Updated', `${sku} (${name}) saved with live WhatsApp dispatch card!`, 'check_circle', 'emerald');
   } catch (err) {
     console.error('Critical handleProductFormSubmit error:', err);
@@ -9496,7 +10252,9 @@ async function handleDeleteProduct() {
   const p = CRM_STATE.products.find(prod => String(prod.id) === String(idVal));
   if (!p) return;
 
-  if (!confirm(`Are you sure you want to delete product ${p.sku} (${p.name}) from the catalog?`)) return;
+  const skuStr = p.sku ? `[${p.sku}] ` : '';
+  const nameStr = p.name || 'this product';
+  if (!window.confirm(`⚠️ Permanently Delete Product?\n\nAre you sure you want to delete ${skuStr}"${nameStr}"?\n\nThis will remove it from both your live catalog and the database.`)) return;
 
   CRM_STATE.products = CRM_STATE.products.filter(prod => String(prod.id) !== String(idVal));
   saveCRMState();
@@ -9505,7 +10263,7 @@ async function handleDeleteProduct() {
     await fetch('api.php?action=delete_product', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: idVal })
+      body: JSON.stringify({ id: idVal, sku: p.sku })
     });
   } catch (err) {
     console.warn('API delete_product failed:', err);
@@ -9514,8 +10272,81 @@ async function handleDeleteProduct() {
   closeModal('modal-product-edit');
   filterCatalogGrid();
   updateOrderProductDropdown();
-  showToast('Garment Deleted', `${p.sku} removed from catalog.`, 'delete', 'rose');
+  showToast('Product Deleted', `${p.sku || p.name} removed from catalog and database.`, 'delete', 'rose');
 }
+window.handleDeleteProduct = handleDeleteProduct;
+
+// Delete product directly from product card or catalog table with confirmation dialog
+async function confirmDeleteProduct(productId, isFamilyGroup = false, groupKey = null) {
+  let delTargets = [];
+  let confirmMsg = '';
+
+  const grouped = groupCatalogProducts(CRM_STATE.products || []);
+  if (isFamilyGroup || (groupKey && (groupKey.startsWith('parent_sku__') || groupKey.startsWith('family__')))) {
+    const group = grouped.find(g => g.groupKey === groupKey || String(g.id) === String(productId));
+    if (group && group.variants && group.variants.length > 0) {
+      delTargets = group.variants;
+      confirmMsg = `⚠️ Permanently Delete Product Family?\n\nAre you sure you want to delete the entire product family "${group.name}" with all ${group.variantCount || group.variants.length} variants [Base SKU: ${group.sku}]?\n\nThis will permanently delete ALL variants from your live catalog and the database.`;
+    }
+  }
+
+  if (delTargets.length === 0) {
+    const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId) || String(prod.sku) === String(productId));
+    if (!p) {
+      showToast('Product Not Found', 'Could not locate product details to delete.', 'error', 'rose');
+      return;
+    }
+    delTargets = [p];
+    const skuStr = p.sku ? `[${p.sku}] ` : '';
+    const nameStr = p.name || 'this product';
+    confirmMsg = `⚠️ Permanently Delete Product Variant?\n\nAre you sure you want to delete ${skuStr}"${nameStr}"?\n\nThis will permanently delete this product from both your live catalog and the database.`;
+  }
+
+  const confirmed = window.confirm(confirmMsg);
+  if (!confirmed) return;
+
+  const idsToDelete = new Set(delTargets.map(t => String(t.id)));
+  const skusToDelete = new Set(delTargets.map(t => String(t.sku || '')).filter(Boolean));
+
+  // Optimistic UI & local storage removal
+  CRM_STATE.products = CRM_STATE.products.filter(prod => !idsToDelete.has(String(prod.id)) && (!prod.sku || !skusToDelete.has(String(prod.sku))));
+  saveCRMState();
+  filterCatalogGrid();
+  updateOrderProductDropdown();
+
+  // If variants modal is open, refresh or close it
+  const variantsModal = document.getElementById('modal-product-variants');
+  if (variantsModal && !variantsModal.classList.contains('hidden')) {
+    if (window.CURRENT_OPEN_VARIANTS_GROUP_KEY) {
+      const remainingGrouped = groupCatalogProducts(CRM_STATE.products || []);
+      const remainingGroup = remainingGrouped.find(g => g.groupKey === window.CURRENT_OPEN_VARIANTS_GROUP_KEY);
+      if (remainingGroup && remainingGroup.variants && remainingGroup.variants.length > 0) {
+        openProductVariantsModal(window.CURRENT_OPEN_VARIANTS_GROUP_KEY);
+      } else {
+        closeModal('modal-product-variants');
+      }
+    } else {
+      closeModal('modal-product-variants');
+    }
+  }
+
+  const label = delTargets.length > 1 ? `${delTargets.length} variants` : (delTargets[0].sku || delTargets[0].name);
+  showToast('Product Deleted', `${label} deleted from database.`, 'delete_forever', 'rose');
+
+  // Server MySQL removal
+  for (const t of delTargets) {
+    try {
+      await fetch('api.php?action=delete_product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: t.id, sku: t.sku })
+      });
+    } catch (err) {
+      console.warn('Backend delete_product notice:', err);
+    }
+  }
+}
+window.confirmDeleteProduct = confirmDeleteProduct;
 
 // -------------------------------------------------------------------------
 // CATEGORIES & SUBCATEGORIES MANAGEMENT MODAL
@@ -10752,7 +11583,7 @@ async function deleteAttribute(type, val, id, extra) {
 // QUICK RESTOCK MODAL
 // -------------------------------------------------------------------------
 function openQuickStockModal(productId) {
-  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId));
+  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId) || String(prod.sku) === String(productId));
   if (!p) {
     if (typeof showToast === 'function') {
       showToast('Product Not Found', `Unable to find product with ID ${productId}`, 'alert-triangle', 'amber');
@@ -10767,13 +11598,14 @@ function openQuickStockModal(productId) {
 
   const info = document.getElementById('quick-stock-product-info');
   if (info) {
-    const imgSrc = p.image || p.imageUrl || DEFAULT_GARMENT_PLACEHOLDER;
+    const imgSrc = getSmartProductImage(p);
+    const safeName = typeof escapeHtml === 'function' ? escapeHtml(p.name || 'Unnamed') : (p.name || 'Unnamed');
     info.innerHTML = `
-      <img src="${imgSrc}" onerror="this.onerror=null;this.src='${DEFAULT_GARMENT_PLACEHOLDER}';" class="w-12 h-12 object-cover rounded-xl border border-slate-200">
+      <img src="${imgSrc}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-12 h-12 object-cover rounded-xl border border-slate-200">
       <div>
         <div class="flex items-center gap-2">
           <span class="font-mono font-bold text-xs bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">${p.sku || 'NO-SKU'}</span>
-          <span class="font-bold text-slate-900 text-xs">${escapeHtml(p.name || 'Unnamed')}</span>
+          <span class="font-bold text-slate-900 text-xs">${safeName}</span>
         </div>
         <p class="text-[11px] text-slate-500 mt-0.5">Current: <b>${p.physicalStock || 0}</b> physical &bull; <b>${p.reservedStock || 0}</b> reserved</p>
       </div>
@@ -10782,18 +11614,20 @@ function openQuickStockModal(productId) {
 
   openModal('modal-quick-stock');
 }
+window.openQuickStockModal = openQuickStockModal;
 
 async function handleQuickStockSubmit(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
   const idVal = document.getElementById('quick-stock-product-id').value;
   const newPhysical = parseInt(document.getElementById('quick-stock-physical-input').value) || 0;
-  const reason = document.getElementById('quick-stock-reason').value;
+  const reason = document.getElementById('quick-stock-reason')?.value || 'Factory Batch Restock';
 
-  const p = CRM_STATE.products.find(prod => String(prod.id) === String(idVal));
+  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(idVal) || String(prod.sku) === String(idVal));
   if (!p) return;
 
   const oldPhysical = p.physicalStock;
   p.physicalStock = newPhysical;
+  saveCRMState();
 
   try {
     await fetch('api.php?action=update_stock', {
@@ -10801,6 +11635,7 @@ async function handleQuickStockSubmit(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: p.id,
+        sku: p.sku,
         physical_stock: newPhysical,
         reserved_stock: p.reservedStock
       })
@@ -10823,12 +11658,19 @@ async function handleQuickStockSubmit(e) {
   closeModal('modal-quick-stock');
   filterCatalogGrid();
   updateOrderProductDropdown();
-  showToast('Restock Completed', `${p.sku} stock adjusted to ${newPhysical} units (${reason}).`, 'warehouse', 'blue');
+  if (typeof refreshVariantsModalIfOpen === 'function') refreshVariantsModalIfOpen();
+  showToast('Restock Completed', `${p.sku || p.name} stock adjusted to ${newPhysical} units (${reason}).`, 'warehouse', 'blue');
 }
+window.handleQuickStockSubmit = handleQuickStockSubmit;
+
 
 // -------------------------------------------------------------------------
-// DIRECT WHATSAPP SHARING MODAL & BROADCAST LOGIC
+// DIRECT WHATSAPP SHARING MODAL & BROADCAST LOGIC (MULTI-RECIPIENT & SMART VARIANT SHARING)
 // -------------------------------------------------------------------------
+let DIRECT_SHARE_SELECTED_CUSTOMERS = new Set();
+let DIRECT_SHARE_SEARCH_QUERY = '';
+
+// Generate WhatsApp text for a single variant/product
 function generateProductWhatsAppText(p) {
   const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
   const stockText = available > 5 
@@ -10867,33 +11709,235 @@ function generateProductWhatsAppText(p) {
   return `🛍️ *${p.name}*\n🏷️ *SKU Code:* ${p.sku}\n${catLine}📏 *Size / Age:* ${p.size || 'Standard'}\n🎨 *Color:* ${p.color || 'Default'}\n${fabricLine}${specsLines}${priceLine}\n📦 *Warehouse Stock:* ${stockText}${descLine}\n✨ *GRM Garments Premium Quality Promise*\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n\n👉 *Reply 'YES' with your delivery address to confirm your booking!*`;
 }
 
-// -------------------------------------------------------------------------
-// DIRECT WHATSAPP SHARING MODAL & BROADCAST LOGIC (MULTI-RECIPIENT & PERSISTENT CAPTION)
-// -------------------------------------------------------------------------
-let DIRECT_SHARE_SELECTED_CUSTOMERS = new Set();
-let DIRECT_SHARE_SEARCH_QUERY = '';
+// Generate WhatsApp text representing ALL variants in a product family
+function generateFamilyProductWhatsAppText(group) {
+  const catLine = group.subcategory 
+    ? `📁 *Catalog:* ${group.category || 'Garments'} › ${group.subcategory}\n` 
+    : (group.category ? `📁 *Category:* ${group.category}\n` : '');
 
-function openDirectShareModal(productId) {
-  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
+  const priceRange = (group.minPrice && group.maxPrice && group.minPrice !== group.maxPrice)
+    ? `₹${group.minPrice} – ₹${group.maxPrice}`
+    : `₹${group.minPrice || group.price || 0}`;
+
+  let variantLines = '';
+  if (Array.isArray(group.variants)) {
+    variantLines = group.variants.map((v) => {
+      const parts = [];
+      if (v.size) parts.push(`📏 Size: ${v.size}`);
+      if (v.color) parts.push(`🎨 Color: ${v.color}`);
+      if (v.fabric) parts.push(`🧵 ${v.fabric}`);
+      if (v.customAttributes) {
+        Object.entries(v.customAttributes).forEach(([k, val]) => {
+          if (val) parts.push(`📌 ${k}: ${val}`);
+        });
+      }
+      const attrStr = parts.join(' • ');
+      const vPhys = parseInt(v.physicalStock) || 0;
+      const vRes = parseInt(v.reservedStock) || 0;
+      const vAvail = vPhys - vRes;
+      const stockBadge = vAvail > 0 ? `Stock: ${vAvail}` : 'Made to Order';
+      return `• ${attrStr ? attrStr + ' — ' : ''}💰 ₹${v.price || 0} (${stockBadge})`;
+    }).join('\n');
+  }
+
+  const totalAvail = (parseInt(group.physicalStock) || 0) - (parseInt(group.reservedStock) || 0);
+  const stockLine = totalAvail > 0
+    ? `📦 *Total Warehouse Stock:* ${totalAvail} units ready for immediate dispatch`
+    : `⚠️ *Made to Order* (Available on booking)`;
+
+  return `🛍️ *${group.name}*\n🏷️ *Base SKU:* ${group.sku}\n${catLine}💰 *Price Range:* ${priceRange}\n\n✨ *Available Variants & Sizes (${group.variantCount || group.variants.length}):*\n${variantLines}\n\n${stockLine}\n✨ *GRM Garments Premium Quality Promise*\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n\n👉 *Reply with your preferred Size & Color to place your booking!*`;
+}
+
+// Generate WhatsApp text representing a collection of multiple selected products
+function generateBatchProductsWhatsAppText(selectedProducts) {
+  const grouped = groupCatalogProducts(selectedProducts);
+  const totalCount = selectedProducts.length;
+
+  let header = `🛍️ *GRM Garments — Exclusive Catalog Selection*\n✨ *${totalCount} Handpicked Items Available Now:*\n`;
+
+  let itemsText = grouped.map((item, idx) => {
+    if (item.isGroup && item.variants && item.variants.length > 1) {
+      const priceRange = (item.minPrice && item.maxPrice && item.minPrice !== item.maxPrice)
+        ? `₹${item.minPrice} – ₹${item.maxPrice}`
+        : `₹${item.minPrice || item.price || 0}`;
+      const vSummary = item.variants.map(v => {
+        const parts = [v.size, v.color].filter(Boolean).join(' / ');
+        const vAvail = (parseInt(v.physicalStock) || 0) - (parseInt(v.reservedStock) || 0);
+        return `   • ${parts ? parts + ': ' : ''}₹${v.price} (${vAvail > 0 ? vAvail + ' in stock' : 'Pre-order'})`;
+      }).join('\n');
+      return `\n*${idx + 1}. ${item.name}* [${item.sku}]\n💰 Price: ${priceRange} (${item.variantCount} Variants)\n${vSummary}`;
+    } else {
+      const parts = [item.size, item.color].filter(Boolean).join(' • ');
+      const desc = parts ? ` (${parts})` : '';
+      const avail = (parseInt(item.physicalStock) || 0) - (parseInt(item.reservedStock) || 0);
+      const stockBadge = avail > 0 ? `Stock: ${avail}` : 'Available on booking';
+      return `\n*${idx + 1}. ${item.name}* [${item.sku}]${desc}\n💰 Price: ₹${item.price} • ${stockBadge}`;
+    }
+  }).join('\n');
+
+  let footer = `\n\n✨ *GRM Garments Premium Quality Promise*\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n\n👉 *Reply with the product number or SKU to place your booking directly!*`;
+
+  return header + itemsText + footer;
+}
+window.generateBatchProductsWhatsAppText = generateBatchProductsWhatsAppText;
+
+function openBulkDirectShareModal() {
+  if (BULK_SELECTED_PRODUCT_IDS.size === 0) {
+    showToast('Select Products First', 'Please select at least 1 garment using checkboxes to share on WhatsApp.', 'warning', 'amber');
+    return;
+  }
+
+  const selectedProducts = (CRM_STATE.products || []).filter(p => BULK_SELECTED_PRODUCT_IDS.has(String(p.id)));
+  if (selectedProducts.length === 0) {
+    showToast('Notice', 'Could not locate selected product details.', 'warning', 'amber');
+    return;
+  }
+
+  // Set hidden inputs in modal-direct-share-product
+  const idInput = document.getElementById('direct-share-product-id');
+  if (idInput) idInput.value = selectedProducts.map(p => p.id).join(',');
+
+  const isFamInput = document.getElementById('direct-share-is-family');
+  if (isFamInput) isFamInput.value = 'batch';
+
+  const grpKeyInput = document.getElementById('direct-share-group-key');
+  if (grpKeyInput) grpKeyInput.value = '';
+
+  // Render preview card in modal
+  const preview = document.getElementById('direct-share-product-preview');
+  if (preview) {
+    const firstImg = getSmartProductImage(selectedProducts[0] || {});
+    const totalPhysical = selectedProducts.reduce((acc, p) => acc + (parseInt(p.physicalStock) || 0), 0);
+    const minPrice = Math.min(...selectedProducts.map(p => parseFloat(p.price) || 0));
+    const maxPrice = Math.max(...selectedProducts.map(p => parseFloat(p.price) || 0));
+    const priceText = minPrice === maxPrice ? `₹${minPrice}` : `₹${minPrice} – ₹${maxPrice}`;
+
+    preview.innerHTML = `
+      <img src="${firstImg}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-12 h-12 object-cover rounded-xl border border-slate-200 shadow-xs shrink-0">
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between">
+          <span class="font-mono font-bold text-xs bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded border border-emerald-300">
+            Batch WhatsApp Dispatch
+          </span>
+          <span class="font-bold text-emerald-800 text-sm">${priceText}</span>
+        </div>
+        <h4 class="font-bold text-slate-900 text-xs truncate mt-0.5">${selectedProducts.length} Garments Selected For Direct WhatsApp Share</h4>
+        <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-100 text-teal-800 border border-teal-200">
+            📦 Combined Stock: ${totalPhysical} units
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
+  // Initialize Recipient Selection
+  DIRECT_SHARE_SELECTED_CUSTOMERS.clear();
+  DIRECT_SHARE_SEARCH_QUERY = '';
+  const searchInput = document.getElementById('direct-share-search-input');
+  if (searchInput) searchInput.value = '';
+
+  const customPhoneInput = document.getElementById('direct-share-custom-phone');
+  if (customPhoneInput) customPhoneInput.value = '';
+
+  if (ACTIVE_CUSTOMER_ID && CRM_STATE.customers.some(c => String(c.id) === String(ACTIVE_CUSTOMER_ID))) {
+    DIRECT_SHARE_SELECTED_CUSTOMERS.add(String(ACTIVE_CUSTOMER_ID));
+  } else if (CRM_STATE.customers.length > 0) {
+    DIRECT_SHARE_SELECTED_CUSTOMERS.add(String(CRM_STATE.customers[0].id));
+  }
+
+  renderDirectShareContactsList();
+  updateDirectShareSummary();
+  closeDirectShareDropdown();
+
+  // Load Message Caption for Batch Share
+  const captionArea = document.getElementById('direct-share-message-text');
+  if (captionArea) {
+    captionArea.value = generateBatchProductsWhatsAppText(selectedProducts);
+  }
+
+  openModal('modal-direct-share-product');
+}
+window.openBulkDirectShareModal = openBulkDirectShareModal;
+
+function openDirectShareModal(targetId, isFamily = false) {
+  let isGroupTarget = isFamily;
+  let group = null;
+  let p = null;
+
+  const grouped = groupCatalogProducts(CRM_STATE.products || []);
+  if (isFamily || String(targetId).startsWith('parent_sku__') || String(targetId).startsWith('family__')) {
+    group = grouped.find(g => g.groupKey === targetId || String(g.id) === String(targetId));
+    if (group && (group.isGroup || isFamily)) {
+      isGroupTarget = true;
+      p = group;
+    }
+  }
+
+  if (!p) {
+    p = CRM_STATE.products.find(prod => String(prod.id) === String(targetId));
+    if (!p) {
+      group = grouped.find(g => g.groupKey === targetId || String(g.id) === String(targetId));
+      if (group) {
+        isGroupTarget = true;
+        p = group;
+      }
+    }
+  }
+
   if (!p) {
     showToast('Product Error', 'Product not found in catalog state.', 'error', 'rose');
     return;
   }
 
-  document.getElementById('direct-share-product-id').value = p.id;
+  const idInput = document.getElementById('direct-share-product-id');
+  if (idInput) idInput.value = p.id;
+
+  const isFamInput = document.getElementById('direct-share-is-family');
+  if (isFamInput) isFamInput.value = isGroupTarget ? 'true' : 'false';
+
+  const grpKeyInput = document.getElementById('direct-share-group-key');
+  if (grpKeyInput) grpKeyInput.value = group ? group.groupKey : (p.groupKey || '');
 
   const preview = document.getElementById('direct-share-product-preview');
   if (preview) {
-    preview.innerHTML = `
-      <img src="${(p.image && !p.image.includes('photo-1518831959646-742c3a14ebf7')) ? p.image : DEFAULT_GARMENT_PLACEHOLDER}" class="w-12 h-12 object-cover rounded-xl border border-slate-200 shadow-xs shrink-0">
-      <div class="min-w-0 flex-1">
-        <div class="flex items-center justify-between">
-          <span class="font-mono font-bold text-xs bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">${p.sku}</span>
-          <span class="font-bold text-emerald-800 text-sm">₹${p.price}</span>
+    const imgSrc = getSmartProductImage(p);
+    if (isGroupTarget && group) {
+      const priceText = (group.minPrice && group.maxPrice && group.minPrice !== group.maxPrice) 
+        ? `₹${group.minPrice} – ₹${group.maxPrice}` 
+        : `₹${group.minPrice || group.price || 0}`;
+      preview.innerHTML = `
+        <img src="${imgSrc}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-12 h-12 object-cover rounded-xl border border-slate-200 shadow-xs shrink-0">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-xs bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">${group.sku}</span>
+            <span class="font-bold text-emerald-800 text-sm">${priceText}</span>
+          </div>
+          <h4 class="font-bold text-slate-900 text-xs truncate mt-0.5">${group.name}</h4>
+          <div class="mt-1 flex items-center gap-1.5">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-100 text-teal-800 border border-teal-200">
+              All ${group.variantCount || group.variants.length} Variants Included
+            </span>
+            <span class="text-[10px] text-slate-400 font-mono">Total Stock: ${group.physicalStock}</span>
+          </div>
         </div>
-        <h4 class="font-bold text-slate-900 text-xs truncate mt-0.5">${p.name}</h4>
-      </div>
-    `;
+      `;
+    } else {
+      const badgeList = [];
+      if (p.size) badgeList.push(`Size: ${p.size}`);
+      if (p.color) badgeList.push(`Color: ${p.color}`);
+      preview.innerHTML = `
+        <img src="${imgSrc}" class="w-12 h-12 object-cover rounded-xl border border-slate-200 shadow-xs shrink-0">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-xs bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">${p.sku}</span>
+            <span class="font-bold text-emerald-800 text-sm">₹${p.price}</span>
+          </div>
+          <h4 class="font-bold text-slate-900 text-xs truncate mt-0.5">${p.name}</h4>
+          ${badgeList.length > 0 ? `<p class="text-[10px] text-slate-500 font-semibold mt-0.5">${badgeList.join(' • ')}</p>` : ''}
+        </div>
+      `;
+    }
   }
 
   // 1. Initialize Recipient Selection
@@ -10917,11 +11961,16 @@ function openDirectShareModal(productId) {
   updateDirectShareSummary();
   closeDirectShareDropdown();
 
-  // 2. Load Message Content: check persistent edited content first, else generate default
-  loadProductShareCaption(p);
+  // 2. Load Message Content
+  if (isGroupTarget && group) {
+    loadFamilyProductShareCaption(group);
+  } else {
+    loadProductShareCaption(p);
+  }
 
   openModal('modal-direct-share-product');
 }
+window.openDirectShareModal = openDirectShareModal;
 
 function loadProductShareCaption(p) {
   const localSaved = localStorage.getItem('CRM_PRODUCT_CAPTION_' + p.id);
@@ -10936,6 +11985,20 @@ function loadProductShareCaption(p) {
     updateDirectShareCaptionBadge(true);
   } else {
     textarea.value = generateProductWhatsAppText(p);
+    updateDirectShareCaptionBadge(false);
+  }
+}
+
+function loadFamilyProductShareCaption(group) {
+  const localSaved = localStorage.getItem('CRM_PRODUCT_FAMILY_CAPTION_' + group.groupKey);
+  const textarea = document.getElementById('direct-share-message-text');
+  if (!textarea) return;
+
+  if (localSaved && localSaved.trim()) {
+    textarea.value = localSaved.trim();
+    updateDirectShareCaptionBadge(true);
+  } else {
+    textarea.value = generateFamilyProductWhatsAppText(group);
     updateDirectShareCaptionBadge(false);
   }
 }
@@ -10969,45 +12032,159 @@ function handleDirectShareCaptionInput() {
 }
 
 async function saveDirectShareCustomCaption(silent = false) {
-  const productId = document.getElementById('direct-share-product-id').value;
-  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
-  if (!p) return;
+  const shareMode = document.getElementById('direct-share-is-family') ? document.getElementById('direct-share-is-family').value : '';
+  const isFamilyShare = shareMode === 'true';
+  const isBatchShare = shareMode === 'batch';
+  const groupKey = (document.getElementById('direct-share-group-key')?.value || '').trim();
+  const productId = (document.getElementById('direct-share-product-id')?.value || '').trim();
 
-  const text = (document.getElementById('direct-share-message-text').value || '').trim();
+  const text = (document.getElementById('direct-share-message-text')?.value || '').trim();
   if (!text) {
     if (!silent) showToast('Notice', 'Caption cannot be empty.', 'warning', 'amber');
     return;
   }
 
-  // 1. Save in-memory
-  p.custom_caption = text;
-  p.customCaption = text;
+  // 1. Handle Batch Dispatch
+  if (isBatchShare) {
+    try {
+      localStorage.setItem('CRM_BATCH_SHARE_CAPTION', text);
+      const rawIds = productId.split(',').map(s => s.trim()).filter(Boolean);
+      rawIds.forEach(id => {
+        const prod = (CRM_STATE.products || []).find(x => String(x.id) === String(id));
+        if (prod) {
+          prod.custom_caption = text;
+          prod.customCaption = text;
+          localStorage.setItem('CRM_PRODUCT_CAPTION_' + prod.id, text);
+        }
+      });
+      saveCRMState();
+    } catch (e) {}
 
-  // 2. Save in localStorage for instant retrieval across browser reloads
+    updateDirectShareCaptionBadge(true);
+    if (!silent) {
+      showToast('Content Saved', 'Edited caption saved for selected batch products!', 'bookmark', 'purple');
+      playChime('order');
+    }
+    return;
+  }
+
+  // 2. Handle Multi-Variant Family Group Share
+  if (isFamilyShare) {
+    const saveKey = groupKey || productId;
+    try {
+      localStorage.setItem('CRM_PRODUCT_FAMILY_CAPTION_' + saveKey, text);
+      if (groupKey) localStorage.setItem('CRM_PRODUCT_FAMILY_CAPTION_' + groupKey, text);
+      if (productId) localStorage.setItem('CRM_PRODUCT_FAMILY_CAPTION_' + productId, text);
+
+      const grouped = groupCatalogProducts(CRM_STATE.products || []);
+      const grp = grouped.find(g => g.groupKey === saveKey || g.groupKey === groupKey || String(g.id) === String(productId));
+      if (grp && Array.isArray(grp.variants)) {
+        grp.variants.forEach(v => {
+          v.custom_caption = text;
+          v.customCaption = text;
+          localStorage.setItem('CRM_PRODUCT_CAPTION_' + v.id, text);
+          fetch('api.php?action=save_product_caption', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: v.id, custom_caption: text })
+          }).catch(() => {});
+        });
+      }
+      saveCRMState();
+    } catch (e) {}
+
+    updateDirectShareCaptionBadge(true);
+    if (!silent) {
+      showToast('Content Saved', 'Edited caption saved for all variants of this product!', 'bookmark', 'purple');
+      playChime('order');
+    }
+    return;
+  }
+
+  // 3. Handle Single Variant / Standalone Product Share
+  let p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId) || prod.sku === productId);
+  if (!p) {
+    const grouped = groupCatalogProducts(CRM_STATE.products || []);
+    const grp = grouped.find(g => g.groupKey === productId || String(g.id) === String(productId));
+    if (grp) p = grp;
+  }
+
+  if (p) {
+    p.custom_caption = text;
+    p.customCaption = text;
+  }
+
   try {
-    localStorage.setItem('CRM_PRODUCT_CAPTION_' + p.id, text);
+    localStorage.setItem('CRM_PRODUCT_CAPTION_' + productId, text);
+    if (p && p.id) {
+      localStorage.setItem('CRM_PRODUCT_CAPTION_' + p.id, text);
+    }
   } catch (e) {}
 
-  // 3. Persist to MySQL database via API
-  try {
-    fetch('api.php?action=save_product_caption', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: p.id, custom_caption: text })
-    }).catch(err => console.warn('[Caption Save API Warning]:', err));
-  } catch (e) {}
+  if (p && p.id) {
+    try {
+      fetch('api.php?action=save_product_caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: p.id, custom_caption: text })
+      }).catch(err => console.warn('[Caption Save API Warning]:', err));
+    } catch (e) {}
+  }
 
+  saveCRMState();
   updateDirectShareCaptionBadge(true);
 
   if (!silent) {
-    showToast('Content Saved', `Edited caption saved! This content will now be used for every share of ${p.sku}.`, 'bookmark', 'purple');
+    const label = p ? (p.sku || p.name) : 'Product';
+    showToast('Content Saved', `Edited caption saved! This content will now be used for every share of ${label}.`, 'bookmark', 'purple');
     playChime('order');
   }
 }
 
 async function resetDirectShareCaptionToDefault() {
-  const productId = document.getElementById('direct-share-product-id').value;
-  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
+  const shareMode = document.getElementById('direct-share-is-family') ? document.getElementById('direct-share-is-family').value : '';
+  const isFamilyShare = shareMode === 'true';
+  const isBatchShare = shareMode === 'batch';
+  const groupKey = (document.getElementById('direct-share-group-key')?.value || '').trim();
+  const productId = (document.getElementById('direct-share-product-id')?.value || '').trim();
+
+  if (isBatchShare) {
+    if (!confirm('Reset batch message caption back to auto-generated details?')) return;
+    try {
+      localStorage.removeItem('CRM_BATCH_SHARE_CAPTION');
+    } catch (e) {}
+    const rawIds = productId.split(',').map(s => s.trim()).filter(Boolean);
+    const selectedProds = (CRM_STATE.products || []).filter(prod => rawIds.includes(String(prod.id)));
+    if (typeof generateBatchWhatsAppText === 'function') {
+      document.getElementById('direct-share-message-text').value = generateBatchWhatsAppText(selectedProds);
+    }
+    updateDirectShareCaptionBadge(false);
+    showToast('Caption Reset', 'Restored auto-generated details for batch selection.', 'restart_alt', 'blue');
+    return;
+  }
+
+  if (isFamilyShare) {
+    const saveKey = groupKey || productId;
+    const grouped = groupCatalogProducts(CRM_STATE.products || []);
+    const group = grouped.find(g => g.groupKey === saveKey || g.groupKey === groupKey || String(g.id) === String(productId));
+    if (!group) return;
+
+    if (!confirm(`Reset message caption for ${group.name} back to auto-generated all-variants details?`)) {
+      return;
+    }
+    try {
+      localStorage.removeItem('CRM_PRODUCT_FAMILY_CAPTION_' + saveKey);
+      if (groupKey) localStorage.removeItem('CRM_PRODUCT_FAMILY_CAPTION_' + groupKey);
+      if (productId) localStorage.removeItem('CRM_PRODUCT_FAMILY_CAPTION_' + productId);
+    } catch (e) {}
+
+    document.getElementById('direct-share-message-text').value = generateFamilyProductWhatsAppText(group);
+    updateDirectShareCaptionBadge(false);
+    showToast('Caption Reset', `Restored auto-generated all-variant details for ${group.name}.`, 'restart_alt', 'blue');
+    return;
+  }
+
+  let p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId) || prod.sku === productId);
   if (!p) return;
 
   if (!confirm(`Reset message caption for ${p.sku} back to auto-generated product details?`)) {
@@ -11018,6 +12195,7 @@ async function resetDirectShareCaptionToDefault() {
   p.customCaption = '';
   try {
     localStorage.removeItem('CRM_PRODUCT_CAPTION_' + p.id);
+    localStorage.removeItem('CRM_PRODUCT_CAPTION_' + productId);
     fetch('api.php?action=save_product_caption', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -11239,8 +12417,36 @@ document.addEventListener('click', (e) => {
 async function handleDirectShareSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
 
-  const idVal = document.getElementById('direct-share-product-id').value;
-  const p = CRM_STATE.products.find(prod => String(prod.id) === String(idVal));
+  const shareMode = document.getElementById('direct-share-is-family') ? document.getElementById('direct-share-is-family').value : '';
+  const isFamilyShare = shareMode === 'true';
+  const isBatchShare = shareMode === 'batch';
+  const groupKey = (document.getElementById('direct-share-group-key')?.value || '').trim();
+  const idVal = (document.getElementById('direct-share-product-id')?.value || '').trim();
+
+  let p = null;
+  let group = null;
+  let batchProducts = [];
+  if (isBatchShare) {
+    const rawIds = idVal.split(',').map(s => s.trim()).filter(Boolean);
+    batchProducts = (CRM_STATE.products || []).filter(prod => rawIds.includes(String(prod.id)));
+    if (batchProducts.length === 0) {
+      showToast('Product Error', 'No selected products found to dispatch.', 'error', 'rose');
+      return;
+    }
+    p = batchProducts[0];
+  } else if (isFamilyShare) {
+    const grouped = groupCatalogProducts(CRM_STATE.products || []);
+    group = grouped.find(g => g.groupKey === groupKey || g.groupKey === idVal || String(g.id) === String(idVal));
+    p = group || (CRM_STATE.products || []).find(prod => String(prod.id) === String(idVal) || prod.sku === idVal);
+  } else {
+    p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(idVal) || prod.sku === idVal);
+    if (!p) {
+      const grouped = groupCatalogProducts(CRM_STATE.products || []);
+      group = grouped.find(g => g.groupKey === idVal || String(g.id) === String(idVal));
+      if (group) p = group;
+    }
+  }
+
   if (!p) {
     showToast('Product Error', 'Product details not loaded. Please select product again.', 'error', 'rose');
     return;
@@ -11277,7 +12483,8 @@ async function handleDirectShareSubmit(e) {
 
   closeModal('modal-direct-share-product');
   playChime('order');
-  showToast('WhatsApp Dispatching', `Broadcasting ${p.sku} to ${totalCount} recipient(s)...`, 'send', 'emerald');
+  const targetLabel = isBatchShare ? `${batchProducts.length} selected garments` : (isFamilyShare && group ? `${group.name} (${group.variantCount} variants)` : (p.sku || p.name));
+  showToast('WhatsApp Dispatching', `Broadcasting ${targetLabel} to ${totalCount} recipient(s)...`, 'send', 'emerald');
 
   let successCount = 0;
   let failCount = 0;
@@ -11404,8 +12611,11 @@ async function handleDirectShareSubmit(e) {
   }
 
   // 6. Comprehensive Result Toast
+  const productSkuOrName = isBatchShare 
+    ? `${batchProducts.length} garments` 
+    : (p.sku || p.name || 'Product');
   if (failCount === 0) {
-    showToast('Product Dispatched! 🚀', `Successfully sent ${p.sku} to ${successCount} recipient(s)!`, 'done_all', 'emerald');
+    showToast('Product Dispatched! 🚀', `Successfully sent ${productSkuOrName} to ${successCount} recipient(s)!`, 'done_all', 'emerald');
     playChime('delivered');
   } else {
     showToast('Dispatch Completed', `Sent to ${successCount} recipient(s). ${failCount} recipient(s) failed.`, 'warning', 'amber');
@@ -11413,13 +12623,27 @@ async function handleDirectShareSubmit(e) {
 }
 
 function copyProductWhatsAppText(productId) {
-  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
-  if (!p) return;
+  let p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
+  const isFamilyShare = document.getElementById('direct-share-is-family') ? document.getElementById('direct-share-is-family').value === 'true' : false;
+  const groupKey = document.getElementById('direct-share-group-key') ? document.getElementById('direct-share-group-key').value : '';
 
   const currentArea = document.getElementById('direct-share-message-text');
-  const text = (currentArea && currentArea.value) ? currentArea.value : (p.custom_caption || p.customCaption || generateProductWhatsAppText(p));
+  let text = (currentArea && currentArea.value) ? currentArea.value : '';
+  if (!text) {
+    if (isFamilyShare) {
+      const grouped = groupCatalogProducts(CRM_STATE.products || []);
+      const group = grouped.find(g => g.groupKey === groupKey || String(g.id) === String(productId));
+      if (group) text = generateFamilyProductWhatsAppText(group);
+    } else if (p) {
+      text = p.custom_caption || p.customCaption || generateProductWhatsAppText(p);
+    }
+  }
+
+  if (!text) return;
+
+  const skuLabel = isFamilyShare ? (groupKey || 'All Variants') : (p ? p.sku : 'Product');
   navigator.clipboard.writeText(text).then(() => {
-    showToast('Copied to Clipboard', `Formatted WhatsApp card for ${p.sku} copied!`, 'content_copy', 'emerald');
+    showToast('Copied to Clipboard', `Formatted WhatsApp card for ${skuLabel} copied!`, 'content_copy', 'emerald');
   }).catch(() => {
     showToast('Copied', `Text ready to paste into WhatsApp!`, 'content_copy', 'emerald');
   });
@@ -11427,11 +12651,23 @@ function copyProductWhatsAppText(productId) {
 
 // 1-Click direct fallback to WhatsApp Web / App
 function openDirectWhatsAppWeb(productId) {
-  const p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
-  if (!p) return;
+  let p = CRM_STATE.products.find(prod => String(prod.id) === String(productId));
+  const isFamilyShare = document.getElementById('direct-share-is-family') ? document.getElementById('direct-share-is-family').value === 'true' : false;
+  const groupKey = document.getElementById('direct-share-group-key') ? document.getElementById('direct-share-group-key').value : '';
 
   const currentArea = document.getElementById('direct-share-message-text');
-  const text = (currentArea && currentArea.value) ? currentArea.value : (p.custom_caption || p.customCaption || generateProductWhatsAppText(p));
+  let text = (currentArea && currentArea.value) ? currentArea.value : '';
+  if (!text) {
+    if (isFamilyShare) {
+      const grouped = groupCatalogProducts(CRM_STATE.products || []);
+      const group = grouped.find(g => g.groupKey === groupKey || String(g.id) === String(productId));
+      if (group) text = generateFamilyProductWhatsAppText(group);
+    } else if (p) {
+      text = p.custom_caption || p.customCaption || generateProductWhatsAppText(p);
+    }
+  }
+
+  if (!text) return;
 
   // Determine phone to open
   let targetPhone = '';
@@ -11458,6 +12694,22 @@ function openDirectWhatsAppWeb(productId) {
   window.open(waUrl, '_blank');
   showToast('WhatsApp Web Opened', 'Opening direct chat preview in WhatsApp Web!', 'open_in_new', 'emerald');
 }
+
+// Expose direct WhatsApp product dispatch functions to window
+window.saveDirectShareCustomCaption = saveDirectShareCustomCaption;
+window.resetDirectShareCaptionToDefault = resetDirectShareCaptionToDefault;
+window.updateDirectShareCaptionBadge = updateDirectShareCaptionBadge;
+window.handleDirectShareCaptionInput = handleDirectShareCaptionInput;
+window.handleDirectShareSubmit = handleDirectShareSubmit;
+window.toggleDirectShareDropdown = toggleDirectShareDropdown;
+window.closeDirectShareDropdown = closeDirectShareDropdown;
+window.filterDirectShareContactsList = filterDirectShareContactsList;
+window.clearDirectShareSearch = clearDirectShareSearch;
+window.toggleDirectShareCustomer = toggleDirectShareCustomer;
+window.selectAllDirectShareContacts = selectAllDirectShareContacts;
+window.selectActiveChatOnly = selectActiveChatOnly;
+window.copyProductWhatsAppText = copyProductWhatsAppText;
+window.openDirectWhatsAppWeb = openDirectWhatsAppWeb;
 
 async function refreshCatalogStockFromAPI() {
   showToast('Syncing Stock', 'Fetching latest warehouse stock and catalog from database...', 'sync', 'blue');
@@ -12869,17 +14121,49 @@ function deleteStaffMember(staffId) {
 }
 
 // =========================================================================
-// 14. UTILITY & MODAL CONTROLLERS
+// 14. UTILITY & MODAL CONTROLLERS (DYNAMIC Z-INDEX STACKING)
 // =========================================================================
+var TOP_MODAL_BASE_Z_INDEX = 50;
+var ACTIVE_MODAL_STACK = [];
+
 function openModal(id) {
   const el = document.getElementById(id);
-  if (el) el.classList.remove('hidden');
+  if (!el) return;
+
+  // Calculate highest z-index among currently open modals
+  let highestZ = TOP_MODAL_BASE_Z_INDEX;
+  const allModals = document.querySelectorAll('.modal-backdrop, [id^="modal-"]');
+  allModals.forEach(m => {
+    if (m !== el && !m.classList.contains('hidden')) {
+      const z = parseInt(window.getComputedStyle(m).zIndex, 10);
+      if (!isNaN(z) && z > highestZ) {
+        highestZ = z;
+      }
+    }
+  });
+
+  const targetZ = highestZ + 20;
+  el.style.zIndex = targetZ.toString();
+  el.classList.remove('hidden');
+
+  const idx = ACTIVE_MODAL_STACK.indexOf(id);
+  if (idx !== -1) {
+    ACTIVE_MODAL_STACK.splice(idx, 1);
+  }
+  ACTIVE_MODAL_STACK.push(id);
 }
 
 function closeModal(id) {
   const el = document.getElementById(id);
-  if (el) el.classList.add('hidden');
+  if (el) {
+    el.classList.add('hidden');
+    el.style.zIndex = '';
+  }
+  ACTIVE_MODAL_STACK = ACTIVE_MODAL_STACK.filter(m => m !== id);
 }
+
+window.openModal = openModal;
+window.closeModal = closeModal;
 
 function logAudit(action, module, details) {
   const user = ACTIVE_ROLE === 'admin' ? 'Super Admin' : (CRM_STATE.staffList.find(s => s.id === ACTIVE_ROLE)?.name || 'Staff');
@@ -13910,7 +15194,13 @@ function stopAutomatedBroadcast() {
 }
 
 // INITIALIZE APP ON LOAD
-window.addEventListener('DOMContentLoaded', () => {
+function startCRMApp() {
   initCRMState();
   initAuthSystem();
-});
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', startCRMApp);
+} else {
+  startCRMApp();
+}
