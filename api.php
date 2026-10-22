@@ -10,28 +10,51 @@
  * - Database Backup & Recovery Snapshots
  */
 
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+if (!headers_sent()) {
+    header("Content-Type: application/json");
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type");
+}
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
 require_once __DIR__ . '/config/db.php';
 
+if (!headers_sent() && session_status() === PHP_SESSION_NONE) {
+    @session_start();
+}
+
 $pdo = getDBConnection();
 $configFile = __DIR__ . '/whatsapp_account_config.json';
 $messagesFile = __DIR__ . '/live_messages_queue.json';
+$bridgeUrl = defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000';
+
+function atomicWriteJson($filePath, $data) {
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    $tmpFile = $filePath . '.' . uniqid('tmp_', true);
+    $fp = @fopen($tmpFile, 'w');
+    if ($fp) {
+        if (@flock($fp, LOCK_EX)) {
+            @fwrite($fp, $json);
+            @fflush($fp);
+            @flock($fp, LOCK_UN);
+        }
+        @fclose($fp);
+        return @rename($tmpFile, $filePath);
+    }
+    return (bool)@file_put_contents($filePath, $json);
+}
 
 $action = $_GET['action'] ?? 'get_state';
 
 // =========================================================================
 // 1. GET FULL CRM STATE FROM MYSQL DATABASE
 // =========================================================================
-if ($action === 'get_state') {
+if ($action === 'get_state' || $action === 'get_all') {
     try {
         if (!$pdo) {
             throw new Exception("Database connection unavailable");
@@ -108,9 +131,82 @@ if ($action === 'get_state') {
         $aStmt = $pdo->query("SELECT * FROM `audit_logs` ORDER BY `id` DESC LIMIT 100");
         $auditLogs = $aStmt->fetchAll();
 
+        // 10. Categories, Subcategories & Attributes (Website Catalog Workflow)
+        $categories = [];
+        $subcategories = [];
+        $attributes = ['sizes' => [], 'colors' => [], 'fabrics' => [], 'specifications' => [], 'custom' => []];
+        try {
+            $catStmt = $pdo->query("SELECT * FROM `categories` ORDER BY `display_order` ASC, `name` ASC");
+            $categories = $catStmt->fetchAll();
+
+            $subStmt = $pdo->query("SELECT * FROM `subcategories` ORDER BY `name` ASC");
+            $subcategories = $subStmt->fetchAll();
+
+            $attrStmt = $pdo->query("SELECT * FROM `attributes` ORDER BY `id` ASC");
+            $rawAttrs = $attrStmt->fetchAll();
+            foreach ($rawAttrs as $ra) {
+                $type = $ra['type'] ?? '';
+                if ($type === 'size') $attributes['sizes'][] = $ra['value'];
+                else if ($type === 'color') $attributes['colors'][] = $ra['value'];
+                else if ($type === 'fabric') $attributes['fabrics'][] = $ra['value'];
+                else if ($type === 'specification') {
+                    $extraStr = $ra['extra'] ?? '';
+                    if (strpos($extraStr, ',') !== false) {
+                        $parts = array_filter(array_map('trim', explode(',', $extraStr)));
+                        foreach ($parts as $pIdx => $part) {
+                            $attributes['specifications'][] = [
+                                'id' => (int)$ra['id'] * 1000 + $pIdx,
+                                'label' => $ra['value'],
+                                'content' => $part
+                            ];
+                        }
+                    } else {
+                        $attributes['specifications'][] = [
+                            'id' => (int)$ra['id'],
+                            'label' => $ra['value'],
+                            'content' => $extraStr
+                        ];
+                    }
+                } else if ($type === 'attribute_type') {
+                    $attrName = trim($ra['value']);
+                    if (!empty($attrName) && !isset($attributes['custom'][$attrName])) {
+                        $attributes['custom'][$attrName] = [];
+                    }
+                } else if ($type === 'attribute_value' || $type === 'custom') {
+                    $attrName = trim($ra['extra'] ?: 'Custom');
+                    if (!isset($attributes['custom'][$attrName])) {
+                        $attributes['custom'][$attrName] = [];
+                    }
+                    if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
+                        $attributes['custom'][$attrName][] = $ra['value'];
+                    }
+                } else {
+                    $attrName = trim($ra['extra'] ?: ucfirst($ra['type']));
+                    if (!empty($attrName)) {
+                        if (!isset($attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName] = [];
+                        }
+                        if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName][] = $ra['value'];
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {}
+
         echo json_encode([
             "status" => "success",
             "source" => "MYSQL_DATABASE",
+            "products" => $products,
+            "customers" => $customers,
+            "queries" => $queries,
+            "orders" => $orders,
+            "followups" => $followups,
+            "staff" => $staffList,
+            "staffList" => $staffList,
+            "categories" => $categories,
+            "subcategories" => $subcategories,
+            "attributes" => $attributes,
             "data" => [
                 "whatsappAccount" => $primaryWA,
                 "whatsappAccounts" => $waAccounts,
@@ -121,7 +217,10 @@ if ($action === 'get_state') {
                 "conversations" => $conversations,
                 "orders" => $orders,
                 "followups" => $followups,
-                "auditLogs" => $auditLogs
+                "auditLogs" => $auditLogs,
+                "categories" => $categories,
+                "subcategories" => $subcategories,
+                "attributes" => $attributes
             ]
         ]);
         exit;
@@ -156,6 +255,7 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $staffId = $staff['id'] ?? ('staff_' . str_pad(rand(1, 99), 2, '0', STR_PAD_LEFT));
         $username = $staff['username'] ?? strtolower(explode(' ', $staff['name'])[0]);
         $password = $staff['password'] ?? 'staff123';
+        $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $avatar = $staff['avatar'] ?? strtoupper(substr($staff['name'], 0, 2));
 
         $stmt = $pdo->prepare("
@@ -167,7 +267,7 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             $staffId,
             $username,
-            $password,
+            $hashedPassword,
             $staff['name'],
             $staff['role'] ?? 'Sales Specialist',
             $staff['email'] ?? ($username . '@grmgarments.com'),
@@ -288,7 +388,7 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $updatedConfig['last_sync'] = date("Y-m-d H:i:s");
     $updatedConfig['status'] = 'CONNECTED';
 
-    file_put_contents($configFile, json_encode($updatedConfig, JSON_PRETTY_PRINT));
+    atomicWriteJson($configFile, $updatedConfig);
 
     // Update MySQL
     if ($pdo) {
@@ -310,7 +410,7 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     // Auto-sync brand name with live Bridge Server
     try {
         $brandToSync = $updatedConfig['display_name'] ?? $updatedConfig['brand_name'] ?? 'GRM Garments Official';
-        $ch = curl_init('http://localhost:3000/api/accounts/update_profile');
+        $ch = curl_init($bridgeUrl . '/api/accounts/update_profile');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -346,12 +446,12 @@ if ($action === 'toggle_autoreply' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $currentConfig['autoReplyKeywordMatching'] = (bool)$postData['keywordMatching'];
     }
 
-    file_put_contents($configFile, json_encode($currentConfig, JSON_PRETTY_PRINT));
+    atomicWriteJson($configFile, $currentConfig);
 
     // Propagate to live Node Bridge
     $bridgeRes = null;
     try {
-        $ch = curl_init('http://localhost:3000/api/autoreply/toggle');
+        $ch = curl_init($bridgeUrl . '/api/autoreply/toggle');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -402,11 +502,11 @@ if ($action === 'save_autoreply_rules' && $_SERVER['REQUEST_METHOD'] === 'POST')
 
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
     $currentConfig['autoReplyRules'] = $rules;
-    file_put_contents($configFile, json_encode($currentConfig, JSON_PRETTY_PRINT));
+    atomicWriteJson($configFile, $currentConfig);
 
     // Propagate to live Node Bridge
     try {
-        $ch = curl_init('http://localhost:3000/api/autoreply/rules');
+        $ch = curl_init($bridgeUrl . '/api/autoreply/rules');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -432,7 +532,7 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
     $currentConfig['status'] = 'DISCONNECTED';
     $currentConfig['last_sync'] = date("Y-m-d H:i:s");
-    file_put_contents($configFile, json_encode($currentConfig, JSON_PRETTY_PRINT));
+    atomicWriteJson($configFile, $currentConfig);
 
     if ($pdo) {
         try {
@@ -456,7 +556,7 @@ if ($action === 'delete_account_slot' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $currentConfig['connected_lines'] = array_values(array_filter($currentConfig['connected_lines'], function($line) use ($accountId) {
                 return ($line['id'] ?? '') !== $accountId;
             }));
-            file_put_contents($configFile, json_encode($currentConfig, JSON_PRETTY_PRINT));
+            atomicWriteJson($configFile, $currentConfig);
         }
 
         if ($pdo) {
@@ -514,20 +614,34 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = $postData['phone'] ?? '';
     $text = $postData['text'] ?? ($postData['message'] ?? '');
     $customerId = $postData['customer_id'] ?? null;
+    $mediaUrl = $postData['media_url'] ?? ($postData['mediaUrl'] ?? null);
+    $mediaType = $postData['type'] ?? ($mediaUrl ? 'image' : null);
 
-    if (empty($phone) || empty($text)) {
+    if (empty($phone) && empty($postData['jid'])) {
         http_response_code(400);
-        echo json_encode(["status" => "error", "message" => "Phone and text are required"]);
+        echo json_encode(["status" => "error", "message" => "Phone or JID is required"]);
+        exit;
+    }
+    if (empty($text)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Text is required"]);
         exit;
     }
 
     // Call Node.js Baileys Bridge
-    $ch = curl_init('http://localhost:3000/api/send');
+    $ch = curl_init($bridgeUrl . '/api/send');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['phone' => $phone, 'text' => $text]));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+        'phone' => $phone, 
+        'text' => $text,
+        'jid' => $postData['jid'] ?? null,
+        'accountId' => $postData['accountId'] ?? null,
+        'mediaUrl' => $mediaUrl
+    ]));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 2);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
@@ -536,9 +650,9 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($pdo && $customerId) {
         try {
             $pdo->prepare("
-                INSERT INTO `messages` (`customer_id`, `sender`, `text`, `time_str`, `status`)
-                VALUES (?, 'staff', ?, ?, 'DELIVERED')
-            ")->execute([$customerId, $text, date("h:i A")]);
+                INSERT INTO `messages` (`customer_id`, `sender`, `text`, `media_type`, `media_url`, `time_str`, `status`)
+                VALUES (?, 'staff', ?, ?, ?, ?, 'DELIVERED')
+            ")->execute([$customerId, $text, $mediaType, $mediaUrl, date("h:i A")]);
         } catch (Exception $e) {}
     }
 
@@ -600,7 +714,7 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (count($queue) > 200) {
         $queue = array_slice($queue, -200);
     }
-    file_put_contents($messagesFile, json_encode($queue, JSON_PRETTY_PRINT));
+    atomicWriteJson($messagesFile, $queue);
 
     // Also persist in MySQL if database connection available
     if ($pdo) {
@@ -691,50 +805,122 @@ if ($action === 'get_inbound_messages') {
 // =========================================================================
 if ($action === 'save_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
-    $p = json_decode($input, true);
+    $payload = json_decode($input, true);
 
-    if (empty($p['name']) || empty($p['sku'])) {
-        http_response_code(400);
-        echo json_encode(["status" => "error", "message" => "Product name and SKU are required"]);
-        exit;
-    }
+    $productsList = (isset($payload['variants']) && is_array($payload['variants'])) 
+        ? $payload['variants'] 
+        : ((isset($payload['products']) && is_array($payload['products'])) ? $payload['products'] : [$payload]);
 
-    if ($pdo) {
-        try {
-            $id = $p['id'] ?? null;
-            if ($id && is_numeric($id)) {
-                $stmt = $pdo->prepare("
-                    UPDATE `products` SET 
-                        `sku` = ?, `name` = ?, `category` = ?, `size` = ?, `color` = ?, 
-                        `price` = ?, `physical_stock` = ?, `reserved_stock` = ?, `image` = ?
-                    WHERE `id` = ?
-                ");
-                $stmt->execute([
-                    $p['sku'], $p['name'], $p['category'] ?? 'General', $p['size'] ?? 'Standard',
-                    $p['color'] ?? 'Default', (float)($p['price'] ?? 0), (int)($p['physical_stock'] ?? 0),
-                    (int)($p['reserved_stock'] ?? 0), $p['image'] ?? '', $id
-                ]);
-            } else {
-                $stmt = $pdo->prepare("
-                    INSERT INTO `products` (`sku`, `name`, `category`, `size`, `color`, `price`, `physical_stock`, `reserved_stock`, `image`)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ");
-                $stmt->execute([
-                    $p['sku'], $p['name'], $p['category'] ?? 'General', $p['size'] ?? 'Standard',
-                    $p['color'] ?? 'Default', (float)($p['price'] ?? 0), (int)($p['physical_stock'] ?? 0),
-                    (int)($p['reserved_stock'] ?? 0), $p['image'] ?? ''
-                ]);
-                $id = $pdo->lastInsertId();
+    $savedIds = [];
+    $savedRows = [];
+
+    foreach ($productsList as $p) {
+        if (empty($p['name']) || empty($p['sku'])) continue;
+
+        if ($pdo) {
+            try {
+                $id = $p['id'] ?? null;
+                $sku = strtoupper(trim($p['sku']));
+                $name = trim($p['name']);
+                $category = $p['category'] ?? '';
+                $subcategory = $p['subcategory'] ?? ($p['subCategory'] ?? '');
+                $size = $p['size'] ?? '';
+                $color = $p['color'] ?? '';
+                $fabric = $p['fabric'] ?? '';
+                $specs = $p['specifications'] ?? ($p['specs'] ?? null);
+                $specifications = !empty($specs) ? (is_string($specs) ? $specs : json_encode($specs, JSON_UNESCAPED_UNICODE)) : null;
+                $price = (float)($p['price'] ?? 0);
+                $mrp = !empty($p['mrp']) ? (float)$p['mrp'] : null;
+                $physical = (int)($p['physical_stock'] ?? ($p['physicalStock'] ?? 0));
+                $reserved = (int)($p['reserved_stock'] ?? ($p['reservedStock'] ?? 0));
+                $image = $p['image'] ?? '';
+
+                // If base64 data URL, automatically save as a file on disk to optimize storage
+                if (!empty($image) && str_starts_with($image, 'data:image/')) {
+                    $uploadDir = __DIR__ . '/uploads/products/';
+                    if (!is_dir($uploadDir)) {
+                        @mkdir($uploadDir, 0777, true);
+                    }
+                    if (preg_match('/^data:image\/(\w+);base64,/', $image, $typeMatch)) {
+                        $rawBase64 = substr($image, strpos($image, ',') + 1);
+                        $ext = strtolower($typeMatch[1]);
+                        if ($ext === 'jpeg') $ext = 'jpg';
+                        $decoded = base64_decode($rawBase64);
+                        if ($decoded !== false) {
+                            $imgName = 'prod_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+                            if (@file_put_contents($uploadDir . $imgName, $decoded)) {
+                                $image = 'uploads/products/' . $imgName;
+                            }
+                        }
+                    }
+                }
+
+                $description = $p['description'] ?? '';
+                $accountId = $p['account_id'] ?? ($p['accountId'] ?? 'account_1');
+
+                $rowExists = false;
+                $targetId = null;
+                if ($id && is_numeric($id)) {
+                    $checkStmt = $pdo->prepare("SELECT `id` FROM `products` WHERE `id` = ?");
+                    $checkStmt->execute([$id]);
+                    $targetId = $checkStmt->fetchColumn();
+                    $rowExists = (bool)$targetId;
+                }
+                if (!$rowExists && !empty($sku)) {
+                    $checkStmt = $pdo->prepare("SELECT `id` FROM `products` WHERE `sku` = ?");
+                    $checkStmt->execute([$sku]);
+                    $targetId = $checkStmt->fetchColumn();
+                    $rowExists = (bool)$targetId;
+                }
+
+                if ($rowExists && $targetId) {
+                    $stmt = $pdo->prepare("
+                        UPDATE `products` SET 
+                            `sku` = ?, `name` = ?, `category` = ?, `subcategory` = ?, `size` = ?, `color` = ?, 
+                            `fabric` = ?, `specifications` = ?, `price` = ?, `mrp` = ?, `physical_stock` = ?, `reserved_stock` = ?, 
+                            `image` = ?, `description` = ?, `account_id` = ?
+                        WHERE `id` = ?
+                    ");
+                    $stmt->execute([
+                        $sku, $name, $category, $subcategory, $size, $color, 
+                        $fabric, $specifications, $price, $mrp, $physical, $reserved, 
+                        $image, $description, $accountId, $targetId
+                    ]);
+                    $savedIds[] = (int)$targetId;
+                    $savedRows[] = ['id' => (int)$targetId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp];
+                } else {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO `products` (`sku`, `name`, `category`, `subcategory`, `size`, `color`, `fabric`, `specifications`, `price`, `mrp`, `physical_stock`, `reserved_stock`, `image`, `description`, `account_id`)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE 
+                            `name` = VALUES(`name`), `category` = VALUES(`category`), `subcategory` = VALUES(`subcategory`),
+                            `size` = VALUES(`size`), `color` = VALUES(`color`), `fabric` = VALUES(`fabric`),
+                            `specifications` = VALUES(`specifications`),
+                            `price` = VALUES(`price`), `mrp` = VALUES(`mrp`), `physical_stock` = VALUES(`physical_stock`),
+                            `image` = VALUES(`image`), `description` = VALUES(`description`), `account_id` = VALUES(`account_id`)
+                    ");
+                    $stmt->execute([
+                        $sku, $name, $category, $subcategory, $size, $color, 
+                        $fabric, $specifications, $price, $mrp, $physical, $reserved, 
+                        $image, $description, $accountId
+                    ]);
+                    $insertedId = (int)($pdo->lastInsertId() ?: $targetId);
+                    $savedIds[] = $insertedId;
+                    $savedRows[] = ['id' => $insertedId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp];
+                }
+            } catch (Exception $e) {
+                error_log("save_product exception for {$p['sku']}: " . $e->getMessage());
             }
-            echo json_encode(["status" => "success", "message" => "Product saved to database", "id" => $id]);
-            exit;
-        } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
-            exit;
         }
     }
-    echo json_encode(["status" => "success", "message" => "Product saved locally"]);
+
+    echo json_encode([
+        "status" => "success", 
+        "message" => count($savedIds) . " product variant(s) saved to catalog database", 
+        "ids" => $savedIds,
+        "id" => $savedIds[0] ?? null,
+        "products" => $savedRows
+    ]);
     exit;
 }
 
@@ -743,25 +929,38 @@ if ($action === 'update_stock' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $p = json_decode($input, true);
 
     $productId = $p['id'] ?? null;
-    $physical = isset($p['physical_stock']) ? (int)$p['physical_stock'] : null;
-    $reserved = isset($p['reserved_stock']) ? (int)$p['reserved_stock'] : null;
+    $sku = !empty($p['sku']) ? trim($p['sku']) : null;
+    $physical = isset($p['physical_stock']) ? (int)$p['physical_stock'] : (isset($p['physicalStock']) ? (int)$p['physicalStock'] : null);
+    $reserved = isset($p['reserved_stock']) ? (int)$p['reserved_stock'] : (isset($p['reservedStock']) ? (int)$p['reservedStock'] : null);
 
-    if (!$productId || $physical === null) {
+    if ((!$productId && !$sku) || $physical === null) {
         http_response_code(400);
-        echo json_encode(["status" => "error", "message" => "Product ID and physical stock are required"]);
+        echo json_encode(["status" => "error", "message" => "Product ID or SKU and physical stock are required"]);
         exit;
     }
 
     if ($pdo) {
         try {
-            if ($reserved !== null) {
-                $stmt = $pdo->prepare("UPDATE `products` SET `physical_stock` = ?, `reserved_stock` = ? WHERE `id` = ?");
-                $stmt->execute([$physical, $reserved, $productId]);
+            $isNumericId = $productId && is_numeric($productId);
+            if ($isNumericId && !empty($sku)) {
+                $where = "`id` = ? OR `sku` = ?";
+                $params = [(int)$productId, $sku];
+            } else if ($isNumericId) {
+                $where = "`id` = ?";
+                $params = [(int)$productId];
             } else {
-                $stmt = $pdo->prepare("UPDATE `products` SET `physical_stock` = ? WHERE `id` = ?");
-                $stmt->execute([$physical, $productId]);
+                $where = "`sku` = ?";
+                $params = [!empty($sku) ? $sku : (string)$productId];
             }
-            echo json_encode(["status" => "success", "message" => "Stock updated in database", "id" => $productId]);
+
+            if ($reserved !== null) {
+                $stmt = $pdo->prepare("UPDATE `products` SET `physical_stock` = ?, `reserved_stock` = ? WHERE " . $where);
+                $stmt->execute(array_merge([$physical, $reserved], $params));
+            } else {
+                $stmt = $pdo->prepare("UPDATE `products` SET `physical_stock` = ? WHERE " . $where);
+                $stmt->execute(array_merge([$physical], $params));
+            }
+            echo json_encode(["status" => "success", "message" => "Stock updated in database", "id" => $productId, "sku" => $sku, "physical_stock" => $physical]);
             exit;
         } catch (Exception $e) {
             http_response_code(500);
@@ -770,6 +969,153 @@ if ($action === 'update_stock' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     echo json_encode(["status" => "success", "message" => "Stock updated locally"]);
+    exit;
+}
+
+if ($action === 'update_price' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+
+    $productId = $p['id'] ?? null;
+    $sku = !empty($p['sku']) ? trim($p['sku']) : null;
+    $price = isset($p['price']) && $p['price'] !== '' ? (float)$p['price'] : null;
+    $hasMrp = isset($p['mrp']) && $p['mrp'] !== '' && $p['mrp'] !== null;
+    $mrp = $hasMrp ? (float)$p['mrp'] : null;
+
+    if ((!$productId && !$sku) || $price === null) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Product ID or SKU and valid price are required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $isNumericId = $productId && is_numeric($productId);
+            if ($isNumericId && !empty($sku)) {
+                $where = "`id` = ? OR `sku` = ?";
+                $params = [(int)$productId, $sku];
+            } else if ($isNumericId) {
+                $where = "`id` = ?";
+                $params = [(int)$productId];
+            } else {
+                $where = "`sku` = ?";
+                $params = [!empty($sku) ? $sku : (string)$productId];
+            }
+
+            if ($hasMrp) {
+                $stmt = $pdo->prepare("UPDATE `products` SET `price` = ?, `mrp` = ? WHERE " . $where);
+                $stmt->execute(array_merge([$price, $mrp], $params));
+            } else {
+                $stmt = $pdo->prepare("UPDATE `products` SET `price` = ? WHERE " . $where);
+                $stmt->execute(array_merge([$price], $params));
+            }
+            echo json_encode(["status" => "success", "message" => "Price updated successfully in database", "id" => $productId, "sku" => $sku, "price" => $price, "mrp" => $mrp]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Price updated locally", "id" => $productId, "price" => $price]);
+    exit;
+}
+
+if ($action === 'bulk_update_prices' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+
+    $ids = $p['ids'] ?? ($p['product_ids'] ?? []);
+    $skus = $p['skus'] ?? [];
+    $mode = $p['mode'] ?? 'fixed'; // 'fixed', 'increase_amt', 'decrease_amt', 'increase_pct', 'decrease_pct', 'discount_pct'
+    $value = isset($p['value']) && $p['value'] !== '' ? (float)$p['value'] : null;
+    $hasMrp = isset($p['mrp']) && $p['mrp'] !== '' && $p['mrp'] !== null;
+    $mrp = $hasMrp ? (float)$p['mrp'] : null;
+
+    $targetIdentifiers = array_unique(array_filter(array_merge((array)$ids, (array)$skus)));
+
+    if (empty($targetIdentifiers) || $value === null) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Product IDs/SKUs and adjustment value are required"]);
+        exit;
+    }
+
+    $updatedCount = 0;
+    if ($pdo) {
+        try {
+            foreach ($targetIdentifiers as $identifier) {
+                if (is_numeric($identifier)) {
+                    $sel = $pdo->prepare("SELECT `id`, `price`, `mrp` FROM `products` WHERE `id` = ? OR `sku` = ? LIMIT 1");
+                    $sel->execute([(int)$identifier, (string)$identifier]);
+                } else {
+                    $sel = $pdo->prepare("SELECT `id`, `price`, `mrp` FROM `products` WHERE `sku` = ? LIMIT 1");
+                    $sel->execute([(string)$identifier]);
+                }
+                $curr = $sel->fetch();
+                if (!$curr) continue;
+
+                $rowId = $curr['id'];
+                $oldPrice = (float)$curr['price'];
+                $newPrice = $oldPrice;
+                if ($mode === 'fixed') {
+                    $newPrice = $value;
+                } else if ($mode === 'increase_amt') {
+                    $newPrice = $oldPrice + $value;
+                } else if ($mode === 'decrease_amt') {
+                    $newPrice = max(0, $oldPrice - $value);
+                } else if ($mode === 'increase_pct') {
+                    $newPrice = round($oldPrice * (1 + ($value / 100)), 2);
+                } else if ($mode === 'decrease_pct' || $mode === 'discount_pct') {
+                    $newPrice = max(0, round($oldPrice * (1 - ($value / 100)), 2));
+                }
+
+                if ($hasMrp) {
+                    $upd = $pdo->prepare("UPDATE `products` SET `price` = ?, `mrp` = ? WHERE `id` = ?");
+                    $upd->execute([$newPrice, $mrp, $rowId]);
+                } else {
+                    $upd = $pdo->prepare("UPDATE `products` SET `price` = ? WHERE `id` = ?");
+                    $upd->execute([$newPrice, $rowId]);
+                }
+                $updatedCount++;
+            }
+            echo json_encode(["status" => "success", "message" => "Updated prices for {$updatedCount} products", "count" => $updatedCount]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Bulk prices updated locally", "count" => count($targetIdentifiers)]);
+    exit;
+}
+
+if ($action === 'save_product_caption' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+
+    $productId = $p['id'] ?? ($p['product_id'] ?? null);
+    $caption = $p['custom_caption'] ?? ($p['caption'] ?? null);
+
+    if (!$productId) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Product ID is required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("UPDATE `products` SET `custom_caption` = ? WHERE `id` = ?");
+            $stmt->execute([$caption, $productId]);
+            echo json_encode(["status" => "success", "message" => "Custom caption saved successfully", "id" => $productId]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Custom caption saved locally"]);
     exit;
 }
 
@@ -797,6 +1143,393 @@ if ($action === 'delete_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     echo json_encode(["status" => "success", "message" => "Product deleted locally"]);
+    exit;
+}
+
+// =========================================================================
+// 5.1 CATEGORIES, SUBCATEGORIES & ATTRIBUTES ENDPOINTS
+// =========================================================================
+if ($action === 'get_catalog_meta') {
+    $categories = [];
+    $subcategories = [];
+    $attributes = ['sizes' => [], 'colors' => [], 'fabrics' => [], 'specifications' => [], 'custom' => []];
+
+    if ($pdo) {
+        try {
+            $catStmt = $pdo->query("SELECT * FROM `categories` ORDER BY `display_order` ASC, `name` ASC");
+            $categories = $catStmt->fetchAll();
+
+            $subStmt = $pdo->query("SELECT * FROM `subcategories` ORDER BY `name` ASC");
+            $subcategories = $subStmt->fetchAll();
+
+            $attrStmt = $pdo->query("SELECT * FROM `attributes` ORDER BY `id` ASC");
+            $rawAttrs = $attrStmt->fetchAll();
+            foreach ($rawAttrs as $ra) {
+                $type = $ra['type'] ?? '';
+                if ($type === 'size') $attributes['sizes'][] = $ra['value'];
+                else if ($type === 'color') $attributes['colors'][] = $ra['value'];
+                else if ($type === 'fabric') $attributes['fabrics'][] = $ra['value'];
+                else if ($type === 'specification') {
+                    $extraStr = $ra['extra'] ?? '';
+                    if (strpos($extraStr, ',') !== false) {
+                        $parts = array_filter(array_map('trim', explode(',', $extraStr)));
+                        foreach ($parts as $pIdx => $part) {
+                            $attributes['specifications'][] = [
+                                'id' => (int)$ra['id'] * 1000 + $pIdx,
+                                'label' => $ra['value'],
+                                'content' => $part
+                            ];
+                        }
+                    } else {
+                        $attributes['specifications'][] = [
+                            'id' => (int)$ra['id'],
+                            'label' => $ra['value'],
+                            'content' => $extraStr
+                        ];
+                    }
+                } else if ($type === 'attribute_type') {
+                    $attrName = trim($ra['value']);
+                    if (!empty($attrName) && !isset($attributes['custom'][$attrName])) {
+                        $attributes['custom'][$attrName] = [];
+                    }
+                } else if ($type === 'attribute_value' || $type === 'custom') {
+                    $attrName = trim($ra['extra'] ?: 'Custom');
+                    if (!isset($attributes['custom'][$attrName])) {
+                        $attributes['custom'][$attrName] = [];
+                    }
+                    if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
+                        $attributes['custom'][$attrName][] = $ra['value'];
+                    }
+                } else {
+                    $attrName = trim($ra['extra'] ?: ucfirst($ra['type']));
+                    if (!empty($attrName)) {
+                        if (!isset($attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName] = [];
+                        }
+                        if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName][] = $ra['value'];
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {}
+    }
+
+    echo json_encode([
+        "status" => "success",
+        "categories" => $categories,
+        "subcategories" => $subcategories,
+        "attributes" => $attributes
+    ]);
+    exit;
+}
+
+if ($action === 'save_category' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $c = json_decode($input, true);
+
+    $name = trim($c['name'] ?? '');
+    if (empty($name)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Category name is required"]);
+        exit;
+    }
+
+    $slug = trim($c['slug'] ?? strtolower(preg_replace('/[^a-zA-Z0-9]+/', '_', $name)));
+    $icon = trim($c['icon'] ?? 'checkroom');
+    $desc = trim($c['description'] ?? '');
+    $order = (int)($c['display_order'] ?? 0);
+
+    if ($pdo) {
+        try {
+            $id = $c['id'] ?? null;
+            $rowExists = false;
+            if ($id && is_numeric($id)) {
+                $checkStmt = $pdo->prepare("SELECT 1 FROM `categories` WHERE `id` = ?");
+                $checkStmt->execute([$id]);
+                $rowExists = (bool)$checkStmt->fetchColumn();
+            }
+
+            if ($rowExists) {
+                $stmt = $pdo->prepare("UPDATE `categories` SET `name` = ?, `slug` = ?, `icon` = ?, `description` = ?, `display_order` = ? WHERE `id` = ?");
+                $stmt->execute([$name, $slug, $icon, $desc, $order, $id]);
+            } else {
+                $stmt = $pdo->prepare("
+                    INSERT INTO `categories` (`name`, `slug`, `icon`, `description`, `display_order`)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `icon` = VALUES(`icon`), `description` = VALUES(`description`)
+                ");
+                $stmt->execute([$name, $slug, $icon, $desc, $order]);
+                $id = $pdo->lastInsertId() ?: $id;
+            }
+            echo json_encode(["status" => "success", "message" => "Category saved successfully", "id" => $id]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Category saved locally"]);
+    exit;
+}
+
+if ($action === 'delete_category' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $c = json_decode($input, true);
+    $catId = $c['id'] ?? null;
+    $catName = $c['name'] ?? null;
+
+    if ($pdo) {
+        try {
+            if ($catId) {
+                $pdo->prepare("DELETE FROM `categories` WHERE `id` = ?")->execute([$catId]);
+            } else if ($catName) {
+                $pdo->prepare("DELETE FROM `categories` WHERE `name` = ?")->execute([$catName]);
+            }
+            echo json_encode(["status" => "success", "message" => "Category deleted"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Category deleted locally"]);
+    exit;
+}
+
+if ($action === 'save_subcategory' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $s = json_decode($input, true);
+
+    $catName = trim($s['category_name'] ?? ($s['categoryName'] ?? ''));
+    $name = trim($s['name'] ?? '');
+    if (empty($name) || empty($catName)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Category name and Subcategory name are required"]);
+        exit;
+    }
+
+    $slug = trim($s['slug'] ?? strtolower(preg_replace('/[^a-zA-Z0-9]+/', '_', $name)));
+    $prefix = strtoupper(trim($s['sku_prefix'] ?? ($s['skuPrefix'] ?? 'GRM')));
+
+    if ($pdo) {
+        try {
+            $id = $s['id'] ?? null;
+            $rowExists = false;
+            if ($id && is_numeric($id)) {
+                $checkStmt = $pdo->prepare("SELECT 1 FROM `subcategories` WHERE `id` = ?");
+                $checkStmt->execute([$id]);
+                $rowExists = (bool)$checkStmt->fetchColumn();
+            }
+
+            if ($rowExists) {
+                $stmt = $pdo->prepare("UPDATE `subcategories` SET `category_name` = ?, `name` = ?, `slug` = ?, `sku_prefix` = ? WHERE `id` = ?");
+                $stmt->execute([$catName, $name, $slug, $prefix, $id]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO `subcategories` (`category_name`, `name`, `slug`, `sku_prefix`) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$catName, $name, $slug, $prefix]);
+                $id = $pdo->lastInsertId() ?: $id;
+            }
+            echo json_encode(["status" => "success", "message" => "Subcategory saved successfully", "id" => $id]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Subcategory saved locally"]);
+    exit;
+}
+
+if ($action === 'delete_subcategory' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $s = json_decode($input, true);
+    $subId = $s['id'] ?? null;
+    $subName = $s['name'] ?? null;
+
+    if ($pdo) {
+        try {
+            if ($subId) {
+                $pdo->prepare("DELETE FROM `subcategories` WHERE `id` = ?")->execute([$subId]);
+            } else if ($subName) {
+                $pdo->prepare("DELETE FROM `subcategories` WHERE `name` = ?")->execute([$subName]);
+            }
+            echo json_encode(["status" => "success", "message" => "Subcategory deleted"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Subcategory deleted locally"]);
+    exit;
+}
+
+if ($action === 'save_attribute' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $a = json_decode($input, true);
+
+    $type = strtolower(trim($a['type'] ?? ''));
+    $val = trim($a['value'] ?? '');
+    $extra = trim($a['extra'] ?? '');
+
+    if (empty($type) || (empty($val) && empty($extra) && $type !== 'attribute_type')) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Valid attribute type and value are required"]);
+        exit;
+    }
+
+    // Auto-detect label and content if type is specification
+    if ($type === 'specification') {
+        if (empty($extra) && strpos($val, ':') !== false) {
+            $parts = explode(':', $val, 2);
+            $val = trim($parts[0]);
+            $extra = trim($parts[1]);
+        } else if (empty($val) && !empty($extra)) {
+            if (strpos($extra, ':') !== false) {
+                $parts = explode(':', $extra, 2);
+                $val = trim($parts[0]);
+                $extra = trim($parts[1]);
+            } else {
+                $val = 'Specification';
+            }
+        } else if (!empty($val) && empty($extra)) {
+            $extra = $val;
+            $val = 'Specification';
+        }
+    }
+
+    if ($pdo) {
+        try {
+            if ($type === 'attribute_type') {
+                $chk = $pdo->prepare("SELECT id FROM `attributes` WHERE `type` = 'attribute_type' AND LOWER(`value`) = LOWER(?) LIMIT 1");
+                $chk->execute([$val]);
+                $existingId = $chk->fetchColumn();
+                if (!$existingId) {
+                    $stmt = $pdo->prepare("INSERT INTO `attributes` (`type`, `value`, `extra`) VALUES ('attribute_type', ?, ?)");
+                    $stmt->execute([$val, $extra ?: $val]);
+                    $existingId = (int)$pdo->lastInsertId();
+                }
+                echo json_encode(["status" => "success", "message" => "Attribute type created", "id" => $existingId]);
+                exit;
+            } elseif ($type === 'attribute_value' || $type === 'custom') {
+                $attrName = !empty($extra) ? $extra : 'Custom';
+                // Check if attribute_type exists, if not auto-register it
+                $chk = $pdo->prepare("SELECT id FROM `attributes` WHERE `type` = 'attribute_type' AND LOWER(`value`) = LOWER(?) LIMIT 1");
+                $chk->execute([$attrName]);
+                if (!$chk->fetchColumn()) {
+                    $pdo->prepare("INSERT INTO `attributes` (`type`, `value`, `extra`) VALUES ('attribute_type', ?, ?)")->execute([$attrName, $attrName]);
+                }
+
+                // Support comma-separated values (e.g. "4GB, 8GB, 16GB")
+                if (strpos($val, ',') !== false) {
+                    $parts = array_filter(array_map('trim', explode(',', $val)));
+                    $firstId = 0;
+                    $stmt = $pdo->prepare("INSERT INTO `attributes` (`type`, `value`, `extra`) VALUES ('attribute_value', ?, ?)");
+                    foreach ($parts as $p) {
+                        if (!empty($p)) {
+                            $stmt->execute([$p, $attrName]);
+                            if (!$firstId) $firstId = (int)$pdo->lastInsertId();
+                        }
+                    }
+                    echo json_encode(["status" => "success", "message" => "Attribute values saved", "id" => $firstId]);
+                    exit;
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO `attributes` (`type`, `value`, `extra`) VALUES ('attribute_value', ?, ?)");
+                    $stmt->execute([$val, $attrName]);
+                    $insertedId = (int)$pdo->lastInsertId();
+                    echo json_encode(["status" => "success", "message" => "Attribute value saved", "id" => $insertedId]);
+                    exit;
+                }
+            } elseif ($type === 'specification' && strpos($extra, ',') !== false) {
+                $parts = array_filter(array_map('trim', explode(',', $extra)));
+                $firstId = 0;
+                $stmt = $pdo->prepare("INSERT INTO `attributes` (`type`, `value`, `extra`) VALUES (?, ?, ?)");
+                foreach ($parts as $part) {
+                    if (!empty($part)) {
+                        $stmt->execute(['specification', $val, $part]);
+                        if (!$firstId) $firstId = (int)$pdo->lastInsertId();
+                    }
+                }
+                echo json_encode(["status" => "success", "message" => "Specifications saved as single items", "id" => $firstId]);
+                exit;
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO `attributes` (`type`, `value`, `extra`) VALUES (?, ?, ?)");
+                $stmt->execute([$type, $val, $extra]);
+                $insertedId = (int)$pdo->lastInsertId();
+                echo json_encode(["status" => "success", "message" => "Attribute saved to database", "id" => $insertedId]);
+                exit;
+            }
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Attribute saved locally", "id" => time()]);
+    exit;
+}
+
+if ($action === 'delete_attribute' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $a = json_decode($input, true);
+    $type = strtolower(trim($a['type'] ?? ''));
+    $val = trim($a['value'] ?? '');
+    $id = !empty($a['id']) ? (int)$a['id'] : null;
+    $extra = trim($a['extra'] ?? '');
+
+    if ($pdo && ($id || ($type && ($val || $extra)))) {
+        try {
+            $deleted = false;
+            if ($id && $id < 1000000000) {
+                $delStmt = $pdo->prepare("DELETE FROM `attributes` WHERE `id` = ?");
+                $delStmt->execute([$id]);
+                if ($delStmt->rowCount() > 0) {
+                    $deleted = true;
+                }
+            }
+
+            if (!$deleted) {
+                if ($type === 'attribute_type') {
+                    // Delete the attribute type definition AND all its child values!
+                    $pdo->prepare("DELETE FROM `attributes` WHERE (`type` = 'attribute_type' AND LOWER(`value`) = LOWER(?)) OR (`type` = 'attribute_value' AND LOWER(`extra`) = LOWER(?)) OR (LOWER(`type`) = LOWER(?))")->execute([$val, $val, $val]);
+                } elseif ($type === 'attribute_value' || $type === 'custom') {
+                    $attrName = !empty($extra) ? $extra : '';
+                    if (!empty($attrName)) {
+                        $delStmt = $pdo->prepare("DELETE FROM `attributes` WHERE `type` = 'attribute_value' AND `value` = ? AND LOWER(`extra`) = LOWER(?)");
+                        $delStmt->execute([$val, $attrName]);
+                        if ($delStmt->rowCount() === 0) {
+                            $pdo->prepare("DELETE FROM `attributes` WHERE LOWER(`type`) = LOWER(?) AND `value` = ?")->execute([$attrName, $val]);
+                        }
+                    } else {
+                        $pdo->prepare("DELETE FROM `attributes` WHERE `type` = 'attribute_value' AND `value` = ?")->execute([$val]);
+                    }
+                } elseif ($type === 'specification' && !empty($extra)) {
+                    $delStmt = $pdo->prepare("DELETE FROM `attributes` WHERE `type` = 'specification' AND `value` = ? AND `extra` = ?");
+                    $delStmt->execute([$val, $extra]);
+                    if ($delStmt->rowCount() === 0) {
+                        // Fallback matching by extra only
+                        $pdo->prepare("DELETE FROM `attributes` WHERE `type` = 'specification' AND `extra` = ?")->execute([$extra]);
+                    }
+                } elseif ($type === 'specification') {
+                    $pdo->prepare("DELETE FROM `attributes` WHERE `type` = 'specification' AND (`value` = ? OR `extra` = ?)")->execute([$val, $val]);
+                } else {
+                    $pdo->prepare("DELETE FROM `attributes` WHERE `type` = ? AND `value` = ?")->execute([$type, $val]);
+                }
+            }
+            echo json_encode(["status" => "success", "message" => "Attribute removed"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Attribute removed locally"]);
     exit;
 }
 
@@ -849,7 +1582,454 @@ if ($action === 'upload_product_image' && $_SERVER['REQUEST_METHOD'] === 'POST')
 }
 
 // =========================================================================
-// 6. DATABASE BACKUP & RESTORE
+// 6. WHATSAPP SALES ORDERS, TRANSACTIONS & STOCK RESERVATION
+// =========================================================================
+if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $order = json_decode($input, true);
+
+    if (empty($order['id']) || (empty($order['customerId']) && empty($order['customer_id']))) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Order ID and Customer ID are required"]);
+        exit;
+    }
+
+    if (!$pdo) {
+        echo json_encode(["status" => "success", "message" => "Order saved locally (Database offline)"]);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $orderId = $order['id'];
+        $queryId = $order['queryId'] ?? ($order['query_id'] ?? null);
+        $customerId = $order['customerId'] ?? ($order['customer_id'] ?? '');
+        $customerName = $order['customerName'] ?? ($order['customer_name'] ?? 'Customer');
+        $items = $order['items'] ?? [];
+        $grandTotal = (float)($order['grandTotal'] ?? ($order['grand_total'] ?? 0));
+        $paymentMethod = $order['paymentMethod'] ?? ($order['payment_method'] ?? 'COD');
+        $paymentStatus = $order['paymentStatus'] ?? ($order['payment_status'] ?? 'PENDING');
+        $orderStatus = $order['orderStatus'] ?? ($order['order_status'] ?? 'STOCK_RESERVED');
+        $createdBy = $order['createdBy'] ?? ($order['created_by'] ?? 'Staff');
+
+        // Check and reserve stock atomically
+        if (!empty($items) && is_array($items)) {
+            foreach ($items as $item) {
+                $sku = $item['sku'] ?? null;
+                $qty = (int)($item['qty'] ?? ($item['quantity'] ?? 1));
+                if ($sku && $qty > 0) {
+                    $chk = $pdo->prepare("SELECT `physical_stock`, `reserved_stock` FROM `products` WHERE `sku` = ? FOR UPDATE");
+                    $chk->execute([$sku]);
+                    $prod = $chk->fetch();
+                    if ($prod) {
+                        $available = (int)$prod['physical_stock'] - (int)$prod['reserved_stock'];
+                        if ($available < $qty) {
+                            $pdo->rollBack();
+                            http_response_code(400);
+                            echo json_encode([
+                                "status" => "error",
+                                "message" => "Insufficient stock for SKU: {$sku}. Available: {$available}, Requested: {$qty}"
+                            ]);
+                            exit;
+                        }
+                        $upd = $pdo->prepare("UPDATE `products` SET `reserved_stock` = `reserved_stock` + ? WHERE `sku` = ?");
+                        $upd->execute([$qty, $sku]);
+                    }
+                }
+            }
+        }
+
+        // Insert or update order
+        $stmt = $pdo->prepare("
+            INSERT INTO `orders` (`id`, `query_id`, `customer_id`, `customer_name`, `items_json`, `grand_total`, `payment_method`, `payment_status`, `order_status`, `created_by`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE 
+                `items_json` = VALUES(`items_json`),
+                `grand_total` = VALUES(`grand_total`),
+                `payment_method` = VALUES(`payment_method`),
+                `payment_status` = VALUES(`payment_status`),
+                `order_status` = VALUES(`order_status`)
+        ");
+        $stmt->execute([
+            $orderId, $queryId, $customerId, $customerName, json_encode($items),
+            $grandTotal, $paymentMethod, $paymentStatus, $orderStatus, $createdBy
+        ]);
+
+        // Update Customer metrics
+        if ($customerId) {
+            $pdo->prepare("
+                UPDATE `customers` 
+                SET `total_orders` = `total_orders` + 1, `total_spend` = `total_spend` + ? 
+                WHERE `id` = ?
+            ")->execute([$grandTotal, $customerId]);
+        }
+
+        // Update Query Status
+        if ($queryId && $queryId !== 'N/A') {
+            $pdo->prepare("UPDATE `queries` SET `status` = 'RESOLVED' WHERE `id` = ?")->execute([$queryId]);
+        }
+
+        // Audit Log
+        $pdo->prepare("
+            INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+            VALUES (?, 'ORDER_CREATED', 'ORDERS', ?, ?)
+        ")->execute([$createdBy, "Order {$orderId} booked for {$customerName}. Amount: ₹{$grandTotal}", date("h:i A")]);
+
+        $pdo->commit();
+        echo json_encode(["status" => "success", "message" => "Order booked and stock reserved in MySQL", "order_id" => $orderId]);
+        exit;
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'update_order_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    $orderId = $data['id'] ?? null;
+    $newStatus = $data['order_status'] ?? ($data['status'] ?? null);
+    $payStatus = $data['payment_status'] ?? null;
+    $user = $data['user'] ?? 'Staff';
+
+    if (!$orderId || !$newStatus) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Order ID and status are required"]);
+        exit;
+    }
+
+    if (!$pdo) {
+        echo json_encode(["status" => "success", "message" => "Order updated locally"]);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("SELECT * FROM `orders` WHERE `id` = ? FOR UPDATE");
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+
+        if ($order) {
+            $oldStatus = $order['order_status'];
+            $items = json_decode($order['items_json'], true) ?: [];
+
+            // If cancelling: release reserved stock
+            if ($newStatus === 'CANCELLED' && $oldStatus !== 'CANCELLED' && $oldStatus !== 'DELIVERED') {
+                foreach ($items as $item) {
+                    $sku = $item['sku'] ?? null;
+                    $qty = (int)($item['qty'] ?? 1);
+                    if ($sku && $qty > 0) {
+                        $pdo->prepare("UPDATE `products` SET `reserved_stock` = GREATEST(0, `reserved_stock` - ?) WHERE `sku` = ?")
+                            ->execute([$qty, $sku]);
+                    }
+                }
+            }
+
+            // If fulfilled/delivered: deduct physical stock and release reserved stock
+            if (($newStatus === 'DELIVERED' || $newStatus === 'FULFILLED') && $oldStatus !== 'DELIVERED' && $oldStatus !== 'FULFILLED') {
+                foreach ($items as $item) {
+                    $sku = $item['sku'] ?? null;
+                    $qty = (int)($item['qty'] ?? 1);
+                    if ($sku && $qty > 0) {
+                        $pdo->prepare("
+                            UPDATE `products` 
+                            SET `physical_stock` = GREATEST(0, `physical_stock` - ?),
+                                `reserved_stock` = GREATEST(0, `reserved_stock` - ?) 
+                            WHERE `sku` = ?
+                        ")->execute([$qty, $qty, $sku]);
+                    }
+                }
+            }
+
+            if ($payStatus) {
+                $pdo->prepare("UPDATE `orders` SET `order_status` = ?, `payment_status` = ? WHERE `id` = ?")
+                    ->execute([$newStatus, $payStatus, $orderId]);
+            } else {
+                $pdo->prepare("UPDATE `orders` SET `order_status` = ? WHERE `id` = ?")
+                    ->execute([$newStatus, $orderId]);
+            }
+
+            $pdo->prepare("
+                INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+                VALUES (?, 'ORDER_STATUS_UPDATED', 'ORDERS', ?, ?)
+            ")->execute([$user, "Order {$orderId} status changed from {$oldStatus} to {$newStatus}", date("h:i A")]);
+        }
+
+        $pdo->commit();
+        echo json_encode(["status" => "success", "message" => "Order status updated in database"]);
+        exit;
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+// =========================================================================
+// 7. FOLLOW-UPS SCHEDULING & MANAGEMENT
+// =========================================================================
+if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $fu = json_decode($input, true);
+
+    if (empty($fu['id']) || (empty($fu['customerId']) && empty($fu['customer_id']))) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Follow-up ID and Customer ID are required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO `followups` (`id`, `query_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    `date_str` = VALUES(`date_str`),
+                    `time_str` = VALUES(`time_str`),
+                    `reason` = VALUES(`reason`),
+                    `status` = VALUES(`status`),
+                    `assigned_to` = VALUES(`assigned_to`)
+            ");
+            $stmt->execute([
+                $fu['id'],
+                $fu['queryId'] ?? ($fu['query_id'] ?? null),
+                $fu['customerId'] ?? ($fu['customer_id'] ?? ''),
+                $fu['customerName'] ?? ($fu['customer_name'] ?? 'Customer'),
+                $fu['assignedTo'] ?? ($fu['assigned_to'] ?? 'staff_01'),
+                $fu['date'] ?? ($fu['date_str'] ?? date('Y-m-d')),
+                $fu['time'] ?? ($fu['time_str'] ?? '11:00 AM'),
+                $fu['reason'] ?? ($fu['notes'] ?? 'Follow-up callback'),
+                $fu['status'] ?? 'PENDING'
+            ]);
+
+            $qId = $fu['queryId'] ?? ($fu['query_id'] ?? null);
+            if ($qId && $qId !== 'N/A') {
+                $pdo->prepare("UPDATE `queries` SET `status` = 'FOLLOW_UP' WHERE `id` = ?")->execute([$qId]);
+            }
+
+            echo json_encode(["status" => "success", "message" => "Follow-up saved in database"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Follow-up saved locally"]);
+    exit;
+}
+
+if ($action === 'update_followup_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $fu = json_decode($input, true);
+    $fuId = $fu['id'] ?? null;
+    $status = $fu['status'] ?? 'COMPLETED';
+
+    if (!$fuId) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Follow-up ID is required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("UPDATE `followups` SET `status` = ? WHERE `id` = ?");
+            $stmt->execute([$status, $fuId]);
+            echo json_encode(["status" => "success", "message" => "Follow-up status updated"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Follow-up status updated locally"]);
+    exit;
+}
+
+// =========================================================================
+// 8. CUSTOMER ENQUIRIES ASSIGNMENT & AUDIT LOGS
+// =========================================================================
+if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $q = json_decode($input, true);
+    $queryId = $q['id'] ?? ($q['query_id'] ?? null);
+    $assignedTo = $q['assigned_to'] ?? ($q['staff_id'] ?? 'UNASSIGNED');
+    $status = $q['status'] ?? ($assignedTo === 'UNASSIGNED' ? 'NEW' : 'ASSIGNED');
+    $user = $q['user'] ?? 'Admin';
+
+    if (!$queryId) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Query ID is required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ? WHERE `id` = ?");
+            $stmt->execute([$assignedTo, $status, $queryId]);
+
+            // Update user active queries counter
+            if ($assignedTo !== 'UNASSIGNED') {
+                $pdo->prepare("
+                    UPDATE `users` 
+                    SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED'))
+                    WHERE `id` = ?
+                ")->execute([$assignedTo, $assignedTo]);
+            }
+
+            // Audit Log
+            $pdo->prepare("
+                INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+                VALUES (?, 'QUERY_ASSIGNED', 'QUERIES', ?, ?)
+            ")->execute([$user, "Query {$queryId} assigned to {$assignedTo}", date("h:i A")]);
+
+            echo json_encode(["status" => "success", "message" => "Query assigned successfully in MySQL"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Query assignment updated locally"]);
+    exit;
+}
+
+if ($action === 'save_audit_log' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $entry = json_decode($input, true);
+
+    if ($pdo && !empty($entry['action'])) {
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $entry['user'] ?? 'System',
+                $entry['action'],
+                $entry['module'] ?? 'SYSTEM',
+                $entry['details'] ?? '',
+                $entry['timestamp'] ?? ($entry['timestamp_str'] ?? date("h:i A"))
+            ]);
+            echo json_encode(["status" => "success", "message" => "Audit entry logged"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Audit logged locally"]);
+    exit;
+}
+
+// =========================================================================
+// 9. PRODUCTION SYSTEM HEALTH CHECK ENDPOINT
+// =========================================================================
+if ($action === 'health_check') {
+    $startTime = microtime(true);
+    $health = [
+        "status" => "HEALTHY",
+        "service" => "GRM_CRM_BACKEND_API",
+        "timestamp" => date("Y-m-d H:i:s"),
+        "checks" => [
+            "database" => ["status" => "UNKNOWN"],
+            "bridge" => ["status" => "UNKNOWN"],
+            "filesystem" => ["status" => "UP"]
+        ]
+    ];
+
+    // 1. Check Database
+    if ($pdo) {
+        try {
+            $dbStart = microtime(true);
+            $stmt = $pdo->query("SELECT COUNT(*) FROM `users`");
+            $userCount = $stmt->fetchColumn();
+            $latency = round((microtime(true) - $dbStart) * 1000, 2);
+
+            $tableCounts = [];
+            foreach (['customers', 'products', 'orders', 'queries', 'messages'] as $tbl) {
+                try {
+                    $tableCounts[$tbl] = (int)$pdo->query("SELECT COUNT(*) FROM `$tbl`")->fetchColumn();
+                } catch (Exception $ex) {
+                    $tableCounts[$tbl] = 0;
+                }
+            }
+
+            $health["checks"]["database"] = [
+                "status" => "UP",
+                "latency_ms" => $latency,
+                "counts" => $tableCounts
+            ];
+        } catch (Exception $e) {
+            $health["status"] = "DEGRADED";
+            $health["checks"]["database"] = [
+                "status" => "DOWN",
+                "error" => $e->getMessage()
+            ];
+        }
+    } else {
+        $health["status"] = "DEGRADED";
+        $health["checks"]["database"] = [
+            "status" => "DOWN",
+            "error" => "No active PDO connection"
+        ];
+    }
+
+    // 2. Check Node.js Baileys Bridge
+    $bridgeCheckUrl = $bridgeUrl . '/api/status';
+    $ch = @curl_init($bridgeCheckUrl);
+    if ($ch) {
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        $bRes = curl_exec($ch);
+        $bCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($bCode === 200 && $bRes) {
+            $bJson = json_decode($bRes, true);
+            $health["checks"]["bridge"] = [
+                "status" => "UP",
+                "connection" => $bJson['connection'] ?? 'ONLINE',
+                "connected_number" => $bJson['connected_number'] ?? null
+            ];
+        } else {
+            $health["checks"]["bridge"] = [
+                "status" => "DOWN",
+                "notice" => "Bridge offline or not responding on " . $bridgeUrl
+            ];
+        }
+    }
+
+    // 3. Writable Directories
+    $uploadDir = __DIR__ . '/uploads';
+    $health["checks"]["filesystem"]["uploads_writable"] = is_writable($uploadDir) || @mkdir($uploadDir, 0777, true);
+
+    $health["total_latency_ms"] = round((microtime(true) - $startTime) * 1000, 2);
+
+    if ($health["checks"]["database"]["status"] === "DOWN") {
+        http_response_code(503);
+    } else {
+        http_response_code(200);
+    }
+
+    echo json_encode($health, JSON_PRETTY_PRINT);
+    exit;
+}
+
+// =========================================================================
+// 10. DATABASE BACKUP & RESTORE
 // =========================================================================
 if ($action === 'backup_db') {
     try {

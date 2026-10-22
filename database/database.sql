@@ -92,13 +92,52 @@ CREATE TABLE IF NOT EXISTS `products` (
     `sku` VARCHAR(50) UNIQUE NOT NULL,
     `name` VARCHAR(150) NOT NULL,
     `category` VARCHAR(50) NOT NULL,
+    `subcategory` VARCHAR(100) NULL,
     `size` VARCHAR(50) NOT NULL,
     `color` VARCHAR(50) NOT NULL,
+    `fabric` VARCHAR(100) NULL,
+    `specifications` TEXT NULL,
     `price` DECIMAL(10,2) NOT NULL,
+    `mrp` DECIMAL(10,2) NULL,
     `physical_stock` INT DEFAULT 0,
     `reserved_stock` INT DEFAULT 0,
     `image` TEXT NULL,
+    `description` TEXT NULL,
+    `custom_caption` TEXT NULL,
+    `account_id` VARCHAR(50) DEFAULT 'account_1',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6.1 Categories Table
+CREATE TABLE IF NOT EXISTS `categories` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    `slug` VARCHAR(100) UNIQUE NOT NULL,
+    `icon` VARCHAR(50) DEFAULT 'checkroom',
+    `description` TEXT NULL,
+    `display_order` INT DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6.2 Subcategories Table
+CREATE TABLE IF NOT EXISTS `subcategories` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `category_id` INT NULL,
+    `category_name` VARCHAR(100) NOT NULL,
+    `name` VARCHAR(100) NOT NULL,
+    `slug` VARCHAR(100) NOT NULL,
+    `sku_prefix` VARCHAR(20) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6.3 Attributes Table (Sizes, Colors, Fabrics, Specifications)
+CREATE TABLE IF NOT EXISTS `attributes` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `type` VARCHAR(50) NOT NULL,
+    `value` VARCHAR(150) NOT NULL,
+    `extra` TEXT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX(`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. WhatsApp Sales Orders
@@ -161,13 +200,4 @@ VALUES
 ('account_2', 'Blue Berry Maternity & Kids', 'Blue Berry Customer Care', 'Blue Berry 💙', '+91 97896 60115', '109823471928375', '982374619283746', 'META_CLOUD_API', 'CONNECTED', 'http://localhost:8080/webhook.php')
 ON DUPLICATE KEY UPDATE `brand_name`=VALUES(`brand_name`);
 
--- Seed Products
-INSERT INTO `products` (`sku`, `name`, `category`, `size`, `color`, `price`, `physical_stock`, `reserved_stock`, `image`)
-VALUES 
-('BF-001-PK', 'Baby Frock (Embroidered Cotton)', 'Baby Collection', '2-3 Years', 'Pink', 599.00, 12, 4, 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=400&auto=format&fit=crop&q=60'),
-('BF-001-YL', 'Baby Frock (Embroidered Cotton)', 'Baby Collection', '1-2 Years', 'Sunshine Yellow', 599.00, 8, 1, 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=400&auto=format&fit=crop&q=60'),
-('MD-102-BL', 'Maternity Maxi Feeding Gown', 'Maternity', 'L / XL', 'Sky Blue', 1299.00, 10, 5, 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=400&auto=format&fit=crop&q=60'),
-('KD-204-YL', 'Kids Organic Cotton T-Shirt Set (Pack of 3)', 'Kids', '4-5 Years', 'Multi Yellow/Green', 450.00, 25, 8, 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400&auto=format&fit=crop&q=60'),
-('GL-505-RD', 'Girls Festive Silk Lehenga Choli', 'Girls Festive', '6-7 Years', 'Ruby Red & Gold', 899.00, 6, 0, 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=400&auto=format&fit=crop&q=60'),
-('BB-301-WH', 'Newborn 5-Piece Organic Romper Gift Set', 'Newborn', '0-6 Months', 'Pure White / Mint', 799.00, 15, 2, 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&auto=format&fit=crop&q=60')
-ON DUPLICATE KEY UPDATE `price`=VALUES(`price`);
+-- Products Table is initialized empty for dynamic catalog management

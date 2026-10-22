@@ -96,7 +96,18 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($dbUser) {
                 // Check plain or hashed password
-                if ($dbUser['password'] === $password || password_verify($password, $dbUser['password'])) {
+                $isPassValid = password_verify($password, $dbUser['password']);
+                if (!$isPassValid && $dbUser['password'] === $password) {
+                    $isPassValid = true;
+                    // Auto-upgrade legacy plaintext password to secure Bcrypt hash
+                    try {
+                        $newHash = password_hash($password, PASSWORD_BCRYPT);
+                        $upStmt = $pdo->prepare("UPDATE `users` SET `password` = ? WHERE `id` = ?");
+                        $upStmt->execute([$newHash, $dbUser['id']]);
+                    } catch (Exception $e) {}
+                }
+
+                if ($isPassValid) {
                     $matchedUser = [
                         'id' => $dbUser['id'],
                         'username' => $dbUser['username'],

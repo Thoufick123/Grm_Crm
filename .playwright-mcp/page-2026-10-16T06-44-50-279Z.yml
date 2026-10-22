@@ -1,0 +1,357 @@
+- generic [active] [ref=f5e1]:
+  - complementary [ref=f5e2]:
+    - generic [ref=f5e4]:
+      - generic [ref=f5e5]: chat
+      - generic [ref=f5e7]:
+        - heading "GRM CRM v2.5" [level=1] [ref=f5e8]:
+          - text: GRM CRM
+          - generic [ref=f5e9]: v2.5
+        - paragraph [ref=f5e10]: WhatsApp Business Hub
+    - generic "Click to configure WhatsApp Business Number" [ref=f5e12] [cursor=pointer]:
+      - generic [ref=f5e17]:
+        - paragraph [ref=f5e18]:
+          - text: Live WhatsApp
+          - generic [ref=f5e19]: tune
+        - paragraph [ref=f5e20]: +91 86680 07593
+      - button "add_circle Sim In" [ref=f5e21]:
+        - generic [ref=f5e22]: add_circle
+        - text: Sim In
+    - navigation [ref=f5e23]:
+      - generic [ref=f5e24]: Command Center
+      - button "dashboard Dashboard" [ref=f5e25] [cursor=pointer]:
+        - generic [ref=f5e26]:
+          - generic [ref=f5e27]: dashboard
+          - generic [ref=f5e28]: Dashboard
+      - button "inbox WhatsApp Inbox 15" [ref=f5e29] [cursor=pointer]:
+        - generic [ref=f5e30]:
+          - generic [ref=f5e31]: inbox
+          - generic [ref=f5e32]: WhatsApp Inbox
+        - generic [ref=f5e33]: "15"
+      - button "contact_support Customer Enquiries 5 New" [ref=f5e34] [cursor=pointer]:
+        - generic [ref=f5e35]:
+          - generic [ref=f5e36]: contact_support
+          - generic [ref=f5e37]: Customer Enquiries
+        - generic [ref=f5e38]: 5 New
+      - generic [ref=f5e39]: Sales & Operations
+      - button "schedule Follow-up Due 3 Today" [ref=f5e40] [cursor=pointer]:
+        - generic [ref=f5e41]:
+          - generic [ref=f5e42]: schedule
+          - generic [ref=f5e43]: Follow-up Due
+        - generic [ref=f5e44]: 3 Today
+      - button "inventory_2 Live Stock & Sharing" [ref=f5e45] [cursor=pointer]:
+        - generic [ref=f5e46]:
+          - generic [ref=f5e47]: inventory_2
+          - generic [ref=f5e48]: Live Stock & Sharing
+      - button "shopping_bag WhatsApp Orders 5" [ref=f5e49] [cursor=pointer]:
+        - generic [ref=f5e50]:
+          - generic [ref=f5e51]: shopping_bag
+          - generic [ref=f5e52]: WhatsApp Orders
+        - generic [ref=f5e53]: "5"
+      - button "groups Customer 360" [ref=f5e54] [cursor=pointer]:
+        - generic [ref=f5e55]:
+          - generic [ref=f5e56]: groups
+          - generic [ref=f5e57]: Customer 360
+      - button "do_not_disturb_on DND / Opt-Out List 0" [ref=f5e58] [cursor=pointer]:
+        - generic [ref=f5e59]:
+          - generic [ref=f5e60]: do_not_disturb_on
+          - generic [ref=f5e61]: DND / Opt-Out List
+        - generic [ref=f5e62]: "0"
+      - generic [ref=f5e63]: Settings & Admin
+      - button "settings_phone WhatsApp Settings" [ref=f5e64] [cursor=pointer]:
+        - generic [ref=f5e65]:
+          - generic [ref=f5e66]: settings_phone
+          - generic [ref=f5e67]: WhatsApp Settings
+      - button "cloud_sync Data Backup & Restore download" [ref=f5e69] [cursor=pointer]:
+        - generic [ref=f5e70]:
+          - generic [ref=f5e71]: cloud_sync
+          - generic [ref=f5e72]: Data Backup & Restore
+        - generic [ref=f5e73]: download
+      - button "badge Staff Management 3" [ref=f5e74] [cursor=pointer]:
+        - generic [ref=f5e75]:
+          - generic [ref=f5e76]: badge
+          - generic [ref=f5e77]: Staff Management
+        - generic [ref=f5e78]: "3"
+      - button "monitoring Staff KPI & Reports" [ref=f5e79] [cursor=pointer]:
+        - generic [ref=f5e80]:
+          - generic [ref=f5e81]: monitoring
+          - generic [ref=f5e82]: Staff KPI & Reports
+      - button "history Audit Trail & Security" [ref=f5e83] [cursor=pointer]:
+        - generic [ref=f5e84]:
+          - generic [ref=f5e85]: history
+          - generic [ref=f5e86]: Audit Trail & Security
+    - generic [ref=f5e88]:
+      - generic [ref=f5e89]:
+        - generic [ref=f5e90]: Logged In As
+        - generic [ref=f5e91]: Super Admin
+      - generic [ref=f5e92]:
+        - generic [ref=f5e93]:
+          - generic [ref=f5e94]: SA
+          - generic [ref=f5e95]:
+            - paragraph [ref=f5e96]: Super Admin
+            - paragraph [ref=f5e97]: Full Control Panel
+        - button "logout" [ref=f5e98] [cursor=pointer]
+      - paragraph [ref=f5e100]: Role-Based Access Protected
+  - generic [ref=f5e101]:
+    - banner [ref=f5e102]:
+      - generic:
+        - generic:
+          - heading "WhatsApp Inbox & Customer Queue" [level=2]
+          - paragraph: Live chats for +91 86680 07593 • Active line conversation management & order booking
+      - generic [ref=f5e103]:
+        - button "phone_android +91 86680 07593 expand_more" [ref=f5e105] [cursor=pointer]:
+          - generic [ref=f5e109]: phone_android
+          - generic [ref=f5e110]: +91 86680 07593
+          - generic [ref=f5e111]: expand_more
+        - 'button "lock Masking: OFF" [ref=f5e112] [cursor=pointer]':
+          - generic [ref=f5e113]: lock
+          - generic [ref=f5e114]: "Masking:"
+          - generic [ref=f5e115]: "OFF"
+        - 'button "pause_circle Auto-Reply: PAUSED" [ref=f5e116] [cursor=pointer]':
+          - generic [ref=f5e117]: pause_circle
+          - generic [ref=f5e118]: "Auto-Reply: PAUSED"
+        - button "campaign Broadcast Template" [ref=f5e119] [cursor=pointer]:
+          - generic [ref=f5e120]: campaign
+          - generic [ref=f5e121]: Broadcast Template
+        - button "restart_alt Reset Inbox" [ref=f5e122] [cursor=pointer]:
+          - generic [ref=f5e123]: restart_alt
+          - generic [ref=f5e124]: Reset Inbox
+        - button "logout Logout" [ref=f5e126] [cursor=pointer]:
+          - generic [ref=f5e127]: logout
+          - generic [ref=f5e128]: Logout
+    - main [ref=f5e129]:
+      - generic [ref=f5e130]:
+        - generic [ref=f5e131]:
+          - generic [ref=f5e132]:
+            - generic [ref=f5e133]:
+              - generic [ref=f5e134]: mark_chat_unread
+              - generic [ref=f5e135]: "Today's Received Messages:"
+            - generic [ref=f5e136]: 45 / 200 msgs (23%)
+          - generic [ref=f5e138]:
+            - button "hub All Inboxes 5" [ref=f5e139] [cursor=pointer]:
+              - generic [ref=f5e140]: hub
+              - generic [ref=f5e141]: All Inboxes
+              - generic [ref=f5e142]: "5"
+            - 'button "Line 1 (Central): +91 86680 07593 5" [ref=f5e143] [cursor=pointer]':
+              - generic [ref=f5e145]: "Line 1 (Central): +91 86680 07593"
+              - generic [ref=f5e146]: "5"
+            - 'button "Line 2 (Blue Berry): Line 2 0" [ref=f5e147] [cursor=pointer]':
+              - generic [ref=f5e149]: "Line 2 (Blue Berry): Line 2"
+              - generic [ref=f5e150]: "0"
+          - generic [ref=f5e151]:
+            - generic [ref=f5e152]:
+              - generic [ref=f5e153]: search
+              - textbox "Search customer, phone, SKU, Query ID..." [ref=f5e154]
+            - generic [ref=f5e155]:
+              - button "All (5)" [ref=f5e156] [cursor=pointer]
+              - button "Unassigned (5)" [ref=f5e157] [cursor=pointer]
+              - button "My Queue (5)" [ref=f5e158] [cursor=pointer]
+              - button "Urgent" [ref=f5e159] [cursor=pointer]
+              - button "restart_alt Reset" [ref=f5e160] [cursor=pointer]:
+                - generic [ref=f5e161]: restart_alt
+                - generic [ref=f5e162]: Reset
+          - generic [ref=f5e163]:
+            - generic [ref=f5e164] [cursor=pointer]:
+              - generic [ref=f5e165]: SU
+              - generic [ref=f5e170]:
+                - generic [ref=f5e171]:
+                  - heading "SugunaMani" [level=4] [ref=f5e172]
+                  - generic [ref=f5e173]: 01:28 pm
+                - paragraph [ref=f5e174]: "Customer: \"✨ *mekha* ✨ Hello *SugunaMani*! 👋 Wel...\""
+                - generic [ref=f5e175]:
+                  - generic [ref=f5e176]:
+                    - 'generic "Received on WhatsApp Line: +91 97896 60115" [ref=f5e177]': 📱 Line 1
+                    - generic [ref=f5e178]: Q-2026-756266
+                    - generic [ref=f5e179]: HIGH
+                  - button "person_add Assign" [ref=f5e180]:
+                    - generic [ref=f5e181]: person_add
+                    - text: Assign
+            - generic [ref=f5e182] [cursor=pointer]:
+              - generic [ref=f5e183]: CU
+              - generic [ref=f5e188]:
+                - generic [ref=f5e189]:
+                  - heading "Customer 5785" [level=4] [ref=f5e190]
+                  - generic [ref=f5e191]: 03:46 pm
+                - paragraph [ref=f5e192]: "Customer: \"[WhatsApp Message]...\""
+                - generic [ref=f5e193]:
+                  - generic [ref=f5e194]:
+                    - 'generic "Received on WhatsApp Line: +919789660115" [ref=f5e195]': 📱 Line 1
+                    - generic [ref=f5e196]: Q-2026-959619
+                    - generic [ref=f5e197]: HIGH
+                  - button "person_add Assign" [ref=f5e198]:
+                    - generic [ref=f5e199]: person_add
+                    - text: Assign
+            - generic [ref=f5e200] [cursor=pointer]:
+              - generic [ref=f5e201]: 𝙅𝙚
+              - generic [ref=f5e206]:
+                - generic [ref=f5e207]:
+                  - heading "𝙅𝙚𝙚𝙫𝙖 ♡" [level=4] [ref=f5e208]
+                  - generic [ref=f5e209]: 03:11 pm
+                - paragraph [ref=f5e210]: "Customer: \"Ithoda startup thane??...\""
+                - generic [ref=f5e211]:
+                  - generic [ref=f5e212]:
+                    - 'generic "Received on WhatsApp Line: +919789660115" [ref=f5e213]': 📱 Line 1
+                    - generic [ref=f5e214]: Q-2026-674262
+                    - generic [ref=f5e215]: HIGH
+                  - button "person_add Assign" [ref=f5e216]:
+                    - generic [ref=f5e217]: person_add
+                    - text: Assign
+            - generic [ref=f5e218] [cursor=pointer]:
+              - generic [ref=f5e219]: ME
+              - generic [ref=f5e224]:
+                - generic [ref=f5e225]:
+                  - heading "Mekha🦋" [level=4] [ref=f5e226]
+                  - generic [ref=f5e227]: 03:20 pm
+                - paragraph [ref=f5e228]: "Customer: \"Hji...\""
+                - generic [ref=f5e229]:
+                  - generic [ref=f5e230]:
+                    - 'generic "Received on WhatsApp Line: +919789660115" [ref=f5e231]': 📱 Line 1
+                    - generic [ref=f5e232]: Q-2026-257197
+                    - generic [ref=f5e233]: HIGH
+                  - button "person_add Assign" [ref=f5e234]:
+                    - generic [ref=f5e235]: person_add
+                    - text: Assign
+            - generic [ref=f5e236] [cursor=pointer]:
+              - generic [ref=f5e237]: PA
+              - generic [ref=f5e242]:
+                - generic [ref=f5e243]:
+                  - heading "papa😍" [level=4] [ref=f5e244]
+                  - generic [ref=f5e245]: 2026-10-02 09:39:29
+                - paragraph [ref=f5e246]: "Customer: \"Saptiya pa...\""
+                - generic [ref=f5e247]:
+                  - generic [ref=f5e248]:
+                    - 'generic "Received on WhatsApp Line: +919789660115" [ref=f5e249]': 📱 Line 1
+                    - generic [ref=f5e250]: Q-2026-213906
+                    - generic [ref=f5e251]: HIGH
+                  - button "person_add Assign" [ref=f5e252]:
+                    - generic [ref=f5e253]: person_add
+                    - text: Assign
+        - generic [ref=f5e254]:
+          - generic [ref=f5e255]:
+            - generic [ref=f5e256]:
+              - generic [ref=f5e257]: CU
+              - generic [ref=f5e258]:
+                - generic [ref=f5e259]:
+                  - heading "Customer 5785" [level=3] [ref=f5e260]
+                  - generic [ref=f5e261]: Live WhatsApp Lead
+                - generic [ref=f5e262]:
+                  - generic [ref=f5e263]: "+53210366615785"
+                  - generic [ref=f5e264]: •
+                  - generic [ref=f5e265]: Q-2026-959619
+            - generic [ref=f5e266]:
+              - button "person_add Assign" [ref=f5e267] [cursor=pointer]:
+                - generic [ref=f5e268]: person_add
+                - generic [ref=f5e269]: Assign
+              - button "call" [ref=f5e270] [cursor=pointer]
+              - link "open_in_new" [ref=f5e272] [cursor=pointer]:
+                - /url: https://wa.me/53210366615785
+              - button "dock_to_left" [ref=f5e274] [cursor=pointer]
+          - generic [ref=f5e276]:
+            - generic [ref=f5e277]:
+              - generic [ref=f5e278]: pause_circle
+              - generic [ref=f5e279]: "Auto-Reply is PAUSED: Automated WhatsApp messages are OFF. Manual staff reply is required for incoming messages."
+            - button "play_arrow Resume Auto-Reply" [ref=f5e280] [cursor=pointer]:
+              - generic [ref=f5e281]: play_arrow
+              - generic [ref=f5e282]: Resume Auto-Reply
+          - generic [ref=f5e284]:
+            - generic [ref=f5e286]:
+              - generic [ref=f5e287]: lock
+              - generic [ref=f5e288]:
+                - text: "Connected to Business Number:"
+                - strong [ref=f5e289]: "+918668007593"
+                - text: • GRM Central Record
+            - generic [ref=f5e291]:
+              - generic [ref=f5e293]:
+                - button "play_arrow" [ref=f5e294] [cursor=pointer]
+                - generic [ref=f5e296]:
+                  - generic [ref=f5e297]:
+                    - generic [ref=f5e298]:
+                      - generic [ref=f5e299]: mic
+                      - text: WhatsApp Voice Note
+                    - generic [ref=f5e300]: 0:12
+                  - slider [ref=f5e301] [cursor=pointer]: "0"
+                  - generic [ref=f5e302]:
+                    - generic [ref=f5e303]: Voice Note
+                    - button "1.0x" [ref=f5e305] [cursor=pointer]
+              - generic [ref=f5e306]: 03:46 pm
+          - generic [ref=f5e308]:
+            - generic [ref=f5e309]: "Quick Actions:"
+            - generic [ref=f5e310]:
+              - 'button "pause_circle Auto-Reply: OFF (Paused)" [ref=f5e311] [cursor=pointer]':
+                - generic [ref=f5e313]: pause_circle
+                - generic [ref=f5e314]: "Auto-Reply: OFF (Paused)"
+              - button "tune" [ref=f5e315] [cursor=pointer]
+            - button "category Share Stock Menu" [ref=f5e317] [cursor=pointer]:
+              - generic [ref=f5e318]: category
+              - text: Share Stock Menu
+            - button "inventory_2 Search Stock & Share" [ref=f5e319] [cursor=pointer]:
+              - generic [ref=f5e320]: inventory_2
+              - text: Search Stock & Share
+            - button "shopping_cart_checkout Convert to Order" [ref=f5e321] [cursor=pointer]:
+              - generic [ref=f5e322]: shopping_cart_checkout
+              - text: Convert to Order
+            - button "event Set Follow-up" [ref=f5e323] [cursor=pointer]:
+              - generic [ref=f5e324]: event
+              - text: Set Follow-up
+            - button "psychology Q&A Templates (11)" [ref=f5e325] [cursor=pointer]:
+              - generic [ref=f5e326]: psychology
+              - generic [ref=f5e327]: Q&A Templates (11)
+            - button "campaign Auto-Broadcast" [ref=f5e328] [cursor=pointer]:
+              - generic [ref=f5e329]: campaign
+              - text: Auto-Broadcast
+            - combobox [ref=f5e330]:
+              - option "⚡ Quick Message Templates..." [selected]
+              - option "Price & Availability Enquiry"
+              - option "Stock Available - Size Confirm"
+              - option "Order Confirmed Successfully"
+              - option "Order Dispatched with Tracking"
+              - option "Payment UPI QR & Account Details"
+          - generic [ref=f5e331]:
+            - generic [ref=f5e332]:
+              - generic [ref=f5e333]: bolt
+              - text: "Quick Templates:"
+            - generic [ref=f5e334]:
+              - button "💬 maternity" [ref=f5e335] [cursor=pointer]:
+                - generic [ref=f5e336]: 💬
+                - generic [ref=f5e337]: maternity
+              - button "💬 enaku oru chocolate venum" [ref=f5e338] [cursor=pointer]:
+                - generic [ref=f5e339]: 💬
+                - generic [ref=f5e340]: enaku oru chocolate venum
+              - button "🤰 Feeding Kurti & Maternity Wear" [ref=f5e341] [cursor=pointer]:
+                - generic [ref=f5e342]: 🤰
+                - generic [ref=f5e343]: Feeding Kurti & Maternity Wear
+              - button "👗 Baby Frocks & Frocks (0-3Y)" [ref=f5e344] [cursor=pointer]:
+                - generic [ref=f5e345]: 👗
+                - generic [ref=f5e346]: Baby Frocks & Frocks (0-3Y)
+              - button "🎁 Newborn Gift Sets (0-6M)" [ref=f5e347] [cursor=pointer]:
+                - generic [ref=f5e348]: 🎁
+                - generic [ref=f5e349]: Newborn Gift Sets (0-6M)
+              - button "👕 Kids Everyday T-Shirts (4-5Y)" [ref=f5e350] [cursor=pointer]:
+                - generic [ref=f5e351]: 👕
+                - generic [ref=f5e352]: Kids Everyday T-Shirts (4-5Y)
+              - button "📦 Wholesale & Bulk Orders" [ref=f5e353] [cursor=pointer]:
+                - generic [ref=f5e354]: 📦
+                - generic [ref=f5e355]: Wholesale & Bulk Orders
+              - button "🥻 Festive & Silk Pattu Pavadai" [ref=f5e356] [cursor=pointer]:
+                - generic [ref=f5e357]: 🥻
+                - generic [ref=f5e358]: Festive & Silk Pattu Pavadai
+              - button "💬 Store Address & Timings" [ref=f5e359] [cursor=pointer]:
+                - generic [ref=f5e360]: 💬
+                - generic [ref=f5e361]: Store Address & Timings
+              - button "💬 Payment & UPI QR" [ref=f5e362] [cursor=pointer]:
+                - generic [ref=f5e363]: 💬
+                - generic [ref=f5e364]: Payment & UPI QR
+              - button "💬 Shipping & Delivery Time" [ref=f5e365] [cursor=pointer]:
+                - generic [ref=f5e366]: 💬
+                - generic [ref=f5e367]: Shipping & Delivery Time
+          - generic [ref=f5e369]:
+            - button "add_photo_alternate" [ref=f5e370] [cursor=pointer]
+            - textbox "Type a message or response to customer (Press Enter to send)..." [ref=f5e372]
+            - button "send" [ref=f5e373] [cursor=pointer]
+          - button "chevron_left Customer Profile" [ref=f5e375] [cursor=pointer]:
+            - generic [ref=f5e376]: chevron_left
+            - generic [ref=f5e377]: Customer Profile
+  - generic [ref=f5e378]:
+    - generic [ref=f5e379]: bolt
+    - generic [ref=f5e381]:
+      - heading "WebSocket Connected" [level=4] [ref=f5e382]
+      - paragraph [ref=f5e383]: Live WhatsApp synchronization active
