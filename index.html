@@ -78,6 +78,71 @@
       }
     })();
   </script>
+  <!-- ========================================================================= -->
+  <!-- INSTANT VIEW SHIELD: ZERO-LATENCY ACTIVE VIEW RESTORATION ON REFRESH       -->
+  <!-- Prevents the browser from flashing/staying on WhatsApp Inbox during page load -->
+  <!-- ========================================================================= -->
+  <script>
+    (function() {
+      try {
+        var validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
+        var hash = (window.location.hash || '').replace('#', '').trim().toLowerCase();
+        var targetView = (hash && validViews.includes(hash)) ? hash : null;
+        if (!targetView) {
+          var stored = localStorage.getItem('GRM_CRM_ACTIVE_VIEW');
+          if (stored && validViews.includes(stored)) {
+            targetView = stored;
+          }
+        }
+        if (!targetView) targetView = 'inbox';
+        window.INITIAL_SHIELD_TARGET_VIEW = targetView;
+        window.ACTIVE_VIEW = targetView;
+
+        if (targetView !== 'inbox') {
+          var style = document.createElement('style');
+          style.id = 'instant-view-shield';
+          style.innerHTML = `
+            #view-inbox { display: none !important; }
+            #nav-inbox { background-color: transparent !important; color: #cbd5e1 !important; font-weight: 500 !important; box-shadow: none !important; }
+            #view-` + targetView + ` { display: block !important; }
+            #nav-` + targetView + ` { background-color: #00a884 !important; color: #ffffff !important; font-weight: 600 !important; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
+          `;
+          document.head.appendChild(style);
+
+          var titles = {
+            inbox: { title: 'WhatsApp Inbox & Customer Queue', sub: 'Live conversation management with instant staff assignment & order booking' },
+            enquiries: { title: 'Customer Enquiries & Staff Assignment Hub', sub: 'Admin control room to distribute new customer leads to staff' },
+            dashboard: { title: 'WhatsApp Operations Dashboard', sub: 'Real-time overview of inquiries, active sessions, and communication health' },
+            catalog: { title: 'Garment Product Catalog & Live Stock', sub: 'Live available stock calculator and 1-click WhatsApp card sharing' },
+            orders: { title: 'WhatsApp Sales Orders & Reservations', sub: 'Direct orders booked from WhatsApp chats with reserved inventory' },
+            followups: { title: 'Customer Follow-up Scheduler', sub: 'Automated reminders to prevent lost customer enquiries' },
+            customers: { title: 'Customer 360 & Tag Directory', sub: 'Profiles, purchase history, and communication preferences' },
+            dnd: { title: 'DND & Opt-Out Customer Hub', sub: 'Customers who requested not to receive garment product offers or messages' },
+            staff: { title: 'Staff & Team Management Hub', sub: 'Onboard team members, assign operational roles & permissions, and monitor workloads' },
+            audit: { title: 'System Audit Trail & Security Logs', sub: 'Tamper-proof record of every staff assignment and order update' },
+            analytics: { title: 'Staff Performance Analytics & KPIs', sub: 'Factual metrics on response times, volume handled, and conversions' },
+            settings: { title: 'WhatsApp Business Settings & Phone Configuration', sub: 'Set your primary WhatsApp Business number for dynamic live message routing' },
+            backup: { title: 'Data Backup & Recovery Hub', sub: 'Full database snapshot export, restore, and zero-data-loss protection (Section 53)' }
+          };
+
+          var updateHeaderEarly = function() {
+            var pt = document.getElementById('page-title');
+            var ps = document.getElementById('page-subtitle');
+            if (pt && titles[targetView]) pt.innerText = titles[targetView].title;
+            if (ps && titles[targetView]) ps.innerText = titles[targetView].sub;
+          };
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateHeaderEarly);
+          } else {
+            updateHeaderEarly();
+          }
+        }
+      } catch (e) {
+        console.warn('Instant view shield initialization error:', e);
+      }
+    })();
+  </script>
   <style>
     /* Custom scrollbars */
     ::-webkit-scrollbar {
@@ -1379,39 +1444,55 @@
                 </button>
               </div>
 
-              <!-- Overall Price Edit Mode Button -->
-              <button type="button" onclick="toggleBulkPriceEditMode()" id="btn-toolbar-bulk-price" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer" title="Bulk / Overall Price Edit: Select multiple garments to update prices">
-                <span class="material-symbols-outlined text-[16px] text-amber-700">price_change</span>
-                <span id="btn-toolbar-bulk-price-text">Overall Price Edit</span>
+              <!-- Select Checkbox Option Button -->
+              <button type="button" onclick="toggleBulkSelectionMode()" id="btn-toolbar-bulk-select" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer" title="Enable selection checkboxes on garment cards">
+                <span class="material-symbols-outlined text-[16px] text-emerald-700">check_box</span>
+                <span id="btn-toolbar-bulk-select-text">Select Checkbox</span>
               </button>
+
+              <!-- Select All Checkbox Option (Direct in Toolbar) -->
+              <label id="toolbar-select-all-container" class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl font-bold text-xs cursor-pointer transition select-none shadow-xs" title="Select or Deselect all visible products">
+                <input type="checkbox" id="toolbar-select-all-checkbox" onchange="handleToolbarSelectAllChange(this.checked)" class="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
+                <span id="toolbar-select-all-label">Select All</span>
+              </label>
             </div>
           </div>
 
-          <!-- Bulk Price Selection Bar (Appears right above Cards & Table List when Overall Price Edit is active) -->
-          <div id="catalog-bulk-price-bar" class="hidden bg-gradient-to-r from-amber-950 via-slate-900 to-amber-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-amber-500/40 flex items-center justify-between gap-3 flex-wrap animate-in fade-in slide-in-from-top-2 duration-200">
+          <!-- Bulk Selection Action Bar (Appears right above Cards & Table List when Selection Mode is active) -->
+          <div id="catalog-bulk-price-bar" class="hidden bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-emerald-500/40 flex items-center justify-between gap-3 flex-wrap animate-in fade-in slide-in-from-top-2 duration-200">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-amber-500/25 text-amber-400 flex items-center justify-center border border-amber-500/40 shrink-0 shadow-xs">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/25 text-emerald-400 flex items-center justify-center border border-emerald-500/40 shrink-0 shadow-xs">
                 <span class="material-symbols-outlined text-[22px]">checklist</span>
               </div>
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="font-black text-sm text-amber-300 tracking-tight font-mono" id="bulk-selected-count-text">0 Garments Selected</span>
-                  <span class="text-[10px] font-bold bg-amber-500/20 text-amber-200 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">Overall Price Mode</span>
+                  <span class="font-black text-sm text-emerald-300 tracking-tight font-mono" id="bulk-selected-count-text">0 Garments Selected</span>
+                  <span class="text-[10px] font-bold bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">Multi-Select Active</span>
                 </div>
-                <p class="text-[11px] text-slate-300 mt-0.5">Check any garments using checkboxes, then click <b class="text-amber-200">Proceed to Price Edit</b> to set prices or apply discounts.</p>
+                <p class="text-[11px] text-slate-300 mt-0.5">Select garments using checkboxes, then choose <b class="text-emerald-300">Share on WhatsApp</b> or <b class="text-amber-300">Price Edit</b>.</p>
               </div>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <button type="button" onclick="selectAllBulkCatalogProducts(true)" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-xs rounded-xl font-bold transition cursor-pointer text-slate-200 hover:text-white border border-white/10">Select All Visible</button>
-              <button type="button" onclick="selectAllBulkCatalogProducts(false)" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-xs rounded-xl font-bold transition cursor-pointer text-slate-200 hover:text-white border border-white/10">Clear</button>
+              <button type="button" onclick="selectAllBulkCatalogProducts(true)" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-xs rounded-xl font-bold transition cursor-pointer text-slate-200 hover:text-white border border-white/10 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">done_all</span> Select All
+              </button>
+              <button type="button" onclick="selectAllBulkCatalogProducts(false)" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-xs rounded-xl font-bold transition cursor-pointer text-slate-200 hover:text-white border border-white/10 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">remove_done</span> Clear
+              </button>
               
-              <!-- Next Process Button -->
+              <!-- 1. SHARE ON WHATSAPP OPTION -->
+              <button type="button" onclick="openBulkDirectShareModal()" id="btn-bar-share-bulk" class="px-4 py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg hover:shadow-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]">
+                <span class="material-symbols-outlined text-[18px]">send</span>
+                <span id="btn-bar-share-text">Share on WhatsApp</span>
+              </button>
+
+              <!-- 2. PRICE EDIT OPTION -->
               <button type="button" onclick="openBulkPriceModal()" id="btn-open-bulk-modal" class="px-4 py-2 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg hover:shadow-amber-500/30 transition-all flex items-center gap-1.5 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]">
                 <span class="material-symbols-outlined text-[18px]">price_change</span>
-                <span id="btn-open-bulk-modal-text">Proceed to Price Edit</span>
-                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                <span id="btn-open-bulk-modal-text">Price Edit</span>
               </button>
-              <button type="button" onclick="toggleBulkPriceEditMode(false)" class="px-3 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-xl transition cursor-pointer border border-slate-700" title="Exit Overall Price Edit Mode">Exit</button>
+
+              <button type="button" onclick="toggleBulkPriceEditMode(false)" class="px-3 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-xl transition cursor-pointer border border-slate-700" title="Exit Selection Mode">Exit</button>
             </div>
           </div>
 
@@ -3294,7 +3375,7 @@
   <!-- ========================================================================= -->
   <!-- MODAL: ADD / EDIT GARMENT PRODUCT (FULL E-COMMERCE CATALOG FLOW) -->
   <!-- ========================================================================= -->
-  <div id="modal-product-edit" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+  <div id="modal-product-edit" class="fixed inset-0 z-[70] modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
     <div class="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[94vh] flex flex-col border border-slate-200">
       
       <!-- Modal Header -->
@@ -3470,6 +3551,9 @@
                     <input type="hidden" id="prod-form-reserved" value="0">
                   </div>
                 </div>
+
+                <!-- DYNAMIC PRICING ERROR & INTERACTIVE SUGGESTIONS BANNER -->
+                <div id="prod-form-price-error-container" class="hidden"></div>
               </div>
 
               <!-- MULTI-VARIANT MATRIX SECTION (e.g. 3 Sizes x 3 Colors = 9 Variant Fields) -->
@@ -3548,7 +3632,7 @@
               <!-- Active Image Preview Pill -->
               <div id="prod-image-preview-wrapper" class="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
                 <div class="w-14 h-14 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 shrink-0 relative flex items-center justify-center">
-                  <img id="prod-form-img-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100' fill='none'><rect width='100' height='100' fill='%23f1f5f9'/><g fill='%2394a3b8'><circle cx='50' cy='45' r='12' fill='%23cbd5e1'/><path d='M50 38c-3.9 0-7 3.1-7 7 0 2.6 1.4 4.8 3.5 6v2.5h-12l-8 15h48l-8-15h-12V51c2.1-1.2 3.5-3.4 3.5-6 0-3.9-3.1-7-7-7z'/><text x='50' y='82' font-family='sans-serif' font-size='8' font-weight='600' text-anchor='middle' fill='%2364748b'>No Image</text></g></svg>" class="w-full h-full object-cover">
+                  <img id="prod-form-img-preview" src="uploads/products/sample_garment.jpg" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-full h-full object-cover">
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="font-bold text-slate-800 text-xs truncate" id="prod-preview-filename">No image selected</p>
@@ -3579,7 +3663,7 @@
               <!-- Product Card as seen in WhatsApp Chat -->
               <div id="prod-live-preview-card" class="bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-200 text-slate-900">
                 <div class="relative h-44 bg-slate-100 overflow-hidden flex items-center justify-center">
-                  <img id="prev-card-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300' fill='none'><rect width='400' height='300' fill='%23f8fafc'/><g fill='%2394a3b8'><path d='M200 95c-11.05 0-20 8.95-20 20 0 7.42 4.05 13.9 10.05 17.37v6.63h-34.1l-24 42h136.1l-24-42h-34.05v-6.63c6-3.47 10-9.95 10-17.37 0-11.05-8.95-20-20-20zm0 8c6.63 0 12 5.37 12 12s-5.37 12-12 12-12-5.37-12-12 5.37-12 12-12z'/><path d='M132 185h136v4H132z' fill='%23cbd5e1'/><text x='200' y='215' font-family='sans-serif' font-size='13' font-weight='600' text-anchor='middle' fill='%2364748b'>No Image Uploaded</text></g></svg>" class="w-full h-full object-cover">
+                  <img id="prev-card-img" src="uploads/products/sample_garment.jpg" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-full h-full object-cover">
                   <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                     <span id="prev-card-sku" class="bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] px-2 py-0.5 rounded shadow"><span class="text-slate-400 italic font-normal">SKU PENDING</span></span>
                   </div>
@@ -3973,7 +4057,7 @@
   </div>
 
   <!-- MODAL: DIRECT WHATSAPP PRODUCT SHARING -->
-  <div id="modal-direct-share-product" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-2 sm:p-4">
+  <div id="modal-direct-share-product" class="fixed inset-0 z-[70] modal-backdrop hidden flex items-center justify-center p-2 sm:p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[96vh] sm:max-h-[92vh]">
       <div class="bg-gradient-to-r from-teal-900 to-emerald-950 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3">
@@ -3996,6 +4080,8 @@
         <!-- Scrollable Modal Content -->
         <div class="p-4 sm:p-5 space-y-3.5 text-xs flex-1 overflow-y-auto custom-chat-scroll">
           <input type="hidden" id="direct-share-product-id" value="">
+          <input type="hidden" id="direct-share-is-family" value="false">
+          <input type="hidden" id="direct-share-group-key" value="">
 
           <!-- Selected Product Overview Card -->
           <div id="direct-share-product-preview" class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 shrink-0">
@@ -4108,7 +4194,7 @@
           </div>
           <div class="flex items-center gap-2">
             <button type="button" onclick="closeModal('modal-direct-share-product')" class="px-3 sm:px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-semibold transition cursor-pointer text-xs">Cancel</button>
-            <button type="submit" id="direct-share-submit-btn" class="px-4 sm:px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md hover:shadow-lg flex items-center gap-1.5 transition cursor-pointer text-xs sm:text-sm">
+            <button type="submit" id="direct-share-submit-btn" onclick="handleDirectShareSubmit(event)" class="px-4 sm:px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md hover:shadow-lg flex items-center gap-1.5 transition cursor-pointer text-xs sm:text-sm">
               <span class="material-symbols-outlined text-[17px]">send</span>
               <span id="direct-share-submit-btn-text">Send to WhatsApp (1 Recipient)</span>
             </button>
@@ -4120,7 +4206,7 @@
   </div>
 
   <!-- MODAL: QUICK RESTOCK / ADJUST STOCK -->
-  <div id="modal-quick-stock" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+  <div id="modal-quick-stock" class="fixed inset-0 z-[70] modal-backdrop hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       <div class="bg-gradient-to-r from-blue-900 to-indigo-950 p-5 text-white flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -4171,33 +4257,78 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- FLOATING BOTTOM DOCK: BULK / OVERALL PRICE EDIT PROCESS BAR (Fixed Always Visible) -->
+  <!-- MODAL: PRODUCT VARIANTS EXPLORER (Display All Variants of a Product Family) -->
   <!-- ========================================================================= -->
-  <div id="catalog-bulk-floating-dock" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-2xl bg-slate-900/95 text-white shadow-2xl rounded-2xl p-3 sm:px-5 sm:py-3.5 flex items-center justify-between gap-3 border-2 border-amber-500/70 backdrop-blur-md animate-in slide-in-from-bottom-5 duration-200 ring-4 ring-amber-500/20">
+  <div id="modal-product-variants" class="fixed inset-0 z-[60] modal-backdrop hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-200 flex flex-col max-h-[92vh]">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-teal-900 via-emerald-950 to-teal-900 p-4 sm:p-5 text-white flex items-center justify-between shrink-0 shadow-sm">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <span class="material-symbols-outlined text-[24px]">layers</span>
+          </div>
+          <div class="min-w-0">
+            <h3 class="font-extrabold text-sm sm:text-base text-white tracking-wide" id="modal-variants-title">Product Variants</h3>
+            <p class="text-[11px] text-emerald-200 font-medium truncate" id="modal-variants-subtitle">All attribute combinations for this garment</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-product-variants')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer shrink-0">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <!-- Variants Body List -->
+      <div class="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50 space-y-3" id="modal-variants-container">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 bg-white border-t border-slate-200 flex items-center justify-between flex-wrap gap-2 shrink-0">
+        <div class="text-xs text-slate-500 font-medium" id="modal-variants-footer-info">
+          <!-- Total stock & variant count -->
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeModal('modal-product-variants')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- FLOATING BOTTOM DOCK: BULK SELECTION PROCESS BAR (SHARE & PRICE EDIT OPTIONS) -->
+  <!-- ========================================================================= -->
+  <div id="catalog-bulk-floating-dock" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-3xl bg-slate-900/95 text-white shadow-2xl rounded-2xl p-3 sm:px-5 sm:py-3.5 flex items-center justify-between gap-3 border-2 border-emerald-500/70 backdrop-blur-md animate-in slide-in-from-bottom-5 duration-200 ring-4 ring-emerald-500/20">
     <div class="flex items-center gap-2.5 shrink-0">
-      <div class="w-9 h-9 rounded-xl bg-amber-500/25 text-amber-400 flex items-center justify-center border border-amber-500/40 shadow-xs">
+      <div class="w-9 h-9 rounded-xl bg-emerald-500/25 text-emerald-400 flex items-center justify-center border border-emerald-500/40 shadow-xs">
         <span class="material-symbols-outlined text-[20px]">checklist</span>
       </div>
       <div>
         <div class="flex items-center gap-1.5">
-          <span class="font-black text-xs sm:text-sm text-amber-300 font-mono tracking-tight" id="bulk-dock-count-badge">0 Garments Selected</span>
+          <span class="font-black text-xs sm:text-sm text-emerald-300 font-mono tracking-tight" id="bulk-dock-count-badge">0 Garments Selected</span>
         </div>
-        <p class="text-[10px] text-slate-300 hidden sm:block">Select products to edit prices together</p>
+        <p class="text-[10px] text-slate-300 hidden sm:block">Select products, then choose Share or Price Edit</p>
       </div>
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap justify-end">
       <button type="button" onclick="selectAllBulkCatalogProducts(true)" class="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer hidden sm:inline-block">Select All</button>
       <button type="button" onclick="selectAllBulkCatalogProducts(false)" class="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer hidden sm:inline-block">Clear</button>
 
-      <!-- The Next Process Button requested by the user -->
-      <button type="button" id="btn-dock-proceed-bulk" onclick="openBulkPriceModal()" class="px-4 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg hover:shadow-amber-500/30 transition-all flex items-center gap-1.5 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]">
-        <span class="material-symbols-outlined text-[18px]">price_change</span>
-        <span id="btn-dock-proceed-text">Proceed to Price Edit</span>
-        <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+      <!-- 1. SHARE ON WHATSAPP OPTION -->
+      <button type="button" id="btn-dock-share-bulk" onclick="openBulkDirectShareModal()" class="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg hover:shadow-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]">
+        <span class="material-symbols-outlined text-[18px]">send</span>
+        <span id="btn-dock-share-text">Share on WhatsApp</span>
       </button>
 
-      <button type="button" onclick="toggleBulkPriceEditMode(false)" class="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition cursor-pointer" title="Exit Overall Price Edit">
+      <!-- 2. PRICE EDIT OPTION -->
+      <button type="button" id="btn-dock-proceed-bulk" onclick="openBulkPriceModal()" class="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg hover:shadow-amber-500/30 transition-all flex items-center gap-1.5 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]">
+        <span class="material-symbols-outlined text-[18px]">price_change</span>
+        <span id="btn-dock-proceed-text">Price Edit</span>
+      </button>
+
+      <button type="button" onclick="toggleBulkPriceEditMode(false)" class="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition cursor-pointer" title="Exit Selection Mode">
         <span class="material-symbols-outlined text-[18px]">close</span>
       </button>
     </div>
@@ -4207,7 +4338,7 @@
   <!-- ========================================================================= -->
   <!-- MODAL: QUICK EDIT SINGLE PRODUCT PRICE (STRATEGY CARDS TEMPLATE) -->
   <!-- ========================================================================= -->
-  <div id="modal-single-edit-price" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+  <div id="modal-single-edit-price" class="fixed inset-0 z-[70] modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
     <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-amber-900/20 flex flex-col max-h-[92vh]">
       <!-- Header (Copper / Deep Amber Brown Gradient) -->
       <div class="bg-gradient-to-r from-[#3e1704] via-[#241003] to-[#3e1704] p-4 sm:p-5 text-white flex items-center justify-between shrink-0 shadow-sm">
@@ -4649,6 +4780,6 @@
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=5.5"></script>
+  <script src="crm_app.js?v=6.3"></script>
 </body>
 </html>
