@@ -143,6 +143,325 @@
       }
     })();
   </script>
+  <!-- Instant Sidebar Controller -->
+  <script>
+    function toggleSidebar(forceState) {
+      var sidebar = document.getElementById('app-sidebar');
+      var backdrop = document.getElementById('sidebar-backdrop');
+      var toggleIcon = document.getElementById('sidebar-toggle-icon');
+      var toggleBtn = document.getElementById('sidebar-toggle-btn');
+      if (!sidebar) return;
+
+      var isCurrentlyOpen = sidebar.classList.contains('sidebar-visible');
+      var shouldOpen = (forceState !== undefined && forceState !== null) ? Boolean(forceState) : !isCurrentlyOpen;
+
+      if (shouldOpen) {
+        sidebar.classList.remove('sidebar-hidden');
+        sidebar.classList.add('sidebar-visible');
+        if (backdrop) {
+          backdrop.classList.remove('hidden');
+          requestAnimationFrame(function() {
+            backdrop.classList.remove('opacity-0');
+            backdrop.classList.add('opacity-100');
+          });
+        }
+        if (toggleIcon) toggleIcon.innerText = 'menu_open';
+        if (toggleBtn) {
+          toggleBtn.classList.add('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
+          toggleBtn.setAttribute('aria-expanded', 'true');
+          toggleBtn.title = 'Close Navigation Sidebar';
+        }
+        try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'true'); } catch (e) {}
+      } else {
+        sidebar.classList.remove('sidebar-visible');
+        sidebar.classList.add('sidebar-hidden');
+        if (backdrop) {
+          backdrop.classList.remove('opacity-100');
+          backdrop.classList.add('opacity-0');
+          setTimeout(function() {
+            if (!sidebar.classList.contains('sidebar-visible')) {
+              backdrop.classList.add('hidden');
+            }
+          }, 300);
+        }
+        if (toggleIcon) toggleIcon.innerText = 'menu';
+        if (toggleBtn) {
+          toggleBtn.classList.remove('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+          toggleBtn.title = 'Open Navigation Sidebar';
+        }
+        try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'false'); } catch (e) {}
+      }
+    }
+    window.toggleSidebar = toggleSidebar;
+
+    // =========================================================================
+    // INBOX WORKSTATION PANEL MINIMIZE & EXPAND CONTROLLERS
+    // =========================================================================
+    var IS_LEFT_PANEL_OPEN = true;
+    function toggleLeftPanel(forceState) {
+      if (forceState !== undefined && forceState !== null) {
+        IS_LEFT_PANEL_OPEN = Boolean(forceState);
+      } else {
+        IS_LEFT_PANEL_OPEN = !IS_LEFT_PANEL_OPEN;
+      }
+      var panel = document.getElementById('inbox-left-panel');
+      var resizer = document.getElementById('resizer-left-panel');
+      var floatingBtn = document.getElementById('floating-left-panel-toggle-btn');
+      var resizerIcon = document.getElementById('resizer-left-icon');
+      var headerBtn = document.getElementById('btn-minimize-left-panel');
+
+      if (panel) {
+        if (IS_LEFT_PANEL_OPEN) {
+          panel.style.display = '';
+          panel.classList.remove('hidden');
+          panel.classList.add('flex');
+          var saved = localStorage.getItem('GRM_INBOX_LEFT_WIDTH') || '320';
+          panel.style.width = saved + 'px';
+          panel.style.minWidth = saved + 'px';
+          if (resizer) resizer.style.display = '';
+          if (floatingBtn) {
+            floatingBtn.style.display = 'none';
+            floatingBtn.classList.add('hidden');
+          }
+          if (resizerIcon) resizerIcon.innerText = 'chevron_left';
+          if (headerBtn) {
+            headerBtn.title = 'Minimize Conversation Queue (Alt+L)';
+            headerBtn.innerHTML = '<span class="material-symbols-outlined text-[15px]">first_page</span>';
+          }
+        } else {
+          panel.style.display = 'none';
+          panel.classList.add('hidden');
+          panel.classList.remove('flex');
+          if (resizer) resizer.style.display = 'none';
+          if (floatingBtn) {
+            floatingBtn.style.display = 'flex';
+            floatingBtn.classList.remove('hidden');
+          }
+          if (resizerIcon) resizerIcon.innerText = 'chevron_right';
+          if (headerBtn) {
+            headerBtn.title = 'Expand Conversation Queue';
+            headerBtn.innerHTML = '<span class="material-symbols-outlined text-[15px]">last_page</span>';
+          }
+        }
+      }
+      try { localStorage.setItem('GRM_INBOX_LEFT_OPEN', IS_LEFT_PANEL_OPEN ? 'true' : 'false'); } catch (e) {}
+    }
+    window.toggleLeftPanel = toggleLeftPanel;
+
+    // =========================================================================
+    // MOUSE DRAGGABLE PANEL RESIZERS (LEFT PANEL, CHAT, RIGHT PANEL, SIDEBAR)
+    // =========================================================================
+    function initPanelResizers() {
+      var leftPanel = document.getElementById('inbox-left-panel');
+      var rightPanel = document.getElementById('chat-right-panel');
+      var appSidebar = document.getElementById('app-sidebar');
+
+      var resizerLeft = document.getElementById('resizer-left-panel');
+      var resizerRight = document.getElementById('resizer-right-panel');
+      var resizerSidebar = document.getElementById('resizer-app-sidebar');
+
+      // Restore saved widths from localStorage
+      try {
+        var savedLeftWidth = localStorage.getItem('GRM_INBOX_LEFT_WIDTH');
+        if (savedLeftWidth && leftPanel && parseInt(savedLeftWidth) > 160) {
+          leftPanel.style.width = savedLeftWidth + 'px';
+          leftPanel.style.minWidth = savedLeftWidth + 'px';
+        }
+        var savedRightWidth = localStorage.getItem('GRM_INBOX_RIGHT_WIDTH');
+        if (savedRightWidth && rightPanel && parseInt(savedRightWidth) > 200) {
+          rightPanel.style.width = savedRightWidth + 'px';
+          rightPanel.style.minWidth = savedRightWidth + 'px';
+        }
+        var savedSidebarWidth = localStorage.getItem('GRM_APP_SIDEBAR_WIDTH');
+        if (savedSidebarWidth && appSidebar && parseInt(savedSidebarWidth) > 160) {
+          appSidebar.style.width = savedSidebarWidth + 'px';
+        }
+        var savedLeftOpen = localStorage.getItem('GRM_INBOX_LEFT_OPEN');
+        if (savedLeftOpen === 'false') {
+          toggleLeftPanel(false);
+        }
+      } catch (e) {}
+
+      // 1. LEFT PANEL RESIZER
+      if (resizerLeft && leftPanel && !resizerLeft._bound) {
+        resizerLeft._bound = true;
+        var startX = 0;
+        var startWidth = 0;
+
+        var onMouseMoveLeft = function(e) {
+          var deltaX = e.clientX - startX;
+          var newWidth = startWidth + deltaX;
+          var maxWidth = Math.max(380, window.innerWidth - 500);
+
+          if (newWidth < 140) {
+            toggleLeftPanel(false);
+            onMouseUpLeft();
+            return;
+          }
+
+          if (!IS_LEFT_PANEL_OPEN) {
+            toggleLeftPanel(true);
+          }
+
+          newWidth = Math.max(180, Math.min(newWidth, maxWidth));
+          leftPanel.style.width = newWidth + 'px';
+          leftPanel.style.minWidth = newWidth + 'px';
+        };
+
+        var onMouseUpLeft = function() {
+          resizerLeft.classList.remove('is-resizing');
+          document.body.classList.remove('is-resizing-panels');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          document.removeEventListener('mousemove', onMouseMoveLeft);
+          document.removeEventListener('mouseup', onMouseUpLeft);
+          if (leftPanel.style.width) {
+            try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', parseInt(leftPanel.style.width)); } catch (e) {}
+          }
+        };
+
+        resizerLeft.addEventListener('mousedown', function(e) {
+          if (e.target.closest('#resizer-left-btn')) return;
+          e.preventDefault();
+          startX = e.clientX;
+          startWidth = leftPanel.getBoundingClientRect().width;
+          resizerLeft.classList.add('is-resizing');
+          document.body.classList.add('is-resizing-panels');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+
+          document.addEventListener('mousemove', onMouseMoveLeft);
+          document.addEventListener('mouseup', onMouseUpLeft);
+        });
+
+        resizerLeft.addEventListener('dblclick', function() {
+          leftPanel.style.width = '320px';
+          leftPanel.style.minWidth = '320px';
+          try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', '320'); } catch (e) {}
+        });
+      }
+
+      // 2. RIGHT PANEL RESIZER
+      if (resizerRight && rightPanel && !resizerRight._bound) {
+        resizerRight._bound = true;
+        var startXRight = 0;
+        var startWidthRight = 0;
+
+        var onMouseMoveRight = function(e) {
+          var deltaX = startXRight - e.clientX;
+          var newWidth = startWidthRight + deltaX;
+          var maxWidth = Math.max(400, window.innerWidth - 500);
+
+          if (newWidth < 160) {
+            if (typeof toggleRightPanel === 'function') toggleRightPanel(false, true);
+            onMouseUpRight();
+            return;
+          }
+
+          if (typeof toggleRightPanel === 'function' && typeof IS_RIGHT_PANEL_OPEN !== 'undefined' && !IS_RIGHT_PANEL_OPEN) {
+            toggleRightPanel(true, true);
+          }
+
+          newWidth = Math.max(220, Math.min(newWidth, maxWidth));
+          rightPanel.style.width = newWidth + 'px';
+          rightPanel.style.minWidth = newWidth + 'px';
+        };
+
+        var onMouseUpRight = function() {
+          resizerRight.classList.remove('is-resizing');
+          document.body.classList.remove('is-resizing-panels');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          document.removeEventListener('mousemove', onMouseMoveRight);
+          document.removeEventListener('mouseup', onMouseUpRight);
+          if (rightPanel.style.width) {
+            try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', parseInt(rightPanel.style.width)); } catch (e) {}
+          }
+        };
+
+        resizerRight.addEventListener('mousedown', function(e) {
+          if (e.target.closest('#resizer-right-btn')) return;
+          e.preventDefault();
+          startXRight = e.clientX;
+          startWidthRight = rightPanel.getBoundingClientRect().width;
+          resizerRight.classList.add('is-resizing');
+          document.body.classList.add('is-resizing-panels');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+
+          document.addEventListener('mousemove', onMouseMoveRight);
+          document.addEventListener('mouseup', onMouseUpRight);
+        });
+
+        resizerRight.addEventListener('dblclick', function() {
+          rightPanel.style.width = '350px';
+          rightPanel.style.minWidth = '350px';
+          try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', '350'); } catch (e) {}
+        });
+      }
+
+      // 3. MAIN APP SIDEBAR RESIZER
+      if (resizerSidebar && appSidebar && !resizerSidebar._bound) {
+        resizerSidebar._bound = true;
+        var startXSide = 0;
+        var startWidthSide = 0;
+
+        var onMouseMoveSide = function(e) {
+          var deltaX = e.clientX - startXSide;
+          var newWidth = startWidthSide + deltaX;
+
+          if (newWidth < 140) {
+            toggleSidebar(false);
+            onMouseUpSide();
+            return;
+          }
+
+          newWidth = Math.max(180, Math.min(newWidth, 420));
+          appSidebar.style.width = newWidth + 'px';
+        };
+
+        var onMouseUpSide = function() {
+          document.body.classList.remove('is-resizing-panels');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          document.removeEventListener('mousemove', onMouseMoveSide);
+          document.removeEventListener('mouseup', onMouseUpSide);
+          if (appSidebar.style.width) {
+            try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', parseInt(appSidebar.style.width)); } catch (e) {}
+          }
+        };
+
+        resizerSidebar.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          startXSide = e.clientX;
+          startWidthSide = appSidebar.getBoundingClientRect().width;
+          document.body.classList.add('is-resizing-panels');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+
+          document.addEventListener('mousemove', onMouseMoveSide);
+          document.addEventListener('mouseup', onMouseUpSide);
+        });
+      }
+    }
+    window.initPanelResizers = initPanelResizers;
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        var sidebar = document.getElementById('app-sidebar');
+        if (sidebar && sidebar.classList.contains('sidebar-visible')) {
+          toggleSidebar(false);
+        }
+      }
+    });
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPanelResizers);
+    } else {
+      setTimeout(initPanelResizers, 50);
+    }
+  </script>
   <style>
     /* Custom scrollbars */
     ::-webkit-scrollbar {
@@ -179,27 +498,169 @@
       background: rgba(8, 36, 23, 0.65);
       backdrop-filter: blur(4px);
     }
+
+    /* ========================================================================= */
+    /* SIDEBAR TOGGLE & RESPONSIVE DRAWER STYLES                                */
+    /* ========================================================================= */
+    #app-sidebar {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                  margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                  opacity 0.25s ease-in-out,
+                  visibility 0.3s;
+      will-change: transform, margin-left;
+    }
+
+    /* Small / Mobile / Tablet (< 1024px): Sliding Off-Canvas Drawer Overlay */
+    @media (max-width: 1023px) {
+      #app-sidebar {
+        position: fixed !important;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        height: 100vh !important;
+        max-width: 85vw;
+        z-index: 50 !important;
+      }
+      #app-sidebar.sidebar-hidden {
+        transform: translateX(-100%) !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+      }
+      #app-sidebar.sidebar-visible {
+        transform: translateX(0) !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
+      }
+    }
+
+    /* Large / Desktop Screens (>= 1024px): Smooth Collapsible Flex Panel */
+    @media (min-width: 1024px) {
+      #app-sidebar {
+        position: relative !important;
+        height: 100% !important;
+      }
+      #app-sidebar.sidebar-hidden {
+        margin-left: -16rem !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+      }
+      #app-sidebar.sidebar-visible {
+        margin-left: 0 !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
+      }
+    }
+
+    /* ========================================================================= */
+    /* DYNAMIC DRAGGABLE PANEL SPLITTERS & RESIZERS                             */
+    /* ========================================================================= */
+    .resizer-splitter {
+      width: 7px;
+      position: relative;
+      background: #e2e8f0;
+      cursor: col-resize;
+      flex-shrink: 0;
+      z-index: 25;
+      transition: background-color 0.15s ease, box-shadow 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      touch-action: none;
+    }
+    .resizer-splitter:hover,
+    .resizer-splitter.is-resizing {
+      background: #00a884 !important; /* brand-wa emerald */
+      box-shadow: 0 0 10px rgba(0, 168, 132, 0.45);
+    }
+    .resizer-splitter::after {
+      content: '';
+      width: 3px;
+      height: 28px;
+      background: #94a3b8;
+      border-radius: 999px;
+      transition: background-color 0.15s ease, height 0.15s ease;
+    }
+    .resizer-splitter:hover::after,
+    .resizer-splitter.is-resizing::after {
+      background: #ffffff;
+      height: 42px;
+    }
+    .resizer-snap-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 9999px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.14);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #334155;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+      z-index: 30;
+    }
+    .resizer-splitter:hover .resizer-snap-btn,
+    .resizer-splitter.is-resizing .resizer-snap-btn {
+      opacity: 1;
+    }
+    .resizer-snap-btn:hover {
+      background: #00a884;
+      color: #ffffff;
+      border-color: #00a884;
+      transform: translateY(-50%) scale(1.15);
+    }
+
+    /* Disable transition during mouse drag for ultra-responsive 60fps tracking */
+    body.is-resizing-panels #inbox-left-panel,
+    body.is-resizing-panels #chat-right-panel,
+    body.is-resizing-panels #chat-center-panel,
+    body.is-resizing-panels #app-sidebar {
+      transition: none !important;
+    }
   </style>
 </head>
-<body class="bg-surface-bg font-sans text-slate-800 antialiased overflow-hidden flex h-screen">
+<body class="bg-surface-bg font-sans text-slate-800 antialiased overflow-hidden flex h-screen relative">
+
+  <!-- Sidebar Backdrop Overlay (Mobile & Tablet) -->
+  <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 hidden transition-opacity duration-300 opacity-0 cursor-pointer lg:hidden"></div>
 
   <!-- ========================================================================= -->
   <!-- 1. LEFT NAVIGATION SIDEBAR -->
   <!-- ========================================================================= -->
-  <aside class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-xl border-r border-brand-900/50 z-30 select-none">
+  <aside id="app-sidebar" class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-40 select-none transition-all duration-300 ease-in-out sidebar-hidden relative">
+    <!-- Main Sidebar Right Edge Resizer Handle (Drag with Mouse to Resize) -->
+    <div id="resizer-app-sidebar" class="absolute top-0 -right-1 w-2.5 h-full hover:bg-emerald-500/50 active:bg-emerald-500 cursor-col-resize z-50 transition-colors select-none group hidden lg:block" title="Drag with mouse to resize navigation sidebar">
+      <div class="h-10 w-1 bg-slate-500/50 group-hover:bg-emerald-300 rounded-full mx-auto my-auto mt-[45vh]"></div>
+    </div>
+
     <!-- Brand Top -->
-    <div class="h-16 flex items-center justify-between px-5 border-b border-brand-900/60 bg-brand-dark shrink-0">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-wa to-brand-500 flex items-center justify-center text-white shadow-glow">
+    <div class="h-16 flex items-center justify-between px-4 border-b border-brand-900/60 bg-brand-dark shrink-0">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-wa to-brand-500 flex items-center justify-center text-white shadow-glow shrink-0">
           <span class="material-symbols-outlined text-[22px]">chat</span>
         </div>
-        <div>
-          <h1 class="font-bold text-base tracking-tight text-white flex items-center gap-1.5">
+        <div class="min-w-0">
+          <h1 class="font-bold text-base tracking-tight text-white flex items-center gap-1.5 truncate">
             GRM CRM <span class="text-[10px] bg-brand-500/20 text-brand-400 font-mono px-1.5 py-0.5 rounded">v2.5</span>
           </h1>
-          <p class="text-[11px] text-emerald-400/80 font-medium">WhatsApp Business Hub</p>
+          <p class="text-[11px] text-emerald-400/80 font-medium truncate">WhatsApp Business Hub</p>
         </div>
       </div>
+      <!-- Close Sidebar Button (Direct Inside Sidebar) -->
+      <button type="button" onclick="toggleSidebar(false)" class="p-1.5 text-slate-400 hover:text-white hover:bg-emerald-800/60 rounded-xl transition cursor-pointer flex items-center justify-center shrink-0" title="Close Sidebar Menu">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
     </div>
 
   
@@ -385,12 +846,20 @@
   <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100">
 
     <!-- Top Header (Clean Height & Responsive Layout to Prevent Text Cutoff) -->
-    <header class="min-h-[64px] bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-20 gap-3">
-      <!-- Dynamic Header Title (Hidden in WhatsApp Inbox) -->
-      <div id="header-title-container" class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg hidden">
-        <div class="min-w-0">
-          <h2 id="page-title" class="font-bold text-base sm:text-lg text-slate-900 leading-tight truncate">WhatsApp Inbox &amp; Customer Queue</h2>
-          <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
+    <header class="min-h-[64px] bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-20 gap-3">
+      <!-- Left: Sidebar Toggle Menu Button & Dynamic Header Title -->
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+        <!-- Sidebar Toggle Menu Bar Button -->
+        <button type="button" onclick="toggleSidebar()" id="sidebar-toggle-btn" class="p-2 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-xl transition flex items-center justify-center cursor-pointer shadow-xs border border-slate-200 shrink-0" title="Toggle Navigation Menu">
+          <span class="material-symbols-outlined text-[24px]" id="sidebar-toggle-icon">menu</span>
+        </button>
+
+        <!-- Dynamic Header Title (Hidden in WhatsApp Inbox) -->
+        <div id="header-title-container" class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg hidden">
+          <div class="min-w-0">
+            <h2 id="page-title" class="font-bold text-base sm:text-lg text-slate-900 leading-tight truncate">WhatsApp Inbox &amp; Customer Queue</h2>
+            <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
+          </div>
         </div>
       </div>
 
@@ -501,21 +970,7 @@
             <button type="button" onclick="switchInboxSubmodule('chats')" id="tab-sub-inbox-chats" class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer" title="Active WhatsApp Chats, Customer Queue & Live Chatbot">
               <span class="material-symbols-outlined text-[17px]">forum</span>
               <span>Live Conversations</span>
-              <span id="subtab-unread-badge" class="bg-white/20 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">3</span>
-            </button>
-
-            <!-- Sub-module 2: Auto-Reply Hub Tab -->
-            <button type="button" onclick="switchInboxSubmodule('autoreply')" id="tab-sub-inbox-autoreply" class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer" title="Auto-Reply Bot Rules, Keywords, Stock Category Links & Pre-Set Q&A">
-              <span class="material-symbols-outlined text-[17px] text-teal-600">smart_toy</span>
-              <span>Auto-Reply Hub</span>
-              <span id="subtab-autoreply-status" class="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-emerald-300">ON</span>
-            </button>
-
-            <!-- Sub-module 3: Broadcast Templates Tab -->
-            <button type="button" onclick="switchInboxSubmodule('broadcast')" id="tab-sub-inbox-broadcast" class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer" title="Automated WhatsApp Broadcast Templates, Audience Blast & Personalization">
-              <span class="material-symbols-outlined text-[17px] text-purple-600">campaign</span>
-              <span>Broadcast Templates</span>
-              <span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.2 rounded-full">Templates</span>
+              <span id="subtab-unread-badge" class="bg-white/20 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
             </button>
           </div>
         </div>
@@ -525,8 +980,8 @@
         <!-- ======================================================== -->
         <div id="submodule-inbox-chats" class="flex-1 flex overflow-hidden w-full relative">
         
-          <!-- Left Panel: Conversation & Enquiry List (Responsive Width based on VPW) -->
-          <div id="inbox-left-panel" class="w-72 xl:w-80 2xl:w-88 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0 transition-all duration-300">
+          <!-- Left Panel: Conversation & Enquiry List (Responsive Width based on VPW & Mouse Drag) -->
+          <div id="inbox-left-panel" class="w-72 xl:w-80 2xl:w-88 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0 transition-all duration-300 relative">
           
           <!-- Daily Inbound Message Volume Progress Tracker -->
           <div class="px-3 py-2 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200/80 flex items-center justify-between text-xs min-w-0 gap-1.5">
@@ -538,6 +993,10 @@
               <span id="inbox-today-message-count" class="font-mono font-extrabold text-emerald-900 bg-white border border-emerald-300 px-2 py-0.5 rounded-lg text-[10px] shadow-sm">
                 0 / 200 msgs (0%)
               </span>
+              <!-- Minimize Left Panel Controller Button -->
+              <button type="button" id="btn-minimize-left-panel" onclick="toggleLeftPanel(false)" class="p-1 text-slate-500 hover:text-emerald-900 hover:bg-emerald-100 rounded-lg transition shrink-0 cursor-pointer flex items-center justify-center border border-emerald-300/60 bg-white shadow-2xs" title="Minimize Conversation Queue (Alt+L)">
+                <span class="material-symbols-outlined text-[15px]">first_page</span>
+              </button>
             </div>
           </div>
 
@@ -568,9 +1027,22 @@
           </div>
         </div>
 
+        <!-- Left Panel Resizer Splitter (Drag with Mouse to Resize • Click to Minimize/Expand) -->
+        <div id="resizer-left-panel" class="resizer-splitter select-none" title="Drag with mouse to resize conversation queue • Double-click to reset">
+          <button type="button" id="resizer-left-btn" onclick="toggleLeftPanel()" class="resizer-snap-btn" style="right: -10px;" title="Minimize / Expand Conversation Queue">
+            <span class="material-symbols-outlined text-[14px]" id="resizer-left-icon">chevron_left</span>
+          </button>
+        </div>
+
         <!-- Center Panel: Active Chat History & Messaging Stream (Responsive Flex Column) -->
         <div id="chat-center-panel" class="flex-1 min-w-0 flex flex-col h-full bg-[#efeae2]/40 relative overflow-hidden transition-all duration-300">
           
+          <!-- Floating Slide-Open Tab Button for LEFT PANEL (Visible when left panel is minimized) -->
+          <button id="floating-left-panel-toggle-btn" onclick="toggleLeftPanel(true)" class="hidden absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-emerald-700 hover:bg-emerald-800 text-white py-3 px-1.5 rounded-r-2xl shadow-2xl transition flex flex-col items-center gap-1 border-y border-r border-emerald-400/50 group cursor-pointer" title="Expand Conversation Queue">
+            <span class="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition">chevron_right</span>
+            <span class="text-[9px] font-extrabold uppercase [writing-mode:vertical-lr] tracking-widest py-1 select-none">Chats</span>
+          </button>
+
           <!-- Chat Header Bar -->
           <div id="chat-header-bar" class="min-h-[56px] py-2 bg-white border-b border-slate-200 px-3 sm:px-5 flex items-center justify-between shrink-0 shadow-sm min-w-0 gap-2">
             <!-- Rendered by JS -->
@@ -629,7 +1101,14 @@
           </button>
         </div>
 
-        <!-- Right Panel: Customer 360 & Query Management (Responsive Width based on VPW) -->
+        <!-- Right Panel Resizer Splitter (Drag with Mouse to Resize • Click to Minimize/Expand) -->
+        <div id="resizer-right-panel" class="resizer-splitter select-none" title="Drag with mouse to resize customer profile • Double-click to reset">
+          <button type="button" id="resizer-right-btn" onclick="toggleRightPanel(null, true)" class="resizer-snap-btn" style="left: -10px;" title="Minimize / Expand Customer Profile">
+            <span class="material-symbols-outlined text-[14px]" id="resizer-right-icon">chevron_right</span>
+          </button>
+        </div>
+
+        <!-- Right Panel: Customer 360 & Query Management (Responsive Width based on VPW & Mouse Drag) -->
         <div id="chat-right-panel" class="w-80 2xl:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto transition-all duration-300 min-w-0 absolute xl:relative right-0 top-0 bottom-0 z-20 xl:z-auto shadow-2xl xl:shadow-none">
           <!-- Rendered by JS -->
         </div>
@@ -1544,13 +2023,13 @@
               <table class="w-full text-left text-xs text-slate-700">
                 <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
                   <tr>
-                    <th class="py-3 px-4">Order ID & Date</th>
+                    <th class="py-3 px-4">Order ID &amp; Date</th>
                     <th class="py-3 px-4">Customer</th>
-                    <th class="py-3 px-4">Items & SKU</th>
-                    <th class="py-3 px-4">Amount</th>
-                    <th class="py-3 px-4">Payment</th>
+                    <th class="py-3 px-4">Items &amp; SKU</th>
+                    <th class="py-3 px-4">Amount &amp; Terms</th>
+                    <th class="py-3 px-4">Payment &amp; Proof</th>
                     <th class="py-3 px-4">Order Status</th>
-                    <th class="py-3 px-4">Created By</th>
+                    <th class="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="orders-table-body" class="divide-y divide-slate-100">
@@ -2706,28 +3185,27 @@
         <div>
           <label class="block font-bold text-slate-700 mb-1">Select Preset Customer or Enter New:</label>
           <select id="sim-customer-preset" onchange="applySimPreset(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa">
-            <option value="feeding" selected>🎯 Pooja ("i want a feeding kurti" - Pre-set Auto-Reply Match)</option>
-            <option value="priya">Priya (Baby Collection - Regular Customer)</option>
-            <option value="ananya">Ananya (Maternity Dresses - High Value VIP)</option>
-            <option value="kavitha">Kavitha (Kids Wear - New Enquiry)</option>
-            <option value="custom">+ New Unregistered Customer Number</option>
+            <option value="custom" selected>+ New Unregistered Customer Number</option>
+            <option value="feeding">Feeding Kurti Enquiry</option>
+            <option value="frock">Baby Frock Enquiry</option>
+            <option value="maternity">Maternity Gown Enquiry</option>
           </select>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block font-bold text-slate-700 mb-1">Customer Name:</label>
-            <input type="text" id="sim-name" value="Pooja Venkatesh" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
+            <input type="text" id="sim-name" placeholder="Enter customer name" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
           </div>
           <div>
             <label class="block font-bold text-slate-700 mb-1">WhatsApp Mobile Number:</label>
-            <input type="text" id="sim-phone" value="+91 97896 60115" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-medium">
+            <input type="text" id="sim-phone" placeholder="+91 98765 43210" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-medium">
           </div>
         </div>
 
         <div>
           <label class="block font-bold text-slate-700 mb-1">WhatsApp Inbound Message Text:</label>
-          <textarea id="sim-message" rows="3" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa" placeholder="e.g. i want a feeding kurti">i want a feeding kurti</textarea>
+          <textarea id="sim-message" rows="3" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa" placeholder="Type inbound WhatsApp message here..."></textarea>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -2798,85 +3276,291 @@
     </div>
   </div>
 
-  <!-- MODAL: CONVERT TO ORDER MODAL (Atomic Stock Reservation) -->
+  <!-- MODAL: CONVERT TO ORDER MODAL (Atomic Stock Reservation & Dual Payment: Online UPI vs COD Rs 200 Advance) -->
   <div id="modal-convert-order" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] my-auto">
-      <div class="bg-gradient-to-r from-emerald-800 to-brand-dark p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] my-auto">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-emerald-800 via-emerald-700 to-brand-dark p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
-            <span class="material-symbols-outlined text-[22px]">shopping_cart_checkout</span>
+          <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white shadow-inner">
+            <span class="material-symbols-outlined text-[24px]">shopping_cart_checkout</span>
           </div>
           <div>
-            <h3 class="font-bold text-base">Book WhatsApp Order & Reserve Stock</h3>
-            <p class="text-xs text-emerald-200/80">Creates sales order and reserves warehouse quantity</p>
+            <div class="flex items-center gap-2">
+              <h3 class="font-extrabold text-base tracking-tight">Book WhatsApp Order</h3>
+              <span class="text-[10px] bg-emerald-500/30 text-emerald-100 font-mono px-2 py-0.5 rounded-full border border-emerald-400/30 font-bold">Stock Reserved</span>
+            </div>
+            <p class="text-xs text-emerald-100/80">Convert customer chat inquiry to confirmed order with payment verification</p>
           </div>
         </div>
-        <button onclick="closeModal('modal-convert-order')" class="text-emerald-300 hover:text-white">
+        <button type="button" onclick="closeModal('modal-convert-order')" class="text-emerald-200 hover:text-white transition p-1 rounded-lg hover:bg-white/10">
           <span class="material-symbols-outlined text-[24px]">close</span>
         </button>
       </div>
 
-      <form onsubmit="handleCreateOrder(event)" class="flex flex-col flex-1 overflow-hidden min-h-0">
-        <div class="p-5 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
-        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+      <form id="order-convert-form" onsubmit="handleCreateOrder(event)" class="flex flex-col flex-1 overflow-hidden min-h-0">
+        <div id="order-modal-scrollable-body" class="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
+          <!-- 1. Customer & Linked Query Badge Card -->
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between shadow-2xs">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm border border-emerald-200">
+                <span id="order-modal-customer-avatar">👤</span>
+              </div>
+              <div>
+                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Customer</span>
+                <p id="order-modal-customer-name" class="font-extrabold text-slate-800 text-sm leading-tight">Customer</p>
+                <p id="order-modal-customer-phone" class="text-xs text-slate-500 font-mono">+91 00000 00000</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Linked Query</span>
+              <p id="order-modal-query-id" class="font-bold text-emerald-700 font-mono text-xs">Q-2026-0000</p>
+              <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">Auto-Linked</span>
+            </div>
+          </div>
+
+          <!-- 2. Selected Products to Order Container -->
           <div>
-            <span class="text-[10px] uppercase font-bold text-slate-400">Customer</span>
-            <p id="order-modal-customer-name" class="font-bold text-slate-800 text-sm">Priya</p>
-            <p id="order-modal-customer-phone" class="text-xs text-slate-500 font-mono">+91 98765 43210</p>
-          </div>
-          <div class="text-right">
-            <span class="text-[10px] uppercase font-bold text-slate-400">Linked Query</span>
-            <p id="order-modal-query-id" class="font-bold text-brand-wa font-mono">Q-2026-0012</p>
-          </div>
-        </div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="font-extrabold text-slate-800 flex items-center gap-1.5 text-xs">
+                <span class="material-symbols-outlined text-[16px] text-emerald-600">inventory_2</span>
+                <span>Selected Products to Book:</span>
+              </label>
+              <button type="button" onclick="toggleAddProductCatalogDropdown()" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[14px]">add_circle</span>
+                <span>Add from Catalog</span>
+              </button>
+            </div>
 
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Select Garment Product & Size:</label>
-          <select id="order-product-select" onchange="calculateOrderTotal()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-1 focus:ring-brand-wa">
-            <!-- Populated dynamically from live catalog -->
-          </select>
-        </div>
+            <!-- Optional catalog product quick adder dropdown -->
+            <div id="order-catalog-picker-row" class="hidden mb-2 p-2.5 bg-slate-100 border border-slate-200 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <select id="order-product-select" class="flex-1 bg-white border border-slate-300 rounded-lg p-2 text-xs font-medium focus:ring-1 focus:ring-emerald-500">
+                  <!-- Populated from CRM_STATE.products -->
+                </select>
+                <button type="button" onclick="addProductFromCatalogDropdown()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shrink-0 cursor-pointer">
+                  + Add to Order
+                </button>
+              </div>
+            </div>
 
-        <div class="grid grid-cols-3 gap-3">
+            <!-- List of items in current order -->
+            <div id="order-items-table-list" class="space-y-2 border border-slate-200 rounded-xl p-2.5 bg-white max-h-52 overflow-y-auto">
+              <!-- Dynamically populated rows: thumbnail, title, SKU, qty stepper, unit price, row total, remove button -->
+            </div>
+          </div>
+
+          <!-- 3. Delivery / Shipping Address -->
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Quantity:</label>
-            <input type="number" id="order-qty" min="1" max="20" value="2" onchange="calculateOrderTotal()" onkeyup="calculateOrderTotal()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold">
+            <label class="block font-bold text-slate-700 mb-1 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px] text-slate-500">local_shipping</span>
+              <span>Delivery &amp; Shipping Address:</span>
+            </label>
+            <input type="text" id="order-shipping-addr" placeholder="Enter complete door delivery address with pincode..." required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
           </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Unit Price (₹):</label>
-            <input type="number" id="order-unit-price" value="599" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-600">
+
+          <!-- 4. Grand Total Summary Strip -->
+          <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/50 border border-emerald-200 p-3.5 rounded-xl flex items-center justify-between">
+            <div>
+              <span class="text-emerald-950 font-extrabold text-xs block">Order Total Amount</span>
+              <p class="text-[10px] text-emerald-700 font-medium">Inclusive of taxes &amp; Doorstep Delivery</p>
+            </div>
+            <div class="text-right">
+              <span id="order-modal-grand-total" class="text-2xl font-black text-emerald-900 font-mono tracking-tight">₹0</span>
+              <span class="text-[10px] font-bold text-emerald-700 block" id="order-modal-items-count-badge">0 Items</span>
+            </div>
           </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Payment Method:</label>
-            <select id="order-payment-method" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
-              <option value="COD">Cash on Delivery (COD)</option>
-              <option value="UPI">UPI / GPay / PhonePe</option>
-              <option value="CASH">Direct Cash</option>
-              <option value="CARD">Card / Online</option>
-            </select>
+
+          <!-- 5. CHOOSE PAYMENT FLOW: ONLINE PAYMENT vs COD (The core requested flow!) -->
+          <div class="space-y-3 pt-1">
+            <div class="flex items-center justify-between">
+              <label class="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[17px] text-brand-wa">payments</span>
+                <span>Select Payment Method &amp; Verification:</span>
+              </label>
+              <span class="text-[10px] font-bold text-slate-400">Choose Option 1 or Option 2</span>
+            </div>
+
+            <!-- Tab Switcher for the 2 Options -->
+            <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <button type="button" id="tab-payment-online" onclick="setOrderPaymentMode('ONLINE')" class="py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition bg-white text-emerald-800 shadow-xs border border-emerald-300 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px] text-emerald-600">account_balance_wallet</span>
+                <span>1. Online Payment (Full)</span>
+              </button>
+              <button type="button" id="tab-payment-cod" onclick="setOrderPaymentMode('COD')" class="py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px] text-amber-600">local_atm</span>
+                <span>2. COD (₹200 Advance)</span>
+              </button>
+            </div>
+
+            <!-- ================= OPTION 1: ONLINE PAYMENT (FULL) ================= -->
+            <div id="payment-panel-online" class="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-3.5">
+              <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-emerald-200">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span class="text-xs font-bold text-emerald-950">Online Full Payment via UPI / NetBanking</span>
+                </div>
+                <span id="online-payable-display" class="font-mono font-extrabold text-emerald-800 text-sm">₹0</span>
+              </div>
+
+              <!-- UPI Transaction ID / UTR -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block font-bold text-slate-800 text-xs">
+                    UPI Transaction ID / Ref (UTR Number) <span class="text-rose-600">*</span>
+                  </label>
+                  <button type="button" onclick="generateSampleUPIId('ONLINE')" class="text-[10px] text-emerald-700 font-bold hover:underline cursor-pointer">
+                    ⚡ Auto-Fill Sample UTR
+                  </button>
+                </div>
+                <input type="text" id="order-online-upi-id" placeholder="e.g. 428910294821 or UPI-2026-..." class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 uppercase">
+                <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <span class="text-[10px] text-slate-400 font-bold">App:</span>
+                  <button type="button" onclick="setQuickPaymentApp('GPay', 'ONLINE')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[10px] font-bold text-slate-700 cursor-pointer">Google Pay</button>
+                  <button type="button" onclick="setQuickPaymentApp('PhonePe', 'ONLINE')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[10px] font-bold text-slate-700 cursor-pointer">PhonePe</button>
+                  <button type="button" onclick="setQuickPaymentApp('Paytm', 'ONLINE')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[10px] font-bold text-slate-700 cursor-pointer">Paytm</button>
+                  <button type="button" onclick="setQuickPaymentApp('BHIM', 'ONLINE')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[10px] font-bold text-slate-700 cursor-pointer">BHIM UPI</button>
+                </div>
+              </div>
+
+              <!-- Payment Screenshot Upload -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block font-bold text-slate-800 text-xs">
+                    Upload Payment Screenshot <span class="text-rose-600">*</span>
+                  </label>
+                  <button type="button" onclick="useSampleScreenshot('ONLINE')" class="text-[10px] text-emerald-700 font-bold hover:underline cursor-pointer">
+                    📸 Use Demo Receipt
+                  </button>
+                </div>
+
+                <div class="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-white rounded-xl p-3 text-center transition cursor-pointer relative" onclick="document.getElementById('file-upload-online-screenshot').click()">
+                  <input type="file" id="file-upload-online-screenshot" accept="image/*" class="hidden" onchange="handleScreenshotUpload(event, 'ONLINE')">
+                  
+                  <div id="online-screenshot-empty-state">
+                    <span class="material-symbols-outlined text-[26px] text-emerald-500 mx-auto block mb-1">add_photo_alternate</span>
+                    <p class="text-xs font-bold text-slate-700">Click to upload customer's payment screenshot</p>
+                    <p class="text-[10px] text-slate-400">PNG, JPG, WebP (captured from WhatsApp)</p>
+                  </div>
+
+                  <!-- Uploaded Preview -->
+                  <div id="online-screenshot-preview-box" class="hidden flex items-center justify-between gap-3 text-left">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <img id="online-screenshot-thumb" src="" alt="Receipt" class="w-12 h-12 rounded-lg object-cover border border-emerald-200 shrink-0">
+                      <div class="min-w-0">
+                        <p id="online-screenshot-filename" class="text-xs font-bold text-slate-800 truncate">screenshot.jpg</p>
+                        <p class="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                          <span class="material-symbols-outlined text-[13px]">verified</span> Proof Attached
+                        </p>
+                      </div>
+                    </div>
+                    <button type="button" onclick="event.stopPropagation(); removeScreenshot('ONLINE')" class="px-2.5 py-1 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold border border-rose-200 shrink-0 cursor-pointer">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= OPTION 2: COD (ADVANCED PAY ₹200) ================= -->
+            <div id="payment-panel-cod" class="hidden p-4 bg-amber-50/60 border border-amber-200 rounded-xl space-y-3.5">
+              <!-- Mandatory ₹200 Advance Notice -->
+              <div class="bg-amber-100/70 border border-amber-300 p-3 rounded-xl flex items-start gap-2.5">
+                <span class="material-symbols-outlined text-[20px] text-amber-800 shrink-0 mt-0.5">info</span>
+                <div>
+                  <h5 class="text-xs font-bold text-amber-950">Cash On Delivery (COD) ₹200 Advance Rule:</h5>
+                  <p class="text-[11px] text-amber-900 leading-relaxed">
+                    Customer must pay a mandatory <strong class="underline font-black">₹200 advance via UPI</strong> to confirm parcel booking. The remaining balance will be collected at door delivery.
+                  </p>
+                </div>
+              </div>
+
+              <!-- 3-Way Split Card -->
+              <div class="grid grid-cols-3 gap-2 bg-white p-3 rounded-xl border border-amber-200 text-center">
+                <div class="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Order</span>
+                  <span id="cod-total-display" class="font-mono font-bold text-slate-800 text-xs">₹0</span>
+                </div>
+                <div class="p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+                  <span class="text-[10px] uppercase font-bold text-emerald-700 block">Advance (Now)</span>
+                  <span class="font-mono font-black text-emerald-900 text-sm">₹200</span>
+                  <span class="text-[8px] bg-emerald-200/80 text-emerald-900 font-bold px-1 rounded block mt-0.5">UPI Paid</span>
+                </div>
+                <div class="p-2 rounded-lg bg-amber-50 border border-amber-200">
+                  <span class="text-[10px] uppercase font-bold text-amber-700 block">Balance on Delivery</span>
+                  <span id="cod-balance-display" class="font-mono font-black text-amber-900 text-sm">₹0</span>
+                  <span class="text-[8px] bg-amber-200/80 text-amber-900 font-bold px-1 rounded block mt-0.5">Due at Door</span>
+                </div>
+              </div>
+
+              <!-- ₹200 Advance UPI Transaction ID / UTR -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block font-bold text-slate-800 text-xs">
+                    Advance ₹200 UPI Transaction ID / UTR <span class="text-rose-600">*</span>
+                  </label>
+                  <button type="button" onclick="generateSampleUPIId('COD')" class="text-[10px] text-amber-800 font-bold hover:underline cursor-pointer">
+                    ⚡ Auto-Fill Sample UTR
+                  </button>
+                </div>
+                <input type="text" id="order-cod-upi-id" placeholder="Enter ₹200 UPI UTR / Ref (e.g. 4289...)" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 uppercase">
+                <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <span class="text-[10px] text-slate-400 font-bold">App:</span>
+                  <button type="button" onclick="setQuickPaymentApp('GPay', 'COD')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[10px] font-bold text-slate-700 cursor-pointer">Google Pay</button>
+                  <button type="button" onclick="setQuickPaymentApp('PhonePe', 'COD')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[10px] font-bold text-slate-700 cursor-pointer">PhonePe</button>
+                  <button type="button" onclick="setQuickPaymentApp('Paytm', 'COD')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[10px] font-bold text-slate-700 cursor-pointer">Paytm</button>
+                </div>
+              </div>
+
+              <!-- Advance ₹200 Payment Screenshot Upload -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block font-bold text-slate-800 text-xs">
+                    Upload ₹200 Advance Screenshot <span class="text-rose-600">*</span>
+                  </label>
+                  <button type="button" onclick="useSampleScreenshot('COD')" class="text-[10px] text-amber-800 font-bold hover:underline cursor-pointer">
+                    📸 Use Demo Receipt
+                  </button>
+                </div>
+
+                <div class="border-2 border-dashed border-amber-300 hover:border-amber-500 bg-white rounded-xl p-3 text-center transition cursor-pointer relative" onclick="document.getElementById('file-upload-cod-screenshot').click()">
+                  <input type="file" id="file-upload-cod-screenshot" accept="image/*" class="hidden" onchange="handleScreenshotUpload(event, 'COD')">
+                  
+                  <div id="cod-screenshot-empty-state">
+                    <span class="material-symbols-outlined text-[26px] text-amber-500 mx-auto block mb-1">add_photo_alternate</span>
+                    <p class="text-xs font-bold text-slate-700">Click to upload ₹200 advance payment screenshot</p>
+                    <p class="text-[10px] text-slate-400">Verifies ₹200 advance was received before booking parcel</p>
+                  </div>
+
+                  <!-- Uploaded Preview -->
+                  <div id="cod-screenshot-preview-box" class="hidden flex items-center justify-between gap-3 text-left">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <img id="cod-screenshot-thumb" src="" alt="Advance Receipt" class="w-12 h-12 rounded-lg object-cover border border-amber-200 shrink-0">
+                      <div class="min-w-0">
+                        <p id="cod-screenshot-filename" class="text-xs font-bold text-slate-800 truncate">advance_200.jpg</p>
+                        <p class="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                          <span class="material-symbols-outlined text-[13px]">verified</span> ₹200 Advance Proof Attached
+                        </p>
+                      </div>
+                    </div>
+                    <button type="button" onclick="event.stopPropagation(); removeScreenshot('COD')" class="px-2.5 py-1 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold border border-rose-200 shrink-0 cursor-pointer">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Delivery / Shipping Address:</label>
-          <input type="text" id="order-shipping-addr" value="No. 45, 2nd Main Road, Gandhinagar, Chennai - 600020" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
-        </div>
-
-        <!-- Total Calculation Box -->
-        <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center justify-between">
-          <div class="text-xs">
-            <span class="text-emerald-800 font-bold">Grand Total Amount</span>
-            <p class="text-[10px] text-emerald-600">Includes taxes & delivery</p>
-          </div>
-          <span id="order-grand-total" class="text-xl font-extrabold text-emerald-900 font-mono">₹1,198</span>
-        </div>
-
-        </div>
-
-        <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0 rounded-b-2xl">
-          <button type="button" onclick="closeModal('modal-convert-order')" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-semibold">Cancel</button>
-          <button type="submit" class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[18px]">check_circle</span> Confirm Order & Reserve Stock
+        <!-- Footer -->
+        <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0 rounded-b-2xl">
+          <button type="button" onclick="closeModal('modal-convert-order')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition cursor-pointer">
+            Cancel
+          </button>
+          <button type="submit" id="order-submit-button" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 transition hover:shadow-lg cursor-pointer">
+            <span class="material-symbols-outlined text-[19px]">check_circle</span>
+            <span id="order-submit-btn-label">Confirm Order &amp; Save (Paid Online)</span>
           </button>
         </div>
       </form>
@@ -2922,7 +3606,7 @@
               <span>Customer</span>
             </label>
             <div id="followup-customer-display" class="w-full bg-slate-100 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-800 truncate">
-              Priya Sundaram (+91 98765 43210)
+              —
             </div>
           </div>
 
@@ -3127,10 +3811,10 @@
         <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
-              <span id="outcome-badge-id" class="font-mono text-[11px] font-extrabold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">FU-2026-0001</span>
-              <strong id="outcome-customer-name" class="text-sm font-bold text-slate-900">Priya Sundaram</strong>
+              <span id="outcome-badge-id" class="font-mono text-[11px] font-extrabold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">—</span>
+              <strong id="outcome-customer-name" class="text-sm font-bold text-slate-900">—</strong>
             </div>
-            <p id="outcome-original-reason" class="text-[11px] text-slate-600 mt-1 line-clamp-1">Original note: Customer confirming pure cotton frock size.</p>
+            <p id="outcome-original-reason" class="text-[11px] text-slate-600 mt-1 line-clamp-1">—</p>
           </div>
           <span id="outcome-assigned-badge" class="px-2.5 py-1 rounded-xl bg-slate-200 text-slate-800 text-[10px] font-bold font-mono">Priya (staff_01)</span>
         </div>
@@ -3665,9 +4349,9 @@
         <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 flex items-start gap-3">
           <span class="material-symbols-outlined text-rose-600 text-[22px] shrink-0 mt-0.5">warning</span>
           <div class="text-xs space-y-1.5">
-            <p class="font-bold text-slate-900">Reset all chat threads &amp; inbound messages?</p>
+            <p class="font-bold text-slate-900">Reset and clear all WhatsApp inbox chats?</p>
             <p class="text-slate-600 text-[11px] leading-relaxed">
-              This will restore all 5 connected WhatsApp lines (Line 1 to Line 5), default customer conversations (SugunaMani, Mekha, Priya, Ananya, etc.), and clear any temporary simulation messages.
+              This will clear all conversation streams, active chat inquiries, and temporary message history, giving you a 100% clean inbox for live WhatsApp customer conversations.
             </p>
           </div>
         </div>
@@ -3675,7 +4359,7 @@
         <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
           <button type="button" onclick="closeModal('modal-reset-inbox-confirm')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold">Cancel</button>
           <button type="button" onclick="resetInboxMessages()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition hover:scale-105">
-            <span class="material-symbols-outlined text-[18px]">restart_alt</span> Yes, Reset Messages
+            <span class="material-symbols-outlined text-[18px]">restart_alt</span> Yes, Clear Inbox
           </button>
         </div>
       </div>
@@ -3931,14 +4615,18 @@
                 </div>
 
                 <!-- Bulk Apply to All Bar -->
-                <div class="p-3 bg-white rounded-xl border border-emerald-200 shadow-sm flex items-center gap-2 flex-wrap text-xs">
-                  <span class="text-[11px] font-extrabold text-emerald-950 shrink-0">⚡ Bulk Apply to All:</span>
-                  <input type="number" id="matrix-bulk-price" placeholder="Price (₹)" class="w-24 p-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-brand-wa">
-                  <input type="number" id="matrix-bulk-mrp" placeholder="MRP (₹)" class="w-24 p-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-brand-wa">
-                  <input type="number" id="matrix-bulk-stock" placeholder="Stock" class="w-20 p-1.5 border border-slate-300 rounded-lg text-xs font-mono font-extrabold focus:ring-2 focus:ring-brand-wa">
-                  <button type="button" onclick="applyBulkToVariantMatrix()" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-xs shadow-sm transition">
-                    Apply to All
-                  </button>
+                <div class="p-3 bg-white rounded-xl border border-emerald-200 shadow-sm space-y-2 text-xs">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[11px] font-extrabold text-emerald-950 shrink-0">⚡ Bulk Apply to All:</span>
+                    <input type="number" id="matrix-bulk-price" min="0" step="1" placeholder="Price (₹)" oninput="validateBulkPricingInputs()" class="w-24 p-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-brand-wa">
+                    <input type="number" id="matrix-bulk-mrp" min="0" step="1" placeholder="MRP (₹)" oninput="validateBulkPricingInputs()" class="w-24 p-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-brand-wa">
+                    <input type="number" id="matrix-bulk-stock" min="0" step="1" placeholder="Stock" class="w-20 p-1.5 border border-slate-300 rounded-lg text-xs font-mono font-extrabold focus:ring-2 focus:ring-brand-wa">
+                    <button type="button" id="btn-matrix-bulk-apply" onclick="applyBulkToVariantMatrix()" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-xs shadow-sm transition cursor-pointer">
+                      Apply to All
+                    </button>
+                  </div>
+                  <!-- Inline Error Container for Bulk Apply -->
+                  <div id="matrix-bulk-error-container" class="hidden"></div>
                 </div>
 
                 <!-- Matrix Fields Container (9 Fields) -->
@@ -5144,6 +5832,6 @@
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=6.3"></script>
+  <script src="crm_app.js?v=7.0"></script>
 </body>
 </html>

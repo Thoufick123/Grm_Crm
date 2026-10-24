@@ -84,64 +84,7 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
   queries: [],
   conversations: {},
   orders: [],
-  followups: [
-    {
-      id: 'FU-2026-0001',
-      queryId: 'Q-2026-001245',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      assignedTo: 'staff_01',
-      date: new Date().toISOString().split('T')[0],
-      time: '11:30 AM',
-      reason: 'Customer asked to confirm pure cotton frock BF-001 pink size availability for 2-year-old before ordering.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'HIGH',
-      channel: 'WHATSAPP'
-    },
-    {
-      id: 'FU-2026-0002',
-      queryId: 'Q-2026-001246',
-      customerId: 'cust_102',
-      customerName: 'Ananya Sharma',
-      assignedTo: 'staff_02',
-      date: new Date().toISOString().split('T')[0],
-      time: '04:00 PM',
-      reason: 'Call to discuss feeding gown MD-102 fabric details & COD shipping options to Bengaluru.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'URGENT',
-      channel: 'CALL'
-    },
-    {
-      id: 'FU-2026-0003',
-      queryId: 'Q-2026-001247',
-      customerId: 'cust_103',
-      customerName: 'Kavitha Ramachandran',
-      assignedTo: 'staff_03',
-      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      time: '10:00 AM',
-      reason: 'Follow up regarding wholesale 25-piece bulk frock lot inquiry and payment quotation.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'NORMAL',
-      channel: 'CALL'
-    },
-    {
-      id: 'FU-2026-0004',
-      queryId: 'Q-2026-001245',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      assignedTo: 'staff_01',
-      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      time: '02:30 PM',
-      reason: 'Check if customer received catalog photos of newborn gift sets.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'NORMAL',
-      channel: 'WHATSAPP'
-    }
-  ],
+  followups: [],
   auditLogs: [],
   categories: [
     { id: 1, name: 'Baby Collection', slug: 'baby_collection', icon: 'child_care', description: 'Pure cotton frocks, rompers & soft babywear (0–3 Years)' },
@@ -258,26 +201,6 @@ window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
 // Global App State (Safely Initialized Immediately)
 var CRM_STATE = window.CRM_STATE || JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
 window.CRM_STATE = CRM_STATE;
-<<<<<<< HEAD
-function getPersistedActiveView() {
-  try {
-    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
-    const hash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
-    if (hash && validViews.includes(hash)) {
-      return hash;
-    }
-    const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_VIEW') : null;
-    if (stored && validViews.includes(stored)) {
-      return stored;
-    }
-  } catch (e) {
-    console.error('Error getting persisted view:', e);
-  }
-  return 'inbox';
-}
-
-var ACTIVE_VIEW = window.ACTIVE_VIEW || getPersistedActiveView();
-=======
 var CURRENT_USER = window.CURRENT_USER || null; // Currently logged in user profile
 var CRM_AUTH_SESSION = window.CRM_AUTH_SESSION || null; // Normalized Auth Session reference
 
@@ -315,8 +238,24 @@ function getCurrentUser() {
   return user;
 }
 
-var ACTIVE_VIEW = window.ACTIVE_VIEW || 'inbox';
->>>>>>> db0958dadb057634312f8abf3968621e2c6c15df
+function getPersistedActiveView() {
+  try {
+    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
+    const hash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+    if (hash && validViews.includes(hash)) {
+      return hash;
+    }
+    const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_VIEW') : null;
+    if (stored && validViews.includes(stored)) {
+      return stored;
+    }
+  } catch (e) {
+    console.error('Error getting persisted view:', e);
+  }
+  return 'inbox';
+}
+
+var ACTIVE_VIEW = window.ACTIVE_VIEW || getPersistedActiveView();
 var ACTIVE_ROLE = window.ACTIVE_ROLE || 'admin'; // 'admin', 'staff_01', 'staff_02', 'staff_03', etc.
 var ACTIVE_CUSTOMER_ID = window.ACTIVE_CUSTOMER_ID || 'cust_100';
 var INBOX_FILTER = window.INBOX_FILTER || 'all'; // 'all', 'unassigned', 'my', 'urgent'
@@ -1420,13 +1359,25 @@ function initCRMState() {
         CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
       }
       if (!Array.isArray(CRM_STATE.customers)) CRM_STATE.customers = [];
+      // Clean up any stale dummy mock customers from state
+      CRM_STATE.customers = CRM_STATE.customers.filter(c => 
+        c && c.id !== 'cust_89660115_account_1' && c.id !== 'cust_101' && c.id !== 'cust_102' && c.id !== 'cust_103' && c.name !== 'Pooja Venkatesh'
+      );
       if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+      CRM_STATE.queries = CRM_STATE.queries.filter(q =>
+        q && q.customerId !== 'cust_89660115_account_1' && q.customerId !== 'cust_101' && q.customerId !== 'cust_102' && q.customerId !== 'cust_103'
+      );
       if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object') CRM_STATE.conversations = {};
+      delete CRM_STATE.conversations['cust_89660115_account_1'];
+      delete CRM_STATE.conversations['cust_101'];
+      delete CRM_STATE.conversations['cust_102'];
+      delete CRM_STATE.conversations['cust_103'];
       if (!Array.isArray(CRM_STATE.orders)) CRM_STATE.orders = [];
       if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = [];
-      if (!Array.isArray(CRM_STATE.followups) || CRM_STATE.followups.length === 0) {
-        CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
-      }
+      if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
+      CRM_STATE.followups = CRM_STATE.followups.filter(f =>
+        f && f.customerId !== 'cust_89660115_account_1' && f.customerId !== 'cust_101' && f.customerId !== 'cust_102' && f.customerId !== 'cust_103'
+      );
       // Keep existing products intact without destructive mock filtering
       if (!Array.isArray(CRM_STATE.categories) || CRM_STATE.categories.length === 0) {
         CRM_STATE.categories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.categories || []));
@@ -2026,7 +1977,65 @@ function toggleWhatsAppDropdown(targetSubmodule) {
 }
 window.toggleWhatsAppDropdown = toggleWhatsAppDropdown;
 
+// =========================================================================
+// SIDEBAR COLLAPSE & MOBILE DRAWER TOGGLE ENGINE
+// =========================================================================
+function toggleSidebar(forceState) {
+  const sidebar = document.getElementById('app-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const toggleIcon = document.getElementById('sidebar-toggle-icon');
+  const toggleBtn = document.getElementById('sidebar-toggle-btn');
+  if (!sidebar) return;
+
+  const isCurrentlyOpen = sidebar.classList.contains('sidebar-visible');
+  const shouldOpen = (forceState !== undefined && forceState !== null) ? Boolean(forceState) : !isCurrentlyOpen;
+
+  if (shouldOpen) {
+    sidebar.classList.remove('sidebar-hidden');
+    sidebar.classList.add('sidebar-visible');
+    if (backdrop) {
+      backdrop.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        backdrop.classList.remove('opacity-0');
+        backdrop.classList.add('opacity-100');
+      });
+    }
+    if (toggleIcon) toggleIcon.innerText = 'menu_open';
+    if (toggleBtn) {
+      toggleBtn.classList.add('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
+      toggleBtn.setAttribute('aria-expanded', 'true');
+      toggleBtn.title = 'Close Navigation Sidebar';
+    }
+    try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'true'); } catch (e) {}
+  } else {
+    sidebar.classList.remove('sidebar-visible');
+    sidebar.classList.add('sidebar-hidden');
+    if (backdrop) {
+      backdrop.classList.remove('opacity-100');
+      backdrop.classList.add('opacity-0');
+      setTimeout(() => {
+        if (!sidebar.classList.contains('sidebar-visible')) {
+          backdrop.classList.add('hidden');
+        }
+      }, 300);
+    }
+    if (toggleIcon) toggleIcon.innerText = 'menu';
+    if (toggleBtn) {
+      toggleBtn.classList.remove('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
+      toggleBtn.setAttribute('aria-expanded', 'false');
+      toggleBtn.title = 'Open Navigation Sidebar';
+    }
+    try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'false'); } catch (e) {}
+  }
+}
+window.toggleSidebar = toggleSidebar;
+
 function switchView(viewName, subName) {
+  // Auto-close sidebar drawer on small/tablet screens upon navigation
+  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+    if (typeof toggleSidebar === 'function') toggleSidebar(false);
+  }
+
   // Enforce Role-Based Access Control: Admin-only modules
   const adminOnlyViews = ['settings', 'backup', 'staff', 'audit', 'analytics'];
   if (ACTIVE_ROLE !== 'admin' && adminOnlyViews.includes(viewName)) {
@@ -2445,6 +2454,7 @@ function renderInbox() {
   try { renderCustomer360Panel(); } catch (e) { console.error('[renderInbox] renderCustomer360Panel error:', e); }
   try { renderInboxPresetTemplatesBar(); } catch (e) { console.error('[renderInbox] renderInboxPresetTemplatesBar error:', e); }
   try { updateRulesCountBadge(); updateBadgeCounters(); } catch (e) { console.error('[renderInbox] updateBadgeCounters error:', e); }
+  try { if (typeof initPanelResizers === 'function') initPanelResizers(); } catch (e) { console.error('[renderInbox] initPanelResizers error:', e); }
 }
 
 // Interactive Quick WhatsApp Line Switcher Chips
@@ -2742,17 +2752,69 @@ function selectCustomerChat(customerId) {
   }
 }
 
-// Slide / Hide Toggle State for Right Customer 360 Panel
-let IS_RIGHT_PANEL_OPEN = true;
-let USER_MANUAL_PANEL_TOGGLE = false;
+// Slide / Hide Toggle State for Right Customer 360 Panel & Left Queue Panel
+var IS_RIGHT_PANEL_OPEN = (typeof window.IS_RIGHT_PANEL_OPEN !== 'undefined') ? window.IS_RIGHT_PANEL_OPEN : true;
+var IS_LEFT_PANEL_OPEN = (typeof window.IS_LEFT_PANEL_OPEN !== 'undefined') ? window.IS_LEFT_PANEL_OPEN : true;
+var USER_MANUAL_PANEL_TOGGLE = (typeof window.USER_MANUAL_PANEL_TOGGLE !== 'undefined') ? window.USER_MANUAL_PANEL_TOGGLE : false;
+
+function toggleLeftPanel(forceState = null) {
+  if (forceState !== null && forceState !== undefined) {
+    IS_LEFT_PANEL_OPEN = Boolean(forceState);
+  } else {
+    IS_LEFT_PANEL_OPEN = !IS_LEFT_PANEL_OPEN;
+  }
+
+  const panel = document.getElementById('inbox-left-panel');
+  const resizer = document.getElementById('resizer-left-panel');
+  const floatingBtn = document.getElementById('floating-left-panel-toggle-btn');
+  const resizerIcon = document.getElementById('resizer-left-icon');
+  const headerBtn = document.getElementById('btn-minimize-left-panel');
+
+  if (panel) {
+    if (IS_LEFT_PANEL_OPEN) {
+      panel.style.display = '';
+      panel.classList.remove('hidden');
+      panel.classList.add('flex');
+      const saved = localStorage.getItem('GRM_INBOX_LEFT_WIDTH') || '320';
+      panel.style.width = saved + 'px';
+      panel.style.minWidth = saved + 'px';
+      if (resizer) resizer.style.display = '';
+      if (floatingBtn) {
+        floatingBtn.style.display = 'none';
+        floatingBtn.classList.add('hidden');
+      }
+      if (resizerIcon) resizerIcon.innerText = 'chevron_left';
+      if (headerBtn) {
+        headerBtn.title = 'Minimize Conversation Queue (Alt+L)';
+        headerBtn.innerHTML = '<span class="material-symbols-outlined text-[15px]">first_page</span>';
+      }
+    } else {
+      panel.style.display = 'none';
+      panel.classList.add('hidden');
+      panel.classList.remove('flex');
+      if (resizer) resizer.style.display = 'none';
+      if (floatingBtn) {
+        floatingBtn.style.display = 'flex';
+        floatingBtn.classList.remove('hidden');
+      }
+      if (resizerIcon) resizerIcon.innerText = 'chevron_right';
+      if (headerBtn) {
+        headerBtn.title = 'Expand Conversation Queue';
+        headerBtn.innerHTML = '<span class="material-symbols-outlined text-[15px]">last_page</span>';
+      }
+    }
+  }
+  try { localStorage.setItem('GRM_INBOX_LEFT_OPEN', IS_LEFT_PANEL_OPEN ? 'true' : 'false'); } catch (e) {}
+}
+window.toggleLeftPanel = toggleLeftPanel;
 
 function toggleRightPanel(forceState = null, isUserAction = false) {
   if (isUserAction) {
     USER_MANUAL_PANEL_TOGGLE = true;
   }
 
-  if (forceState !== null) {
-    IS_RIGHT_PANEL_OPEN = forceState;
+  if (forceState !== null && forceState !== undefined) {
+    IS_RIGHT_PANEL_OPEN = Boolean(forceState);
   } else {
     IS_RIGHT_PANEL_OPEN = !IS_RIGHT_PANEL_OPEN;
   }
@@ -2760,35 +2822,266 @@ function toggleRightPanel(forceState = null, isUserAction = false) {
   const panel = document.getElementById('chat-right-panel');
   const toggleBtn = document.getElementById('btn-toggle-right-panel');
   const floatingToggle = document.getElementById('floating-panel-toggle-btn');
+  const resizer = document.getElementById('resizer-right-panel');
+  const resizerIcon = document.getElementById('resizer-right-icon');
 
   if (panel) {
     if (IS_RIGHT_PANEL_OPEN) {
+      panel.style.display = '';
       panel.classList.remove('hidden');
       panel.classList.add('flex');
+      const savedWidth = localStorage.getItem('GRM_INBOX_RIGHT_WIDTH') || '350';
+      panel.style.width = savedWidth + 'px';
+      panel.style.minWidth = savedWidth + 'px';
+      if (resizer) resizer.style.display = '';
     } else {
+      panel.style.display = 'none';
       panel.classList.add('hidden');
       panel.classList.remove('flex');
+      if (resizer) resizer.style.display = 'none';
     }
   }
 
   if (toggleBtn) {
     if (IS_RIGHT_PANEL_OPEN) {
       toggleBtn.className = "px-2 sm:px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-emerald-100 shrink-0";
-      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_right</span><span class="hidden sm:inline">Hide Profile</span>`;
+      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_right</span><span class="hidden xl:inline">Hide Profile</span>`;
+      toggleBtn.title = "Minimize Customer Profile Panel";
     } else {
       toggleBtn.className = "px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-slate-200 shrink-0";
-      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_left</span><span class="hidden sm:inline">Customer Profile</span>`;
+      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_left</span><span class="hidden xl:inline">Customer Profile</span>`;
+      toggleBtn.title = "Expand Customer Profile Panel";
     }
   }
 
   if (floatingToggle) {
     if (IS_RIGHT_PANEL_OPEN) {
+      floatingToggle.style.display = 'none';
       floatingToggle.classList.add('hidden');
     } else {
+      floatingToggle.style.display = 'flex';
       floatingToggle.classList.remove('hidden');
     }
   }
+
+  if (resizerIcon) {
+    resizerIcon.innerText = IS_RIGHT_PANEL_OPEN ? 'chevron_right' : 'chevron_left';
+  }
+
+  try { localStorage.setItem('GRM_INBOX_RIGHT_OPEN', IS_RIGHT_PANEL_OPEN ? 'true' : 'false'); } catch (e) {}
 }
+window.toggleRightPanel = toggleRightPanel;
+
+// Mouse Draggable Panel Resizers (Left Queue, Right Customer 360, Main Sidebar)
+function initPanelResizers() {
+  const leftPanel = document.getElementById('inbox-left-panel');
+  const rightPanel = document.getElementById('chat-right-panel');
+  const appSidebar = document.getElementById('app-sidebar');
+
+  const resizerLeft = document.getElementById('resizer-left-panel');
+  const resizerRight = document.getElementById('resizer-right-panel');
+  const resizerSidebar = document.getElementById('resizer-app-sidebar');
+
+  // Restore saved widths & states
+  try {
+    const savedLeftWidth = localStorage.getItem('GRM_INBOX_LEFT_WIDTH');
+    if (savedLeftWidth && leftPanel && parseInt(savedLeftWidth) > 160) {
+      leftPanel.style.width = savedLeftWidth + 'px';
+      leftPanel.style.minWidth = savedLeftWidth + 'px';
+    }
+    const savedRightWidth = localStorage.getItem('GRM_INBOX_RIGHT_WIDTH');
+    if (savedRightWidth && rightPanel && parseInt(savedRightWidth) > 200) {
+      rightPanel.style.width = savedRightWidth + 'px';
+      rightPanel.style.minWidth = savedRightWidth + 'px';
+    }
+    const savedSidebarWidth = localStorage.getItem('GRM_APP_SIDEBAR_WIDTH');
+    if (savedSidebarWidth && appSidebar && parseInt(savedSidebarWidth) > 160) {
+      appSidebar.style.width = savedSidebarWidth + 'px';
+    }
+    const savedLeftOpen = localStorage.getItem('GRM_INBOX_LEFT_OPEN');
+    if (savedLeftOpen === 'false') {
+      toggleLeftPanel(false);
+    }
+    const savedRightOpen = localStorage.getItem('GRM_INBOX_RIGHT_OPEN');
+    if (savedRightOpen === 'false') {
+      toggleRightPanel(false, false);
+    }
+  } catch (e) {}
+
+  // 1. LEFT PANEL RESIZER
+  if (resizerLeft && leftPanel && !resizerLeft._bound) {
+    resizerLeft._bound = true;
+    let startX = 0;
+    let startWidth = 0;
+
+    const onMouseMoveLeft = (e) => {
+      const deltaX = e.clientX - startX;
+      let newWidth = startWidth + deltaX;
+      const maxWidth = Math.max(380, window.innerWidth - 450);
+
+      if (newWidth < 140) {
+        toggleLeftPanel(false);
+        onMouseUpLeft();
+        return;
+      }
+
+      if (!IS_LEFT_PANEL_OPEN) {
+        toggleLeftPanel(true);
+      }
+
+      newWidth = Math.max(180, Math.min(newWidth, maxWidth));
+      leftPanel.style.width = newWidth + 'px';
+      leftPanel.style.minWidth = newWidth + 'px';
+    };
+
+    const onMouseUpLeft = () => {
+      resizerLeft.classList.remove('is-resizing');
+      document.body.classList.remove('is-resizing-panels');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMoveLeft);
+      document.removeEventListener('mouseup', onMouseUpLeft);
+      if (leftPanel.style.width) {
+        try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', parseInt(leftPanel.style.width)); } catch (e) {}
+      }
+    };
+
+    resizerLeft.addEventListener('mousedown', (e) => {
+      if (e.target.closest('#resizer-left-btn')) return;
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = leftPanel.getBoundingClientRect().width;
+      resizerLeft.classList.add('is-resizing');
+      document.body.classList.add('is-resizing-panels');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      document.addEventListener('mousemove', onMouseMoveLeft);
+      document.addEventListener('mouseup', onMouseUpLeft);
+    });
+
+    resizerLeft.addEventListener('dblclick', () => {
+      leftPanel.style.width = '320px';
+      leftPanel.style.minWidth = '320px';
+      try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', '320'); } catch (e) {}
+    });
+  }
+
+  // 2. RIGHT PANEL RESIZER
+  if (resizerRight && rightPanel && !resizerRight._bound) {
+    resizerRight._bound = true;
+    let startXRight = 0;
+    let startWidthRight = 0;
+
+    const onMouseMoveRight = (e) => {
+      const deltaX = startXRight - e.clientX;
+      let newWidth = startWidthRight + deltaX;
+      const maxWidth = Math.max(400, window.innerWidth - 450);
+
+      if (newWidth < 160) {
+        toggleRightPanel(false, true);
+        onMouseUpRight();
+        return;
+      }
+
+      if (!IS_RIGHT_PANEL_OPEN) {
+        toggleRightPanel(true, true);
+      }
+
+      newWidth = Math.max(220, Math.min(newWidth, maxWidth));
+      rightPanel.style.width = newWidth + 'px';
+      rightPanel.style.minWidth = newWidth + 'px';
+    };
+
+    const onMouseUpRight = () => {
+      resizerRight.classList.remove('is-resizing');
+      document.body.classList.remove('is-resizing-panels');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMoveRight);
+      document.removeEventListener('mouseup', onMouseUpRight);
+      if (rightPanel.style.width) {
+        try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', parseInt(rightPanel.style.width)); } catch (e) {}
+      }
+    };
+
+    resizerRight.addEventListener('mousedown', (e) => {
+      if (e.target.closest('#resizer-right-btn')) return;
+      e.preventDefault();
+      startXRight = e.clientX;
+      startWidthRight = rightPanel.getBoundingClientRect().width;
+      resizerRight.classList.add('is-resizing');
+      document.body.classList.add('is-resizing-panels');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      document.addEventListener('mousemove', onMouseMoveRight);
+      document.addEventListener('mouseup', onMouseUpRight);
+    });
+
+    resizerRight.addEventListener('dblclick', () => {
+      rightPanel.style.width = '350px';
+      rightPanel.style.minWidth = '350px';
+      try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', '350'); } catch (e) {}
+    });
+  }
+
+  // 3. MAIN APP SIDEBAR RESIZER
+  if (resizerSidebar && appSidebar && !resizerSidebar._bound) {
+    resizerSidebar._bound = true;
+    let startXSide = 0;
+    let startWidthSide = 0;
+
+    const onMouseMoveSide = (e) => {
+      const deltaX = e.clientX - startXSide;
+      let newWidth = startWidthSide + deltaX;
+
+      if (newWidth < 140) {
+        if (typeof toggleSidebar === 'function') toggleSidebar(false);
+        onMouseUpSide();
+        return;
+      }
+
+      newWidth = Math.max(180, Math.min(newWidth, 420));
+      appSidebar.style.width = newWidth + 'px';
+    };
+
+    const onMouseUpSide = () => {
+      document.body.classList.remove('is-resizing-panels');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMoveSide);
+      document.removeEventListener('mouseup', onMouseUpSide);
+      if (appSidebar.style.width) {
+        try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', parseInt(appSidebar.style.width)); } catch (e) {}
+      }
+    };
+
+    resizerSidebar.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startXSide = e.clientX;
+      startWidthSide = appSidebar.getBoundingClientRect().width;
+      document.body.classList.add('is-resizing-panels');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      document.addEventListener('mousemove', onMouseMoveSide);
+      document.addEventListener('mouseup', onMouseUpSide);
+    });
+  }
+}
+window.initPanelResizers = initPanelResizers;
+
+window.addEventListener('keydown', (e) => {
+  if (e.altKey && (e.key === 'l' || e.key === 'L')) {
+    e.preventDefault();
+    toggleLeftPanel();
+  }
+  if (e.altKey && (e.key === 'r' || e.key === 'R')) {
+    e.preventDefault();
+    toggleRightPanel(null, true);
+  }
+});
 
 // Auto-adjust layout dynamically based on Viewport Width (vpw)
 function handleResponsiveLayout() {
@@ -3584,14 +3877,18 @@ function updateBadgeCounters() {
 
   // 1. Unread count in inbox
   const unreadEl = document.getElementById('badge-total-unread');
+  const subtabUnread = document.getElementById('subtab-unread-badge');
+  let unreadCount = 0;
+  (CRM_STATE.queries || []).forEach(q => {
+    if (q.status !== 'DND') {
+      unreadCount += (q.unreadCount || 0);
+    }
+  });
   if (unreadEl) {
-    let unreadCount = 0;
-    (CRM_STATE.queries || []).forEach(q => {
-      if (q.status !== 'DND') {
-        unreadCount += (q.unreadCount || 0);
-      }
-    });
     unreadEl.innerText = unreadCount > 0 ? unreadCount : '0';
+  }
+  if (subtabUnread) {
+    subtabUnread.innerText = unreadCount > 0 ? unreadCount : '0';
   }
 
   // 2. Unassigned Enquiries
@@ -4265,21 +4562,37 @@ function renderCustomer360Panel() {
       ` : '<p class="text-xs text-slate-400">No active query recorded for this customer</p>'}
     </div>
 
-    <!-- 3. DYNAMIC BOT AUTOMATION & CHOSEN PRODUCTS TRACKER CARD -->
-    <div class="p-4 border-b border-slate-200 bg-sky-50/40 space-y-2.5">
+    <!-- 3. DYNAMIC BOT AUTOMATION & CHOSEN PRODUCTS TRACKER CARD (With Select Options & Move to Order) -->
+    <div id="chosen-products-tracker-card" class="p-4 border-b border-slate-200 bg-sky-50/40 space-y-2.5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px] text-sky-600">smart_toy</span>
           <span class="text-[11px] font-extrabold uppercase text-sky-950">Bot Automation &amp; Chosen Products</span>
         </div>
         <div class="flex items-center gap-1">
+          <button type="button" onclick="openProductSearchModal()" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Search Stock &amp; Share to WhatsApp">
+            <span class="material-symbols-outlined text-[12px]">share</span>
+            <span class="hidden sm:inline">Share</span>
+          </button>
           <span class="text-[9px] bg-sky-100 text-sky-800 font-mono font-bold px-2 py-0.5 rounded-full border border-sky-200">
             ${(customer.automationHistory || []).length} Actions
           </span>
-          <button type="button" onclick="syncCustomerAutomationHistory(CRM_STATE.customers.find(c => c.id === '${customer.id}')); renderCustomer360Panel();" class="p-1 hover:bg-sky-200/60 rounded text-sky-700 transition" title="Re-sync chat actions">
+          <button type="button" onclick="syncCustomerAutomationHistory(CRM_STATE.customers.find(c => c.id === '${customer.id}')); renderCustomer360Panel();" class="p-1 hover:bg-sky-200/60 rounded text-sky-700 transition cursor-pointer" title="Re-sync chat actions">
             <span class="material-symbols-outlined text-[13px]">sync</span>
           </button>
         </div>
+      </div>
+
+      <!-- Bulk Move to Orders Bar -->
+      <div id="chosen-products-bulk-bar" class="hidden p-2.5 bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl shadow-md flex items-center justify-between transition animate-in fade-in">
+        <div class="min-w-0 pr-1">
+          <span class="text-xs font-bold block truncate" id="chosen-products-selected-text">0 Selected</span>
+          <span class="text-[10px] text-emerald-200 font-mono font-bold block" id="chosen-products-selected-total">Total: ₹0</span>
+        </div>
+        <button type="button" onclick="openOrderFromSelectedChosenProducts('${customer.id}')" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-950 rounded-lg text-xs font-extrabold flex items-center gap-1 shadow-sm transition shrink-0 cursor-pointer">
+          <span class="material-symbols-outlined text-[14px]">shopping_cart_checkout</span>
+          <span>Move to Orders</span>
+        </button>
       </div>
 
       <div class="space-y-2">
@@ -4289,11 +4602,41 @@ function renderCustomer360Panel() {
             <p>No automation activity yet. As customer chooses categories or products on WhatsApp, they will appear here automatically.</p>
           </div>
         ` : `
-          <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+          <!-- Sub-header with Select All option -->
+          <div class="flex items-center justify-between px-1 text-[10px] text-slate-500 font-semibold">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" id="chosen-products-select-all" onchange="toggleSelectAllChosenProducts('${customer.id}', this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer w-3.5 h-3.5">
+              <span>Select All Products</span>
+            </label>
+            <span class="text-[9px] text-slate-400">Select to move to order</span>
+          </div>
+
+          <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
             ${customer.automationHistory.map(item => {
               const safeTitle = (item.title || '').replace(/[\r\n]+/g, ' ').replace(/'/g, "\\'");
+              const safeSku = (item.sku || '').replace(/'/g, "\\'");
+              const safePrice = (item.price || '').replace(/'/g, "\\'");
+              const safeSize = (item.size || '').replace(/'/g, "\\'");
+              const safeImg = (item.image || '').replace(/'/g, "\\'");
+              const isProduct = item.type === 'PRODUCT_VIEWED' || (item.price && item.price.length > 0) || (item.sku && !item.sku.startsWith('CAT-'));
+              const isChecked = typeof CHOSEN_PRODUCTS_SELECTION !== 'undefined' && CHOSEN_PRODUCTS_SELECTION.has(String(item.id));
+
               return `
-              <div class="bg-white p-2.5 rounded-xl border border-sky-200 shadow-2xs flex items-start gap-2.5 transition hover:border-sky-300 hover:shadow-xs">
+              <div class="bg-white p-2.5 rounded-xl border ${isChecked ? 'border-emerald-400 bg-emerald-50/20 shadow-xs' : 'border-sky-200'} shadow-2xs flex items-start gap-2 transition hover:border-sky-300 hover:shadow-xs">
+                ${isProduct ? `
+                  <div class="pt-1 shrink-0">
+                    <input type="checkbox" class="chosen-product-cb rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4" 
+                      data-item-id="${item.id}" 
+                      data-item-sku="${safeSku}" 
+                      data-item-name="${safeTitle}" 
+                      data-item-price="${safePrice}" 
+                      data-item-size="${safeSize}" 
+                      data-item-image="${safeImg}" 
+                      onchange="handleChosenProductCheckChange('${customer.id}')" 
+                      ${isChecked ? 'checked' : ''}>
+                  </div>
+                ` : ''}
+
                 ${item.image ? `
                   <div class="relative shrink-0 group">
                     <img src="${item.image}" alt="${item.title}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 cursor-pointer transition group-hover:opacity-90" onclick="openImageLightbox('${item.image}', '${safeTitle}')">
@@ -4304,6 +4647,7 @@ function renderCustomer360Panel() {
                     <span class="material-symbols-outlined text-[18px]">${item.type === 'PRODUCT_VIEWED' ? 'checkroom' : 'category'}</span>
                   </div>
                 `}
+
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center justify-between gap-1">
                     <h5 class="text-xs font-bold text-slate-900 truncate" title="${item.title}">${item.title}</h5>
@@ -4315,6 +4659,16 @@ function renderCustomer360Panel() {
                     ${item.size ? `<span class="text-[9px] text-slate-500 font-medium">${item.size}</span>` : ''}
                     <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded-full font-bold ml-auto">${item.badge || 'Browsed'}</span>
                   </div>
+
+                  ${isProduct ? `
+                    <div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
+                      <span class="text-[9px] text-slate-400 font-medium">Ready to order</span>
+                      <button type="button" onclick="openOrderFromSingleChosenProduct('${customer.id}', '${item.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" title="Move this product to Order">
+                        <span class="material-symbols-outlined text-[12px]">shopping_cart_checkout</span>
+                        <span>Move to Order</span>
+                      </button>
+                    </div>
+                  ` : ''}
                 </div>
               </div>
             `;
@@ -6128,38 +6482,46 @@ function handleConfirmAssignment(event) {
 // 6. INBOUND WHATSAPP SIMULATOR & DEV TESTING ACTIONS
 // =========================================================================
 function confirmResetInboxMessages() {
-  if (typeof openModal === 'function' && document.getElementById('modal-reset-inbox-confirm')) {
+  const modal = document.getElementById('modal-reset-inbox-confirm');
+  if (modal && typeof openModal === 'function') {
     openModal('modal-reset-inbox-confirm');
   } else {
-    if (confirm('Reset all inbox messages and conversations across all 5 numbers to default test state?')) {
-      resetInboxMessages();
-    }
+    resetInboxMessages();
   }
 }
+window.confirmResetInboxMessages = confirmResetInboxMessages;
 
 function resetInboxMessages(skipAlert) {
   try {
-    // Reset state cleanly without static mock data
-    CRM_STATE.customers = [];
-    CRM_STATE.queries = [];
+    // 1. Completely clear all inbox conversations, active inquiries, customers, and temporary chat data
     CRM_STATE.conversations = {};
-    CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
-    CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
+    CRM_STATE.queries = [];
+    CRM_STATE.customers = [];
+    CRM_STATE.orders = [];
     CRM_STATE.deletedSlots = [];
     CRM_STATE.whatsappLines = null;
-    
-    // Reset active line and active customer
     ACTIVE_CUSTOMER_ID = null;
     ACTIVE_SEND_ACCOUNT_ID = 'all';
 
-    // Clear backend message queue as well
+    if (INITIAL_CRM_DATA && INITIAL_CRM_DATA.whatsappAccount) {
+      CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
+    }
+    if (INITIAL_CRM_DATA && INITIAL_CRM_DATA.dailyMessageTarget) {
+      CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
+    }
+
+    // 2. Call backend API to clear messages and live message queue
     fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => {});
 
-    // Persist to local storage
+    // 3. Persist clean state to local storage
     saveCRMState();
 
-    // Re-render UI components
+    // 4. Re-render UI components cleanly
     renderInbox();
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    if (typeof renderChatHeader === 'function') renderChatHeader();
+    if (typeof renderChatMessages === 'function') renderChatMessages();
+    if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
     if (typeof renderPhoneSwitcherDropdown === 'function') renderPhoneSwitcherDropdown();
     if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
     if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
@@ -6174,9 +6536,9 @@ function resetInboxMessages(skipAlert) {
 
     if (!skipAlert && typeof showToast === 'function') {
       showToast(
-        'Inbox Messages Reset',
-        'Inbox has been cleared. Only active connected WhatsApp numbers and incoming chats will be displayed.',
-        'restart_alt',
+        'Inbox Cleared',
+        'All chat conversations and messages have been cleared.',
+        'delete_sweep',
         'emerald'
       );
       if (typeof playChime === 'function') playChime('inbound');
@@ -6188,6 +6550,7 @@ function resetInboxMessages(skipAlert) {
     }
   }
 }
+window.resetInboxMessages = resetInboxMessages;
 
 function openInboundSimulatorModal() {
   const phoneLabel = document.getElementById('sim-target-phone');
@@ -6197,17 +6560,20 @@ function openInboundSimulatorModal() {
 
 function applySimPreset(preset) {
   const presets = {
-    feeding: { name: 'Pooja Venkatesh', phone: '+91 97896 60115', msg: 'i want a feeding kurti' },
-    priya: { name: 'Priya Sundaram', phone: '+91 98765 43210', msg: 'Hello! Is Baby Frock BF-001 Pink colour in 2-3 Years size available in your shop? How much is it?' },
-    ananya: { name: 'Ananya Sharma', phone: '+91 98450 11223', msg: 'Hi GRM, can you please send me photos and fabric details for the Maternity Maxi Gown in Blue?' },
-    kavitha: { name: 'Kavitha Ramachandran', phone: '+91 97890 55441', msg: 'Do you have boys organic cotton t-shirt pack in 4-5Y size? And what are the delivery charges to Madurai?' },
-    custom: { name: 'Vikram Patel', phone: '+91 91234 56789', msg: 'Hello! I saw your baby gift set online. Do you have ready stock for instant shipping?' }
+    feeding: { name: 'Customer (Feeding Kurti)', phone: '+91 98000 00001', msg: 'i want a feeding kurti' },
+    frock: { name: 'Customer (Baby Frock)', phone: '+91 98000 00002', msg: 'Hello! Is Baby Frock BF-001 Pink colour in 2-3 Years size available in your shop?' },
+    maternity: { name: 'Customer (Maternity Gown)', phone: '+91 98000 00003', msg: 'Hi GRM, can you please send me photos and fabric details for the Maternity Maxi Gown?' },
+    kavitha: { name: 'Customer (Kids Wear)', phone: '+91 98000 00004', msg: 'Do you have boys organic cotton t-shirt pack in 4-5Y size?' },
+    custom: { name: '', phone: '', msg: '' }
   };
 
   if (presets[preset]) {
-    document.getElementById('sim-name').value = presets[preset].name;
-    document.getElementById('sim-phone').value = presets[preset].phone;
-    document.getElementById('sim-message').value = presets[preset].msg;
+    const nameEl = document.getElementById('sim-name');
+    const phoneEl = document.getElementById('sim-phone');
+    const msgEl = document.getElementById('sim-message');
+    if (nameEl) nameEl.value = presets[preset].name;
+    if (phoneEl) phoneEl.value = presets[preset].phone;
+    if (msgEl) msgEl.value = presets[preset].msg;
   }
 }
 
@@ -7682,8 +8048,109 @@ function shareCategoryStockSummaryToChat() {
 }
 
 // =========================================================================
-// 8. CHAT-TO-ORDER CONVERSION & STOCK RESERVATION
+// 8. CHAT-TO-ORDER CONVERSION & DUAL PAYMENT FLOW (ONLINE UPI & COD RS 200 ADVANCE)
 // =========================================================================
+
+var CHOSEN_PRODUCTS_SELECTION = new Set();
+var ORDER_MODAL_STATE = {
+  customerId: null,
+  queryId: null,
+  items: [],
+  paymentMode: 'ONLINE', // 'ONLINE' or 'COD'
+  onlineUpiId: '',
+  onlineScreenshot: null,
+  onlineScreenshotName: '',
+  codUpiId: '',
+  codScreenshot: null,
+  codScreenshotName: '',
+  shippingAddress: ''
+};
+
+function handleChosenProductCheckChange(customerId) {
+  const cbs = document.querySelectorAll('.chosen-product-cb');
+  CHOSEN_PRODUCTS_SELECTION.clear();
+  let total = 0;
+  cbs.forEach(cb => {
+    if (cb.checked) {
+      CHOSEN_PRODUCTS_SELECTION.add(cb.getAttribute('data-item-id'));
+      const pStr = (cb.getAttribute('data-item-price') || '0').replace(/[^0-9.]/g, '');
+      total += parseFloat(pStr) || 0;
+    }
+  });
+
+  const count = CHOSEN_PRODUCTS_SELECTION.size;
+  const bulkBar = document.getElementById('chosen-products-bulk-bar');
+  const countText = document.getElementById('chosen-products-selected-text');
+  const totalText = document.getElementById('chosen-products-selected-total');
+  const selectAllCb = document.getElementById('chosen-products-select-all');
+
+  if (bulkBar) {
+    if (count > 0) {
+      bulkBar.classList.remove('hidden');
+      if (countText) countText.innerText = `${count} Product${count > 1 ? 's' : ''} Selected`;
+      if (totalText) totalText.innerText = `Total: ₹${total.toLocaleString('en-IN')}`;
+    } else {
+      bulkBar.classList.add('hidden');
+    }
+  }
+
+  if (selectAllCb) {
+    selectAllCb.checked = (cbs.length > 0 && count === cbs.length);
+  }
+}
+
+function toggleSelectAllChosenProducts(customerId, isChecked) {
+  const cbs = document.querySelectorAll('.chosen-product-cb');
+  cbs.forEach(cb => { cb.checked = isChecked; });
+  handleChosenProductCheckChange(customerId);
+}
+
+function openOrderFromSingleChosenProduct(customerId, itemId) {
+  const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
+  if (!customer) return;
+  const item = (customer.automationHistory || []).find(a => String(a.id) === String(itemId));
+  if (!item) return;
+
+  const priceNum = parseFloat((item.price || '0').replace(/[^0-9.]/g, '')) || 999;
+  const prodItem = {
+    sku: item.sku || 'SKU-WA',
+    name: item.title || 'Garment Product',
+    price: priceNum,
+    qty: 1,
+    image: item.image || null,
+    size: item.size || 'Free Size'
+  };
+
+  initOrderModal(customer, [prodItem]);
+}
+
+function openOrderFromSelectedChosenProducts(customerId) {
+  const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
+  if (!customer) return;
+
+  const cbs = document.querySelectorAll('.chosen-product-cb:checked');
+  if (cbs.length === 0) {
+    showToast('Select Products', 'Please check at least one product using the select checkbox.', 'warning', 'amber');
+    return;
+  }
+
+  const items = [];
+  cbs.forEach(cb => {
+    const pStr = (cb.getAttribute('data-item-price') || '0').replace(/[^0-9.]/g, '');
+    const priceNum = parseFloat(pStr) || 999;
+    items.push({
+      sku: cb.getAttribute('data-item-sku') || 'SKU-WA',
+      name: cb.getAttribute('data-item-name') || 'Garment Product',
+      price: priceNum,
+      qty: 1,
+      image: cb.getAttribute('data-item-image') || null,
+      size: cb.getAttribute('data-item-size') || 'Free Size'
+    });
+  });
+
+  initOrderModal(customer, items);
+}
+
 function updateOrderProductDropdown() {
   const select = document.getElementById('order-product-select');
   if (!select) return;
@@ -7706,125 +8173,542 @@ function updateOrderProductDropdown() {
   }
 }
 
-function openOrderModal() {
+function initOrderModal(customer, items) {
+  const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
+  ORDER_MODAL_STATE = {
+    customerId: customer.id,
+    queryId: query ? query.id : 'N/A',
+    items: items && items.length > 0 ? items : [],
+    paymentMode: 'ONLINE',
+    onlineUpiId: '',
+    onlineScreenshot: null,
+    onlineScreenshotName: '',
+    codUpiId: '',
+    codScreenshot: null,
+    codScreenshotName: '',
+    shippingAddress: customer.address || 'No. 45, Gandhi Road, Chennai - 600020'
+  };
+
+  const cName = document.getElementById('order-modal-customer-name');
+  const cPhone = document.getElementById('order-modal-customer-phone');
+  const qId = document.getElementById('order-modal-query-id');
+  const cAvatar = document.getElementById('order-modal-customer-avatar');
+  const addrInput = document.getElementById('order-shipping-addr');
+
+  if (cName) cName.innerText = customer.name;
+  if (cPhone) cPhone.innerText = customer.whatsapp || customer.phone || '+91 97896 60115';
+  if (qId) qId.innerText = query ? query.id : 'Q-2026-AUTO';
+  if (cAvatar) cAvatar.innerText = customer.avatar || customer.name.charAt(0);
+  if (addrInput) addrInput.value = customer.address || 'No. 45, Gandhi Road, Chennai - 600020';
+
   updateOrderProductDropdown();
-  const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
-  const query = CRM_STATE.queries.find(q => q.customerId === ACTIVE_CUSTOMER_ID);
 
-  if (customer) {
-    document.getElementById('order-modal-customer-name').innerText = customer.name;
-    document.getElementById('order-modal-customer-phone').innerText = customer.whatsapp;
-    document.getElementById('order-modal-query-id').innerText = query ? query.id : 'N/A';
-    document.getElementById('order-shipping-addr').value = customer.address || '';
-  }
+  const onlineUpiInput = document.getElementById('order-online-upi-id');
+  const codUpiInput = document.getElementById('order-cod-upi-id');
+  if (onlineUpiInput) onlineUpiInput.value = '';
+  if (codUpiInput) codUpiInput.value = '';
+  removeScreenshot('ONLINE');
+  removeScreenshot('COD');
 
-  calculateOrderTotal();
+  renderOrderModalItemsList();
+  setOrderPaymentMode('ONLINE');
+
   openModal('modal-convert-order');
 }
 
-function calculateOrderTotal() {
-  const select = document.getElementById('order-product-select');
-  const selectedOption = select.options[select.selectedIndex];
-  const price = parseFloat(selectedOption.getAttribute('data-price') || 599);
-  const qty = parseInt(document.getElementById('order-qty').value || 1);
+function openOrderModal() {
+  const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) || CRM_STATE.customers[0];
+  if (!customer) {
+    showToast('Select Customer', 'Please select a customer first.', 'warning', 'amber');
+    return;
+  }
 
-  document.getElementById('order-unit-price').value = price;
-  const total = price * qty;
-  document.getElementById('order-grand-total').innerText = '₹' + total.toLocaleString('en-IN');
+  // If customer has chosen products, pre-load the first product or any selected
+  let defaultItems = [];
+  const prodActions = (customer.automationHistory || []).filter(a => a.type === 'PRODUCT_VIEWED' || (a.price && a.price.length > 0));
+  if (prodActions.length > 0) {
+    const act = prodActions[0];
+    const priceNum = parseFloat((act.price || '0').replace(/[^0-9.]/g, '')) || 999;
+    defaultItems.push({
+      sku: act.sku || 'SKU-WA',
+      name: act.title || 'Garment Product',
+      price: priceNum,
+      qty: 1,
+      image: act.image || null,
+      size: act.size || 'Free Size'
+    });
+  } else if (CRM_STATE.products && CRM_STATE.products.length > 0) {
+    const p = CRM_STATE.products[0];
+    defaultItems.push({
+      sku: p.sku,
+      name: p.name,
+      price: parseFloat(p.price) || 599,
+      qty: 1,
+      image: p.image || null,
+      size: p.size || 'Standard'
+    });
+  }
+
+  initOrderModal(customer, defaultItems);
 }
+
+function renderOrderModalItemsList() {
+  const container = document.getElementById('order-items-table-list');
+  if (!container) return;
+
+  if (!ORDER_MODAL_STATE.items || ORDER_MODAL_STATE.items.length === 0) {
+    container.innerHTML = `
+      <div class="py-6 text-center text-slate-400">
+        <span class="material-symbols-outlined text-[24px] block mb-1">shopping_basket</span>
+        <p>No products in order yet. Click "+ Add from Catalog" above to add products.</p>
+      </div>
+    `;
+    updateOrderModalFinancials();
+    return;
+  }
+
+  container.innerHTML = ORDER_MODAL_STATE.items.map((item, index) => {
+    const itemTotal = item.price * item.qty;
+    const safeName = (item.name || '').replace(/"/g, '&quot;');
+    const safeImg = (item.image || '').replace(/'/g, "\\'");
+    return `
+      <div class="flex items-center gap-3 p-2 bg-slate-50 border border-slate-200 rounded-xl hover:border-emerald-300 transition">
+        ${item.image ? `
+          <img src="${item.image}" alt="${safeName}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0 cursor-pointer" onclick="openImageLightbox('${safeImg}', '${safeName}')">
+        ` : `
+          <div class="w-12 h-12 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0">
+            <span class="material-symbols-outlined text-[20px]">checkroom</span>
+          </div>
+        `}
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center justify-between gap-1">
+            <h5 class="font-bold text-slate-800 text-xs truncate" title="${safeName}">${safeName}</h5>
+            <span class="text-xs font-mono font-black text-emerald-800 shrink-0">₹${itemTotal.toLocaleString('en-IN')}</span>
+          </div>
+          <div class="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+            <span class="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold">${item.sku}</span>
+            <span>${item.size || 'Free Size'}</span>
+            <span>&bull;</span>
+            <span class="text-emerald-700 font-bold">₹${item.price.toLocaleString('en-IN')} each</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button type="button" onclick="adjustOrderItemQty(${index}, -1)" class="w-6 h-6 rounded bg-white hover:bg-slate-200 border border-slate-300 font-bold flex items-center justify-center text-xs cursor-pointer">-</button>
+          <span class="w-6 text-center font-bold font-mono text-xs">${item.qty}</span>
+          <button type="button" onclick="adjustOrderItemQty(${index}, 1)" class="w-6 h-6 rounded bg-white hover:bg-slate-200 border border-slate-300 font-bold flex items-center justify-center text-xs cursor-pointer">+</button>
+          <button type="button" onclick="removeOrderItem(${index})" class="text-slate-400 hover:text-rose-600 p-1 transition cursor-pointer" title="Remove Item">
+            <span class="material-symbols-outlined text-[16px]">delete</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  updateOrderModalFinancials();
+}
+
+function adjustOrderItemQty(index, delta) {
+  if (!ORDER_MODAL_STATE.items[index]) return;
+  ORDER_MODAL_STATE.items[index].qty = Math.max(1, ORDER_MODAL_STATE.items[index].qty + delta);
+  renderOrderModalItemsList();
+}
+
+function removeOrderItem(index) {
+  ORDER_MODAL_STATE.items.splice(index, 1);
+  renderOrderModalItemsList();
+}
+
+function toggleAddProductCatalogDropdown() {
+  const row = document.getElementById('order-catalog-picker-row');
+  if (row) row.classList.toggle('hidden');
+}
+
+function addProductFromCatalogDropdown() {
+  const select = document.getElementById('order-product-select');
+  if (!select) return;
+  const sku = select.value;
+  const prod = (CRM_STATE.products || []).find(p => p.sku === sku);
+  if (!prod) return;
+
+  const existing = ORDER_MODAL_STATE.items.find(i => i.sku === sku);
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    ORDER_MODAL_STATE.items.push({
+      sku: prod.sku,
+      name: prod.name,
+      price: parseFloat(prod.price) || 599,
+      qty: 1,
+      image: prod.image || null,
+      size: prod.size || 'Standard'
+    });
+  }
+
+  renderOrderModalItemsList();
+  toggleAddProductCatalogDropdown();
+}
+
+function updateOrderModalFinancials() {
+  let grandTotal = 0;
+  let totalQty = 0;
+  (ORDER_MODAL_STATE.items || []).forEach(item => {
+    grandTotal += (item.price * item.qty);
+    totalQty += item.qty;
+  });
+
+  const grandTotalEl = document.getElementById('order-modal-grand-total');
+  const countBadgeEl = document.getElementById('order-modal-items-count-badge');
+  const onlinePayableEl = document.getElementById('online-payable-display');
+  const codTotalEl = document.getElementById('cod-total-display');
+  const codBalanceEl = document.getElementById('cod-balance-display');
+  const submitBtnLabel = document.getElementById('order-submit-btn-label');
+
+  const grandTotalStr = '₹' + grandTotal.toLocaleString('en-IN');
+  if (grandTotalEl) grandTotalEl.innerText = grandTotalStr;
+  if (countBadgeEl) countBadgeEl.innerText = `${totalQty} Item${totalQty !== 1 ? 's' : ''}`;
+  if (onlinePayableEl) onlinePayableEl.innerText = grandTotalStr;
+  if (codTotalEl) codTotalEl.innerText = grandTotalStr;
+
+  const codBalance = Math.max(0, grandTotal - 200);
+  if (codBalanceEl) codBalanceEl.innerText = '₹' + codBalance.toLocaleString('en-IN');
+
+  if (submitBtnLabel) {
+    if (ORDER_MODAL_STATE.paymentMode === 'ONLINE') {
+      submitBtnLabel.innerText = `Confirm Order & Save (Paid ${grandTotalStr})`;
+    } else {
+      submitBtnLabel.innerText = `Confirm COD Order (₹200 Adv Verified • ₹${codBalance.toLocaleString('en-IN')} Due)`;
+    }
+  }
+}
+
+function setOrderPaymentMode(mode) {
+  ORDER_MODAL_STATE.paymentMode = mode;
+  const tabOnline = document.getElementById('tab-payment-online');
+  const tabCod = document.getElementById('tab-payment-cod');
+  const panelOnline = document.getElementById('payment-panel-online');
+  const panelCod = document.getElementById('payment-panel-cod');
+
+  if (mode === 'ONLINE') {
+    if (tabOnline) {
+      tabOnline.className = 'py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition bg-white text-emerald-800 shadow-xs border border-emerald-300 cursor-pointer';
+    }
+    if (tabCod) {
+      tabCod.className = 'py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 cursor-pointer';
+    }
+    if (panelOnline) panelOnline.classList.remove('hidden');
+    if (panelCod) panelCod.classList.add('hidden');
+  } else {
+    if (tabOnline) {
+      tabOnline.className = 'py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 cursor-pointer';
+    }
+    if (tabCod) {
+      tabCod.className = 'py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition bg-white text-amber-900 shadow-xs border border-amber-300 cursor-pointer';
+    }
+    if (panelOnline) panelOnline.classList.add('hidden');
+    if (panelCod) panelCod.classList.remove('hidden');
+  }
+
+  updateOrderModalFinancials();
+}
+
+function handleScreenshotUpload(event, mode) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    setScreenshotPreview(mode, dataUrl, file.name);
+  };
+  reader.readAsDataURL(file);
+}
+
+function setScreenshotPreview(mode, dataUrl, filename) {
+  if (mode === 'ONLINE') {
+    ORDER_MODAL_STATE.onlineScreenshot = dataUrl;
+    ORDER_MODAL_STATE.onlineScreenshotName = filename;
+    const emptyBox = document.getElementById('online-screenshot-empty-state');
+    const previewBox = document.getElementById('online-screenshot-preview-box');
+    const thumb = document.getElementById('online-screenshot-thumb');
+    const nameEl = document.getElementById('online-screenshot-filename');
+
+    if (emptyBox) emptyBox.classList.add('hidden');
+    if (previewBox) previewBox.classList.remove('hidden');
+    if (thumb) thumb.src = dataUrl;
+    if (nameEl) nameEl.innerText = filename || 'screenshot.png';
+  } else {
+    ORDER_MODAL_STATE.codScreenshot = dataUrl;
+    ORDER_MODAL_STATE.codScreenshotName = filename;
+    const emptyBox = document.getElementById('cod-screenshot-empty-state');
+    const previewBox = document.getElementById('cod-screenshot-preview-box');
+    const thumb = document.getElementById('cod-screenshot-thumb');
+    const nameEl = document.getElementById('cod-screenshot-filename');
+
+    if (emptyBox) emptyBox.classList.add('hidden');
+    if (previewBox) previewBox.classList.remove('hidden');
+    if (thumb) thumb.src = dataUrl;
+    if (nameEl) nameEl.innerText = filename || 'advance_200.png';
+  }
+}
+
+function removeScreenshot(mode) {
+  if (mode === 'ONLINE') {
+    ORDER_MODAL_STATE.onlineScreenshot = null;
+    ORDER_MODAL_STATE.onlineScreenshotName = '';
+    const emptyBox = document.getElementById('online-screenshot-empty-state');
+    const previewBox = document.getElementById('online-screenshot-preview-box');
+    const fileInput = document.getElementById('file-upload-online-screenshot');
+    if (emptyBox) emptyBox.classList.remove('hidden');
+    if (previewBox) previewBox.classList.add('hidden');
+    if (fileInput) fileInput.value = '';
+  } else {
+    ORDER_MODAL_STATE.codScreenshot = null;
+    ORDER_MODAL_STATE.codScreenshotName = '';
+    const emptyBox = document.getElementById('cod-screenshot-empty-state');
+    const previewBox = document.getElementById('cod-screenshot-preview-box');
+    const fileInput = document.getElementById('file-upload-cod-screenshot');
+    if (emptyBox) emptyBox.classList.remove('hidden');
+    if (previewBox) previewBox.classList.add('hidden');
+    if (fileInput) fileInput.value = '';
+  }
+}
+
+function generateRandomUTR() {
+  return '4289' + Math.floor(10000000 + Math.random() * 90000000);
+}
+
+function useSampleScreenshot(mode) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 400;
+  canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+
+  const isOnline = mode === 'ONLINE';
+  ctx.fillStyle = isOnline ? '#064e3b' : '#78350f';
+  ctx.fillRect(0, 0, 400, 300);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(15, 15, 370, 270, 16);
+  } else {
+    ctx.rect(15, 15, 370, 270);
+  }
+  ctx.fill();
+
+  ctx.fillStyle = isOnline ? '#059669' : '#d97706';
+  ctx.beginPath();
+  ctx.arc(200, 60, 24, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(190, 60);
+  ctx.lineTo(197, 67);
+  ctx.lineTo(212, 52);
+  ctx.stroke();
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(isOnline ? 'Payment Successful' : '₹200 Advance Paid', 200, 110);
+
+  let amt = 0;
+  (ORDER_MODAL_STATE.items || []).forEach(i => amt += i.price * i.qty);
+  const displayAmt = isOnline ? ('₹' + amt.toLocaleString('en-IN')) : '₹200.00';
+
+  ctx.fillStyle = isOnline ? '#059669' : '#b45309';
+  ctx.font = '900 26px monospace';
+  ctx.fillText(displayAmt, 200, 145);
+
+  ctx.fillStyle = '#64748b';
+  ctx.font = '12px sans-serif';
+  const utr = generateRandomUTR();
+  ctx.fillText(`UPI Ref: ${utr}`, 200, 175);
+  ctx.fillText(`Paid to: GRM Garments Business Hub`, 200, 195);
+  ctx.fillText(`Time: ${new Date().toLocaleTimeString()} • Verified`, 200, 215);
+
+  const dataUrl = canvas.toDataURL('image/png');
+  setScreenshotPreview(mode, dataUrl, `${mode.toLowerCase()}_upi_receipt.png`);
+
+  const inputEl = document.getElementById(isOnline ? 'order-online-upi-id' : 'order-cod-upi-id');
+  if (inputEl && !inputEl.value.trim()) {
+    inputEl.value = utr;
+  }
+
+  showToast('Demo Receipt Attached', `${mode} payment screenshot verified.`, 'receipt_long', 'emerald');
+}
+
+function generateSampleUPIId(mode) {
+  const isOnline = mode === 'ONLINE';
+  const utr = generateRandomUTR();
+  const inputEl = document.getElementById(isOnline ? 'order-online-upi-id' : 'order-cod-upi-id');
+  if (inputEl) inputEl.value = utr;
+  showToast('UTR Generated', `Auto-filled UPI Ref: ${utr}`, 'check_circle', 'emerald');
+}
+
+function setQuickPaymentApp(app, mode) {
+  const isOnline = mode === 'ONLINE';
+  const inputEl = document.getElementById(isOnline ? 'order-online-upi-id' : 'order-cod-upi-id');
+  if (!inputEl) return;
+  const current = inputEl.value.trim();
+  const utr = current.match(/[0-9]{8,12}/) ? current.match(/[0-9]{8,12}/)[0] : generateRandomUTR();
+  inputEl.value = `${app.toUpperCase()}-${utr}`;
+  showToast('App Selected', `Tagged as ${app} payment.`, 'payments', 'sky');
+}
+
+function openOrderReceiptLightbox(orderId) {
+  const ord = (CRM_STATE.orders || []).find(o => o.id === orderId);
+  if (ord && ord.paymentScreenshot) {
+    if (typeof window.openImageLightbox === 'function') {
+      window.openImageLightbox(ord.paymentScreenshot, `Payment Proof — Order #${ord.id}`);
+      const subEl = document.getElementById('lightbox-image-sub');
+      if (subEl) {
+        subEl.innerText = `${ord.customerName} • ${ord.paymentMethod === 'COD' ? 'COD (₹200 Advance Paid)' : '100% Online Payment'} • UTR: ${ord.upiTransactionId || 'N/A'}`;
+      }
+    }
+  } else {
+    showToast('No Receipt', 'No payment screenshot attached to this order.', 'info', 'slate');
+  }
+}
+window.openOrderReceiptLightbox = openOrderReceiptLightbox;
 
 function handleCreateOrder(event) {
   event.preventDefault();
-  const select = document.getElementById('order-product-select');
-  const selectedOption = select.options[select.selectedIndex];
-  const sku = selectedOption.value;
-  const prodName = selectedOption.getAttribute('data-name');
-  const price = parseFloat(selectedOption.getAttribute('data-price'));
-  const qty = parseInt(document.getElementById('order-qty').value);
-  const paymentMethod = document.getElementById('order-payment-method').value;
-  const address = document.getElementById('order-shipping-addr').value;
 
-  const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
-  const query = CRM_STATE.queries.find(q => q.customerId === ACTIVE_CUSTOMER_ID);
-
-  // 1. Reserve Stock in Product Catalog
-  const product = CRM_STATE.products.find(p => p.sku === sku);
-  if (product) {
-    if ((product.physicalStock - product.reservedStock) < qty) {
-      alert('Insufficient available stock to reserve this order!');
-      return;
-    }
-    product.reservedStock += qty;
+  if (!ORDER_MODAL_STATE.items || ORDER_MODAL_STATE.items.length === 0) {
+    showToast('No Products', 'Please add at least one product to create an order.', 'warning', 'amber');
+    return;
   }
 
-  // 2. Create Order Record
+  const customer = CRM_STATE.customers.find(c => c.id === ORDER_MODAL_STATE.customerId || c.id === ACTIVE_CUSTOMER_ID) || CRM_STATE.customers[0];
+  const query = CRM_STATE.queries.find(q => q.customerId === (customer ? customer.id : ACTIVE_CUSTOMER_ID));
+  const address = (document.getElementById('order-shipping-addr')?.value || '').trim();
+
+  if (!address) {
+    showToast('Address Required', 'Please enter shipping & delivery address.', 'warning', 'amber');
+    document.getElementById('order-shipping-addr')?.focus();
+    return;
+  }
+
+  const paymentMode = ORDER_MODAL_STATE.paymentMode; // 'ONLINE' or 'COD'
+  let upiId = '';
+  let screenshot = null;
+
+  if (paymentMode === 'ONLINE') {
+    upiId = (document.getElementById('order-online-upi-id')?.value || '').trim();
+    screenshot = ORDER_MODAL_STATE.onlineScreenshot;
+    if (!upiId) {
+      showToast('UPI ID Required', 'Please enter UPI Transaction ID / UTR for Online Payment.', 'warning', 'amber');
+      document.getElementById('order-online-upi-id')?.focus();
+      return;
+    }
+  } else {
+    // COD Mode (₹200 Advance Required)
+    upiId = (document.getElementById('order-cod-upi-id')?.value || '').trim();
+    screenshot = ORDER_MODAL_STATE.codScreenshot;
+    if (!upiId) {
+      showToast('Advance UPI ID Required', 'Please enter the ₹200 Advance UPI Transaction ID / UTR.', 'warning', 'amber');
+      document.getElementById('order-cod-upi-id')?.focus();
+      return;
+    }
+  }
+
+  // Calculate grand total & stock deduction
+  let grandTotal = 0;
+  for (const it of ORDER_MODAL_STATE.items) {
+    grandTotal += (it.price * it.qty);
+    const product = CRM_STATE.products.find(p => p.sku === it.sku);
+    if (product) {
+      product.reservedStock = (product.reservedStock || 0) + it.qty;
+    }
+  }
+
   const newOrderId = `WA-2026-00${1125 + CRM_STATE.orders.length + 1}`;
-  const grandTotal = price * qty;
+  const codAdvance = paymentMode === 'COD' ? 200 : 0;
+  const codBalanceDue = paymentMode === 'COD' ? Math.max(0, grandTotal - 200) : 0;
+  const paymentMethodDisplay = paymentMode === 'ONLINE' ? 'ONLINE_UPI' : 'COD';
+  const paymentStatusDisplay = paymentMode === 'ONLINE' ? 'PAID' : 'PARTIAL_PAID (₹200 ADVANCE)';
 
   const newOrder = {
     id: newOrderId,
     queryId: query ? query.id : 'N/A',
     customerId: customer ? customer.id : 'cust_101',
     customerName: customer ? customer.name : 'Customer',
-    items: [{ sku: sku, name: prodName, qty: qty, price: price }],
+    customerPhone: customer ? (customer.whatsapp || customer.phone || '') : '',
+    items: JSON.parse(JSON.stringify(ORDER_MODAL_STATE.items)),
     grandTotal: grandTotal,
-    paymentMethod: paymentMethod,
-    paymentStatus: paymentMethod === 'COD' ? 'PENDING' : 'PAID',
+    paymentMethod: paymentMethodDisplay,
+    paymentStatus: paymentStatusDisplay,
+    upiTransactionId: upiId,
+    paymentScreenshot: screenshot,
+    codAdvance: codAdvance,
+    codBalanceDue: codBalanceDue,
     orderStatus: 'STOCK_RESERVED',
-    createdAt: 'Just now',
-    createdBy: ACTIVE_ROLE === 'admin' ? 'Admin Manager' : 'Assigned Staff'
+    shippingAddress: address,
+    createdAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    createdBy: ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Assigned Staff'
   };
 
   CRM_STATE.orders.unshift(newOrder);
 
-  // 3. Update Customer Spend & Total Orders
+  // Update customer spend & total orders
   if (customer) {
-    customer.totalOrders += 1;
-    customer.totalSpend += grandTotal;
+    customer.totalOrders = (customer.totalOrders || 0) + 1;
+    customer.totalSpend = (customer.totalSpend || 0) + grandTotal;
     customer.address = address;
   }
 
-  // 4. Update Query Status to CONVERTED
+  // Update linked query status
   if (query) {
     query.status = 'CONVERTED';
   }
 
-  // 5. Post Order Confirmation Message in Chat
-  const confirmMsg = `🎉 *ORDER CONFIRMED!*\nOrder ID: *${newOrderId}*\nItem: ${prodName} (Qty: ${qty})\nTotal Amount: *₹${grandTotal.toLocaleString('en-IN')}*\nPayment: ${paymentMethod}\nShipping to: ${address}\n\nYour stock has been reserved. Thank you for shopping with GRM Garments (${CRM_STATE.whatsappAccount.phoneNumber})!`;
-
-  if (!CRM_STATE.conversations[ACTIVE_CUSTOMER_ID]) {
-    CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] = [];
+  // Generate WhatsApp chat confirmation message
+  const itemsText = ORDER_MODAL_STATE.items.map(i => `• ${i.name} (SKU: ${i.sku}, Size: ${i.size || 'Free Size'}) x${i.qty} — ₹${(i.price * i.qty).toLocaleString('en-IN')}`).join('\n');
+  
+  let confirmMsg = '';
+  if (paymentMode === 'ONLINE') {
+    confirmMsg = `🎉 *WHATSAPP ORDER BOOKED & PAID!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n💰 *Total Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Online UPI (PAID ✅)\n🔢 *UPI Ref / UTR:* ${upiId}\n📸 *Payment Receipt:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour order is confirmed and stock reserved for packing. Tracking will be shared once dispatched! 🚚✨`;
+  } else {
+    confirmMsg = `🎉 *WHATSAPP COD ORDER BOOKED!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n💰 *Total Order Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Cash On Delivery (COD)\n✅ *Mandatory Advance Paid:* ₹200 (UPI Ref: ${upiId})\n💵 *Balance to Pay at Delivery:* *₹${codBalanceDue.toLocaleString('en-IN')}*\n📸 *Advance Proof:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour COD parcel booking is confirmed! Please keep ₹${codBalanceDue.toLocaleString('en-IN')} ready for courier at doorstep delivery. 🚚✨`;
   }
-  CRM_STATE.conversations[ACTIVE_CUSTOMER_ID].push({
+
+  const custId = customer ? customer.id : ACTIVE_CUSTOMER_ID;
+  if (!CRM_STATE.conversations[custId]) {
+    CRM_STATE.conversations[custId] = [];
+  }
+  CRM_STATE.conversations[custId].push({
     id: Date.now(),
     sender: 'staff',
     text: confirmMsg,
+    type: screenshot ? 'image' : 'text',
+    media_url: screenshot || null,
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     status: 'SENT'
   });
 
-  // 6. Log Audit
-  logAudit('ORDER_CREATED', 'ORDERS', `Created order ${newOrderId} for ${customer.name}. Stock reserved: ${qty} units of ${sku}`);
+  // Audit trail
+  logAudit('ORDER_CREATED', 'ORDERS', `Order ${newOrderId} created (${paymentMethodDisplay}: ₹${grandTotal}) for ${customer ? customer.name : 'Customer'}. Stock reserved.`);
 
-  // 7. Asynchronously synchronize order & stock reservation with MySQL Database
-  fetch('api.php?action=save_order', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(newOrder)
-  }).then(r => r.json()).then(res => {
-    if (res && res.status === 'success') {
-      console.log('[Order DB Sync Success]:', res.order_id);
-    }
-  }).catch(err => {
-    console.warn('[Order DB Sync Notice]: Saved locally, will sync on next refresh.');
-  });
-
+  // Save state
   saveCRMState();
   closeModal('modal-convert-order');
-  playChime('order');
-  showToast('Order Booked & Stock Reserved!', `Order ${newOrderId} created (₹${grandTotal}). Confirmation sent on WhatsApp.`, 'check_circle', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+
+  const toastTitle = paymentMode === 'ONLINE' ? 'Order Booked & Paid!' : 'COD Order Booked (₹200 Adv Verified)!';
+  const toastMsg = `Order ${newOrderId} (₹${grandTotal.toLocaleString('en-IN')}) saved and moved to WhatsApp Orders.`;
+  showToast(toastTitle, toastMsg, 'check_circle', 'emerald');
+
+  // Update badge count
+  const badgeOrders = document.getElementById('badge-orders-count');
+  if (badgeOrders) {
+    badgeOrders.innerText = CRM_STATE.orders.length;
+  }
 
   renderInbox();
+  renderOrdersTable();
 }
 
 // =========================================================================
@@ -9438,7 +10322,7 @@ function renderCatalogGridFromList(list) {
                     <span class="material-symbols-outlined text-[13px]">warehouse</span> Stock
                   </button>
 
-                  <button onclick="openEditProductModal('${p.id}')" class="px-1 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Overall Edit: Full Product Master">
+                  <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-1 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Overall Edit: Full Product Master">
                     <span class="material-symbols-outlined text-[13px] text-amber-700">edit_note</span> Edit
                   </button>
 
@@ -9612,19 +10496,19 @@ function openProductVariantsModal(groupKey) {
 
             <!-- Actions for this specific variant -->
             <div class="flex items-center gap-1.5 border-l border-slate-200 pl-3 flex-wrap justify-end">
-              <button onclick="openDirectShareModal('${v.id}', false)" class="px-2 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Direct WhatsApp share this variant only">
+              <button onclick="openDirectShareModal('${v.id || v.sku}', false)" class="px-2 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Direct WhatsApp share this variant only">
                 <span class="material-symbols-outlined text-[14px]">send</span>
                 <span>WA</span>
               </button>
-              <button onclick="openQuickStockModal('${v.id}')" class="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-semibold cursor-pointer" title="Quick restock this specific variant">
+              <button onclick="openQuickStockModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-semibold cursor-pointer" title="Quick restock this specific variant">
                 <span class="material-symbols-outlined text-[14px]">warehouse</span>
                 <span>Stock</span>
               </button>
-              <button onclick="openEditProductModal('${v.id}')" class="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Edit full details of this variant">
+              <button onclick="openEditProductModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Edit full details of this variant">
                 <span class="material-symbols-outlined text-[14px] text-amber-700">edit_note</span>
                 <span>Edit</span>
               </button>
-              <button onclick="confirmDeleteProduct('${v.id}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete this variant">
+              <button onclick="confirmDeleteProduct('${v.id || v.sku}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete this variant">
                 <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
               </button>
             </div>
@@ -9770,7 +10654,7 @@ function renderCatalogTableFromList(list) {
           <div class="flex items-center gap-3">
             <img src="${imgUrl}" alt="${p.name}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm">
             <div class="min-w-0">
-              <div class="font-bold text-slate-900 text-xs hover:text-emerald-700 cursor-pointer transition line-clamp-1" onclick="${p.isGroup ? `openProductVariantsModal('${p.groupKey}')` : `openEditProductModal('${p.id}')`}" title="${p.name}">${p.name}</div>
+              <div class="font-bold text-slate-900 text-xs hover:text-emerald-700 cursor-pointer transition line-clamp-1" onclick="${p.isGroup ? `openProductVariantsModal('${p.groupKey}')` : `openEditProductModal('${p.id || p.sku}')`}" title="${p.name}">${p.name}</div>
               <div class="flex items-center gap-1.5 mt-1">
                 <span class="bg-slate-900 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">${p.sku}</span>
                 ${p.isGroup ? `<span class="bg-indigo-100 text-indigo-900 font-extrabold text-[9px] px-1.5 py-0.2 rounded-full border border-indigo-200">🗂️ ${p.variantCount} vars</span>` : ''}
@@ -9830,7 +10714,7 @@ function renderCatalogTableFromList(list) {
                 <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
               </button>
             ` : `
-              <button onclick="openEditProductModal('${p.id}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 font-bold text-xs cursor-pointer group/editbtn" title="Overall Edit: Edit all garment details">
+              <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 font-bold text-xs cursor-pointer group/editbtn" title="Overall Edit: Edit all garment details">
                 <span class="material-symbols-outlined text-[15px] text-amber-700 group-hover/editbtn:scale-110 transition-transform">edit_note</span>
                 <span>Overall Edit</span>
               </button>
@@ -10206,7 +11090,12 @@ function calculatePriceByStrategy(basePrice, strategy, rawValue) {
 // -------------------------------------------------------------------------
 
 function openSinglePriceModal(productId) {
-  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId));
+  if (!productId) return;
+  const cleanId = String(productId).trim();
+  const p = (CRM_STATE.products || []).find(prod => 
+    (prod.id !== undefined && prod.id !== null && String(prod.id) === cleanId) ||
+    (prod.sku && String(prod.sku).toUpperCase() === cleanId.toUpperCase())
+  );
   if (!p) {
     showToast('Product Not Found', 'Could not locate the selected product.', 'error', 'rose');
     return;
@@ -10241,6 +11130,7 @@ function openSinglePriceModal(productId) {
     }
   }, 100);
 }
+window.openSinglePriceModal = openSinglePriceModal;
 
 function setSinglePriceStrategy(strategyKey, resetDefaultValue = true) {
   if (!PRICE_STRATEGY_CONFIG[strategyKey]) strategyKey = 'fixed';
@@ -10880,8 +11770,11 @@ function toggleProductFormCustomAttr(attrName, val) {
   if (!attrName || !val) return;
   const trimmed = val.trim();
   const lower = trimmed.toLowerCase();
-  if (!SELECTED_CUSTOM_ATTRIBUTES[attrName]) {
-    SELECTED_CUSTOM_ATTRIBUTES[attrName] = [];
+  if (!Array.isArray(SELECTED_CUSTOM_ATTRIBUTES[attrName])) {
+    const existing = SELECTED_CUSTOM_ATTRIBUTES[attrName];
+    SELECTED_CUSTOM_ATTRIBUTES[attrName] = existing 
+      ? (Array.isArray(existing) ? existing : (typeof existing === 'string' ? existing.split(',').map(s => s.trim()).filter(Boolean) : [String(existing)]))
+      : [];
   }
   const idx = SELECTED_CUSTOM_ATTRIBUTES[attrName].findIndex(s => s.toLowerCase() === lower);
   if (idx >= 0) {
@@ -11043,8 +11936,11 @@ function renderProductFormAttributeChips(selectedSizesArg, selectedColorsArg, se
     } else {
       customCont.innerHTML = customNames.map(attrName => {
         const vals = customAttrs[attrName] || [];
-        const selectedVals = SELECTED_CUSTOM_ATTRIBUTES[attrName] || [];
-        const selectedLower = selectedVals.map(v => v.toLowerCase());
+        const rawSelected = SELECTED_CUSTOM_ATTRIBUTES[attrName] || [];
+        const selectedVals = Array.isArray(rawSelected) 
+          ? rawSelected 
+          : (typeof rawSelected === 'string' ? rawSelected.split(',').map(s => s.trim()).filter(Boolean) : [String(rawSelected)]);
+        const selectedLower = selectedVals.map(v => typeof v === 'string' ? v.toLowerCase() : String(v).toLowerCase());
         const escapedAttrName = attrName.replace(/'/g, "\\'");
 
         const chipsHtml = vals.length === 0 
@@ -11136,7 +12032,11 @@ function calculateProductVariantMatrix() {
     dimensions.push({ key: 'color', name: 'Color', values: SELECTED_PRODUCT_COLORS });
   }
   Object.keys(SELECTED_CUSTOM_ATTRIBUTES || {}).forEach(attrName => {
-    const vals = (SELECTED_CUSTOM_ATTRIBUTES[attrName] || []).filter(Boolean);
+    const rawVals = SELECTED_CUSTOM_ATTRIBUTES[attrName] || [];
+    const vals = (Array.isArray(rawVals) 
+      ? rawVals 
+      : (typeof rawVals === 'string' ? rawVals.split(',').map(s => s.trim()).filter(Boolean) : [String(rawVals)])
+    ).filter(Boolean);
     if (vals.length > 0) {
       dimensions.push({ key: attrName, name: attrName, values: vals });
     }
@@ -11373,6 +12273,17 @@ function renderMatrixVariantRows() {
             </div>
           </div>
 
+          <!-- Inline Pricing Error Alert for this variant -->
+          <div id="matrix-row-error-${i}" class="${price > 0 && mrp > 0 && price > mrp ? '' : 'hidden'} col-span-1 md:col-span-12 p-2 bg-rose-50 border border-rose-300 rounded-xl text-rose-800 text-[11px] font-bold flex items-center justify-between gap-2 animate-in fade-in duration-150">
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-rose-600 text-[16px]">error</span>
+              <span>⚠️ MRP (₹${mrp}) cannot be lower than Selling Price (₹${price})! Always MRP is bigger.</span>
+            </div>
+            <button type="button" onclick="updateMatrixVariantField(${i}, 'mrp', ${price}); const mrpEl = document.getElementById('matrix-mrp-${i}'); if (mrpEl) mrpEl.value = ${price};" class="px-2 py-0.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-md font-bold text-[10px] shadow-2xs transition cursor-pointer">
+              Set MRP = ₹${price}
+            </button>
+          </div>
+
         </div>
       </div>
     `;
@@ -11517,38 +12428,147 @@ function updateMatrixVariantField(index, field, value) {
   const discBadge = document.getElementById(`matrix-discount-badge-${index}`);
   const priceInput = document.getElementById(`matrix-price-${index}`);
   const mrpInput = document.getElementById(`matrix-mrp-${index}`);
+  const rowErr = document.getElementById(`matrix-row-error-${index}`);
 
   if (price > 0 && mrp > 0 && price > mrp) {
-    if (priceInput) priceInput.classList.add('border-rose-500', 'bg-rose-50');
-    if (mrpInput) mrpInput.classList.add('border-rose-500', 'bg-rose-50');
+    if (priceInput) priceInput.classList.add('border-rose-500', 'bg-rose-50', 'ring-2', 'ring-rose-200');
+    if (mrpInput) mrpInput.classList.add('border-rose-500', 'bg-rose-50', 'ring-2', 'ring-rose-200');
     if (discBadge) {
       discBadge.className = 'h-[31px] px-1.5 bg-rose-100 rounded-lg border border-rose-300 text-rose-800 text-[10px] font-extrabold flex items-center justify-center animate-pulse';
       discBadge.innerHTML = `<span class="material-symbols-outlined text-[13px] text-rose-600 mr-0.5">warning</span> MRP &lt; Price`;
     }
+    if (rowErr) {
+      rowErr.innerHTML = `
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-rose-600 text-[16px]">error</span>
+          <span>⚠️ MRP (₹${mrp}) cannot be lower than Selling Price (₹${price})! Always MRP is bigger.</span>
+        </div>
+        <button type="button" onclick="updateMatrixVariantField(${index}, 'mrp', ${price}); const mrpEl = document.getElementById('matrix-mrp-${index}'); if (mrpEl) mrpEl.value = ${price};" class="px-2 py-0.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-md font-bold text-[10px] shadow-2xs transition cursor-pointer">
+          Set MRP = ₹${price}
+        </button>
+      `;
+      rowErr.classList.remove('hidden');
+    }
   } else {
-    if (priceInput) priceInput.classList.remove('border-rose-500', 'bg-rose-50');
-    if (mrpInput) mrpInput.classList.remove('border-rose-500', 'bg-rose-50');
+    if (priceInput) priceInput.classList.remove('border-rose-500', 'bg-rose-50', 'ring-2', 'ring-rose-200');
+    if (mrpInput) mrpInput.classList.remove('border-rose-500', 'bg-rose-50', 'ring-2', 'ring-rose-200');
     const discount = (mrp > price && price > 0) ? Math.round(((mrp - price) / mrp) * 100) : 0;
     if (discBadge) {
       discBadge.className = 'h-[31px] px-2 bg-slate-100 rounded-lg border border-slate-200 text-slate-600 text-[11px] font-bold flex items-center justify-center';
       discBadge.innerHTML = discount > 0 ? `<span class="text-emerald-700 font-extrabold">${discount}% OFF</span>` : '—';
     }
+    if (rowErr) {
+      rowErr.innerHTML = '';
+      rowErr.classList.add('hidden');
+    }
   }
 }
 
+// -------------------------------------------------------------------------
+// BULK APPLY TO VARIANT MATRIX WITH REAL-TIME INLINE PRICING VALIDATION
+// -------------------------------------------------------------------------
+function validateBulkPricingInputs() {
+  const priceInput = document.getElementById('matrix-bulk-price');
+  const mrpInput = document.getElementById('matrix-bulk-mrp');
+  const errContainer = document.getElementById('matrix-bulk-error-container');
+
+  const priceVal = priceInput ? priceInput.value.trim() : '';
+  const mrpVal = mrpInput ? mrpInput.value.trim() : '';
+  const price = parseFloat(priceVal) || 0;
+  const mrp = parseFloat(mrpVal) || 0;
+
+  // Reset input styles
+  if (priceInput) priceInput.classList.remove('border-rose-500', 'bg-rose-50', 'ring-2', 'ring-rose-200');
+  if (mrpInput) mrpInput.classList.remove('border-rose-500', 'bg-rose-50', 'ring-2', 'ring-rose-200');
+
+  // Enforce: MRP cannot be lower than Selling Price. Always MRP is bigger.
+  if (price > 0 && mrp > 0 && price > mrp) {
+    if (priceInput) priceInput.classList.add('border-rose-500', 'bg-rose-50', 'ring-2', 'ring-rose-200');
+    if (mrpInput) mrpInput.classList.add('border-rose-500', 'bg-rose-50', 'ring-2', 'ring-rose-200');
+
+    if (errContainer) {
+      const suggestedMrp25 = Math.ceil((price * 1.25) / 10) * 10;
+      errContainer.className = 'p-3 bg-rose-50/95 border border-rose-300 rounded-xl space-y-1.5 text-xs animate-in fade-in duration-150';
+      errContainer.innerHTML = `
+        <div class="flex items-start gap-2 text-rose-900">
+          <span class="material-symbols-outlined text-rose-600 text-[18px] shrink-0 mt-0.5">error</span>
+          <div class="space-y-1 flex-1">
+            <div class="font-extrabold text-xs text-rose-800">
+              ⚠️ Pricing Error: MRP (₹${mrp}) cannot be lower than Selling Price (₹${price}). Always MRP is bigger!
+            </div>
+            <p class="text-[11px] text-rose-700 leading-snug">
+              Selling price cannot be applied while MRP is lower. Correct the MRP or click a quick suggestion:
+            </p>
+            <div class="pt-0.5 flex items-center gap-1.5 flex-wrap text-[10px]">
+              <span class="font-bold text-slate-700">Quick Fix:</span>
+              <button type="button" onclick="applyBulkSuggestedPricing(${price}, ${price})" class="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-md font-bold shadow-2xs transition cursor-pointer">
+                Set MRP = ₹${price} (0% Off)
+              </button>
+              <button type="button" onclick="applyBulkSuggestedPricing(${price}, ${suggestedMrp25})" class="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-md font-bold shadow-2xs transition cursor-pointer">
+                Set MRP = ₹${suggestedMrp25} (+25%)
+              </button>
+              <button type="button" onclick="applyBulkSuggestedPricing(${mrp}, ${mrp})" class="px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-800 border border-blue-300 rounded-md font-bold shadow-2xs transition cursor-pointer">
+                Reduce Price to ₹${mrp}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      errContainer.classList.remove('hidden');
+    }
+    return false;
+  }
+
+  // Valid
+  if (errContainer) {
+    errContainer.innerHTML = '';
+    errContainer.className = 'hidden';
+  }
+  return true;
+}
+window.validateBulkPricingInputs = validateBulkPricingInputs;
+
+function applyBulkSuggestedPricing(newPrice, newMrp) {
+  const priceInput = document.getElementById('matrix-bulk-price');
+  const mrpInput = document.getElementById('matrix-bulk-mrp');
+  if (priceInput && newPrice !== undefined) priceInput.value = newPrice;
+  if (mrpInput && newMrp !== undefined) mrpInput.value = newMrp;
+  validateBulkPricingInputs();
+  if (typeof playChime === 'function') playChime('pop');
+}
+window.applyBulkSuggestedPricing = applyBulkSuggestedPricing;
+
 function applyBulkToVariantMatrix() {
+  const isValid = validateBulkPricingInputs();
+  if (!isValid) {
+    showToast('Pricing Error', 'Bulk Selling Price cannot be greater than Bulk MRP. Always MRP is bigger.', 'error', 'rose');
+    const mrpInput = document.getElementById('matrix-bulk-mrp');
+    if (mrpInput) mrpInput.focus();
+    return;
+  }
+
   const bulkPrice = parseFloat(document.getElementById('matrix-bulk-price')?.value);
   const bulkMrp = parseFloat(document.getElementById('matrix-bulk-mrp')?.value);
   const bulkStock = parseInt(document.getElementById('matrix-bulk-stock')?.value);
 
   if (isNaN(bulkPrice) && isNaN(bulkMrp) && isNaN(bulkStock)) {
+    const errContainer = document.getElementById('matrix-bulk-error-container');
+    if (errContainer) {
+      errContainer.className = 'p-2.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs flex items-center gap-2 animate-in fade-in duration-150';
+      errContainer.innerHTML = `
+        <span class="material-symbols-outlined text-amber-600 text-[18px] shrink-0">info</span>
+        <span>Please enter Price, MRP, or Stock in the bulk fields before applying.</span>
+      `;
+      errContainer.classList.remove('hidden');
+    }
     showToast('Bulk Values Needed', 'Please enter Price, MRP, or Stock in the bulk toolbar to apply.', 'info', 'amber');
     return;
   }
 
-  if (!isNaN(bulkPrice) && !isNaN(bulkMrp) && bulkPrice > 0 && bulkMrp > 0 && bulkPrice > bulkMrp) {
-    showToast('Invalid Pricing', 'Bulk Selling Price cannot be greater than Bulk MRP. Always MRP is bigger.', 'error', 'rose');
-    return;
+  const errContainer = document.getElementById('matrix-bulk-error-container');
+  if (errContainer) {
+    errContainer.innerHTML = '';
+    errContainer.classList.add('hidden');
   }
 
   PRODUCT_VARIANTS_MATRIX.forEach((v, i) => {
@@ -11570,7 +12590,9 @@ function applyBulkToVariantMatrix() {
     updateMatrixVariantField(i, 'price', v.price);
   });
 
+  showToast('Bulk Values Applied', `Updated ${PRODUCT_VARIANTS_MATRIX.length} variants!`, 'check_circle', 'emerald');
 }
+window.applyBulkToVariantMatrix = applyBulkToVariantMatrix;
 
 // -------------------------------------------------------------------------
 // PRODUCT SPECIFICATIONS (SAME ATTRIBUTE FLOW: CHIPS & MULTI-SELECT)
@@ -12132,9 +13154,17 @@ function openAddProductModal() {
 }
 
 function openEditProductModal(productId) {
-  const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId));
+  if (!productId || productId === 'undefined' || productId === 'null') {
+    showToast('Invalid Product', 'Product identifier is missing.', 'error', 'rose');
+    return;
+  }
+  const cleanId = String(productId).trim();
+  const p = (CRM_STATE.products || []).find(prod => 
+    (prod.id !== undefined && prod.id !== null && String(prod.id) === cleanId) ||
+    (prod.sku && String(prod.sku).toUpperCase() === cleanId.toUpperCase())
+  );
   if (!p) {
-    showToast('Product Not Found', 'Could not locate product details.', 'error', 'rose');
+    showToast('Product Not Found', `Could not locate product details for "${productId}".`, 'error', 'rose');
     return;
   }
 
@@ -12144,17 +13174,28 @@ function openEditProductModal(productId) {
   const icon = document.getElementById('modal-product-icon');
   if (icon) icon.innerText = 'edit_note';
 
-  document.getElementById('prod-form-id').value = p.id;
-  document.getElementById('prod-form-sku').value = p.sku || '';
-  document.getElementById('prod-form-name').value = p.name || '';
-  document.getElementById('prod-form-desc').value = p.description || '';
-  document.getElementById('prod-form-size').value = p.size || '';
-  document.getElementById('prod-form-color').value = p.color || '';
-  if (document.getElementById('prod-form-fabric')) document.getElementById('prod-form-fabric').value = '';
-  document.getElementById('prod-form-price').value = p.price || '';
-  document.getElementById('prod-form-mrp').value = p.mrp || '';
-  document.getElementById('prod-form-physical').value = p.physicalStock || '';
-  document.getElementById('prod-form-reserved').value = p.reservedStock || 0;
+  const formIdEl = document.getElementById('prod-form-id');
+  if (formIdEl) formIdEl.value = (p.id !== undefined && p.id !== null) ? p.id : (p.sku || '');
+  const formSkuEl = document.getElementById('prod-form-sku');
+  if (formSkuEl) formSkuEl.value = p.sku || '';
+  const formNameEl = document.getElementById('prod-form-name');
+  if (formNameEl) formNameEl.value = p.name || '';
+  const formDescEl = document.getElementById('prod-form-desc');
+  if (formDescEl) formDescEl.value = p.description || '';
+  const formSizeEl = document.getElementById('prod-form-size');
+  if (formSizeEl) formSizeEl.value = p.size || '';
+  const formColorEl = document.getElementById('prod-form-color');
+  if (formColorEl) formColorEl.value = p.color || '';
+  const formFabricEl = document.getElementById('prod-form-fabric');
+  if (formFabricEl) formFabricEl.value = p.fabric || '';
+  const formPriceEl = document.getElementById('prod-form-price');
+  if (formPriceEl) formPriceEl.value = p.price || '';
+  const formMrpEl = document.getElementById('prod-form-mrp');
+  if (formMrpEl) formMrpEl.value = p.mrp || '';
+  const formPhysEl = document.getElementById('prod-form-physical');
+  if (formPhysEl) formPhysEl.value = (p.physicalStock !== undefined && p.physicalStock !== null) ? p.physicalStock : '';
+  const formResEl = document.getElementById('prod-form-reserved');
+  if (formResEl) formResEl.value = p.reservedStock || 0;
 
   const lineSelect = document.getElementById('prod-form-account-id');
   if (lineSelect) lineSelect.value = p.accountId || 'account_1';
@@ -12184,21 +13225,31 @@ function openEditProductModal(productId) {
   setProductSpecificationsInForm(p.specifications || []);
 
   // Multi-select attributes & matrix init
-  SELECTED_PRODUCT_SIZES = p.size ? p.size.split(',').map(s => s.trim()).filter(Boolean) : [];
-  SELECTED_PRODUCT_COLORS = p.color ? p.color.split(',').map(c => c.trim()).filter(Boolean) : [];
+  SELECTED_PRODUCT_SIZES = p.size 
+    ? (Array.isArray(p.size) ? p.size : String(p.size).split(',')).map(s => String(s).trim()).filter(Boolean) 
+    : [];
+  SELECTED_PRODUCT_COLORS = p.color 
+    ? (Array.isArray(p.color) ? p.color : String(p.color).split(',')).map(c => String(c).trim()).filter(Boolean) 
+    : [];
 
-  // Custom attributes extraction
+  // Custom attributes extraction & normalization to Array of strings
   SELECTED_CUSTOM_ATTRIBUTES = {};
-  if (p.customAttributes && typeof p.customAttributes === 'object') {
-    SELECTED_CUSTOM_ATTRIBUTES = JSON.parse(JSON.stringify(p.customAttributes));
-  } else if (p.custom_attributes) {
-    if (typeof p.custom_attributes === 'object') {
-      SELECTED_CUSTOM_ATTRIBUTES = JSON.parse(JSON.stringify(p.custom_attributes));
-    } else {
-      try {
-        SELECTED_CUSTOM_ATTRIBUTES = JSON.parse(p.custom_attributes);
-      } catch (e) {}
-    }
+  let rawCustom = p.customAttributes || p.custom_attributes;
+  if (typeof rawCustom === 'string') {
+    try { rawCustom = JSON.parse(rawCustom); } catch (e) { rawCustom = {}; }
+  }
+  if (rawCustom && typeof rawCustom === 'object') {
+    Object.entries(rawCustom).forEach(([k, val]) => {
+      if (Array.isArray(val)) {
+        SELECTED_CUSTOM_ATTRIBUTES[k] = val.map(String).map(s => s.trim()).filter(Boolean);
+      } else if (typeof val === 'string') {
+        SELECTED_CUSTOM_ATTRIBUTES[k] = val.split(',').map(s => s.trim()).filter(Boolean);
+      } else if (val !== null && val !== undefined) {
+        SELECTED_CUSTOM_ATTRIBUTES[k] = [String(val).trim()];
+      } else {
+        SELECTED_CUSTOM_ATTRIBUTES[k] = [];
+      }
+    });
   }
 
   // Also extract from specifications if any spec matches custom attribute names
@@ -12209,8 +13260,10 @@ function openEditProductModal(productId) {
     if (lbl && cnt) {
       const matchType = registeredCustomTypes.find(t => t.toLowerCase() === lbl.toLowerCase());
       if (matchType) {
-        if (!SELECTED_CUSTOM_ATTRIBUTES[matchType]) SELECTED_CUSTOM_ATTRIBUTES[matchType] = [];
-        if (!SELECTED_CUSTOM_ATTRIBUTES[matchType].includes(cnt)) {
+        if (!Array.isArray(SELECTED_CUSTOM_ATTRIBUTES[matchType])) {
+          SELECTED_CUSTOM_ATTRIBUTES[matchType] = [];
+        }
+        if (!SELECTED_CUSTOM_ATTRIBUTES[matchType].some(s => s.toLowerCase() === cnt.toLowerCase())) {
           SELECTED_CUSTOM_ATTRIBUTES[matchType].push(cnt);
         }
       }
@@ -12230,6 +13283,7 @@ function openEditProductModal(productId) {
 
   openModal('modal-product-edit');
 }
+window.openEditProductModal = openEditProductModal;
 
 // -------------------------------------------------------------------------
 // SAVE & DELETE PRODUCT API HANDLERS
@@ -12385,6 +13439,7 @@ async function handleProductFormSubmit(e) {
       closeModal('modal-product-edit');
       filterCatalogGrid();
       updateOrderProductDropdown();
+      if (typeof refreshVariantsModalIfOpen === 'function') refreshVariantsModalIfOpen();
       showToast('Matrix Saved', `Saved ${variantsPayload.length} product variants with individual pricing & inventory!`, 'check_circle', 'emerald');
       return;
     }
@@ -15010,24 +16065,119 @@ function renderOrdersTable() {
   const tbody = document.getElementById('orders-table-body');
   if (!tbody) return;
 
-  tbody.innerHTML = CRM_STATE.orders.map(ord => `
-    <tr class="hover:bg-slate-50 transition">
-      <td class="py-3 px-4 font-mono font-bold text-slate-900">
-        ${ord.id}
-        <div class="text-[10px] font-normal text-slate-400">${ord.createdAt}</div>
-      </td>
-      <td class="py-3 px-4 font-bold text-slate-800">${ord.customerName}</td>
-      <td class="py-3 px-4 text-slate-600 font-medium">${ord.items.map(i => `${i.name} (x${i.qty})`).join(', ')}</td>
-      <td class="py-3 px-4 font-mono font-bold text-emerald-700">₹${ord.grandTotal.toLocaleString('en-IN')}</td>
-      <td class="py-3 px-4">
-        <span class="text-[10px] font-bold px-2 py-0.5 rounded ${ord.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${ord.paymentMethod} (${ord.paymentStatus})</span>
-      </td>
-      <td class="py-3 px-4">
-        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">${ord.orderStatus}</span>
-      </td>
-      <td class="py-3 px-4 text-slate-500 font-medium">${ord.createdBy}</td>
-    </tr>
-  `).join('');
+  const badgeOrders = document.getElementById('badge-orders-count');
+  if (badgeOrders) {
+    badgeOrders.innerText = (CRM_STATE.orders || []).length;
+  }
+
+  if (!CRM_STATE.orders || CRM_STATE.orders.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-12 text-center text-slate-400">
+          <span class="material-symbols-outlined text-[32px] block mb-2 text-slate-300">shopping_bag</span>
+          <p class="font-bold text-slate-600">No WhatsApp orders recorded yet</p>
+          <p class="text-xs">Convert chats to orders directly from the WhatsApp Inbox.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = CRM_STATE.orders.map(ord => {
+    const isOnline = ord.paymentMethod === 'ONLINE_UPI' || ord.paymentMethod === 'UPI';
+    const isCod = ord.paymentMethod === 'COD';
+
+    let amountHtml = '';
+    if (isCod) {
+      const adv = ord.codAdvance || 200;
+      const due = ord.codBalanceDue !== undefined ? ord.codBalanceDue : Math.max(0, (ord.grandTotal || 0) - adv);
+      amountHtml = `
+        <div class="font-mono font-bold text-slate-900 text-xs">₹${(ord.grandTotal || 0).toLocaleString('en-IN')}</div>
+        <div class="text-[10px] text-amber-800 font-semibold flex items-center gap-1 mt-0.5 flex-wrap">
+          <span class="bg-emerald-100 text-emerald-800 px-1 rounded font-bold">₹${adv} Adv</span>
+          <span>&bull;</span>
+          <span class="bg-amber-100 text-amber-900 px-1 rounded font-bold">₹${due.toLocaleString('en-IN')} Due</span>
+        </div>
+      `;
+    } else {
+      amountHtml = `
+        <div class="font-mono font-bold text-emerald-800 text-xs">₹${(ord.grandTotal || 0).toLocaleString('en-IN')}</div>
+        <div class="text-[10px] text-emerald-600 font-bold mt-0.5">100% Paid Online</div>
+      `;
+    }
+
+    const badgeColor = isOnline ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-900 border-amber-300';
+    const badgeLabel = isOnline ? '🟢 ONLINE (PAID)' : '🟠 COD (₹200 ADV)';
+
+    const paymentHtml = `
+      <div class="space-y-1">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${badgeColor}">
+            ${badgeLabel}
+          </span>
+          ${ord.paymentScreenshot ? `
+            <button type="button" onclick="openOrderReceiptLightbox('${ord.id}')" class="p-0.5 rounded border border-slate-200 hover:border-emerald-400 bg-white transition group relative cursor-pointer" title="Click to view payment screenshot proof">
+              <img src="${ord.paymentScreenshot}" alt="Proof" class="w-7 h-7 rounded object-cover">
+              <span class="material-symbols-outlined absolute -bottom-1 -right-1 text-[10px] bg-black/70 text-white rounded-full p-0.5">zoom_in</span>
+            </button>
+          ` : ''}
+        </div>
+        ${ord.upiTransactionId ? `
+          <div class="flex items-center gap-1 text-[10px] font-mono text-slate-600">
+            <span class="text-slate-400">UTR:</span>
+            <span class="font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 px-1 rounded cursor-pointer" onclick="navigator.clipboard.writeText('${ord.upiTransactionId}'); showToast('Copied', 'UPI UTR copied to clipboard', 'content_copy', 'emerald')" title="Click to copy UTR">${ord.upiTransactionId}</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+        <td class="py-3 px-4 font-mono font-bold text-slate-900">
+          <div class="text-xs text-brand-wa font-black">${ord.id}</div>
+          <div class="text-[10px] font-normal text-slate-400 mt-0.5">${ord.createdAt || 'Recent'}</div>
+        </td>
+        <td class="py-3 px-4">
+          <div class="font-bold text-slate-800 text-xs">${ord.customerName}</div>
+          ${ord.customerPhone ? `<div class="text-[10px] font-mono text-slate-500">${ord.customerPhone}</div>` : ''}
+        </td>
+        <td class="py-3 px-4 text-slate-700 font-medium text-xs max-w-xs">
+          ${(ord.items || []).map(i => `
+            <div class="truncate text-[11px]" title="${i.name}">
+              <strong class="font-bold text-slate-900">${i.name}</strong> 
+              <span class="text-slate-500 font-bold">(x${i.qty})</span>
+              ${i.sku ? `<span class="text-[9px] font-mono bg-slate-100 px-1 rounded ml-1 text-slate-600 font-bold">${i.sku}</span>` : ''}
+            </div>
+          `).join('')}
+        </td>
+        <td class="py-3 px-4">
+          ${amountHtml}
+        </td>
+        <td class="py-3 px-4">
+          ${paymentHtml}
+        </td>
+        <td class="py-3 px-4">
+          <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+            ${ord.orderStatus || 'STOCK_RESERVED'}
+          </span>
+        </td>
+        <td class="py-3 px-4 text-right">
+          <div class="flex items-center justify-end gap-1.5">
+            <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-emerald-200" title="Chat with customer on WhatsApp">
+              <span class="material-symbols-outlined text-[14px]">chat</span>
+              <span class="hidden sm:inline text-[11px]">Chat</span>
+            </button>
+            ${ord.paymentScreenshot ? `
+              <button type="button" onclick="openOrderReceiptLightbox('${ord.id}')" class="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition border border-slate-200 cursor-pointer" title="View Payment Screenshot">
+                <span class="material-symbols-outlined text-[15px]">receipt_long</span>
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function renderFollowupsCards() {
@@ -16528,37 +17678,14 @@ function filterConversations(val) {
 }
 
 function toggleNotificationDrawer() {
-  showToast('Follow-up Reminder', 'Priya Sundaram follow-up is scheduled for today at 12:00 PM', 'alarm', 'blue');
-}
-
-// Dev & Test helper to completely clear and reset all inbox conversations and messages
-function confirmResetInboxMessages() {
-  if (confirm("⚠️ Are you sure you want to clear all WhatsApp inbox chats?\n\nThis will clear all conversation history and active inquiry cards, giving you a 100% clean inbox.")) {
-    CRM_STATE.conversations = {};
-    CRM_STATE.queries = [];
-    ACTIVE_CUSTOMER_ID = null;
-
-    // Reset unread counters on all customers
-    if (Array.isArray(CRM_STATE.customers)) {
-      CRM_STATE.customers.forEach(c => {
-        c.totalOrders = c.totalOrders || 0;
-      });
-    }
-
-    // Call backend API to clear messages and live message queue
-    fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => {});
-
-    saveCRMState();
-    renderInbox();
-    renderInboxConversationList();
-    renderChatHeader();
-    renderChatMessages();
-    renderCustomer360Panel();
-    updateBadgeCounters();
-    showToast('Inbox Chats Cleared', 'All WhatsApp inbox conversations and messages have been cleared.', 'delete_sweep', 'emerald');
-    if (typeof playChime === 'function') playChime('inbound');
+  const pendingFu = (CRM_STATE.followups || []).find(f => f.status === 'PENDING');
+  if (pendingFu) {
+    showToast('Follow-up Reminder', `${pendingFu.customerName} follow-up is scheduled for today at ${pendingFu.time || '12:00 PM'}`, 'alarm', 'blue');
+  } else {
+    showToast('Notifications', 'No pending follow-ups or alerts for today', 'notifications', 'emerald');
   }
 }
+
 
 // =========================================================================
 // 15. AUTOMATED TEMPLATE BROADCAST CONTROLLER (100% FREE & SAFE DISPATCH)

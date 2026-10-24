@@ -122,6 +122,135 @@ if ($pdo) {
     .chat-bubble-in { border-radius: 0px 18px 18px 18px; }
     .chat-bubble-out { border-radius: 18px 0px 18px 18px; }
     .modal-backdrop { background: rgba(8, 36, 23, 0.65); backdrop-filter: blur(4px); }
+    /* ========================================================================= */
+    /* SIDEBAR TOGGLE & RESPONSIVE DRAWER STYLES                                */
+    /* ========================================================================= */
+    #app-sidebar {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                  margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                  opacity 0.25s ease-in-out,
+                  visibility 0.3s;
+      will-change: transform, margin-left;
+    }
+
+    /* Small / Mobile / Tablet (< 1024px): Sliding Off-Canvas Drawer Overlay */
+    @media (max-width: 1023px) {
+      #app-sidebar {
+        position: fixed !important;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        height: 100vh !important;
+        max-width: 85vw;
+        z-index: 50 !important;
+      }
+      #app-sidebar.sidebar-hidden {
+        transform: translateX(-100%) !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+      }
+      #app-sidebar.sidebar-visible {
+        transform: translateX(0) !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
+      }
+    }
+
+    /* Large / Desktop Screens (>= 1024px): Smooth Collapsible Flex Panel */
+    @media (min-width: 1024px) {
+      #app-sidebar {
+        position: relative !important;
+        height: 100% !important;
+      }
+      #app-sidebar.sidebar-hidden {
+        margin-left: -16rem !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+      }
+      #app-sidebar.sidebar-visible {
+        margin-left: 0 !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
+      }
+    }
+
+    /* ========================================================================= */
+    /* DYNAMIC DRAGGABLE PANEL SPLITTERS & RESIZERS                             */
+    /* ========================================================================= */
+    .resizer-splitter {
+      width: 7px;
+      position: relative;
+      background: #e2e8f0;
+      cursor: col-resize;
+      flex-shrink: 0;
+      z-index: 25;
+      transition: background-color 0.15s ease, box-shadow 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      touch-action: none;
+    }
+    .resizer-splitter:hover,
+    .resizer-splitter.is-resizing {
+      background: #00a884 !important;
+      box-shadow: 0 0 10px rgba(0, 168, 132, 0.45);
+    }
+    .resizer-splitter::after {
+      content: '';
+      width: 3px;
+      height: 28px;
+      background: #94a3b8;
+      border-radius: 999px;
+      transition: background-color 0.15s ease, height 0.15s ease;
+    }
+    .resizer-splitter:hover::after,
+    .resizer-splitter.is-resizing::after {
+      background: #ffffff;
+      height: 42px;
+    }
+    .resizer-snap-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 9999px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.14);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #334155;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+      z-index: 30;
+    }
+    .resizer-splitter:hover .resizer-snap-btn,
+    .resizer-splitter.is-resizing .resizer-snap-btn {
+      opacity: 1;
+    }
+    .resizer-snap-btn:hover {
+      background: #00a884;
+      color: #ffffff;
+      border-color: #00a884;
+      transform: translateY(-50%) scale(1.15);
+    }
+
+    /* Disable transition during mouse drag for ultra-responsive 60fps tracking */
+    body.is-resizing-panels #inbox-left-panel,
+    body.is-resizing-panels #chat-right-panel,
+    body.is-resizing-panels #chat-center-panel,
+    body.is-resizing-panels #app-sidebar {
+      transition: none !important;
+    }
   </style>
   <!-- Server-Side Authentication Session Injection -->
   <script>
@@ -129,25 +258,36 @@ if ($pdo) {
     localStorage.setItem('GRM_CRM_SESSION', JSON.stringify(window.PHP_USER_SESSION));
   </script>
 </head>
-<body class="bg-surface-bg font-sans text-slate-800 antialiased overflow-hidden flex h-screen">
+<body class="bg-surface-bg font-sans text-slate-800 antialiased overflow-hidden flex h-screen relative">
+
+  <!-- Sidebar Backdrop Overlay (Mobile & Tablet) -->
+  <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 hidden transition-opacity duration-300 opacity-0 cursor-pointer lg:hidden"></div>
 
   <!-- ========================================================================= -->
   <!-- 1. LEFT NAVIGATION SIDEBAR -->
   <!-- ========================================================================= -->
-  <aside class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-xl border-r border-brand-900/50 z-30 select-none">
+  <aside id="app-sidebar" class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-40 select-none transition-all duration-300 ease-in-out sidebar-hidden relative">
+    <!-- Main Sidebar Right Edge Resizer Handle (Drag with Mouse to Resize) -->
+    <div id="resizer-app-sidebar" class="absolute top-0 -right-1 w-2.5 h-full hover:bg-emerald-500/50 active:bg-emerald-500 cursor-col-resize z-50 transition-colors select-none group hidden lg:block" title="Drag with mouse to resize navigation sidebar">
+      <div class="h-10 w-1 bg-slate-500/50 group-hover:bg-emerald-300 rounded-full mx-auto my-auto mt-[45vh]"></div>
+    </div>
     <!-- Brand Top -->
-    <div class="h-16 flex items-center justify-between px-5 border-b border-brand-900/60 bg-brand-dark shrink-0">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-wa to-brand-500 flex items-center justify-center text-white shadow-glow">
+    <div class="h-16 flex items-center justify-between px-4 border-b border-brand-900/60 bg-brand-dark shrink-0">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-wa to-brand-500 flex items-center justify-center text-white shadow-glow shrink-0">
           <span class="material-symbols-outlined text-[22px]">chat</span>
         </div>
-        <div>
-          <h1 class="font-bold text-base tracking-tight text-white flex items-center gap-1.5">
+        <div class="min-w-0">
+          <h1 class="font-bold text-base tracking-tight text-white flex items-center gap-1.5 truncate">
             GRM CRM <span class="text-[10px] bg-brand-500/20 text-brand-400 font-mono px-1.5 py-0.5 rounded">PHP v2.5</span>
           </h1>
-          <p class="text-[11px] text-emerald-400/80 font-medium"><?php echo htmlspecialchars($brandName); ?></p>
+          <p class="text-[11px] text-emerald-400/80 font-medium truncate"><?php echo htmlspecialchars($brandName); ?></p>
         </div>
       </div>
+      <!-- Close Sidebar Button (Direct Inside Sidebar) -->
+      <button type="button" onclick="toggleSidebar(false)" class="p-1.5 text-slate-400 hover:text-white hover:bg-emerald-800/60 rounded-xl transition cursor-pointer flex items-center justify-center shrink-0" title="Close Sidebar Menu">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
     </div>
 
     <!-- Quick Action / Status Bar -->
@@ -341,12 +481,20 @@ if ($pdo) {
   <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100">
 
     <!-- Top Header (Clean Height & Responsive Layout to Prevent Text Cutoff) -->
-    <header class="min-h-[64px] bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-20 gap-3">
-      <!-- Dynamic Header Title (Hidden in WhatsApp Inbox) -->
-      <div id="header-title-container" class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg hidden">
-        <div class="min-w-0">
-          <h2 id="page-title" class="font-bold text-base sm:text-lg text-slate-900 leading-tight truncate">WhatsApp Inbox &amp; Customer Queue</h2>
-          <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
+    <header class="min-h-[64px] bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-20 gap-3">
+      <!-- Left: Sidebar Toggle Menu Button & Dynamic Header Title -->
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+        <!-- Sidebar Toggle Menu Bar Button -->
+        <button type="button" onclick="toggleSidebar()" id="sidebar-toggle-btn" class="p-2 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-xl transition flex items-center justify-center cursor-pointer shadow-xs border border-slate-200 shrink-0" title="Toggle Navigation Menu">
+          <span class="material-symbols-outlined text-[24px]" id="sidebar-toggle-icon">menu</span>
+        </button>
+
+        <!-- Dynamic Header Title (Hidden in WhatsApp Inbox) -->
+        <div id="header-title-container" class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg hidden">
+          <div class="min-w-0">
+            <h2 id="page-title" class="font-bold text-base sm:text-lg text-slate-900 leading-tight truncate">WhatsApp Inbox &amp; Customer Queue</h2>
+            <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
+          </div>
         </div>
       </div>
 
