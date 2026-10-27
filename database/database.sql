@@ -172,6 +172,12 @@ CREATE TABLE IF NOT EXISTS `followups` (
     `contact_channel` ENUM('WHATSAPP', 'CALL', 'STORE_VISIT') DEFAULT 'WHATSAPP',
     `outcome_notes` TEXT NULL,
     `completed_at` DATETIME NULL,
+    `is_payment_pending` TINYINT(1) NOT NULL DEFAULT 0,
+    `payment_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `payment_mode` VARCHAR(50) NULL DEFAULT 'UPI',
+    `payment_due_date` VARCHAR(50) NULL,
+    `payment_notes` TEXT NULL,
+    `quoted_items` TEXT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

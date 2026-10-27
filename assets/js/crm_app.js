@@ -84,8 +84,166 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
   queries: [],
   conversations: {},
   orders: [],
-  followups: [],
   auditLogs: [],
+  followups: [
+    {
+      id: 'FU-2026-0001',
+      queryId: 'Q-2026-001245',
+      customerId: 'cust_101',
+      customerName: 'Priya Sundaram',
+      assignedTo: 'staff_01',
+      date: new Date().toISOString().split('T')[0],
+      time: '11:30 AM',
+      reason: 'Customer asked to confirm pure cotton frock BF-001 pink size availability for 2-year-old before ordering.',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'HIGH',
+      channel: 'WHATSAPP',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'FU-2026-0002',
+      queryId: 'Q-2026-001246',
+      customerId: 'cust_102',
+      customerName: 'Ananya Sharma',
+      assignedTo: 'staff_02',
+      date: new Date().toISOString().split('T')[0],
+      time: '04:00 PM',
+      reason: 'Call to discuss feeding gown MD-102 fabric details & COD shipping options to Bengaluru.',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'URGENT',
+      channel: 'CALL',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'FU-2026-0003',
+      queryId: 'Q-2026-001247',
+      customerId: 'cust_103',
+      customerName: 'Kavitha Ramachandran',
+      assignedTo: 'staff_03',
+      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      time: '10:00 AM',
+      reason: 'Follow up regarding wholesale 25-piece bulk frock lot inquiry and payment quotation.',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'NORMAL',
+      channel: 'CALL',
+      createdAt: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+      id: 'FU-2026-0004',
+      queryId: 'Q-2026-001248',
+      customerId: 'cust_104',
+      customerName: 'Lakshmi Narayanan',
+      assignedTo: 'staff_01',
+      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+      time: '02:30 PM',
+      reason: 'Check if customer received catalog photos of newborn 5-piece gift sets & organic cotton swaddles.',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'NORMAL',
+      channel: 'WHATSAPP',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'FU-2026-0005',
+      queryId: 'Q-2026-001249',
+      customerId: 'cust_105',
+      customerName: 'Deepa Krishnan',
+      assignedTo: 'staff_03',
+      date: new Date().toISOString().split('T')[0],
+      time: '09:30 AM',
+      reason: 'Pattu Pavadai festive silk set size 4-5 years price and delivery confirmation.',
+      status: 'COMPLETED',
+      outcome: 'ORDER_PLACED',
+      priority: 'HIGH',
+      channel: 'WHATSAPP',
+      outcomeNotes: 'Customer confirmed order #ORD-2026-0881 via UPI advance payment.',
+      completedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'FU-2026-0006',
+      queryId: 'Q-2026-001250',
+      customerId: 'cust_106',
+      customerName: 'Ramesh Babu',
+      assignedTo: 'staff_02',
+      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      time: '03:00 PM',
+      reason: 'Bulk wholesale inquiry for 50-piece newborn rompers box.',
+      status: 'COMPLETED',
+      outcome: 'LOST',
+      priority: 'LOW',
+      channel: 'CALL',
+      outcomeNotes: 'Client postponed purchase until next season.',
+      completedAt: new Date(Date.now() - 86400000).toISOString(),
+      createdAt: new Date(Date.now() - 172800000).toISOString()
+    },
+    {
+      id: 'FU-2026-0007',
+      queryId: 'Q-2026-001251',
+      customerId: 'cust_101',
+      customerName: 'Priya Sundaram',
+      assignedTo: 'staff_01',
+      date: new Date().toISOString().split('T')[0],
+      time: '05:00 PM',
+      reason: 'Awaiting GPay ₹2,450 for 3x Pure Cotton Baby Frocks (BF-001 Pink & Yellow)',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'HIGH',
+      channel: 'WHATSAPP',
+      isPaymentPending: true,
+      paymentAmount: 2450.00,
+      paymentMode: 'UPI',
+      paymentDueDate: new Date().toISOString().split('T')[0],
+      paymentNotes: 'Customer promised to pay via GPay after 6 PM today',
+      quotedItems: '3x Pure Cotton Frocks (Size 2Y)',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'FU-2026-0008',
+      queryId: 'Q-2026-001252',
+      customerId: 'cust_104',
+      customerName: 'Lakshmi Narayanan',
+      assignedTo: 'staff_01',
+      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+      time: '01:00 PM',
+      reason: 'Bank transfer advance ₹4,800 for 5-Piece Organic Gift Sets',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'NORMAL',
+      channel: 'WHATSAPP',
+      isPaymentPending: true,
+      paymentAmount: 4800.00,
+      paymentMode: 'BANK',
+      paymentDueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+      paymentNotes: 'IMPS/NEFT confirmation pending from customer accounts team',
+      quotedItems: '4x Organic Newborn Gift Sets',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'FU-2026-0009',
+      queryId: 'Q-2026-001253',
+      customerId: 'cust_103',
+      customerName: 'Kavitha Ramachandran',
+      assignedTo: 'staff_03',
+      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      time: '11:00 AM',
+      reason: 'Overdue COD Advance ₹1,200 for Festive Pattu Pavadai',
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: 'URGENT',
+      channel: 'CALL',
+      isPaymentPending: true,
+      paymentAmount: 1200.00,
+      paymentMode: 'COD_ADVANCE',
+      paymentDueDate: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      paymentNotes: 'Promised yesterday, pending advance confirmation for COD dispatch',
+      quotedItems: 'Festive Pattu Pavadai (4-5 Years)',
+      createdAt: new Date(Date.now() - 86400000).toISOString()
+    }
+  ],
   categories: [
     { id: 1, name: 'Baby Collection', slug: 'baby_collection', icon: 'child_care', description: 'Pure cotton frocks, rompers & soft babywear (0–3 Years)' },
     { id: 2, name: 'Maternity & Feeding', slug: 'maternity_wear', icon: 'pregnant_woman', description: 'Feeding kurtis, maxi gowns & maternity comfort dresses' },
@@ -1218,6 +1376,24 @@ function cleanupAndDeduplicateCRMState() {
           delete CRM_STATE.conversations[cust.id];
         }
       }
+      // Migrate followups and queries if customerId was deduplicated
+      if (cust.id !== existing.id) {
+        if (Array.isArray(CRM_STATE.followups)) {
+          CRM_STATE.followups.forEach(f => {
+            if (f && (f.customerId === cust.id || String(f.customerId) === String(cust.id))) {
+              f.customerId = existing.id;
+              f.customerName = existing.name || f.customerName;
+            }
+          });
+        }
+        if (Array.isArray(CRM_STATE.queries)) {
+          CRM_STATE.queries.forEach(q => {
+            if (q && (q.customerId === cust.id || String(q.customerId) === String(cust.id))) {
+              q.customerId = existing.id;
+            }
+          });
+        }
+      }
     }
   });
   CRM_STATE.customers = dedupedCustomers;
@@ -1365,7 +1541,7 @@ function initCRMState() {
       );
       if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
       CRM_STATE.queries = CRM_STATE.queries.filter(q =>
-        q && q.customerId !== 'cust_89660115_account_1' && q.customerId !== 'cust_101' && q.customerId !== 'cust_102' && q.customerId !== 'cust_103'
+        q && q.customerId !== 'cust_89660115_account_1' && q.customerId !== 'cust_101' && q.customerId !== 'cust_102' && q.customerId !== 'cust_103' && !(q.queryText && q.queryText.includes('ytfdw'))
       );
       if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object') CRM_STATE.conversations = {};
       delete CRM_STATE.conversations['cust_89660115_account_1'];
@@ -1374,10 +1550,19 @@ function initCRMState() {
       delete CRM_STATE.conversations['cust_103'];
       if (!Array.isArray(CRM_STATE.orders)) CRM_STATE.orders = [];
       if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = [];
-      if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
-      CRM_STATE.followups = CRM_STATE.followups.filter(f =>
-        f && f.customerId !== 'cust_89660115_account_1' && f.customerId !== 'cust_101' && f.customerId !== 'cust_102' && f.customerId !== 'cust_103'
-      );
+      if (!Array.isArray(CRM_STATE.followups) || CRM_STATE.followups.length === 0) {
+        CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
+      } else {
+        CRM_STATE.followups = CRM_STATE.followups.filter(f => 
+          f && f.id && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw'))
+        );
+        if (!CRM_STATE.followups.some(f => f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1)) {
+          const samplePayments = (INITIAL_CRM_DATA.followups || []).filter(f => f.isPaymentPending);
+          if (samplePayments.length > 0) {
+            CRM_STATE.followups.push(...JSON.parse(JSON.stringify(samplePayments)));
+          }
+        }
+      }
       // Keep existing products intact without destructive mock filtering
       if (!Array.isArray(CRM_STATE.categories) || CRM_STATE.categories.length === 0) {
         CRM_STATE.categories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.categories || []));
@@ -1517,9 +1702,20 @@ function initCRMState() {
       if (data && data.attributes) {
         CRM_STATE.attributes = data.attributes;
       }
+      if (data && data.queries && Array.isArray(data.queries) && data.queries.length > 0) {
+        if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+        data.queries.forEach(dbQ => {
+          const localQ = CRM_STATE.queries.find(q => q.id === dbQ.id || q.customerId === dbQ.customer_id);
+          if (localQ) {
+            if (dbQ.status) localQ.status = dbQ.status;
+            if (dbQ.assigned_to) localQ.assignedTo = dbQ.assigned_to;
+            if (dbQ.status_notes !== undefined && dbQ.status_notes !== null) localQ.statusNotes = dbQ.status_notes;
+          }
+        });
+      }
 
       if (data && data.followups && Array.isArray(data.followups) && data.followups.length > 0) {
-        CRM_STATE.followups = data.followups.map(fu => ({
+        const dbFollowups = data.followups.map(fu => ({
           id: fu.id,
           queryId: fu.queryId || fu.query_id || '',
           customerId: fu.customerId || fu.customer_id || '',
@@ -1535,8 +1731,33 @@ function initCRMState() {
           outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
           completedAt: fu.completedAt || fu.completed_at || null,
           rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
-          createdAt: fu.createdAt || fu.created_at || ''
+          createdAt: fu.createdAt || fu.created_at || '',
+          isPaymentPending: fu.isPaymentPending === true || fu.is_payment_pending === 1 || fu.is_payment_pending === '1',
+          paymentAmount: parseFloat(fu.paymentAmount || fu.payment_amount || 0),
+          paymentMode: fu.paymentMode || fu.payment_mode || 'UPI',
+          paymentDueDate: fu.paymentDueDate || fu.payment_due_date || '',
+          paymentNotes: fu.paymentNotes || fu.payment_notes || '',
+          quotedItems: fu.quotedItems || fu.quoted_items || ''
         }));
+
+        // Safely merge DB follow-ups with local follow-ups so active customer records are NEVER destroyed on refresh
+        const localFollowups = Array.isArray(CRM_STATE.followups) ? CRM_STATE.followups : [];
+        const mergedFollowups = [...dbFollowups];
+        localFollowups.forEach(locFu => {
+          if (!locFu) return;
+          const matchIndex = mergedFollowups.findIndex(m => m && (m.id === locFu.id || (m.customerId && locFu.customerId && String(m.customerId) === String(locFu.customerId) && m.status === 'PENDING' && locFu.status === 'PENDING')));
+          if (matchIndex < 0) {
+            mergedFollowups.unshift(locFu);
+          } else {
+            // Keep richer local data if present
+            mergedFollowups[matchIndex] = { ...mergedFollowups[matchIndex], ...locFu };
+          }
+        });
+        CRM_STATE.followups = mergedFollowups;
+        if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+        if (ACTIVE_VIEW === 'followups' && typeof filterFollowupsCards === 'function') filterFollowupsCards();
+      } else if (!CRM_STATE.followups || CRM_STATE.followups.length === 0) {
+        CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
         if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
         if (ACTIVE_VIEW === 'followups' && typeof filterFollowupsCards === 'function') filterFollowupsCards();
       }
@@ -1901,6 +2122,16 @@ function switchInboxSubmodule(submodule) {
   const navSubAuto = document.getElementById('nav-inbox-sub-autoreply');
   const navSubBcast = document.getElementById('nav-inbox-sub-broadcast');
 
+  // Toggle sub-modules strip: hidden on live 3-panel chats, shown on autoreply/broadcast
+  const strip = document.getElementById('inbox-submodules-nav-strip');
+  if (strip) {
+    if (submodule === 'chats') {
+      strip.classList.add('hidden');
+    } else {
+      strip.classList.remove('hidden');
+    }
+  }
+
   // Hide all submodules
   if (chatSub) chatSub.classList.add('hidden');
   if (autoSub) autoSub.classList.add('hidden');
@@ -1956,24 +2187,12 @@ function toggleWhatsAppDropdown(targetSubmodule) {
   const subMenu = document.getElementById('inbox-submodules-menu');
   const subnavArrow = document.getElementById('inbox-subnav-arrow');
 
-  if (ACTIVE_VIEW !== 'inbox') {
-    // If currently on another view, activate inbox and expand dropdown
-    if (subMenu) subMenu.classList.remove('hidden');
-    if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
-    switchView('inbox', targetSubmodule || ACTIVE_INBOX_SUBMODULE || 'chats');
-  } else {
-    // If already on inbox view, toggle sub-menu expand / collapse
-    if (subMenu) {
-      const isHidden = subMenu.classList.contains('hidden');
-      if (isHidden) {
-        subMenu.classList.remove('hidden');
-        if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
-      } else {
-        subMenu.classList.add('hidden');
-        if (subnavArrow) subnavArrow.style.transform = 'rotate(0deg)';
-      }
-    }
-  }
+  const shield = document.getElementById('instant-view-shield');
+  if (shield) shield.remove();
+
+  if (subMenu) subMenu.classList.remove('hidden');
+  if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
+  switchView('inbox', targetSubmodule || 'chats');
 }
 window.toggleWhatsAppDropdown = toggleWhatsAppDropdown;
 
@@ -2031,6 +2250,10 @@ function toggleSidebar(forceState) {
 window.toggleSidebar = toggleSidebar;
 
 function switchView(viewName, subName) {
+  // Clear instant-view-shield if present to allow instant view transitions
+  const shield = document.getElementById('instant-view-shield');
+  if (shield) shield.remove();
+
   // Auto-close sidebar drawer on small/tablet screens upon navigation
   if (typeof window !== 'undefined' && window.innerWidth < 1024) {
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
@@ -2110,11 +2333,15 @@ function switchView(viewName, subName) {
   };
 
   const titleContainer = document.getElementById('header-title-container');
+  const liveQueuePill = document.getElementById('header-live-queue-pill');
   if (titleContainer) {
+    titleContainer.classList.remove('hidden');
+  }
+  if (liveQueuePill) {
     if (viewName === 'inbox') {
-      titleContainer.classList.add('hidden');
+      liveQueuePill.classList.remove('hidden');
     } else {
-      titleContainer.classList.remove('hidden');
+      liveQueuePill.classList.add('hidden');
     }
   }
 
@@ -2659,6 +2886,8 @@ function renderInboxConversationList() {
   container.innerHTML = customerCards.map(item => {
     const isSelected = item.customerId === ACTIVE_CUSTOMER_ID || String(item.customerId) === String(ACTIVE_CUSTOMER_ID);
     const isUnassigned = item.assignedTo === 'UNASSIGNED';
+    const rawPhone = item.customer ? (item.customer.whatsapp || item.customer.phone || '') : '';
+    const displayPhone = typeof formatDisplayPhone === 'function' ? formatDisplayPhone(rawPhone, item.customerId) : rawPhone;
 
     // Priority badge
     let priorityBadge = '';
@@ -2684,7 +2913,7 @@ function renderInboxConversationList() {
       : (isLine2Card ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-purple-100 text-purple-800 border-purple-300');
 
     return `
-      <div onclick="selectCustomerChat('${item.customerId}')" class="p-3.5 cursor-pointer transition flex items-start gap-3 hover:bg-slate-50 relative ${isSelected ? 'bg-emerald-50/70 border-l-4 border-brand-wa shadow-sm' : ''}">
+      <div onclick="selectCustomerChat('${item.customerId}')" class="p-3 sm:p-3.5 cursor-pointer transition flex items-start gap-3 hover:bg-slate-50 relative ${isSelected ? 'bg-emerald-50/70 border-l-4 border-brand-wa shadow-sm' : ''}">
         <!-- Avatar -->
         <div class="relative shrink-0">
           <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-700 to-slate-900 text-white font-bold text-xs flex items-center justify-center">
@@ -2700,14 +2929,17 @@ function renderInboxConversationList() {
           `}
         </div>
 
-        <!-- Chat Details -->
+        <!-- Chat Details (Clear Customer Name, WhatsApp Phone & Status) -->
         <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between">
-            <h4 class="text-xs font-bold text-slate-800 truncate">${item.customer ? item.customer.name : 'Customer'}</h4>
-            <span class="text-[10px] text-slate-400 font-medium">${item.createdAt}</span>
+          <div class="flex items-start justify-between gap-1.5">
+            <div class="min-w-0 flex-1">
+              <h4 class="text-xs font-bold text-slate-900 truncate" title="${item.customer ? item.customer.name : 'Customer'}">${item.customer ? item.customer.name : 'Customer'}</h4>
+              ${displayPhone ? `<p class="text-[11px] font-mono font-semibold text-emerald-700 truncate mt-0.5">${displayPhone}</p>` : ''}
+            </div>
+            <span class="text-[10px] text-slate-400 font-medium shrink-0 pt-0.5">${item.createdAt}</span>
           </div>
 
-          <p class="text-xs text-slate-600 truncate mt-0.5 font-medium">${item.lastMessage}</p>
+          <p class="text-xs text-slate-600 line-clamp-2 mt-1 leading-snug font-medium" title="${item.lastMessage ? item.lastMessage.replace(/"/g, '&quot;') : ''}">${item.lastMessage}</p>
 
           <div class="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
             <div class="flex items-center gap-1.5 flex-wrap">
@@ -3087,9 +3319,9 @@ window.addEventListener('keydown', (e) => {
 function handleResponsiveLayout() {
   const vpw = window.innerWidth;
   if (!USER_MANUAL_PANEL_TOGGLE) {
-    if (vpw < 1180 && IS_RIGHT_PANEL_OPEN) {
+    if (vpw < 960 && IS_RIGHT_PANEL_OPEN) {
       toggleRightPanel(false, false);
-    } else if (vpw >= 1180 && !IS_RIGHT_PANEL_OPEN) {
+    } else if (vpw >= 960 && !IS_RIGHT_PANEL_OPEN) {
       toggleRightPanel(true, false);
     }
   }
@@ -3703,22 +3935,71 @@ window.playSimulatedVoice = function (msgId) {
   }, 500);
 };
 
-// Update Query Status (Pending, Follow-up, In Progress, Converted, Resolved, DND)
-function updateCustomerQueryStatus(queryId, newStatus) {
+// Update Query Status (Pending, Follow-up, In Progress, Converted, Resolved, DND) with optional Notes
+function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData = null, callbackSchedule = null) {
   const query = CRM_STATE.queries.find(q => q.id === queryId || q.customerId === queryId);
   const customer = query ? CRM_STATE.customers.find(c => c.id === query.customerId) : CRM_STATE.customers.find(c => c.id === queryId);
   if (!query && !customer) return;
 
   const oldStatus = query ? query.status : 'NEW';
-  if (query) query.status = newStatus;
+  const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const staffName = currentUser ? (currentUser.name || currentUser.username || (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff')) : (ACTIVE_ROLE === 'admin' ? 'Super Admin' : (CRM_STATE.staffList?.find(s => s.id === ACTIVE_ROLE)?.name || 'Staff'));
+  const now = new Date();
+  const timeFormatted = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' at ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  const staffName = ACTIVE_ROLE === 'admin' ? 'Super Admin' : (CRM_STATE.staffList.find(s => s.id === ACTIVE_ROLE)?.name || 'Staff');
+  if (query) {
+    query.status = newStatus;
+    query.statusLastEditedBy = staffName;
+    query.statusLastEditedAt = timeFormatted;
+    query.statusPrevious = oldStatus;
+    if (notes !== undefined && notes !== null) {
+      query.statusNotes = notes;
+    }
+    if (paymentData && paymentData.isPaymentPending) {
+      query.isPaymentPending = true;
+      query.paymentAmount = parseFloat(paymentData.paymentAmount || 0);
+      query.paymentMode = paymentData.paymentMode || 'UPI';
+      query.paymentDueDate = paymentData.paymentDueDate || '';
+      query.paymentNotes = paymentData.paymentNotes || '';
+      query.quotedItems = paymentData.quotedItems || '';
+    } else if (paymentData && paymentData.isPaymentPending === false) {
+      query.isPaymentPending = false;
+    }
+    query.statusHistory = query.statusHistory || [];
+    const isReschedAction = (oldStatus === 'FOLLOW_UP' && newStatus === 'FOLLOW_UP');
+    const existingPendingFu = (CRM_STATE.followups || []).find(f => f && (f.customerId === customer?.id || (query && f.queryId === query.id)) && f.status === 'PENDING');
+    query.statusHistory.unshift({
+      action: isReschedAction ? 'FOLLOWUP_RESCHEDULED' : (newStatus === 'FOLLOW_UP' ? 'FOLLOWUP_SCHEDULED' : 'STATUS_CHANGED'),
+      from: oldStatus,
+      to: newStatus,
+      by: staffName,
+      at: timeFormatted,
+      followupDate: (callbackSchedule && callbackSchedule.date) ? callbackSchedule.date : (existingPendingFu ? existingPendingFu.date : (paymentData?.paymentDueDate || '')),
+      followupTime: (callbackSchedule && callbackSchedule.time) ? callbackSchedule.time : (existingPendingFu ? existingPendingFu.time : ''),
+      assignedTo: existingPendingFu ? existingPendingFu.assignedTo : query.assignedTo,
+      notes: notes || query.statusNotes || '',
+      timestamp: now.toISOString()
+    });
+
+    // Asynchronously update MySQL database
+    fetch('api.php?action=assign_query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: query.id,
+        assigned_to: query.assignedTo || 'UNASSIGNED',
+        status: newStatus,
+        notes: notes || query.statusNotes || '',
+        user: staffName
+      })
+    }).catch(() => {});
+  }
 
   if (customer) {
     if (newStatus === 'DND') {
       customer.isDND = true;
-      customer.dndReason = 'Customer not interested in products (Requested DND)';
-      customer.dndTimestamp = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      customer.dndReason = notes || 'Customer not interested in products (Requested DND)';
+      customer.dndTimestamp = timeFormatted;
       customer.dndMarkedBy = staffName;
       if (!Array.isArray(customer.tags)) customer.tags = [];
       if (!customer.tags.includes('DND / Opt-Out')) customer.tags.push('DND / Opt-Out');
@@ -3730,20 +4011,103 @@ function updateCustomerQueryStatus(queryId, newStatus) {
     }
   }
   
-  logAudit('STATUS_CHANGE', 'INBOX_PANEL', `Query ${query ? query.id : customer?.id} status changed from ${oldStatus} to ${newStatus}`);
+  logAudit('STATUS_CHANGE', 'INBOX_PANEL', `Query ${query ? query.id : customer?.id} status changed from ${oldStatus} to ${newStatus} by ${staffName}${notes ? ' (Note: ' + notes + ')' : ''}`);
+
+  // Automatically ensure active follow-up record in CRM_STATE.followups
+  if (newStatus === 'FOLLOW_UP' || newStatus === 'PENDING' || (callbackSchedule && callbackSchedule.date)) {
+    if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
+    let existingFu = CRM_STATE.followups.find(f => f && (f.customerId === customer?.id || (query && f.queryId === query.id)) && f.status === 'PENDING');
+    const fuReason = notes || query?.queryText || (newStatus === 'FOLLOW_UP' ? 'Customer callback requested' : 'Pending enquiry callback');
+    const isPayPending = Boolean(paymentData && paymentData.isPaymentPending);
+    const payAmt = parseFloat(paymentData?.paymentAmount || 0);
+    const payMode = paymentData?.paymentMode || 'UPI';
+    const payDue = paymentData?.paymentDueDate || '';
+    const payNotes = paymentData?.paymentNotes || notes || '';
+    const payItems = paymentData?.quotedItems || '';
+
+    if (!existingFu) {
+      const todayStr = now.toISOString().split('T')[0];
+      let nextH = (now.getHours() + 1) % 24;
+      const ampm = nextH >= 12 ? 'PM' : 'AM';
+      let h12 = nextH % 12 || 12;
+      const defaultTime = `${String(h12).padStart(2, '0')}:00 ${ampm}`;
+      const newFu = {
+        id: `FU-2026-00${CRM_STATE.followups.length + 101}`,
+        queryId: query ? query.id : 'Q-2026-0000',
+        customerId: customer ? customer.id : (query ? query.customerId : 'cust_101'),
+        customerName: customer ? customer.name : 'Customer',
+        assignedTo: (query && query.assignedTo && query.assignedTo !== 'UNASSIGNED') ? query.assignedTo : (currentUser?.staffId || currentUser?.id || 'staff_01'),
+        date: (callbackSchedule && callbackSchedule.date) ? callbackSchedule.date : (payDue || todayStr),
+        time: (callbackSchedule && callbackSchedule.time) ? callbackSchedule.time : defaultTime,
+        reason: fuReason,
+        status: 'PENDING',
+        outcome: 'PENDING',
+        priority: query?.priority || 'NORMAL',
+        channel: 'WHATSAPP',
+        createdAt: now.toISOString(),
+        isPaymentPending: isPayPending,
+        paymentAmount: payAmt,
+        paymentMode: payMode,
+        paymentDueDate: payDue,
+        paymentNotes: payNotes,
+        quotedItems: payItems
+      };
+      CRM_STATE.followups.unshift(newFu);
+      fetch('api.php?action=save_followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newFu)
+      }).catch(() => {});
+    } else {
+      if (notes) existingFu.reason = notes;
+      if (callbackSchedule && callbackSchedule.date) {
+        existingFu.date = callbackSchedule.date;
+        if (callbackSchedule.time) existingFu.time = callbackSchedule.time;
+      }
+      if (paymentData) {
+        if (paymentData.isPaymentPending) {
+          existingFu.isPaymentPending = true;
+          existingFu.paymentAmount = payAmt;
+          existingFu.paymentMode = payMode;
+          if (payDue) existingFu.paymentDueDate = payDue;
+          if (payNotes) existingFu.paymentNotes = payNotes;
+          if (payItems) existingFu.quotedItems = payItems;
+        } else if (paymentData.isPaymentPending === false) {
+          existingFu.isPaymentPending = false;
+        }
+      }
+      fetch('api.php?action=save_followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(existingFu)
+      }).catch(() => {});
+    }
+  } else if (newStatus === 'CONVERTED' || newStatus === 'RESOLVED') {
+    if (Array.isArray(CRM_STATE.followups)) {
+      CRM_STATE.followups.forEach(f => {
+        if (f && (f.customerId === customer?.id || (query && f.queryId === query.id)) && f.status === 'PENDING') {
+          f.status = 'COMPLETED';
+          f.outcome = newStatus === 'CONVERTED' ? 'ORDER_PLACED' : 'RESOLVED';
+          if (notes) f.outcomeNotes = notes;
+          f.completedAt = now.toISOString();
+        }
+      });
+    }
+  }
 
   saveCRMState();
   renderInbox();
   renderCustomer360Panel();
   if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
-  if (typeof renderFollowupsTable === 'function') renderFollowupsTable();
+  if (typeof renderFollowupsCards === 'function') renderFollowupsCards();
+  if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
   if (typeof renderDndModule === 'function') renderDndModule();
   updateBadgeCounters();
 
   const label = newStatus === 'DND' ? '🚫 DND / Not Interested' : newStatus.replace('_', ' ');
   showToast(
-    newStatus === 'DND' ? 'Customer Marked as DND' : 'Status Updated',
-    newStatus === 'DND' ? `Customer moved to separate DND & Opt-Out module.` : `Query status is now set to "${label}".`,
+    newStatus === 'DND' ? 'Customer Marked as DND' : 'Status & Notes Saved',
+    notes ? `Status: "${label}" • Note: "${notes.length > 40 ? notes.slice(0, 37) + '...' : notes}"` : `Query status is now set to "${label}".`,
     newStatus === 'DND' ? 'do_not_disturb_on' : (newStatus === 'RESOLVED' || newStatus === 'CONVERTED' ? 'emerald' : (newStatus === 'PENDING' ? 'amber' : 'blue')),
     newStatus === 'DND' ? 'rose' : (newStatus === 'RESOLVED' || newStatus === 'CONVERTED' ? 'emerald' : (newStatus === 'PENDING' ? 'amber' : 'blue'))
   );
@@ -3890,6 +4254,10 @@ function updateBadgeCounters() {
   if (subtabUnread) {
     subtabUnread.innerText = unreadCount > 0 ? unreadCount : '0';
   }
+  const headerLiveCount = document.getElementById('header-live-queue-count');
+  if (headerLiveCount) {
+    headerLiveCount.innerText = unreadCount > 0 ? unreadCount : '0';
+  }
 
   // 2. Unassigned Enquiries
   const unassignedEl = document.getElementById('badge-unassigned-count');
@@ -3984,11 +4352,104 @@ function toggleCustomerEditMode(customerId, enableEdit = true) {
   renderCustomer360Panel();
 }
 
+var QUERY_EDIT_MODES = new Set();
+
+function toggleQueryEditMode(queryId, enable) {
+  if (enable) {
+    QUERY_EDIT_MODES.add(queryId);
+  } else {
+    QUERY_EDIT_MODES.delete(queryId);
+  }
+  renderCustomer360Panel();
+}
+window.toggleQueryEditMode = toggleQueryEditMode;
+
+function getStatusPrettyLabel(st) {
+  const map = {
+    'NEW': '🟢 New Lead',
+    'PENDING': '🟡 Pending Action',
+    'FOLLOW_UP': '🔵 Follow-up Scheduled',
+    'IN_PROGRESS': '🟣 In Progress',
+    'ASSIGNED': '🟣 Assigned',
+    'RESOLVED': '✅ Resolved / Closed',
+    'CONVERTED': '🏆 Converted to Sale',
+    'DND': '🚫 DND / Not Interested',
+    'LOST': '❌ Lead Lost',
+    'FOLLOWUP_RESCHEDULED': '🗓️ Follow-up Rescheduled'
+  };
+  return map[st] || st || 'New';
+}
+window.getStatusPrettyLabel = getStatusPrettyLabel;
+
+function handleQueryStatusSelectChange(selectedStatus, queryId, customerId) {
+  const container = document.getElementById('enquiry-dynamic-followup-container');
+  const payContainer = document.getElementById('enquiry-payment-pending-wrapper');
+  const cbEditRow = document.getElementById('query-callback-edit-row');
+  if (selectedStatus === 'FOLLOW_UP') {
+    if (container) container.classList.remove('hidden');
+    if (payContainer) payContainer.classList.remove('hidden');
+    if (cbEditRow) cbEditRow.classList.remove('hidden');
+  } else if (selectedStatus === 'PENDING' || selectedStatus === 'NEW' || selectedStatus === 'IN_PROGRESS') {
+    if (container) container.classList.add('hidden');
+    if (payContainer) payContainer.classList.remove('hidden');
+    if (cbEditRow) cbEditRow.classList.remove('hidden');
+  } else {
+    if (container) container.classList.add('hidden');
+    if (payContainer) payContainer.classList.add('hidden');
+    if (cbEditRow) cbEditRow.classList.add('hidden');
+  }
+}
+window.handleQueryStatusSelectChange = handleQueryStatusSelectChange;
+
 function handleSaveQueryStatus(queryId) {
   const select = document.getElementById('query-status-select');
   if (!select) return;
   const newStatus = select.value;
-  updateCustomerQueryStatus(queryId, newStatus);
+  const notes = document.getElementById('query-status-notes-input')?.value.trim() || '';
+
+  // Extract Callback Date & Time if present
+  const cbDate = document.getElementById('query-callback-date')?.value;
+  const cbHour = document.getElementById('query-callback-hour')?.value || '11';
+  const cbMin = document.getElementById('query-callback-min')?.value || '00';
+  const cbAmpm = document.getElementById('query-callback-ampm')?.value || 'AM';
+  const cbTime = cbDate ? `${cbHour}:${cbMin} ${cbAmpm}` : '';
+  const callbackSchedule = cbDate ? { date: cbDate, time: cbTime } : null;
+
+  // Extract Payment Pending details from right panel if enabled
+  const payToggle = document.getElementById('query-pay-pending-toggle');
+  let paymentData = null;
+  if (payToggle) {
+    if (payToggle.checked) {
+      paymentData = {
+        isPaymentPending: true,
+        paymentAmount: parseFloat(document.getElementById('query-pay-amount-input')?.value || 0),
+        paymentMode: document.getElementById('query-pay-mode-select')?.value || 'UPI',
+        paymentDueDate: document.getElementById('query-pay-due-input')?.value || '',
+        paymentNotes: document.getElementById('query-pay-notes-input')?.value?.trim() || '',
+        quotedItems: document.getElementById('query-pay-items-input')?.value?.trim() || ''
+      };
+    } else {
+      paymentData = {
+        isPaymentPending: false
+      };
+    }
+  }
+
+  updateCustomerQueryStatus(queryId, newStatus, notes, paymentData, callbackSchedule);
+  QUERY_EDIT_MODES.delete(queryId);
+  renderCustomer360Panel();
+
+  // Auto-scroll on status change in WhatsApp inbox right panel
+  setTimeout(() => {
+    const scrollBox = document.getElementById('status-history-scroll-container');
+    if (scrollBox) {
+      scrollBox.scrollTop = 0;
+    }
+    const historyWrapper = document.getElementById('status-history-wrapper');
+    if (historyWrapper) {
+      historyWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, 60);
 }
 
 // Save Customer Details from Right-Side Panel Form
@@ -4332,6 +4793,64 @@ function renderCustomer360Panel() {
   const staff = query ? (CRM_STATE.staffList || []).find(s => s && (s.id === query.assignedTo || String(s.id) === String(query.assignedTo))) : null;
   const orders = (CRM_STATE.orders || []).filter(o => o && (o.customerId === ACTIVE_CUSTOMER_ID || String(o.customerId) === String(ACTIVE_CUSTOMER_ID)));
 
+  // Dynamic Follow-up Record Linkage for Customer 360
+  const custDigits = customer ? (customer.phone || customer.whatsapp || '').replace(/\D/g, '') : '';
+  let customerFollowup = customer ? (CRM_STATE.followups || []).find(f => {
+    if (!f || f.status !== 'PENDING') return false;
+    if (f.customerId === customer.id || String(f.customerId) === String(customer.id)) return true;
+    if (query && (f.queryId === query.id || f.queryId === query.queryId)) return true;
+    if (custDigits && f.customerPhone && f.customerPhone.replace(/\D/g, '') === custDigits) return true;
+    if (customer.name && customer.name !== 'Customer' && f.customerName === customer.name) return true;
+    return false;
+  }) : null;
+
+  // Auto-recovery / Re-hydration: If query has status FOLLOW_UP but follow-up object is missing from memory
+  const rawQStatus = query ? (query.status || 'NEW') : (customer?.isDND ? 'DND' : 'NONE');
+  if (!customerFollowup && customer && (rawQStatus === 'FOLLOW_UP' || query?.status === 'FOLLOW_UP')) {
+    const histFu = (query?.statusHistory || []).find(h => h && (h.action === 'FOLLOWUP_SCHEDULED' || h.action === 'FOLLOWUP_RESCHEDULED' || h.followupDate));
+    const assignedStaffVal = histFu?.assignedTo || query?.assignedTo || (ACTIVE_ROLE === 'admin' ? 'admin' : 'staff_01');
+    const fuDateVal = histFu?.followupDate || query?.paymentDueDate || new Date().toISOString().split('T')[0];
+    const fuTimeVal = histFu?.followupTime || '11:00 AM';
+    const fuReasonVal = histFu?.notes || query?.statusNotes || query?.queryText || 'Scheduled follow-up callback';
+    const fuAuthorVal = histFu?.by || query?.statusLastEditedBy || (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff');
+
+    customerFollowup = {
+      id: `FU-2026-00${(CRM_STATE.followups || []).length + 101}`,
+      queryId: query ? query.id : 'Q-2026-0000',
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone || customer.whatsapp || '',
+      assignedTo: assignedStaffVal,
+      createdBy: fuAuthorVal,
+      date: fuDateVal,
+      time: fuTimeVal,
+      reason: fuReasonVal,
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: query?.priority || 'NORMAL',
+      channel: 'WHATSAPP',
+      createdAt: new Date().toISOString(),
+      isPaymentPending: Boolean(query?.isPaymentPending),
+      paymentAmount: parseFloat(query?.paymentAmount || 0),
+      paymentMode: query?.paymentMode || 'UPI',
+      paymentDueDate: query?.paymentDueDate || '',
+      paymentNotes: query?.paymentNotes || '',
+      quotedItems: query?.quotedItems || ''
+    };
+    if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
+    CRM_STATE.followups.unshift(customerFollowup);
+    saveCRMState();
+  }
+
+  const staffMember = customerFollowup ? (CRM_STATE.staffList || []).find(s => s && (s.id === customerFollowup.assignedTo || s.name === customerFollowup.assignedTo)) : null;
+  const fuStaff = customerFollowup ? (
+    staffMember ? staffMember.name :
+    (customerFollowup.assignedTo === 'admin' || customerFollowup.assignedTo === 'Super Admin' ? 'Super Admin' :
+    (customerFollowup.assignedTo || 'Super Admin'))
+  ) : '';
+  const fuCreatedBy = customerFollowup ? (customerFollowup.createdBy || query?.statusLastEditedBy || '') : '';
+  const isOverdue = customerFollowup ? (typeof isFollowupOverdue === 'function' ? isFollowupOverdue(customerFollowup) : false) : false;
+
   if (!customer) {
     panel.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">Customer profile details will appear here</div>`;
     return;
@@ -4347,6 +4866,7 @@ function renderCustomer360Panel() {
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
   const isEditing = CUSTOMER_EDIT_MODES.has(customer.id);
+  const isQueryEditing = query ? QUERY_EDIT_MODES.has(query.id) : false;
 
   // Status Badge Formatting
   const qStatus = query ? (query.status || 'NEW') : (customer.isDND ? 'DND' : 'NONE');
@@ -4392,9 +4912,9 @@ function renderCustomer360Panel() {
 
       <!-- Handle Staff Subtitle Badge -->
       <div class="mt-2 flex items-center justify-center">
-        <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${staff ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'} px-2.5 py-0.5 rounded-full">
-          <span class="material-symbols-outlined text-[13px]">${staff ? 'badge' : 'person_alert'}</span>
-          <span>Handled by: <strong>${staff ? staff.name : 'Unassigned'}</strong></span>
+        <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${staff || query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'} px-2.5 py-0.5 rounded-full">
+          <span class="material-symbols-outlined text-[13px]">${staff || query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'badge' : 'person_alert'}</span>
+          <span>Handled by: <strong>${staff ? staff.name : (query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'Super Admin' : (query?.assignedTo && query.assignedTo !== 'UNASSIGNED' ? query.assignedTo : 'Unassigned'))}</strong></span>
         </span>
       </div>
       
@@ -4513,51 +5033,658 @@ function renderCustomer360Panel() {
           <span class="material-symbols-outlined text-[16px] text-brand-wa">assignment</span>
           <span class="text-[11px] font-bold uppercase text-slate-700">Enquiry Status &amp; State</span>
         </div>
-        ${statusBadgeHtml}
+        <div class="flex items-center gap-1.5">
+          ${statusBadgeHtml}
+          ${(!isQueryEditing && query) ? `
+            <button type="button" onclick="toggleQueryEditMode('${query.id}', true)" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Edit Enquiry">
+              <span class="material-symbols-outlined text-[12px]">edit_note</span>
+              <span>Edit</span>
+            </button>
+          ` : ''}
+        </div>
       </div>
 
       ${query ? `
         <!-- Status Dropdown Selector & Follow-up & Save Button Below -->
         <div class="space-y-3">
+          <!-- ROW 1: STATUS DROPDOWN SELECTOR -->
           <div>
-            <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide mb-1">Change Status:</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide">Change Status:</label>
+              ${isQueryEditing ? `
+                <span class="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded animate-pulse">Editing Status</span>
+              ` : `
+                <span class="text-[9px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded">Locked</span>
+              `}
+            </div>
             <div class="relative">
-              <select id="query-status-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-brand-wa appearance-none pr-8">
+              <select id="query-status-select" ${isQueryEditing ? '' : 'disabled'} onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full ${isQueryEditing ? 'bg-white border-brand-wa ring-1 ring-brand-wa text-slate-900 cursor-pointer shadow-xs' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none opacity-90'} border rounded-xl p-2.5 text-xs font-bold appearance-none pr-8 transition">
                 <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 New Lead</option>
                 <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 Pending Action</option>
-                <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 Follow-up Scheduled</option>
-                <option value="IN_PROGRESS" ${qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED' ? 'selected' : ''}>🟣 In Progress / Active</option>
+                <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 Follow Up</option>
+                <option value="IN_PROGRESS" ${qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED' ? 'selected' : ''}>🟣 In Progress</option>
                 <option value="RESOLVED" ${qStatus === 'RESOLVED' ? 'selected' : ''}>✅ Resolved / Closed</option>
                 <option value="CONVERTED" ${qStatus === 'CONVERTED' ? 'selected' : ''}>🏆 Converted to Sale</option>
-                <option value="DND" ${qStatus === 'DND' ? 'selected' : ''}>🚫 DND / Not Interested (No Products Needed)</option>
+                <option value="DND" ${qStatus === 'DND' ? 'selected' : ''}>🚫 DND / Not Interested</option>
               </select>
               <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
             </div>
           </div>
 
-          <!-- Query Meta Details with Set Follow-up Action -->
-          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-2">
-            <div class="flex justify-between items-center">
-              <span class="text-slate-500 font-medium">Query ID:</span>
-              <span class="font-mono font-bold text-slate-800">${query.id}</span>
+          <!-- ROW 2: CALLBACK DATE & TIME (Before Status Change Notes & Remarks) -->
+          ${(() => {
+            const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
+            const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
+            const cbTimeRaw = customerFollowup?.time || histItem?.followupTime || '11:00 AM';
+            const [cbTimePart = '11:00', cbAmpmPart = 'AM'] = cbTimeRaw.split(' ');
+            const [cbHourPart = '11', cbMinPart = '00'] = cbTimePart.split(':');
+            const hoursList = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+            const minsList = ['00','15','30','45'];
+
+            return isQueryEditing ? `
+              <!-- Editable Callback Date & Time Row -->
+              <div id="query-callback-edit-row" class="${(qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS' || Boolean(customerFollowup)) ? '' : 'hidden'} bg-gradient-to-br from-blue-50/90 via-indigo-50/40 to-white border border-blue-200/90 p-3 rounded-2xl space-y-2.5 shadow-2xs transition-all">
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px] text-blue-600">calendar_month</span>
+                      <span>Callback Date *</span>
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">Today</button>
+                      <button type="button" onclick="setQueryQuickDate(1)" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">Tomorrow</button>
+                      <button type="button" onclick="setQueryQuickDate(2)" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2 Days</button>
+                    </div>
+                  </div>
+                  <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full bg-white border border-blue-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px] text-indigo-600">schedule</span>
+                      <span>Callback Time (12-Hour) *</span>
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <button type="button" onclick="setQueryQuickTime('NOW')" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-indigo-100 hover:text-indigo-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">Now</button>
+                      <button type="button" onclick="setQueryQuickTime('PLUS_1H')" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-indigo-100 hover:text-indigo-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+1 Hr</button>
+                      <button type="button" onclick="setQueryQuickTime('10AM')" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-indigo-100 hover:text-indigo-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">10 AM</button>
+                      <button type="button" onclick="setQueryQuickTime('5PM')" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-indigo-100 hover:text-indigo-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">05 PM</button>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-1">
+                    <select id="query-callback-hour" class="bg-white border border-blue-300 rounded-xl p-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                      ${hoursList.map(h => `<option value="${h}" ${h === cbHourPart ? 'selected' : ''}>${h}</option>`).join('')}
+                    </select>
+                    <select id="query-callback-min" class="bg-white border border-blue-300 rounded-xl p-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                      ${minsList.map(m => `<option value="${m}" ${m === cbMinPart ? 'selected' : ''}>${m}</option>`).join('')}
+                    </select>
+                    <select id="query-callback-ampm" class="bg-white border border-blue-300 rounded-xl p-1.5 text-xs font-bold text-indigo-900 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                      <option value="AM" ${cbAmpmPart.toUpperCase() === 'AM' ? 'selected' : ''}>AM</option>
+                      <option value="PM" ${cbAmpmPart.toUpperCase() === 'PM' ? 'selected' : ''}>PM</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <!-- Locked Display for Active Callback Date & Time -->
+              ${(qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS' || Boolean(customerFollowup)) ? `
+                <div class="p-2.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-200 flex items-center justify-between text-xs">
+                  <span class="text-blue-900 font-bold flex items-center gap-1.5 text-[11px]">
+                    <span class="material-symbols-outlined text-[16px] text-blue-600">calendar_month</span>
+                    <span>Callback Date &amp; Time:</span>
+                  </span>
+                  <span class="font-mono font-black text-blue-950 bg-white px-2.5 py-1 rounded-lg border border-blue-200 text-xs shadow-2xs">
+                    ${cbDateVal} at ${cbTimeRaw}
+                  </span>
+                </div>
+              ` : ''}
+            `;
+          })()}
+
+          <!-- ROW 3: STATUS CHANGE NOTES & REMARKS (With Quick Note Chips) -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-amber-600">note_alt</span>
+                <span>Status Change Notes &amp; Remarks:</span>
+              </label>
+              ${isQueryEditing ? `
+                <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 font-extrabold px-1.5 py-0.2 rounded">Add Note for State</span>
+              ` : `
+                <span class="text-[9px] bg-slate-100 text-slate-500 font-medium px-1.5 py-0.2 rounded">Notes Log</span>
+              `}
             </div>
+
+            <!-- Quick Note Chips (Task 2) -->
+            <div class="flex items-center gap-1 flex-wrap mb-1.5">
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[11px] text-amber-500">bolt</span>
+                <span>Quick:</span>
+              </span>
+              <button type="button" onclick="setQuickStatusNote('Order Complete', 'CONVERTED')" class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs" title="Click to fill 'Order Complete' and mark Converted">
+                <span>📦 Order Complete</span>
+              </button>
+              <button type="button" onclick="setQuickStatusNote('Callback Promise - Customer requested call back', 'FOLLOW_UP')" class="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs" title="Click to set Callback Promise">
+                <span>📞 Callback Promise</span>
+              </button>
+              <button type="button" onclick="setQuickStatusNote('Price Quoted / Catalog Shared', 'IN_PROGRESS')" class="px-2 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs">
+                <span>💬 Price Quoted</span>
+              </button>
+              <button type="button" onclick="setQuickStatusNote('Payment Pending - Advance requested', 'PENDING')" class="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs">
+                <span>💳 Advance Pending</span>
+              </button>
+              <button type="button" onclick="setQuickStatusNote('Customer Not Interested / Opt-Out', 'DND')" class="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs">
+                <span>🚫 Not Interested</span>
+              </button>
+            </div>
+
+            <textarea id="query-status-notes-input" rows="2" ${isQueryEditing ? '' : 'disabled'} placeholder="Add customer remarks, discussion summary, reason for status change, or callback promise..." class="w-full ${isQueryEditing ? 'bg-amber-50/40 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa font-medium' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs transition">${query.statusNotes || ''}</textarea>
+          </div>
+
+          <!-- Query Meta Priority Details (Query ID and Schedule Action removed) -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
             <div class="flex justify-between items-center">
               <span class="text-slate-500 font-medium">Priority:</span>
               <span class="font-bold ${query.priority === 'URGENT' ? 'text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200' : 'text-amber-700'}">${query.priority}</span>
             </div>
-            <div class="flex justify-between items-center">
-              <span class="text-slate-500 font-medium">Schedule Action:</span>
-              <button type="button" onclick="openFollowUpModal()" class="text-[11px] text-blue-700 font-bold hover:underline flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px]">calendar_add_on</span> Set Follow-up
+          </div>
+
+          <!-- DYNAMIC FOLLOW-UP MODULE (Appears when Follow-up Scheduled is chosen) -->
+          <div id="enquiry-dynamic-followup-container" class="${(qStatus === 'FOLLOW_UP' || (customerFollowup && qStatus !== 'PENDING')) ? '' : 'hidden'} bg-gradient-to-br from-blue-50/90 via-indigo-50/50 to-slate-50 border border-blue-200/90 p-3.5 rounded-2xl space-y-2.5 shadow-2xs transition-all">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-blue-900 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px] text-blue-600">event_repeat</span>
+                <span>Follow-up Module</span>
+              </span>
+              ${customerFollowup ? `
+                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 ${isOverdue ? 'bg-rose-100 text-rose-800 border border-rose-300 animate-pulse' : 'bg-blue-100 text-blue-800 border border-blue-200'}">
+                  ${isOverdue ? '<span class="material-symbols-outlined text-[11px]">alarm</span> OVERDUE' : '🔵 SCHEDULED'}
+                </span>
+              ` : `
+                <span class="bg-blue-100 text-blue-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200">
+                  SCHEDULE INLINE
+                </span>
+              `}
+            </div>
+
+            ${customerFollowup ? `
+              <!-- Active Scheduled Follow-up Details Card -->
+              <div class="space-y-2 text-xs">
+                <div class="flex items-center justify-between bg-white/90 p-2 rounded-xl border border-blue-100">
+                  <span class="text-slate-500 font-medium">Scheduled Time:</span>
+                  <span class="font-mono font-bold ${isOverdue ? 'text-rose-700' : 'text-blue-900'} flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px] ${isOverdue ? 'text-rose-600' : 'text-blue-600'}">schedule</span>
+                    ${customerFollowup.date} at ${customerFollowup.time}
+                  </span>
+                </div>
+
+                <div class="flex items-center justify-between bg-white/90 p-2 rounded-xl border border-blue-100">
+                  <span class="text-slate-500 font-medium">Assigned To:</span>
+                  <span class="font-bold text-slate-800 text-[11px] flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px] ${fuStaff === 'Super Admin' ? 'text-amber-600' : 'text-indigo-600'}">${fuStaff === 'Super Admin' ? 'admin_panel_settings' : 'badge'}</span>
+                    <span class="${fuStaff === 'Super Admin' ? 'text-amber-900 font-black' : 'text-slate-800'}">${fuStaff}</span>
+                    <span class="text-slate-400">&bull;</span>
+                    <span class="text-emerald-700 font-semibold uppercase text-[10px]">${customerFollowup.channel || 'WHATSAPP'}</span>
+                  </span>
+                </div>
+                ${fuCreatedBy ? `
+                <div class="flex items-center justify-between bg-white/80 px-2 py-1.5 rounded-xl border border-blue-100 text-[10px]">
+                  <span class="text-slate-500 font-medium flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[12px] text-slate-400">person_edit</span>
+                    <span>Scheduled By:</span>
+                  </span>
+                  <span class="font-bold text-slate-700">${fuCreatedBy}</span>
+                </div>
+                ` : ''}
+
+                <div class="bg-white/90 p-2.5 rounded-xl border border-blue-100 text-[11px] text-slate-700 leading-snug">
+                  <div class="font-bold text-slate-800 text-[10px] uppercase mb-0.5 flex items-center gap-1 text-blue-950">
+                    <span class="material-symbols-outlined text-[13px] text-blue-600">description</span>
+                    <span>Callback Context:</span>
+                  </div>
+                  <p class="italic text-slate-600">"${customerFollowup.reason}"</p>
+                </div>
+
+                <!-- Action Button: Reschedule Inline (Outcome removed in inbox) -->
+                <div class="pt-0.5">
+                  <button type="button" onclick="document.getElementById('inline-reschedule-box-${customer.id}').classList.toggle('hidden')" class="w-full py-2 px-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 hover:border-slate-400 rounded-xl font-bold text-[11px] transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs">
+                    <span class="material-symbols-outlined text-[15px] text-blue-600">edit_calendar</span>
+                    <span>Reschedule</span>
+                  </button>
+                </div>
+
+                ${(() => {
+                  const [fuTimePart = '11:00', fuAmpmPart = 'AM'] = (customerFollowup.time || '11:00 AM').split(' ');
+                  const [fuHourPart = '11', fuMinPart = '00'] = fuTimePart.split(':');
+                  const hoursList = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+                  const minsList = ['00','15','30','45'];
+                  return `
+                    <!-- Hidden Inline Reschedule Controls (Toggled by Reschedule button) -->
+                    <div id="inline-reschedule-box-${customer.id}" class="hidden space-y-2.5 bg-white/95 p-3 rounded-2xl border border-blue-300 shadow-sm mt-2">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-black text-blue-900 uppercase flex items-center gap-1">
+                          <span class="material-symbols-outlined text-[14px] text-blue-600">edit_calendar</span>
+                          <span>Reschedule Follow-up</span>
+                        </span>
+                        <span class="text-[9px] text-slate-400 font-medium">Updates Status History</span>
+                      </div>
+                      <input type="date" id="inline-resched-date-${customer.id}" value="${customerFollowup.date}" min="${new Date().toISOString().split('T')[0]}" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                      <div class="grid grid-cols-3 gap-1">
+                        <select id="inline-resched-hour-${customer.id}" class="bg-slate-50 border border-slate-300 rounded-xl p-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                          ${hoursList.map(h => `<option value="${h}" ${h === fuHourPart ? 'selected' : ''}>${h}</option>`).join('')}
+                        </select>
+                        <select id="inline-resched-min-${customer.id}" class="bg-slate-50 border border-slate-300 rounded-xl p-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                          ${minsList.map(m => `<option value="${m}" ${m === fuMinPart ? 'selected' : ''}>${m}</option>`).join('')}
+                        </select>
+                        <select id="inline-resched-ampm-${customer.id}" class="bg-slate-50 border border-slate-300 rounded-xl p-1.5 text-xs font-bold text-indigo-900 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                          <option value="AM" ${fuAmpmPart.toUpperCase() === 'AM' ? 'selected' : ''}>AM</option>
+                          <option value="PM" ${fuAmpmPart.toUpperCase() === 'PM' ? 'selected' : ''}>PM</option>
+                        </select>
+                      </div>
+                      <div>
+                        <input type="text" id="inline-resched-note-${customer.id}" placeholder="Reschedule reason or callback promise (optional)..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-medium text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                      </div>
+                      <button type="button" onclick="saveInlineRescheduledFollowup('${customer.id}', '${customerFollowup.id}')" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95">
+                        <span class="material-symbols-outlined text-[15px]">event_repeat</span>
+                        <span>Update Follow-up &amp; Log Audit</span>
+                      </button>
+                    </div>
+                  `;
+                })()}
+
+                ${customerFollowup.isPaymentPending ? `
+                  <div class="bg-gradient-to-r from-amber-50 to-amber-100/70 border border-amber-300 p-2.5 rounded-xl text-[11px] text-amber-950 space-y-1.5 shadow-2xs">
+                    <div class="flex items-center justify-between font-black text-amber-950">
+                      <span class="flex items-center gap-1 font-bold text-xs">
+                        <span class="material-symbols-outlined text-[15px] text-amber-700">payments</span>
+                        <span>₹${parseFloat(customerFollowup.paymentAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})} Pending</span>
+                      </span>
+                      <span class="text-[9px] bg-amber-200/90 text-amber-900 px-2 py-0.5 rounded-full font-bold uppercase border border-amber-300/60">${customerFollowup.paymentMode || 'UPI'}</span>
+                    </div>
+                    ${customerFollowup.quotedItems ? `<div class="text-[10px] text-slate-700 font-medium truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-amber-600">inventory_2</span><span>${customerFollowup.quotedItems}</span></div>` : ''}
+                    <div class="flex items-center gap-1.5 pt-1">
+                      <button type="button" onclick="sendWhatsAppPaymentRequest('${customer.id}', '${customerFollowup.id}')" class="flex-1 py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 shadow-2xs cursor-pointer active:scale-95 transition">
+                        <span class="material-symbols-outlined text-[13px]">send_to_mobile</span>
+                        <span>UPI Request</span>
+                      </button>
+                      <button type="button" onclick="markPaymentReceivedAndConvert('${customerFollowup.id}', '${customer.id}')" class="flex-1 py-1.5 px-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 shadow-2xs cursor-pointer active:scale-95 transition">
+                        <span class="material-symbols-outlined text-[13px]">verified</span>
+                        <span>Mark Paid</span>
+                      </button>
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            ` : `
+              <!-- Dynamic Inline Follow-up Scheduling Form (No Popup Modal) -->
+              <div class="space-y-2.5 text-xs bg-white/95 p-3 rounded-2xl border border-blue-200 shadow-2xs">
+                <!-- Date Row -->
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px] text-blue-600">calendar_month</span>
+                      <span>Follow-up Date *</span>
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <button type="button" onclick="setInlineFuQuickDate(0)" class="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 hover:bg-blue-100 hover:text-blue-800 text-slate-600 rounded transition cursor-pointer">Today</button>
+                      <button type="button" onclick="setInlineFuQuickDate(1)" class="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 hover:bg-blue-100 hover:text-blue-800 text-slate-600 rounded transition cursor-pointer">Tomorrow</button>
+                      <button type="button" onclick="setInlineFuQuickDate(2)" class="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 hover:bg-blue-100 hover:text-blue-800 text-slate-600 rounded transition cursor-pointer">+2 Days</button>
+                    </div>
+                  </div>
+                  <input type="date" id="inline-fu-date" value="${new Date().toISOString().split('T')[0]}" min="${new Date().toISOString().split('T')[0]}" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                </div>
+
+                <!-- 12-Hour Time Row -->
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px] text-indigo-600">schedule</span>
+                      <span>12-Hour Time *</span>
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <button type="button" onclick="setInlineFuQuickTime('NOW')" class="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 text-slate-600 rounded transition cursor-pointer">Now</button>
+                      <button type="button" onclick="setInlineFuQuickTime('PLUS_1H')" class="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 text-slate-600 rounded transition cursor-pointer">+1 Hr</button>
+                      <button type="button" onclick="setInlineFuQuickTime('10AM')" class="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 text-slate-600 rounded transition cursor-pointer">10 AM</button>
+                      <button type="button" onclick="setInlineFuQuickTime('5PM')" class="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 text-slate-600 rounded transition cursor-pointer">05 PM</button>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-1">
+                    <select id="inline-fu-hour" class="bg-slate-50 border border-slate-300 rounded-xl p-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                      <option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11" selected>11</option><option value="12">12</option>
+                    </select>
+                    <select id="inline-fu-min" class="bg-slate-50 border border-slate-300 rounded-xl p-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                      <option value="00" selected>00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option>
+                    </select>
+                    <select id="inline-fu-ampm" class="bg-slate-50 border border-slate-300 rounded-xl p-1.5 text-xs font-bold text-indigo-900 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                      <option value="AM" selected>AM</option><option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Assigned Staff / Admin -->
+                <div>
+                  <span class="block font-bold text-slate-800 uppercase text-[10px] tracking-wide mb-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px] text-indigo-600">badge</span>
+                    <span>Assigned Staff / Admin</span>
+                  </span>
+                  <select id="inline-fu-staff" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                    ${(() => {
+                      const selStaff = query?.assignedTo || (ACTIVE_ROLE === 'admin' ? 'admin' : 'staff_01');
+                      const listHtml = (CRM_STATE.staffList || []).map(s => `
+                        <option value="${s.id}" ${selStaff === s.id ? 'selected' : ''}>${s.name} (${s.specialization || 'Staff'})</option>
+                      `).join('');
+                      return listHtml + `<option value="admin" ${selStaff === 'admin' || selStaff === 'Super Admin' ? 'selected' : ''}>Super Admin</option>`;
+                    })()}
+                  </select>
+                </div>
+
+                <!-- Context Notes -->
+                <div>
+                  <span class="block font-bold text-slate-800 uppercase text-[10px] tracking-wide mb-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px] text-blue-600">edit_note</span>
+                    <span>Callback Promise &amp; Notes</span>
+                  </span>
+                  <textarea id="inline-fu-notes" rows="2" placeholder="e.g. Discuss bulk frock sizes, confirm advance payment..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-medium text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">${query?.statusNotes || query?.queryText || ''}</textarea>
+                </div>
+
+                <!-- Direct Save Button (Inline Action) -->
+                <button type="button" onclick="saveDynamicCustomerFollowup('${customer.id}')" class="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.99]">
+                  <span class="material-symbols-outlined text-[16px]">alarm_on</span>
+                  <span>Save Follow-up</span>
+                </button>
+              </div>
+            `}
+          </div>
+
+          <!-- DYNAMIC PAYMENT PENDING MODULE (Appears when Pending / Follow-up is selected) -->
+          <div id="enquiry-payment-pending-wrapper" class="${(qStatus === 'FOLLOW_UP' || qStatus === 'PENDING' || customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-white border border-amber-300/80 p-3.5 rounded-2xl space-y-2.5 shadow-2xs transition-all">
+            <div class="flex items-center justify-between">
+              <label class="text-[11px] font-black uppercase text-amber-950 flex items-center gap-1.5 cursor-pointer select-none">
+                <input type="checkbox" id="query-pay-pending-toggle" ${isQueryEditing ? '' : 'disabled'} ${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? 'checked' : ''} onchange="document.getElementById('query-pay-fields').classList.toggle('hidden', !this.checked)" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-amber-300">
+                <span>Payment Pending Option</span>
+              </label>
+              ${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? `
+                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[11px] text-amber-700">payments</span>
+                  <span>ACTIVE</span>
+                </span>
+              ` : `
+                <span class="text-[9px] text-slate-400 font-medium">Optional</span>
+              `}
+            </div>
+
+            <div id="query-pay-fields" class="${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} space-y-2 pt-1 border-t border-amber-200/80 text-xs">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block font-bold text-slate-700 text-[10px] uppercase mb-0.5">Amount (₹):</label>
+                  <div class="relative">
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
+                    <input type="number" id="query-pay-amount-input" ${isQueryEditing ? '' : 'disabled'} value="${customerFollowup?.paymentAmount || query?.paymentAmount || ''}" placeholder="0.00" class="w-full pl-6 pr-2 py-1.5 rounded-xl border border-amber-300 bg-white text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-amber-500">
+                  </div>
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 text-[10px] uppercase mb-0.5">Mode:</label>
+                  <select id="query-pay-mode-select" ${isQueryEditing ? '' : 'disabled'} class="w-full py-1.5 px-2 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-800 focus:ring-1 focus:ring-amber-500">
+                    <option value="UPI" ${(customerFollowup?.paymentMode || query?.paymentMode || 'UPI') === 'UPI' ? 'selected' : ''}>UPI (GPay / PhonePe / Paytm)</option>
+                    <option value="BANK_TRANSFER" ${(customerFollowup?.paymentMode || query?.paymentMode) === 'BANK_TRANSFER' ? 'selected' : ''}>Bank Transfer (NEFT/RTGS)</option>
+                    <option value="CASH" ${(customerFollowup?.paymentMode || query?.paymentMode) === 'CASH' ? 'selected' : ''}>Cash on Delivery</option>
+                    <option value="CARD" ${(customerFollowup?.paymentMode || query?.paymentMode) === 'CARD' ? 'selected' : ''}>Card Swipe</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] uppercase mb-0.5">Payment Due Date:</label>
+                <input type="date" id="query-pay-due-input" ${isQueryEditing ? '' : 'disabled'} value="${customerFollowup?.paymentDueDate || query?.paymentDueDate || ''}" class="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 bg-white text-xs font-mono font-bold text-slate-800 focus:ring-1 focus:ring-amber-500">
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] uppercase mb-0.5">Quoted Items / Garments:</label>
+                <input type="text" id="query-pay-items-input" ${isQueryEditing ? '' : 'disabled'} value="${customerFollowup?.quotedItems || query?.quotedItems || ''}" placeholder="e.g. 12 pcs Maternity Kurtis (Pink &amp; Blue, Size L)" class="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 bg-white text-xs text-slate-900 font-medium">
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] uppercase mb-0.5">Payment Promise Notes:</label>
+                <input type="text" id="query-pay-notes-input" ${isQueryEditing ? '' : 'disabled'} value="${customerFollowup?.paymentNotes || query?.paymentNotes || ''}" placeholder="e.g. Promised advance GPay after banking hours" class="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 bg-white text-xs text-slate-900 font-medium">
+              </div>
+
+              <!-- Quick Action: Share to WhatsApp Chat -->
+              <button type="button" onclick="sendWhatsAppPaymentRequest('${customer.id}', '${customerFollowup?.id || ''}')" class="w-full mt-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-2xs flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95">
+                <span class="material-symbols-outlined text-[14px]">send_to_mobile</span>
+                <span>Share Payment Request to Chat</span>
               </button>
             </div>
           </div>
 
-          <!-- Save Status Button Below Follow-up Action -->
-          <button type="button" onclick="handleSaveQueryStatus('${query.id}')" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
-            <span class="material-symbols-outlined text-[15px]">save</span>
-            <span>Save Status</span>
-          </button>
+          <!-- Action Buttons: Locked (Edit Button) vs Editing (Cancel & Save) - Placed Directly Below Enquiry Fields -->
+          <div class="pt-1">
+            ${isQueryEditing ? `
+              <div class="flex gap-2">
+                <button type="button" onclick="toggleQueryEditMode('${query.id}', false)" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer">
+                  Cancel
+                </button>
+                <button type="button" onclick="handleSaveQueryStatus('${query.id}')" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">save</span>
+                  <span>Save Status Change</span>
+                </button>
+              </div>
+            ` : `
+              <button type="button" onclick="toggleQueryEditMode('${query.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">edit_note</span>
+                <span>Edit Enquiry Status</span>
+              </button>
+            `}
+          </div>
+
+          <!-- Dynamic Status History Audit Engine (First 3 static, 4th and above auto-scroll) - Shown BELOW Enquiry Form & Actions -->
+          
+          ${(() => {
+            let historyList = (Array.isArray(query.statusHistory) && query.statusHistory.length > 0)
+              ? query.statusHistory
+              : (query.statusLastEditedBy ? [{
+                  from: query.statusPrevious || 'NEW',
+                  to: query.status || 'NEW',
+                  by: query.statusLastEditedBy,
+                  at: query.statusLastEditedAt || '',
+                  notes: query.statusNotes || '',
+                  followupDate: customerFollowup ? customerFollowup.date : null,
+                  followupTime: customerFollowup ? customerFollowup.time : null,
+                  assignedTo: customerFollowup ? customerFollowup.assignedTo : query.assignedTo,
+                  timestamp: new Date().toISOString()
+                }] : []);
+
+            if (historyList.length === 0) {
+              return `
+                <div class="bg-slate-50/80 border border-slate-200/70 p-2.5 rounded-xl text-[11px] text-slate-500 space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px] text-slate-400">info</span>
+                      <span>Current Status: <strong class="text-slate-700">${getStatusPrettyLabel(query.status)}</strong></span>
+                    </span>
+                    <span class="text-[10px] text-slate-400 font-mono">${query.createdAt || 'Initial'}</span>
+                  </div>
+                  ${query.statusNotes ? `
+                    <div class="pt-1 border-t border-slate-200/60 flex items-start gap-1 text-[11px] text-slate-600">
+                      <span class="material-symbols-outlined text-[13px] text-amber-600 shrink-0 mt-0.5">sticky_note_2</span>
+                      <span class="italic">"${query.statusNotes}"</span>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }
+
+            const isScrollable = (historyList.length >= 4);
+
+            return `
+              <div id="status-history-wrapper" class="space-y-1.5">
+                <div class="flex items-center justify-between text-[11px] px-0.5">
+                  <span class="font-extrabold text-slate-800 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[15px] text-indigo-600">history</span>
+                    <span>Status History</span>
+                    <span class="text-[10px] bg-indigo-100 text-indigo-900 px-1.5 py-0.2 rounded-full font-mono font-bold">${historyList.length}</span>
+                  </span>
+                  ${isScrollable ? `
+                    <span class="text-[10px] text-slate-400 font-medium flex items-center gap-0.5">
+                      <span class="material-symbols-outlined text-[12px] text-slate-400">unfold_more</span>
+                      <span>Scrollable</span>
+                    </span>
+                  ` : `
+                    <span class="text-[10px] text-slate-400 font-medium">Static</span>
+                  `}
+                </div>
+
+                <div id="status-history-scroll-container" class="${isScrollable ? 'max-h-[340px] overflow-y-auto pr-1 space-y-2.5 custom-scrollbar' : 'space-y-2.5'}">
+                  ${historyList.map((item, idx) => {
+                    const isRescheduled = item.action === 'FOLLOWUP_RESCHEDULED' ||
+                      item.action === 'RESCHEDULED' ||
+                      Boolean(item.previousFollowupDate && item.followupDate) ||
+                      (item.from === 'FOLLOW_UP' && item.to === 'FOLLOW_UP') ||
+                      (typeof item.notes === 'string' && item.notes.toLowerCase().includes('rescheduled'));
+
+                    const isScheduled = !isRescheduled && (
+                      item.action === 'FOLLOWUP_SCHEDULED' ||
+                      item.to === 'FOLLOW_UP' ||
+                      Boolean(item.followupDate)
+                    );
+
+                    let effectiveDate = item.followupDate || '';
+                    let effectiveTime = item.followupTime || '';
+                    let prevDate = item.previousFollowupDate || '';
+                    let prevTime = item.previousFollowupTime || '';
+
+                    // 1. Check notes for regex date time
+                    if (!effectiveDate && item.notes) {
+                      const m = item.notes.match(/(\d{4}-\d{2}-\d{2})\s*(?:at\s*)?(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)/i);
+                      if (m) {
+                        effectiveDate = m[1];
+                        effectiveTime = m[2];
+                      }
+                    }
+
+                    // 2. Comprehensive fallback for follow-up date and time
+                    if (!effectiveDate && (isRescheduled || isScheduled || item.to === 'FOLLOW_UP')) {
+                      const allCustFu = (CRM_STATE.followups || []).filter(f => f && (f.customerId === customer?.id || String(f.customerId) === String(customer?.id) || (query && f.queryId === query.id)));
+                      if (allCustFu.length > 0) {
+                        if (isRescheduled) {
+                          effectiveDate = allCustFu[0].date;
+                          effectiveTime = allCustFu[0].time;
+                          if (allCustFu.length > 1) {
+                            prevDate = allCustFu[1].date;
+                            prevTime = allCustFu[1].time;
+                          }
+                        } else {
+                          const prevResched = historyList.find(h => h.previousFollowupDate);
+                          if (prevResched) {
+                            effectiveDate = prevResched.previousFollowupDate;
+                            effectiveTime = prevResched.previousFollowupTime;
+                          } else {
+                            const olderFu = allCustFu.find(f => f.id === customerFollowup?.rescheduledFromId) || allCustFu[allCustFu.length - 1];
+                            effectiveDate = olderFu ? olderFu.date : allCustFu[0].date;
+                            effectiveTime = olderFu ? olderFu.time : allCustFu[0].time;
+                          }
+                        }
+                      } else if (customerFollowup) {
+                        effectiveDate = customerFollowup.date;
+                        effectiveTime = customerFollowup.time;
+                      }
+                    }
+
+                    const staffId = item.assignedTo || (customerFollowup ? customerFollowup.assignedTo : (query ? query.assignedTo : null));
+                    const staffName = staffId ? ((CRM_STATE.staffList || []).find(s => s && (s.id === staffId || s.name === staffId))?.name || staffId) : '';
+
+                    return `
+                      <div class="bg-white border border-slate-200/90 p-3 rounded-2xl text-xs space-y-2 shadow-2xs transition ${idx === 0 ? 'ring-1.5 ring-blue-400/80 bg-gradient-to-br from-blue-50/20 via-white to-slate-50/40' : 'hover:border-slate-300'}">
+                        
+                        <!-- 1. LOGGED AT & LATEST BADGE -->
+                        <div class="flex items-center justify-between text-[11px] pb-1.5 border-b border-slate-100">
+                          <div class="flex items-center gap-1 text-slate-500 font-mono text-[10px]">
+                            <span class="material-symbols-outlined text-[13px] text-slate-400">schedule</span>
+                            <span>${item.at || ''}</span>
+                          </div>
+                          ${idx === 0 ? '<span class="text-[9px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-extrabold uppercase">Latest Update</span>' : ''}
+                        </div>
+
+                        <!-- 2. STATUS -->
+                        <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50/90 border border-slate-200/70">
+                          <div class="flex items-center gap-1 text-slate-500 font-bold text-[10px] uppercase shrink-0">
+                            <span class="material-symbols-outlined text-[14px] text-indigo-600">swap_horiz</span>
+                            <span>Status:</span>
+                          </div>
+                          <div class="flex items-center gap-1.5 font-bold text-slate-800 flex-wrap justify-end">
+                            ${isRescheduled ? `
+                              <span class="text-blue-900 text-[10px] bg-blue-100/90 border border-blue-300 px-2 py-0.5 rounded-lg font-black flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[13px] text-blue-700">event_repeat</span>
+                                <span>Follow-up Rescheduled</span>
+                              </span>
+                            ` : `
+                              <span class="text-slate-600 text-[10px] bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-2xs">${getStatusPrettyLabel(item.from || 'NEW')}</span>
+                              <span class="material-symbols-outlined text-[12px] text-slate-400">arrow_forward</span>
+                              <span class="text-blue-700 text-[10px] bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded font-extrabold shadow-2xs">${getStatusPrettyLabel(item.to)}</span>
+                            `}
+                          </div>
+                        </div>
+
+                        <!-- 3. DATE & TIME (Follow-up Scheduled or Rescheduled Time) -->
+                        ${(isRescheduled || isScheduled || effectiveDate) ? `
+                          <div class="p-2 rounded-xl bg-blue-50/70 border border-blue-200/80 space-y-1.5">
+                            <div class="flex items-center justify-between text-[11px] gap-2">
+                              <span class="text-blue-950 font-bold text-[10px] uppercase flex items-center gap-1 shrink-0">
+                                <span class="material-symbols-outlined text-[14px] text-blue-600">calendar_month</span>
+                                <span>${isRescheduled ? 'Rescheduled Date & Time:' : 'Follow-up Date & Time:'}</span>
+                              </span>
+                              <span class="font-mono font-black text-blue-900 text-xs bg-white px-2 py-0.5 rounded-md border border-blue-200 shadow-2xs">
+                                ${effectiveDate || customerFollowup?.date || '2026-10-26'} at ${effectiveTime || customerFollowup?.time || '11:00 AM'}
+                              </span>
+                            </div>
+                            ${prevDate ? `
+                              <div class="flex items-center justify-between text-[10px] text-slate-500 border-t border-blue-100 pt-1">
+                                <span class="font-medium">Previous Scheduled:</span>
+                                <span class="line-through font-mono text-slate-400">
+                                  ${prevDate} at ${prevTime || '11:00 AM'}
+                                </span>
+                              </div>
+                            ` : ''}
+                            ${staffName ? `
+                              <div class="flex items-center justify-between text-[10px] text-slate-600 border-t border-blue-100 pt-1">
+                                <span class="font-medium">Assigned Staff:</span>
+                                <span class="font-bold text-indigo-950 flex items-center gap-1">
+                                  <span class="material-symbols-outlined text-[13px] text-indigo-600">badge</span>
+                                  <span>${staffName}</span>
+                                </span>
+                              </div>
+                            ` : ''}
+                          </div>
+                        ` : ''}
+
+                        <!-- 4. NOTE -->
+                        ${item.notes ? `
+                          <div class="bg-amber-50/80 border border-amber-200/80 p-2 rounded-xl text-[11px] text-slate-700 leading-snug flex items-start gap-1.5">
+                            <span class="material-symbols-outlined text-[14px] text-amber-600 shrink-0 mt-0.5">sticky_note_2</span>
+                            <div class="min-w-0 flex-1">
+                              <span class="font-bold text-amber-950 text-[10px] uppercase block mb-0.5 tracking-wide">Recorded Status Note:</span>
+                              <p class="italic text-slate-700 font-medium">"${item.notes}"</p>
+                            </div>
+                          </div>
+                        ` : ''}
+
+                        <!-- 5. BOTTOM RIGHT CONTAINER: BY (Super Admin / Staff) -->
+                        <div class="flex justify-end items-center pt-1">
+                          <div class="inline-flex items-center gap-1.5 bg-slate-50/90 px-2.5 py-1 rounded-lg border border-slate-200 text-[11px] shadow-2xs">
+                            <span class="material-symbols-outlined text-[15px] text-indigo-600">account_circle</span>
+                            <span class="text-slate-500 font-semibold text-[10px] uppercase">By:</span>
+                            <strong class="text-indigo-950 font-bold">${item.by || 'Super Admin'}</strong>
+                          </div>
+                        </div>
+
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          })()}
+
         </div>
       ` : '<p class="text-xs text-slate-400">No active query recorded for this customer</p>'}
     </div>
@@ -4678,62 +5805,6 @@ function renderCustomer360Panel() {
       </div>
     </div>
 
-    <!-- 3. DEDICATED ADMIN & STAFF INTERNAL NOTES ENGINE (Multi-Entry & Timestamped) -->
-    <div class="p-4 border-b border-slate-200 bg-amber-50/50 space-y-2.5">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-1.5">
-          <span class="material-symbols-outlined text-[16px] text-amber-700">edit_note</span>
-          <span class="text-[11px] font-extrabold uppercase text-amber-950">Admin &amp; Staff Internal Notes</span>
-        </div>
-        <span class="text-[9px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
-          ${(customer.adminNotes || []).length} Notes
-        </span>
-      </div>
-
-      <!-- In-Place Note Composer -->
-      <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs space-y-2">
-        <textarea id="quick-admin-note-input" rows="2" placeholder="Write an internal note about customer preference, wholesale inquiry, sizing..." class="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-1 focus:ring-amber-500 focus:outline-none resize-none"></textarea>
-        
-        <!-- Quick Note Tags -->
-        <div class="flex items-center gap-1 flex-wrap pt-0.5">
-          <span class="text-[9px] font-bold text-slate-400">Quick Tags:</span>
-          <button type="button" onclick="insertAdminNoteTag('🛍️ Bulk Wholesale Buyer')" class="px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-[9px] font-bold transition">+ Bulk Buyer</button>
-          <button type="button" onclick="insertAdminNoteTag('✨ Premium Focus')" class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded text-[9px] font-bold transition">+ Premium</button>
-          <button type="button" onclick="insertAdminNoteTag('🏷️ Price Sensitive')" class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[9px] font-bold transition">+ Price Sensitive</button>
-          <button type="button" onclick="insertAdminNoteTag('📦 Ready for Dispatch')" class="px-1.5 py-0.5 bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 rounded text-[9px] font-bold transition">+ Ready to Ship</button>
-        </div>
-
-        <div class="flex items-center justify-end pt-1 border-t border-slate-100">
-          <button type="button" onclick="addAdminInternalNote('${customer.id}')" class="px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center gap-1 active:scale-[0.98]">
-            <span class="material-symbols-outlined text-[14px]">save</span>
-            <span>Save Internal Note</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Notes History Stream -->
-      <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-        ${(!customer.adminNotes || customer.adminNotes.length === 0) ? `
-          <p class="text-[11px] text-slate-400 italic text-center py-1">No admin notes logged yet. Type above to record custom notes.</p>
-        ` : customer.adminNotes.map(n => `
-          <div class="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-2xs space-y-1 relative group">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-extrabold text-amber-900 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[12px] text-amber-600">person</span>
-                <span>${n.author || 'Admin'}</span>
-              </span>
-              <div class="flex items-center gap-1">
-                <span class="text-[9px] text-slate-400 font-mono">${n.time}</span>
-                <button type="button" onclick="deleteAdminInternalNote('${customer.id}', '${n.id}')" class="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 p-0.5 rounded transition" title="Delete note">
-                  <span class="material-symbols-outlined text-[13px]">delete</span>
-                </button>
-              </div>
-            </div>
-            <p class="text-xs text-slate-800 leading-relaxed font-normal">${n.text}</p>
-          </div>
-        `).join('')}
-      </div>
-    </div>
 
     <!-- 3. PROMINENT HANDLING STAFF SECTION -->
     <div class="p-4 border-b border-slate-200 space-y-2.5 bg-slate-50/50">
@@ -4872,6 +5943,282 @@ window.deleteAdminInternalNote = function(customerId, noteId) {
   renderCustomer360Panel();
   showToast('Note Deleted', 'Internal note removed.', 'delete', 'slate');
 };
+
+// =========================================================================
+// DYNAMIC INLINE FOLLOW-UP SCHEDULER (Replaces popup modal)
+// =========================================================================
+function setInlineFuQuickDate(daysAhead) {
+  const target = new Date();
+  target.setDate(target.getDate() + daysAhead);
+  const year = target.getFullYear();
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const day = String(target.getDate()).padStart(2, '0');
+  const dateInput = document.getElementById('inline-fu-date');
+  if (dateInput) {
+    dateInput.value = `${year}-${month}-${day}`;
+  }
+}
+window.setInlineFuQuickDate = setInlineFuQuickDate;
+
+function setInlineFuQuickTime(preset) {
+  const hourEl = document.getElementById('inline-fu-hour');
+  const minEl = document.getElementById('inline-fu-min');
+  const ampmEl = document.getElementById('inline-fu-ampm');
+  if (!hourEl || !minEl || !ampmEl) return;
+
+  const now = new Date();
+  if (preset === 'NOW') {
+    let h = now.getHours();
+    let m = Math.ceil(now.getMinutes() / 5) * 5;
+    if (m >= 60) { h = (h + 1) % 24; m = 0; }
+    ampmEl.value = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12 || 12;
+    hourEl.value = String(h12).padStart(2, '0');
+    minEl.value = String(m).padStart(2, '0');
+  } else if (preset === 'PLUS_1H') {
+    let h = (now.getHours() + 1) % 24;
+    let m = Math.ceil(now.getMinutes() / 5) * 5;
+    if (m >= 60) { h = (h + 1) % 24; m = 0; }
+    ampmEl.value = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12 || 12;
+    hourEl.value = String(h12).padStart(2, '0');
+    minEl.value = String(m).padStart(2, '0');
+  } else if (preset === '10AM') {
+    hourEl.value = '10';
+    minEl.value = '00';
+    ampmEl.value = 'AM';
+  } else if (preset === '5PM') {
+    hourEl.value = '05';
+    minEl.value = '00';
+    ampmEl.value = 'PM';
+  }
+}
+window.setInlineFuQuickTime = setInlineFuQuickTime;
+
+function saveDynamicCustomerFollowup(customerId) {
+  const custId = customerId || ACTIVE_CUSTOMER_ID;
+  const cust = (CRM_STATE.customers || []).find(c => c.id === custId) || { id: custId, name: 'Customer' };
+  const qry = (CRM_STATE.queries || []).find(q => q.customerId === custId);
+
+  const dateVal = document.getElementById('inline-fu-date')?.value || new Date().toISOString().split('T')[0];
+  const hourVal = document.getElementById('inline-fu-hour')?.value || '11';
+  const minVal = document.getElementById('inline-fu-min')?.value || '00';
+  const ampmVal = document.getElementById('inline-fu-ampm')?.value || 'AM';
+  const timeVal = `${hourVal}:${minVal} ${ampmVal}`;
+  const staffVal = document.getElementById('inline-fu-staff')?.value || 'staff_01';
+  const rawNote = document.getElementById('inline-fu-notes')?.value?.trim();
+  const notesVal = rawNote || (qry?.queryText || 'Customer Follow-up');
+
+  const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const authorName = currentUser ? (currentUser.name || currentUser.username || (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff')) : (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff');
+
+  // Check if active pending follow-up already exists
+  let existingFu = (CRM_STATE.followups || []).find(f => f && (f.customerId === custId || String(f.customerId) === String(custId)) && f.status === 'PENDING');
+  let isRescheduled = false;
+  let oldDate = null;
+  let oldTime = null;
+  let targetFu = null;
+
+  if (existingFu) {
+    isRescheduled = true;
+    oldDate = existingFu.date;
+    oldTime = existingFu.time;
+    existingFu.date = dateVal;
+    existingFu.time = timeVal;
+    existingFu.assignedTo = staffVal;
+    existingFu.reason = notesVal;
+    existingFu.createdBy = authorName;
+    existingFu.customerPhone = cust.phone || cust.whatsapp || existingFu.customerPhone || '';
+    targetFu = existingFu;
+  } else {
+    const newFu = {
+      id: `FU-2026-00${(CRM_STATE.followups || []).length + 101}`,
+      queryId: qry ? qry.id : 'Q-2026-0000',
+      customerId: custId,
+      customerName: cust.name,
+      customerPhone: cust.phone || cust.whatsapp || '',
+      assignedTo: staffVal,
+      createdBy: authorName,
+      date: dateVal,
+      time: timeVal,
+      reason: notesVal,
+      status: 'PENDING',
+      outcome: 'PENDING',
+      priority: qry?.priority || 'NORMAL',
+      channel: 'WHATSAPP',
+      createdAt: new Date().toISOString()
+    };
+    (CRM_STATE.followups = CRM_STATE.followups || []).unshift(newFu);
+    targetFu = newFu;
+  }
+
+  // Sync follow-up to MySQL backend
+  fetch('api.php?action=save_followup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(targetFu)
+  }).catch(() => {});
+
+  if (qry) {
+    const oldSt = qry.status || 'NEW';
+    qry.status = 'FOLLOW_UP';
+    qry.statusNotes = notesVal;
+    qry.assignedTo = staffVal; // Keep query assignedTo in sync with follow-up staff
+    const nowObj = new Date();
+    const timeFormatted = nowObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' at ' + nowObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    qry.statusLastEditedBy = authorName;
+    qry.statusLastEditedAt = timeFormatted;
+    qry.statusPrevious = oldSt;
+    qry.statusHistory = qry.statusHistory || [];
+    qry.statusHistory.unshift({
+      action: isRescheduled ? 'FOLLOWUP_RESCHEDULED' : 'FOLLOWUP_SCHEDULED',
+      from: oldSt,
+      to: 'FOLLOW_UP',
+      by: authorName,
+      at: timeFormatted,
+      followupDate: dateVal,
+      followupTime: timeVal,
+      previousFollowupDate: oldDate,
+      previousFollowupTime: oldTime,
+      assignedTo: staffVal,
+      notes: rawNote ? notesVal : (isRescheduled ? `Follow-up rescheduled to ${dateVal} at ${timeVal}` : notesVal),
+      timestamp: nowObj.toISOString()
+    });
+
+    fetch('api.php?action=assign_query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: qry.id,
+        assigned_to: staffVal || qry.assignedTo || 'UNASSIGNED',
+        status: 'FOLLOW_UP',
+        notes: qry.statusNotes,
+        user: authorName
+      })
+    }).catch(() => {});
+  }
+
+  saveCRMState();
+  if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+  if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+  if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+  if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+
+  showToast(isRescheduled ? 'Follow-up Rescheduled' : 'Follow-up Saved', `Scheduled for ${dateVal} at ${timeVal}`, 'check_circle', isRescheduled ? 'blue' : 'emerald');
+  renderCustomer360Panel();
+
+  setTimeout(() => {
+    const scrollBox = document.getElementById('status-history-scroll-container');
+    if (scrollBox) {
+      scrollBox.scrollTop = 0;
+    }
+    const historyWrapper = document.getElementById('status-history-wrapper');
+    if (historyWrapper) {
+      historyWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, 60);
+}
+window.saveDynamicCustomerFollowup = saveDynamicCustomerFollowup;
+
+function saveInlineRescheduledFollowup(customerId, followupId) {
+  const custId = customerId || ACTIVE_CUSTOMER_ID;
+  const dateVal = document.getElementById(`inline-resched-date-${custId}`)?.value || new Date().toISOString().split('T')[0];
+  const hourVal = document.getElementById(`inline-resched-hour-${custId}`)?.value || '11';
+  const minVal = document.getElementById(`inline-resched-min-${custId}`)?.value || '00';
+  const ampmVal = document.getElementById(`inline-resched-ampm-${custId}`)?.value || 'AM';
+  const timeVal = `${hourVal}:${minVal} ${ampmVal}`;
+  const customNoteVal = document.getElementById(`inline-resched-note-${custId}`)?.value?.trim() || '';
+
+  const fu = (CRM_STATE.followups || []).find(f => f.id === followupId);
+  if (fu) {
+    const oldDate = fu.date;
+    const oldTime = fu.time;
+    fu.date = dateVal;
+    fu.time = timeVal;
+    fu.status = 'PENDING';
+    if (customNoteVal) fu.reason = customNoteVal;
+    fu.createdBy = authorName;
+    if (customNoteVal) fu.reason = customNoteVal;
+    fu.createdBy = authorName;
+
+    const cust = (CRM_STATE.customers || []).find(c => c.id === custId) || { id: custId, name: 'Customer' };
+    const qry = (CRM_STATE.queries || []).find(q => q.customerId === custId || (fu.queryId && q.id === fu.queryId));
+
+    const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const authorName = currentUser ? (currentUser.name || currentUser.username || (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff')) : (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff');
+    const nowObj = new Date();
+    const timeFormatted = nowObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' at ' + nowObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const auditNote = customNoteVal || `Follow-up rescheduled from ${oldDate} at ${oldTime} to ${dateVal} at ${timeVal}`;
+
+    if (qry) {
+      const oldSt = qry.status || 'FOLLOW_UP';
+      qry.status = 'FOLLOW_UP';
+      qry.statusNotes = auditNote;
+      qry.statusLastEditedBy = authorName;
+      qry.statusLastEditedAt = timeFormatted;
+      qry.statusPrevious = oldSt;
+      qry.statusHistory = qry.statusHistory || [];
+      qry.statusHistory.unshift({
+        action: 'FOLLOWUP_RESCHEDULED',
+        from: oldSt,
+        to: 'FOLLOW_UP',
+        by: authorName,
+        at: timeFormatted,
+        followupDate: dateVal,
+        followupTime: timeVal,
+        previousFollowupDate: oldDate,
+        previousFollowupTime: oldTime,
+        assignedTo: fu.assignedTo,
+        notes: auditNote,
+        timestamp: nowObj.toISOString()
+      });
+
+      // Synchronize query status with backend MySQL
+      fetch('api.php?action=assign_query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: qry.id,
+          assigned_to: qry.assignedTo || fu.assignedTo || 'UNASSIGNED',
+          status: 'FOLLOW_UP',
+          notes: auditNote,
+          user: authorName
+        })
+      }).catch(() => {});
+    }
+
+    // Persist updated follow-up with MySQL
+    fetch('api.php?action=save_followup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fu)
+    }).catch(() => {});
+
+    if (typeof logAudit === 'function') {
+      logAudit('FOLLOWUP_RESCHEDULED', 'CUSTOMER_PANEL', `Follow-up for ${cust.name || 'Customer'} rescheduled from ${oldDate} at ${oldTime} to ${dateVal} at ${timeVal} by ${authorName}`);
+    }
+
+    saveCRMState();
+    if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+    if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+    showToast('Follow-up Rescheduled', `Updated to ${dateVal} at ${timeVal}`, 'check_circle', 'blue');
+    renderCustomer360Panel();
+
+    setTimeout(() => {
+      const scrollBox = document.getElementById('status-history-scroll-container');
+      if (scrollBox) {
+        scrollBox.scrollTop = 0;
+      }
+      const historyWrapper = document.getElementById('status-history-wrapper');
+      if (historyWrapper) {
+        historyWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 60);
+  }
+}
+window.saveInlineRescheduledFollowup = saveInlineRescheduledFollowup;
 
 window.insertAdminNoteTag = function(tagText) {
   const noteInput = document.getElementById('quick-admin-note-input');
@@ -8772,7 +10119,19 @@ function openFollowUpModal(prefillCustomerId = null) {
   // Set Customer Display
   const custDisplay = document.getElementById('followup-customer-display');
   if (custDisplay) {
-    custDisplay.innerText = customer ? `${customer.name} (${customer.whatsapp || customer.phone})` : 'New WhatsApp Customer';
+    if (prefillCustomerId && customer) {
+      custDisplay.innerHTML = `<span class="text-slate-900 font-bold">${customer.name} (${customer.whatsapp || customer.phone || 'WhatsApp'})</span><input type="hidden" id="followup-chosen-customer-id" value="${customer.id}">`;
+    } else if (CRM_STATE.customers && CRM_STATE.customers.length > 0) {
+      custDisplay.innerHTML = `
+        <select id="followup-chosen-customer-id" onchange="ACTIVE_CUSTOMER_ID = this.value; checkDuplicateFollowup(this.value);" class="w-full bg-transparent font-bold text-slate-800 text-xs focus:outline-none cursor-pointer">
+          ${CRM_STATE.customers.map(c => `
+            <option value="${c.id}" ${c.id === cId ? 'selected' : ''}>${c.name} (${c.whatsapp || c.phone || 'No Phone'})</option>
+          `).join('')}
+        </select>
+      `;
+    } else {
+      custDisplay.innerHTML = `<span class="text-slate-900 font-bold">${customer ? (customer.name + ' (' + (customer.whatsapp || customer.phone) + ')') : 'Priya Sundaram (+91 98401 23456)'}</span><input type="hidden" id="followup-chosen-customer-id" value="${cId || 'cust_101'}">`;
+    }
   }
 
   // Pre-fill Assigned Staff Dropdown
@@ -8794,17 +10153,7 @@ function openFollowUpModal(prefillCustomerId = null) {
   }
 
   // Duplicate Active Follow-up Pre-Flight Check
-  const dupWarning = document.getElementById('followup-duplicate-warning');
-  const dupText = document.getElementById('followup-duplicate-text');
-  if (dupWarning && dupText) {
-    const existing = (CRM_STATE.followups || []).find(f => f.customerId === cId && f.status === 'PENDING');
-    if (existing) {
-      dupWarning.classList.remove('hidden');
-      dupText.innerText = `Customer already has an active follow-up (${existing.id}) scheduled for ${existing.date} at ${existing.time} with ${existing.assignedTo}. You may reschedule or create an additional follow-up.`;
-    } else {
-      dupWarning.classList.add('hidden');
-    }
-  }
+  checkDuplicateFollowup(cId);
 
   // Set default date to today
   const now = new Date();
@@ -8842,8 +10191,31 @@ function openFollowUpModal(prefillCustomerId = null) {
   const chanEl = document.getElementById('followup-channel');
   if (chanEl) chanEl.value = 'WHATSAPP';
 
+  // Reset or pre-fill Payment Pending fields
+  const payToggle = document.getElementById('modal-followup-pay-pending-toggle');
+  const payFields = document.getElementById('modal-followup-pay-fields');
+  const payAmt = document.getElementById('modal-followup-pay-amount');
+  const payMode = document.getElementById('modal-followup-pay-mode');
+  const payItems = document.getElementById('modal-followup-quoted-items');
+  if (payToggle) {
+    payToggle.checked = Boolean(query?.isPaymentPending);
+  }
+  if (payFields) {
+    if (query?.isPaymentPending) {
+      payFields.classList.remove('hidden');
+    } else {
+      payFields.classList.add('hidden');
+    }
+  }
+  if (payAmt) payAmt.value = query?.paymentAmount || '';
+  if (payMode) payMode.value = query?.paymentMode || 'UPI';
+  if (payItems) payItems.value = query?.quotedItems || '';
+
   updateFollowUpTimePreview();
-  openModal('modal-followup');
+  if (prefillCustomerId) {
+    if (typeof selectCustomerChat === 'function') selectCustomerChat(prefillCustomerId);
+    if (typeof switchView === 'function') switchView('inbox');
+  }
 }
 
 function updateFollowUpTimePreview() {
@@ -8941,9 +10313,24 @@ function appendFollowUpNoteTemplate(text) {
   notesEl.focus();
 }
 
+function checkDuplicateFollowup(cId) {
+  const dupWarning = document.getElementById('followup-duplicate-warning');
+  const dupText = document.getElementById('followup-duplicate-text');
+  if (!dupWarning || !dupText) return;
+  const existing = (CRM_STATE.followups || []).find(f => f && (f.customerId === cId || String(f.customerId) === String(cId)) && f.status === 'PENDING');
+  if (existing) {
+    dupWarning.classList.remove('hidden');
+    dupText.innerText = `Customer already has an active follow-up (${existing.id}) scheduled for ${existing.date} at ${existing.time} with ${existing.assignedTo}. You may reschedule or create an additional follow-up.`;
+  } else {
+    dupWarning.classList.add('hidden');
+  }
+}
+window.checkDuplicateFollowup = checkDuplicateFollowup;
+
 function handleCreateFollowup(event) {
   event.preventDefault();
   const currentUser = getCurrentUser();
+  const chosenCustId = document.getElementById('followup-chosen-customer-id')?.value || ACTIVE_CUSTOMER_ID;
   const date = document.getElementById('followup-date')?.value || new Date().toISOString().split('T')[0];
   const hour = document.getElementById('followup-hour')?.value || '11';
   const min = document.getElementById('followup-minute')?.value || '00';
@@ -8954,7 +10341,13 @@ function handleCreateFollowup(event) {
   const channel = document.getElementById('followup-channel')?.value || 'WHATSAPP';
   const assignedStaff = document.getElementById('followup-staff-select')?.value || (currentUser.staffId || currentUser.id || 'staff_01');
 
-  const customer = (CRM_STATE.customers || []).find(c => c.id === ACTIVE_CUSTOMER_ID) || CRM_STATE.customers[0] || { id: 'cust_101', name: 'Customer' };
+  // Payment Pending Fields
+  const isPayPending = document.getElementById('modal-followup-pay-pending-toggle')?.checked || false;
+  const payAmt = parseFloat(document.getElementById('modal-followup-pay-amount')?.value || 0);
+  const payMode = document.getElementById('modal-followup-pay-mode')?.value || 'UPI';
+  const quotedItems = document.getElementById('modal-followup-quoted-items')?.value?.trim() || '';
+
+  const customer = (CRM_STATE.customers || []).find(c => c.id === chosenCustId) || (CRM_STATE.customers && CRM_STATE.customers[0]) || { id: chosenCustId || 'cust_101', name: 'Customer' };
   const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
 
   const newFollowup = {
@@ -8970,14 +10363,50 @@ function handleCreateFollowup(event) {
     outcome: 'PENDING',
     priority: priority,
     channel: channel,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    isPaymentPending: isPayPending,
+    paymentAmount: payAmt,
+    paymentMode: payMode,
+    paymentDueDate: isPayPending ? date : '',
+    paymentNotes: isPayPending ? notes : '',
+    quotedItems: quotedItems
   };
 
   (CRM_STATE.followups = CRM_STATE.followups || []).unshift(newFollowup);
-  if (query) query.status = 'FOLLOW_UP';
+  if (query) {
+    const oldSt = query.status || 'NEW';
+    query.status = 'FOLLOW_UP';
+    if (isPayPending) {
+      query.isPaymentPending = true;
+      query.paymentAmount = payAmt;
+      query.paymentMode = payMode;
+      query.paymentDueDate = date;
+      query.paymentNotes = notes;
+      query.quotedItems = quotedItems;
+    }
+    const actor = currentUser.name || (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff');
+    const nowObj = new Date();
+    const timeFormatted = nowObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' at ' + nowObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    query.statusLastEditedBy = actor;
+    query.statusLastEditedAt = timeFormatted;
+    query.statusNotes = notes;
+    query.statusHistory = query.statusHistory || [];
+    query.statusHistory.unshift({
+      action: (oldSt === 'FOLLOW_UP') ? 'FOLLOWUP_RESCHEDULED' : 'FOLLOWUP_SCHEDULED',
+      from: oldSt,
+      to: 'FOLLOW_UP',
+      by: actor,
+      at: timeFormatted,
+      followupDate: date,
+      followupTime: formattedTime,
+      assignedTo: assignedStaff,
+      notes: notes,
+      timestamp: nowObj.toISOString()
+    });
+  }
 
   const actor = currentUser.name || 'Staff';
-  logAudit('FOLLOWUP_SCHEDULED', 'FOLLOWUP', `Scheduled follow-up for ${customer.name} on ${date} at ${formattedTime} via ${channel} (Priority: ${priority}, Staff: ${assignedStaff})`);
+  logAudit('FOLLOWUP_SCHEDULED', 'FOLLOWUP', `Scheduled follow-up for ${customer.name} on ${date} at ${formattedTime} via ${channel} (Priority: ${priority}, Staff: ${assignedStaff}${isPayPending ? ', Payment Pending: ₹' + payAmt : ''})`);
 
   // Asynchronously synchronize follow-up with MySQL Database
   fetch('api.php?action=save_followup', {
@@ -8988,7 +10417,11 @@ function handleCreateFollowup(event) {
 
   saveCRMState();
   closeModal('modal-followup');
-  showToast('Follow-up Scheduled', `Reminder set for ${date} at ${formattedTime} (${assignedStaff})`, 'event', 'blue');
+  if (isPayPending) {
+    showToast('Payment Follow-up Scheduled', `Payment Pending ₹${payAmt.toFixed(2)} scheduled for ${date} (${assignedStaff})`, 'payments', 'amber');
+  } else {
+    showToast('Follow-up Scheduled', `Reminder set for ${date} at ${formattedTime} (${assignedStaff})`, 'event', 'blue');
+  }
   
   updateFollowupsKPICounters();
   filterFollowupsCards();
@@ -9088,7 +10521,31 @@ function handleSaveFollowupOutcome(event) {
     };
     CRM_STATE.followups.unshift(nextFu);
     nextFuPayload = nextFu;
-    if (query) query.status = 'FOLLOW_UP';
+    if (query) {
+      const oldSt = query.status || 'FOLLOW_UP';
+      query.status = 'FOLLOW_UP';
+      const actor = currentUser.name || (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff');
+      const nowObj = new Date();
+      const timeFormatted = nowObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' at ' + nowObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      query.statusLastEditedBy = actor;
+      query.statusLastEditedAt = timeFormatted;
+      query.statusNotes = notes ? `Follow-up again: ${notes}` : `Follow-up rescheduled to ${nextDate} at ${nextTime}`;
+      query.statusHistory = query.statusHistory || [];
+      query.statusHistory.unshift({
+        action: 'FOLLOWUP_RESCHEDULED',
+        from: oldSt,
+        to: 'FOLLOW_UP',
+        by: actor,
+        at: timeFormatted,
+        followupDate: nextDate,
+        followupTime: nextTime,
+        previousFollowupDate: fu.date,
+        previousFollowupTime: fu.time,
+        assignedTo: fu.assignedTo,
+        notes: notes ? `Follow-up again: ${notes}` : `Follow-up rescheduled to ${nextDate} at ${nextTime}`,
+        timestamp: nowObj.toISOString()
+      });
+    }
   }
 
   // 3. Post to backend API
@@ -9147,27 +10604,86 @@ function handleReassignFollowup(fuId, newStaffId) {
   filterFollowupsCards();
 }
 
+let ACTIVE_FOLLOWUP_HUB_MODE = 'FOLLOWUPS'; // 'FOLLOWUPS' | 'PAYMENT_PENDING'
+let ACTIVE_PAYMENT_PENDING_TAB = 'ALL'; // 'ALL' | 'TODAY' | 'UPCOMING' | 'OVERDUE' | 'COMPLETED' | 'LOST'
+
+function switchFollowupHubMode(mode) {
+  ACTIVE_FOLLOWUP_HUB_MODE = mode;
+  const viewFollowups = document.getElementById('subview-hub-followups');
+  const viewPayment = document.getElementById('subview-hub-payment-pending');
+  const tabFollowups = document.getElementById('hub-mode-tab-followups');
+  const tabPayment = document.getElementById('hub-mode-tab-payment-pending');
+
+  if (mode === 'FOLLOWUPS') {
+    if (viewFollowups) viewFollowups.classList.remove('hidden');
+    if (viewPayment) viewPayment.classList.add('hidden');
+    if (tabFollowups) tabFollowups.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-blue-700 cursor-pointer";
+    if (tabPayment) tabPayment.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-amber-700 cursor-pointer";
+    updateFollowupsKPICounters();
+    filterFollowupsCards();
+  } else {
+    if (viewFollowups) viewFollowups.classList.add('hidden');
+    if (viewPayment) viewPayment.classList.remove('hidden');
+    if (tabFollowups) tabFollowups.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-blue-700 cursor-pointer";
+    if (tabPayment) tabPayment.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-amber-600 cursor-pointer";
+    updatePaymentPendingKPICounters();
+    filterPaymentPendingCards();
+  }
+}
+window.switchFollowupHubMode = switchFollowupHubMode;
+
 function setFollowupTabFilter(tab) {
   ACTIVE_FOLLOWUP_TAB = tab;
 
   // Highlight tab buttons
-  const tabs = ['ALL', 'TODAY', 'UPCOMING', 'OVERDUE', 'COMPLETED', 'LOST'];
+  const tabs = ['ALL', 'TODAY', 'UPCOMING', 'OVERDUE', 'PAYMENT_PENDING', 'COMPLETED', 'LOST'];
   tabs.forEach(t => {
-    const btn = document.getElementById(`tab-fu-${t.toLowerCase()}`);
+    const btnId = t === 'PAYMENT_PENDING' ? 'tab-fu-payment-pending' : `tab-fu-${t.toLowerCase()}`;
+    const btn = document.getElementById(btnId);
     if (btn) {
       if (t === tab) {
-        btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-blue-600 text-white shadow-sm transition shrink-0 flex items-center gap-1";
+        if (t === 'PAYMENT_PENDING') {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-white text-amber-600 border border-amber-200/80 shadow-sm transition shrink-0 flex items-center gap-1.5 cursor-pointer";
+        } else {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-blue-600 text-white shadow-sm transition shrink-0 flex items-center gap-1 cursor-pointer";
+        }
       } else {
-        btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0 flex items-center gap-1";
+        if (t === 'PAYMENT_PENDING') {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 transition shrink-0 flex items-center gap-1.5 cursor-pointer";
+        } else {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0 flex items-center gap-1 cursor-pointer";
+        }
+      }
+    }
+  });
+
+  // KPI card selection border highlight
+  const kpiFuMap = {
+    'ALL': 'kpi-card-all',
+    'TODAY': 'kpi-card-today',
+    'UPCOMING': 'kpi-card-upcoming',
+    'OVERDUE': 'kpi-card-overdue',
+    'PAYMENT_PENDING': 'kpi-card-payment-pending',
+    'COMPLETED': 'kpi-card-converted',
+    'LOST': 'kpi-card-lost'
+  };
+  Object.keys(kpiFuMap).forEach(k => {
+    const card = document.getElementById(kpiFuMap[k]);
+    if (card) {
+      if (k === tab) {
+        card.classList.add('ring-2', 'ring-blue-500', 'shadow-md');
+      } else {
+        card.classList.remove('ring-2', 'ring-blue-500', 'shadow-md');
       }
     }
   });
 
   filterFollowupsCards();
 }
+window.setFollowupTabFilter = setFollowupTabFilter;
 
 function updateFollowupsKPICounters() {
-  const all = CRM_STATE.followups || [];
+  const all = (CRM_STATE.followups || []).filter(f => f && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw')));
   const currentUser = getCurrentUser();
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
 
@@ -9179,6 +10695,9 @@ function updateFollowupsKPICounters() {
   const todayDue = scopedList.filter(f => f.status === 'PENDING' && f.date === todayStr).length;
   const upcoming = scopedList.filter(f => f.status === 'PENDING' && f.date > todayStr).length;
   const overdue = scopedList.filter(f => isFollowupOverdue(f)).length;
+  const paymentPendingList = scopedList.filter(f => (f.status === 'PENDING' || !f.status || f.status === 'SCHEDULED') && (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1'));
+  const paymentPendingCount = paymentPendingList.length;
+  const paymentPendingTotalAmt = paymentPendingList.reduce((sum, f) => sum + (parseFloat(f.paymentAmount) || 0), 0);
   const converted = scopedList.filter(f => f.status === 'COMPLETED' && f.outcome !== 'LOST').length;
   const lost = scopedList.filter(f => f.outcome === 'LOST').length;
 
@@ -9187,6 +10706,8 @@ function updateFollowupsKPICounters() {
   const elToday = document.getElementById('kpi-fu-today');
   const elUpcoming = document.getElementById('kpi-fu-upcoming');
   const elOverdue = document.getElementById('kpi-fu-overdue');
+  const elPaymentPending = document.getElementById('kpi-fu-payment-pending');
+  const elPaymentAmount = document.getElementById('kpi-fu-payment-amount');
   const elConverted = document.getElementById('kpi-fu-converted');
   const elLost = document.getElementById('kpi-fu-lost');
 
@@ -9194,14 +10715,24 @@ function updateFollowupsKPICounters() {
   if (elToday) elToday.innerText = todayDue;
   if (elUpcoming) elUpcoming.innerText = upcoming;
   if (elOverdue) elOverdue.innerText = overdue;
+  if (elPaymentPending) elPaymentPending.innerText = paymentPendingCount;
+  if (elPaymentAmount) elPaymentAmount.innerText = `₹${paymentPendingTotalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Total`;
   if (elConverted) elConverted.innerText = converted;
   if (elLost) elLost.innerText = lost;
+
+  // Update Tier 1 Mode Switcher Badges
+  const hubBadgeFollowups = document.getElementById('hub-badge-followups-count');
+  if (hubBadgeFollowups) hubBadgeFollowups.innerText = total;
+  const hubBadgePayment = document.getElementById('hub-badge-payment-pending-count');
+  if (hubBadgePayment) hubBadgePayment.innerText = paymentPendingCount;
 
   // Update Tab Badges
   const tabBadgeToday = document.getElementById('tab-badge-today');
   const tabBadgeOverdue = document.getElementById('tab-badge-overdue');
+  const tabBadgePayPending = document.getElementById('tab-badge-payment-pending');
   if (tabBadgeToday) tabBadgeToday.innerText = todayDue;
   if (tabBadgeOverdue) tabBadgeOverdue.innerText = overdue;
+  if (tabBadgePayPending) tabBadgePayPending.innerText = paymentPendingCount;
 
   // Sidebar Follow-up Counter
   const badgeSidebar = document.getElementById('badge-followup-count');
@@ -9241,7 +10772,387 @@ function updateFollowupsKPICounters() {
       `;
     }
   }
+
+  // Also update Payment Pending Counters
+  updatePaymentPendingKPICounters();
 }
+window.updateFollowupsKPICounters = updateFollowupsKPICounters;
+
+function updatePaymentPendingKPICounters() {
+  const all = (CRM_STATE.followups || []).filter(f => f && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw')));
+  const currentUser = getCurrentUser();
+  const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
+
+  // RBAC scope
+  const scopedList = isAdmin ? all : all.filter(f => f.assignedTo === currentUser.id || f.assignedTo === currentUser.staffId);
+  const payRecords = scopedList.filter(f => f && (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1));
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const totalPendingList = payRecords.filter(f => (f.status === 'PENDING' || !f.status || f.status === 'SCHEDULED'));
+  const todayDueList = payRecords.filter(f => (f.status === 'PENDING' || !f.status || f.status === 'SCHEDULED') && (f.paymentDueDate === todayStr || f.date === todayStr));
+  const upcomingList = payRecords.filter(f => (f.status === 'PENDING' || !f.status || f.status === 'SCHEDULED') && ((f.paymentDueDate || f.date) > todayStr));
+  const overdueList = payRecords.filter(f => (f.status === 'PENDING' || !f.status || f.status === 'SCHEDULED') && isFollowupOverdue(f));
+  const convertedList = payRecords.filter(f => f.status === 'COMPLETED' && f.outcome !== 'LOST');
+  const lostList = payRecords.filter(f => f.outcome === 'LOST');
+
+  const sumAmt = (list) => list.reduce((sum, f) => sum + (parseFloat(f.paymentAmount) || 0), 0);
+
+  const totalCount = totalPendingList.length;
+  const totalAmount = sumAmt(totalPendingList);
+
+  const todayCount = todayDueList.length;
+  const todayAmount = sumAmt(todayDueList);
+
+  const upcomingCount = upcomingList.length;
+  const upcomingAmount = sumAmt(upcomingList);
+
+  const overdueCount = overdueList.length;
+  const overdueAmount = sumAmt(overdueList);
+
+  const convertedCount = convertedList.length;
+  const convertedAmount = sumAmt(convertedList);
+
+  const lostCount = lostList.length;
+  const lostAmount = sumAmt(lostList);
+
+  const fmt = (amt) => `₹${amt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+  const setInner = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = val;
+  };
+
+  setInner('kpi-pay-total-count', totalCount);
+  setInner('kpi-pay-total-amount', `${fmt(totalAmount)} Total`);
+
+  setInner('kpi-pay-today-count', todayCount);
+  setInner('kpi-pay-today-amount', `${fmt(todayAmount)} Due`);
+
+  setInner('kpi-pay-upcoming-count', upcomingCount);
+  setInner('kpi-pay-upcoming-amount', `${fmt(upcomingAmount)} Promised`);
+
+  setInner('kpi-pay-overdue-count', overdueCount);
+  setInner('kpi-pay-overdue-amount', `${fmt(overdueAmount)} Overdue`);
+
+  setInner('kpi-pay-converted-count', convertedCount);
+  setInner('kpi-pay-converted-amount', `${fmt(convertedAmount)} Collected`);
+
+  setInner('kpi-pay-lost-count', lostCount);
+  setInner('kpi-pay-lost-amount', `${fmt(lostAmount)} Cancelled`);
+
+  // Sub-tab ribbon badges
+  setInner('tab-badge-pay-today', todayCount);
+  setInner('tab-badge-pay-overdue', overdueCount);
+
+  // Top header badge
+  setInner('hub-badge-payment-pending-count', totalCount);
+}
+window.updatePaymentPendingKPICounters = updatePaymentPendingKPICounters;
+
+function setPaymentPendingTabFilter(tab) {
+  ACTIVE_PAYMENT_PENDING_TAB = tab;
+
+  // Sub-tabs styling
+  const tabs = ['ALL', 'TODAY', 'UPCOMING', 'OVERDUE', 'COMPLETED', 'LOST'];
+  tabs.forEach(t => {
+    let btnId = 'tab-pay-all';
+    if (t === 'TODAY') btnId = 'tab-pay-today';
+    else if (t === 'UPCOMING') btnId = 'tab-pay-upcoming';
+    else if (t === 'OVERDUE') btnId = 'tab-pay-overdue';
+    else if (t === 'COMPLETED') btnId = 'tab-pay-completed';
+    else if (t === 'LOST') btnId = 'tab-pay-lost';
+
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      if (t === tab) {
+        if (t === 'OVERDUE') {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-rose-600 text-white shadow-sm transition shrink-0 flex items-center gap-1 cursor-pointer";
+        } else if (t === 'COMPLETED') {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-emerald-600 text-white shadow-sm transition shrink-0 cursor-pointer";
+        } else if (t === 'UPCOMING') {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-indigo-600 text-white shadow-sm transition shrink-0 cursor-pointer";
+        } else {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-amber-600 text-white shadow-sm transition shrink-0 flex items-center gap-1 cursor-pointer";
+        }
+      } else {
+        if (t === 'OVERDUE') {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 transition shrink-0 flex items-center gap-1 cursor-pointer";
+        } else {
+          btn.className = "px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 transition shrink-0 flex items-center gap-1 cursor-pointer";
+        }
+      }
+    }
+  });
+
+  // KPI card selection border highlight
+  const kpiMap = {
+    'ALL': 'kpi-paycard-all',
+    'TODAY': 'kpi-paycard-today',
+    'UPCOMING': 'kpi-paycard-upcoming',
+    'OVERDUE': 'kpi-paycard-overdue',
+    'COMPLETED': 'kpi-paycard-converted',
+    'LOST': 'kpi-paycard-lost'
+  };
+  Object.keys(kpiMap).forEach(k => {
+    const card = document.getElementById(kpiMap[k]);
+    if (card) {
+      if (k === tab) {
+        card.classList.add('ring-2', 'ring-amber-500', 'shadow-md');
+      } else {
+        card.classList.remove('ring-2', 'ring-amber-500', 'shadow-md');
+      }
+    }
+  });
+
+  filterPaymentPendingCards();
+}
+window.setPaymentPendingTabFilter = setPaymentPendingTabFilter;
+
+function filterPaymentPendingCards() {
+  const container = document.getElementById('payment-pending-cards-grid');
+  const emptyState = document.getElementById('payment-pending-empty-state');
+  if (!container) return;
+
+  const currentUser = getCurrentUser();
+  const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
+
+  const searchKeyword = (document.getElementById('pay-pending-search-input')?.value || '').toLowerCase().trim();
+  const staffFilter = document.getElementById('pay-pending-filter-staff')?.value || 'ALL';
+  const modeFilter = document.getElementById('pay-pending-filter-mode')?.value || 'ALL';
+  const tabFilter = ACTIVE_PAYMENT_PENDING_TAB || 'ALL';
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  let list = (CRM_STATE.followups || []).filter(fu => fu && (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1));
+
+  // 1. RBAC Isolation
+  if (!isAdmin) {
+    list = list.filter(fu => fu.assignedTo === currentUser.id || fu.assignedTo === currentUser.staffId);
+  } else if (staffFilter !== 'ALL') {
+    list = list.filter(fu => fu.assignedTo === staffFilter);
+  }
+
+  // 2. Tab Filter
+  if (tabFilter === 'TODAY') {
+    list = list.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && (fu.paymentDueDate === todayStr || fu.date === todayStr));
+  } else if (tabFilter === 'UPCOMING') {
+    list = list.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && ((fu.paymentDueDate || fu.date) > todayStr));
+  } else if (tabFilter === 'OVERDUE') {
+    list = list.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && isFollowupOverdue(fu));
+  } else if (tabFilter === 'COMPLETED') {
+    list = list.filter(fu => fu.status === 'COMPLETED' && fu.outcome !== 'LOST');
+  } else if (tabFilter === 'LOST') {
+    list = list.filter(fu => fu.outcome === 'LOST');
+  }
+
+  // 3. Payment Mode Filter
+  if (modeFilter !== 'ALL') {
+    list = list.filter(fu => (fu.paymentMode || 'UPI').toUpperCase() === modeFilter.toUpperCase());
+  }
+
+  // 4. Search Filter
+  if (searchKeyword) {
+    list = list.filter(fu => {
+      const matchName = (fu.customerName || '').toLowerCase().includes(searchKeyword);
+      const matchItems = (fu.quotedItems || '').toLowerCase().includes(searchKeyword);
+      const matchNotes = (fu.paymentNotes || '').toLowerCase().includes(searchKeyword);
+      const matchReason = (fu.reason || '').toLowerCase().includes(searchKeyword);
+      const matchId = (fu.id || '').toLowerCase().includes(searchKeyword);
+      const matchCustId = (fu.customerId || '').toLowerCase().includes(searchKeyword);
+      return matchName || matchItems || matchNotes || matchReason || matchId || matchCustId;
+    });
+  }
+
+  // 5. Date Filter (Customize Date Pick)
+  const dateFilter = document.getElementById('pay-pending-filter-date')?.value || '';
+  const btnClearPayDate = document.getElementById('btn-clear-pay-date');
+  if (btnClearPayDate) btnClearPayDate.classList.toggle('hidden', !dateFilter);
+  if (dateFilter) {
+    list = list.filter(fu => (fu.paymentDueDate === dateFilter || fu.date === dateFilter));
+  }
+
+  // 6. Order / Sort Picker
+  const sortOrder = document.getElementById('pay-pending-filter-sort-order')?.value || 'DUE_ASC';
+  if (sortOrder === 'DUE_ASC') {
+    list.sort((a, b) => ((a.paymentDueDate || a.date || '9999-99-99') + (a.time || '')).localeCompare((b.paymentDueDate || b.date || '9999-99-99') + (b.time || '')));
+  } else if (sortOrder === 'DUE_DESC') {
+    list.sort((a, b) => ((b.paymentDueDate || b.date || '') + (b.time || '')).localeCompare((a.paymentDueDate || a.date || '') + (a.time || '')));
+  } else if (sortOrder === 'AMOUNT_DESC') {
+    list.sort((a, b) => (parseFloat(b.paymentAmount) || 0) - (parseFloat(a.paymentAmount) || 0));
+  } else if (sortOrder === 'AMOUNT_ASC') {
+    list.sort((a, b) => (parseFloat(a.paymentAmount) || 0) - (parseFloat(b.paymentAmount) || 0));
+  } else if (sortOrder === 'NEWEST') {
+    list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  } else if (sortOrder === 'NAME_ASC') {
+    list.sort((a, b) => (a.customerName || '').localeCompare(b.customerName || ''));
+  }
+
+  if (list.length === 0) {
+    container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+    return;
+  }
+
+  if (emptyState) emptyState.classList.add('hidden');
+
+  container.innerHTML = list.map(fu => {
+    const isOverdue = isFollowupOverdue(fu);
+    const isCompleted = fu.status === 'COMPLETED';
+    const isLost = fu.outcome === 'LOST';
+    const amt = parseFloat(fu.paymentAmount || 0);
+    const formattedAmt = amt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const mode = fu.paymentMode || 'UPI';
+    const dueDate = fu.paymentDueDate || fu.date || todayStr;
+    const items = fu.quotedItems || 'Quoted Garments';
+    const notes = fu.paymentNotes || fu.reason || 'Pending payment confirmation';
+
+    // Payment Mode label & icon
+    let modeBadge = `<span class="whitespace-nowrap px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[14px]">smartphone</span> UPI / GPay</span>`;
+    if (mode === 'BANK' || mode === 'BANK_TRANSFER') {
+      modeBadge = `<span class="whitespace-nowrap px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-900 border border-blue-300 flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[14px]">account_balance</span> Bank Transfer</span>`;
+    } else if (mode === 'COD_ADVANCE' || mode === 'COD') {
+      modeBadge = `<span class="whitespace-nowrap px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[14px]">local_shipping</span> COD Advance</span>`;
+    } else if (mode === 'PAYMENT_LINK') {
+      modeBadge = `<span class="whitespace-nowrap px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[14px]">link</span> Payment Link</span>`;
+    } else if (mode === 'CASH') {
+      modeBadge = `<span class="whitespace-nowrap px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[14px]">payments</span> Counter Cash</span>`;
+    } else if (mode === 'CARD') {
+      modeBadge = `<span class="whitespace-nowrap px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-900 border border-indigo-300 flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[14px]">credit_card</span> Card Swipe</span>`;
+    }
+
+    // Due date badge (with whitespace-nowrap and shrink-0 to prevent broken wrapping)
+    let dueStatusBadge = `<span class="whitespace-nowrap text-[10px] font-extrabold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 inline-flex items-center gap-1 shrink-0">Due Today</span>`;
+    if (isCompleted) {
+      dueStatusBadge = `<span class="whitespace-nowrap text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 inline-flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[13px]">check_circle</span> Paid</span>`;
+    } else if (isLost) {
+      dueStatusBadge = `<span class="whitespace-nowrap text-[10px] font-extrabold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 inline-flex items-center gap-1 shrink-0">Cancelled</span>`;
+    } else if (isOverdue) {
+      dueStatusBadge = `<span class="whitespace-nowrap text-[10px] font-extrabold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-300 inline-flex items-center gap-1 animate-pulse shrink-0"><span class="material-symbols-outlined text-[13px]">warning</span> Overdue (${dueDate})</span>`;
+    } else if (dueDate > todayStr) {
+      dueStatusBadge = `<span class="whitespace-nowrap text-[10px] font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200 inline-flex items-center gap-1 shrink-0">Promised ${dueDate}</span>`;
+    }
+
+    // Staff Name
+    const staffNames = {
+      staff_01: 'Priya Sharma',
+      staff_02: 'Rahul Verma',
+      staff_03: 'Sneha Patel',
+      admin: 'Super Admin'
+    };
+    const staffName = staffNames[fu.assignedTo] || fu.assignedTo || 'Unassigned';
+
+    return `
+      <div class="bg-white rounded-3xl p-5 border ${isOverdue && !isCompleted ? 'border-rose-300 shadow-rose-100/50 ring-1 ring-rose-200' : 'border-slate-200/90'} shadow-sm hover:shadow-md transition-all flex flex-col justify-between h-full space-y-3 relative group">
+        <!-- Card Header -->
+        <div class="flex items-start justify-between gap-2 min-h-[42px]">
+          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-700 text-white font-black text-sm flex items-center justify-center shadow-xs shrink-0">
+              <span class="material-symbols-outlined text-[20px]">currency_rupee</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h4 class="text-sm font-extrabold text-slate-900 flex items-center gap-1 cursor-pointer hover:text-amber-800 transition truncate" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" title="${fu.customerName}">
+                <span class="truncate">${fu.customerName}</span>
+                <span class="material-symbols-outlined text-[13px] text-slate-400 shrink-0">open_in_new</span>
+              </h4>
+              <p class="text-[11px] text-slate-500 font-mono flex items-center gap-1 truncate">
+                <span class="material-symbols-outlined text-[12px] text-slate-400 shrink-0">fingerprint</span>
+                <span class="truncate">${fu.customerId}</span>
+              </p>
+            </div>
+          </div>
+          <div class="shrink-0 pt-0.5">
+            ${dueStatusBadge}
+          </div>
+        </div>
+
+        <!-- Hero Golden Payment Highlight Box -->
+        <div class="p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-200/90 space-y-2">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-[10px] font-black text-amber-900 uppercase tracking-wider flex items-center gap-1 shrink-0">
+              <span class="material-symbols-outlined text-[14px] text-amber-700">payments</span>
+              <span>Payment Expected</span>
+            </span>
+            <div class="shrink-0">
+              ${modeBadge}
+            </div>
+          </div>
+          <div class="flex items-baseline justify-between gap-2 pt-0.5 flex-wrap">
+            <span class="text-2xl font-black text-amber-950 font-mono tracking-tight shrink-0">₹${formattedAmt}</span>
+            <span class="text-[10px] font-bold text-amber-900/90 font-mono bg-amber-100/70 border border-amber-200/80 px-2 py-0.5 rounded-lg whitespace-nowrap flex items-center gap-1 shrink-0">
+              <span class="material-symbols-outlined text-[12px] text-amber-700">schedule</span>
+              <span>Promise: ${dueDate}${fu.time ? ' ' + fu.time : ''}</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Quoted Items Box (Fixed min-height for uniform horizontal alignment) -->
+        <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/70 min-h-[58px] flex flex-col justify-center space-y-0.5">
+          <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
+            <span class="material-symbols-outlined text-[13px] text-indigo-600">checkroom</span>
+            <span>Quoted Garment Items</span>
+          </span>
+          <p class="text-xs font-bold text-slate-800 leading-snug line-clamp-1 truncate" title="${items}">${items}</p>
+        </div>
+
+        <!-- Promise Notes (Fixed min-height for uniform horizontal alignment) -->
+        <div class="min-h-[68px] flex flex-col justify-center space-y-1">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
+            <span class="material-symbols-outlined text-[13px] text-slate-400">notes</span>
+            <span>Customer Promise &amp; Remarks</span>
+          </span>
+          <p class="text-xs text-slate-700 italic bg-amber-50/40 p-2 rounded-xl border border-amber-100/80 leading-snug line-clamp-2 min-h-[38px] flex items-center" title="${notes}">"${notes}"</p>
+        </div>
+
+        <!-- Staff Assignment Tag -->
+        <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100 shrink-0">
+          <span class="flex items-center gap-1 truncate">
+            <span class="material-symbols-outlined text-[14px] text-slate-400 shrink-0">support_agent</span>
+            <span class="truncate">Assigned: <strong class="text-slate-700">${staffName}</strong></span>
+          </span>
+          <span class="text-[10px] font-mono text-slate-400 uppercase shrink-0">${fu.channel || 'WHATSAPP'}</span>
+        </div>
+
+        <!-- Action Toolbar (Fixed height & bottom-anchored) -->
+        <div class="mt-auto pt-3 border-t border-slate-100 space-y-1.5 shrink-0">
+          <!-- 1-Click WhatsApp Payment Reminder -->
+          <button type="button" onclick="sendWhatsAppPaymentRequest('${fu.customerId}', '${fu.id}')" class="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]" title="Load formatted UPI payment reminder in WhatsApp chat composer">
+            <span class="material-symbols-outlined text-[16px]">send_to_mobile</span>
+            <span>Send Reminder</span>
+          </button>
+
+          <div class="grid grid-cols-3 gap-1.5 w-full">
+            <!-- Direct Call -->
+            <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Call customer to confirm transfer">
+              <span class="material-symbols-outlined text-[15px]">call</span>
+              <span>Call</span>
+            </button>
+
+            ${!isCompleted ? `
+              <!-- 1-Click Mark Paid & Convert -->
+              <button type="button" onclick="markPaymentReceivedAndConvert('${fu.id}', '${fu.customerId}')" class="py-1.5 px-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-0.5 cursor-pointer whitespace-nowrap active:scale-95" title="Mark payment received and convert to order">
+                <span class="material-symbols-outlined text-[15px]">verified</span>
+                <span>Mark Paid</span>
+              </button>
+
+              <!-- Log Outcome / Remarks -->
+              <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Log Follow-up Outcome or Reschedule">
+                <span class="material-symbols-outlined text-[15px]">edit_note</span>
+                <span>Notes</span>
+              </button>
+            ` : `
+              <!-- Completed / Repeat Follow-up -->
+              <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="col-span-2 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">repeat</span>
+                <span>Follow-up</span>
+              </button>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+window.filterPaymentPendingCards = filterPaymentPendingCards;
 
 function filterFollowupsCards() {
   const container = document.getElementById('followups-cards-grid');
@@ -9258,7 +11169,9 @@ function filterFollowupsCards() {
   const tabFilter = ACTIVE_FOLLOWUP_TAB || 'ALL';
   const todayStr = new Date().toISOString().split('T')[0];
 
-  let list = (CRM_STATE.followups || []);
+  let list = (CRM_STATE.followups || []).filter(fu => 
+    fu && fu.id !== 'FU-2026-00108' && fu.id !== 'FU-2026-00107' && !(fu.reason && fu.reason.includes('ytfdw'))
+  );
 
   // 1. RBAC Isolation
   if (!isAdmin) {
@@ -9274,6 +11187,8 @@ function filterFollowupsCards() {
     list = list.filter(fu => fu.status === 'PENDING' && fu.date > todayStr);
   } else if (tabFilter === 'OVERDUE') {
     list = list.filter(fu => isFollowupOverdue(fu));
+  } else if (tabFilter === 'PAYMENT_PENDING') {
+    list = list.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1'));
   } else if (tabFilter === 'COMPLETED') {
     list = list.filter(fu => fu.status === 'COMPLETED' && fu.outcome !== 'LOST');
   } else if (tabFilter === 'LOST') {
@@ -9297,8 +11212,34 @@ function filterFollowupsCards() {
       const matchReason = (fu.reason || '').toLowerCase().includes(searchKeyword);
       const matchId = (fu.id || '').toLowerCase().includes(searchKeyword);
       const matchNotes = (fu.outcomeNotes || '').toLowerCase().includes(searchKeyword);
-      return matchName || matchReason || matchId || matchNotes;
+      const matchItems = (fu.quotedItems || '').toLowerCase().includes(searchKeyword);
+      return matchName || matchReason || matchId || matchNotes || matchItems;
     });
+  }
+
+  // 6. Date Filter (Customize Date Pick)
+  const dateFilter = document.getElementById('followup-filter-date')?.value || '';
+  const btnClearDate = document.getElementById('btn-clear-followup-date');
+  if (btnClearDate) btnClearDate.classList.toggle('hidden', !dateFilter);
+  if (dateFilter) {
+    list = list.filter(fu => fu.date === dateFilter);
+  }
+
+  // 7. Order / Sort Picker
+  const sortOrder = document.getElementById('followup-filter-sort-order')?.value || 'DUE_ASC';
+  if (sortOrder === 'DUE_ASC') {
+    list.sort((a, b) => ((a.date || '9999-99-99') + (a.time || '')).localeCompare((b.date || '9999-99-99') + (b.time || '')));
+  } else if (sortOrder === 'DUE_DESC') {
+    list.sort((a, b) => ((b.date || '') + (b.time || '')).localeCompare((a.date || '') + (a.time || '')));
+  } else if (sortOrder === 'NEWEST') {
+    list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  } else if (sortOrder === 'OLDEST') {
+    list.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+  } else if (sortOrder === 'PRIORITY') {
+    const pWeight = { URGENT: 4, HIGH: 3, NORMAL: 2, LOW: 1 };
+    list.sort((a, b) => (pWeight[b.priority || 'NORMAL'] || 0) - (pWeight[a.priority || 'NORMAL'] || 0));
+  } else if (sortOrder === 'NAME_ASC') {
+    list.sort((a, b) => (a.customerName || '').localeCompare(b.customerName || ''));
   }
 
   // Render cards or empty state
@@ -9314,6 +11255,7 @@ function filterFollowupsCards() {
     const isOverdue = isFollowupOverdue(fu);
     const isCompleted = fu.status === 'COMPLETED';
     const isLost = fu.outcome === 'LOST';
+    const isPayPendingActive = (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1') && !isCompleted;
     const priority = fu.priority || 'NORMAL';
     const channel = fu.channel || 'WHATSAPP';
 
@@ -9332,7 +11274,12 @@ function filterFollowupsCards() {
     let statusPill = `<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full ${isOverdue ? 'bg-rose-100 text-rose-800 border border-rose-300 font-extrabold animate-pulse' : 'bg-blue-100 text-blue-800'}">` +
       (isOverdue ? '⚠️ Overdue' : 'Pending') + '</span>';
 
-    if (isCompleted) {
+    if (isPayPendingActive) {
+      statusPill = `<span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shadow-2xs">
+        <span class="material-symbols-outlined text-[13px] text-amber-700">payments</span>
+        <span>₹${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})} Pending</span>
+      </span>`;
+    } else if (isCompleted) {
       if (fu.outcome === 'ORDER_PLACED') {
         statusPill = '<span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">verified</span> Order Placed</span>';
       } else if (fu.outcome === 'LOST') {
@@ -9346,7 +11293,7 @@ function filterFollowupsCards() {
     let staffPill = '';
     if (isAdmin && !isCompleted) {
       staffPill = `
-        <select onchange="handleReassignFollowup('${fu.id}', this.value)" class="text-[11px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg px-2 py-1 focus:outline-none cursor-pointer">
+        <select onchange="handleReassignFollowup('${fu.id}', this.value)" class="text-[11px] font-bold bg-white border border-indigo-200 text-indigo-950 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none cursor-pointer shadow-2xs">
           <option value="staff_01" ${fu.assignedTo === 'staff_01' ? 'selected' : ''}>Priya</option>
           <option value="staff_02" ${fu.assignedTo === 'staff_02' ? 'selected' : ''}>Rahul</option>
           <option value="staff_03" ${fu.assignedTo === 'staff_03' ? 'selected' : ''}>Sneha</option>
@@ -9354,47 +11301,78 @@ function filterFollowupsCards() {
         </select>
       `;
     } else {
-      staffPill = `<span class="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-mono">${fu.assignedTo}</span>`;
+      staffPill = `<span class="text-[11px] font-bold bg-white border border-slate-200 text-slate-800 px-2.5 py-0.5 rounded-lg font-mono shadow-2xs">${fu.assignedTo}</span>`;
     }
 
     return `
-      <div class="bg-white p-5 rounded-3xl border ${isOverdue ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200/90'} shadow-sm hover:shadow-md transition space-y-3 flex flex-col justify-between">
+      <div class="bg-white p-5 rounded-3xl border ${isOverdue ? 'border-rose-300 ring-2 ring-rose-100' : (isPayPendingActive ? 'border-amber-300 ring-2 ring-amber-100/90 bg-gradient-to-b from-amber-50/20 to-white' : 'border-slate-200/90')} shadow-sm hover:shadow-md transition space-y-3 flex flex-col justify-between">
         <!-- Top Metadata Row -->
         <div>
           <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-1.5">
-              <span class="font-mono text-xs font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">${fu.id}</span>
-              ${chanIcon}
-              ${prioBadge}
+            <div>
+              ${statusPill}
             </div>
-            ${statusPill}
           </div>
 
-          <!-- Overdue Warning Pill -->
+          <!-- Overdue Warning Pill or Scheduled Date -->
           ${isOverdue ? `
             <div class="mt-2 bg-rose-50 border border-rose-200 p-2 rounded-xl flex items-center gap-1.5 text-rose-800 text-[11px] font-bold">
               <span class="material-symbols-outlined text-[16px] text-rose-600 animate-pulse">alarm</span>
               <span>Callback time was ${fu.date} at ${fu.time}</span>
             </div>
           ` : `
-            <div class="mt-2 flex items-center justify-between text-xs text-slate-500 font-medium">
+            <div class="mt-2 flex items-center gap-1 text-xs text-slate-500 font-medium">
               <span class="flex items-center gap-1 font-mono font-bold text-slate-700">
                 <span class="material-symbols-outlined text-[14px] text-blue-600">event</span>
-                ${fu.date} at ${fu.time}
+                <span>Scheduled: ${fu.date} at ${fu.time}</span>
               </span>
-              ${staffPill}
             </div>
           `}
 
           <!-- Customer Info -->
           <div class="mt-3 pt-2.5 border-t border-slate-100">
-            <h4 class="font-bold text-slate-900 text-sm flex items-center justify-between">
-              <span>${fu.customerName}</span>
-              ${isOverdue ? staffPill : ''}
+            <h4 class="font-bold text-slate-900 text-sm">
+              ${fu.customerName}
             </h4>
             <div class="bg-slate-50 border border-slate-100 p-3 rounded-2xl mt-2 text-xs text-slate-700 leading-relaxed font-medium">
               "${fu.reason}"
             </div>
+          </div>
+
+          <!-- Payment Pending Details Box (If active) -->
+          ${isPayPendingActive ? `
+            <div class="mt-2.5 bg-gradient-to-r from-amber-50 to-amber-100/60 border border-amber-200/90 p-3 rounded-2xl text-xs space-y-1.5 shadow-2xs">
+              <div class="flex items-center justify-between font-black text-amber-950">
+                <span class="flex items-center gap-1 font-bold text-xs text-amber-900">
+                  <span class="material-symbols-outlined text-[16px] text-amber-700">currency_rupee</span>
+                  <span class="text-sm font-mono">${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                </span>
+                <span class="text-[10px] bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-full font-bold uppercase border border-amber-300/60 font-mono">
+                  ${fu.paymentMode || 'UPI'}
+                </span>
+              </div>
+              ${fu.quotedItems ? `
+                <div class="text-[11px] text-slate-700 font-medium flex items-start gap-1">
+                  <span class="material-symbols-outlined text-[14px] text-amber-700 shrink-0 mt-0.5">inventory_2</span>
+                  <span class="leading-tight">${fu.quotedItems}</span>
+                </div>
+              ` : ''}
+              ${fu.paymentDueDate ? `
+                <div class="text-[10px] text-amber-900/90 flex items-center gap-1 font-mono font-medium">
+                  <span class="material-symbols-outlined text-[13px] text-amber-700">event_available</span>
+                  <span>Promised Due: ${fu.paymentDueDate}</span>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Dedicated Assigned Staff Row with clear label -->
+          <div class="mt-2.5 flex items-center justify-between bg-slate-50/90 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs">
+            <span class="text-slate-500 font-semibold flex items-center gap-1.5 text-[11px]">
+              <span class="material-symbols-outlined text-[15px] text-indigo-600">badge</span>
+              <span>Assigned Staff:</span>
+            </span>
+            ${staffPill}
           </div>
 
           <!-- Outcome Notes if Completed -->
@@ -9411,35 +11389,63 @@ function filterFollowupsCards() {
 
         <!-- Action Footer -->
         <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-1.5 flex-wrap">
-          <!-- WhatsApp Chat -->
-          <button type="button" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
-            <span class="material-symbols-outlined text-[15px]">chat</span>
-            <span>Chat</span>
-          </button>
-
-          <!-- Direct Phone Call Trigger -->
-          <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center gap-1" title="Call Customer">
-            <span class="material-symbols-outlined text-[15px]">call</span>
-            <span>Call</span>
-          </button>
-
-          <!-- Log Outcome Button (Only if pending) -->
-          ${!isCompleted ? `
-            <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
-              <span class="material-symbols-outlined text-[15px]">check_circle</span>
-              <span>Outcome</span>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <!-- WhatsApp Chat -->
+            <button type="button" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px]">chat</span>
+              <span>Chat</span>
             </button>
-          ` : `
-            <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1">
-              <span class="material-symbols-outlined text-[15px]">repeat</span>
-              <span>Follow-up Again</span>
+
+            <!-- Direct Phone Call Trigger -->
+            <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center gap-1" title="Call Customer">
+              <span class="material-symbols-outlined text-[15px]">call</span>
+              <span>Call</span>
             </button>
-          `}
+
+            ${isPayPendingActive ? `
+              <!-- WhatsApp Payment Reminder -->
+              <button type="button" onclick="sendWhatsAppPaymentRequest('${fu.customerId}', '${fu.id}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1" title="Send WhatsApp Payment Link / Reminder">
+                <span class="material-symbols-outlined text-[15px]">send_to_mobile</span>
+                <span>Reminder</span>
+              </button>
+
+              <!-- 1-Click Mark Paid & Convert -->
+              <button type="button" onclick="markPaymentReceivedAndConvert('${fu.id}', '${fu.customerId}')" class="px-2.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1" title="1-Click Mark Payment Received &amp; Order Converted">
+                <span class="material-symbols-outlined text-[15px]">verified</span>
+                <span>Mark Paid</span>
+              </button>
+            ` : ''}
+
+            <!-- Log Outcome Button (Only if pending) -->
+            ${!isCompleted ? `
+              <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                <span>Outcome</span>
+              </button>
+            ` : `
+              <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px]">repeat</span>
+                <span>Follow-up Again</span>
+              </button>
+            `}
+          </div>
         </div>
       </div>
     `;
   }).join('');
 }
+
+function deleteFollowupCard(id) {
+  if (!confirm('Are you sure you want to delete this follow-up record?')) return;
+  CRM_STATE.followups = (CRM_STATE.followups || []).filter(f => f && f.id !== id);
+  saveCRMState();
+  updateFollowupsKPICounters();
+  filterFollowupsCards();
+  if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+  if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+  showToast('Follow-up Deleted', `Record ${id} has been removed.`, 'delete', 'slate');
+}
+window.deleteFollowupCard = deleteFollowupCard;
 
 function handleFollowupCallCustomer(customerId) {
   const cust = (CRM_STATE.customers || []).find(c => c.id === customerId);
@@ -9456,14 +11462,84 @@ function handleFollowupCallCustomer(customerId) {
   }
 }
 
+// 1-Click Send WhatsApp Payment Request Link with Store UPI
+function sendWhatsAppPaymentRequest(customerId, followupId = null) {
+  const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
+  const fu = followupId 
+    ? (CRM_STATE.followups || []).find(f => f.id === followupId) 
+    : (CRM_STATE.followups || []).find(f => (f.customerId === customerId || String(f.customerId) === String(customerId)) && f.isPaymentPending && f.status === 'PENDING');
+  
+  const amt = fu && fu.paymentAmount ? parseFloat(fu.paymentAmount).toFixed(2) : '0.00';
+  const mode = fu?.paymentMode || 'UPI';
+  const items = fu?.quotedItems || 'Garments Order';
+  const custName = customer?.name || 'Customer';
+
+  const paymentMsg = `Dear ${custName},\n\nGreetings from GRM Garments! 🙏\nThis is a friendly reminder regarding your pending payment of ₹${amt} for ${items}.\n\n💳 Payment Details:\n• Amount Due: ₹${amt}\n• Payment Mode: ${mode}\n• Store UPI ID: 8668007593@okbizaxis\n\nKindly complete the transfer and share the transaction screenshot here for instant order confirmation and dispatch.\n\nThank you! ✨`;
+
+  selectCustomerChat(customerId);
+  switchView('inbox');
+
+  setTimeout(() => {
+    const input = document.getElementById('chat-input-text');
+    if (input) {
+      input.value = paymentMsg;
+      input.focus();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      showToast('Payment Reminder Ready', `Loaded ₹${amt} payment reminder in WhatsApp composer. Press send to deliver.`, 'send_to_mobile', 'emerald');
+    }
+  }, 150);
+}
+window.sendWhatsAppPaymentRequest = sendWhatsAppPaymentRequest;
+
+// 1-Click Mark Payment Received & Convert to Order
+function markPaymentReceivedAndConvert(followupId, customerId) {
+  const fu = (CRM_STATE.followups || []).find(f => f.id === followupId);
+  const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
+  if (!fu) return;
+
+  const amt = fu.paymentAmount ? parseFloat(fu.paymentAmount).toFixed(2) : '0.00';
+  const mode = fu.paymentMode || 'UPI';
+  const notes = `Payment of ₹${amt} received via ${mode}. Converted to Order.`;
+
+  fu.status = 'COMPLETED';
+  fu.outcome = 'ORDER_PLACED';
+  fu.outcomeNotes = notes;
+  fu.completedAt = new Date().toISOString();
+
+  // Update associated query status to CONVERTED
+  const query = (CRM_STATE.queries || []).find(q => q.customerId === customerId || q.id === fu.queryId);
+  if (query) {
+    updateCustomerQueryStatus(query.id, 'CONVERTED', notes);
+  }
+
+  // Persist to MySQL
+  fetch('api.php?action=save_followup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fu)
+  }).catch(() => {});
+
+  logAudit('PAYMENT_RECEIVED', 'FOLLOWUP', `Marked payment of ₹${amt} received for ${customer?.name || fu.customerName || 'Customer'} (${fu.id}). Converted to Order.`);
+
+  saveCRMState();
+  updateFollowupsKPICounters();
+  filterFollowupsCards();
+  if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+  if (typeof renderInbox === 'function') renderInbox();
+
+  showToast('Payment Received & Converted! 🏆', `₹${amt} marked as received. Order placed & enquiry converted.`, 'verified', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+window.markPaymentReceivedAndConvert = markPaymentReceivedAndConvert;
+
 function refreshFollowupsState() {
   showToast('Syncing Follow-ups', 'Fetching latest database records...', 'sync', 'blue');
   fetch('api.php?action=get_all')
     .then(r => r.json())
     .then(res => {
       const data = res.data || res;
-      if (data && data.followups && Array.isArray(data.followups)) {
-        CRM_STATE.followups = data.followups.map(fu => ({
+      if (data && data.followups && Array.isArray(data.followups) && data.followups.length > 0) {
+        const dbFollowups = data.followups.map(fu => ({
           id: fu.id,
           queryId: fu.queryId || fu.query_id || '',
           customerId: fu.customerId || fu.customer_id || '',
@@ -9479,17 +11555,66 @@ function refreshFollowupsState() {
           outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
           completedAt: fu.completedAt || fu.completed_at || null,
           rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
-          createdAt: fu.createdAt || fu.created_at || ''
+          createdAt: fu.createdAt || fu.created_at || '',
+          isPaymentPending: (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1),
+          paymentAmount: parseFloat(fu.paymentAmount || fu.payment_amount || 0),
+          paymentMode: fu.paymentMode || fu.payment_mode || 'UPI',
+          paymentDueDate: fu.paymentDueDate || fu.payment_due_date || fu.date || '',
+          paymentNotes: fu.paymentNotes || fu.payment_notes || '',
+          quotedItems: fu.quotedItems || fu.quoted_items || ''
         }));
+        const localFollowups = Array.isArray(CRM_STATE.followups) ? CRM_STATE.followups : [];
+        const mergedFollowups = [...dbFollowups];
+        localFollowups.forEach(locFu => {
+          if (!locFu) return;
+          const matchIndex = mergedFollowups.findIndex(m => m && (m.id === locFu.id || (m.customerId && locFu.customerId && String(m.customerId) === String(locFu.customerId) && m.status === 'PENDING' && locFu.status === 'PENDING')));
+          if (matchIndex < 0) {
+            mergedFollowups.unshift(locFu);
+          } else {
+            mergedFollowups[matchIndex] = { ...mergedFollowups[matchIndex], ...locFu };
+          }
+        });
+        CRM_STATE.followups = mergedFollowups;
+      } else if (!CRM_STATE.followups || CRM_STATE.followups.length === 0) {
+        CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
       }
-      updateFollowupsKPICounters();
-      filterFollowupsCards();
+
+      // Reconcile any active queries marked as FOLLOW_UP or PENDING into follow-ups
+      (CRM_STATE.queries || []).forEach(q => {
+        const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
+        const custName = cust ? cust.name : (q.customerName || '');
+        const qReason = q.queryText || '';
+        if (qReason.includes('ytfdw')) return;
+
+        if ((q.status === 'FOLLOW_UP' || q.status === 'PENDING') && !CRM_STATE.followups.some(f => f && (f.customerId === q.customerId || f.queryId === q.id) && f.status === 'PENDING')) {
+          CRM_STATE.followups.unshift({
+            id: `FU-2026-00${CRM_STATE.followups.length + 101}`,
+            queryId: q.id,
+            customerId: q.customerId,
+            customerName: custName || 'Customer',
+            assignedTo: (q.assignedTo && q.assignedTo !== 'UNASSIGNED') ? q.assignedTo : 'staff_01',
+            date: new Date().toISOString().split('T')[0],
+            time: '11:00 AM',
+            reason: q.queryText || 'Enquiry Follow-up',
+            status: 'PENDING',
+            outcome: 'PENDING',
+            priority: q.priority || 'NORMAL',
+            channel: 'WHATSAPP',
+            createdAt: q.createdAt || new Date().toISOString()
+          });
+        }
+      });
+
+      CRM_STATE.followups = (CRM_STATE.followups || []).filter(f => 
+        f && f.id && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw'))
+      );
+
+      renderFollowupsCards();
       saveCRMState();
       showToast('Follow-ups Synchronized', 'All follow-up queues and outcomes are live.', 'check_circle', 'emerald');
     })
     .catch(() => {
-      updateFollowupsKPICounters();
-      filterFollowupsCards();
+      renderFollowupsCards();
     });
 }
 
@@ -9521,8 +11646,13 @@ function startFollowupReminderTicker() {
 }
 
 function renderFollowupsCards() {
-  updateFollowupsKPICounters();
-  filterFollowupsCards();
+  if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+  if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+  if (typeof ACTIVE_FOLLOWUP_HUB_MODE !== 'undefined' && ACTIVE_FOLLOWUP_HUB_MODE === 'PAYMENT_PENDING') {
+    if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+  } else {
+    if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+  }
 }
 
 // =========================================================================
@@ -16182,7 +18312,12 @@ function renderOrdersTable() {
 
 function renderFollowupsCards() {
   if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
-  if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+  if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+  if (typeof ACTIVE_FOLLOWUP_HUB_MODE !== 'undefined' && ACTIVE_FOLLOWUP_HUB_MODE === 'PAYMENT_PENDING') {
+    if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+  } else {
+    if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+  }
 }
 
 function renderCustomersGrid() {
@@ -18626,4 +20761,684 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 } else {
   window.addEventListener('DOMContentLoaded', bootstrapCRMApp);
 }
+
+
+// =========================================================================
+// QUICK STATUS NOTES & QUERY CALLBACK PRESET HELPERS
+// =========================================================================
+function setQuickStatusNote(noteText, suggestedStatus) {
+  const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
+  if (query && !QUERY_EDIT_MODES.has(query.id)) {
+    QUERY_EDIT_MODES.add(query.id);
+    renderCustomer360Panel();
+  }
+  setTimeout(() => {
+    const input = document.getElementById('query-status-notes-input');
+    if (input) {
+      input.disabled = false;
+      input.value = noteText;
+      input.focus();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.classList.add('ring-2', 'ring-amber-400');
+      setTimeout(() => input.classList.remove('ring-2', 'ring-amber-400'), 1000);
+    }
+    if (suggestedStatus) {
+      const select = document.getElementById('query-status-select');
+      if (select) {
+        select.disabled = false;
+        select.value = suggestedStatus;
+        if (typeof handleQueryStatusSelectChange === 'function') {
+          handleQueryStatusSelectChange(suggestedStatus, query?.id, ACTIVE_CUSTOMER_ID);
+        }
+      }
+    }
+    showToast('Quick Note Inserted', `Set note: "${noteText}"`, 'sticky_note_2', 'amber');
+  }, 40);
+}
+window.setQuickStatusNote = setQuickStatusNote;
+
+function setQueryQuickDate(daysAhead) {
+  const target = new Date();
+  target.setDate(target.getDate() + daysAhead);
+  const year = target.getFullYear();
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const day = String(target.getDate()).padStart(2, '0');
+  const dateInput = document.getElementById('query-callback-date');
+  if (dateInput) {
+    dateInput.value = `${year}-${month}-${day}`;
+  }
+}
+window.setQueryQuickDate = setQueryQuickDate;
+
+function setQueryQuickTime(preset) {
+  const hourEl = document.getElementById('query-callback-hour');
+  const minEl = document.getElementById('query-callback-min');
+  const ampmEl = document.getElementById('query-callback-ampm');
+  if (!hourEl || !minEl || !ampmEl) return;
+
+  const now = new Date();
+  if (preset === 'NOW') {
+    let h = now.getHours();
+    let m = Math.ceil(now.getMinutes() / 5) * 5;
+    if (m >= 60) { h = (h + 1) % 24; m = 0; }
+    ampmEl.value = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12 || 12;
+    hourEl.value = String(h12).padStart(2, '0');
+    minEl.value = String(m).padStart(2, '0');
+  } else if (preset === 'PLUS_1H') {
+    let h = (now.getHours() + 1) % 24;
+    let m = Math.ceil(now.getMinutes() / 5) * 5;
+    if (m >= 60) { h = (h + 1) % 24; m = 0; }
+    ampmEl.value = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12 || 12;
+    hourEl.value = String(h12).padStart(2, '0');
+    minEl.value = String(m).padStart(2, '0');
+  } else if (preset === '10AM') {
+    hourEl.value = '10';
+    minEl.value = '00';
+    ampmEl.value = 'AM';
+  } else if (preset === '5PM') {
+    hourEl.value = '05';
+    minEl.value = '00';
+    ampmEl.value = 'PM';
+  }
+}
+window.setQueryQuickTime = setQueryQuickTime;
+
+// =========================================================================
+// FOLLOW-UP & PAYMENT PENDING REPORT EXPORT (CUSTOM DATE & ORDER PICKER)
+// =========================================================================
+let EXPORT_HUB_MODE = 'FOLLOWUPS'; // 'FOLLOWUPS' | 'PAYMENT_PENDING'
+let EXPORT_ACTIVE_DATE_PRESET = 'ALL';
+
+function clearFollowupDateFilter() {
+  const el = document.getElementById('followup-filter-date');
+  if (el) el.value = '';
+  const btn = document.getElementById('btn-clear-followup-date');
+  if (btn) btn.classList.add('hidden');
+  filterFollowupsCards();
+}
+window.clearFollowupDateFilter = clearFollowupDateFilter;
+
+function clearPayPendingDateFilter() {
+  const el = document.getElementById('pay-pending-filter-date');
+  if (el) el.value = '';
+  const btn = document.getElementById('btn-clear-pay-date');
+  if (btn) btn.classList.add('hidden');
+  filterPaymentPendingCards();
+}
+window.clearPayPendingDateFilter = clearPayPendingDateFilter;
+
+function openFollowupExportModal(mode) {
+  EXPORT_HUB_MODE = mode || (typeof ACTIVE_FOLLOWUP_HUB_MODE !== 'undefined' ? ACTIVE_FOLLOWUP_HUB_MODE : 'FOLLOWUPS');
+  
+  // Update mode tabs & form options
+  switchExportHubMode(EXPORT_HUB_MODE);
+
+  // Set date preset to ALL by default
+  setExportDatePreset('ALL');
+
+  // Open modal
+  if (typeof openModal === 'function') {
+    openModal('modal-followup-export');
+  } else {
+    const modal = document.getElementById('modal-followup-export');
+    if (modal) modal.classList.remove('hidden');
+  }
+}
+window.openFollowupExportModal = openFollowupExportModal;
+
+function switchExportHubMode(mode) {
+  EXPORT_HUB_MODE = mode;
+  const btnFu = document.getElementById('export-mode-btn-followups');
+  const btnPay = document.getElementById('export-mode-btn-payment');
+  
+  if (btnFu && btnPay) {
+    if (mode === 'FOLLOWUPS') {
+      btnFu.className = "py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-blue-600 text-white shadow-sm";
+      btnPay.className = "py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-transparent text-slate-700 hover:text-amber-800";
+    } else {
+      btnFu.className = "py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-transparent text-slate-700 hover:text-blue-800";
+      btnPay.className = "py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-amber-600 text-white shadow-sm";
+    }
+  }
+
+  // Populate Sort Order Dropdown based on mode
+  const sortSelect = document.getElementById('export-sort-order');
+  if (sortSelect) {
+    if (mode === 'FOLLOWUPS') {
+      sortSelect.innerHTML = `
+        <option value="DUE_ASC">📅 Scheduled Date (Closest First)</option>
+        <option value="DUE_DESC">📅 Scheduled Date (Latest First)</option>
+        <option value="NEWEST">⏱️ Created (Newest First)</option>
+        <option value="OLDEST">⏱️ Created (Oldest First)</option>
+        <option value="PRIORITY">🔥 Priority (Urgent First)</option>
+        <option value="NAME_ASC">👤 Customer Name (A to Z)</option>
+      `;
+    } else {
+      sortSelect.innerHTML = `
+        <option value="DUE_ASC">📅 Promise Due Date (Closest First)</option>
+        <option value="DUE_DESC">📅 Promise Due Date (Latest First)</option>
+        <option value="AMOUNT_DESC">💰 Amount (Highest to Lowest)</option>
+        <option value="AMOUNT_ASC">💰 Amount (Lowest to Highest)</option>
+        <option value="NEWEST">⏱️ Created (Newest First)</option>
+        <option value="NAME_ASC">👤 Customer Name (A to Z)</option>
+      `;
+    }
+  }
+
+  // Populate Status / Outcome Filter Dropdown based on mode
+  const statusSelect = document.getElementById('export-status-filter');
+  if (statusSelect) {
+    if (mode === 'FOLLOWUPS') {
+      statusSelect.innerHTML = `
+        <option value="ALL">📋 All Follow-up Records</option>
+        <option value="PENDING">⏳ Pending Follow-ups</option>
+        <option value="TODAY">📅 Today's Due</option>
+        <option value="UPCOMING">🚀 Upcoming Dates</option>
+        <option value="OVERDUE">⚠️ Overdue Follow-ups</option>
+        <option value="COMPLETED">✅ Converted / Completed Orders</option>
+        <option value="LOST">❌ Lost / Cancelled</option>
+      `;
+    } else {
+      statusSelect.innerHTML = `
+        <option value="ALL">📋 All Payment Records</option>
+        <option value="PENDING">⏳ Pending Collection</option>
+        <option value="TODAY">📅 Today's Due Promises</option>
+        <option value="UPCOMING">🚀 Upcoming Promises</option>
+        <option value="OVERDUE">⚠️ Overdue Promises</option>
+        <option value="COMPLETED">✅ Paid & Converted</option>
+        <option value="LOST">❌ Cancelled / Lost</option>
+      `;
+    }
+  }
+
+  updateFollowupExportPreview();
+}
+window.switchExportHubMode = switchExportHubMode;
+
+function setExportDatePreset(preset) {
+  EXPORT_ACTIVE_DATE_PRESET = preset;
+  const presets = ['all', 'today', 'yesterday', 'week', 'month'];
+  presets.forEach(p => {
+    const el = document.getElementById(`export-preset-${p}`);
+    if (el) {
+      if ((preset === 'ALL' && p === 'all') ||
+          (preset === 'TODAY' && p === 'today') ||
+          (preset === 'YESTERDAY' && p === 'yesterday') ||
+          (preset === 'THIS_WEEK' && p === 'week') ||
+          (preset === 'THIS_MONTH' && p === 'month')) {
+        el.className = "px-2.5 py-1 rounded-lg font-bold text-[11px] bg-slate-900 text-white transition cursor-pointer";
+      } else {
+        el.className = "px-2.5 py-1 rounded-lg font-bold text-[11px] bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer";
+      }
+    }
+  });
+
+  const fromInput = document.getElementById('export-date-from');
+  const toInput = document.getElementById('export-date-to');
+  const now = new Date();
+  const fmt = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  if (preset === 'ALL') {
+    if (fromInput) fromInput.value = '';
+    if (toInput) toInput.value = '';
+  } else if (preset === 'TODAY') {
+    const todayStr = fmt(now);
+    if (fromInput) fromInput.value = todayStr;
+    if (toInput) toInput.value = todayStr;
+  } else if (preset === 'YESTERDAY') {
+    const yest = new Date(now);
+    yest.setDate(yest.getDate() - 1);
+    const yestStr = fmt(yest);
+    if (fromInput) fromInput.value = yestStr;
+    if (toInput) toInput.value = yestStr;
+  } else if (preset === 'THIS_WEEK') {
+    const startOfWeek = new Date(now);
+    const dayOfWeek = startOfWeek.getDay() || 7;
+    startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek + 1);
+    if (fromInput) fromInput.value = fmt(startOfWeek);
+    if (toInput) toInput.value = fmt(now);
+  } else if (preset === 'THIS_MONTH') {
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (fromInput) fromInput.value = fmt(startOfMonth);
+    if (toInput) toInput.value = fmt(now);
+  }
+
+  updateFollowupExportPreview();
+}
+window.setExportDatePreset = setExportDatePreset;
+
+function onExportDateInputChange() {
+  EXPORT_ACTIVE_DATE_PRESET = 'CUSTOM';
+  const presets = ['all', 'today', 'yesterday', 'week', 'month'];
+  presets.forEach(p => {
+    const el = document.getElementById(`export-preset-${p}`);
+    if (el) el.className = "px-2.5 py-1 rounded-lg font-bold text-[11px] bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer";
+  });
+  updateFollowupExportPreview();
+}
+window.onExportDateInputChange = onExportDateInputChange;
+
+function getFilteredExportRecords() {
+  const currentUser = getCurrentUser();
+  const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
+  const staffFilter = document.getElementById('export-staff-filter')?.value || 'ALL';
+  const statusFilter = document.getElementById('export-status-filter')?.value || 'ALL';
+  const sortOrder = document.getElementById('export-sort-order')?.value || 'DUE_ASC';
+  const fromDate = document.getElementById('export-date-from')?.value || '';
+  const toDate = document.getElementById('export-date-to')?.value || '';
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  let rawList = (CRM_STATE.followups || []).filter(fu => 
+    fu && fu.id !== 'FU-2026-00108' && fu.id !== 'FU-2026-00107' && !(fu.reason && fu.reason.includes('ytfdw'))
+  );
+
+  // 1. Module filter
+  if (EXPORT_HUB_MODE === 'PAYMENT_PENDING') {
+    rawList = rawList.filter(fu => (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1));
+  }
+
+  // 2. RBAC & Staff filter
+  if (!isAdmin) {
+    rawList = rawList.filter(fu => fu.assignedTo === currentUser.id || fu.assignedTo === currentUser.staffId);
+  } else if (staffFilter !== 'ALL') {
+    rawList = rawList.filter(fu => fu.assignedTo === staffFilter);
+  }
+
+  // 3. Status filter
+  if (statusFilter !== 'ALL') {
+    if (EXPORT_HUB_MODE === 'PAYMENT_PENDING') {
+      if (statusFilter === 'PENDING') {
+        rawList = rawList.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED'));
+      } else if (statusFilter === 'TODAY') {
+        rawList = rawList.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && (fu.paymentDueDate === todayStr || fu.date === todayStr));
+      } else if (statusFilter === 'UPCOMING') {
+        rawList = rawList.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && ((fu.paymentDueDate || fu.date) > todayStr));
+      } else if (statusFilter === 'OVERDUE') {
+        rawList = rawList.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && isFollowupOverdue(fu));
+      } else if (statusFilter === 'COMPLETED') {
+        rawList = rawList.filter(fu => fu.status === 'COMPLETED' && fu.outcome !== 'LOST');
+      } else if (statusFilter === 'LOST') {
+        rawList = rawList.filter(fu => fu.outcome === 'LOST');
+      }
+    } else {
+      if (statusFilter === 'PENDING') {
+        rawList = rawList.filter(fu => fu.status === 'PENDING');
+      } else if (statusFilter === 'TODAY') {
+        rawList = rawList.filter(fu => fu.status === 'PENDING' && fu.date === todayStr);
+      } else if (statusFilter === 'UPCOMING') {
+        rawList = rawList.filter(fu => fu.status === 'PENDING' && fu.date > todayStr);
+      } else if (statusFilter === 'OVERDUE') {
+        rawList = rawList.filter(fu => isFollowupOverdue(fu));
+      } else if (statusFilter === 'COMPLETED') {
+        rawList = rawList.filter(fu => fu.status === 'COMPLETED' && fu.outcome !== 'LOST');
+      } else if (statusFilter === 'LOST') {
+        rawList = rawList.filter(fu => fu.outcome === 'LOST');
+      }
+    }
+  }
+
+  // 4. Date range filter
+  if (fromDate || toDate) {
+    rawList = rawList.filter(fu => {
+      const recDate = EXPORT_HUB_MODE === 'PAYMENT_PENDING' ? (fu.paymentDueDate || fu.date || '') : (fu.date || '');
+      if (!recDate) return true;
+      if (fromDate && recDate < fromDate) return false;
+      if (toDate && recDate > toDate) return false;
+      return true;
+    });
+  }
+
+  // 5. Sort Order (Order Picker)
+  if (EXPORT_HUB_MODE === 'PAYMENT_PENDING') {
+    if (sortOrder === 'DUE_ASC') {
+      rawList.sort((a, b) => ((a.paymentDueDate || a.date || '9999-99-99') + (a.time || '')).localeCompare((b.paymentDueDate || b.date || '9999-99-99') + (b.time || '')));
+    } else if (sortOrder === 'DUE_DESC') {
+      rawList.sort((a, b) => ((b.paymentDueDate || b.date || '') + (b.time || '')).localeCompare((a.paymentDueDate || a.date || '') + (a.time || '')));
+    } else if (sortOrder === 'AMOUNT_DESC') {
+      rawList.sort((a, b) => (parseFloat(b.paymentAmount) || 0) - (parseFloat(a.paymentAmount) || 0));
+    } else if (sortOrder === 'AMOUNT_ASC') {
+      rawList.sort((a, b) => (parseFloat(a.paymentAmount) || 0) - (parseFloat(b.paymentAmount) || 0));
+    } else if (sortOrder === 'NEWEST') {
+      rawList.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    } else if (sortOrder === 'NAME_ASC') {
+      rawList.sort((a, b) => (a.customerName || '').localeCompare(b.customerName || ''));
+    }
+  } else {
+    if (sortOrder === 'DUE_ASC') {
+      rawList.sort((a, b) => ((a.date || '9999-99-99') + (a.time || '')).localeCompare((b.date || '9999-99-99') + (b.time || '')));
+    } else if (sortOrder === 'DUE_DESC') {
+      rawList.sort((a, b) => ((b.date || '') + (b.time || '')).localeCompare((a.date || '') + (a.time || '')));
+    } else if (sortOrder === 'NEWEST') {
+      rawList.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    } else if (sortOrder === 'OLDEST') {
+      rawList.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+    } else if (sortOrder === 'PRIORITY') {
+      const pWeight = { URGENT: 4, HIGH: 3, NORMAL: 2, LOW: 1 };
+      rawList.sort((a, b) => (pWeight[b.priority || 'NORMAL'] || 0) - (pWeight[a.priority || 'NORMAL'] || 0));
+    } else if (sortOrder === 'NAME_ASC') {
+      rawList.sort((a, b) => (a.customerName || '').localeCompare(b.customerName || ''));
+    }
+  }
+
+  return rawList;
+}
+window.getFilteredExportRecords = getFilteredExportRecords;
+
+function updateFollowupExportPreview() {
+  const records = getFilteredExportRecords();
+  const summaryEl = document.getElementById('export-preview-summary-text');
+  const amountBadge = document.getElementById('export-preview-amount-badge');
+  const chipsContainer = document.getElementById('export-columns-chips-container');
+  const thead = document.getElementById('export-preview-thead');
+  const tbody = document.getElementById('export-preview-tbody');
+  const badgeFu = document.getElementById('export-badge-followups-count');
+  const badgePay = document.getElementById('export-badge-payment-count');
+
+  // Update mode count badges
+  const allFu = (CRM_STATE.followups || []).filter(f => f && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107');
+  const allPay = allFu.filter(f => (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1));
+  if (badgeFu) badgeFu.innerText = allFu.length;
+  if (badgePay) badgePay.innerText = allPay.length;
+
+  if (summaryEl) {
+    const label = EXPORT_HUB_MODE === 'PAYMENT_PENDING' ? 'Payment Pending Records' : 'Follow-up Records';
+    summaryEl.innerText = `${records.length} ${label} Ready for Export`;
+  }
+
+  if (amountBadge) {
+    if (EXPORT_HUB_MODE === 'PAYMENT_PENDING') {
+      const totalAmt = records.reduce((sum, r) => sum + (parseFloat(r.paymentAmount) || 0), 0);
+      amountBadge.innerText = `₹${totalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Total`;
+      amountBadge.classList.remove('hidden');
+    } else {
+      amountBadge.classList.add('hidden');
+    }
+  }
+
+  // Render Columns chips
+  const fuCols = ['Follow-up ID', 'Customer Name', 'Customer Phone', 'Date', 'Time', 'Reason', 'Priority', 'Channel', 'Assigned Staff', 'Status', 'Outcome', 'Remarks', 'Order ID', 'Created At'];
+  const payCols = ['Record ID', 'Customer Name', 'Customer Phone', 'Quoted Items', 'Pending Amount (₹)', 'Payment Mode', 'Promise Due Date', 'Promise Time', 'Remarks', 'Assigned Staff', 'Status', 'Channel', 'Order ID', 'Created At'];
+  const cols = EXPORT_HUB_MODE === 'PAYMENT_PENDING' ? payCols : fuCols;
+
+  if (chipsContainer) {
+    chipsContainer.innerHTML = cols.map(c => `
+      <span class="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-900 font-semibold text-[10px] shadow-2xs">${c}</span>
+    `).join('');
+  }
+
+  // Render Mini Table Preview (first 3 rows)
+  if (thead && tbody) {
+    if (EXPORT_HUB_MODE === 'PAYMENT_PENDING') {
+      thead.innerHTML = `
+        <tr>
+          <th class="px-3 py-1.5">ID</th>
+          <th class="px-3 py-1.5">Customer</th>
+          <th class="px-3 py-1.5">Amount (₹)</th>
+          <th class="px-3 py-1.5">Mode</th>
+          <th class="px-3 py-1.5">Due Date</th>
+          <th class="px-3 py-1.5">Staff</th>
+          <th class="px-3 py-1.5">Status</th>
+        </tr>
+      `;
+      if (records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-4 text-center text-slate-400 italic">No records match the selected date &amp; filters</td></tr>`;
+      } else {
+        tbody.innerHTML = records.slice(0, 3).map(r => {
+          const staff = (CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || r.assignedTo || 'Unassigned';
+          return `
+            <tr>
+              <td class="px-3 py-1.5 font-mono font-bold text-amber-700">${r.id}</td>
+              <td class="px-3 py-1.5 font-bold">${r.customerName || 'Customer'}</td>
+              <td class="px-3 py-1.5 font-mono font-bold text-slate-900">₹${(parseFloat(r.paymentAmount) || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+              <td class="px-3 py-1.5">${r.paymentMode || 'UPI'}</td>
+              <td class="px-3 py-1.5 font-mono">${r.paymentDueDate || r.date || '—'}</td>
+              <td class="px-3 py-1.5">${staff}</td>
+              <td class="px-3 py-1.5"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${r.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}">${r.status || 'PENDING'}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+    } else {
+      thead.innerHTML = `
+        <tr>
+          <th class="px-3 py-1.5">ID</th>
+          <th class="px-3 py-1.5">Customer</th>
+          <th class="px-3 py-1.5">Scheduled</th>
+          <th class="px-3 py-1.5">Reason</th>
+          <th class="px-3 py-1.5">Priority</th>
+          <th class="px-3 py-1.5">Staff</th>
+          <th class="px-3 py-1.5">Status</th>
+        </tr>
+      `;
+      if (records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-4 text-center text-slate-400 italic">No records match the selected date &amp; filters</td></tr>`;
+      } else {
+        tbody.innerHTML = records.slice(0, 3).map(r => {
+          const staff = (CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || r.assignedTo || 'Unassigned';
+          return `
+            <tr>
+              <td class="px-3 py-1.5 font-mono font-bold text-blue-700">${r.id}</td>
+              <td class="px-3 py-1.5 font-bold">${r.customerName || 'Customer'}</td>
+              <td class="px-3 py-1.5 font-mono">${r.date} ${r.time || ''}</td>
+              <td class="px-3 py-1.5 truncate max-w-[140px]">${r.reason || 'Follow-up'}</td>
+              <td class="px-3 py-1.5 font-bold">${r.priority || 'NORMAL'}</td>
+              <td class="px-3 py-1.5">${staff}</td>
+              <td class="px-3 py-1.5"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${r.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}">${r.status || 'PENDING'}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+  }
+}
+window.updateFollowupExportPreview = updateFollowupExportPreview;
+
+function handleExportFollowupsCSV() {
+  const records = getFilteredExportRecords();
+  if (!records || records.length === 0) {
+    showToast('No Records to Export', 'Please adjust date range or filter selection.', 'warning', 'amber');
+    return;
+  }
+
+  const includeOrders = document.getElementById('export-include-order-details')?.checked ?? true;
+  const isPay = (EXPORT_HUB_MODE === 'PAYMENT_PENDING');
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+
+  let headers = [];
+  if (isPay) {
+    headers = [
+      'Record ID',
+      'Customer Name',
+      'Customer Phone',
+      'Customer City',
+      'Quoted Garment Items',
+      'Pending Amount (INR)',
+      'Payment Mode',
+      'Promised Due Date',
+      'Promised Time',
+      'Customer Remarks / Notes',
+      'Assigned Staff',
+      'Channel',
+      'Status',
+      'Outcome',
+      'Linked Order ID',
+      'Linked Order Total (INR)',
+      'Linked Order Status',
+      'Created Date'
+    ];
+  } else {
+    headers = [
+      'Follow-up ID',
+      'Customer Name',
+      'Customer Phone',
+      'Customer City',
+      'Scheduled Date',
+      'Scheduled Time',
+      'Enquiry Reason / Notes',
+      'Priority',
+      'Channel',
+      'Assigned Staff',
+      'Status',
+      'Outcome',
+      'Outcome Conversation Notes',
+      'Linked Order ID',
+      'Linked Order Total (INR)',
+      'Linked Order Status',
+      'Created Date'
+    ];
+  }
+
+  const escapeCSV = (val) => {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  };
+
+  const rows = [headers.map(escapeCSV).join(',')];
+
+  records.forEach(r => {
+    const cust = (CRM_STATE.customers || []).find(c => c.id === r.customerId);
+    const phone = cust ? cust.phone : (r.customerPhone || '');
+    const city = cust ? (cust.city || cust.location || '') : '';
+    const staff = (CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || r.assignedTo || 'Unassigned';
+    
+    // Linked order details
+    let orderId = '';
+    let orderTotal = '';
+    let orderStatus = '';
+    if (includeOrders) {
+      const linkedOrder = (CRM_STATE.orders || []).find(o => o.customerId === r.customerId || (r.orderId && o.id === r.orderId));
+      if (linkedOrder) {
+        orderId = linkedOrder.id || '';
+        orderTotal = linkedOrder.grandTotal || linkedOrder.totalAmount || '';
+        orderStatus = linkedOrder.orderStatus || linkedOrder.status || '';
+      }
+    }
+
+    if (isPay) {
+      rows.push([
+        escapeCSV(r.id),
+        escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
+        escapeCSV(phone),
+        escapeCSV(city),
+        escapeCSV(r.quotedItems || ''),
+        escapeCSV(parseFloat(r.paymentAmount) || 0),
+        escapeCSV(r.paymentMode || 'UPI'),
+        escapeCSV(r.paymentDueDate || r.date || ''),
+        escapeCSV(r.time || ''),
+        escapeCSV(r.paymentNotes || r.reason || ''),
+        escapeCSV(staff),
+        escapeCSV(r.channel || 'WHATSAPP'),
+        escapeCSV(r.status || 'PENDING'),
+        escapeCSV(r.outcome || 'PENDING'),
+        escapeCSV(orderId),
+        escapeCSV(orderTotal),
+        escapeCSV(orderStatus),
+        escapeCSV(r.createdAt || '')
+      ].join(','));
+    } else {
+      rows.push([
+        escapeCSV(r.id),
+        escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
+        escapeCSV(phone),
+        escapeCSV(city),
+        escapeCSV(r.date || ''),
+        escapeCSV(r.time || ''),
+        escapeCSV(r.reason || ''),
+        escapeCSV(r.priority || 'NORMAL'),
+        escapeCSV(r.channel || 'WHATSAPP'),
+        escapeCSV(staff),
+        escapeCSV(r.status || 'PENDING'),
+        escapeCSV(r.outcome || 'PENDING'),
+        escapeCSV(r.outcomeNotes || ''),
+        escapeCSV(orderId),
+        escapeCSV(orderTotal),
+        escapeCSV(orderStatus),
+        escapeCSV(r.createdAt || '')
+      ].join(','));
+    }
+  });
+
+  const csvContent = "\uFEFF" + rows.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const downloadLink = document.createElement('a');
+  const filename = isPay ? `GRM_Payment_Pending_Report_${dateStr}.csv` : `GRM_Followups_Report_${dateStr}.csv`;
+  downloadLink.href = url;
+  downloadLink.setAttribute('download', filename);
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
+  URL.revokeObjectURL(url);
+
+  logAudit(isPay ? 'PAYMENT_REPORT_EXPORTED' : 'FOLLOWUP_REPORT_EXPORTED', 'EXPORT', `Exported ${records.length} records to ${filename}`);
+  showToast('Report Downloaded', `Successfully exported ${records.length} records to ${filename}`, 'download_done', 'emerald');
+}
+window.handleExportFollowupsCSV = handleExportFollowupsCSV;
+
+function handleCopyFollowupsExportData() {
+  const records = getFilteredExportRecords();
+  if (!records || records.length === 0) {
+    showToast('No Records to Copy', 'Please adjust date range or filter selection.', 'warning', 'amber');
+    return;
+  }
+
+  const isPay = (EXPORT_HUB_MODE === 'PAYMENT_PENDING');
+  let headers = isPay 
+    ? ['ID', 'Customer', 'Phone', 'Items', 'Amount', 'Mode', 'Due Date', 'Staff', 'Status']
+    : ['ID', 'Customer', 'Phone', 'Date', 'Time', 'Reason', 'Priority', 'Staff', 'Status'];
+
+  const rows = [headers.join('\t')];
+  records.forEach(r => {
+    const cust = (CRM_STATE.customers || []).find(c => c.id === r.customerId);
+    const phone = cust ? cust.phone : (r.customerPhone || '');
+    const staff = (CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || r.assignedTo || 'Unassigned';
+
+    if (isPay) {
+      rows.push([
+        r.id,
+        r.customerName || (cust ? cust.name : 'Customer'),
+        phone,
+        (r.quotedItems || '').replace(/\t|\n/g, ' '),
+        r.paymentAmount || 0,
+        r.paymentMode || 'UPI',
+        r.paymentDueDate || r.date || '',
+        staff,
+        r.status || 'PENDING'
+      ].join('\t'));
+    } else {
+      rows.push([
+        r.id,
+        r.customerName || (cust ? cust.name : 'Customer'),
+        phone,
+        r.date || '',
+        r.time || '',
+        (r.reason || '').replace(/\t|\n/g, ' '),
+        r.priority || 'NORMAL',
+        staff,
+        r.status || 'PENDING'
+      ].join('\t'));
+    }
+  });
+
+  const tsv = rows.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(tsv).then(() => {
+      showToast('Copied to Clipboard!', `${records.length} records copied. Paste directly into Excel (Ctrl+V).`, 'content_copy', 'emerald');
+    }).catch(() => {
+      showToast('Copy Failed', 'Clipboard access was blocked.', 'error', 'rose');
+    });
+  } else {
+    showToast('Copied!', 'Export data formatted.', 'content_copy', 'emerald');
+  }
+}
+window.handleCopyFollowupsExportData = handleCopyFollowupsExportData;
 

@@ -5,7 +5,7 @@
  * Automatically creates database `grm_crm_db` and all necessary tables & seed records on first run.
  */
 
-// Load .env configuration file if present
+// Load .env configuration file if present, with container/system environment variables taking highest priority
 function loadEnvConfig() {
     $envFile = dirname(__DIR__) . '/.env';
     $env = [
@@ -13,9 +13,12 @@ function loadEnvConfig() {
         'DB_USER' => 'root',
         'DB_PASS' => '',
         'DB_NAME' => 'grm_crm_db',
-        'DB_PORT' => '3306'
+        'DB_PORT' => '3306',
+        'BRIDGE_URL' => 'http://localhost:3000',
+        'APP_URL' => 'http://localhost:8080'
     ];
 
+    // 1. Read .env file if it exists
     if (file_exists($envFile)) {
         $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
@@ -29,6 +32,18 @@ function loadEnvConfig() {
                 $val = trim($val, "\"'");
                 $env[$key] = $val;
             }
+        }
+    }
+
+    // 2. Container / System Environment Variables take highest priority (e.g. from Docker Compose)
+    foreach ($env as $key => $defaultVal) {
+        $serverVal = getenv($key);
+        if ($serverVal !== false && $serverVal !== '') {
+            $env[$key] = $serverVal;
+        } elseif (!empty($_SERVER[$key])) {
+            $env[$key] = $_SERVER[$key];
+        } elseif (!empty($_ENV[$key])) {
+            $env[$key] = $_ENV[$key];
         }
     }
 
@@ -50,37 +65,58 @@ function getDBConnection() {
         return $pdo;
     }
 
-    $hosts = [DB_HOST, '127.0.0.1', 'localhost'];
+    $hosts = [DB_HOST];
+    if (DB_HOST === 'crm-db') {
+        $hosts[] = 'grm_crm_mariadb';
+    } elseif (DB_HOST === '127.0.0.1' || DB_HOST === 'localhost') {
+        $hosts[] = '127.0.0.1';
+        $hosts[] = 'localhost';
+    } else {
+        $hosts[] = '127.0.0.1';
+    }
 
     foreach (array_unique($hosts) as $host) {
         try {
-            // 1. Connect to MySQL server to ensure DB exists
-            $initPdo = new PDO(
-                "mysql:host=" . $host . ";port=" . DB_PORT . ";charset=utf8mb4",
-                DB_USER,
-                DB_PASS,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                ]
-            );
+            // 1. Try connecting directly to the target database first
+            try {
+                $pdo = new PDO(
+                    "mysql:host=" . $host . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+                    DB_USER,
+                    DB_PASS,
+                    [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                    ]
+                );
+            } catch (PDOException $dbNotFound) {
+                // 2. If database doesn't exist yet, connect to server and create it
+                $initPdo = new PDO(
+                    "mysql:host=" . $host . ";port=" . DB_PORT . ";charset=utf8mb4",
+                    DB_USER,
+                    DB_PASS,
+                    [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                    ]
+                );
 
-            $initPdo->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+                $initPdo->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
 
-            // 2. Connect to the database
-            $pdo = new PDO(
-                "mysql:host=" . $host . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4",
-                DB_USER,
-                DB_PASS,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                ]
-            );
+                $pdo = new PDO(
+                    "mysql:host=" . $host . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+                    DB_USER,
+                    DB_PASS,
+                    [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                    ]
+                );
+            }
 
-            // 3. Ensure tables and seeds exist
+            // 3. Ensure tables and default seeds exist
             initializeDatabaseSchema($pdo);
 
             return $pdo;
@@ -313,7 +349,13 @@ function initializeDatabaseSchema($pdo) {
             'priority'            => "ALTER TABLE `followups` ADD COLUMN `priority` ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT') DEFAULT 'NORMAL' AFTER `outcome`",
             'contact_channel'     => "ALTER TABLE `followups` ADD COLUMN `contact_channel` ENUM('WHATSAPP', 'CALL', 'STORE_VISIT') DEFAULT 'WHATSAPP' AFTER `priority`",
             'outcome_notes'       => "ALTER TABLE `followups` ADD COLUMN `outcome_notes` TEXT NULL AFTER `reason`",
-            'completed_at'        => "ALTER TABLE `followups` ADD COLUMN `completed_at` DATETIME NULL AFTER `outcome_notes`"
+            'completed_at'        => "ALTER TABLE `followups` ADD COLUMN `completed_at` DATETIME NULL AFTER `outcome_notes`",
+            'is_payment_pending'  => "ALTER TABLE `followups` ADD COLUMN `is_payment_pending` TINYINT(1) NOT NULL DEFAULT 0",
+            'payment_amount'      => "ALTER TABLE `followups` ADD COLUMN `payment_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+            'payment_mode'        => "ALTER TABLE `followups` ADD COLUMN `payment_mode` VARCHAR(50) NULL DEFAULT 'UPI'",
+            'payment_due_date'    => "ALTER TABLE `followups` ADD COLUMN `payment_due_date` VARCHAR(50) NULL",
+            'payment_notes'       => "ALTER TABLE `followups` ADD COLUMN `payment_notes` TEXT NULL",
+            'quoted_items'        => "ALTER TABLE `followups` ADD COLUMN `quoted_items` TEXT NULL"
         ];
         foreach ($fuColDefs as $cName => $sql) {
             if (!in_array($cName, $existingFuCols)) {

@@ -679,7 +679,7 @@
 
       <!-- WhatsApp Inbox Module with Sub-Modules -->
       <div class="space-y-1">
-        <button onclick="toggleWhatsAppDropdown()" id="nav-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm">
+        <button onclick="switchView('inbox', 'chats');" id="nav-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-[20px]">inbox</span>
             <span>WhatsApp Inbox</span>
@@ -854,10 +854,17 @@
           <span class="material-symbols-outlined text-[24px]" id="sidebar-toggle-icon">menu</span>
         </button>
 
-        <!-- Dynamic Header Title (Hidden in WhatsApp Inbox) -->
-        <div id="header-title-container" class="flex items-center gap-3 min-w-0 max-w-sm md:max-w-md lg:max-w-lg hidden">
+        <!-- Dynamic Header Title & Live Status Pill -->
+        <div id="header-title-container" class="flex items-center gap-3 min-w-0">
           <div class="min-w-0">
-            <h2 id="page-title" class="font-bold text-base sm:text-lg text-slate-900 leading-tight truncate">WhatsApp Inbox &amp; Customer Queue</h2>
+            <div class="flex items-center gap-2">
+              <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight">WhatsApp Inbox &amp; Customer Queue</h2>
+              <span id="header-live-queue-pill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Live Queue</span>
+                <span id="header-live-queue-count" class="bg-emerald-600 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
+              </span>
+            </div>
             <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management with instant staff assignment &amp; order booking</p>
           </div>
         </div>
@@ -963,14 +970,24 @@
       <!-- ========================================== -->
       <section id="view-inbox" class="h-full flex flex-col overflow-hidden w-full relative">
         
-        <!-- WhatsApp Inbox Sub-Modules Navigation Strip -->
-        <div class="min-h-[46px] bg-white border-b border-slate-200 px-3 sm:px-6 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-xs z-10 gap-2">
+        <!-- WhatsApp Inbox Sub-Modules Navigation Strip (Shown for Auto-Reply / Broadcast, Hidden for 3-Panel Chats) -->
+        <div id="inbox-submodules-nav-strip" class="hidden min-h-[46px] bg-white border-b border-slate-200 px-3 sm:px-6 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-xs z-10 gap-2">
           <div class="flex items-center gap-1.5 sm:gap-2">
             <!-- Sub-module 1: Live Conversations Tab -->
             <button type="button" onclick="switchInboxSubmodule('chats')" id="tab-sub-inbox-chats" class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer" title="Active WhatsApp Chats, Customer Queue & Live Chatbot">
               <span class="material-symbols-outlined text-[17px]">forum</span>
               <span>Live Conversations</span>
               <span id="subtab-unread-badge" class="bg-white/20 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
+            </button>
+            <!-- Sub-module 2: Auto-Reply Rules Tab -->
+            <button type="button" onclick="switchInboxSubmodule('autoreply')" id="tab-sub-inbox-autoreply" class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer" title="Auto-Reply Bot Rules & Q&A Templates">
+              <span class="material-symbols-outlined text-[17px]">smart_toy</span>
+              <span>Auto-Reply &amp; Templates</span>
+            </button>
+            <!-- Sub-module 3: Broadcast Tab -->
+            <button type="button" onclick="switchInboxSubmodule('broadcast')" id="tab-sub-inbox-broadcast" class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer" title="Custom Broadcast Templates & Blast Engine">
+              <span class="material-symbols-outlined text-[17px]">campaign</span>
+              <span>Broadcast Engine</span>
             </button>
           </div>
         </div>
@@ -980,8 +997,8 @@
         <!-- ======================================================== -->
         <div id="submodule-inbox-chats" class="flex-1 flex overflow-hidden w-full relative">
         
-          <!-- Left Panel: Conversation & Enquiry List (Responsive Width based on VPW & Mouse Drag) -->
-          <div id="inbox-left-panel" class="w-72 xl:w-80 2xl:w-88 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0 transition-all duration-300 relative">
+          <!-- Left Panel: Conversation & Enquiry List (Generous Width for Clear Customer Names & Phone Numbers) -->
+          <div id="inbox-left-panel" class="w-80 xl:w-88 2xl:w-96 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0 transition-all duration-300 relative">
           
           <!-- Daily Inbound Message Volume Progress Tracker -->
           <div class="px-3 py-2 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200/80 flex items-center justify-between text-xs min-w-0 gap-1.5">
@@ -2046,169 +2063,372 @@
       <!-- ========================================== -->
       <section id="view-followups" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
         <div class="max-w-7xl mx-auto space-y-5">
-          <!-- Hub Header with Dynamic Role Indicator -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-soft">
-            <div class="space-y-1">
-              <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-[22px]">event_repeat</span>
-                </div>
-                <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Follow-up Management Hub</h2>
-                <span id="followup-role-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Global Overview
-                </span>
-              </div>
-              <p id="followup-role-subtitle" class="text-xs text-slate-500 pl-11">
-                Admin Control: Full visibility across all 4 staff queues, customer promises, response rates &amp; conversions.
-              </p>
+
+          <!-- TIER 1: PRIMARY HUB MODE SWITCHER (Follow-ups vs Payment Pending) -->
+          <div class="flex items-center justify-between gap-4 border-b border-slate-200/90 pb-4 flex-wrap">
+            <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 shadow-inner">
+              <!-- Follow-ups Mode Tab -->
+              <button type="button" id="hub-mode-tab-followups" onclick="switchFollowupHubMode('FOLLOWUPS')" 
+                class="px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-blue-700 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">event_repeat</span>
+                <span>Follow Ups</span>
+                <span id="hub-badge-followups-count" class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">0</span>
+              </button>
+
+              <!-- Payment Pending Mode Tab -->
+              <button type="button" id="hub-mode-tab-payment-pending" onclick="switchFollowupHubMode('PAYMENT_PENDING')" 
+                class="px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-amber-700 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">payments</span>
+                <span>Payment Pending</span>
+                <span id="hub-badge-payment-pending-count" class="bg-amber-100 text-amber-900 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">0</span>
+              </button>
             </div>
-            <div class="flex items-center gap-2 pl-11 sm:pl-0">
-              <button type="button" onclick="refreshFollowupsState()" class="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl border border-slate-200 transition flex items-center justify-center" title="Refresh Live Database Follow-ups">
+
+            <!-- Right Actions -->
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="openFollowupExportModal()" id="btn-export-followups-hub" class="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95" title="Export All Follow-up & Payment Pending Details">
+                <span class="material-symbols-outlined text-[17px]">download</span>
+                <span>Export Details</span>
+              </button>
+              <button type="button" onclick="refreshFollowupsState()" class="p-2.5 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl border border-slate-200 transition shadow-2xs cursor-pointer" title="Refresh Live Database">
                 <span class="material-symbols-outlined text-[18px]">sync</span>
               </button>
-              <button type="button" onclick="openFollowUpModal()" class="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95">
-                <span class="material-symbols-outlined text-[18px]">add_alarm</span>
-                <span>Schedule Follow-up</span>
-              </button>
             </div>
           </div>
 
-          <!-- 1. Interactive KPI Metrics Dashboard (Click card to filter!) -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <!-- Total -->
-            <div onclick="setFollowupTabFilter('ALL')" id="kpi-card-all" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-slate-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
-              <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                Total
-                <span class="material-symbols-outlined text-[16px] text-slate-400">stacked_bar_chart</span>
-              </span>
-              <p id="kpi-fu-total" class="text-2xl font-black text-slate-900 mt-2 font-mono">0</p>
-              <span class="text-[10px] text-slate-400 mt-0.5">All customer records</span>
-            </div>
-
-            <!-- Today -->
-            <div onclick="setFollowupTabFilter('TODAY')" id="kpi-card-today" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-blue-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
-              <span class="text-[11px] font-bold text-blue-700 uppercase tracking-wider flex items-center justify-between">
-                Today's Due
-                <span class="material-symbols-outlined text-[16px] text-blue-500">today</span>
-              </span>
-              <p id="kpi-fu-today" class="text-2xl font-black text-blue-600 mt-2 font-mono">0</p>
-              <span class="text-[10px] text-blue-500 font-medium mt-0.5">Scheduled for today</span>
-            </div>
-
-            <!-- Upcoming -->
-            <div onclick="setFollowupTabFilter('UPCOMING')" id="kpi-card-upcoming" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-indigo-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
-              <span class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider flex items-center justify-between">
-                Upcoming
-                <span class="material-symbols-outlined text-[16px] text-indigo-500">upcoming</span>
-              </span>
-              <p id="kpi-fu-upcoming" class="text-2xl font-black text-indigo-600 mt-2 font-mono">0</p>
-              <span class="text-[10px] text-indigo-500 font-medium mt-0.5">Future dates</span>
-            </div>
-
-            <!-- Overdue -->
-            <div onclick="setFollowupTabFilter('OVERDUE')" id="kpi-card-overdue" class="bg-rose-50/50 p-3.5 rounded-2xl border-2 border-rose-200/60 hover:border-rose-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
-              <span class="text-[11px] font-extrabold text-rose-700 uppercase tracking-wider flex items-center justify-between">
-                Overdue
-                <span class="material-symbols-outlined text-[16px] text-rose-600 animate-pulse">warning</span>
-              </span>
-              <p id="kpi-fu-overdue" class="text-2xl font-black text-rose-600 mt-2 font-mono">0</p>
-              <span class="text-[10px] text-rose-600 font-bold mt-0.5">Immediate action</span>
-            </div>
-
-            <!-- Converted -->
-            <div onclick="setFollowupTabFilter('COMPLETED')" id="kpi-card-converted" class="bg-emerald-50/50 p-3.5 rounded-2xl border-2 border-emerald-200/60 hover:border-emerald-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
-              <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
-                Converted
-                <span class="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
-              </span>
-              <p id="kpi-fu-converted" class="text-2xl font-black text-emerald-700 mt-2 font-mono">0</p>
-              <span class="text-[10px] text-emerald-600 font-medium mt-0.5">Orders booked</span>
-            </div>
-
-            <!-- Lost -->
-            <div onclick="setFollowupTabFilter('LOST')" id="kpi-card-lost" class="bg-slate-50 p-3.5 rounded-2xl border-2 border-transparent hover:border-slate-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
-              <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center justify-between">
-                Lost
-                <span class="material-symbols-outlined text-[16px] text-slate-500">cancel</span>
-              </span>
-              <p id="kpi-fu-lost" class="text-2xl font-black text-slate-600 mt-2 font-mono">0</p>
-              <span class="text-[10px] text-slate-500 font-medium mt-0.5">Cancelled / Closed</span>
-            </div>
-          </div>
-
-          <!-- 2. Filter & Search Toolbar -->
-          <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <!-- Search Bar -->
-              <div class="relative flex-1">
-                <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-                <input type="text" id="followup-search-input" oninput="filterFollowupsCards()" placeholder="Search by customer name, phone, notes, or query ID..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+          <!-- ======================================================== -->
+          <!-- SUB-VIEW 1: FOLLOW-UPS WORKSTATION                       -->
+          <!-- ======================================================== -->
+          <div id="subview-hub-followups" class="space-y-5">
+            <!-- 1. Interactive KPI Metrics Dashboard (Click card to filter!) -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+              <!-- Total -->
+              <div onclick="setFollowupTabFilter('ALL')" id="kpi-card-all" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-slate-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                  Total
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">stacked_bar_chart</span>
+                </span>
+                <p id="kpi-fu-total" class="text-2xl font-black text-slate-900 mt-2 font-mono">0</p>
+                <span class="text-[10px] text-slate-400 mt-0.5">All customer records</span>
               </div>
 
-              <!-- Filters Row -->
-              <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                <!-- Staff Filter (Admin sees all staff; Staff sees locked badge) -->
-                <div id="followup-staff-filter-container" class="shrink-0">
-                  <select id="followup-filter-staff" onchange="filterFollowupsCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                    <option value="ALL">👥 All Staff Members</option>
-                    <option value="staff_01">Priya Sharma (Baby Collection)</option>
-                    <option value="staff_02">Rahul Verma (Maternity &amp; Kids)</option>
-                    <option value="staff_03">Sneha Patel (Order Support)</option>
-                    <option value="admin">Super Admin</option>
-                  </select>
+              <!-- Today -->
+              <div onclick="setFollowupTabFilter('TODAY')" id="kpi-card-today" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-blue-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-blue-700 uppercase tracking-wider flex items-center justify-between">
+                  Today's Due
+                  <span class="material-symbols-outlined text-[16px] text-blue-500">today</span>
+                </span>
+                <p id="kpi-fu-today" class="text-2xl font-black text-blue-600 mt-2 font-mono">0</p>
+                <span class="text-[10px] text-blue-500 font-medium mt-0.5">Scheduled for today</span>
+              </div>
+
+              <!-- Upcoming -->
+              <div onclick="setFollowupTabFilter('UPCOMING')" id="kpi-card-upcoming" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-indigo-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider flex items-center justify-between">
+                  Upcoming
+                  <span class="material-symbols-outlined text-[16px] text-indigo-500">upcoming</span>
+                </span>
+                <p id="kpi-fu-upcoming" class="text-2xl font-black text-indigo-600 mt-2 font-mono">0</p>
+                <span class="text-[10px] text-indigo-500 font-medium mt-0.5">Future dates</span>
+              </div>
+
+              <!-- Overdue -->
+              <div onclick="setFollowupTabFilter('OVERDUE')" id="kpi-card-overdue" class="bg-rose-50/50 p-3.5 rounded-2xl border-2 border-rose-200/60 hover:border-rose-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-extrabold text-rose-700 uppercase tracking-wider flex items-center justify-between">
+                  Overdue
+                  <span class="material-symbols-outlined text-[16px] text-rose-600 animate-pulse">warning</span>
+                </span>
+                <p id="kpi-fu-overdue" class="text-2xl font-black text-rose-600 mt-2 font-mono">0</p>
+                <span class="text-[10px] text-rose-600 font-bold mt-0.5">Immediate action</span>
+              </div>
+
+              <!-- Payment Pending -->
+              <div onclick="setFollowupTabFilter('PAYMENT_PENDING')" id="kpi-card-payment-pending" class="bg-amber-50/70 p-3.5 rounded-2xl border-2 border-amber-200/90 hover:border-amber-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-extrabold text-amber-900 uppercase tracking-wider flex items-center justify-between">
+                  <span>Payment Pending</span>
+                  <span class="material-symbols-outlined text-[16px] text-amber-600">payments</span>
+                </span>
+                <p id="kpi-fu-payment-pending" class="text-2xl font-black text-amber-950 mt-2 font-mono">0</p>
+                <span id="kpi-fu-payment-amount" class="text-[10px] text-amber-800 font-bold mt-0.5 font-mono truncate">₹0.00 Total</span>
+              </div>
+
+              <!-- Converted -->
+              <div onclick="setFollowupTabFilter('COMPLETED')" id="kpi-card-converted" class="bg-emerald-50/50 p-3.5 rounded-2xl border-2 border-emerald-200/60 hover:border-emerald-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+                  Converted
+                  <span class="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
+                </span>
+                <p id="kpi-fu-converted" class="text-2xl font-black text-emerald-700 mt-2 font-mono">0</p>
+                <span class="text-[10px] text-emerald-600 font-medium mt-0.5">Orders booked</span>
+              </div>
+
+              <!-- Lost -->
+              <div onclick="setFollowupTabFilter('LOST')" id="kpi-card-lost" class="bg-slate-50 p-3.5 rounded-2xl border-2 border-transparent hover:border-slate-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center justify-between">
+                  Lost
+                  <span class="material-symbols-outlined text-[16px] text-slate-500">cancel</span>
+                </span>
+                <p id="kpi-fu-lost" class="text-2xl font-black text-slate-600 mt-2 font-mono">0</p>
+                <span class="text-[10px] text-slate-500 font-medium mt-0.5">Cancelled / Closed</span>
+              </div>
+            </div>
+
+            <!-- 2. Filter & Search Toolbar -->
+            <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <!-- Search Bar -->
+                <div class="relative flex-1">
+                  <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                  <input type="text" id="followup-search-input" oninput="filterFollowupsCards()" placeholder="Search by customer name, phone, notes, or query ID..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                 </div>
 
-                <!-- Priority Filter -->
-                <select id="followup-filter-priority" onchange="filterFollowupsCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition shrink-0">
-                  <option value="ALL">All Priorities</option>
-                  <option value="URGENT">🔥 Urgent</option>
-                  <option value="HIGH">⚡ High</option>
-                  <option value="NORMAL">📌 Normal</option>
-                  <option value="LOW">☕ Low</option>
-                </select>
+                <!-- Filters Row -->
+                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <!-- Customize Date Pick -->
+                  <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-2xl px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition shrink-0" title="Customize Date Pick">
+                    <span class="material-symbols-outlined text-[16px] text-slate-400">calendar_month</span>
+                    <input type="date" id="followup-filter-date" onchange="filterFollowupsCards()" class="text-xs font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer">
+                    <button type="button" onclick="clearFollowupDateFilter()" id="btn-clear-followup-date" class="hidden text-slate-400 hover:text-rose-500 transition cursor-pointer" title="Clear Date Filter">
+                      <span class="material-symbols-outlined text-[15px]">cancel</span>
+                    </button>
+                  </div>
 
-                <!-- Channel Filter -->
-                <select id="followup-filter-channel" onchange="filterFollowupsCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition shrink-0">
-                  <option value="ALL">All Channels</option>
-                  <option value="WHATSAPP">💬 WhatsApp Chat</option>
-                  <option value="CALL">📞 Phone Call</option>
-                  <option value="STORE_VISIT">🏬 Store Visit</option>
-                </select>
+                  <!-- Order Picker (Sort Order) -->
+                  <select id="followup-filter-sort-order" onchange="filterFollowupsCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition shrink-0" title="Order Picker (Sort Order)">
+                    <option value="DUE_ASC">📅 Due Date (Closest First)</option>
+                    <option value="DUE_DESC">📅 Due Date (Latest First)</option>
+                    <option value="NEWEST">⏱️ Created (Newest First)</option>
+                    <option value="OLDEST">⏱️ Created (Oldest First)</option>
+                    <option value="PRIORITY">🔥 Priority (Urgent First)</option>
+                    <option value="NAME_ASC">👤 Customer (A to Z)</option>
+                  </select>
+
+                  <!-- Staff Filter -->
+                  <div id="followup-staff-filter-container" class="shrink-0">
+                    <select id="followup-filter-staff" onchange="filterFollowupsCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                      <option value="ALL">👥 All Staff Members</option>
+                      <option value="staff_01">Priya Sharma (Baby Collection)</option>
+                      <option value="staff_02">Rahul Verma (Maternity &amp; Kids)</option>
+                      <option value="staff_03">Sneha Patel (Order Support)</option>
+                      <option value="admin">Super Admin</option>
+                    </select>
+                  </div>
+
+                  <!-- Channel Filter -->
+                  <select id="followup-filter-channel" onchange="filterFollowupsCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition shrink-0">
+                    <option value="ALL">All Channels</option>
+                    <option value="WHATSAPP">💬 WhatsApp Chat</option>
+                    <option value="CALL">📞 Phone Call</option>
+                    <option value="STORE_VISIT">🏬 Store Visit</option>
+                  </select>
+
+                  <!-- Quick Export Follow-ups Button -->
+                  <button type="button" onclick="openFollowupExportModal('FOLLOWUPS')" class="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-2xl text-xs font-bold transition shadow-2xs shrink-0 cursor-pointer active:scale-95" title="Export Follow-up Details">
+                    <span class="material-symbols-outlined text-[16px] text-emerald-600">file_download</span>
+                    <span>Export</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Status Tabs Ribbon -->
+              <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs border-t border-slate-100 pt-3">
+                <button type="button" onclick="setFollowupTabFilter('ALL')" id="tab-fu-all" class="px-3.5 py-1.5 rounded-xl font-bold bg-blue-600 text-white shadow-sm transition shrink-0">All Records</button>
+                <button type="button" onclick="setFollowupTabFilter('TODAY')" id="tab-fu-today" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0 flex items-center gap-1">
+                  <span>Today's Due</span>
+                  <span id="tab-badge-today" class="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono">0</span>
+                </button>
+                <button type="button" onclick="setFollowupTabFilter('UPCOMING')" id="tab-fu-upcoming" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Upcoming</button>
+                <button type="button" onclick="setFollowupTabFilter('OVERDUE')" id="tab-fu-overdue" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 transition shrink-0 flex items-center gap-1">
+                  <span>Overdue</span>
+                  <span id="tab-badge-overdue" class="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono">0</span>
+                </button>
+                <button type="button" onclick="setFollowupTabFilter('PAYMENT_PENDING')" id="tab-fu-payment-pending" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 transition shrink-0 flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[15px]">payments</span>
+                  <span>Payment Pending</span>
+                  <span id="tab-badge-payment-pending" class="bg-amber-100 text-amber-900 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">0</span>
+                </button>
+                <button type="button" onclick="setFollowupTabFilter('COMPLETED')" id="tab-fu-completed" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Converted / Done</button>
+                <button type="button" onclick="setFollowupTabFilter('LOST')" id="tab-fu-lost" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Lost Enquiries</button>
               </div>
             </div>
 
-            <!-- Status Tabs Ribbon -->
-            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs border-t border-slate-100 pt-3">
-              <button type="button" onclick="setFollowupTabFilter('ALL')" id="tab-fu-all" class="px-3.5 py-1.5 rounded-xl font-bold bg-blue-600 text-white shadow-sm transition shrink-0">All Records</button>
-              <button type="button" onclick="setFollowupTabFilter('TODAY')" id="tab-fu-today" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0 flex items-center gap-1">
-                <span>Today's Due</span>
-                <span id="tab-badge-today" class="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono">0</span>
+            <!-- Follow-up Cards Grid -->
+            <div id="followups-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <!-- Populated dynamically by JS with complete RBAC & actions -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="followups-empty-state" class="hidden text-center py-16 bg-white rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
+              <div class="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+                <span class="material-symbols-outlined text-[32px]">event_available</span>
+              </div>
+              <h3 class="text-base font-bold text-slate-800">No follow-ups match your current filter</h3>
+              <p class="text-xs text-slate-500 max-w-sm mx-auto">All customer callbacks are up to date, or no records match the chosen search criteria.</p>
+              <button type="button" onclick="setFollowupTabFilter('ALL')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                Reset Filters
               </button>
-              <button type="button" onclick="setFollowupTabFilter('UPCOMING')" id="tab-fu-upcoming" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Upcoming</button>
-              <button type="button" onclick="setFollowupTabFilter('OVERDUE')" id="tab-fu-overdue" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 transition shrink-0 flex items-center gap-1">
-                <span>Overdue</span>
-                <span id="tab-badge-overdue" class="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono">0</span>
-              </button>
-              <button type="button" onclick="setFollowupTabFilter('COMPLETED')" id="tab-fu-completed" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Converted / Done</button>
-              <button type="button" onclick="setFollowupTabFilter('LOST')" id="tab-fu-lost" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Lost Enquiries</button>
             </div>
           </div>
 
-          <!-- 3. Follow-up Cards Grid -->
-          <div id="followups-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <!-- Populated dynamically by JS with complete RBAC & actions -->
-          </div>
+          <!-- ======================================================== -->
+          <!-- SUB-VIEW 2: DEDICATED PAYMENT PENDING WORKSTATION        -->
+          <!-- ======================================================== -->
+          <div id="subview-hub-payment-pending" class="space-y-5 hidden">
+            <!-- 1. Dedicated Payment KPI Metrics Dashboard -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <!-- Total Pending -->
+              <div onclick="setPaymentPendingTabFilter('ALL')" id="kpi-paycard-all" class="bg-amber-50/70 p-3.5 rounded-2xl border-2 border-amber-200/90 hover:border-amber-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center justify-between">
+                  <span>Total Pending</span>
+                  <span class="material-symbols-outlined text-[16px] text-amber-600">payments</span>
+                </span>
+                <p id="kpi-pay-total-count" class="text-2xl font-black text-amber-950 mt-2 font-mono">0</p>
+                <span id="kpi-pay-total-amount" class="text-[10px] text-amber-800 font-bold mt-0.5 font-mono truncate">₹0.00 Total</span>
+              </div>
 
-          <!-- Empty State -->
-          <div id="followups-empty-state" class="hidden text-center py-16 bg-white rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
-            <div class="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
-              <span class="material-symbols-outlined text-[32px]">event_available</span>
+              <!-- Today's Due -->
+              <div onclick="setPaymentPendingTabFilter('TODAY')" id="kpi-paycard-today" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-amber-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
+                  <span>Today's Due</span>
+                  <span class="material-symbols-outlined text-[16px] text-amber-600">today</span>
+                </span>
+                <p id="kpi-pay-today-count" class="text-2xl font-black text-slate-900 mt-2 font-mono">0</p>
+                <span id="kpi-pay-today-amount" class="text-[10px] text-amber-700 font-bold mt-0.5 font-mono truncate">₹0.00 Due</span>
+              </div>
+
+              <!-- Upcoming -->
+              <div onclick="setPaymentPendingTabFilter('UPCOMING')" id="kpi-paycard-upcoming" class="bg-white p-3.5 rounded-2xl border-2 border-transparent hover:border-indigo-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider flex items-center justify-between">
+                  <span>Upcoming</span>
+                  <span class="material-symbols-outlined text-[16px] text-indigo-500">upcoming</span>
+                </span>
+                <p id="kpi-pay-upcoming-count" class="text-2xl font-black text-slate-900 mt-2 font-mono">0</p>
+                <span id="kpi-pay-upcoming-amount" class="text-[10px] text-indigo-600 font-bold mt-0.5 font-mono truncate">₹0.00 Promised</span>
+              </div>
+
+              <!-- Overdue -->
+              <div onclick="setPaymentPendingTabFilter('OVERDUE')" id="kpi-paycard-overdue" class="bg-rose-50/50 p-3.5 rounded-2xl border-2 border-rose-200/60 hover:border-rose-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-extrabold text-rose-700 uppercase tracking-wider flex items-center justify-between">
+                  <span>Overdue</span>
+                  <span class="material-symbols-outlined text-[16px] text-rose-600 animate-pulse">warning</span>
+                </span>
+                <p id="kpi-pay-overdue-count" class="text-2xl font-black text-rose-600 mt-2 font-mono">0</p>
+                <span id="kpi-pay-overdue-amount" class="text-[10px] text-rose-600 font-bold mt-0.5 font-mono truncate">₹0.00 Overdue</span>
+              </div>
+
+              <!-- Paid & Converted -->
+              <div onclick="setPaymentPendingTabFilter('COMPLETED')" id="kpi-paycard-converted" class="bg-emerald-50/50 p-3.5 rounded-2xl border-2 border-emerald-200/60 hover:border-emerald-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+                  <span>Paid &amp; Converted</span>
+                  <span class="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
+                </span>
+                <p id="kpi-pay-converted-count" class="text-2xl font-black text-emerald-700 mt-2 font-mono">0</p>
+                <span id="kpi-pay-converted-amount" class="text-[10px] text-emerald-700 font-bold mt-0.5 font-mono truncate">₹0.00 Collected</span>
+              </div>
+
+              <!-- Cancelled / Lost -->
+              <div onclick="setPaymentPendingTabFilter('LOST')" id="kpi-paycard-lost" class="bg-slate-50 p-3.5 rounded-2xl border-2 border-transparent hover:border-slate-300 shadow-sm cursor-pointer transition flex flex-col justify-between">
+                <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center justify-between">
+                  <span>Cancelled</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-500">cancel</span>
+                </span>
+                <p id="kpi-pay-lost-count" class="text-2xl font-black text-slate-600 mt-2 font-mono">0</p>
+                <span id="kpi-pay-lost-amount" class="text-[10px] text-slate-500 font-medium mt-0.5 font-mono truncate">₹0.00 Cancelled</span>
+              </div>
             </div>
-            <h3 class="text-base font-bold text-slate-800">No follow-ups match your current filter</h3>
-            <p class="text-xs text-slate-500 max-w-sm mx-auto">All customer callbacks are up to date, or no records match the chosen search criteria.</p>
-            <button type="button" onclick="setFollowupTabFilter('ALL')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
-              Reset Filters
-            </button>
+
+            <!-- 2. Payment Filter & Search Toolbar -->
+            <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <!-- Search Bar -->
+                <div class="relative flex-1">
+                  <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                  <input type="text" id="pay-pending-search-input" oninput="filterPaymentPendingCards()" placeholder="Search payments by customer, phone, quoted garments, or notes..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+                </div>
+
+                <!-- Filters Row -->
+                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <!-- Customize Date Pick -->
+                  <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-2xl px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-amber-500 focus-within:bg-white transition shrink-0" title="Customize Date Pick">
+                    <span class="material-symbols-outlined text-[16px] text-slate-400">calendar_month</span>
+                    <input type="date" id="pay-pending-filter-date" onchange="filterPaymentPendingCards()" class="text-xs font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer">
+                    <button type="button" onclick="clearPayPendingDateFilter()" id="btn-clear-pay-date" class="hidden text-slate-400 hover:text-rose-500 transition cursor-pointer" title="Clear Date Filter">
+                      <span class="material-symbols-outlined text-[15px]">cancel</span>
+                    </button>
+                  </div>
+
+                  <!-- Order Picker (Sort Order) -->
+                  <select id="pay-pending-filter-sort-order" onchange="filterPaymentPendingCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition shrink-0" title="Order Picker (Sort Order)">
+                    <option value="DUE_ASC">📅 Due Date (Closest First)</option>
+                    <option value="DUE_DESC">📅 Due Date (Latest First)</option>
+                    <option value="AMOUNT_DESC">💰 Amount (Highest First)</option>
+                    <option value="AMOUNT_ASC">💰 Amount (Lowest First)</option>
+                    <option value="NEWEST">⏱️ Created (Newest First)</option>
+                    <option value="NAME_ASC">👤 Customer (A to Z)</option>
+                  </select>
+
+                  <!-- Staff Filter -->
+                  <div id="pay-pending-staff-filter-container" class="shrink-0">
+                    <select id="pay-pending-filter-staff" onchange="filterPaymentPendingCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+                      <option value="ALL">👥 All Staff Members</option>
+                      <option value="staff_01">Priya Sharma</option>
+                      <option value="staff_02">Rahul Verma</option>
+                      <option value="staff_03">Sneha Patel</option>
+                      <option value="admin">Super Admin</option>
+                    </select>
+                  </div>
+
+                  <!-- Payment Mode Filter -->
+                  <select id="pay-pending-filter-mode" onchange="filterPaymentPendingCards()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition shrink-0">
+                    <option value="ALL">💳 All Payment Modes</option>
+                    <option value="UPI">📱 GPay / PhonePe / Paytm (UPI)</option>
+                    <option value="BANK">🏦 Bank Transfer (NEFT / IMPS)</option>
+                    <option value="COD_ADVANCE">📦 COD Advance</option>
+                    <option value="PAYMENT_LINK">🔗 Payment Link / QR</option>
+                    <option value="CASH">💵 Cash / Store Counter</option>
+                  </select>
+
+                  <!-- Quick Export Payment Pending Button -->
+                  <button type="button" onclick="openFollowupExportModal('PAYMENT_PENDING')" class="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-2xl text-xs font-bold transition shadow-2xs shrink-0 cursor-pointer active:scale-95" title="Export Payment Pending Details">
+                    <span class="material-symbols-outlined text-[16px] text-amber-600">file_download</span>
+                    <span>Export</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Payment Sub-Tabs Ribbon -->
+              <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs border-t border-slate-100 pt-3">
+                <button type="button" onclick="setPaymentPendingTabFilter('ALL')" id="tab-pay-all" class="px-3.5 py-1.5 rounded-xl font-bold bg-amber-600 text-white shadow-sm transition shrink-0">All Records</button>
+                <button type="button" onclick="setPaymentPendingTabFilter('TODAY')" id="tab-pay-today" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 transition shrink-0 flex items-center gap-1">
+                  <span>Today's Due</span>
+                  <span id="tab-badge-pay-today" class="bg-amber-100 text-amber-900 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">0</span>
+                </button>
+                <button type="button" onclick="setPaymentPendingTabFilter('UPCOMING')" id="tab-pay-upcoming" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Upcoming</button>
+                <button type="button" onclick="setPaymentPendingTabFilter('OVERDUE')" id="tab-pay-overdue" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 transition shrink-0 flex items-center gap-1">
+                  <span>Overdue</span>
+                  <span id="tab-badge-pay-overdue" class="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">0</span>
+                </button>
+                <button type="button" onclick="setPaymentPendingTabFilter('COMPLETED')" id="tab-pay-completed" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Paid &amp; Converted</button>
+                <button type="button" onclick="setPaymentPendingTabFilter('LOST')" id="tab-pay-lost" class="px-3.5 py-1.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0">Cancelled</button>
+              </div>
+            </div>
+
+            <!-- Payment Pending Cards Grid -->
+            <div id="payment-pending-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <!-- Populated dynamically by JS -->
+            </div>
+
+            <!-- Payment Empty State -->
+            <div id="payment-pending-empty-state" class="hidden text-center py-16 bg-white rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
+              <div class="w-16 h-16 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                <span class="material-symbols-outlined text-[32px]">payments</span>
+              </div>
+              <h3 class="text-base font-bold text-slate-800">No payment pending records found</h3>
+              <p class="text-xs text-slate-500 max-w-sm mx-auto">No pending customer payments match your chosen filter criteria.</p>
+              <button type="button" onclick="setPaymentPendingTabFilter('ALL')" class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold transition">
+                Reset Filters
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -3567,8 +3787,8 @@
     </div>
   </div>
 
-  <!-- MODAL: FOLLOW-UP SCHEDULER -->
-  <div id="modal-followup" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+  <!-- MODAL: FOLLOW-UP SCHEDULER (Superseded by dynamic inline follow-up workstation) -->
+  <div id="modal-followup" class="fixed inset-0 z-50 modal-backdrop hidden items-center justify-center p-3 sm:p-4" style="display: none !important;">
     <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-200 flex flex-col max-h-[90vh] my-auto">
       <!-- Header (Fixed / Non-scrolling) -->
       <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
@@ -3731,6 +3951,46 @@
         <div id="followup-preview-banner" class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 p-2.5 rounded-xl flex items-center gap-2 text-blue-950 font-bold text-xs">
           <span class="material-symbols-outlined text-[18px] text-blue-700">alarm</span>
           <span>Reminder scheduled for: <strong id="followup-preview-text" class="text-blue-900 font-mono">Today at 11:00 AM</strong></span>
+        </div>
+
+        <!-- Payment Pending Toggle & Details Box in Modal -->
+        <div class="bg-gradient-to-br from-amber-50/90 to-orange-50/50 border border-amber-300/90 p-3.5 rounded-2xl space-y-2.5">
+          <label class="flex items-center justify-between cursor-pointer select-none">
+            <span class="flex items-center gap-2 font-bold text-slate-800 text-xs">
+              <input type="checkbox" id="modal-followup-pay-pending-toggle" onchange="document.getElementById('modal-followup-pay-fields').classList.toggle('hidden', !this.checked)" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-amber-300">
+              <span class="flex items-center gap-1.5 text-amber-950 font-black">
+                <span class="material-symbols-outlined text-[16px] text-amber-600">payments</span>
+                <span>Payment Pending / Advance Collection</span>
+              </span>
+            </span>
+            <span class="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">Awaiting Transfer</span>
+          </label>
+
+          <div id="modal-followup-pay-fields" class="hidden space-y-2 pt-1 border-t border-amber-200/80 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold text-amber-900 uppercase mb-0.5">Pending Amount (₹):</label>
+                <div class="relative">
+                  <span class="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-slate-500 text-xs">₹</span>
+                  <input type="number" id="modal-followup-pay-amount" placeholder="0.00" class="w-full pl-6 pr-2 py-1.5 rounded-xl border border-amber-300 bg-white text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-amber-500">
+                </div>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-amber-900 uppercase mb-0.5">Expected Mode:</label>
+                <select id="modal-followup-pay-mode" class="w-full py-1.5 px-2 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-800 focus:ring-1 focus:ring-amber-500">
+                  <option value="UPI">GPay / PhonePe / Paytm (UPI)</option>
+                  <option value="BANK">Bank Transfer (NEFT / IMPS)</option>
+                  <option value="COD_ADVANCE">COD Advance</option>
+                  <option value="PAYMENT_LINK">Payment Link / QR</option>
+                  <option value="CASH">Cash / Store Counter</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-amber-900 uppercase mb-0.5">Quoted Products / Garments:</label>
+              <input type="text" id="modal-followup-quoted-items" placeholder="e.g. Feeding Kurti FK-204 Pink (Size M)" class="w-full px-2.5 py-1.5 rounded-xl border border-amber-300 bg-white text-xs text-slate-900 font-medium">
+            </div>
+          </div>
         </div>
 
         <!-- MAIN THING: FOLLOW-UP REASON & DETAILED NOTES -->
@@ -3924,6 +4184,190 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: FOLLOW-UP & PAYMENT PENDING REPORT EXPORT (Customize Date Pick & Order Picker with Separated Details) -->
+  <div id="modal-followup-export" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] border border-slate-200">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shadow-inner">
+            <span class="material-symbols-outlined text-[24px]">file_download</span>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base text-white flex items-center gap-2">
+              <span>Export All Details Report</span>
+              <span class="text-[10px] bg-indigo-500/30 text-indigo-200 font-mono px-2 py-0.5 rounded-full border border-indigo-400/30">CSV / Excel</span>
+            </h3>
+            <p class="text-xs text-indigo-200/80 mt-0.5">Customize date range, sort order &amp; export separated follow-up or payment records</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-followup-export')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-indigo-200 hover:text-white transition cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs">
+        
+        <!-- 1. Report Type Switcher: Follow-up vs Payment Pending (Separated Details!) -->
+        <div>
+          <label class="block font-black text-slate-700 uppercase tracking-wider text-[11px] mb-2 flex items-center justify-between">
+            <span>1. Select Report Type (Separated Details)</span>
+            <span class="text-[10px] text-slate-400 font-normal">Choose dataset to export</span>
+          </label>
+          <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+            <!-- Follow-up Details Option -->
+            <button type="button" id="export-mode-btn-followups" onclick="switchExportHubMode('FOLLOWUPS')" class="py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-blue-600 text-white shadow-sm">
+              <span class="material-symbols-outlined text-[18px]">event_repeat</span>
+              <span>Follow-ups Details</span>
+              <span id="export-badge-followups-count" class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.2 rounded-full font-mono font-bold">0</span>
+            </button>
+            <!-- Payment Pending Details Option -->
+            <button type="button" id="export-mode-btn-payment" onclick="switchExportHubMode('PAYMENT_PENDING')" class="py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-transparent text-slate-700 hover:text-amber-800">
+              <span class="material-symbols-outlined text-[18px]">payments</span>
+              <span>Payment Pending Details</span>
+              <span id="export-badge-payment-count" class="bg-amber-100 text-amber-900 text-[10px] px-2 py-0.2 rounded-full font-mono font-bold">0</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Customize Date Pick (Range & Presets) -->
+        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label class="font-black text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-blue-600">calendar_month</span>
+              <span>2. Customize Date Pick</span>
+            </label>
+            <span class="text-[10px] text-slate-400">Filter records by date range</span>
+          </div>
+
+          <!-- Date Presets -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button type="button" onclick="setExportDatePreset('ALL')" id="export-preset-all" class="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-slate-900 text-white transition cursor-pointer">All Dates</button>
+            <button type="button" onclick="setExportDatePreset('TODAY')" id="export-preset-today" class="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer">Today</button>
+            <button type="button" onclick="setExportDatePreset('YESTERDAY')" id="export-preset-yesterday" class="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer">Yesterday</button>
+            <button type="button" onclick="setExportDatePreset('THIS_WEEK')" id="export-preset-week" class="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer">This Week</button>
+            <button type="button" onclick="setExportDatePreset('THIS_MONTH')" id="export-preset-month" class="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer">This Month</button>
+          </div>
+
+          <!-- Date Range Inputs -->
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">From Date</span>
+              <input type="date" id="export-date-from" onchange="onExportDateInputChange()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+              <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">To Date</span>
+              <input type="date" id="export-date-to" onchange="onExportDateInputChange()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Order Picker & Filters -->
+        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label class="font-black text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-indigo-600">sort</span>
+              <span>3. Order Picker &amp; Filters</span>
+            </label>
+            <span class="text-[10px] text-slate-400">Sort sequence &amp; status filtering</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Sort Order Dropdown -->
+            <div>
+              <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sort Order (Order Picker)</span>
+              <select id="export-sort-order" onchange="updateFollowupExportPreview()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <!-- Populated dynamically based on Follow-up vs Payment mode -->
+              </select>
+            </div>
+
+            <!-- Status / Outcome Filter -->
+            <div>
+              <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status / Outcome Filter</span>
+              <select id="export-status-filter" onchange="updateFollowupExportPreview()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <!-- Populated dynamically based on Follow-up vs Payment mode -->
+              </select>
+            </div>
+
+            <!-- Staff Assignment Filter -->
+            <div>
+              <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Staff Member</span>
+              <select id="export-staff-filter" onchange="updateFollowupExportPreview()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <option value="ALL">👥 All Staff Members</option>
+                <option value="staff_01">Priya Sharma</option>
+                <option value="staff_02">Rahul Verma</option>
+                <option value="staff_03">Sneha Patel</option>
+                <option value="admin">Super Admin</option>
+              </select>
+            </div>
+
+            <!-- Extra options (Include WhatsApp Order details) -->
+            <div class="flex items-center pt-5">
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="export-include-order-details" checked onchange="updateFollowupExportPreview()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300">
+                <span class="text-xs font-bold text-slate-700">Include Linked WhatsApp Order Details</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Live Data Summary & Preview Box -->
+        <div class="bg-indigo-50/60 p-4 rounded-2xl border border-indigo-100 space-y-2">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="font-bold text-indigo-950 flex items-center gap-1.5 text-xs">
+              <span class="material-symbols-outlined text-[16px] text-indigo-600">table_view</span>
+              <span id="export-preview-summary-text">0 Records Ready for Export</span>
+            </span>
+            <span id="export-preview-amount-badge" class="hidden text-xs font-black font-mono px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-200">
+              ₹0.00
+            </span>
+          </div>
+
+          <!-- Separated Columns Chip Preview -->
+          <div>
+            <span class="block text-[10px] font-bold text-indigo-900/80 uppercase mb-1">Separated Columns Included in File:</span>
+            <div id="export-columns-chips-container" class="flex flex-wrap gap-1">
+              <!-- Dynamically rendered column pills -->
+            </div>
+          </div>
+
+          <!-- Mini Table Preview (First 3 rows) -->
+          <div class="overflow-x-auto rounded-xl border border-indigo-200/60 bg-white mt-2 max-h-36">
+            <table class="w-full text-left text-[11px] divide-y divide-slate-100">
+              <thead id="export-preview-thead" class="bg-slate-100 text-slate-700 font-bold uppercase text-[9px] tracking-wider">
+              </thead>
+              <tbody id="export-preview-tbody" class="divide-y divide-slate-100 text-slate-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer Action Bar -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2.5 shrink-0 rounded-b-3xl flex-wrap">
+        <button type="button" onclick="closeModal('modal-followup-export')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition cursor-pointer">
+          Cancel
+        </button>
+
+        <div class="flex items-center gap-2">
+          <!-- Copy to Clipboard -->
+          <button type="button" onclick="handleCopyFollowupsExportData()" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer" title="Copy Tab-Separated Data to Clipboard (Paste into Excel/Google Sheets)">
+            <span class="material-symbols-outlined text-[17px]">content_copy</span>
+            <span>Copy</span>
+          </button>
+
+          <!-- Download CSV / Excel -->
+          <button type="button" onclick="handleExportFollowupsCSV()" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-extrabold shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95">
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            <span>Download CSV (Excel)</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -5832,6 +6276,6 @@
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=7.0"></script>
+  <script src="crm_app.js?v=9.4"></script>
 </body>
 </html>

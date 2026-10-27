@@ -147,7 +147,13 @@ if ($action === 'get_state' || $action === 'get_all') {
                 'outcome_notes'     => $fu['outcome_notes'] ?? '',
                 'completedAt'       => $fu['completed_at'] ?? null,
                 'rescheduledFromId' => $fu['rescheduled_from_id'] ?? null,
-                'createdAt'         => $fu['created_at'] ?? ''
+                'createdAt'         => $fu['created_at'] ?? '',
+                'isPaymentPending'  => (bool)($fu['is_payment_pending'] ?? false),
+                'paymentAmount'     => (float)($fu['payment_amount'] ?? 0),
+                'paymentMode'       => $fu['payment_mode'] ?? 'UPI',
+                'paymentDueDate'    => $fu['payment_due_date'] ?? '',
+                'paymentNotes'      => $fu['payment_notes'] ?? '',
+                'quotedItems'       => $fu['quoted_items'] ?? ''
             ];
         }, $rawFollowups);
 
@@ -251,11 +257,14 @@ if ($action === 'get_state' || $action === 'get_all') {
     } catch (Exception $e) {
         // Return fallback from config file if MySQL is offline
         $configData = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+        $fallbackFuFile = __DIR__ . '/config/followups_fallback.json';
+        $fallbackFollowups = file_exists($fallbackFuFile) ? json_decode(file_get_contents($fallbackFuFile), true) : [];
         echo json_encode([
             "status" => "fallback",
             "message" => $e->getMessage(),
             "data" => [
-                "whatsappAccount" => $configData
+                "whatsappAccount" => $configData,
+                "followups" => $fallbackFollowups
             ]
         ]);
         exit;
@@ -1865,19 +1874,31 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $priority = $fu['priority'] ?? 'NORMAL';
     $channel = $fu['channel'] ?? ($fu['contact_channel'] ?? 'WHATSAPP');
     $rescheduledFrom = $fu['rescheduledFromId'] ?? ($fu['rescheduled_from_id'] ?? null);
+    $isPaymentPending = !empty($fu['isPaymentPending']) ? 1 : (!empty($fu['is_payment_pending']) ? 1 : 0);
+    $paymentAmount = (float)($fu['paymentAmount'] ?? ($fu['payment_amount'] ?? 0));
+    $paymentMode = $fu['paymentMode'] ?? ($fu['payment_mode'] ?? 'UPI');
+    $paymentDueDate = $fu['paymentDueDate'] ?? ($fu['payment_due_date'] ?? null);
+    $paymentNotes = $fu['paymentNotes'] ?? ($fu['payment_notes'] ?? null);
+    $quotedItems = $fu['quotedItems'] ?? ($fu['quoted_items'] ?? null);
 
     if ($pdo) {
         try {
             $stmt = $pdo->prepare("
-                INSERT INTO `followups` (`id`, `query_id`, `rescheduled_from_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', ?, ?)
+                INSERT INTO `followups` (`id`, `query_id`, `rescheduled_from_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`, `is_payment_pending`, `payment_amount`, `payment_mode`, `payment_due_date`, `payment_notes`, `quoted_items`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     `date_str` = VALUES(`date_str`),
                     `time_str` = VALUES(`time_str`),
                     `reason` = VALUES(`reason`),
                     `assigned_to` = VALUES(`assigned_to`),
                     `priority` = VALUES(`priority`),
-                    `contact_channel` = VALUES(`contact_channel`)
+                    `contact_channel` = VALUES(`contact_channel`),
+                    `is_payment_pending` = VALUES(`is_payment_pending`),
+                    `payment_amount` = VALUES(`payment_amount`),
+                    `payment_mode` = VALUES(`payment_mode`),
+                    `payment_due_date` = VALUES(`payment_due_date`),
+                    `payment_notes` = VALUES(`payment_notes`),
+                    `quoted_items` = VALUES(`quoted_items`)
             ");
             $stmt->execute([
                 $fu['id'],
@@ -1890,7 +1911,13 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $timeStr,
                 $reason,
                 $priority,
-                $channel
+                $channel,
+                $isPaymentPending,
+                $paymentAmount,
+                $paymentMode,
+                $paymentDueDate,
+                $paymentNotes,
+                $quotedItems
             ]);
 
             if ($qId && $qId !== 'N/A') {
@@ -1899,16 +1926,17 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Record in audit log
             $actor = $_SESSION['user']['name'] ?? ($fu['actor'] ?? 'Staff');
+            $payAuditInfo = $isPaymentPending ? " [💳 Payment Pending: ₹{$paymentAmount} via {$paymentMode}]" : "";
             $pdo->prepare("
                 INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
                 VALUES (?, 'FOLLOWUP_SCHEDULED', 'FOLLOWUP', ?, ?)
             ")->execute([
                 $actor,
-                "Follow-up {$fu['id']} scheduled for {$cName} on {$dateStr} at {$timeStr} via {$channel} (Priority: {$priority})",
+                "Follow-up {$fu['id']} scheduled for {$cName} on {$dateStr} at {$timeStr} via {$channel} (Priority: {$priority}){$payAuditInfo}",
                 date('Y-m-d H:i:s')
             ]);
 
-            echo json_encode(["status" => "success", "message" => "Follow-up saved in database", "id" => $fu['id']]);
+            echo json_encode(["status" => "success", "message" => "Follow-up saved in database", "id" => $fu['id'], "isPaymentPending" => (bool)$isPaymentPending]);
             exit;
         } catch (Exception $e) {
             http_response_code(500);
@@ -1916,7 +1944,24 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     }
-    echo json_encode(["status" => "success", "message" => "Follow-up saved locally"]);
+    // Save locally in fallback JSON file if MySQL is offline
+    $fallbackFuFile = __DIR__ . '/config/followups_fallback.json';
+    $fallbackFollowups = file_exists($fallbackFuFile) ? json_decode(file_get_contents($fallbackFuFile), true) : [];
+    if (!is_array($fallbackFollowups)) $fallbackFollowups = [];
+    $existingIndex = -1;
+    foreach ($fallbackFollowups as $idx => $item) {
+        if (($item['id'] ?? '') === ($fu['id'] ?? '')) {
+            $existingIndex = $idx;
+            break;
+        }
+    }
+    if ($existingIndex >= 0) {
+        $fallbackFollowups[$existingIndex] = $fu;
+    } else {
+        array_unshift($fallbackFollowups, $fu);
+    }
+    file_put_contents($fallbackFuFile, json_encode($fallbackFollowups, JSON_PRETTY_PRINT));
+    echo json_encode(["status" => "success", "message" => "Follow-up saved in local fallback store", "id" => $fu['id']]);
     exit;
 }
 
@@ -2097,6 +2142,7 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $queryId = $q['id'] ?? ($q['query_id'] ?? null);
     $assignedTo = $q['assigned_to'] ?? ($q['staff_id'] ?? 'UNASSIGNED');
     $status = $q['status'] ?? ($assignedTo === 'UNASSIGNED' ? 'NEW' : 'ASSIGNED');
+    $notes = trim($q['notes'] ?? '');
     $user = $q['user'] ?? 'Admin';
 
     if (!$queryId) {
@@ -2107,8 +2153,8 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ? WHERE `id` = ?");
-            $stmt->execute([$assignedTo, $status, $queryId]);
+            $stmt = $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ?, `status_notes` = ? WHERE `id` = ?");
+            $stmt->execute([$assignedTo, $status, $notes, $queryId]);
 
             // Update user active queries counter
             if ($assignedTo !== 'UNASSIGNED') {
@@ -2120,12 +2166,13 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Audit Log
+            $details = "Query {$queryId} status set to {$status} (Assigned: {$assignedTo})" . ($notes ? " | Note: {$notes}" : "");
             $pdo->prepare("
                 INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
-                VALUES (?, 'QUERY_ASSIGNED', 'QUERIES', ?, ?)
-            ")->execute([$user, "Query {$queryId} assigned to {$assignedTo}", date("h:i A")]);
+                VALUES (?, 'QUERY_STATUS_UPDATED', 'QUERIES', ?, ?)
+            ")->execute([$user, $details, date("h:i A")]);
 
-            echo json_encode(["status" => "success", "message" => "Query assigned successfully in MySQL"]);
+            echo json_encode(["status" => "success", "message" => "Query status and notes updated in MySQL", "notes" => $notes]);
             exit;
         } catch (Exception $e) {
             http_response_code(500);
