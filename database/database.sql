@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS `queries` (
     `product_sku` VARCHAR(50) NULL,
     `unread_count` INT DEFAULT 0,
     `last_message` TEXT NULL,
+    `status_notes` TEXT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

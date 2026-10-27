@@ -2156,11 +2156,26 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ?, `status_notes` = ? WHERE `id` = ?");
             $stmt->execute([$assignedTo, $status, $notes, $queryId]);
 
+            // Synchronize customer DND fields in MySQL
+            try {
+                $cStmt = $pdo->prepare("SELECT `customer_id` FROM `queries` WHERE `id` = ?");
+                $cStmt->execute([$queryId]);
+                $cid = $cStmt->fetchColumn();
+                if ($cid) {
+                    if ($status === 'DND') {
+                        $pdo->prepare("UPDATE `customers` SET `is_dnd` = 1, `dnd_reason` = ?, `dnd_notes` = ?, `dnd_marked_by` = ?, `dnd_timestamp` = ? WHERE `id` = ?")
+                            ->execute([$notes ?: 'Customer not interested in products (Requested DND)', $notes, $user, date("d M Y at h:i A"), $cid]);
+                    } else {
+                        $pdo->prepare("UPDATE `customers` SET `is_dnd` = 0 WHERE `id` = ?")->execute([$cid]);
+                    }
+                }
+            } catch (Exception $e) {}
+
             // Update user active queries counter
             if ($assignedTo !== 'UNASSIGNED') {
                 $pdo->prepare("
                     UPDATE `users` 
-                    SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED'))
+                    SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED', 'DND'))
                     WHERE `id` = ?
                 ")->execute([$assignedTo, $assignedTo]);
             }
