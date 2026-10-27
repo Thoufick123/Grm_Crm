@@ -199,6 +199,7 @@ function initializeDatabaseSchema($pdo) {
             `product_sku` VARCHAR(50) NULL,
             `unread_count` INT DEFAULT 0,
             `last_message` TEXT NULL,
+            `status_notes` TEXT NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
@@ -238,6 +239,7 @@ function initializeDatabaseSchema($pdo) {
             `reserved_stock` INT DEFAULT 0,
             `image` TEXT NULL,
             `description` TEXT NULL,
+            `custom_caption` TEXT NULL,
             `account_id` VARCHAR(50) DEFAULT 'account_1',
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -247,12 +249,13 @@ function initializeDatabaseSchema($pdo) {
     try {
         $existingCols = $pdo->query("SHOW COLUMNS FROM `products`")->fetchAll(PDO::FETCH_COLUMN);
         $colDefs = [
-            'subcategory' => "ALTER TABLE `products` ADD COLUMN `subcategory` VARCHAR(100) NULL AFTER `category`",
-            'fabric'      => "ALTER TABLE `products` ADD COLUMN `fabric` VARCHAR(100) NULL AFTER `color`",
-            'mrp'         => "ALTER TABLE `products` ADD COLUMN `mrp` DECIMAL(10,2) NULL AFTER `price`",
-            'description' => "ALTER TABLE `products` ADD COLUMN `description` TEXT NULL AFTER `image`",
+            'subcategory'    => "ALTER TABLE `products` ADD COLUMN `subcategory` VARCHAR(100) NULL AFTER `category`",
+            'fabric'         => "ALTER TABLE `products` ADD COLUMN `fabric` VARCHAR(100) NULL AFTER `color`",
+            'mrp'            => "ALTER TABLE `products` ADD COLUMN `mrp` DECIMAL(10,2) NULL AFTER `price`",
+            'description'    => "ALTER TABLE `products` ADD COLUMN `description` TEXT NULL AFTER `image`",
+            'custom_caption' => "ALTER TABLE `products` ADD COLUMN `custom_caption` TEXT NULL AFTER `description`",
             'specifications' => "ALTER TABLE `products` ADD COLUMN `specifications` TEXT NULL AFTER `fabric`",
-            'account_id'  => "ALTER TABLE `products` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1' AFTER `description`"
+            'account_id'     => "ALTER TABLE `products` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1' AFTER `custom_caption`"
         ];
         foreach ($colDefs as $cName => $sql) {
             if (!in_array($cName, $existingCols)) {
@@ -310,13 +313,51 @@ function initializeDatabaseSchema($pdo) {
             `customer_name` VARCHAR(100) NOT NULL,
             `items_json` JSON NOT NULL,
             `grand_total` DECIMAL(10,2) NOT NULL,
-            `payment_method` VARCHAR(30) DEFAULT 'COD',
+            `shipping_amount` DECIMAL(10,2) DEFAULT 0.00,
+            `advance_payment` DECIMAL(10,2) DEFAULT 0.00,
+            `balance_amount` DECIMAL(10,2) DEFAULT 0.00,
+            `payment_method` VARCHAR(50) DEFAULT 'COD',
             `payment_status` VARCHAR(30) DEFAULT 'PENDING',
             `order_status` VARCHAR(30) DEFAULT 'PROCESSING',
             `created_by` VARCHAR(100) NULL,
+            `notes` TEXT NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
+
+    // Dynamic Alter for Orders Table
+    try {
+        $existingOrderCols = $pdo->query("SHOW COLUMNS FROM `orders`")->fetchAll(PDO::FETCH_COLUMN);
+        $orderColDefs = [
+            'shipping_amount' => "ALTER TABLE `orders` ADD COLUMN `shipping_amount` DECIMAL(10,2) DEFAULT 0.00 AFTER `grand_total`",
+            'advance_payment' => "ALTER TABLE `orders` ADD COLUMN `advance_payment` DECIMAL(10,2) DEFAULT 0.00 AFTER `shipping_amount`",
+            'balance_amount' => "ALTER TABLE `orders` ADD COLUMN `balance_amount` DECIMAL(10,2) DEFAULT 0.00 AFTER `advance_payment`",
+            'notes'          => "ALTER TABLE `orders` ADD COLUMN `notes` TEXT NULL AFTER `created_by`"
+        ];
+        foreach ($orderColDefs as $cName => $sql) {
+            if (!in_array($cName, $existingOrderCols)) {
+                $pdo->exec($sql);
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Orders migration note: " . $e->getMessage());
+    }
+
+    // Dynamic Alter for Customers Table
+    try {
+        $existingCustCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN);
+        $custColDefs = [
+            'is_dnd' => "ALTER TABLE `customers` ADD COLUMN `is_dnd` TINYINT(1) DEFAULT 0 AFTER `avatar`",
+            'notes'  => "ALTER TABLE `customers` ADD COLUMN `notes` TEXT NULL AFTER `is_dnd`"
+        ];
+        foreach ($custColDefs as $cName => $sql) {
+            if (!in_array($cName, $existingCustCols)) {
+                $pdo->exec($sql);
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Customers migration note: " . $e->getMessage());
+    }
 
     // 8. Follow-ups Table (Full Lifecycle Tracking & Outcomes)
     $pdo->exec("
@@ -336,6 +377,14 @@ function initializeDatabaseSchema($pdo) {
             `contact_channel` ENUM('WHATSAPP', 'CALL', 'STORE_VISIT') DEFAULT 'WHATSAPP',
             `outcome_notes` TEXT NULL,
             `completed_at` DATETIME NULL,
+            `is_payment_pending` TINYINT(1) NOT NULL DEFAULT 0,
+            `payment_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            `shipping_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            `payment_mode` VARCHAR(50) NULL DEFAULT 'UPI',
+            `advance_payment` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            `payment_due_date` VARCHAR(50) NULL,
+            `payment_notes` TEXT NULL,
+            `quoted_items` TEXT NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
@@ -352,7 +401,9 @@ function initializeDatabaseSchema($pdo) {
             'completed_at'        => "ALTER TABLE `followups` ADD COLUMN `completed_at` DATETIME NULL AFTER `outcome_notes`",
             'is_payment_pending'  => "ALTER TABLE `followups` ADD COLUMN `is_payment_pending` TINYINT(1) NOT NULL DEFAULT 0",
             'payment_amount'      => "ALTER TABLE `followups` ADD COLUMN `payment_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+            'shipping_amount'     => "ALTER TABLE `followups` ADD COLUMN `shipping_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `payment_amount`",
             'payment_mode'        => "ALTER TABLE `followups` ADD COLUMN `payment_mode` VARCHAR(50) NULL DEFAULT 'UPI'",
+            'advance_payment'     => "ALTER TABLE `followups` ADD COLUMN `advance_payment` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `payment_mode`",
             'payment_due_date'    => "ALTER TABLE `followups` ADD COLUMN `payment_due_date` VARCHAR(50) NULL",
             'payment_notes'       => "ALTER TABLE `followups` ADD COLUMN `payment_notes` TEXT NULL",
             'quoted_items'        => "ALTER TABLE `followups` ADD COLUMN `quoted_items` TEXT NULL"
@@ -363,10 +414,30 @@ function initializeDatabaseSchema($pdo) {
             }
         }
 
-        // Ensure queries table status supports FOLLOW_UP, CONVERTED, LOST
+        // Ensure queries table status supports FOLLOW_UP, CONVERTED, LOST and has all payment/callback fields
         $pdo->exec("ALTER TABLE `queries` MODIFY COLUMN `status` VARCHAR(50) DEFAULT 'NEW'");
+        $existingQueryCols = $pdo->query("SHOW COLUMNS FROM `queries`")->fetchAll(PDO::FETCH_COLUMN);
+        $queryColDefs = [
+            'status_notes'        => "ALTER TABLE `queries` ADD COLUMN `status_notes` TEXT NULL AFTER `last_message`",
+            'is_payment_pending'  => "ALTER TABLE `queries` ADD COLUMN `is_payment_pending` TINYINT(1) NOT NULL DEFAULT 0",
+            'payment_amount'      => "ALTER TABLE `queries` ADD COLUMN `payment_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+            'shipping_amount'     => "ALTER TABLE `queries` ADD COLUMN `shipping_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+            'payment_mode'        => "ALTER TABLE `queries` ADD COLUMN `payment_mode` VARCHAR(50) NULL DEFAULT 'UPI'",
+            'advance_payment'     => "ALTER TABLE `queries` ADD COLUMN `advance_payment` DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+            'payment_due_date'    => "ALTER TABLE `queries` ADD COLUMN `payment_due_date` VARCHAR(50) NULL",
+            'payment_notes'       => "ALTER TABLE `queries` ADD COLUMN `payment_notes` TEXT NULL",
+            'quoted_items'        => "ALTER TABLE `queries` ADD COLUMN `quoted_items` TEXT NULL",
+            'callback_date'       => "ALTER TABLE `queries` ADD COLUMN `callback_date` VARCHAR(50) NULL",
+            'callback_time'       => "ALTER TABLE `queries` ADD COLUMN `callback_time` VARCHAR(50) NULL DEFAULT '11:00 AM'",
+            'status_history'      => "ALTER TABLE `queries` ADD COLUMN `status_history` JSON NULL"
+        ];
+        foreach ($queryColDefs as $cName => $sql) {
+            if (!in_array($cName, $existingQueryCols)) {
+                $pdo->exec($sql);
+            }
+        }
     } catch (Exception $e) {
-        error_log("Follow-up migration note: " . $e->getMessage());
+        error_log("Follow-up / Queries migration note: " . $e->getMessage());
     }
 
     // 9. Audit Logs Table

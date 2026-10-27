@@ -127,7 +127,8 @@ if ($pdo) {
     /* ========================================================================= */
     #app-sidebar {
       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                  margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+           
+      margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
                   opacity 0.25s ease-in-out,
                   visibility 0.3s;
       will-change: transform, margin-left;
@@ -290,22 +291,6 @@ if ($pdo) {
       </button>
     </div>
 
-    <!-- Quick Action / Status Bar -->
-    <div class="p-3 bg-brand-dark/40 border-b border-brand-900/30 shrink-0">
-      <div class="flex items-center justify-between bg-surface-sidebarActive p-2.5 rounded-xl border border-emerald-800/40 cursor-pointer hover:border-emerald-500/60 transition" onclick="switchView('settings')" title="Click to configure WhatsApp Business Number">
-        <div class="flex items-center gap-2">
-          <span class="relative flex h-2.5 w-2.5">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-          </span>
-          <div class="text-xs">
-            <p class="font-semibold text-white leading-tight flex items-center gap-1">Live WhatsApp <span class="material-symbols-outlined text-[12px] text-emerald-400">tune</span></p>
-            <p id="sidebar-connected-phone" class="text-[10px] text-emerald-300/90 font-mono font-bold configured-business-phone"><?php echo htmlspecialchars($waPhone); ?></p>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Scrollable Navigation Links -->
     <nav class="flex-1 overflow-y-auto custom-chat-scroll p-3 space-y-1 text-xs font-medium min-h-0">
       <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Command Center</div>
@@ -399,6 +384,15 @@ if ($pdo) {
           <span class="material-symbols-outlined text-[20px] text-purple-400 group-hover:scale-110 transition">groups</span>
           <span>Customer 360</span>
         </div>
+      </button>
+
+      <!-- DND / OPT-OUT CUSTOMERS MODULE -->
+      <button onclick="switchView('dnd')" id="nav-dnd" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">do_not_disturb_on</span>
+          <span>DND / Opt-Out List</span>
+        </div>
+        <span id="badge-dnd-count" class="bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
       </button>
 
       <!-- Admin-Only Navigation Modules -->
@@ -535,20 +529,11 @@ if ($pdo) {
           </div>
         </div>
 
-        <!-- Admin-Only Header Controls -->
-        <button onclick="switchView('settings')" id="header-settings-btn" class="p-2 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition admin-only-ui <?php echo $isAdmin ? '' : 'hidden'; ?>" title="WhatsApp Business &amp; Phone Settings">
-          <span class="material-symbols-outlined text-[20px]">settings</span>
-        </button>
-
+        <!-- Masking Toggle Button -->
         <button onclick="toggleGlobalPhoneMasking()" id="btn-mask-toggle" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition shadow-sm admin-only-ui <?php echo $isAdmin ? '' : 'hidden'; ?>" title="Toggle Customer Phone Number Masking">
           <span class="material-symbols-outlined text-[16px] text-amber-700" id="mask-icon">lock</span>
           <span class="hidden lg:inline">Masking:</span>
           <span id="mask-status-label" class="font-bold">ON</span>
-        </button>
-
-        <button onclick="openInboundSimulatorModal()" id="header-inbound-sim-btn" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-semibold rounded-lg transition shadow-sm admin-only-ui <?php echo $isAdmin ? '' : 'hidden'; ?>">
-          <span class="material-symbols-outlined text-[16px]">sim_card_download</span>
-          <span>Receive WhatsApp Message</span>
         </button>
 
 

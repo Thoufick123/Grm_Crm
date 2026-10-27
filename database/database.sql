@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS `customers` (
     `total_orders` INT DEFAULT 0,
     `total_spend` DECIMAL(10,2) DEFAULT 0.00,
     `avatar` VARCHAR(10) NULL,
+    `is_dnd` TINYINT(1) DEFAULT 0,
+    `notes` TEXT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -67,6 +69,18 @@ CREATE TABLE IF NOT EXISTS `queries` (
     `product_sku` VARCHAR(50) NULL,
     `unread_count` INT DEFAULT 0,
     `last_message` TEXT NULL,
+    `status_notes` TEXT NULL,
+    `is_payment_pending` TINYINT(1) NOT NULL DEFAULT 0,
+    `payment_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `shipping_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `payment_mode` VARCHAR(50) NULL DEFAULT 'UPI',
+    `advance_payment` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `payment_due_date` VARCHAR(50) NULL,
+    `payment_notes` TEXT NULL,
+    `quoted_items` TEXT NULL,
+    `callback_date` VARCHAR(50) NULL,
+    `callback_time` VARCHAR(50) NULL DEFAULT '11:00 AM',
+    `status_history` JSON NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -148,10 +162,14 @@ CREATE TABLE IF NOT EXISTS `orders` (
     `customer_name` VARCHAR(100) NOT NULL,
     `items_json` JSON NOT NULL,
     `grand_total` DECIMAL(10,2) NOT NULL,
-    `payment_method` VARCHAR(30) DEFAULT 'COD',
+    `shipping_amount` DECIMAL(10,2) DEFAULT 0.00,
+    `advance_payment` DECIMAL(10,2) DEFAULT 0.00,
+    `balance_amount` DECIMAL(10,2) DEFAULT 0.00,
+    `payment_method` VARCHAR(50) DEFAULT 'COD',
     `payment_status` VARCHAR(30) DEFAULT 'PENDING',
     `order_status` VARCHAR(30) DEFAULT 'PROCESSING',
     `created_by` VARCHAR(100) NULL,
+    `notes` TEXT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -174,7 +192,9 @@ CREATE TABLE IF NOT EXISTS `followups` (
     `completed_at` DATETIME NULL,
     `is_payment_pending` TINYINT(1) NOT NULL DEFAULT 0,
     `payment_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `shipping_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     `payment_mode` VARCHAR(50) NULL DEFAULT 'UPI',
+    `advance_payment` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     `payment_due_date` VARCHAR(50) NULL,
     `payment_notes` TEXT NULL,
     `quoted_items` TEXT NULL,

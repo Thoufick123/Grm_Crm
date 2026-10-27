@@ -92,6 +92,24 @@ if ($action === 'get_state' || $action === 'get_all') {
         // 5. Queries
         $qStmt = $pdo->query("SELECT * FROM `queries` ORDER BY `created_at` DESC");
         $queries = $qStmt->fetchAll();
+        foreach ($queries as &$q) {
+            if (!empty($q['status_history']) && is_string($q['status_history'])) {
+                $q['statusHistory'] = json_decode($q['status_history'], true) ?: [];
+            } else {
+                $q['statusHistory'] = [];
+            }
+            $q['isPaymentPending'] = (bool)($q['is_payment_pending'] ?? false);
+            $q['paymentAmount'] = (float)($q['payment_amount'] ?? 0);
+            $q['shippingAmount'] = (float)($q['shipping_amount'] ?? 0);
+            $q['paymentMode'] = $q['payment_mode'] ?? 'UPI';
+            $q['advancePayment'] = (float)($q['advance_payment'] ?? 0);
+            $q['paymentDueDate'] = $q['payment_due_date'] ?? '';
+            $q['paymentNotes'] = $q['payment_notes'] ?? '';
+            $q['quotedItems'] = $q['quoted_items'] ?? '';
+            $q['callbackDate'] = $q['callback_date'] ?? '';
+            $q['callbackTime'] = $q['callback_time'] ?? '11:00 AM';
+            $q['statusNotes'] = $q['status_notes'] ?? '';
+        }
 
         // 6. Conversations map grouped by customer_id
         $mStmt = $pdo->query("SELECT * FROM `messages` ORDER BY `created_at` ASC");
@@ -150,7 +168,9 @@ if ($action === 'get_state' || $action === 'get_all') {
                 'createdAt'         => $fu['created_at'] ?? '',
                 'isPaymentPending'  => (bool)($fu['is_payment_pending'] ?? false),
                 'paymentAmount'     => (float)($fu['payment_amount'] ?? 0),
+                'shippingAmount'    => (float)($fu['shipping_amount'] ?? 0),
                 'paymentMode'       => $fu['payment_mode'] ?? 'UPI',
+                'advancePayment'    => (float)($fu['advance_payment'] ?? 0),
                 'paymentDueDate'    => $fu['payment_due_date'] ?? '',
                 'paymentNotes'      => $fu['payment_notes'] ?? '',
                 'quotedItems'       => $fu['quoted_items'] ?? ''
@@ -1876,7 +1896,9 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $rescheduledFrom = $fu['rescheduledFromId'] ?? ($fu['rescheduled_from_id'] ?? null);
     $isPaymentPending = !empty($fu['isPaymentPending']) ? 1 : (!empty($fu['is_payment_pending']) ? 1 : 0);
     $paymentAmount = (float)($fu['paymentAmount'] ?? ($fu['payment_amount'] ?? 0));
+    $shippingAmount = (float)($fu['shippingAmount'] ?? ($fu['shipping_amount'] ?? 0));
     $paymentMode = $fu['paymentMode'] ?? ($fu['payment_mode'] ?? 'UPI');
+    $advancePayment = (float)($fu['advancePayment'] ?? ($fu['advance_payment'] ?? 0));
     $paymentDueDate = $fu['paymentDueDate'] ?? ($fu['payment_due_date'] ?? null);
     $paymentNotes = $fu['paymentNotes'] ?? ($fu['payment_notes'] ?? null);
     $quotedItems = $fu['quotedItems'] ?? ($fu['quoted_items'] ?? null);
@@ -1884,8 +1906,8 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($pdo) {
         try {
             $stmt = $pdo->prepare("
-                INSERT INTO `followups` (`id`, `query_id`, `rescheduled_from_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`, `is_payment_pending`, `payment_amount`, `payment_mode`, `payment_due_date`, `payment_notes`, `quoted_items`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO `followups` (`id`, `query_id`, `rescheduled_from_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`, `is_payment_pending`, `payment_amount`, `shipping_amount`, `payment_mode`, `advance_payment`, `payment_due_date`, `payment_notes`, `quoted_items`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     `date_str` = VALUES(`date_str`),
                     `time_str` = VALUES(`time_str`),
@@ -1895,7 +1917,9 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     `contact_channel` = VALUES(`contact_channel`),
                     `is_payment_pending` = VALUES(`is_payment_pending`),
                     `payment_amount` = VALUES(`payment_amount`),
+                    `shipping_amount` = VALUES(`shipping_amount`),
                     `payment_mode` = VALUES(`payment_mode`),
+                    `advance_payment` = VALUES(`advance_payment`),
                     `payment_due_date` = VALUES(`payment_due_date`),
                     `payment_notes` = VALUES(`payment_notes`),
                     `quoted_items` = VALUES(`quoted_items`)
@@ -1914,7 +1938,9 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $channel,
                 $isPaymentPending,
                 $paymentAmount,
+                $shippingAmount,
                 $paymentMode,
+                $advancePayment,
                 $paymentDueDate,
                 $paymentNotes,
                 $quotedItems
@@ -2144,6 +2170,17 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $q['status'] ?? ($assignedTo === 'UNASSIGNED' ? 'NEW' : 'ASSIGNED');
     $notes = trim($q['notes'] ?? '');
     $user = $q['user'] ?? 'Admin';
+    $isPayPending = !empty($q['isPaymentPending']) ? 1 : (!empty($q['is_payment_pending']) ? 1 : 0);
+    $payAmt = (float)($q['paymentAmount'] ?? ($q['payment_amount'] ?? 0));
+    $shipAmt = (float)($q['shippingAmount'] ?? ($q['shipping_amount'] ?? 0));
+    $payMode = $q['paymentMode'] ?? ($q['payment_mode'] ?? 'UPI');
+    $advAmt = (float)($q['advancePayment'] ?? ($q['advance_payment'] ?? 0));
+    $payDue = $q['paymentDueDate'] ?? ($q['payment_due_date'] ?? null);
+    $payNotes = $q['paymentNotes'] ?? ($q['payment_notes'] ?? null);
+    $quotedItems = $q['quotedItems'] ?? ($q['quoted_items'] ?? null);
+    $cbDate = $q['callbackDate'] ?? ($q['callback_date'] ?? null);
+    $cbTime = $q['callbackTime'] ?? ($q['callback_time'] ?? '11:00 AM');
+    $statusHist = isset($q['statusHistory']) ? (is_array($q['statusHistory']) ? json_encode($q['statusHistory']) : $q['statusHistory']) : null;
 
     if (!$queryId) {
         http_response_code(400);
@@ -2153,8 +2190,24 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ?, `status_notes` = ? WHERE `id` = ?");
-            $stmt->execute([$assignedTo, $status, $notes, $queryId]);
+            $stmt = $pdo->prepare("
+                UPDATE `queries` 
+                SET `assigned_to` = ?, `status` = ?, `status_notes` = ?,
+                    `is_payment_pending` = ?, `payment_amount` = ?, `shipping_amount` = ?,
+                    `payment_mode` = ?, `advance_payment` = ?, `payment_due_date` = ?,
+                    `payment_notes` = ?, `quoted_items` = ?, `callback_date` = ?,
+                    `callback_time` = ?,
+                    `status_history` = COALESCE(?, `status_history`)
+                WHERE `id` = ?
+            ");
+            $stmt->execute([
+                $assignedTo, $status, $notes,
+                $isPayPending, $payAmt, $shipAmt,
+                $payMode, $advAmt, $payDue,
+                $payNotes, $quotedItems, $cbDate,
+                $cbTime, $statusHist,
+                $queryId
+            ]);
 
             // Update user active queries counter
             if ($assignedTo !== 'UNASSIGNED') {
