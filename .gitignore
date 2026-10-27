@@ -2,41 +2,107 @@
 # GRM WhatsApp CRM — Git Ignore Configuration
 # =========================================================================
 
-# Dependencies
+# -------------------------------------------------------------------------
+# 1. Environment & Secrets Configuration
+# -------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+
+# -------------------------------------------------------------------------
+# 2. Dependencies (Node.js & PHP Composer)
+# -------------------------------------------------------------------------
 node_modules/
 bridge/node_modules/
 */node_modules/
+vendor/
+*/vendor/
+composer.phar
 
-# WhatsApp Baileys Authentication & Session Storage (Sensitive Credentials & Keys)
+# -------------------------------------------------------------------------
+# 3. WhatsApp Baileys Authentication & Session Storage (Sensitive Credentials)
+# -------------------------------------------------------------------------
 bridge/auth_session/
 bridge/auth_sessions/
 baileys_auth_info/
+auth_info_baileys/
+auth_sessions/
+auth_session/
 *.session
 *.session-journal
+creds.json
+bridge/creds.json
 
-# Environment & Secrets Configuration
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Logs & Runtime Diagnostics
+# -------------------------------------------------------------------------
+# 4. Logs, Runtime Diagnostics & Process Tracking
+# -------------------------------------------------------------------------
 logs/
+bridge/logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 webhook_logs.json
 
-# Operating System & Cache Files
+# -------------------------------------------------------------------------
+# 5. Playwright, Browser & Testing Artifacts
+# -------------------------------------------------------------------------
+.playwright-mcp/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.phpunit.result.cache
+
+# -------------------------------------------------------------------------
+# 6. Temporary, Cache & Runtime Queues
+# -------------------------------------------------------------------------
+tmp/
+temp/
+*.tmp
+*.tmp.*
+*.temp
+*.bak
+*~
+live_messages_queue.json.tmp*
+
+# -------------------------------------------------------------------------
+# 7. User Uploads & Dynamic Runtime Media (Preserve Sample Product Assets)
+# -------------------------------------------------------------------------
+uploads/temp/
+uploads/cache/
+uploads/chat/
+uploads/attachments/
+uploads/voice/
+uploads/audio/
+uploads/media/
+uploads/documents/
+
+# -------------------------------------------------------------------------
+# 8. Operating System & Cache Files
+# -------------------------------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
 desktop.ini
 
-# IDE & Editor Directories
+# -------------------------------------------------------------------------
+# 9. IDE, Code Editor & Workspace Settings
+# -------------------------------------------------------------------------
 .idea/
 .vscode/
+*.sublime-project
+*.sublime-workspace
 *.suo
 *.ntvs*
 *.njsproj
@@ -44,7 +110,8 @@ desktop.ini
 *.swp
 *.swo
 
-# Temporary & Cache Dumps
-tmp/
-temp/
-*.tmp
+# -------------------------------------------------------------------------
+# 10. Docker & Local Process Overrides
+# -------------------------------------------------------------------------
+docker-compose.override.yml
+.pm2/

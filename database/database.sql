@@ -53,6 +53,11 @@ CREATE TABLE IF NOT EXISTS `customers` (
     `total_orders` INT DEFAULT 0,
     `total_spend` DECIMAL(10,2) DEFAULT 0.00,
     `avatar` VARCHAR(10) NULL,
+    `is_dnd` TINYINT(1) DEFAULT 0,
+    `dnd_reason` TEXT NULL,
+    `dnd_notes` TEXT NULL,
+    `dnd_marked_by` VARCHAR(100) NULL,
+    `dnd_timestamp` VARCHAR(50) NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -141,19 +146,33 @@ CREATE TABLE IF NOT EXISTS `attributes` (
     INDEX(`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. WhatsApp Sales Orders
+-- 7. WhatsApp Sales Orders & Reservations
 CREATE TABLE IF NOT EXISTS `orders` (
     `id` VARCHAR(50) PRIMARY KEY,
     `query_id` VARCHAR(50) NULL,
     `customer_id` VARCHAR(50) NOT NULL,
     `customer_name` VARCHAR(100) NOT NULL,
+    `customer_phone` VARCHAR(30) NULL,
+    `shipping_address` TEXT NULL,
     `items_json` JSON NOT NULL,
     `grand_total` DECIMAL(10,2) NOT NULL,
+    `cod_advance` DECIMAL(10,2) DEFAULT 0.00,
+    `cod_balance_due` DECIMAL(10,2) DEFAULT 0.00,
     `payment_method` VARCHAR(30) DEFAULT 'COD',
     `payment_status` VARCHAR(30) DEFAULT 'PENDING',
-    `order_status` VARCHAR(30) DEFAULT 'PROCESSING',
+    `upi_transaction_id` VARCHAR(100) NULL,
+    `payment_screenshot` LONGTEXT NULL,
+    `order_status` VARCHAR(50) DEFAULT 'PLACED',
+    `staff_id` VARCHAR(50) NULL,
+    `staff_name` VARCHAR(100) NULL,
     `created_by` VARCHAR(100) NULL,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `tracking_number` VARCHAR(100) NULL,
+    `courier_name` VARCHAR(100) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX(`customer_id`),
+    INDEX(`order_status`),
+    INDEX(`staff_id`),
+    INDEX(`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. Customer Follow-up Reminders (Full Lifecycle Tracking & Outcomes)
@@ -191,6 +210,29 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
     `details` TEXT NOT NULL,
     `timestamp_str` VARCHAR(50) NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. DND Management & Suppression List (Dedicated DND Table)
+CREATE TABLE IF NOT EXISTS `dnd_records` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `customer_id` VARCHAR(50) NOT NULL,
+    `customer_name` VARCHAR(100) NULL,
+    `phone` VARCHAR(30) NULL,
+    `whatsapp` VARCHAR(30) NULL,
+    `query_id` VARCHAR(50) NULL,
+    `reason` TEXT NULL,
+    `notes` TEXT NULL,
+    `marked_by` VARCHAR(100) DEFAULT 'Super Admin',
+    `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED',
+    `status` ENUM('ACTIVE', 'REVOKED') DEFAULT 'ACTIVE',
+    `dnd_timestamp` VARCHAR(50) NULL,
+    `revoked_at` DATETIME NULL,
+    `revoked_by` VARCHAR(100) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX(`customer_id`),
+    INDEX(`status`),
+    INDEX(`assigned_to`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================================

@@ -83,7 +83,142 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
   customers: [],
   queries: [],
   conversations: {},
-  orders: [],
+  orders: [
+    {
+      id: 'WA-2026-001126',
+      queryId: 'Q-2026-001245',
+      customerId: 'cust_101',
+      customerName: 'Priya Sundaram',
+      customerPhone: '+91 98401 23456',
+      shippingAddress: '42, 3rd Cross Street, Gandhinagar, Adyar, Chennai - 600020',
+      items: [{ name: 'Baby Cotton Frock (Pink / 2-3Y)', sku: 'BF-001-PNK-2Y', qty: 2, price: 599 }],
+      grandTotal: 1198.00,
+      codAdvance: 0,
+      codBalanceDue: 0,
+      paymentMethod: 'ONLINE_UPI',
+      paymentStatus: 'PAID',
+      upiTransactionId: 'UPI-2026-9882103984',
+      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
+      orderStatus: 'PLACED',
+      staffId: 'staff_01',
+      staffName: 'Priya Sharma',
+      createdBy: 'Priya Sharma',
+      createdAt: '2026-10-27 10:15:00'
+    },
+    {
+      id: 'WA-2026-001127',
+      queryId: 'Q-2026-001246',
+      customerId: 'cust_102',
+      customerName: 'Ananya Sharma',
+      customerPhone: '+91 98765 43210',
+      shippingAddress: 'Flat 4B, Lotus Apartments, 100 Feet Rd, Indiranagar, Bengaluru - 560038',
+      items: [{ name: 'Maternity Feeding Kurtis (Teal / L)', sku: 'MD-102-TEA-L', qty: 2, price: 949 }],
+      grandTotal: 1898.00,
+      codAdvance: 200,
+      codBalanceDue: 1698.00,
+      paymentMethod: 'COD',
+      paymentStatus: 'ADVANCE_PAID',
+      upiTransactionId: 'UPI-2026-4433221100',
+      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
+      orderStatus: 'PACKED',
+      staffId: 'staff_02',
+      staffName: 'Rahul Verma',
+      createdBy: 'Rahul Verma',
+      createdAt: '2026-10-26 14:30:00'
+    },
+    {
+      id: 'WA-2026-001128',
+      queryId: 'Q-2026-001247',
+      customerId: 'cust_103',
+      customerName: 'Kavitha Ramachandran',
+      customerPhone: '+91 94441 55667',
+      shippingAddress: '12, Saravana Street, T. Nagar, Chennai - 600017',
+      items: [{ name: 'Pure Cotton Rompers Set (3-Pack / 6M)', sku: 'RP-003-AST-6M', qty: 3, price: 599 }],
+      grandTotal: 1797.00,
+      codAdvance: 0,
+      codBalanceDue: 0,
+      paymentMethod: 'ONLINE_UPI',
+      paymentStatus: 'PAID',
+      upiTransactionId: 'UPI-2026-7788990011',
+      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
+      orderStatus: 'SHIPPED',
+      staffId: 'staff_01',
+      staffName: 'Priya Sharma',
+      createdBy: 'Priya Sharma',
+      trackingNumber: 'DELHIVERY-778899221',
+      courierName: 'Delhivery Express',
+      createdAt: '2026-10-25 11:20:00'
+    },
+    {
+      id: 'WA-2026-001129',
+      queryId: 'Q-2026-001248',
+      customerId: 'cust_104',
+      customerName: 'SugunaMani',
+      customerPhone: '+91 98410 88990',
+      shippingAddress: '55, Anna Nagar West, Madurai - 625020',
+      items: [{ name: 'Anarkali Feeding Maternity Kurti (Navy / XL)', sku: 'MK-204-NVY-XL', qty: 2, price: 749 }],
+      grandTotal: 1498.00,
+      codAdvance: 200,
+      codBalanceDue: 1298.00,
+      paymentMethod: 'COD',
+      paymentStatus: 'ADVANCE_PAID',
+      upiTransactionId: 'UPI-2026-5566443322',
+      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
+      orderStatus: 'SHIPPED',
+      staffId: 'staff_02',
+      staffName: 'Rahul Verma',
+      createdBy: 'Rahul Verma',
+      trackingNumber: 'DTDC-992233441',
+      courierName: 'DTDC Courier',
+      createdAt: '2026-10-24 16:45:00'
+    },
+    {
+      id: 'WA-2026-001130',
+      queryId: 'Q-2026-001249',
+      customerId: 'cust_101',
+      customerName: 'Priya Sundaram',
+      customerPhone: '+91 98401 23456',
+      shippingAddress: '42, 3rd Cross Street, Gandhinagar, Adyar, Chennai - 600020',
+      items: [{ name: 'Kids Organic Cotton Sleepsuits (Yellow / 1Y)', sku: 'SS-101-YLW-1Y', qty: 2, price: 799 }],
+      grandTotal: 1598.00,
+      codAdvance: 0,
+      codBalanceDue: 0,
+      paymentMethod: 'ONLINE_UPI',
+      paymentStatus: 'PAID',
+      upiTransactionId: 'UPI-2026-1122334455',
+      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
+      orderStatus: 'DELIVERED',
+      staffId: 'staff_03',
+      staffName: 'Sneha Patel',
+      createdBy: 'Sneha Patel',
+      trackingNumber: 'BLUE-DART-8822991',
+      courierName: 'Blue Dart Surface',
+      createdAt: '2026-10-22 09:30:00'
+    },
+    {
+      id: 'WA-2026-001131',
+      queryId: 'Q-2026-001250',
+      customerId: 'cust_102',
+      customerName: 'Ananya Sharma',
+      customerPhone: '+91 98765 43210',
+      shippingAddress: 'Flat 4B, Lotus Apartments, 100 Feet Rd, Indiranagar, Bengaluru - 560038',
+      items: [{ name: 'Baby Cotton Romper & Cap Set (Sky Blue)', sku: 'RP-005-BLU-3M', qty: 3, price: 449 }],
+      grandTotal: 1347.00,
+      codAdvance: 0,
+      codBalanceDue: 0,
+      paymentMethod: 'ONLINE_UPI',
+      paymentStatus: 'PAID',
+      upiTransactionId: 'UPI-2026-9900112233',
+      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
+      orderStatus: 'DELIVERED',
+      staffId: 'staff_03',
+      staffName: 'Sneha Patel',
+      createdBy: 'Sneha Patel',
+      trackingNumber: 'DELHIVERY-334455667',
+      courierName: 'Delhivery Express',
+      createdAt: '2026-10-20 15:10:00'
+    }
+  ],
   auditLogs: [],
   followups: [
     {
@@ -2363,7 +2498,15 @@ function switchView(viewName, subName) {
     if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
     renderCatalogGrid('');
   }
-  if (viewName === 'orders') renderOrdersTable();
+  if (viewName === 'orders') {
+    const ordersSubMenu = document.getElementById('nav-orders-submodules');
+    if (ordersSubMenu) ordersSubMenu.classList.remove('hidden');
+    switchOrdersSubmodule(subName || ACTIVE_ORDERS_SUBMODULE || 'dashboard');
+    renderOrdersModule();
+  } else {
+    const ordersSubMenu = document.getElementById('nav-orders-submodules');
+    if (ordersSubMenu) ordersSubMenu.classList.add('hidden');
+  }
   if (viewName === 'followups') renderFollowupsCards();
   if (viewName === 'customers') renderCustomersGrid();
   if (viewName === 'dnd') renderDndModule();
@@ -4003,7 +4146,13 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         assigned_to: query.assignedTo || 'UNASSIGNED',
         status: newStatus,
         notes: notes || query.statusNotes || '',
-        user: staffName
+        user: staffName,
+        customer_id: customer ? customer.id : null,
+        customer_name: customer ? customer.name : null,
+        phone: customer ? customer.phone : null,
+        whatsapp: customer ? customer.whatsapp : null,
+        reason: notes || (customer ? customer.dndReason : 'Customer not interested in products (Requested DND)'),
+        dnd_timestamp: timeFormatted
       })
     }).catch(() => {});
   }
@@ -4017,6 +4166,50 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
       customer.dndMarkedBy = staffName;
       if (!Array.isArray(customer.tags)) customer.tags = [];
       if (!customer.tags.includes('DND / Opt-Out')) customer.tags.push('DND / Opt-Out');
+
+      // Sync dedicated in-memory dndRecords collection
+      if (!CRM_STATE.dndRecords) CRM_STATE.dndRecords = [];
+      const existingDnd = CRM_STATE.dndRecords.find(d => d.customer_id === customer.id && d.status === 'ACTIVE');
+      if (existingDnd) {
+        existingDnd.notes = notes || '';
+        existingDnd.reason = notes || 'Customer not interested in products (Requested DND)';
+        existingDnd.marked_by = staffName;
+        existingDnd.dnd_timestamp = timeFormatted;
+        existingDnd.assigned_to = query ? (query.assignedTo || 'UNASSIGNED') : 'UNASSIGNED';
+      } else {
+        CRM_STATE.dndRecords.unshift({
+          customer_id: customer.id,
+          customer_name: customer.name,
+          phone: customer.phone,
+          whatsapp: customer.whatsapp,
+          query_id: query ? query.id : null,
+          reason: notes || 'Customer not interested in products (Requested DND)',
+          notes: notes || '',
+          marked_by: staffName,
+          assigned_to: query ? (query.assignedTo || 'UNASSIGNED') : 'UNASSIGNED',
+          status: 'ACTIVE',
+          dnd_timestamp: timeFormatted
+        });
+      }
+
+      // Guarantee MySQL dnd_records table persistence
+      fetch('api.php?action=save_dnd_record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: customer.id,
+          customer_name: customer.name,
+          phone: customer.phone,
+          whatsapp: customer.whatsapp,
+          query_id: query ? query.id : null,
+          reason: customer.dndReason,
+          notes: customer.dndNotes,
+          marked_by: staffName,
+          assigned_to: query ? (query.assignedTo || 'UNASSIGNED') : 'UNASSIGNED',
+          status: 'ACTIVE',
+          dnd_timestamp: timeFormatted
+        })
+      }).catch(() => {});
 
       // Dynamically remove from active inbox view by switching active selection if current customer was marked DND
       if (ACTIVE_CUSTOMER_ID === customer.id || String(ACTIVE_CUSTOMER_ID) === String(customer.id)) {
@@ -4036,6 +4229,14 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
       customer.isDND = false;
       if (Array.isArray(customer.tags)) {
         customer.tags = customer.tags.filter(t => t !== 'DND / Opt-Out');
+      }
+      if (CRM_STATE.dndRecords) {
+        const dRec = CRM_STATE.dndRecords.find(d => d.customer_id === customer.id && d.status === 'ACTIVE');
+        if (dRec) {
+          dRec.status = 'REVOKED';
+          dRec.revoked_at = new Date().toISOString();
+          dRec.revoked_by = staffName;
+        }
       }
     }
   }
@@ -4157,6 +4358,26 @@ function reactivateCustomerFromDND(customerId) {
     query.status = 'IN_PROGRESS';
   }
 
+  if (CRM_STATE.dndRecords) {
+    const dRec = CRM_STATE.dndRecords.find(d => (d.customer_id === customer.id || d.customerId === customer.id) && d.status === 'ACTIVE');
+    if (dRec) {
+      dRec.status = 'REVOKED';
+      dRec.revoked_at = new Date().toISOString();
+      dRec.revoked_by = CURRENT_USER?.name || 'Admin';
+    }
+  }
+
+  // Persist reactivation to MySQL backend
+  fetch('api.php?action=revoke_dnd', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      customer_id: customer.id,
+      query_id: query ? query.id : null,
+      user: CURRENT_USER?.name || 'Admin'
+    })
+  }).catch(() => {});
+
   logAudit('DND_REACTIVATED', 'DND_MODULE', `Reactivated customer ${customer.name} (${customer.phone}) from DND list.`);
   saveCRMState();
   renderDndModule();
@@ -4214,7 +4435,8 @@ function renderDndModule() {
   const dndCustomers = (CRM_STATE?.customers || []).filter(c => {
     if (!c) return false;
     const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
-    return c.isDND === true || (q && q.status === 'DND') || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'));
+    const dndRec = (CRM_STATE?.dndRecords || CRM_STATE?.dnd_records || []).find(d => (d.customer_id === c.id || d.customerId === c.id) && d.status === 'ACTIVE');
+    return (dndRec !== undefined) || c.isDND === true || (q && q.status === 'DND') || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'));
   });
 
   const totalDnd = dndCustomers.length;
@@ -4226,9 +4448,12 @@ function renderDndModule() {
   if (searchVal) {
     filtered = filtered.filter(c => {
       const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+      const dndRec = (CRM_STATE?.dndRecords || CRM_STATE?.dnd_records || []).find(d => (d.customer_id === c.id || d.customerId === c.id) && d.status === 'ACTIVE');
       return (c.name && c.name.toLowerCase().includes(searchVal)) ||
         (c.phone && c.phone.includes(searchVal)) ||
         (c.whatsapp && c.whatsapp.includes(searchVal)) ||
+        (dndRec && dndRec.reason && dndRec.reason.toLowerCase().includes(searchVal)) ||
+        (dndRec && dndRec.notes && dndRec.notes.toLowerCase().includes(searchVal)) ||
         (c.dndReason && c.dndReason.toLowerCase().includes(searchVal)) ||
         (c.dndNotes && c.dndNotes.toLowerCase().includes(searchVal)) ||
         (q && q.statusNotes && q.statusNotes.toLowerCase().includes(searchVal));
@@ -4252,18 +4477,19 @@ function renderDndModule() {
 
   tableBody.innerHTML = filtered.map(c => {
     const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+    const dndRec = (CRM_STATE?.dndRecords || CRM_STATE?.dnd_records || []).find(d => (d.customer_id === c.id || d.customerId === c.id) && d.status === 'ACTIVE');
     const conv = CRM_STATE?.conversations?.[c.id] || [];
     const lastMsg = conv.length > 0 ? conv[conv.length - 1].text : (q ? q.lastMessage : 'No recent messages');
-    const dndTime = c.dndTimestamp || (q ? q.statusLastEditedAt || q.createdAt : 'Recent');
-    const markedBy = c.dndMarkedBy || (q ? q.statusLastEditedBy : 'Super Admin') || 'Super Admin';
+    const dndTime = (dndRec && dndRec.dnd_timestamp) || c.dndTimestamp || (q ? q.statusLastEditedAt || q.createdAt : 'Recent');
+    const markedBy = (dndRec && dndRec.marked_by) || c.dndMarkedBy || (q ? q.statusLastEditedBy : 'Super Admin') || 'Super Admin';
     
-    // Notes fetched from WhatsApp Inbox why the user was set to DND
-    const inboxNotes = c.dndNotes || (q ? q.statusNotes : '') || (q?.statusHistory?.find(h => h.to === 'DND')?.notes) || (c.dndReason && !c.dndReason.includes('(Requested DND)') ? c.dndReason : '');
-    const mainReason = c.dndReason || (inboxNotes ? inboxNotes : 'Customer not interested in products (Requested DND)');
+    // Notes fetched from dedicated dnd_records table or WhatsApp Inbox why the user was set to DND
+    const inboxNotes = (dndRec && dndRec.notes) || c.dndNotes || (q ? q.statusNotes : '') || (q?.statusHistory?.find(h => h.to === 'DND')?.notes) || (c.dndReason && !c.dndReason.includes('(Requested DND)') ? c.dndReason : '');
+    const mainReason = (dndRec && dndRec.reason) || c.dndReason || (inboxNotes ? inboxNotes : 'Customer not interested in products (Requested DND)');
     const displayPhone = formatPhoneNumberPretty(c.whatsapp || c.phone);
 
     // Assigned Staff
-    const staffId = q ? q.assignedTo : 'UNASSIGNED';
+    const staffId = (dndRec && dndRec.assigned_to && dndRec.assigned_to !== 'UNASSIGNED') ? dndRec.assigned_to : (q ? q.assignedTo : 'UNASSIGNED');
     const staff = (CRM_STATE?.staffList || []).find(s => s.id === staffId);
     const assignedStaffName = staff ? staff.name : (staffId === 'admin' || staffId === 'Super Admin' ? 'Super Admin' : (staffId && staffId !== 'UNASSIGNED' ? staffId : 'Unassigned'));
     const isUnassigned = (!staffId || staffId === 'UNASSIGNED');
@@ -7942,9 +8168,23 @@ function handleConfirmAssignment(event) {
         }
       }
       query.status = 'ASSIGNED';
+      if (CRM_STATE.dndRecords) {
+        const dRec = CRM_STATE.dndRecords.find(d => (d.customer_id === customer?.id || d.customerId === customer?.id) && d.status === 'ACTIVE');
+        if (dRec) {
+          dRec.status = 'REVOKED';
+          dRec.revoked_at = new Date().toISOString();
+          dRec.revoked_by = CURRENT_USER?.name || 'Admin';
+        }
+      }
       logAudit('STAFF_ASSIGNMENT', 'DND_MODULE', `Assigned DND Customer ${customer ? customer.name : query.id} to ${staff.name} and restored to active WhatsApp Inbox for communication. Note: ${note || 'None'}`);
     } else {
       if (query.status === 'NEW') query.status = 'ASSIGNED';
+      if (CRM_STATE.dndRecords) {
+        const dRec = CRM_STATE.dndRecords.find(d => (d.customer_id === customer?.id || d.customerId === customer?.id) && d.status === 'ACTIVE');
+        if (dRec) {
+          dRec.assigned_to = staffId;
+        }
+      }
       logAudit('STAFF_ASSIGNMENT', 'STAFF_ASSIGN', `Assigned query ${query.id} to ${staff.name} by Admin. Note: ${note || 'None'}`);
     }
     
@@ -9703,6 +9943,36 @@ function initOrderModal(customer, items) {
   if (cAvatar) cAvatar.innerText = customer.avatar || customer.name.charAt(0);
   if (addrInput) addrInput.value = customer.address || 'No. 45, Gandhi Road, Chennai - 600020';
 
+  // Populate Staff selector for credited sales specialist
+  const staffSelect = document.getElementById('order-booking-staff-select');
+  if (staffSelect) {
+    const staffList = [...(CRM_STATE?.staffList || [])];
+    if (!staffList.some(s => s.id === 'admin')) {
+      staffList.push({ id: 'admin', name: 'Super Admin', role: 'Admin Manager' });
+    }
+
+    // Determine default staff for this customer
+    let defaultStaffId = '';
+    const linkedQuery = (CRM_STATE.queries || []).find(q => q.customerId === customer.id || q.customer_id === customer.id);
+    if (linkedQuery && (linkedQuery.assignedTo || linkedQuery.assigned_to)) {
+      defaultStaffId = linkedQuery.assignedTo || linkedQuery.assigned_to;
+    } else if (customer && (customer.assignedTo || customer.assigned_to)) {
+      defaultStaffId = customer.assignedTo || customer.assigned_to;
+    } else if (CURRENT_USER && CURRENT_USER.id && CURRENT_USER.id !== 'admin') {
+      defaultStaffId = CURRENT_USER.id;
+    } else if (CRM_STATE.staffList && CRM_STATE.staffList.length > 0) {
+      defaultStaffId = CRM_STATE.staffList[0].id;
+    } else {
+      defaultStaffId = 'admin';
+    }
+
+    staffSelect.innerHTML = staffList.map(s => `
+      <option value="${s.id}" ${s.id === defaultStaffId ? 'selected' : ''}>
+        ${s.name} (${s.role || s.specialization || 'Sales Specialist'})
+      </option>
+    `).join('');
+  }
+
   updateOrderProductDropdown();
 
   const onlineUpiInput = document.getElementById('order-online-upi-id');
@@ -10147,13 +10417,35 @@ function handleCreateOrder(event) {
     paymentScreenshot: screenshot,
     codAdvance: codAdvance,
     codBalanceDue: codBalanceDue,
-    orderStatus: 'STOCK_RESERVED',
+    orderStatus: 'PLACED',
     shippingAddress: address,
     createdAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    createdBy: ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Assigned Staff'
+    staffId: (() => {
+      const el = document.getElementById('order-booking-staff-select');
+      return el ? el.value : (query?.assignedTo || 'staff_01');
+    })(),
+    staffName: (() => {
+      const el = document.getElementById('order-booking-staff-select');
+      const val = el ? el.value : (query?.assignedTo || 'staff_01');
+      const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === val);
+      return staffObj ? staffObj.name : (val === 'admin' ? 'Super Admin' : 'Priya Sharma');
+    })(),
+    createdBy: (() => {
+      const el = document.getElementById('order-booking-staff-select');
+      const val = el ? el.value : (query?.assignedTo || 'staff_01');
+      const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === val);
+      return staffObj ? staffObj.name : (val === 'admin' ? 'Super Admin' : 'Priya Sharma');
+    })()
   };
 
   CRM_STATE.orders.unshift(newOrder);
+
+  // Sync newly booked order to MySQL backend
+  fetch('api.php?action=save_order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newOrder)
+  }).catch(() => {});
 
   // Update customer spend & total orders
   if (customer) {
@@ -18346,48 +18638,458 @@ async function refreshCatalogStockFromAPI() {
   showToast('Stock Synchronized', 'All garment inventory levels and catalog taxonomy are live.', 'check_circle', 'emerald');
 }
 
-function renderOrdersTable() {
-  const tbody = document.getElementById('orders-table-body');
+// =========================================================================
+// 8. WHATSAPP ORDERS ENGINE: ORDER DASHBOARD & ORDER HISTORY (SUBMODULES)
+// =========================================================================
+
+var ACTIVE_ORDERS_SUBMODULE = 'dashboard';
+var ACTIVE_ORDER_HISTORY_STATUS_FILTER = 'ALL';
+
+function normalizeOrderStatus(status) {
+  if (!status) return 'PLACED';
+  const s = String(status).toUpperCase();
+  if (s === 'STOCK_RESERVED' || s === 'NEW' || s === 'PLACED') return 'PLACED';
+  if (s === 'PACKED' || s === 'PROCESSING') return 'PACKED';
+  if (s === 'SHIPPED' || s === 'IN_TRANSIT') return 'SHIPPED';
+  if (s === 'DELIVERED' || s === 'COMPLETED') return 'DELIVERED';
+  return s;
+}
+
+function switchOrdersSubmodule(submodule) {
+  ACTIVE_ORDERS_SUBMODULE = submodule || 'dashboard';
+  const tabDash = document.getElementById('tab-orders-submodule-dashboard');
+  const tabHist = document.getElementById('tab-orders-submodule-history');
+  const viewDash = document.getElementById('subview-orders-dashboard');
+  const viewHist = document.getElementById('subview-orders-history');
+
+  const navDash = document.getElementById('nav-sub-orders-dashboard');
+  const navHist = document.getElementById('nav-sub-orders-history');
+
+  if (submodule === 'dashboard') {
+    if (viewDash) viewDash.classList.remove('hidden');
+    if (viewHist) viewHist.classList.add('hidden');
+    if (tabDash) tabDash.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-700 cursor-pointer";
+    if (tabHist) tabHist.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-700 cursor-pointer";
+    if (navDash) navDash.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer";
+    if (navHist) navHist.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
+    try { window.location.hash = '#orders/dashboard'; } catch(e) {}
+    renderOrdersDashboard();
+  } else {
+    if (viewDash) viewDash.classList.add('hidden');
+    if (viewHist) viewHist.classList.remove('hidden');
+    if (tabDash) tabDash.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-700 cursor-pointer";
+    if (tabHist) tabHist.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-700 cursor-pointer";
+    if (navDash) navDash.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
+    if (navHist) navHist.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer";
+    try { window.location.hash = '#orders/history'; } catch(e) {}
+    renderOrdersHistoryTable();
+  }
+}
+window.switchOrdersSubmodule = switchOrdersSubmodule;
+
+function reassignOrderStaff(orderId, newStaffId) {
+  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  if (!ord) return;
+  const staffList = [...(CRM_STATE?.staffList || [])];
+  if (!staffList.some(s => s.id === 'admin')) {
+    staffList.push({ id: 'admin', name: 'Super Admin', role: 'Admin Manager' });
+  }
+  const staffObj = staffList.find(s => s.id === newStaffId) || { id: newStaffId, name: newStaffId === 'admin' ? 'Super Admin' : 'Staff' };
+
+  const oldStaff = ord.staffName || ord.staff_name || ord.createdBy || 'Staff';
+  ord.staffId = newStaffId;
+  ord.staff_id = newStaffId;
+  ord.staffName = staffObj.name;
+  ord.staff_name = staffObj.name;
+  ord.createdBy = staffObj.name;
+  ord.created_by = staffObj.name;
+
+  // Persist to MySQL database
+  fetch('api.php?action=reassign_order_staff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: orderId,
+      order_id: orderId,
+      staff_id: newStaffId,
+      staff_name: staffObj.name,
+      user: CURRENT_USER?.name || 'Super Admin'
+    })
+  }).catch(() => {});
+
+  logAudit('ORDER_REASSIGNED', 'ORDERS', `Order ${orderId} reassigned from ${oldStaff} to ${staffObj.name}`);
+  saveCRMState();
+  renderOrdersDashboard();
+  renderOrdersHistoryTable();
+  showToast('Order Reassigned', `Order ${orderId} credited to ${staffObj.name}`, 'support_agent', 'indigo');
+}
+window.reassignOrderStaff = reassignOrderStaff;
+
+function renderOrdersModule() {
+  const badgeOrders = document.getElementById('badge-orders-count');
+  const badgeTotalHeader = document.getElementById('badge-orders-total-count');
+  const badgeHistoryTab = document.getElementById('orders-tab-history-badge');
+  const totalCount = (CRM_STATE?.orders || []).length;
+
+  if (badgeOrders) badgeOrders.innerText = totalCount;
+  if (badgeTotalHeader) badgeTotalHeader.innerText = `${totalCount} Order${totalCount === 1 ? '' : 's'}`;
+  if (badgeHistoryTab) badgeHistoryTab.innerText = totalCount;
+
+  populateOrderHistoryStaffFilter();
+  renderOrdersDashboard();
+  renderOrdersHistoryTable();
+}
+window.renderOrdersModule = renderOrdersModule;
+window.renderOrdersTable = renderOrdersModule;
+
+function renderOrdersDashboard() {
+  const orders = CRM_STATE?.orders || [];
+  
+  // 1. Overall Revenue
+  let overallRevenue = 0;
+  let paidOnline = 0;
+  let codPending = 0;
+
+  orders.forEach(o => {
+    const total = parseFloat(o.grandTotal || o.grand_total) || 0;
+    overallRevenue += total;
+    const isOnline = o.paymentMethod === 'ONLINE_UPI' || o.paymentMethod === 'UPI' || o.payment_method === 'ONLINE_UPI' || o.payment_method === 'UPI';
+    if (isOnline) {
+      paidOnline += total;
+    } else {
+      const adv = parseFloat(o.codAdvance || o.cod_advance) || 200;
+      paidOnline += Math.min(total, adv);
+      codPending += Math.max(0, total - adv);
+    }
+  });
+
+  const revEl = document.getElementById('dash-ord-overall-revenue');
+  const paidEl = document.getElementById('dash-ord-paid-online');
+  const codEl = document.getElementById('dash-ord-cod-pending');
+  if (revEl) revEl.innerText = `₹${overallRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (paidEl) paidEl.innerText = `₹${paidOnline.toLocaleString('en-IN')} Paid Online`;
+  if (codEl) codEl.innerText = `₹${codPending.toLocaleString('en-IN')} COD Due`;
+
+  // 2. Weekly Orders Count & Revenue (Past 7 days)
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+  const weeklyOrders = orders.filter(o => {
+    const dStr = o.createdAt || o.created_at;
+    if (!dStr) return true;
+    const d = new Date(dStr);
+    return !isNaN(d.getTime()) ? d >= sevenDaysAgo : true;
+  });
+  const weeklyCount = weeklyOrders.length;
+  const weeklyRevenue = weeklyOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal || o.grand_total) || 0), 0);
+
+  const weekCountEl = document.getElementById('dash-ord-weekly-count');
+  const weekRevEl = document.getElementById('dash-ord-weekly-revenue');
+  if (weekCountEl) weekCountEl.innerText = `${weeklyCount} Order${weeklyCount === 1 ? '' : 's'}`;
+  if (weekRevEl) weekRevEl.innerText = `₹${weeklyRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+  // 3. Monthly Orders Count & Revenue (Past 30 days)
+  const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+  const monthlyOrders = orders.filter(o => {
+    const dStr = o.createdAt || o.created_at;
+    if (!dStr) return true;
+    const d = new Date(dStr);
+    return !isNaN(d.getTime()) ? d >= thirtyDaysAgo : true;
+  });
+  const monthlyCount = monthlyOrders.length;
+  const monthlyRevenue = monthlyOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal || o.grand_total) || 0), 0);
+
+  const monthCountEl = document.getElementById('dash-ord-monthly-count');
+  const monthRevEl = document.getElementById('dash-ord-monthly-revenue');
+  if (monthCountEl) monthCountEl.innerText = `${monthlyCount} Order${monthlyCount === 1 ? '' : 's'}`;
+  if (monthRevEl) monthRevEl.innerText = `₹${monthlyRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+  // 4. Average Order Value (AOV)
+  const aov = orders.length > 0 ? (overallRevenue / orders.length) : 0;
+  const aovEl = document.getElementById('dash-ord-aov');
+  const allTimeEl = document.getElementById('dash-ord-all-time-count');
+  if (aovEl) aovEl.innerText = `₹${Math.round(aov).toLocaleString('en-IN')}`;
+  if (allTimeEl) allTimeEl.innerText = `${orders.length} total volume`;
+
+  // 5. Stage Funnel Counts (Placed, Packed, Shipped, Delivered)
+  const countPlaced = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
+  const countPacked = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
+  const countShipped = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+  const countDelivered = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
+
+  const pipePlaced = document.getElementById('pipe-ord-placed-count');
+  const pipePacked = document.getElementById('pipe-ord-packed-count');
+  const pipeShipped = document.getElementById('pipe-ord-shipped-count');
+  const pipeDelivered = document.getElementById('pipe-ord-delivered-count');
+  if (pipePlaced) pipePlaced.innerText = countPlaced;
+  if (pipePacked) pipePacked.innerText = countPacked;
+  if (pipeShipped) pipeShipped.innerText = countShipped;
+  if (pipeDelivered) pipeDelivered.innerText = countDelivered;
+
+  // 6. Staff Breakdown
+  renderOrdersStaffBreakdown();
+}
+window.renderOrdersDashboard = renderOrdersDashboard;
+
+function renderOrdersStaffBreakdown() {
+  const tbody = document.getElementById('orders-staff-breakdown-body');
   if (!tbody) return;
 
-  const badgeOrders = document.getElementById('badge-orders-count');
-  if (badgeOrders) {
-    badgeOrders.innerText = (CRM_STATE.orders || []).length;
+  const orders = CRM_STATE?.orders || [];
+  const totalOrdersCount = orders.length;
+
+  const staffMembers = [...(CRM_STATE?.staffList || [])];
+  if (!staffMembers.some(s => s.id === 'admin' || s.name === 'Super Admin')) {
+    staffMembers.push({
+      id: 'admin',
+      name: 'Super Admin',
+      role: 'Admin Manager (Full System)',
+      avatar: 'SA',
+      specialization: 'Central Sales & Operations'
+    });
   }
 
-  if (!CRM_STATE.orders || CRM_STATE.orders.length === 0) {
+  const staffStats = staffMembers.map(staff => {
+    const staffOrders = orders.filter(o => {
+      const matchId = o.staffId && (o.staffId === staff.id || o.staff_id === staff.id);
+      const matchName = (o.staffName && o.staffName.toLowerCase().includes(staff.name.toLowerCase())) ||
+                        (o.staff_name && o.staff_name.toLowerCase().includes(staff.name.toLowerCase())) ||
+                        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase())) ||
+                        (o.created_by && o.created_by.toLowerCase().includes(staff.name.toLowerCase()));
+      return matchId || matchName;
+    });
+
+    const count = staffOrders.length;
+    const revenue = staffOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal || o.grand_total) || 0), 0);
+    const placed = staffOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
+    const packed = staffOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
+    const shipped = staffOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+    const delivered = staffOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
+    const sharePercent = totalOrdersCount > 0 ? Math.round((count / totalOrdersCount) * 100) : 0;
+
+    return { staff, count, revenue, placed, packed, shipped, delivered, sharePercent };
+  });
+
+  staffStats.sort((a, b) => b.count - a.count);
+
+  if (staffStats.length === 0 || totalOrdersCount === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="py-12 text-center text-slate-400">
-          <span class="material-symbols-outlined text-[32px] block mb-2 text-slate-300">shopping_bag</span>
-          <p class="font-bold text-slate-600">No WhatsApp orders recorded yet</p>
-          <p class="text-xs">Convert chats to orders directly from the WhatsApp Inbox.</p>
+        <td colspan="7" class="py-8 text-center text-slate-400">
+          <span class="material-symbols-outlined text-[28px] text-slate-300 block mb-1">people</span>
+          <p class="font-bold text-slate-600">No staff order records available</p>
+          <p class="text-[11px]">Orders booked by staff will automatically display here.</p>
         </td>
       </tr>
     `;
     return;
   }
 
-  tbody.innerHTML = CRM_STATE.orders.map(ord => {
-    const isOnline = ord.paymentMethod === 'ONLINE_UPI' || ord.paymentMethod === 'UPI';
-    const isCod = ord.paymentMethod === 'COD';
+  tbody.innerHTML = staffStats.map((item, idx) => {
+    const isTop = idx === 0 && item.count > 0;
+    const badgeColor = isTop ? 'bg-amber-100 text-amber-900 border-amber-300' : (item.count > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200');
+    const badgeText = isTop ? '🏆 Top Performer' : (item.count > 0 ? '⚡ Active Specialist' : 'No Bookings');
+
+    return `
+      <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
+        <td class="py-3.5 px-5">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-800 text-white font-extrabold text-xs flex items-center justify-center shadow-xs shrink-0">
+              ${item.staff.avatar || item.staff.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div class="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                <span>${item.staff.name}</span>
+                ${isTop ? '<span class="text-[10px] text-amber-500">★</span>' : ''}
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono">ID: ${item.staff.id}</div>
+            </div>
+          </div>
+        </td>
+        <td class="py-3.5 px-4 text-slate-600 text-xs font-medium">
+          <div class="truncate max-w-xs font-medium">${item.staff.role || item.staff.specialization || 'Sales Specialist'}</div>
+        </td>
+        <td class="py-3.5 px-4 text-center">
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-mono font-black ${item.count > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-500'}">
+            <span class="material-symbols-outlined text-[14px]">shopping_bag</span>
+            <span>${item.count} Order${item.count === 1 ? '' : 's'}</span>
+          </span>
+        </td>
+        <td class="py-3.5 px-4">
+          <div class="flex items-center gap-1 flex-wrap text-[10px] font-bold">
+            <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200" title="Placed">${item.placed} Placed</span>
+            <span class="px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200" title="Packed">${item.packed} Packed</span>
+            <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200" title="Shipped">${item.shipped} Shipped</span>
+            <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200" title="Delivered">${item.delivered} Delivered</span>
+          </div>
+        </td>
+        <td class="py-3.5 px-4">
+          <div class="font-mono font-black text-slate-900 text-xs">₹${item.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+          <div class="text-[10px] text-slate-400 font-medium">Avg: ₹${item.count > 0 ? Math.round(item.revenue / item.count).toLocaleString('en-IN') : 0}</div>
+        </td>
+        <td class="py-3.5 px-4">
+          <div class="w-32 space-y-1">
+            <div class="flex items-center justify-between text-[10px] font-bold text-slate-600">
+              <span>${item.sharePercent}%</span>
+              <span>${item.count}/${totalOrdersCount}</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full bg-emerald-500 rounded-full" style="width: ${item.sharePercent}%"></div>
+            </div>
+          </div>
+        </td>
+        <td class="py-3.5 px-4 text-right">
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${badgeColor} inline-block whitespace-nowrap">
+            ${badgeText}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+window.renderOrdersStaffBreakdown = renderOrdersStaffBreakdown;
+
+function populateOrderHistoryStaffFilter() {
+  const select = document.getElementById('order-history-staff-filter');
+  if (!select) return;
+  const currentVal = select.value;
+  const staffMembers = [...(CRM_STATE?.staffList || [])];
+  if (!staffMembers.some(s => s.id === 'admin' || s.name === 'Super Admin')) {
+    staffMembers.push({ id: 'admin', name: 'Super Admin' });
+  }
+
+  select.innerHTML = '<option value="ALL">All Staff Members</option>' + staffMembers.map(s => `
+    <option value="${s.name}">${s.name}</option>
+  `).join('');
+  if (currentVal) select.value = currentVal;
+}
+window.populateOrderHistoryStaffFilter = populateOrderHistoryStaffFilter;
+
+function setOrderHistoryStatusFilter(status) {
+  ACTIVE_ORDER_HISTORY_STATUS_FILTER = status;
+  const buttons = ['ALL', 'PLACED', 'PACKED', 'SHIPPED', 'DELIVERED'];
+  buttons.forEach(b => {
+    const btn = document.getElementById(`filter-btn-status-${b}`);
+    if (btn) {
+      if (b === status) {
+        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white cursor-pointer shadow-xs";
+      } else {
+        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer";
+      }
+    }
+  });
+  renderOrdersHistoryTable();
+}
+window.setOrderHistoryStatusFilter = setOrderHistoryStatusFilter;
+
+function filterOrderHistoryByStatus(status) {
+  switchOrdersSubmodule('history');
+  setOrderHistoryStatusFilter(status);
+}
+window.filterOrderHistoryByStatus = filterOrderHistoryByStatus;
+
+function filterOrdersHistoryTable() {
+  renderOrdersHistoryTable();
+}
+window.filterOrdersHistoryTable = filterOrdersHistoryTable;
+
+function renderOrdersHistoryTable() {
+  const tbody = document.getElementById('orders-table-body');
+  if (!tbody) return;
+
+  const orders = CRM_STATE?.orders || [];
+  const searchInput = document.getElementById('order-history-search');
+  const searchVal = (searchInput ? searchInput.value : '').toLowerCase().trim();
+  const staffFilter = document.getElementById('order-history-staff-filter');
+  const staffVal = staffFilter ? staffFilter.value : 'ALL';
+
+  // Update filter counters
+  const cAll = orders.length;
+  const cPlaced = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
+  const cPacked = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
+  const cShipped = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+  const cDelivered = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
+
+  const elAll = document.getElementById('count-filter-all');
+  const elPlaced = document.getElementById('count-filter-placed');
+  const elPacked = document.getElementById('count-filter-packed');
+  const elShipped = document.getElementById('count-filter-shipped');
+  const elDelivered = document.getElementById('count-filter-delivered');
+  if (elAll) elAll.innerText = cAll;
+  if (elPlaced) elPlaced.innerText = cPlaced;
+  if (elPacked) elPacked.innerText = cPacked;
+  if (elShipped) elShipped.innerText = cShipped;
+  if (elDelivered) elDelivered.innerText = cDelivered;
+
+  const filteredOrders = orders.filter(ord => {
+    const status = normalizeOrderStatus(ord.orderStatus || ord.order_status);
+    if (ACTIVE_ORDER_HISTORY_STATUS_FILTER !== 'ALL' && status !== ACTIVE_ORDER_HISTORY_STATUS_FILTER) {
+      return false;
+    }
+
+    if (staffVal !== 'ALL') {
+      const matchStaff = (ord.staffName && ord.staffName.toLowerCase().includes(staffVal.toLowerCase())) ||
+                         (ord.staff_name && ord.staff_name.toLowerCase().includes(staffVal.toLowerCase())) ||
+                         (ord.createdBy && ord.createdBy.toLowerCase().includes(staffVal.toLowerCase())) ||
+                         (ord.created_by && ord.created_by.toLowerCase().includes(staffVal.toLowerCase()));
+      if (!matchStaff) return false;
+    }
+
+    if (searchVal) {
+      const searchTarget = [
+        ord.id,
+        ord.customerName,
+        ord.customerPhone,
+        ord.staffName,
+        ord.createdBy,
+        ord.shippingAddress,
+        ord.upiTransactionId,
+        (ord.items || []).map(i => i.name).join(' ')
+      ].join(' ').toLowerCase();
+
+      if (!searchTarget.includes(searchVal)) return false;
+    }
+
+    return true;
+  });
+
+  if (filteredOrders.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-12 text-center text-slate-400">
+          <span class="material-symbols-outlined text-[36px] block mb-2 text-slate-300">receipt_long</span>
+          <p class="font-bold text-slate-600">No matching orders found</p>
+          <p class="text-xs text-slate-400 mt-0.5">Try adjusting your status filter or search query.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filteredOrders.map(ord => {
+    const normStatus = normalizeOrderStatus(ord.orderStatus || ord.order_status);
+    const isOnline = ord.paymentMethod === 'ONLINE_UPI' || ord.paymentMethod === 'UPI' || ord.payment_method === 'ONLINE_UPI' || ord.payment_method === 'UPI';
+    const isCod = ord.paymentMethod === 'COD' || ord.payment_method === 'COD';
+    const grandTotal = parseFloat(ord.grandTotal || ord.grand_total) || 0;
+    const codAdv = parseFloat(ord.codAdvance || ord.cod_advance) || 200;
+    const codDue = ord.codBalanceDue !== undefined ? parseFloat(ord.codBalanceDue) : Math.max(0, grandTotal - codAdv);
 
     let amountHtml = '';
     if (isCod) {
-      const adv = ord.codAdvance || 200;
-      const due = ord.codBalanceDue !== undefined ? ord.codBalanceDue : Math.max(0, (ord.grandTotal || 0) - adv);
       amountHtml = `
-        <div class="font-mono font-bold text-slate-900 text-xs">₹${(ord.grandTotal || 0).toLocaleString('en-IN')}</div>
+        <div class="font-mono font-bold text-slate-900 text-xs">₹${grandTotal.toLocaleString('en-IN')}</div>
         <div class="text-[10px] text-amber-800 font-semibold flex items-center gap-1 mt-0.5 flex-wrap">
-          <span class="bg-emerald-100 text-emerald-800 px-1 rounded font-bold">₹${adv} Adv</span>
+          <span class="bg-emerald-100 text-emerald-800 px-1 rounded font-bold">₹${codAdv} Adv</span>
           <span>&bull;</span>
-          <span class="bg-amber-100 text-amber-900 px-1 rounded font-bold">₹${due.toLocaleString('en-IN')} Due</span>
+          <span class="bg-amber-100 text-amber-900 px-1 rounded font-bold">₹${codDue.toLocaleString('en-IN')} Due</span>
         </div>
       `;
     } else {
       amountHtml = `
-        <div class="font-mono font-bold text-emerald-800 text-xs">₹${(ord.grandTotal || 0).toLocaleString('en-IN')}</div>
-        <div class="text-[10px] text-emerald-600 font-bold mt-0.5">100% Paid Online</div>
+        <div class="font-mono font-bold text-emerald-800 text-xs">₹${grandTotal.toLocaleString('en-IN')}</div>
+        <div class="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1">
+          <span class="material-symbols-outlined text-[13px]">check_circle</span>
+          <span>100% Paid Online</span>
+        </div>
       `;
     }
 
@@ -18401,9 +19103,9 @@ function renderOrdersTable() {
             ${badgeLabel}
           </span>
           ${ord.paymentScreenshot ? `
-            <button type="button" onclick="openOrderReceiptLightbox('${ord.id}')" class="p-0.5 rounded border border-slate-200 hover:border-emerald-400 bg-white transition group relative cursor-pointer" title="Click to view payment screenshot proof">
-              <img src="${ord.paymentScreenshot}" alt="Proof" class="w-7 h-7 rounded object-cover">
-              <span class="material-symbols-outlined absolute -bottom-1 -right-1 text-[10px] bg-black/70 text-white rounded-full p-0.5">zoom_in</span>
+            <button type="button" onclick="openOrderReceiptLightbox('${ord.id}')" class="p-0.5 rounded border border-slate-200 hover:border-emerald-400 bg-white transition group relative cursor-pointer" title="Click to view payment proof">
+              <img src="${ord.paymentScreenshot}" alt="Proof" class="w-6 h-6 rounded object-cover">
+              <span class="material-symbols-outlined absolute -bottom-1 -right-1 text-[9px] bg-black/70 text-white rounded-full p-0.5">zoom_in</span>
             </button>
           ` : ''}
         </div>
@@ -18416,54 +19118,431 @@ function renderOrdersTable() {
       </div>
     `;
 
+    // Status Badge & Selector
+    let statusBadgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+    let statusIcon = 'receipt';
+    if (normStatus === 'PACKED') {
+      statusBadgeClass = 'bg-purple-100 text-purple-800 border-purple-200';
+      statusIcon = 'inventory_2';
+    } else if (normStatus === 'SHIPPED') {
+      statusBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
+      statusIcon = 'local_shipping';
+    } else if (normStatus === 'DELIVERED') {
+      statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      statusIcon = 'verified';
+    }
+
+    const staffDisplayName = ord.staffName || ord.staff_name || ord.createdBy || ord.created_by || 'Super Admin';
+    const staffAvatar = staffDisplayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SA';
+
     return `
-      <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-        <td class="py-3 px-4 font-mono font-bold text-slate-900">
-          <div class="text-xs text-brand-wa font-black">${ord.id}</div>
+      <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
+        <!-- 1. Order ID & Date -->
+        <td class="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs text-brand-wa font-black">${ord.id}</span>
+            <button onclick="navigator.clipboard.writeText('${ord.id}'); showToast('Copied', 'Order ID copied', 'content_copy', 'emerald')" class="text-slate-400 hover:text-slate-600 cursor-pointer" title="Copy Order ID">
+              <span class="material-symbols-outlined text-[14px]">content_copy</span>
+            </button>
+          </div>
           <div class="text-[10px] font-normal text-slate-400 mt-0.5">${ord.createdAt || 'Recent'}</div>
         </td>
-        <td class="py-3 px-4">
-          <div class="font-bold text-slate-800 text-xs">${ord.customerName}</div>
-          ${ord.customerPhone ? `<div class="text-[10px] font-mono text-slate-500">${ord.customerPhone}</div>` : ''}
-        </td>
-        <td class="py-3 px-4 text-slate-700 font-medium text-xs max-w-xs">
-          ${(ord.items || []).map(i => `
-            <div class="truncate text-[11px]" title="${i.name}">
-              <strong class="font-bold text-slate-900">${i.name}</strong> 
-              <span class="text-slate-500 font-bold">(x${i.qty})</span>
-              ${i.sku ? `<span class="text-[9px] font-mono bg-slate-100 px-1 rounded ml-1 text-slate-600 font-bold">${i.sku}</span>` : ''}
+
+        <!-- 2. Customer Details -->
+        <td class="py-3.5 px-4">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-200">
+              ${(ord.customerName || 'CU').slice(0, 2).toUpperCase()}
             </div>
-          `).join('')}
+            <div>
+              <div class="font-extrabold text-slate-900 text-xs">${ord.customerName}</div>
+              <div class="text-[10px] font-mono text-slate-500">${ord.customerPhone || ord.customer_phone || ''}</div>
+              ${ord.shippingAddress ? `<div class="text-[10px] text-slate-400 truncate max-w-[200px]" title="${ord.shippingAddress}">📍 ${ord.shippingAddress}</div>` : ''}
+            </div>
+          </div>
         </td>
-        <td class="py-3 px-4">
+
+        <!-- 3. Which Staff Taken That Order (With Live Reassignment) -->
+        <td class="py-3 px-4 whitespace-nowrap">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-700 to-indigo-900 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
+              ${staffAvatar}
+            </div>
+            <div>
+              <div class="font-extrabold text-slate-900 text-xs">${staffDisplayName}</div>
+              <div class="text-[10px] text-indigo-700 font-medium flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                <span>Booking Specialist</span>
+              </div>
+            </div>
+          </div>
+          <!-- Inline Quick Staff Reassignment Dropdown -->
+          <div class="mt-1.5 flex items-center gap-1.5">
+            <span class="text-[9px] text-slate-400 font-extrabold uppercase">Credit:</span>
+            <select onchange="reassignOrderStaff('${ord.id}', this.value)" class="text-[10px] font-bold bg-indigo-50/80 hover:bg-indigo-100 text-indigo-950 border border-indigo-200/90 rounded-md px-1.5 py-0.5 outline-none cursor-pointer" title="Reassign order credit to another staff specialist">
+              ${(() => {
+                const sList = [...(CRM_STATE?.staffList || [])];
+                if (!sList.some(s => s.id === 'admin')) sList.push({ id: 'admin', name: 'Super Admin' });
+                const curId = ord.staffId || ord.staff_id || (staffDisplayName.includes('Admin') ? 'admin' : '');
+                return sList.map(s => `<option value="${s.id}" ${s.id === curId || s.name === staffDisplayName ? 'selected' : ''}>${s.name}</option>`).join('');
+              })()}
+            </select>
+          </div>
+        </td>
+
+        <!-- 4. Ordered Items (Product Thumbnail, Name, Qty Stepper, Size & Price) -->
+        <td class="py-3 px-4 text-slate-700 text-xs min-w-[240px] max-w-md">
+          <div class="space-y-1.5">
+            ${(ord.items || []).map(i => {
+              const matchedProd = (CRM_STATE?.products || []).find(p => p.sku === i.sku || p.name === i.name);
+              const fallbackImg = 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=120&auto=format&fit=crop&q=60';
+              const imgUrl = i.image || matchedProd?.image || matchedProd?.imageUrl || (matchedProd?.images && matchedProd.images[0]) || fallbackImg;
+              const safeImg = (imgUrl || '').replace(/'/g, "\\'");
+              const safeName = (i.name || 'Garment Item').replace(/"/g, '&quot;');
+              const unitPrice = parseFloat(i.price || matchedProd?.price || 0);
+              const qty = parseInt(i.qty || 1);
+              const lineTotal = unitPrice * qty;
+
+              return `
+                <div class="flex items-center gap-2.5 p-1.5 bg-slate-50/90 hover:bg-slate-100/90 rounded-xl border border-slate-200/80 transition">
+                  <!-- Product Image Thumbnail -->
+                  <div class="relative shrink-0">
+                    <img src="${imgUrl}" alt="${safeName}" class="w-11 h-11 rounded-lg object-cover border border-slate-200 shadow-2xs bg-white cursor-pointer hover:scale-105 transition" onclick="openImageLightbox('${safeImg}', '${safeName}')" onerror="this.onerror=null; this.src='${fallbackImg}';">
+                    <span class="absolute -top-1.5 -right-1.5 bg-emerald-700 text-white font-black text-[9px] px-1.5 py-0.2 rounded-full font-mono shadow-xs">x${qty}</span>
+                  </div>
+                  <!-- Product Details -->
+                  <div class="min-w-0 flex-1">
+                    <div class="font-extrabold text-slate-900 text-xs truncate" title="${safeName}">${safeName}</div>
+                    <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 flex-wrap">
+                      <span class="font-mono bg-white px-1.5 py-0.2 rounded border border-slate-200 font-bold text-slate-700">${i.sku || 'SKU'}</span>
+                      ${i.size ? `<span class="bg-indigo-50 text-indigo-700 px-1 rounded font-bold">${i.size}</span>` : ''}
+                      ${unitPrice > 0 ? `<span class="font-mono font-bold text-emerald-800 ml-auto">₹${lineTotal.toLocaleString('en-IN')}</span>` : ''}
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </td>
+
+        <!-- 5. Payment Details -->
+        <td class="py-3.5 px-4 whitespace-nowrap">
           ${amountHtml}
-        </td>
-        <td class="py-3 px-4">
           ${paymentHtml}
         </td>
-        <td class="py-3 px-4">
-          <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-            ${ord.orderStatus || 'STOCK_RESERVED'}
-          </span>
+
+        <!-- 6. Order Status (Placed, Packed, Shipped, Delivered) with Quick Selector -->
+        <td class="py-3.5 px-4 whitespace-nowrap">
+          <div class="space-y-1.5">
+            <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${statusBadgeClass} inline-flex items-center gap-1 shadow-2xs">
+              <span class="material-symbols-outlined text-[13px]">${statusIcon}</span>
+              <span>${normStatus}</span>
+            </span>
+
+            <!-- Quick Status Transition Selector -->
+            <div>
+              <select onchange="updateOrderStatus('${ord.id}', this.value)" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded px-1.5 py-0.5 outline-none cursor-pointer">
+                <option value="PLACED" ${normStatus === 'PLACED' ? 'selected' : ''}>1. Placed</option>
+                <option value="PACKED" ${normStatus === 'PACKED' ? 'selected' : ''}>2. Packed</option>
+                <option value="SHIPPED" ${normStatus === 'SHIPPED' ? 'selected' : ''}>3. Shipped</option>
+                <option value="DELIVERED" ${normStatus === 'DELIVERED' ? 'selected' : ''}>4. Delivered</option>
+              </select>
+            </div>
+          </div>
         </td>
-        <td class="py-3 px-4 text-right">
+
+        <!-- 7. Actions -->
+        <td class="py-3.5 px-4 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1.5">
-            <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-emerald-200" title="Chat with customer on WhatsApp">
+            <!-- View Invoice -->
+            <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-300" title="View Tax Invoice &amp; Packing Slip">
+              <span class="material-symbols-outlined text-[14px]">receipt_long</span>
+              <span class="text-[11px]">Invoice</span>
+            </button>
+
+            <!-- Chat -->
+            <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-emerald-300" title="Chat on WhatsApp">
               <span class="material-symbols-outlined text-[14px]">chat</span>
               <span class="hidden sm:inline text-[11px]">Chat</span>
             </button>
-            ${ord.paymentScreenshot ? `
-              <button type="button" onclick="openOrderReceiptLightbox('${ord.id}')" class="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition border border-slate-200 cursor-pointer" title="View Payment Screenshot">
-                <span class="material-symbols-outlined text-[15px]">receipt_long</span>
-              </button>
-            ` : ''}
           </div>
         </td>
       </tr>
     `;
   }).join('');
 }
+window.renderOrdersHistoryTable = renderOrdersHistoryTable;
+
+function updateOrderStatus(orderId, newStatus) {
+  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  if (!ord) return;
+
+  const oldStatus = ord.orderStatus || ord.order_status;
+  ord.orderStatus = newStatus;
+  ord.order_status = newStatus;
+
+  // Sync to MySQL backend
+  fetch('api.php?action=update_order_status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: orderId,
+      order_id: orderId,
+      order_status: newStatus,
+      status: newStatus,
+      user: CURRENT_USER?.name || 'Super Admin'
+    })
+  }).catch(() => {});
+
+  logAudit('ORDER_STATUS_UPDATED', 'ORDERS', `Order ${orderId} status changed from ${oldStatus} to ${newStatus}`);
+  saveCRMState();
+  renderOrdersDashboard();
+  renderOrdersHistoryTable();
+
+  showToast('Order Status Updated', `Order ${orderId} marked as ${newStatus}.`, 'check_circle', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+window.updateOrderStatus = updateOrderStatus;
+
+function downloadOrdersDashboardReport() {
+  const orders = CRM_STATE?.orders || [];
+  let overallRevenue = 0;
+  orders.forEach(o => { overallRevenue += (parseFloat(o.grandTotal || o.grand_total) || 0); });
+
+  const countPlaced = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
+  const countPacked = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
+  const countShipped = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+  const countDelivered = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
+
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "GRM GARMENTS - WHATSAPP SALES & ORDER DASHBOARD REPORT\r\n";
+  csvContent += `Generated On: ${new Date().toLocaleString()}\r\n\r\n`;
+
+  csvContent += "EXECUTIVE REVENUE SUMMARY\r\n";
+  csvContent += `Total Orders Booked,${orders.length}\r\n`;
+  csvContent += `Overall Gross Revenue (INR),Rs ${overallRevenue.toFixed(2)}\r\n`;
+  csvContent += `Average Order Value (AOV),Rs ${orders.length > 0 ? (overallRevenue / orders.length).toFixed(2) : 0}\r\n\r\n`;
+
+  csvContent += "ORDER FULFILLMENT PIPELINE\r\n";
+  csvContent += `1. Placed Orders,${countPlaced}\r\n`;
+  csvContent += `2. Packed Orders,${countPacked}\r\n`;
+  csvContent += `3. Shipped Orders,${countShipped}\r\n`;
+  csvContent += `4. Delivered Orders,${countDelivered}\r\n\r\n`;
+
+  csvContent += "STAFF NAME WISE TOTAL ORDER COUNT & PERFORMANCE\r\n";
+  csvContent += "Staff Name,Role,Total Orders Taken,Total Revenue (INR),Placed,Packed,Shipped,Delivered,Share (%)\r\n";
+
+  const staffMembers = [...(CRM_STATE?.staffList || [])];
+  if (!staffMembers.some(s => s.id === 'admin' || s.name === 'Super Admin')) {
+    staffMembers.push({ id: 'admin', name: 'Super Admin', role: 'Admin Manager' });
+  }
+
+  staffMembers.forEach(staff => {
+    const sOrders = orders.filter(o => {
+      const matchId = o.staffId && (o.staffId === staff.id || o.staff_id === staff.id);
+      const matchName = (o.staffName && o.staffName.toLowerCase().includes(staff.name.toLowerCase())) ||
+                        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase()));
+      return matchId || matchName;
+    });
+    const count = sOrders.length;
+    const rev = sOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal || o.grand_total) || 0), 0);
+    const p = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
+    const pk = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
+    const sh = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+    const del = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
+    const share = orders.length > 0 ? Math.round((count / orders.length) * 100) : 0;
+
+    csvContent += `"${staff.name}","${staff.role || 'Sales Specialist'}",${count},${rev.toFixed(2)},${p},${pk},${sh},${del},${share}%\r\n`;
+  });
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `GRM_Order_Dashboard_Report_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('Report Downloaded', 'Executive order dashboard report saved.', 'download', 'emerald');
+}
+window.downloadOrdersDashboardReport = downloadOrdersDashboardReport;
+window.downloadStaffOrdersReport = downloadOrdersDashboardReport;
+
+function downloadOrdersHistoryCSV() {
+  const orders = CRM_STATE?.orders || [];
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "Order ID,Booking Date,Customer Name,Phone,Shipping Address,Handling Staff,Ordered Items,Total Amount (INR),Payment Method,Payment Status,Transaction UTR,Order Status\r\n";
+
+  orders.forEach(o => {
+    const itemsStr = (o.items || []).map(i => `${i.name} (x${i.qty || 1}) [${i.sku || ''}]`).join('; ');
+    const staff = o.staffName || o.staff_name || o.createdBy || o.created_by || 'Super Admin';
+    csvContent += `"${o.id}","${o.createdAt || ''}","${o.customerName || ''}","${o.customerPhone || ''}","${(o.shippingAddress || '').replace(/"/g, '""')}","${staff}","${itemsStr.replace(/"/g, '""')}",${parseFloat(o.grandTotal || o.grand_total || 0).toFixed(2)},"${o.paymentMethod || 'COD'}","${o.paymentStatus || ''}","${o.upiTransactionId || ''}","${normalizeOrderStatus(o.orderStatus || o.order_status)}"\r\n`;
+  });
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `GRM_Orders_History_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('Order History Exported', `${orders.length} orders downloaded as CSV.`, 'download', 'emerald');
+}
+window.downloadOrdersHistoryCSV = downloadOrdersHistoryCSV;
+
+function openOrderInvoiceModal(orderId) {
+  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  if (!ord) return;
+
+  const content = document.getElementById('invoice-printable-content');
+  if (!content) return;
+
+  const grandTotal = parseFloat(ord.grandTotal || ord.grand_total || 0);
+  const staff = ord.staffName || ord.staff_name || ord.createdBy || 'Super Admin';
+  const normStatus = normalizeOrderStatus(ord.orderStatus || ord.order_status);
+
+  content.innerHTML = `
+    <div class="border border-slate-200 rounded-2xl p-6 bg-white space-y-6 shadow-sm">
+      <!-- Invoice Header -->
+      <div class="flex items-start justify-between border-b border-slate-200 pb-5 flex-wrap gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-sm">GRM</span>
+            <span class="font-black text-lg text-slate-900 tracking-tight">GRM Garments</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Wholesale &amp; Retail Garment Business Hub</p>
+          <p class="text-[11px] text-slate-500">GSTIN: 33AAAAA0000A1Z5 • Blue Berry Brand</p>
+        </div>
+        <div class="text-right">
+          <span class="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">TAX INVOICE</span>
+          <div class="font-mono font-bold text-sm text-slate-900 mt-1.5">${ord.id}</div>
+          <div class="text-[11px] text-slate-500">${ord.createdAt || 'Recent'}</div>
+        </div>
+      </div>
+
+      <!-- Customer & Staff Info Grid -->
+      <div class="grid grid-cols-2 gap-4 text-xs">
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Bill &amp; Ship To</span>
+          <p class="font-bold text-slate-900 text-sm">${ord.customerName}</p>
+          <p class="font-mono text-slate-600">${ord.customerPhone || ''}</p>
+          <p class="text-slate-600 mt-1">${ord.shippingAddress || 'Store Pickup / Direct WhatsApp'}</p>
+        </div>
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Order &amp; Payment Meta</span>
+          <p class="font-bold text-slate-900">Handled by: <span class="text-emerald-700">${staff}</span></p>
+          <p class="text-slate-600">Payment: <strong class="text-slate-800">${ord.paymentMethod || 'COD'}</strong> (${ord.paymentStatus || 'Verified'})</p>
+          ${ord.upiTransactionId ? `<p class="font-mono text-[11px] text-slate-500">UTR: ${ord.upiTransactionId}</p>` : ''}
+          <p class="text-slate-600">Status: <strong class="text-blue-700 font-bold">${normStatus}</strong></p>
+        </div>
+      </div>
+
+      <!-- Items Table -->
+      <div class="border border-slate-200 rounded-xl overflow-hidden">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 text-slate-600 font-bold uppercase text-[10px]">
+            <tr>
+              <th class="py-2.5 px-3">Item Description</th>
+              <th class="py-2.5 px-3">SKU</th>
+              <th class="py-2.5 px-3">Size</th>
+              <th class="py-2.5 px-3 text-center">Qty</th>
+              <th class="py-2.5 px-3 text-right">Unit Price</th>
+              <th class="py-2.5 px-3 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${(ord.items || []).map(it => `
+              <tr>
+                <td class="py-2.5 px-3 font-bold text-slate-800">${it.name}</td>
+                <td class="py-2.5 px-3 font-mono text-[11px] text-slate-500">${it.sku || 'N/A'}</td>
+                <td class="py-2.5 px-3 text-slate-600">${it.size || 'Standard'}</td>
+                <td class="py-2.5 px-3 text-center font-bold">${it.qty || 1}</td>
+                <td class="py-2.5 px-3 text-right font-mono">₹${parseFloat(it.price || 0).toLocaleString('en-IN')}</td>
+                <td class="py-2.5 px-3 text-right font-mono font-bold">₹${((it.price || 0) * (it.qty || 1)).toLocaleString('en-IN')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot class="bg-slate-50 font-bold border-t border-slate-200">
+            <tr>
+              <td colspan="5" class="py-2.5 px-3 text-right uppercase text-[11px] text-slate-600">Grand Total:</td>
+              <td class="py-2.5 px-3 text-right font-mono text-emerald-800 text-sm">₹${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Footer Note -->
+      <div class="border-t border-slate-100 pt-4 flex items-center justify-between text-[11px] text-slate-400">
+        <span>Thank you for choosing GRM Garments! For inquiries, message WhatsApp.</span>
+        <span>Authorized Signature: <strong class="text-slate-600">${staff}</strong></span>
+      </div>
+    </div>
+  `;
+
+  openModal('modal-order-invoice');
+}
+window.openOrderInvoiceModal = openOrderInvoiceModal;
+
+function printOrderInvoice() {
+  const printable = document.getElementById('invoice-printable-content');
+  if (!printable) return;
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Invoice - GRM Garments</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+      </head>
+      <body class="p-8 bg-white font-sans text-slate-800">
+        ${printable.innerHTML}
+        <script>
+          window.onload = function() { window.print(); window.close(); }
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+window.printOrderInvoice = printOrderInvoice;
+
+function refreshOrdersFromDB() {
+  fetch('api.php?action=get_all')
+    .then(r => r.json())
+    .then(res => {
+      const data = res.data || res;
+      if (data && data.orders && Array.isArray(data.orders)) {
+        CRM_STATE.orders = data.orders.map(o => ({
+          id: o.id,
+          queryId: o.queryId || o.query_id || 'N/A',
+          customerId: o.customerId || o.customer_id || '',
+          customerName: o.customerName || o.customer_name || 'Customer',
+          customerPhone: o.customerPhone || o.customer_phone || '',
+          shippingAddress: o.shippingAddress || o.shipping_address || '',
+          items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? JSON.parse(o.items_json) : []),
+          grandTotal: parseFloat(o.grandTotal || o.grand_total || 0),
+          codAdvance: parseFloat(o.codAdvance || o.cod_advance || 0),
+          codBalanceDue: parseFloat(o.codBalanceDue || o.cod_balance_due || 0),
+          paymentMethod: o.paymentMethod || o.payment_method || 'COD',
+          paymentStatus: o.paymentStatus || o.payment_status || 'PENDING',
+          upiTransactionId: o.upiTransactionId || o.upi_transaction_id || '',
+          paymentScreenshot: o.paymentScreenshot || o.payment_screenshot || '',
+          orderStatus: (o.orderStatus || o.order_status || 'PLACED').toUpperCase(),
+          staffId: o.staffId || o.staff_id || '',
+          staffName: o.staffName || o.staff_name || o.createdBy || o.created_by || 'Super Admin',
+          createdBy: o.createdBy || o.created_by || o.staffName || 'Staff',
+          trackingNumber: o.trackingNumber || o.tracking_number || '',
+          courierName: o.courierName || o.courier_name || '',
+          createdAt: o.createdAt || o.created_at || ''
+        }));
+        saveCRMState();
+        renderOrdersModule();
+        showToast('Orders Synced', `${CRM_STATE.orders.length} orders updated from database.`, 'sync', 'emerald');
+      }
+    })
+    .catch(() => {
+      showToast('Offline Mode', 'Displaying saved local orders.', 'info', 'blue');
+    });
+}
+window.refreshOrdersFromDB = refreshOrdersFromDB;
 
 function renderFollowupsCards() {
   if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();

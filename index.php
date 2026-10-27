@@ -401,6 +401,15 @@ if ($pdo) {
         </div>
       </button>
 
+      <!-- DND / OPT-OUT CUSTOMERS MODULE -->
+      <button onclick="switchView('dnd')" id="nav-dnd" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">do_not_disturb_on</span>
+          <span>DND / Opt-Out List</span>
+        </div>
+        <span id="badge-dnd-count" class="bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+      </button>
+
       <!-- Admin-Only Navigation Modules -->
       <div class="admin-only-nav <?php echo $isAdmin ? '' : 'hidden'; ?>">
         <div class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Settings & Admin</div>
