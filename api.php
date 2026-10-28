@@ -606,11 +606,58 @@ if ($action === 'save_autoreply_rules' && $_SERVER['REQUEST_METHOD'] === 'POST')
     $postData = json_decode($input, true) ?: [];
     $rules = $postData['rules'] ?? [];
 
+    // 1. Persist to MySQL auto_reply_rules table
+    if ($pdo && is_array($rules)) {
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO `auto_reply_rules` (`id`, `name`, `keywords`, `action_type`, `category_id`, `reply_text`, `enabled`, `auto_send`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                    `name` = VALUES(`name`),
+                    `keywords` = VALUES(`keywords`),
+                    `action_type` = VALUES(`action_type`),
+                    `category_id` = VALUES(`category_id`),
+                    `reply_text` = VALUES(`reply_text`),
+                    `enabled` = VALUES(`enabled`),
+                    `auto_send` = VALUES(`auto_send`)
+            ");
+
+            $activeIds = [];
+            foreach ($rules as $r) {
+                if (empty($r['id'])) continue;
+                $activeIds[] = $r['id'];
+                $keywordsJson = is_array($r['keywords'] ?? null) 
+                    ? json_encode($r['keywords'], JSON_UNESCAPED_UNICODE) 
+                    : json_encode([$r['keywords'] ?? '']);
+                $stmt->execute([
+                    $r['id'],
+                    $r['name'] ?? 'Pre-set Rule',
+                    $keywordsJson,
+                    $r['actionType'] ?? ($r['action_type'] ?? 'custom_text'),
+                    $r['categoryId'] ?? ($r['category_id'] ?? null),
+                    $r['replyText'] ?? ($r['reply_text'] ?? ''),
+                    isset($r['enabled']) ? ($r['enabled'] ? 1 : 0) : 1,
+                    isset($r['autoSend']) ? ($r['autoSend'] ? 1 : 0) : 1
+                ]);
+            }
+
+            // Remove any rules from MySQL that were deleted in the UI
+            if (!empty($activeIds)) {
+                $inClause = implode(',', array_fill(0, count($activeIds), '?'));
+                $delStmt = $pdo->prepare("DELETE FROM `auto_reply_rules` WHERE `id` NOT IN ($inClause)");
+                $delStmt->execute($activeIds);
+            }
+        } catch (Exception $e) {
+            error_log("Error saving auto_reply_rules to MySQL: " . $e->getMessage());
+        }
+    }
+
+    // 2. Persist to config JSON file
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
     $currentConfig['autoReplyRules'] = $rules;
     atomicWriteJson($configFile, $currentConfig);
 
-    // Propagate to live Node Bridge
+    // 3. Propagate to live Node Bridge
     try {
         $ch = curl_init($bridgeUrl . '/api/autoreply/rules');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -624,7 +671,8 @@ if ($action === 'save_autoreply_rules' && $_SERVER['REQUEST_METHOD'] === 'POST')
 
     echo json_encode([
         "status" => "success",
-        "message" => "Auto-reply rules updated successfully",
+        "source" => "MYSQL_AND_CONFIG",
+        "message" => "Auto-reply rules updated successfully in MySQL and Bridge",
         "rules" => $rules
     ]);
     exit;
