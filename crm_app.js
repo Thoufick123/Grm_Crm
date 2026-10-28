@@ -3278,9 +3278,9 @@ function toggleRightPanel(forceState = null, isUserAction = false) {
       panel.style.display = '';
       panel.classList.remove('hidden');
       panel.classList.add('flex');
-      const savedWidth = localStorage.getItem('GRM_INBOX_RIGHT_WIDTH') || '350';
-      panel.style.width = savedWidth + 'px';
-      panel.style.minWidth = savedWidth + 'px';
+      const savedWidth = localStorage.getItem('GRM_INBOX_RIGHT_WIDTH') || '320';
+      panel.style.width = Math.min(340, parseInt(savedWidth)) + 'px';
+      panel.style.minWidth = Math.min(340, parseInt(savedWidth)) + 'px';
       if (resizer) resizer.style.display = '';
     } else {
       panel.style.display = 'none';
@@ -3334,13 +3334,15 @@ function initPanelResizers() {
   try {
     const savedLeftWidth = localStorage.getItem('GRM_INBOX_LEFT_WIDTH');
     if (savedLeftWidth && leftPanel && parseInt(savedLeftWidth) > 160) {
-      leftPanel.style.width = savedLeftWidth + 'px';
-      leftPanel.style.minWidth = savedLeftWidth + 'px';
+      const lW = Math.min(320, parseInt(savedLeftWidth));
+      leftPanel.style.width = lW + 'px';
+      leftPanel.style.minWidth = lW + 'px';
     }
     const savedRightWidth = localStorage.getItem('GRM_INBOX_RIGHT_WIDTH');
     if (savedRightWidth && rightPanel && parseInt(savedRightWidth) > 200) {
-      rightPanel.style.width = savedRightWidth + 'px';
-      rightPanel.style.minWidth = savedRightWidth + 'px';
+      const rW = Math.min(340, parseInt(savedRightWidth));
+      rightPanel.style.width = rW + 'px';
+      rightPanel.style.minWidth = rW + 'px';
     }
     const savedSidebarWidth = localStorage.getItem('GRM_APP_SIDEBAR_WIDTH');
     if (savedSidebarWidth && appSidebar && parseInt(savedSidebarWidth) > 160) {
@@ -3578,10 +3580,10 @@ function renderChatHeader() {
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-1.5 min-w-0">
           <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate" title="${customer.name}">${customer.name}</h3>
-          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0 hidden sm:inline-block">${customer.customerType}</span>
+          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0 hidden md:inline-block">${customer.customerType || 'Customer'}</span>
         </div>
-        <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium truncate mt-0.5">
-          <span class="font-mono text-emerald-700 font-bold truncate">${displayPhone}</span>
+        <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5">
+          <span class="font-mono text-emerald-700 font-bold text-[11px] whitespace-nowrap">${displayPhone}</span>
         </div>
       </div>
     </div>
@@ -3589,24 +3591,24 @@ function renderChatHeader() {
     <!-- Actions & Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
       ${isUnassigned ? `
-        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2 sm:px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 animate-pulse shrink-0" title="Assign Staff Member">
+        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2 sm:px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="Assign Staff Member">
           <span class="material-symbols-outlined text-[15px]">person_add</span>
-          <span class="hidden lg:inline">Assign</span>
+          <span class="hidden sm:inline">Assign</span>
         </button>
       ` : `
-        <div class="hidden xl:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0">
-          <span class="text-slate-500 hidden 2xl:inline">Handled by:</span>
-          <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : 'Assigned'}</span>
+        <div class="hidden lg:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0" title="Assigned staff: ${staff ? staff.name : 'Assigned'}">
+          <span class="text-slate-500 hidden xl:inline">Staff:</span>
+          <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : 'Staff'}</span>
           ${ACTIVE_ROLE === 'admin' ? `
-            <button onclick="openStaffAssignModal('${query ? query.id : ''}')" class="text-brand-wa hover:underline font-bold text-[11px] ml-1">Reassign</button>
+            <button onclick="openStaffAssignModal('${query ? query.id : ''}')" class="text-brand-wa hover:underline font-bold text-[10px] ml-0.5 cursor-pointer">Reassign</button>
           ` : ''}
         </div>
       `}
       
       <!-- BRAND-MASKED WHATSAPP CALL BUTTON -->
-      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] shrink-0" title="Call customer via Brand Masked Line (Customer receives call as: ${getBrandName()})">
+      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="Call customer via Brand Masked Line">
         <span class="material-symbols-outlined text-[15px]">call</span>
-        <span class="hidden 2xl:inline">Brand Call</span>
+        <span class="hidden xl:inline">Call</span>
       </button>
 
       <a href="https://wa.me/${(customer.phone || '').replace(/[^0-9]/g, '')}" target="_blank" class="p-1.5 text-slate-600 hover:text-brand-wa hover:bg-emerald-50 rounded-lg transition shrink-0" title="Open Native WhatsApp Web">
@@ -3614,9 +3616,9 @@ function renderChatHeader() {
       </a>
 
       <!-- Slide Hide / Show Toggle Button for Customer Profile Panel -->
-      <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel(null, true)" class="px-2 sm:px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition shrink-0" title="Slide Hide / Show Customer Profile Panel">
+      <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel(null, true)" class="px-2 sm:px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition shrink-0 cursor-pointer" title="${IS_RIGHT_PANEL_OPEN ? 'Hide Customer Profile' : 'Show Customer Profile'}">
         <span class="material-symbols-outlined text-[16px]">${IS_RIGHT_PANEL_OPEN ? 'dock_to_right' : 'dock_to_left'}</span>
-        <span class="hidden xl:inline">${IS_RIGHT_PANEL_OPEN ? 'Hide Profile' : 'Profile'}</span>
+        <span class="hidden sm:inline">${IS_RIGHT_PANEL_OPEN ? 'Hide Profile' : 'Profile'}</span>
       </button>
     </div>
   `;
