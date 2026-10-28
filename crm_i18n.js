@@ -6,14 +6,19 @@
 (function () {
   'use strict';
 
-  // 1. Language Definitions with Country Flags
+  // 1. Cross-Platform SVG Country Flags (Guaranteed to render on Windows, Mac, Linux, iOS & Android)
+  const FLAG_SVGS = {
+    in: `<svg class="w-5 h-3.5 rounded-[2px] shadow-2xs inline-block align-middle shrink-0 border border-slate-300" viewBox="0 0 900 600" aria-label="India Flag"><rect width="900" height="200" fill="#FF9933"/><rect y="200" width="900" height="200" fill="#FFFFFF"/><rect y="400" width="900" height="200" fill="#128807"/><g transform="translate(450, 300)"><circle r="60" fill="none" stroke="#000088" stroke-width="8"/><circle r="12" fill="#000088"/><line x1="0" y1="-60" x2="0" y2="60" stroke="#000088" stroke-width="2.5"/><line x1="-15.5" y1="-58" x2="15.5" y2="58" stroke="#000088" stroke-width="2.5"/><line x1="-30" y1="-52" x2="30" y2="52" stroke="#000088" stroke-width="2.5"/><line x1="-42.4" y1="-42.4" x2="42.4" y2="42.4" stroke="#000088" stroke-width="2.5"/><line x1="-52" y1="-30" x2="52" y2="30" stroke="#000088" stroke-width="2.5"/><line x1="-58" y1="-15.5" x2="58" y2="15.5" stroke="#000088" stroke-width="2.5"/><line x1="-60" y1="0" x2="60" y2="0" stroke="#000088" stroke-width="2.5"/><line x1="-58" y1="15.5" x2="58" y2="-15.5" stroke="#000088" stroke-width="2.5"/><line x1="-52" y1="30" x2="52" y2="-30" stroke="#000088" stroke-width="2.5"/><line x1="-42.4" y1="42.4" x2="42.4" y2="-42.4" stroke="#000088" stroke-width="2.5"/><line x1="-30" y1="52" x2="30" y2="-52" stroke="#000088" stroke-width="2.5"/><line x1="-15.5" y1="58" x2="15.5" y2="-58" stroke="#000088" stroke-width="2.5"/></g></svg>`,
+    gb: `<svg class="w-5 h-3.5 rounded-[2px] shadow-2xs inline-block align-middle shrink-0 border border-slate-300" viewBox="0 0 60 30" aria-label="UK Flag"><clipPath id="uk-flag-clip"><rect width="60" height="30"/></clipPath><g clip-path="url(#uk-flag-clip)"><rect width="60" height="30" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L30,15 M60,30 L30,15 M60,0 L30,15 M0,30 L30,15" stroke="#C8102E" stroke-width="2"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>`
+  };
+
   const LANGUAGES = [
-    { code: 'en', flag: '🇬🇧', label: 'English', native: 'English' },
-    { code: 'ta', flag: '🇮🇳', label: 'Tamil', native: 'தமிழ்' },
-    { code: 'hi', flag: '🇮🇳', label: 'Hindi', native: 'हिन्दी' },
-    { code: 'te', flag: '🇮🇳', label: 'Telugu', native: 'తెలుగు' },
-    { code: 'ml', flag: '🇮🇳', label: 'Malayalam', native: 'മലയാളം' },
-    { code: 'kn', flag: '🇮🇳', label: 'Kannada', native: 'ಕನ್ನಡ' }
+    { code: 'en', flag: '🇬🇧', flagSvg: FLAG_SVGS.gb, label: 'English', native: 'English' },
+    { code: 'ta', flag: '🇮🇳', flagSvg: FLAG_SVGS.in, label: 'Tamil', native: 'தமிழ்' },
+    { code: 'hi', flag: '🇮🇳', flagSvg: FLAG_SVGS.in, label: 'Hindi', native: 'हिन्दी' },
+    { code: 'te', flag: '🇮🇳', flagSvg: FLAG_SVGS.in, label: 'Telugu', native: 'తెలుగు' },
+    { code: 'ml', flag: '🇮🇳', flagSvg: FLAG_SVGS.in, label: 'Malayalam', native: 'മലയാളം' },
+    { code: 'kn', flag: '🇮🇳', flagSvg: FLAG_SVGS.in, label: 'Kannada', native: 'ಕನ್ನಡ' }
   ];
 
   // 2. Comprehensive Multi-Language Translation Dictionaries
@@ -1235,7 +1240,7 @@
     const flagEl = document.getElementById('header-current-lang-flag');
     const nameEl = document.getElementById('header-current-lang-name');
     const cur = getCurrentLanguage();
-    if (flagEl) flagEl.textContent = cur.flag;
+    if (flagEl) flagEl.innerHTML = cur.flagSvg || cur.flag;
     if (nameEl) nameEl.textContent = cur.native;
 
     // Update active highlight in dropdown
@@ -1244,14 +1249,14 @@
       listContainer.innerHTML = LANGUAGES.map(lang => {
         const isActive = lang.code === currentLang;
         return `
-          <button type="button" onclick="window.applyAppLanguage('${lang.code}')"
+          <button type="button" onclick="window.applyAppLanguage('${lang.code}')" id="lang-opt-${lang.code}"
             class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
               isActive
                 ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200 shadow-2xs'
                 : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
             }">
             <div class="flex items-center gap-2">
-              <span class="text-base">${lang.flag}</span>
+              <span class="inline-flex items-center shrink-0">${lang.flagSvg || lang.flag}</span>
               <span class="font-bold">${lang.native}</span>
               <span class="text-[10px] text-slate-400 font-normal">(${lang.label})</span>
             </div>
