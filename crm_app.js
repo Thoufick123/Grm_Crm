@@ -4838,7 +4838,7 @@ function handleQueryStatusSelectChange(selectedStatus, queryId, customerId) {
   } else {
     if (container) container.classList.add('hidden');
     if (payContainer) payContainer.classList.add('hidden');
-    if (cbEditRow) cbEditRow.classList.add('hidden');
+    if (cbEditRow) cbEditRow.classList.remove('hidden');
   }
 }
 function handlePayModeChange(val) {
@@ -4919,6 +4919,12 @@ function handleSaveQueryStatus(queryId) {
     }
   }, 60);
 }
+
+function handleCancelQueryEdit(queryId) {
+  renderCustomer360Panel();
+  showToast('Reset', 'Status and remarks reset to saved values', 'undo', 'slate');
+}
+window.handleCancelQueryEdit = handleCancelQueryEdit;
 
 // Save Customer Details from Right-Side Panel Form
 function handleQuickCustomerSave(event, customerId) {
@@ -5334,7 +5340,7 @@ function renderCustomer360Panel() {
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
   const isEditing = CUSTOMER_EDIT_MODES.has(customer.id);
-  const isQueryEditing = query ? QUERY_EDIT_MODES.has(query.id) : false;
+  const isQueryEditing = true;
 
   // Status Badge Formatting
   const qStatus = query ? (query.status || 'NEW') : (customer.isDND ? 'DND' : 'NONE');
@@ -5503,12 +5509,6 @@ function renderCustomer360Panel() {
         </div>
         <div class="flex items-center gap-1.5">
           ${statusBadgeHtml}
-          ${(!isQueryEditing && query) ? `
-            <button type="button" onclick="toggleQueryEditMode('${query.id}', true)" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Edit Enquiry">
-              <span class="material-symbols-outlined text-[12px]">edit_note</span>
-              <span>Edit</span>
-            </button>
-          ` : ''}
         </div>
       </div>
 
@@ -5521,14 +5521,10 @@ function renderCustomer360Panel() {
             <div>
               <div class="flex items-center justify-between mb-1.5 h-4">
                 <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide truncate">Change Status:</label>
-                ${isQueryEditing ? `
-                  <span class="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded animate-pulse shrink-0">Editing</span>
-                ` : `
-                  <span class="text-[9px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded shrink-0">Locked</span>
-                `}
+                <span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-1.5 py-0.2 rounded shrink-0">Editable</span>
               </div>
               <div class="relative">
-                <select id="query-status-select" ${isQueryEditing ? '' : 'disabled'} onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full h-[42px] ${isQueryEditing ? 'bg-white border-brand-wa ring-1 ring-brand-wa text-slate-900 cursor-pointer shadow-xs' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none opacity-90'} border rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
+                <select id="query-status-select" onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full h-[42px] bg-white border border-slate-300 hover:border-brand-wa ring-0 focus:ring-1 focus:ring-brand-wa text-slate-900 cursor-pointer shadow-2xs rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
                   <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 New Lead</option>
                   <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 Pending Action</option>
                   <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 Follow Up</option>
@@ -5541,15 +5537,13 @@ function renderCustomer360Panel() {
               </div>
             </div>
 
-            <!-- COLUMN 2: CALLBACK DATE -->
+            <!-- COLUMN 2: CALLBACK DATE (ALL TIME EDITABLE WITH DATE PICKER & PRESETS) -->
             ${(() => {
               const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
               const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
-              const hasCallback = Boolean(customerFollowup) || (histItem && histItem.followupDate) || (qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS');
 
-              return isQueryEditing ? `
-                <!-- Editable Callback Date Column -->
-                <div id="query-callback-edit-row" class="${(qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS' || Boolean(customerFollowup)) ? '' : 'hidden'}">
+              return `
+                <div id="query-callback-edit-row">
                   <div class="flex items-center justify-between mb-1.5 h-4">
                     <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1 truncate">
                       <span class="material-symbols-outlined text-[13px] text-blue-600 shrink-0">calendar_month</span>
@@ -5561,27 +5555,7 @@ function renderCustomer360Panel() {
                       <button type="button" onclick="setQueryQuickDate(2)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2D</button>
                     </div>
                   </div>
-                  <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full h-[42px] bg-white border border-blue-300 rounded-xl px-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
-                </div>
-              ` : `
-                <!-- Locked Display for Active Callback Date Column -->
-                <div>
-                  <div class="flex items-center justify-between mb-1.5 h-4">
-                    <span class="font-bold text-slate-700 uppercase text-[10px] tracking-wide flex items-center gap-1 truncate">
-                      <span class="material-symbols-outlined text-[13px] text-blue-600 shrink-0">calendar_month</span>
-                      <span class="truncate">Callback Date:</span>
-                    </span>
-                    <span class="text-[9px] ${hasCallback ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-500'} font-bold px-1.5 py-0.2 rounded shrink-0">${hasCallback ? 'Active' : 'None'}</span>
-                  </div>
-                  <div class="h-[42px] px-2.5 rounded-xl ${hasCallback ? 'bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-200' : 'bg-slate-100 border border-slate-200'} flex items-center justify-between text-xs">
-                    <span class="${hasCallback ? 'text-blue-900' : 'text-slate-400'} font-bold flex items-center gap-1 text-[11px] truncate">
-                      <span class="material-symbols-outlined text-[15px] ${hasCallback ? 'text-blue-600' : 'text-slate-400'}">event</span>
-                      <span class="truncate">${hasCallback ? 'Date:' : 'No callback'}</span>
-                    </span>
-                    <span class="font-mono font-black ${hasCallback ? 'text-blue-950 bg-white border border-blue-200 shadow-2xs' : 'text-slate-400 bg-white/70 border border-slate-200'} px-2 py-0.5 rounded-lg text-xs shrink-0">
-                      ${hasCallback ? cbDateVal : '—'}
-                    </span>
-                  </div>
+                  <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full h-[42px] bg-white border border-blue-300 rounded-xl px-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600 cursor-pointer">
                 </div>
               `;
             })()}
@@ -5865,24 +5839,18 @@ function renderCustomer360Panel() {
             `;
           })()}
 
-          <!-- Action Buttons: Locked (Edit Button) vs Editing (Cancel & Save) - Placed Directly Below Enquiry Fields -->
+          <!-- Action Buttons: Cancel & Save Status (Always Directly Available) -->
           <div class="pt-1">
-            ${isQueryEditing ? `
-              <div class="flex gap-2">
-                <button type="button" onclick="toggleQueryEditMode('${query.id}', false)" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer">
-                  Cancel
-                </button>
-                <button type="button" onclick="handleSaveQueryStatus('${query.id}')" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer">
-                  <span class="material-symbols-outlined text-[16px]">save</span>
-                  <span>Save Status Change</span>
-                </button>
-              </div>
-            ` : `
-              <button type="button" onclick="toggleQueryEditMode('${query.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer">
-                <span class="material-symbols-outlined text-[16px]">edit_note</span>
-                <span>Edit Enquiry Status</span>
+            <div class="flex gap-2">
+              <button type="button" onclick="handleCancelQueryEdit('${query.id}')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-2xs">
+                <span class="material-symbols-outlined text-[15px]">close</span>
+                <span>Cancel</span>
               </button>
-            `}
+              <button type="button" onclick="handleSaveQueryStatus('${query.id}')" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">save</span>
+                <span>Save Status &amp; Log History</span>
+              </button>
+            </div>
           </div>
 
           <!-- Dynamic Status History Audit Engine (First 3 static, 4th and above auto-scroll) - Shown BELOW Enquiry Form & Actions -->
@@ -22478,10 +22446,6 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 // =========================================================================
 function setQuickStatusNote(noteText, suggestedStatus) {
   const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  if (query && !QUERY_EDIT_MODES.has(query.id)) {
-    showToast('Enquiry Locked', 'Touch "Edit Enquiry Status" below before applying quick notes', 'lock', 'amber');
-    return;
-  }
   setTimeout(() => {
     const input = document.getElementById('query-status-notes-input');
     if (input) {
@@ -22518,11 +22482,6 @@ function getCustomQuickNotes() {
 window.getCustomQuickNotes = getCustomQuickNotes;
 
 function showInlineAddQuickNote() {
-  const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  if (query && !QUERY_EDIT_MODES.has(query.id)) {
-    showToast('Edit Mode Required', 'Please touch "Edit Enquiry Status" below before adding quick notes', 'lock', 'amber');
-    return;
-  }
   const btn = document.getElementById('btn-show-add-quick-note');
   const box = document.getElementById('inline-add-quick-note-box');
   const input = document.getElementById('inline-quick-note-text');
@@ -22552,12 +22511,6 @@ function hideInlineAddQuickNote() {
 window.hideInlineAddQuickNote = hideInlineAddQuickNote;
 
 function saveCustomQuickNote() {
-  const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  if (query && !QUERY_EDIT_MODES.has(query.id)) {
-    showToast('Edit Mode Required', 'Please touch "Edit Enquiry Status" below before saving quick notes', 'lock', 'amber');
-    return;
-  }
-
   const input = document.getElementById('inline-quick-note-text');
   const text = (input?.value || '').trim();
   if (!text) {
@@ -22594,12 +22547,6 @@ function saveCustomQuickNote() {
 window.saveCustomQuickNote = saveCustomQuickNote;
 
 function deleteCustomQuickNote(noteId) {
-  const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  if (query && !QUERY_EDIT_MODES.has(query.id)) {
-    showToast('Edit Mode Required', 'Please touch "Edit Enquiry Status" below before deleting quick notes', 'lock', 'amber');
-    return;
-  }
-
   let list = getCustomQuickNotes();
   list = list.filter(n => {
     if (typeof n === 'string') return n !== noteId;
@@ -22616,7 +22563,7 @@ function renderQuickNotesList() {
   if (!container) return;
 
   const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  const isQueryEditing = query ? QUERY_EDIT_MODES.has(query.id) : false;
+  const isQueryEditing = true;
 
   const defaults = [
     { text: 'Order Complete', status: 'CONVERTED', icon: '📦', color: 'emerald' },
