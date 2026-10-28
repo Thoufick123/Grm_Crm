@@ -183,6 +183,11 @@ function initializeDatabaseSchema($pdo) {
             `total_orders` INT DEFAULT 0,
             `total_spend` DECIMAL(10,2) DEFAULT 0.00,
             `avatar` VARCHAR(10) NULL,
+            `is_dnd` TINYINT(1) DEFAULT 0,
+            `dnd_reason` TEXT NULL,
+            `dnd_notes` TEXT NULL,
+            `dnd_marked_by` VARCHAR(100) NULL,
+            `dnd_timestamp` VARCHAR(50) NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
@@ -193,7 +198,7 @@ function initializeDatabaseSchema($pdo) {
             `id` VARCHAR(50) PRIMARY KEY,
             `customer_id` VARCHAR(50) NOT NULL,
             `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED',
-            `status` ENUM('NEW', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED') DEFAULT 'NEW',
+            `status` VARCHAR(50) DEFAULT 'NEW',
             `priority` ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT') DEFAULT 'NORMAL',
             `query_text` TEXT NULL,
             `product_sku` VARCHAR(50) NULL,
@@ -233,6 +238,7 @@ function initializeDatabaseSchema($pdo) {
             `size` VARCHAR(50) NOT NULL,
             `color` VARCHAR(50) NOT NULL,
             `fabric` VARCHAR(100) NULL,
+            `specifications` TEXT NULL,
             `price` DECIMAL(10,2) NOT NULL,
             `mrp` DECIMAL(10,2) NULL,
             `physical_stock` INT DEFAULT 0,
@@ -253,8 +259,8 @@ function initializeDatabaseSchema($pdo) {
             'fabric'         => "ALTER TABLE `products` ADD COLUMN `fabric` VARCHAR(100) NULL AFTER `color`",
             'mrp'            => "ALTER TABLE `products` ADD COLUMN `mrp` DECIMAL(10,2) NULL AFTER `price`",
             'description'    => "ALTER TABLE `products` ADD COLUMN `description` TEXT NULL AFTER `image`",
-            'custom_caption' => "ALTER TABLE `products` ADD COLUMN `custom_caption` TEXT NULL AFTER `description`",
             'specifications' => "ALTER TABLE `products` ADD COLUMN `specifications` TEXT NULL AFTER `fabric`",
+            'custom_caption' => "ALTER TABLE `products` ADD COLUMN `custom_caption` TEXT NULL AFTER `description`",
             'account_id'     => "ALTER TABLE `products` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1' AFTER `custom_caption`"
         ];
         foreach ($colDefs as $cName => $sql) {
@@ -451,6 +457,27 @@ function initializeDatabaseSchema($pdo) {
                 $pdo->exec($sql);
             }
         }
+
+        // Ensure orders table has rich ecommerce and staff assignment columns
+        $existingOrderCols = $pdo->query("SHOW COLUMNS FROM `orders`")->fetchAll(PDO::FETCH_COLUMN);
+        $orderColDefs = [
+            'customer_phone'     => "ALTER TABLE `orders` ADD COLUMN `customer_phone` VARCHAR(30) NULL AFTER `customer_name`",
+            'shipping_address'   => "ALTER TABLE `orders` ADD COLUMN `shipping_address` TEXT NULL AFTER `customer_phone`",
+            'staff_id'           => "ALTER TABLE `orders` ADD COLUMN `staff_id` VARCHAR(50) NULL AFTER `created_by`",
+            'staff_name'         => "ALTER TABLE `orders` ADD COLUMN `staff_name` VARCHAR(100) NULL AFTER `staff_id`",
+            'upi_transaction_id' => "ALTER TABLE `orders` ADD COLUMN `upi_transaction_id` VARCHAR(100) NULL AFTER `payment_status`",
+            'payment_screenshot' => "ALTER TABLE `orders` ADD COLUMN `payment_screenshot` LONGTEXT NULL AFTER `upi_transaction_id`",
+            'cod_advance'        => "ALTER TABLE `orders` ADD COLUMN `cod_advance` DECIMAL(10,2) DEFAULT 0.00 AFTER `grand_total`",
+            'cod_balance_due'    => "ALTER TABLE `orders` ADD COLUMN `cod_balance_due` DECIMAL(10,2) DEFAULT 0.00 AFTER `cod_advance`",
+            'tracking_number'    => "ALTER TABLE `orders` ADD COLUMN `tracking_number` VARCHAR(100) NULL AFTER `order_status`",
+            'courier_name'       => "ALTER TABLE `orders` ADD COLUMN `courier_name` VARCHAR(100) NULL AFTER `tracking_number`"
+        ];
+        foreach ($orderColDefs as $cName => $sql) {
+            if (!in_array($cName, $existingOrderCols)) {
+                $pdo->exec($sql);
+            }
+        }
+        $pdo->exec("ALTER TABLE `orders` MODIFY COLUMN `order_status` VARCHAR(50) DEFAULT 'PLACED'");
     } catch (Exception $e) {
         error_log("Schema migration note: " . $e->getMessage());
     }
@@ -468,7 +495,57 @@ function initializeDatabaseSchema($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
-    // 10. Populate Default Seeds If Empty
+    // 10. Dedicated DND Management & Suppression List Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `dnd_records` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `customer_id` VARCHAR(50) NOT NULL,
+            `customer_name` VARCHAR(100) NULL,
+            `phone` VARCHAR(30) NULL,
+            `whatsapp` VARCHAR(30) NULL,
+            `query_id` VARCHAR(50) NULL,
+            `reason` TEXT NULL,
+            `notes` TEXT NULL,
+            `marked_by` VARCHAR(100) DEFAULT 'Super Admin',
+            `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED',
+            `status` ENUM('ACTIVE', 'REVOKED') DEFAULT 'ACTIVE',
+            `dnd_timestamp` VARCHAR(50) NULL,
+            `revoked_at` DATETIME NULL,
+            `revoked_by` VARCHAR(100) NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX(`customer_id`),
+            INDEX(`status`),
+            INDEX(`assigned_to`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // Auto-sync existing DND entries into dnd_records if empty
+    try {
+        $pdo->exec("
+            INSERT INTO `dnd_records` (`customer_id`, `customer_name`, `phone`, `whatsapp`, `query_id`, `reason`, `notes`, `marked_by`, `assigned_to`, `status`, `dnd_timestamp`)
+            SELECT 
+                c.`id` AS `customer_id`,
+                c.`name` AS `customer_name`,
+                c.`phone` AS `phone`,
+                c.`whatsapp` AS `whatsapp`,
+                q.`id` AS `query_id`,
+                COALESCE(c.`dnd_reason`, q.`status_notes`, 'Customer not interested in products (Requested DND)') AS `reason`,
+                COALESCE(c.`dnd_notes`, q.`status_notes`, '') AS `notes`,
+                COALESCE(c.`dnd_marked_by`, 'Super Admin') AS `marked_by`,
+                COALESCE(q.`assigned_to`, 'UNASSIGNED') AS `assigned_to`,
+                'ACTIVE' AS `status`,
+                COALESCE(c.`dnd_timestamp`, DATE_FORMAT(NOW(), '%d %b %Y at %h:%i %p')) AS `dnd_timestamp`
+            FROM `customers` c
+            LEFT JOIN `queries` q ON q.`customer_id` = c.`id`
+            WHERE (c.`is_dnd` = 1 OR q.`status` = 'DND')
+              AND NOT EXISTS (SELECT 1 FROM `dnd_records` d WHERE d.`customer_id` = c.`id` AND d.`status` = 'ACTIVE')
+        ");
+    } catch (Exception $e) {
+        error_log("DND records initial sync note: " . $e->getMessage());
+    }
+
+    // 11. Populate Default Seeds If Empty
     seedDefaultDataIfEmpty($pdo);
 }
 
@@ -710,6 +787,83 @@ function seedDefaultDataIfEmpty($pdo) {
 
         foreach ($defaultFollowups as $fu) {
             $stmt->execute($fu);
+        }
+    }
+
+    // Check Orders
+    $oCount = $pdo->query("SELECT COUNT(*) FROM `orders`")->fetchColumn();
+    if ($oCount == 0) {
+        $now = time();
+        $stmt = $pdo->prepare("
+            INSERT INTO `orders` (
+                `id`, `query_id`, `customer_id`, `customer_name`, `customer_phone`, `shipping_address`,
+                `items_json`, `grand_total`, `cod_advance`, `cod_balance_due`, `payment_method`,
+                `payment_status`, `upi_transaction_id`, `order_status`, `staff_id`, `staff_name`,
+                `created_by`, `tracking_number`, `courier_name`, `created_at`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $defaultOrders = [
+            [
+                'WA-2026-001126', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', '+91 98765 43210',
+                'No. 45, 2nd Main Road, Gandhinagar, Adyar, Chennai - 600020',
+                json_encode([
+                    ['name' => 'Embroidered Cotton Baby Frock', 'sku' => 'BF-001-PK', 'size' => '2–3 Years', 'qty' => 2, 'price' => 599.00]
+                ]),
+                1198.00, 0.00, 0.00, 'ONLINE_UPI', 'PAID', 'UPI-982347192837', 'PLACED',
+                'staff_01', 'Priya Sharma', 'Priya Sharma', null, null, date('Y-m-d H:i:s', $now - 3600)
+            ],
+            [
+                'WA-2026-001127', 'Q-2026-001246', 'cust_102', 'Ananya Sharma', '+91 98450 11223',
+                'Flat 402, Green Glen Layout, Bellandur, Bengaluru - 560103',
+                json_encode([
+                    ['name' => 'Pure Cotton Tiered Feeding Gown', 'sku' => 'MD-102-BL', 'size' => 'L / XL', 'qty' => 1, 'price' => 1299.00],
+                    ['name' => 'Sunshine Flared Baby Frock', 'sku' => 'BF-001-YL', 'size' => '1–2 Years', 'qty' => 1, 'price' => 599.00]
+                ]),
+                1898.00, 200.00, 1698.00, 'COD', 'PARTIAL_PAID (₹200 ADVANCE)', 'UPI-819283719283', 'PACKED',
+                'staff_02', 'Rahul Verma', 'Rahul Verma', null, 'Delhivery Express', date('Y-m-d H:i:s', $now - 86400)
+            ],
+            [
+                'WA-2026-001128', 'Q-2026-001247', 'cust_103', 'Kavitha Ramachandran', '+91 97890 55441',
+                '12/B, Anna Nagar West, Madurai - 625020',
+                json_encode([
+                    ['name' => 'Embroidered Cotton Baby Frock', 'sku' => 'BF-001-PK', 'size' => '1–2 Years', 'qty' => 3, 'price' => 599.00]
+                ]),
+                1797.00, 0.00, 0.00, 'ONLINE_UPI', 'PAID', 'UPI-762910481920', 'SHIPPED',
+                'staff_01', 'Priya Sharma', 'Priya Sharma', 'BLUEDART-882937102', 'BlueDart Courier', date('Y-m-d H:i:s', $now - (86400 * 3))
+            ],
+            [
+                'WA-2026-001129', 'Q-2026-1008', 'cust_7338965560', 'SugunaMani', '+91 73389 65560',
+                '14/2 Cross Cut Road, Gandhipuram, Coimbatore - 641012',
+                json_encode([
+                    ['name' => 'Sunshine Flared Baby Frock', 'sku' => 'BF-001-YL', 'size' => '2–3 Years', 'qty' => 1, 'price' => 599.00],
+                    ['name' => 'Festive Silk Baby Set', 'sku' => 'FS-301-GD', 'size' => '1–2 Years', 'qty' => 1, 'price' => 899.00]
+                ]),
+                1498.00, 200.00, 1298.00, 'COD', 'PARTIAL_PAID (₹200 ADVANCE)', 'UPI-652918273918', 'SHIPPED',
+                'staff_02', 'Rahul Verma', 'Rahul Verma', 'DTDC-9928172635', 'DTDC Express', date('Y-m-d H:i:s', $now - (86400 * 5))
+            ],
+            [
+                'WA-2026-001130', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', '+91 98765 43210',
+                'No. 45, 2nd Main Road, Gandhinagar, Adyar, Chennai - 600020',
+                json_encode([
+                    ['name' => '5-Piece Organic Newborn Gift Set', 'sku' => 'NB-201-WT', 'size' => '0–6 Months', 'qty' => 2, 'price' => 799.00]
+                ]),
+                1598.00, 0.00, 0.00, 'ONLINE_UPI', 'PAID', 'UPI-541928374829', 'DELIVERED',
+                'staff_03', 'Sneha Patel', 'Sneha Patel', 'ST-TRACK-88291029', 'Speed Post India', date('Y-m-d H:i:s', $now - (86400 * 12))
+            ],
+            [
+                'WA-2026-001131', 'Q-2026-001246', 'cust_102', 'Ananya Sharma', '+91 98450 11223',
+                'Flat 402, Green Glen Layout, Bellandur, Bengaluru - 560103',
+                json_encode([
+                    ['name' => 'Pure Cotton Tiered Feeding Gown', 'sku' => 'MD-102-BL', 'size' => 'L / XL', 'qty' => 1, 'price' => 1299.00]
+                ]),
+                1299.00, 0.00, 0.00, 'ONLINE_UPI', 'PAID', 'UPI-432819283746', 'DELIVERED',
+                'staff_01', 'Priya Sharma', 'Priya Sharma', 'BLUEDART-772910283', 'BlueDart Courier', date('Y-m-d H:i:s', $now - (86400 * 18))
+            ]
+        ];
+
+        foreach ($defaultOrders as $ord) {
+            $stmt->execute($ord);
         }
     }
 }

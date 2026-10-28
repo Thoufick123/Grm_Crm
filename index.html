@@ -810,16 +810,32 @@
         </div>
       </button>
 
-      <button onclick="switchView('orders')" id="nav-orders"
-        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-        <div class="flex items-center gap-3">
-          <span
-            class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">shopping_bag</span>
-          <span>WhatsApp Orders</span>
+      <!-- WHATSAPP ORDERS MODULE WITH SUBMODULES -->
+      <div id="nav-orders-group" class="space-y-1">
+        <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">shopping_bag</span>
+            <span class="font-bold">WhatsApp Orders</span>
+          </div>
+          <span id="badge-orders-count" class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">6</span>
+        </button>
+        <!-- Sub-modules in Sidebar -->
+        <div id="nav-orders-submodules" class="pl-7 pr-1 space-y-1">
+          <button type="button" onclick="switchOrdersSubmodule('dashboard')" id="nav-sub-orders-dashboard" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-emerald-400">analytics</span>
+              <span>1. Order Dashboard</span>
+            </div>
+          </button>
+          <button type="button" onclick="switchOrdersSubmodule('history')" id="nav-sub-orders-history" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-teal-400">history</span>
+              <span>2. Order History</span>
+            </div>
+            <span id="nav-sub-orders-history-badge" class="text-[9px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded-full font-bold">6</span>
+          </button>
         </div>
-        <span id="badge-orders-count"
-          class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">5</span>
-      </button>
+      </div>
 
       <button onclick="switchView('customers')" id="nav-customers"
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
@@ -2395,37 +2411,302 @@
       <!-- ========================================== -->
       <!-- VIEW: ORDERS & STOCK RESERVATIONS -->
       <!-- ========================================== -->
-      <section id="view-orders" class="h-full overflow-y-auto p-6 hidden">
+      <!-- ========================================== -->
+      <!-- VIEW: ORDERS (DASHBOARD & ORDER HISTORY)   -->
+      <!-- ========================================== -->
+      <section id="view-orders" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
         <div class="max-w-7xl mx-auto space-y-6">
-          <div class="flex items-center justify-between">
+
+          <!-- 1. TOP BAR: TITLE & SUBMODULE TABS SWITCHER (Order Dashboard vs Order History) -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/90 pb-4">
             <div>
-              <h2 class="text-xl font-bold text-slate-900">WhatsApp Sales Orders</h2>
-              <p class="text-xs text-slate-500">Orders created directly from customer WhatsApp conversations with
-                reserved inventory</p>
+              <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                  <span class="material-symbols-outlined text-[24px]">shopping_bag</span>
+                </div>
+                <div>
+                  <h2 class="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>WhatsApp Sales &amp; Orders Hub</span>
+                    <span id="badge-orders-total-count" class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-bold font-mono">0 Orders</span>
+                  </h2>
+                  <p class="text-xs text-slate-500">Real-time revenue analytics, staff sales tracking, and 4-stage order fulfillment</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- SUB-MODULE SWITCHER (Dashboard vs History) -->
+            <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 shadow-inner">
+              <!-- Sub-module 1: Order Dashboard -->
+              <button type="button" id="tab-orders-submodule-dashboard" onclick="switchOrdersSubmodule('dashboard')"
+                class="px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-700 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">analytics</span>
+                <span>Order Dashboard</span>
+              </button>
+
+              <!-- Sub-module 2: Order History -->
+              <button type="button" id="tab-orders-submodule-history" onclick="switchOrdersSubmodule('history')"
+                class="px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-700 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">history</span>
+                <span>Order History</span>
+                <span id="orders-tab-history-badge" class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">0</span>
+              </button>
+            </div>
+
+            <!-- Global Action: Download & Refresh Options -->
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="downloadOrdersDashboardReport()" class="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95" title="Download Excel/CSV Report">
+                <span class="material-symbols-outlined text-[17px]">download</span>
+                <span>Download Report</span>
+              </button>
+              <button type="button" onclick="refreshOrdersFromDB()" class="p-2.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 transition shadow-2xs cursor-pointer" title="Refresh Live Orders from Database">
+                <span class="material-symbols-outlined text-[18px]">sync</span>
+              </button>
             </div>
           </div>
 
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs text-slate-700">
-                <thead
-                  class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                  <tr>
-                    <th class="py-3 px-4">Order ID &amp; Date</th>
-                    <th class="py-3 px-4">Customer</th>
-                    <th class="py-3 px-4">Items &amp; SKU</th>
-                    <th class="py-3 px-4">Amount &amp; Terms</th>
-                    <th class="py-3 px-4">Payment &amp; Proof</th>
-                    <th class="py-3 px-4">Order Status</th>
-                    <th class="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="orders-table-body" class="divide-y divide-slate-100">
-                  <!-- Populated by JS -->
-                </tbody>
-              </table>
+          <!-- ======================================================== -->
+          <!-- SUB-MODULE 1: ORDER DASHBOARD                            -->
+          <!-- ======================================================== -->
+          <div id="subview-orders-dashboard" class="space-y-6">
+            
+            <!-- 1. Key Metrics Cards Grid: Overall Revenue, Weekly, Monthly, AOV -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- Card 1: Overall Revenue -->
+              <div class="bg-gradient-to-br from-emerald-900 via-emerald-800 to-slate-900 rounded-2xl p-5 text-white shadow-sm relative overflow-hidden">
+                <div class="absolute -right-4 -bottom-4 w-28 h-28 bg-emerald-500/10 rounded-full blur-xl pointer-events-none"></div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-emerald-200 tracking-wider uppercase">Overall Revenue</span>
+                  <div class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-emerald-300">
+                    <span class="material-symbols-outlined text-[18px]">payments</span>
+                  </div>
+                </div>
+                <p id="dash-ord-overall-revenue" class="text-3xl font-black font-mono mt-3 tracking-tight">₹0.00</p>
+                <div class="mt-3 pt-3 border-t border-emerald-700/50 flex items-center justify-between text-[11px] text-emerald-200">
+                  <span id="dash-ord-paid-online">₹0 Paid Online</span>
+                  <span>&bull;</span>
+                  <span id="dash-ord-cod-pending">₹0 COD Due</span>
+                </div>
+              </div>
+
+              <!-- Card 2: Weekly Order Total Count -->
+              <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-slate-500 tracking-wider uppercase">Weekly Orders</span>
+                  <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[18px]">date_range</span>
+                  </div>
+                </div>
+                <p id="dash-ord-weekly-count" class="text-3xl font-black font-mono mt-3 text-slate-900">0</p>
+                <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-500">Weekly Revenue:</span>
+                  <strong id="dash-ord-weekly-revenue" class="text-blue-700 font-mono font-bold">₹0.00</strong>
+                </div>
+              </div>
+
+              <!-- Card 3: Monthly Total Order Count -->
+              <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-slate-500 tracking-wider uppercase">Monthly Orders</span>
+                  <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+                  </div>
+                </div>
+                <p id="dash-ord-monthly-count" class="text-3xl font-black font-mono mt-3 text-slate-900">0</p>
+                <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-500">Monthly Revenue:</span>
+                  <strong id="dash-ord-monthly-revenue" class="text-indigo-700 font-mono font-bold">₹0.00</strong>
+                </div>
+              </div>
+
+              <!-- Card 4: Average Order Value & Total Volume -->
+              <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-slate-500 tracking-wider uppercase">Avg. Order Value (AOV)</span>
+                  <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[18px]">query_stats</span>
+                  </div>
+                </div>
+                <p id="dash-ord-aov" class="text-3xl font-black font-mono mt-3 text-slate-900">₹0</p>
+                <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-500">Total All-Time Orders:</span>
+                  <strong id="dash-ord-all-time-count" class="text-slate-900 font-bold font-mono">0</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Order Lifecycle Funnel: Placed, Packed, Shipped, Delivered -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Fulfillment Pipeline Status</h3>
+                  <p class="text-xs text-slate-500">Live breakdown of orders across 4 stages. Click any card to view filtered order history.</p>
+                </div>
+                <span class="text-[11px] bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-full">4 Stages</span>
+              </div>
+
+              <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- Placed -->
+                <div onclick="filterOrderHistoryByStatus('PLACED')" class="p-4 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 transition cursor-pointer flex items-center justify-between">
+                  <div class="space-y-1">
+                    <span class="text-xs font-black text-blue-900 flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                      1. Placed
+                    </span>
+                    <p id="pipe-ord-placed-count" class="text-2xl font-black text-blue-700 font-mono">0</p>
+                    <span class="text-[10px] text-blue-600">Booked &amp; Reserved</span>
+                  </div>
+                  <span class="material-symbols-outlined text-blue-400 text-[28px]">receipt</span>
+                </div>
+
+                <!-- Packed -->
+                <div onclick="filterOrderHistoryByStatus('PACKED')" class="p-4 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100/50 transition cursor-pointer flex items-center justify-between">
+                  <div class="space-y-1">
+                    <span class="text-xs font-black text-purple-900 flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                      2. Packed
+                    </span>
+                    <p id="pipe-ord-packed-count" class="text-2xl font-black text-purple-700 font-mono">0</p>
+                    <span class="text-[10px] text-purple-600">Ready for Dispatch</span>
+                  </div>
+                  <span class="material-symbols-outlined text-purple-400 text-[28px]">inventory_2</span>
+                </div>
+
+                <!-- Shipped -->
+                <div onclick="filterOrderHistoryByStatus('SHIPPED')" class="p-4 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 transition cursor-pointer flex items-center justify-between">
+                  <div class="space-y-1">
+                    <span class="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-amber-600"></span>
+                      3. Shipped
+                    </span>
+                    <p id="pipe-ord-shipped-count" class="text-2xl font-black text-amber-700 font-mono">0</p>
+                    <span class="text-[10px] text-amber-600">In Transit with Courier</span>
+                  </div>
+                  <span class="material-symbols-outlined text-amber-400 text-[28px]">local_shipping</span>
+                </div>
+
+                <!-- Delivered -->
+                <div onclick="filterOrderHistoryByStatus('DELIVERED')" class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/50 transition cursor-pointer flex items-center justify-between">
+                  <div class="space-y-1">
+                    <span class="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                      4. Delivered
+                    </span>
+                    <p id="pipe-ord-delivered-count" class="text-2xl font-black text-emerald-700 font-mono">0</p>
+                    <span class="text-[10px] text-emerald-600">Handed to Customer</span>
+                  </div>
+                  <span class="material-symbols-outlined text-emerald-400 text-[28px]">verified</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Staff Name Wise Total Order Count & Revenue Breakdown -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                    <span class="material-symbols-outlined text-emerald-600 text-[18px]">badge</span>
+                    <span>Staff Name Wise Total Order Count</span>
+                  </h3>
+                  <p class="text-xs text-slate-500">Sales performance and order volume booked by each team member</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="downloadStaffOrdersReport()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <span class="material-symbols-outlined text-[15px]">file_download</span>
+                    <span>Export Staff Breakdown</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-700">
+                  <thead class="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-100">
+                    <tr>
+                      <th class="py-3 px-5">Staff Member</th>
+                      <th class="py-3 px-4">Role / Department</th>
+                      <th class="py-3 px-4 text-center">Total Orders Taken</th>
+                      <th class="py-3 px-4">Stage Distribution</th>
+                      <th class="py-3 px-4">Total Revenue Generated</th>
+                      <th class="py-3 px-4">Share of Orders</th>
+                      <th class="py-3 px-4 text-right">Performance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="orders-staff-breakdown-body" class="divide-y divide-slate-100">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
+
+          <!-- ======================================================== -->
+          <!-- SUB-MODULE 2: ORDER HISTORY                              -->
+          <!-- ======================================================== -->
+          <div id="subview-orders-history" class="space-y-4 hidden">
+            
+            <!-- Filters & Search Toolbar -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <!-- Search Input -->
+              <div class="relative flex-1 max-w-md">
+                <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
+                <input type="text" id="order-history-search" oninput="filterOrdersHistoryTable()" placeholder="Search customer, phone, order ID, product, staff..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+              </div>
+
+              <!-- Quick Status Pills -->
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" onclick="setOrderHistoryStatusFilter('ALL')" id="filter-btn-status-ALL" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white cursor-pointer">
+                  All (<span id="count-filter-all">0</span>)
+                </button>
+                <button type="button" onclick="setOrderHistoryStatusFilter('PLACED')" id="filter-btn-status-PLACED" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-blue-100 cursor-pointer">
+                  Placed (<span id="count-filter-placed">0</span>)
+                </button>
+                <button type="button" onclick="setOrderHistoryStatusFilter('PACKED')" id="filter-btn-status-PACKED" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-purple-100 cursor-pointer">
+                  Packed (<span id="count-filter-packed">0</span>)
+                </button>
+                <button type="button" onclick="setOrderHistoryStatusFilter('SHIPPED')" id="filter-btn-status-SHIPPED" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-amber-100 cursor-pointer">
+                  Shipped (<span id="count-filter-shipped">0</span>)
+                </button>
+                <button type="button" onclick="setOrderHistoryStatusFilter('DELIVERED')" id="filter-btn-status-DELIVERED" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-emerald-100 cursor-pointer">
+                  Delivered (<span id="count-filter-delivered">0</span>)
+                </button>
+              </div>
+
+              <!-- Staff Filter & Download CSV -->
+              <div class="flex items-center gap-2">
+                <select id="order-history-staff-filter" onchange="filterOrdersHistoryTable()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none">
+                  <option value="ALL">All Staff Members</option>
+>>>>>>> 9767f60
+                  <!-- Populated by JS -->
+                </select>
+                <button type="button" onclick="downloadOrdersHistoryCSV()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95" title="Download Order History as CSV">
+                  <span class="material-symbols-outlined text-[16px]">download</span>
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Orders History Table -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-700">
+                  <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th class="py-3.5 px-4">Order ID &amp; Date</th>
+                      <th class="py-3.5 px-4">Customer Details</th>
+                      <th class="py-3.5 px-4">Which Staff Taken</th>
+                      <th class="py-3.5 px-4">Ordered Items</th>
+                      <th class="py-3.5 px-4">Payment Details</th>
+                      <th class="py-3.5 px-4">Order Status</th>
+                      <th class="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="orders-table-body" class="divide-y divide-slate-100">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -4206,6 +4487,26 @@
             </div>
           </div>
 
+          <!-- 1.5 Which Staff Taken / Handled This Order -->
+          <div class="bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-2xs shrink-0">
+                <span class="material-symbols-outlined text-[20px]">badge</span>
+              </div>
+              <div>
+                <label for="order-booking-staff-select" class="text-[11px] font-black text-indigo-950 uppercase tracking-wide block">
+                  Order Taken By (Assigned Staff Specialist)
+                </label>
+                <p class="text-[10px] text-indigo-600 font-medium">Sales staff member credited with this customer booking</p>
+              </div>
+            </div>
+            <div class="shrink-0">
+              <select id="order-booking-staff-select" required class="w-full sm:w-auto bg-white border border-indigo-300 text-indigo-950 font-bold rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer">
+                <!-- Dynamically populated from staffList -->
+              </select>
+            </div>
+          </div>
+
           <!-- 2. Selected Products to Order Container -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
@@ -4503,6 +4804,45 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ORDER INVOICE & PACKING SLIP -->
+  <div id="modal-order-invoice" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+            <span class="material-symbols-outlined text-[24px]">receipt_long</span>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base tracking-tight" id="invoice-modal-title">Tax Invoice &amp; Packing Slip</h3>
+            <p class="text-xs text-emerald-200" id="invoice-modal-subtitle">Order details, items &amp; delivery note</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-order-invoice')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Printable Body -->
+      <div id="invoice-printable-content" class="p-6 overflow-y-auto space-y-5 text-xs text-slate-700">
+        <!-- Injected by JS -->
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <button type="button" onclick="closeModal('modal-order-invoice')" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition">
+          Close
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="printOrderInvoice()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">print</span>
+            <span>Print Invoice</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

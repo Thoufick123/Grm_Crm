@@ -139,6 +139,25 @@ if ($action === 'get_state' || $action === 'get_all') {
             if (!empty($o['items_json']) && is_string($o['items_json'])) {
                 $o['items'] = json_decode($o['items_json'], true) ?: [];
             }
+            $o['queryId'] = $o['query_id'] ?? '';
+            $o['customerId'] = $o['customer_id'] ?? '';
+            $o['customerName'] = $o['customer_name'] ?? 'Customer';
+            $o['customerPhone'] = $o['customer_phone'] ?? '';
+            $o['shippingAddress'] = $o['shipping_address'] ?? '';
+            $o['grandTotal'] = (float)($o['grand_total'] ?? 0);
+            $o['codAdvance'] = (float)($o['cod_advance'] ?? 0);
+            $o['codBalanceDue'] = (float)($o['cod_balance_due'] ?? 0);
+            $o['paymentMethod'] = $o['payment_method'] ?? 'COD';
+            $o['paymentStatus'] = $o['payment_status'] ?? 'PENDING';
+            $o['upiTransactionId'] = $o['upi_transaction_id'] ?? '';
+            $o['paymentScreenshot'] = $o['payment_screenshot'] ?? '';
+            $o['orderStatus'] = $o['order_status'] ?? 'PLACED';
+            $o['staffId'] = $o['staff_id'] ?? ($o['created_by'] ?? 'staff_01');
+            $o['staffName'] = $o['staff_name'] ?? ($o['created_by'] ?? 'Super Admin');
+            $o['createdBy'] = $o['created_by'] ?? ($o['staff_name'] ?? 'Staff');
+            $o['trackingNumber'] = $o['tracking_number'] ?? '';
+            $o['courierName'] = $o['courier_name'] ?? '';
+            $o['createdAt'] = $o['created_at'] ?? '';
         }
 
         // 8. Followups (Normalized with lifecycle & RBAC fields)
@@ -180,6 +199,13 @@ if ($action === 'get_state' || $action === 'get_all') {
         // 9. Audit Logs
         $aStmt = $pdo->query("SELECT * FROM `audit_logs` ORDER BY `id` DESC LIMIT 100");
         $auditLogs = $aStmt->fetchAll();
+
+        // 9.1 Dedicated DND Records Table
+        $dndRecords = [];
+        try {
+            $dndStmt = $pdo->query("SELECT * FROM `dnd_records` ORDER BY `created_at` DESC");
+            $dndRecords = $dndStmt->fetchAll();
+        } catch (Exception $e) {}
 
         // 10. Categories, Subcategories & Attributes (Website Catalog Workflow)
         $categories = [];
@@ -257,6 +283,8 @@ if ($action === 'get_state' || $action === 'get_all') {
             "categories" => $categories,
             "subcategories" => $subcategories,
             "attributes" => $attributes,
+            "dnd_records" => $dndRecords,
+            "dndRecords" => $dndRecords,
             "data" => [
                 "whatsappAccount" => $primaryWA,
                 "whatsappAccounts" => $waAccounts,
@@ -270,7 +298,9 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "auditLogs" => $auditLogs,
                 "categories" => $categories,
                 "subcategories" => $subcategories,
-                "attributes" => $attributes
+                "attributes" => $attributes,
+                "dndRecords" => $dndRecords,
+                "dnd_records" => $dndRecords
             ]
         ]);
         exit;
@@ -1676,7 +1706,16 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $paymentMethod = $order['paymentMethod'] ?? ($order['payment_method'] ?? 'COD');
         $paymentStatus = $order['paymentStatus'] ?? ($order['payment_status'] ?? 'PENDING');
         $orderStatus = $order['orderStatus'] ?? ($order['order_status'] ?? 'STOCK_RESERVED');
-        $createdBy = $order['createdBy'] ?? ($order['created_by'] ?? 'Staff');
+        $customerPhone = $order['customerPhone'] ?? ($order['customer_phone'] ?? '');
+        $shippingAddress = $order['shippingAddress'] ?? ($order['shipping_address'] ?? '');
+        $codAdvance = (float)($order['codAdvance'] ?? ($order['cod_advance'] ?? 0));
+        $codBalanceDue = (float)($order['codBalanceDue'] ?? ($order['cod_balance_due'] ?? 0));
+        $upiTransactionId = $order['upiTransactionId'] ?? ($order['upi_transaction_id'] ?? '');
+        $paymentScreenshot = $order['paymentScreenshot'] ?? ($order['payment_screenshot'] ?? '');
+        $staffId = $order['staffId'] ?? ($order['staff_id'] ?? '');
+        $staffName = $order['staffName'] ?? ($order['staff_name'] ?? ($order['createdBy'] ?? $createdBy));
+        $trackingNumber = $order['trackingNumber'] ?? ($order['tracking_number'] ?? '');
+        $courierName = $order['courierName'] ?? ($order['courier_name'] ?? '');
 
         // Check and reserve stock atomically
         if (!empty($items) && is_array($items)) {
@@ -1707,18 +1746,36 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Insert or update order
         $stmt = $pdo->prepare("
-            INSERT INTO `orders` (`id`, `query_id`, `customer_id`, `customer_name`, `items_json`, `grand_total`, `payment_method`, `payment_status`, `order_status`, `created_by`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO `orders` (
+                `id`, `query_id`, `customer_id`, `customer_name`, `customer_phone`,
+                `shipping_address`, `items_json`, `grand_total`, `cod_advance`, `cod_balance_due`,
+                `payment_method`, `payment_status`, `upi_transaction_id`, `payment_screenshot`,
+                `order_status`, `tracking_number`, `courier_name`, `created_by`, `staff_id`, `staff_name`
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE 
+                `customer_name` = VALUES(`customer_name`),
+                `customer_phone` = VALUES(`customer_phone`),
+                `shipping_address` = VALUES(`shipping_address`),
                 `items_json` = VALUES(`items_json`),
                 `grand_total` = VALUES(`grand_total`),
+                `cod_advance` = VALUES(`cod_advance`),
+                `cod_balance_due` = VALUES(`cod_balance_due`),
                 `payment_method` = VALUES(`payment_method`),
                 `payment_status` = VALUES(`payment_status`),
-                `order_status` = VALUES(`order_status`)
+                `upi_transaction_id` = VALUES(`upi_transaction_id`),
+                `payment_screenshot` = VALUES(`payment_screenshot`),
+                `order_status` = VALUES(`order_status`),
+                `tracking_number` = VALUES(`tracking_number`),
+                `courier_name` = VALUES(`courier_name`),
+                `staff_id` = VALUES(`staff_id`),
+                `staff_name` = VALUES(`staff_name`)
         ");
         $stmt->execute([
-            $orderId, $queryId, $customerId, $customerName, json_encode($items),
-            $grandTotal, $paymentMethod, $paymentStatus, $orderStatus, $createdBy
+            $orderId, $queryId, $customerId, $customerName, $customerPhone,
+            $shippingAddress, json_encode($items), $grandTotal, $codAdvance, $codBalanceDue,
+            $paymentMethod, $paymentStatus, $upiTransactionId, $paymentScreenshot,
+            $orderStatus, $trackingNumber, $courierName, $createdBy, $staffId, $staffName
         ]);
 
         // Update Customer metrics
@@ -1833,6 +1890,75 @@ if ($action === 'update_order_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'reassign_order_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    $orderId = $data['id'] ?? ($data['order_id'] ?? null);
+    $staffId = $data['staff_id'] ?? null;
+    $staffName = $data['staff_name'] ?? null;
+    $user = $data['user'] ?? 'Super Admin';
+
+    if (!$orderId || !$staffId) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Order ID and Staff ID are required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        $stmt = $pdo->prepare("UPDATE `orders` SET `staff_id` = ?, `staff_name` = ?, `created_by` = ? WHERE `id` = ?");
+        $stmt->execute([$staffId, $staffName, $staffName, $orderId]);
+        
+        $pdo->prepare("
+            INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+            VALUES (?, 'ORDER_REASSIGNED', 'ORDERS', ?, ?)
+        ")->execute([$user, "Order {$orderId} reassigned to staff: {$staffName} ({$staffId})", date("h:i A")]);
+    }
+
+    echo json_encode(["status" => "success", "message" => "Order staff reassigned successfully", "staff_id" => $staffId, "staff_name" => $staffName]);
+    exit;
+}
+
+if ($action === 'get_orders') {
+    try {
+        if (!$pdo) {
+            echo json_encode(["status" => "success", "orders" => []]);
+            exit;
+        }
+        $stmt = $pdo->query("SELECT * FROM `orders` ORDER BY `created_at` DESC");
+        $orders = $stmt->fetchAll();
+        foreach ($orders as &$o) {
+            if (!empty($o['items_json']) && is_string($o['items_json'])) {
+                $o['items'] = json_decode($o['items_json'], true) ?: [];
+            }
+            $o['queryId'] = $o['query_id'] ?? '';
+            $o['customerId'] = $o['customer_id'] ?? '';
+            $o['customerName'] = $o['customer_name'] ?? 'Customer';
+            $o['customerPhone'] = $o['customer_phone'] ?? '';
+            $o['shippingAddress'] = $o['shipping_address'] ?? '';
+            $o['grandTotal'] = (float)($o['grand_total'] ?? 0);
+            $o['codAdvance'] = (float)($o['cod_advance'] ?? 0);
+            $o['codBalanceDue'] = (float)($o['cod_balance_due'] ?? 0);
+            $o['paymentMethod'] = $o['payment_method'] ?? 'COD';
+            $o['paymentStatus'] = $o['payment_status'] ?? 'PENDING';
+            $o['upiTransactionId'] = $o['upi_transaction_id'] ?? '';
+            $o['paymentScreenshot'] = $o['payment_screenshot'] ?? '';
+            $o['orderStatus'] = $o['order_status'] ?? 'PLACED';
+            $o['staffId'] = $o['staff_id'] ?? ($o['created_by'] ?? 'staff_01');
+            $o['staffName'] = $o['staff_name'] ?? ($o['created_by'] ?? 'Super Admin');
+            $o['createdBy'] = $o['created_by'] ?? ($o['staff_name'] ?? 'Staff');
+            $o['trackingNumber'] = $o['tracking_number'] ?? '';
+            $o['courierName'] = $o['courier_name'] ?? '';
+            $o['createdAt'] = $o['created_at'] ?? '';
+        }
+        echo json_encode(["status" => "success", "orders" => $orders]);
+        exit;
+    } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(["status" => "error", "message" => $e->getMessage()]);
         exit;
@@ -2182,47 +2308,151 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $cbTime = $q['callbackTime'] ?? ($q['callback_time'] ?? '11:00 AM');
     $statusHist = isset($q['statusHistory']) ? (is_array($q['statusHistory']) ? json_encode($q['statusHistory']) : $q['statusHistory']) : null;
 
-    if (!$queryId) {
+    $customerId = $q['customer_id'] ?? ($q['customerId'] ?? null);
+    $customerName = $q['customer_name'] ?? ($q['customerName'] ?? null);
+    $phone = $q['phone'] ?? null;
+    $whatsapp = $q['whatsapp'] ?? ($phone ?? null);
+    $reason = $q['reason'] ?? ($notes ?: 'Customer not interested in products (Requested DND)');
+    $dndTimestamp = $q['dnd_timestamp'] ?? date("d M Y at h:i A");
+
+    if (!$queryId && !$customerId) {
         http_response_code(400);
-        echo json_encode(["status" => "error", "message" => "Query ID is required"]);
+        echo json_encode(["status" => "error", "message" => "Query ID or Customer ID is required"]);
         exit;
+    }
+
+    if (!$queryId) {
+        $queryId = 'Q-' . date('Y') . '-' . rand(100000, 999999);
     }
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("
-                UPDATE `queries` 
-                SET `assigned_to` = ?, `status` = ?, `status_notes` = ?,
-                    `is_payment_pending` = ?, `payment_amount` = ?, `shipping_amount` = ?,
-                    `payment_mode` = ?, `advance_payment` = ?, `payment_due_date` = ?,
-                    `payment_notes` = ?, `quoted_items` = ?, `callback_date` = ?,
-                    `callback_time` = ?,
-                    `status_history` = COALESCE(?, `status_history`)
-                WHERE `id` = ?
-            ");
-            $stmt->execute([
-                $assignedTo, $status, $notes,
-                $isPayPending, $payAmt, $shipAmt,
-                $payMode, $advAmt, $payDue,
-                $payNotes, $quotedItems, $cbDate,
-                $cbTime, $statusHist,
-                $queryId
-            ]);
-
-            // Synchronize customer DND fields in MySQL
-            try {
-                $cStmt = $pdo->prepare("SELECT `customer_id` FROM `queries` WHERE `id` = ?");
+            // 1. Resolve or Create Customer in MySQL
+            $cData = null;
+            if ($queryId) {
+                $cStmt = $pdo->prepare("SELECT `id`, `name`, `phone`, `whatsapp` FROM `customers` WHERE `id` = (SELECT `customer_id` FROM `queries` WHERE `id` = ?)");
                 $cStmt->execute([$queryId]);
-                $cid = $cStmt->fetchColumn();
-                if ($cid) {
-                    if ($status === 'DND') {
-                        $pdo->prepare("UPDATE `customers` SET `is_dnd` = 1, `dnd_reason` = ?, `dnd_notes` = ?, `dnd_marked_by` = ?, `dnd_timestamp` = ? WHERE `id` = ?")
-                            ->execute([$notes ?: 'Customer not interested in products (Requested DND)', $notes, $user, date("d M Y at h:i A"), $cid]);
-                    } else {
-                        $pdo->prepare("UPDATE `customers` SET `is_dnd` = 0 WHERE `id` = ?")->execute([$cid]);
-                    }
+                $cData = $cStmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$cData && $customerId) {
+                $cStmt = $pdo->prepare("SELECT `id`, `name`, `phone`, `whatsapp` FROM `customers` WHERE `id` = ?");
+                $cStmt->execute([$customerId]);
+                $cData = $cStmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$cData && $phone) {
+                $cleanP = preg_replace('/[^0-9]/', '', $phone);
+                if (strlen($cleanP) >= 7) {
+                    $cStmt = $pdo->prepare("SELECT `id`, `name`, `phone`, `whatsapp` FROM `customers` WHERE REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', '') LIKE ? OR REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', '') LIKE ? LIMIT 1");
+                    $cStmt->execute(['%' . substr($cleanP, -10), '%' . substr($cleanP, -10)]);
+                    $cData = $cStmt->fetch(PDO::FETCH_ASSOC);
                 }
-            } catch (Exception $e) {}
+            }
+
+            if (!$cData && ($customerId || $phone || $customerName)) {
+                $cid = $customerId ?: ('cust_' . (preg_replace('/[^0-9]/', '', $phone ?: '') ?: uniqid()));
+                $cName = $customerName ?: 'Customer';
+                $cPhone = $phone ?: '';
+                $cWa = $whatsapp ?: $cPhone;
+                $cCode = 'CUST-' . date('Y') . '-' . rand(1000, 9999);
+                
+                $pdo->prepare("
+                    INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `created_at`)
+                    VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', NOW())
+                    ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `phone` = VALUES(`phone`), `whatsapp` = VALUES(`whatsapp`)
+                ")->execute([$cid, $cCode, $cName, $cPhone, $cWa]);
+                $cData = ['id' => $cid, 'name' => $cName, 'phone' => $cPhone, 'whatsapp' => $cWa];
+            }
+
+            $cid = $cData ? $cData['id'] : ($customerId ?: null);
+
+            // 2. Resolve or Create Query in MySQL
+            $qCheck = $pdo->prepare("SELECT `id` FROM `queries` WHERE `id` = ?");
+            $qCheck->execute([$queryId]);
+            if (!$qCheck->fetch()) {
+                $pdo->prepare("
+                    INSERT INTO `queries` (
+                        `id`, `customer_id`, `assigned_to`, `status`, `status_notes`, `query_text`,
+                        `is_payment_pending`, `payment_amount`, `shipping_amount`, `payment_mode`,
+                        `advance_payment`, `payment_due_date`, `payment_notes`, `quoted_items`,
+                        `callback_date`, `callback_time`, `status_history`, `priority`, `created_at`
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NORMAL', NOW())
+                ")->execute([
+                    $queryId, $cid, $assignedTo, $status, $notes, $notes ?: 'WhatsApp Lead Enquiry',
+                    $isPayPending, $payAmt, $shipAmt, $payMode,
+                    $advAmt, $payDue, $payNotes, $quotedItems,
+                    $cbDate, $cbTime, $statusHist
+                ]);
+            } else {
+                $stmt = $pdo->prepare("
+                    UPDATE `queries` 
+                    SET `assigned_to` = ?, `status` = ?, `status_notes` = ?,
+                        `is_payment_pending` = ?, `payment_amount` = ?, `shipping_amount` = ?,
+                        `payment_mode` = ?, `advance_payment` = ?, `payment_due_date` = ?,
+                        `payment_notes` = ?, `quoted_items` = ?, `callback_date` = ?,
+                        `callback_time` = ?,
+                        `status_history` = COALESCE(?, `status_history`)
+                    WHERE `id` = ?
+                ");
+                $stmt->execute([
+                    $assignedTo, $status, $notes,
+                    $isPayPending, $payAmt, $shipAmt,
+                    $payMode, $advAmt, $payDue,
+                    $payNotes, $quotedItems, $cbDate,
+                    $cbTime, $statusHist,
+                    $queryId
+                ]);
+            }
+
+            // 3. Synchronize customer DND fields and dedicated dnd_records table in MySQL
+            if ($cid) {
+                if ($status === 'DND') {
+                    $dndTime = $dndTimestamp ?: date("d M Y at h:i A");
+                    $dndReason = $reason ?: ($notes ?: 'Customer not interested in products (Requested DND)');
+
+                    // A. Update customers table
+                    $pdo->prepare("UPDATE `customers` SET `is_dnd` = 1, `dnd_reason` = ?, `dnd_notes` = ?, `dnd_marked_by` = ?, `dnd_timestamp` = ? WHERE `id` = ?")
+                        ->execute([$dndReason, $notes, $user, $dndTime, $cid]);
+
+                    // B. Upsert into dedicated dnd_records table
+                    $dndCheck = $pdo->prepare("SELECT `id` FROM `dnd_records` WHERE `customer_id` = ? AND `status` = 'ACTIVE' LIMIT 1");
+                    $dndCheck->execute([$cid]);
+                    $activeDnd = $dndCheck->fetch(PDO::FETCH_ASSOC);
+
+                    if ($activeDnd) {
+                        $pdo->prepare("
+                            UPDATE `dnd_records` 
+                            SET `reason` = ?, `notes` = ?, `marked_by` = ?, `assigned_to` = ?, `dnd_timestamp` = ?, `query_id` = ?
+                            WHERE `id` = ?
+                        ")->execute([$dndReason, $notes, $user, $assignedTo, $dndTime, $queryId, $activeDnd['id']]);
+                    } else {
+                        $pdo->prepare("
+                            INSERT INTO `dnd_records` (`customer_id`, `customer_name`, `phone`, `whatsapp`, `query_id`, `reason`, `notes`, `marked_by`, `assigned_to`, `status`, `dnd_timestamp`)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+                        ")->execute([
+                            $cid,
+                            $cData['name'] ?? ($customerName ?: 'Customer'),
+                            $cData['phone'] ?? ($phone ?: ''),
+                            $cData['whatsapp'] ?? ($whatsapp ?: ($phone ?: '')),
+                            $queryId,
+                            $dndReason,
+                            $notes,
+                            $user,
+                            $assignedTo,
+                            $dndTime
+                        ]);
+                    }
+                } else {
+                    // Restore from DND
+                    $pdo->prepare("UPDATE `customers` SET `is_dnd` = 0 WHERE `id` = ?")->execute([$cid]);
+                    $pdo->prepare("
+                        UPDATE `dnd_records` 
+                        SET `status` = 'REVOKED', `revoked_at` = NOW(), `revoked_by` = ? 
+                        WHERE `customer_id` = ? AND `status` = 'ACTIVE'
+                    ")->execute([$user, $cid]);
+                }
+            }
 
             // Update user active queries counter
             if ($assignedTo !== 'UNASSIGNED') {
@@ -2240,7 +2470,7 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 VALUES (?, 'QUERY_STATUS_UPDATED', 'QUERIES', ?, ?)
             ")->execute([$user, $details, date("h:i A")]);
 
-            echo json_encode(["status" => "success", "message" => "Query status and notes updated in MySQL", "notes" => $notes]);
+            echo json_encode(["status" => "success", "message" => "Query status and DND records successfully updated in MySQL", "notes" => $notes]);
             exit;
         } catch (Exception $e) {
             http_response_code(500);
@@ -2250,6 +2480,158 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     echo json_encode(["status" => "success", "message" => "Query assignment updated locally"]);
     exit;
+}
+
+// Dedicated direct save endpoint for DND suppression records
+if ($action === 'save_dnd_record' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+    $cid = $p['customer_id'] ?? null;
+    $cName = $p['customer_name'] ?? 'Customer';
+    $phone = $p['phone'] ?? '';
+    $whatsapp = $p['whatsapp'] ?? $phone;
+    $queryId = $p['query_id'] ?? null;
+    $reason = $p['reason'] ?? 'Customer not interested in products (Requested DND)';
+    $notes = $p['notes'] ?? '';
+    $markedBy = $p['marked_by'] ?? 'Super Admin';
+    $assignedTo = $p['assigned_to'] ?? 'UNASSIGNED';
+    $status = $p['status'] ?? 'ACTIVE';
+    $dndTimestamp = $p['dnd_timestamp'] ?? date("d M Y at h:i A");
+
+    if ($pdo) {
+        try {
+            // Ensure customer exists in customers table
+            if ($cid) {
+                $checkCust = $pdo->prepare("SELECT id FROM `customers` WHERE `id` = ? LIMIT 1");
+                $checkCust->execute([$cid]);
+                if (!$checkCust->fetch()) {
+                    $cCode = 'CUST-' . date('Y') . '-' . rand(1000, 9999);
+                    $pdo->prepare("
+                        INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `is_dnd`, `dnd_reason`, `dnd_notes`, `dnd_marked_by`, `dnd_timestamp`, `created_at`)
+                        VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 1, ?, ?, ?, ?, NOW())
+                        ON DUPLICATE KEY UPDATE `is_dnd` = 1, `dnd_reason` = VALUES(`dnd_reason`), `dnd_notes` = VALUES(`dnd_notes`)
+                    ")->execute([$cid, $cCode, $cName, $phone, $whatsapp, $reason, $notes, $markedBy, $dndTimestamp]);
+                } else {
+                    $pdo->prepare("UPDATE `customers` SET `is_dnd` = 1, `dnd_reason` = ?, `dnd_notes` = ?, `dnd_marked_by` = ?, `dnd_timestamp` = ? WHERE `id` = ?")
+                        ->execute([$reason, $notes, $markedBy, $dndTimestamp, $cid]);
+                }
+            }
+
+            // Ensure query exists if queryId provided
+            if ($queryId && $cid) {
+                $checkQ = $pdo->prepare("SELECT id FROM `queries` WHERE `id` = ? LIMIT 1");
+                $checkQ->execute([$queryId]);
+                if (!$checkQ->fetch()) {
+                    $pdo->prepare("
+                        INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `status_notes`, `query_text`, `priority`, `created_at`)
+                        VALUES (?, ?, ?, 'DND', ?, ?, 'NORMAL', NOW())
+                    ")->execute([$queryId, $cid, $assignedTo, $notes, $reason]);
+                } else {
+                    $pdo->prepare("UPDATE `queries` SET `status` = 'DND', `status_notes` = ?, `assigned_to` = ? WHERE `id` = ?")
+                        ->execute([$notes, $assignedTo, $queryId]);
+                }
+            }
+
+            // Upsert into dnd_records table
+            $checkDnd = $pdo->prepare("SELECT id FROM `dnd_records` WHERE `customer_id` = ? AND `status` = 'ACTIVE' LIMIT 1");
+            $checkDnd->execute([$cid]);
+            $existing = $checkDnd->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+                $pdo->prepare("
+                    UPDATE `dnd_records`
+                    SET `customer_name` = ?, `phone` = ?, `whatsapp` = ?, `query_id` = ?, `reason` = ?, `notes` = ?, `marked_by` = ?, `assigned_to` = ?, `dnd_timestamp` = ?
+                    WHERE `id` = ?
+                ")->execute([$cName, $phone, $whatsapp, $queryId, $reason, $notes, $markedBy, $assignedTo, $dndTimestamp, $existing['id']]);
+            } else {
+                $pdo->prepare("
+                    INSERT INTO `dnd_records` (`customer_id`, `customer_name`, `phone`, `whatsapp`, `query_id`, `reason`, `notes`, `marked_by`, `assigned_to`, `status`, `dnd_timestamp`)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+                ")->execute([$cid, $cName, $phone, $whatsapp, $queryId, $reason, $notes, $markedBy, $assignedTo, $dndTimestamp]);
+            }
+
+            echo json_encode(["status" => "success", "message" => "Customer successfully registered in MySQL dnd_records table"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+}
+
+// Revoke DND (Reactivate customer)
+if ($action === 'revoke_dnd' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+    $cid = $p['customer_id'] ?? null;
+    $queryId = $p['query_id'] ?? null;
+    $user = $p['user'] ?? 'Admin';
+
+    if ($cid && $pdo) {
+        try {
+            $pdo->prepare("UPDATE `customers` SET `is_dnd` = 0 WHERE `id` = ?")->execute([$cid]);
+            $pdo->prepare("
+                UPDATE `dnd_records` 
+                SET `status` = 'REVOKED', `revoked_at` = NOW(), `revoked_by` = ? 
+                WHERE `customer_id` = ? AND `status` = 'ACTIVE'
+            ")->execute([$user, $cid]);
+
+            if ($queryId) {
+                $pdo->prepare("UPDATE `queries` SET `status` = 'IN_PROGRESS' WHERE `id` = ?")->execute([$queryId]);
+            } else {
+                $pdo->prepare("UPDATE `queries` SET `status` = 'IN_PROGRESS' WHERE `customer_id` = ? AND `status` = 'DND'")->execute([$cid]);
+            }
+
+            $details = "Customer {$cid} reactivated from DND list";
+            $pdo->prepare("INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`) VALUES (?, 'DND_REVOKED', 'DND', ?, ?)")
+                ->execute([$user, $details, date("h:i A")]);
+
+            echo json_encode(["status" => "success", "message" => "Customer reactivated and DND status revoked in MySQL"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+}
+
+if ($action === 'assign_dnd_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $p = json_decode($input, true);
+    $cid = $p['customer_id'] ?? null;
+    $staffId = $p['staff_id'] ?? 'UNASSIGNED';
+    $user = $p['user'] ?? 'Admin';
+    $notes = $p['notes'] ?? '';
+
+    if ($cid && $pdo) {
+        try {
+            $pdo->prepare("UPDATE `dnd_records` SET `assigned_to` = ? WHERE `customer_id` = ? AND `status` = 'ACTIVE'")
+                ->execute([$staffId, $cid]);
+            $pdo->prepare("UPDATE `queries` SET `assigned_to` = ? WHERE `customer_id` = ?")
+                ->execute([$staffId, $cid]);
+            
+            $details = "DND customer {$cid} assigned to staff {$staffId}" . ($notes ? " | Note: {$notes}" : "");
+            $pdo->prepare("INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`) VALUES (?, 'DND_STAFF_ASSIGNED', 'DND', ?, ?)")
+                ->execute([$user, $details, date("h:i A")]);
+
+            echo json_encode(["status" => "success", "message" => "DND staff assigned successfully in dnd_records table"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+}
+
+if ($action === 'get_dnd_records') {
+    if ($pdo) {
+        $stmt = $pdo->query("SELECT * FROM `dnd_records` ORDER BY `created_at` DESC");
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll()]);
+        exit;
+    }
 }
 
 if ($action === 'save_audit_log' && $_SERVER['REQUEST_METHOD'] === 'POST') {
