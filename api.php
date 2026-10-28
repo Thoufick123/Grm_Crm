@@ -2927,6 +2927,19 @@ if ($action === 'backup_db') {
         echo json_encode(["status" => "error", "message" => $e->getMessage()]);
         exit;
     }
+if ($action === 'save_user_preference' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = json_decode(file_get_contents('php://input'), true) ?? [];
+    if (!empty($data['preferred_language'])) {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $_SESSION['preferred_language'] = $data['preferred_language'];
+        if (!empty($_SESSION['user']['id']) && $pdo) {
+            try {
+                $pdo->prepare("UPDATE `users` SET `preferred_language` = ? WHERE `id` = ?")->execute([$data['preferred_language'], $_SESSION['user']['id']]);
+            } catch (Exception $e) {}
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Preference saved"]);
+    exit;
 }
 
 // Default fallback response
