@@ -4841,6 +4841,28 @@ function handleQueryStatusSelectChange(selectedStatus, queryId, customerId) {
     if (cbEditRow) cbEditRow.classList.remove('hidden');
   }
 }
+function handlePayPendingToggle(checked) {
+  const fields = document.getElementById('query-pay-fields');
+  const badge = document.getElementById('query-pay-pending-badge');
+  if (fields) {
+    if (checked) {
+      fields.classList.remove('hidden');
+    } else {
+      fields.classList.add('hidden');
+    }
+  }
+  if (badge) {
+    if (checked) {
+      badge.innerHTML = `<span class="material-symbols-outlined text-[10px] text-amber-700">check_circle</span><span>ACTIVE</span>`;
+      badge.className = 'text-[8.5px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5';
+    } else {
+      badge.innerHTML = 'Optional';
+      badge.className = 'text-[8.5px] text-slate-400 font-medium';
+    }
+  }
+}
+window.handlePayPendingToggle = handlePayPendingToggle;
+
 function handlePayModeChange(val) {
   const advWrapper = document.getElementById('query-pay-advance-wrapper');
   if (advWrapper) {
@@ -5671,25 +5693,11 @@ function renderCustomer360Panel() {
             return `
               <div id="enquiry-payment-pending-wrapper" class="${(qStatus === 'FOLLOW_UP' || qStatus === 'PENDING' || customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-white border border-amber-300/80 p-2.5 rounded-xl space-y-2 shadow-2xs transition-all">
                 <div class="flex items-center justify-between">
-                  ${isQueryEditing ? `
-                    <label class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 cursor-pointer select-none">
-                      <input type="checkbox" id="query-pay-pending-toggle" ${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? 'checked' : ''} onchange="document.getElementById('query-pay-fields').classList.toggle('hidden', !this.checked)" class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300">
-                      <span>Payment Pending Option</span>
-                    </label>
-                  ` : `
-                    <div class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 select-none">
-                      <span class="material-symbols-outlined text-[14px] text-amber-700">payments</span>
-                      <span>Payment Pending Option</span>
-                    </div>
-                  `}
-                  ${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? `
-                    <span class="text-[8.5px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5">
-                      <span class="material-symbols-outlined text-[10px] text-amber-700">check_circle</span>
-                      <span>ACTIVE</span>
-                    </span>
-                  ` : `
-                    <span class="text-[8.5px] text-slate-400 font-medium">Optional</span>
-                  `}
+                  <label class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" id="query-pay-pending-toggle" onchange="handlePayPendingToggle(this.checked)" class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300 cursor-pointer">
+                    <span>Payment Pending Option</span>
+                  </label>
+                  <span id="query-pay-pending-badge" class="text-[8.5px] text-slate-400 font-medium">Optional</span>
                 </div>
 
                 ${!isQueryEditing ? `
@@ -5760,7 +5768,7 @@ function renderCustomer360Panel() {
                   </div>
                 ` : `
                   <!-- EDITABLE INPUT FORM WHEN EDITING STATUS IS ACTIVE -->
-                  <div id="query-pay-fields" class="${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
+                  <div id="query-pay-fields" class="hidden space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
                     <div class="grid grid-cols-2 gap-2">
                       <div>
                         <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Total Amount (₹):</label>
