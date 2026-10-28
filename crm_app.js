@@ -2936,7 +2936,7 @@ function renderInboxConversationList() {
     let statusBadge = '';
     const qStatus = item.status || 'NEW';
     if (qStatus === 'DND' || item.customer?.isDND) statusBadge = `<span class="bg-rose-100 text-rose-900 border border-rose-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">🚫 DND</span>`;
-    else if (qStatus === 'PENDING') statusBadge = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">PENDING</span>`;
+    else if (qStatus === 'PENDING') statusBadge = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">PAYMENT PENDING</span>`;
     else if (qStatus === 'FOLLOW_UP') statusBadge = `<span class="bg-blue-100 text-blue-900 border border-blue-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">FOLLOW-UP</span>`;
     else if (qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED') statusBadge = `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">IN PROGRESS</span>`;
     else if (qStatus === 'RESOLVED') statusBadge = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">RESOLVED</span>`;
@@ -4644,7 +4644,7 @@ window.toggleQueryEditMode = toggleQueryEditMode;
 function getStatusPrettyLabel(st) {
   const map = {
     'NEW': '🟢 New Lead',
-    'PENDING': '🟡 Pending Action',
+    'PENDING': '🟡 Payment Pending',
     'FOLLOW_UP': '🔵 Follow-up Scheduled',
     'IN_PROGRESS': '🟣 In Progress',
     'ASSIGNED': '🟣 Assigned',
@@ -5205,7 +5205,7 @@ function renderCustomer360Panel() {
   if (qStatus === 'DND' || customer.isDND) {
     statusBadgeHtml = `<span class="bg-rose-100 text-rose-900 border border-rose-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span> 🚫 DND</span>`;
   } else if (qStatus === 'PENDING') {
-    statusBadgeHtml = `<span class="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> 🟡 PENDING</span>`;
+    statusBadgeHtml = `<span class="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> 🟡 PAYMENT PENDING</span>`;
   } else if (qStatus === 'FOLLOW_UP') {
     statusBadgeHtml = `<span class="bg-blue-100 text-blue-900 border border-blue-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> 🔵 FOLLOW-UP</span>`;
   } else if (qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED') {
@@ -5383,7 +5383,7 @@ function renderCustomer360Panel() {
               <div class="relative">
                 <select id="query-status-select" onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full h-[42px] bg-white border border-slate-300 hover:border-brand-wa ring-0 focus:ring-1 focus:ring-brand-wa text-slate-900 cursor-pointer shadow-2xs rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
                   <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 New Lead</option>
-                  <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 Pending Action</option>
+                  <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 Payment Pending</option>
                   <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 Follow Up</option>
                   <option value="IN_PROGRESS" ${qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED' ? 'selected' : ''}>🟣 In Progress</option>
                   <option value="RESOLVED" ${qStatus === 'RESOLVED' ? 'selected' : ''}>✅ Resolved / Closed</option>
