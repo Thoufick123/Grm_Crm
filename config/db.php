@@ -353,8 +353,10 @@ function initializeDatabaseSchema($pdo) {
     try {
         $existingCustCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN);
         $custColDefs = [
-            'is_dnd' => "ALTER TABLE `customers` ADD COLUMN `is_dnd` TINYINT(1) DEFAULT 0 AFTER `avatar`",
-            'notes'  => "ALTER TABLE `customers` ADD COLUMN `notes` TEXT NULL AFTER `is_dnd`"
+            'is_dnd'      => "ALTER TABLE `customers` ADD COLUMN `is_dnd` TINYINT(1) DEFAULT 0 AFTER `avatar`",
+            'notes'       => "ALTER TABLE `customers` ADD COLUMN `notes` TEXT NULL AFTER `is_dnd`",
+            'alt_phone'   => "ALTER TABLE `customers` ADD COLUMN `alt_phone` VARCHAR(30) NULL AFTER `whatsapp`",
+            'alt_address' => "ALTER TABLE `customers` ADD COLUMN `alt_address` TEXT NULL AFTER `address`"
         ];
         foreach ($custColDefs as $cName => $sql) {
             if (!in_array($cName, $existingCustCols)) {
@@ -470,7 +472,8 @@ function initializeDatabaseSchema($pdo) {
             'cod_advance'        => "ALTER TABLE `orders` ADD COLUMN `cod_advance` DECIMAL(10,2) DEFAULT 0.00 AFTER `grand_total`",
             'cod_balance_due'    => "ALTER TABLE `orders` ADD COLUMN `cod_balance_due` DECIMAL(10,2) DEFAULT 0.00 AFTER `cod_advance`",
             'tracking_number'    => "ALTER TABLE `orders` ADD COLUMN `tracking_number` VARCHAR(100) NULL AFTER `order_status`",
-            'courier_name'       => "ALTER TABLE `orders` ADD COLUMN `courier_name` VARCHAR(100) NULL AFTER `tracking_number`"
+            'courier_name'       => "ALTER TABLE `orders` ADD COLUMN `courier_name` VARCHAR(100) NULL AFTER `tracking_number`",
+            'shipping_url'       => "ALTER TABLE `orders` ADD COLUMN `shipping_url` TEXT NULL AFTER `courier_name`"
         ];
         foreach ($orderColDefs as $cName => $sql) {
             if (!in_array($cName, $existingOrderCols)) {

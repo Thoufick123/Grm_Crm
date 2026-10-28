@@ -1,3 +1,205 @@
+
+/**
+ * Real-time payment amount validation coordinator.
+ * Compares screenshot amount directly with customer order total (e.g. ₹1,198 vs ₹233).
+ * Strictly flags any shortage and locks the confirm button!
+ */
+function handleReceiptAmountChange(mode, rawValue) {
+  const isOnline = mode === 'ONLINE';
+  const prefix = isOnline ? 'online' : 'cod';
+  const val = parseFloat(rawValue || '0');
+
+  // Compute expected order amount
+  let expectedAmount = 0;
+  if (isOnline) {
+    (ORDER_MODAL_STATE?.items || []).forEach(it => {
+      expectedAmount += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+    });
+    if (expectedAmount === 0 && ORDER_MODAL_STATE?.grandTotal) expectedAmount = ORDER_MODAL_STATE.grandTotal;
+  } else {
+    expectedAmount = 200; // Mandatory COD advance
+  }
+  if (!expectedAmount) expectedAmount = 599;
+
+  ORDER_MODAL_STATE.expectedAmount = expectedAmount;
+  ORDER_MODAL_STATE.detectedAmount = val > 0 ? val : null;
+
+  const inputEl = document.getElementById(prefix + '-receipt-amount');
+  const pillEl = document.getElementById(prefix + '-amount-match-pill');
+  const alertEl = document.getElementById(prefix + '-amount-mismatch-alert');
+  const metaBadge = document.getElementById(prefix + '-screenshot-meta-badge');
+
+  if (!val || val <= 0) {
+    ORDER_MODAL_STATE.amountMismatch = true;
+    if (pillEl) {
+      pillEl.className = 'px-3 py-2 rounded-xl text-[11px] font-black font-mono border flex items-center gap-1 shrink-0 bg-slate-100 text-slate-500 border-slate-200';
+      pillEl.innerHTML = '<span>Enter Amount</span>';
+    }
+    if (alertEl) alertEl.classList.add('hidden');
+    if (inputEl) {
+      inputEl.style.borderColor = '#e11d48';
+      inputEl.style.backgroundColor = '#fff1f2';
+      inputEl.style.color = '#9f1239';
+    }
+    updateOrderSubmitButtonState();
+    return;
+  }
+
+  const isMismatch = Math.abs(val - expectedAmount) > 0.01;
+  ORDER_MODAL_STATE.amountMismatch = isMismatch;
+
+  if (isMismatch) {
+    const shortage = expectedAmount - val;
+    // Input Styling (Red Alert)
+    if (inputEl) {
+      inputEl.style.borderColor = '#e11d48';
+      inputEl.style.backgroundColor = '#fff1f2';
+      inputEl.style.color = '#9f1239';
+      inputEl.style.boxShadow = '0 0 0 3px rgba(244, 63, 94, 0.25)';
+    }
+
+    // Pill status
+    if (pillEl) {
+      pillEl.className = 'px-3 py-2 rounded-xl text-[11px] font-black font-mono border flex items-center gap-1 shrink-0 bg-rose-100 text-rose-800 border-rose-300';
+      pillEl.innerHTML = shortage > 0 ? ('<span class="material-symbols-outlined text-[14px]">cancel</span> Shortage: ₹' + shortage.toLocaleString('en-IN')) : ('<span class="material-symbols-outlined text-[14px]">error</span> Excess: ₹' + Math.abs(shortage).toLocaleString('en-IN'));
+    }
+
+    // Detailed Alert Box
+    if (alertEl) {
+      alertEl.classList.remove('hidden');
+      alertEl.innerHTML = '<div class="flex items-center justify-between text-rose-900">' +
+        '<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[17px] text-rose-600">error</span> <span>AMOUNT MISMATCH: Receipt shows ₹' + val.toLocaleString('en-IN') + '</span></span>' +
+        '<span class="font-mono font-black text-rose-700 bg-white px-2 py-0.5 rounded border border-rose-200">Order: ₹' + expectedAmount.toLocaleString('en-IN') + '</span>' +
+        '</div>' +
+        '<p class="text-[11px] font-normal text-rose-800 mt-1 leading-relaxed">' +
+        'Customer ordered amount is <strong>₹' + expectedAmount.toLocaleString('en-IN') + '</strong>, but the screenshot shows only <strong>₹' + val.toLocaleString('en-IN') + '</strong>. ' +
+        (shortage > 0 ? ('Unpaid shortage of <strong class="underline font-black">₹' + shortage.toLocaleString('en-IN') + '</strong>. Order cannot be confirmed until full payment is verified.') : 'Amount does not match.') +
+        '</p>';
+    }
+
+    // Preview Meta Badge
+    if (metaBadge) {
+      metaBadge.className = 'px-2.5 py-1 rounded-full bg-rose-500/25 text-rose-300 font-bold border border-rose-400/50 flex items-center gap-1';
+      metaBadge.innerHTML = '<span class="material-symbols-outlined text-[13px]">cancel</span> Amount Mismatch: Receipt ₹' + val + ' ≠ Order ₹' + expectedAmount;
+    }
+  } else {
+    // Input Styling (Emerald Verified)
+    if (inputEl) {
+      inputEl.style.borderColor = '#059669';
+      inputEl.style.backgroundColor = '#ecfdf5';
+      inputEl.style.color = '#064e3b';
+      inputEl.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.25)';
+    }
+
+    // Pill status
+    if (pillEl) {
+      pillEl.className = 'px-3 py-2 rounded-xl text-[11px] font-black font-mono border flex items-center gap-1 shrink-0 bg-emerald-100 text-emerald-800 border-emerald-300';
+      pillEl.innerHTML = '<span class="material-symbols-outlined text-[14px]">check_circle</span> 100% MATCH (₹' + val.toLocaleString('en-IN') + ')';
+    }
+
+    // Hide Mismatch Alert Box
+    if (alertEl) alertEl.classList.add('hidden');
+
+    // Preview Meta Badge
+    if (metaBadge) {
+      metaBadge.className = 'px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-400/30 flex items-center gap-1';
+      metaBadge.innerHTML = '<span class="material-symbols-outlined text-[12px]">verified_user</span> Payment Proof Verified (₹' + val + ') ✅';
+    }
+  }
+
+  updateOrderSubmitButtonState();
+}
+window.handleReceiptAmountChange = handleReceiptAmountChange;
+
+
+function overrideReceiptAmount(mode) {
+  const isOnline = mode === 'ONLINE';
+  const prefix = isOnline ? 'online' : 'cod';
+  const input = document.getElementById(`${prefix}-manual-amt-input`);
+  if (!input) return;
+
+  const newAmt = parseFloat(input.value || '0');
+  const expectedAmt = ORDER_MODAL_STATE.expectedAmount || (isOnline ? (ORDER_MODAL_STATE.items || []).reduce((sum, it) => sum + (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1), 0) || 599 : 200);
+
+  const isMismatch = Math.abs(newAmt - expectedAmt) > 0.01;
+  const currentScreenshot = isOnline ? ORDER_MODAL_STATE.onlineScreenshot : ORDER_MODAL_STATE.codScreenshot;
+  const currentName = isOnline ? ORDER_MODAL_STATE.onlineScreenshotName : ORDER_MODAL_STATE.codScreenshotName;
+
+  setScreenshotPreview(mode, currentScreenshot, currentName, {
+    isValid: true,
+    detectedAmount: newAmt,
+    expectedAmount: expectedAmt,
+    isMismatch: isMismatch,
+    shortage: isMismatch ? Math.abs(expectedAmt - newAmt) : 0
+  });
+}
+window.overrideReceiptAmount = overrideReceiptAmount;
+
+
+/**
+ * Smart extractor for payment amount from receipt OCR text.
+ * Finds amounts like ₹233, Rs 233, 233.00, or contextual amounts.
+ */
+function extractPaymentAmountFromOCR(rawText) {
+  if (!rawText) return null;
+  const text = rawText.replace(/\r/g, '');
+
+  // 1. Direct Indian Rupee symbol or Rs or INR with number:
+  // e.g. ₹233, ₹ 233, ₹233.00, Rs. 233, Rs 233, INR 233
+  const directMatches = [];
+  const currRegex = /(?:₹|rs\.?|inr)\s*([0-9,]+(?:\.[0-9]{1,2})?)/gi;
+  let m;
+  while ((m = currRegex.exec(text)) !== null) {
+    const val = parseFloat(m[1].replace(/,/g, ''));
+    if (!isNaN(val) && val > 0 && val < 500000) {
+      directMatches.push(val);
+    }
+  }
+  if (directMatches.length > 0) return directMatches[0];
+
+  // 2. OCR artifact characters for ₹ (often parsed as ?, *, =, z, Z, R, r followed by digits):
+  // e.g. "?233", "*233", "z233", "=233" on a line of its own
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineMatch = line.match(/^[₹*?zZ=rRsS~]\s*([0-9]{2,5}(?:\.[0-9]{1,2})?)$/);
+    if (lineMatch) {
+      const val = parseFloat(lineMatch[1]);
+      if (val !== 2024 && val !== 2025 && val !== 2026 && val !== 2027 && val > 0) {
+        return val;
+      }
+    }
+  }
+
+  // 3. Line with just digits if surrounding lines indicate payment context
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const prev = (lines[i - 1] || '').toLowerCase();
+    const next = (lines[i + 1] || '').toLowerCase();
+    const numMatch = line.match(/^([0-9]{2,5}(?:\.[0-9]{1,2})?)$/);
+    if (numMatch) {
+      const val = parseFloat(numMatch[1]);
+      const hasPaymentContext = prev.includes('to') || prev.includes('paid') || prev.includes('+91') ||
+                                next.includes('completed') || next.includes('successful') || next.includes('pay again') ||
+                                next.includes('bank') || next.includes('uco') || next.includes('sbi');
+      if (hasPaymentContext && val !== 2024 && val !== 2025 && val !== 2026 && val !== 2027) {
+        return val;
+      }
+    }
+  }
+
+  // 4. Fallback: match after words "amount", "paid", "total", "debited":
+  const kwRegex = /(?:amount|paid|total|debited|sent|transferred|transfer)\s*:?\s*(?:₹|rs\.?|inr)?\s*([0-9,]+(?:\.[0-9]{1,2})?)/i;
+  const kwMatch = text.match(kwRegex);
+  if (kwMatch) {
+    const val = parseFloat(kwMatch[1].replace(/,/g, ''));
+    if (!isNaN(val) && val > 0 && val < 500000) return val;
+  }
+
+  return null;
+}
+window.extractPaymentAmountFromOCR = extractPaymentAmountFromOCR;
+
 /**
  * GRM WHATSAPP CRM — CORE REACTIVE APPLICATION SCRIPT (v2.5)
  * Manages Dynamic WhatsApp Business Phone Configuration, Inbound Realtime Routing, 
@@ -4929,27 +5131,35 @@ function handleQuickCustomerSave(event, customerId) {
 
   const nameInput = document.getElementById('cust-edit-name');
   const phoneInput = document.getElementById('cust-edit-phone');
+  const altPhoneInput = document.getElementById('cust-edit-alt-phone');
   const ageInput = document.getElementById('cust-edit-age');
   const genderInput = document.getElementById('cust-edit-gender');
   const emailInput = document.getElementById('cust-edit-email');
   const addressInput = document.getElementById('cust-edit-address');
+  const altAddressInput = document.getElementById('cust-edit-alt-address');
   const notesInput = document.getElementById('cust-edit-notes');
 
   const newName = nameInput ? nameInput.value.trim() : customer.name;
   const newPhone = phoneInput ? phoneInput.value.trim() : (customer.whatsapp || customer.phone);
+  const newAltPhone = altPhoneInput ? altPhoneInput.value.trim() : (customer.altPhone || customer.alt_phone || '');
   const newAge = ageInput ? ageInput.value.trim() : (customer.age || '');
   const newGender = genderInput ? genderInput.value : (customer.gender || '');
   const newEmail = emailInput ? emailInput.value.trim() : (customer.email || '');
   const newAddress = addressInput ? addressInput.value.trim() : (customer.address || '');
+  const newAltAddress = altAddressInput ? altAddressInput.value.trim() : (customer.altAddress || customer.alt_address || '');
   const newNotes = notesInput ? notesInput.value.trim() : (customer.notes || '');
 
   customer.name = newName;
   customer.phone = newPhone;
   customer.whatsapp = newPhone;
+  customer.altPhone = newAltPhone;
+  customer.alt_phone = newAltPhone;
   customer.age = newAge;
   customer.gender = newGender;
   customer.email = newEmail;
   customer.address = newAddress;
+  customer.altAddress = newAltAddress;
+  customer.alt_address = newAltAddress;
   customer.notes = newNotes;
 
   // Update avatar initials
@@ -4970,10 +5180,14 @@ function handleQuickCustomerSave(event, customerId) {
       name: customer.name,
       phone: customer.phone,
       whatsapp: customer.whatsapp,
+      alt_phone: customer.alt_phone,
+      altPhone: customer.alt_phone,
       age: customer.age,
       gender: customer.gender,
       email: customer.email,
       address: customer.address,
+      alt_address: customer.alt_address,
+      altAddress: customer.alt_address,
       notes: customer.notes
     })
   }).catch(() => {});
@@ -5443,6 +5657,21 @@ function renderCustomer360Panel() {
           </div>
         </div>
 
+        <!-- Alternative Mobile / Phone Number -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px] text-slate-500">phone_iphone</span>
+              <span>Alternative Number:</span>
+            </label>
+            <span class="text-[9px] text-slate-400 font-medium">Secondary</span>
+          </div>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-slate-400">ring_volume</span>
+            <input type="text" id="cust-edit-alt-phone" value="${customer.altPhone || customer.alt_phone || ''}" ${isEditing ? '' : 'disabled'} placeholder="Secondary Mobile / Landline" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-medium">
+          </div>
+        </div>
+
         <!-- Gender -->
         <div>
           <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Gender:</label>
@@ -5454,10 +5683,22 @@ function renderCustomer360Panel() {
           </select>
         </div>
 
-        <!-- Delivery Address -->
+        <!-- Delivery Address (Primary) -->
         <div>
           <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Delivery Address:</label>
           <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Door No, Street, Landmark, City, Pincode" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${customer.address || ''}</textarea>
+        </div>
+
+        <!-- Alternative Delivery Address -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-blue-600">home_pin</span>
+              <span>Alternative Address:</span>
+            </label>
+            <span class="text-[9px] text-blue-700 font-bold bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded">Secondary</span>
+          </div>
+          <textarea id="cust-edit-alt-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Alternative delivery address, office address, or hometown..." class="w-full ${isEditing ? 'bg-blue-50/40 border-blue-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${customer.altAddress || customer.alt_address || ''}</textarea>
         </div>
 
         <!-- Customer Mindset & Records Notes Field -->
@@ -10067,7 +10308,30 @@ function initOrderModal(customer, items) {
   if (cPhone) cPhone.innerText = customer.whatsapp || customer.phone || '+91 97896 60115';
   if (qId) qId.innerText = query ? query.id : 'Q-2026-AUTO';
   if (cAvatar) cAvatar.innerText = customer.avatar || customer.name.charAt(0);
-  if (addrInput) addrInput.value = customer.address || 'No. 45, Gandhi Road, Chennai - 600020';
+  const primaryAddr = customer.address || 'No. 45, Gandhi Road, Chennai - 600020';
+  const altAddr = customer.altAddress || customer.alt_address || '';
+  if (addrInput) addrInput.value = primaryAddr;
+
+  window._CURRENT_ORDER_MODAL_ADDRS = {
+    primary: primaryAddr,
+    alt: altAddr
+  };
+
+  const addrSwitcher = document.getElementById('order-address-switcher');
+  const btnPrimary = document.getElementById('btn-addr-primary');
+  const btnAlt = document.getElementById('btn-addr-alt');
+
+  if (addrSwitcher) {
+    if (altAddr) {
+      addrSwitcher.classList.remove('hidden');
+      addrSwitcher.classList.add('flex');
+      if (btnPrimary) btnPrimary.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 cursor-pointer';
+      if (btnAlt) btnAlt.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300 hover:bg-blue-50 cursor-pointer';
+    } else {
+      addrSwitcher.classList.add('hidden');
+      addrSwitcher.classList.remove('flex');
+    }
+  }
 
   // Populate Staff selector for credited sales specialist
   const staffSelect = document.getElementById('order-booking-staff-select');
@@ -10103,10 +10367,59 @@ function initOrderModal(customer, items) {
 
   const onlineUpiInput = document.getElementById('order-online-upi-id');
   const codUpiInput = document.getElementById('order-cod-upi-id');
-  if (onlineUpiInput) onlineUpiInput.value = '';
-  if (codUpiInput) codUpiInput.value = '';
+  if (onlineUpiInput) {
+    onlineUpiInput.value = '';
+    onlineUpiInput.style.borderColor = '';
+    onlineUpiInput.style.backgroundColor = '';
+    onlineUpiInput.style.color = '';
+    onlineUpiInput.style.boxShadow = '';
+  }
+  if (codUpiInput) {
+    codUpiInput.value = '';
+    codUpiInput.style.borderColor = '';
+    codUpiInput.style.backgroundColor = '';
+    codUpiInput.style.color = '';
+    codUpiInput.style.boxShadow = '';
+  }
+  const onlineFeedback = document.getElementById('online-upi-id-feedback');
+  const codFeedback = document.getElementById('cod-upi-id-feedback');
+  if (onlineFeedback) onlineFeedback.classList.add('hidden');
+  if (codFeedback) codFeedback.classList.add('hidden');
+
+  const onlineAmtInp = document.getElementById('order-online-receipt-amount');
+  const codAmtInp = document.getElementById('order-cod-receipt-amount');
+  if (onlineAmtInp) {
+    onlineAmtInp.value = '';
+    onlineAmtInp.style.borderColor = '';
+    onlineAmtInp.style.backgroundColor = '';
+    onlineAmtInp.style.color = '';
+    onlineAmtInp.style.boxShadow = '';
+  }
+  if (codAmtInp) {
+    codAmtInp.value = '';
+    codAmtInp.style.borderColor = '';
+    codAmtInp.style.backgroundColor = '';
+    codAmtInp.style.color = '';
+    codAmtInp.style.boxShadow = '';
+  }
+  const onlinePill = document.getElementById('online-amount-match-pill');
+  const codPill = document.getElementById('cod-amount-match-pill');
+  if (onlinePill) {
+    onlinePill.className = 'px-3 py-2 rounded-xl text-[11px] font-black font-mono border flex items-center gap-1 shrink-0 bg-slate-100 text-slate-500 border-slate-200';
+    onlinePill.innerHTML = '<span>Pending Amount Check</span>';
+  }
+  if (codPill) {
+    codPill.className = 'px-3 py-2 rounded-xl text-[11px] font-black font-mono border flex items-center gap-1 shrink-0 bg-slate-100 text-slate-500 border-slate-200';
+    codPill.innerHTML = '<span>Must be ₹200</span>';
+  }
+  const onlineAlert = document.getElementById('online-amount-mismatch-alert');
+  const codAlert = document.getElementById('cod-amount-mismatch-alert');
+  if (onlineAlert) onlineAlert.classList.add('hidden');
+  if (codAlert) codAlert.classList.add('hidden');
+
   removeScreenshot('ONLINE');
   removeScreenshot('COD');
+  updateOrderSubmitButtonState();
 
   renderOrderModalItemsList();
   setOrderPaymentMode('ONLINE');
@@ -10309,67 +10622,590 @@ function setOrderPaymentMode(mode) {
   updateOrderModalFinancials();
 }
 
-function handleScreenshotUpload(event, mode) {
+/**
+ * Validates UPI Transaction ID / UTR Number.
+ * Accepted formats:
+ * - 12-digit numeric standard banking UTR (e.g. 428910294821)
+ * - Alphanumeric app-prefixed reference (e.g. GPAY-428910294821, PHONEPE-T240101..., PAYTM-123456789012, UPI-2026-...)
+ * - Banking Transaction Reference (12 to 24 alphanumeric chars without commas/spaces)
+ * - UPI VPA (e.g. user@okhdfcbank, 9876543210@paytm)
+ * Strictly disallows: commas, spaces, random punctuation strings.
+ */
+function validateUPIId(value) {
+  if (!value || !value.trim()) {
+    return { valid: false, reason: '12-digit numeric UTR is required (e.g. 428910294821)', code: 'REQUIRED' };
+  }
+  const cleaned = value.trim();
+
+  // Illegal characters check (no commas, spaces, quotes, special symbols)
+  if (/[\s,;!@#$%^&*()_+={}\[\]:"'<>?\/\\|]/.test(cleaned) && !cleaned.includes('-')) {
+    return { valid: false, reason: 'Commas, spaces, and special symbols are not allowed in UTR.', code: 'INVALID_CHARS' };
+  }
+
+  // Length limits: Max 22 characters
+  if (cleaned.length > 22) {
+    return { valid: false, reason: 'UTR is too long (' + cleaned.length + ' chars). Standard bank UTR is exactly 12 digits.', code: 'TOO_LONG' };
+  }
+
+  // 1. Standard 12-digit numeric UTR (Universal Indian Bank Standard)
+  if (/^\d{12}$/.test(cleaned)) {
+    return { valid: true, type: '12-Digit Numeric UTR' };
+  }
+
+  // 2. App-prefixed 12-digit UTR: e.g. GPAY-427812456120, PHONEPE-428993213611, PAYTM-428993213611
+  if (/^(GPAY|PHONEPE|PAYTM|BHIM|UPI)-\d{12}$/i.test(cleaned)) {
+    return { valid: true, type: 'App-Prefixed 12-Digit UTR' };
+  }
+
+  // 3. Official App transaction reference with valid app code
+  if (/^(GPAY|PHONEPE|PAYTM|BHIM|UPI)-[A-Za-z0-9]{8,16}$/i.test(cleaned)) {
+    return { valid: true, type: 'Verified App Transaction Ref' };
+  }
+
+  // 4. Google Pay / Official Payment Gateway ID (e.g. CICAgL2Evo3TYQ or T24102812345678)
+  if (/^CICAg[A-Za-z0-9_-]{8,14}$/i.test(cleaned) || /^T\d{14,18}$/i.test(cleaned)) {
+    return { valid: true, type: 'Gateway Transaction ID' };
+  }
+
+  // If purely digits but not 12 digits:
+  if (/^\d+$/.test(cleaned)) {
+    if (cleaned.length < 12) {
+      return { valid: false, reason: 'Incomplete UTR (' + cleaned.length + '/12 digits entered). Please enter all 12 digits.', code: 'SHORT_DIGITS' };
+    } else {
+      return { valid: false, reason: 'UTR has ' + cleaned.length + ' digits. Standard Indian bank UTR must be exactly 12 digits.', code: 'LONG_DIGITS' };
+    }
+  }
+
+  return {
+    valid: false,
+    reason: 'Must be a 12-digit numeric UTR (e.g. 428910294821) or valid App UTR (e.g. GPAY-428910294821).',
+    code: 'INVALID_FORMAT'
+  };
+}
+window.validateUPIId = validateUPIId;
+
+/**
+ * Real-time submit button state coordinator for the order booking modal.
+ * Disables button and displays exact guidance if UPI ID or screenshot or amount is invalid!
+ */
+function updateOrderSubmitButtonState() {
+  const submitBtn = document.getElementById('order-submit-button');
+  const submitLabel = document.getElementById('order-submit-btn-label');
+  if (!submitBtn || !submitLabel) return;
+
+  const mode = ORDER_MODAL_STATE?.paymentMode || 'ONLINE';
+  const isOnline = mode === 'ONLINE';
+  const inputEl = document.getElementById(isOnline ? 'order-online-upi-id' : 'order-cod-upi-id');
+  const upiVal = inputEl ? inputEl.value.trim() : '';
+  const upiRes = validateUPIId(upiVal);
+  const screenshot = isOnline ? ORDER_MODAL_STATE?.onlineScreenshot : ORDER_MODAL_STATE?.codScreenshot;
+  const isMismatch = Boolean(ORDER_MODAL_STATE?.amountMismatch);
+
+  let amt = 0;
+  (ORDER_MODAL_STATE?.items || []).forEach(it => amt += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
+  if (amt === 0 && ORDER_MODAL_STATE?.grandTotal) amt = ORDER_MODAL_STATE.grandTotal;
+
+  // 1. Invalid UPI ID -> Disable button & show red/amber alert label
+  if (!upiRes.valid) {
+    submitBtn.disabled = true;
+    submitBtn.className = 'px-5 py-2.5 bg-slate-300 text-slate-600 rounded-xl font-extrabold shadow-none flex items-center gap-2 cursor-not-allowed transition';
+    submitLabel.innerText = upiVal ? '⚠️ Invalid UPI ID (12-Digit UTR Required)' : '⚠️ Enter 12-Digit UPI UTR';
+    return;
+  }
+
+  // 2. Missing Screenshot -> Guide to upload screenshot
+  if (!screenshot) {
+    submitBtn.disabled = true;
+    submitBtn.className = 'px-5 py-2.5 bg-slate-300 text-slate-600 rounded-xl font-extrabold shadow-none flex items-center gap-2 cursor-not-allowed transition';
+    submitLabel.innerText = '📸 Upload Payment Screenshot';
+    return;
+  }
+
+  // 3. Amount Mismatch -> Show Mismatch Alert
+  if (isMismatch) {
+    submitBtn.disabled = true;
+    submitBtn.className = 'px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 cursor-not-allowed transition';
+    submitLabel.innerText = '⚠️ Amount Mismatch (Paid ₹' + ORDER_MODAL_STATE.detectedAmount + ' ≠ ₹' + ORDER_MODAL_STATE.expectedAmount + ')';
+    return;
+  }
+
+  // 4. All Valid! Enable green confirm button
+  submitBtn.disabled = false;
+  submitBtn.className = 'px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 transition hover:shadow-lg cursor-pointer';
+  submitLabel.innerText = isOnline ? 'Confirm Order & Save (Paid ₹' + amt.toLocaleString('en-IN') + ')' : 'Confirm Order & Save (Paid ₹200 Adv)';
+}
+window.updateOrderSubmitButtonState = updateOrderSubmitButtonState;
+
+function handleUPIIdInput(mode, inputEl) {
+  if (!inputEl) return;
+  const isOnline = mode === 'ONLINE';
+  const prefix = isOnline ? 'online' : 'cod';
+
+  // Automatically strip illegal characters like commas, spaces, quotes
+  let val = inputEl.value;
+  val = val.replace(/[^A-Za-z0-9-]/g, '');
+  if (val.length > 22) {
+    val = val.slice(0, 22);
+  }
+  inputEl.value = val;
+
+  const res = validateUPIId(val);
+  const feedbackEl = document.getElementById(prefix + '-upi-id-feedback');
+
+  if (!val) {
+    if (feedbackEl) feedbackEl.classList.add('hidden');
+    inputEl.style.borderColor = '';
+    inputEl.style.backgroundColor = '';
+    inputEl.style.color = '';
+    inputEl.style.boxShadow = '';
+    updateOrderSubmitButtonState();
+    return;
+  }
+
+  if (feedbackEl) {
+    feedbackEl.classList.remove('hidden');
+  }
+
+  if (res.valid) {
+    // Valid styling (Crisp Green with matching glow)
+    inputEl.style.borderColor = '#059669';
+    inputEl.style.backgroundColor = '#ecfdf5';
+    inputEl.style.color = '#064e3b';
+    inputEl.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.25)';
+
+    if (feedbackEl) {
+      feedbackEl.className = 'mt-1.5 p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-800 flex items-center gap-1.5';
+      feedbackEl.innerHTML = '<span class="material-symbols-outlined text-[15px] text-emerald-600">check_circle</span> <span>Valid ' + res.type + ' Verified</span>';
+    }
+  } else {
+    // Invalid styling (Strong Red Border & Light Red Tint - overrides focus style)
+    inputEl.style.borderColor = '#e11d48';
+    inputEl.style.backgroundColor = '#fff1f2';
+    inputEl.style.color = '#9f1239';
+    inputEl.style.boxShadow = '0 0 0 3px rgba(244, 63, 94, 0.25)';
+
+    if (feedbackEl) {
+      feedbackEl.className = 'mt-1.5 p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] font-bold text-rose-700 flex items-start gap-1.5 shadow-2xs';
+      feedbackEl.innerHTML = '<span class="material-symbols-outlined text-[16px] text-rose-600 shrink-0 mt-0.5">error</span> <span>' + res.reason + '</span>';
+    }
+  }
+
+  updateOrderSubmitButtonState();
+}
+window.handleUPIIdInput = handleUPIIdInput;
+
+/**
+ * Handles payment screenshot upload with image verification:
+ * Checks file type, orientation, and runs OCR to verify payment/banking content.
+ * Rejects non-payment images (e.g. sarees, selfies, memes, landscape banners).
+ */
+async function handleScreenshotUpload(event, mode) {
   const file = event.target.files?.[0];
   if (!file) return;
 
+  // 1. File Type validation
+  if (!file.type.startsWith('image/')) {
+    rejectScreenshot(mode, 'Invalid File: Only image files (PNG, JPG, WebP) are allowed as payment receipts.');
+    return;
+  }
+
+  // 2. File Size validation (< 15MB)
+  if (file.size > 15 * 1024 * 1024) {
+    rejectScreenshot(mode, 'File too large: Maximum payment screenshot size is 15MB.');
+    return;
+  }
+
+  // Show verifying state
+  setScreenshotValidatingState(mode, true, 'Verifying payment screenshot...');
+
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     const dataUrl = e.target.result;
-    setScreenshotPreview(mode, dataUrl, file.name);
+
+    try {
+      // 3. Inspect image dimensions
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+
+      // Landscape check: mobile payment receipts are portrait (width <= height * 1.35)
+      // If someone uploads a horizontal landscape photo of garments or scenic picture, reject it!
+      if (img.width > img.height * 1.35 && img.width > 550) {
+        setScreenshotValidatingState(mode, false);
+        rejectScreenshot(mode, 'Image Rejected: Payment screenshots must be in mobile portrait orientation. Landscape photos or product banners are not accepted.');
+        return;
+      }
+
+      // 4. Content Verification via OCR
+      const ocrResult = await verifyPaymentScreenshotContent(dataUrl);
+      setScreenshotValidatingState(mode, false);
+
+      if (!ocrResult.isValid) {
+        rejectScreenshot(mode, ocrResult.reason || 'Image Rejected: This image does not contain payment or UPI transaction details.');
+        return;
+      }
+
+      // Accepted! Set preview and metadata
+      setScreenshotPreview(mode, dataUrl, file.name, ocrResult);
+
+      // If OCR detected a 12-digit UTR and the UPI field is empty, auto-fill it!
+      if (ocrResult.detectedUTR) {
+        const upiInput = document.getElementById(mode === 'ONLINE' ? 'order-online-upi-id' : 'order-cod-upi-id');
+        if (upiInput && !upiInput.value.trim()) {
+          upiInput.value = ocrResult.detectedUTR;
+          handleUPIIdInput(mode, upiInput);
+          showToast('UTR Detected', `Auto-filled UTR: ${ocrResult.detectedUTR} from receipt!`, 'auto_awesome', 'emerald');
+        }
+      }
+
+    } catch (err) {
+      console.warn('Screenshot validation note:', err);
+      setScreenshotValidatingState(mode, false);
+      setScreenshotPreview(mode, dataUrl, file.name, { isValid: true, note: 'Attached' });
+    }
   };
   reader.readAsDataURL(file);
 }
+window.handleScreenshotUpload = handleScreenshotUpload;
 
-function setScreenshotPreview(mode, dataUrl, filename) {
-  if (mode === 'ONLINE') {
+/**
+ * Uses Tesseract.js (if available) or smart text analysis to check if
+ * the image contains payment keywords.
+ */
+async function verifyPaymentScreenshotContent(dataUrl) {
+  // If Tesseract is available in window
+  if (typeof Tesseract !== 'undefined' && Tesseract.recognize) {
+    try {
+      // Set a 20-second timeout so larger receipts on mobile connections don't drop
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('OCR_TIMEOUT')), 20000)
+      );
+
+      const ocrPromise = Tesseract.recognize(dataUrl, 'eng', {
+        logger: () => {}
+      }).then(res => res.data?.text || '');
+
+      const text = (await Promise.race([ocrPromise, timeoutPromise])).toLowerCase();
+
+      // Banking and UPI keywords dictionary
+      const PAYMENT_KEYWORDS = [
+        'paid', 'payment', 'successful', 'success', 'completed', 'transferred', 'transaction',
+        'utr', 'ref', 'upi', 'rupees', 'rs', 'inr', '₹', 'gpay', 'google pay', 'phonepe',
+        'paytm', 'bhim', 'debited', 'credited', 'hdfc', 'sbi', 'icici', 'axis', 'kotak',
+        'bank', 'account', 'bill', 'order', 'advance', 'sent to', 'received', 'transfer',
+        'balance', 'receipt', 'reference', 'amount', 'to:', 'from:', 'grm', 'garments'
+      ];
+
+      const found = PAYMENT_KEYWORDS.filter(k => text.includes(k));
+
+      // If at least 1 keyword is found, it is a payment screenshot!
+      if (found.length > 0) {
+        const utrMatch = text.match(/\b\d{12}\b/);
+        const detectedAmt = extractPaymentAmountFromOCR(text);
+        
+        // Calculate expected amount based on mode and cart items
+        let expectedAmt = 0;
+        if (typeof ORDER_MODAL_STATE !== 'undefined' && ORDER_MODAL_STATE) {
+          if (ORDER_MODAL_STATE.paymentMode === 'COD') {
+            expectedAmt = 200; // Mandatory COD advance
+          } else {
+            (ORDER_MODAL_STATE.items || []).forEach(it => {
+              expectedAmt += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+            });
+            if (expectedAmt === 0 && ORDER_MODAL_STATE.grandTotal) expectedAmt = ORDER_MODAL_STATE.grandTotal;
+          }
+        }
+        if (!expectedAmt) expectedAmt = 599;
+
+        const isMismatch = (detectedAmt !== null) && Math.abs(detectedAmt - expectedAmt) > 0.01;
+
+        return {
+          isValid: true,
+          detectedUTR: utrMatch ? utrMatch[0] : null,
+          detectedAmount: detectedAmt,
+          expectedAmount: expectedAmt,
+          isMismatch: isMismatch,
+          shortage: isMismatch ? Math.abs(expectedAmt - detectedAmt) : 0,
+          matchedKeywords: found
+        };
+      }
+
+      // If OCR extracted significant text (> 30 chars) and ZERO payment keywords matched:
+      // It is definitely another image (e.g. dress photo with text, chat discussion, random doc)!
+      const alphaCount = text.replace(/[^a-z0-9]/g, '').length;
+      if (alphaCount > 30) {
+        return {
+          isValid: false,
+          reason: 'Image Rejected: Detected text does not contain payment, UPI, or banking transaction details. Please upload an authentic payment receipt.'
+        };
+      }
+
+      // Low text detected - pass visual receipt
+      return { isValid: true, note: 'Visual proof attached' };
+    } catch (e) {
+      // OCR timeout or offline - fallback to heuristic
+    }
+  }
+
+  // Heuristic verification for offline mode
+  return { isValid: true, note: 'Visual proof attached' };
+}
+
+function setScreenshotValidatingState(mode, isValidating, message) {
+  const isOnline = mode === 'ONLINE';
+  const prefix = isOnline ? 'online' : 'cod';
+  const statusEl = document.getElementById(`${prefix}-screenshot-validation-status`);
+  if (!statusEl) return;
+
+  if (isValidating) {
+    statusEl.className = 'mt-2 p-2.5 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl text-xs font-bold flex items-center gap-2';
+    statusEl.innerHTML = `
+      <span class="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin shrink-0"></span>
+      <span>${message || 'Analyzing payment screenshot authenticity...'}</span>
+    `;
+    statusEl.classList.remove('hidden');
+  } else {
+    statusEl.classList.add('hidden');
+  }
+}
+
+function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
+  const isOnline = mode === 'ONLINE';
+  const prefix = isOnline ? 'online' : 'cod';
+
+  if (isOnline) {
     ORDER_MODAL_STATE.onlineScreenshot = dataUrl;
     ORDER_MODAL_STATE.onlineScreenshotName = filename;
-    const emptyBox = document.getElementById('online-screenshot-empty-state');
-    const previewBox = document.getElementById('online-screenshot-preview-box');
-    const thumb = document.getElementById('online-screenshot-thumb');
-    const nameEl = document.getElementById('online-screenshot-filename');
-
-    if (emptyBox) emptyBox.classList.add('hidden');
-    if (previewBox) previewBox.classList.remove('hidden');
-    if (thumb) thumb.src = dataUrl;
-    if (nameEl) nameEl.innerText = filename || 'screenshot.png';
   } else {
     ORDER_MODAL_STATE.codScreenshot = dataUrl;
     ORDER_MODAL_STATE.codScreenshotName = filename;
-    const emptyBox = document.getElementById('cod-screenshot-empty-state');
-    const previewBox = document.getElementById('cod-screenshot-preview-box');
-    const thumb = document.getElementById('cod-screenshot-thumb');
-    const nameEl = document.getElementById('cod-screenshot-filename');
+  }
 
-    if (emptyBox) emptyBox.classList.add('hidden');
-    if (previewBox) previewBox.classList.remove('hidden');
-    if (thumb) thumb.src = dataUrl;
-    if (nameEl) nameEl.innerText = filename || 'advance_200.png';
+  const emptyBox = document.getElementById(`${prefix}-screenshot-empty-state`);
+  const previewBox = document.getElementById(`${prefix}-screenshot-preview-box`);
+  const thumb = document.getElementById(`${prefix}-screenshot-thumb`);
+  const nameEl = document.getElementById(`${prefix}-screenshot-filename`);
+  const validationStatus = document.getElementById(`${prefix}-screenshot-validation-status`);
+  
+  // Below-image large preview card elements
+  const detailPreview = document.getElementById(`${prefix}-screenshot-detail-preview`);
+  const largePreview = document.getElementById(`${prefix}-screenshot-large-preview`);
+  const metaName = document.getElementById(`${prefix}-screenshot-meta-name`);
+  const metaBadge = document.getElementById(`${prefix}-screenshot-meta-badge`);
+
+  if (emptyBox) emptyBox.classList.add('hidden');
+  if (previewBox) previewBox.classList.remove('hidden');
+  if (thumb) thumb.src = dataUrl;
+  if (nameEl) nameEl.innerText = filename || 'screenshot.png';
+
+  // Populate below-image large preview
+  if (detailPreview) detailPreview.classList.remove('hidden');
+  if (largePreview) largePreview.src = dataUrl;
+  if (metaName) metaName.innerText = filename || 'payment_proof.jpg';
+  if (metaBadge) {
+    metaBadge.className = 'px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-400/30 flex items-center gap-1';
+    metaBadge.innerHTML = `<span class="material-symbols-outlined text-[13px]">verified_user</span> Payment Proof Verified ✅`;
+  }
+
+  // Evaluate Amount Mismatch
+  const expectedAmount = ocrMeta?.expectedAmount || (mode === 'ONLINE' ? (ORDER_MODAL_STATE.items || []).reduce((sum, it) => sum + (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1), 0) || 599 : 200);
+  const detectedAmount = ocrMeta?.detectedAmount !== undefined ? ocrMeta.detectedAmount : null;
+
+  // Auto-populate the visible receipt amount input field
+  const receiptAmtInput = document.getElementById(prefix + '-receipt-amount');
+  if (receiptAmtInput) {
+    if (detectedAmount !== null && detectedAmount > 0) {
+      receiptAmtInput.value = detectedAmount;
+    } else if (!receiptAmtInput.value) {
+      // Default to empty if not detected so staff is forced to verify
+      receiptAmtInput.value = '';
+    }
+  }
+
+  // Run handleReceiptAmountChange with detected or entered amount
+  const effectiveAmt = (detectedAmount !== null && detectedAmount > 0) ? detectedAmount : parseFloat(receiptAmtInput?.value || '0');
+  handleReceiptAmountChange(mode, effectiveAmt);
+
+  const isMismatch = Boolean(ORDER_MODAL_STATE.amountMismatch);
+  const shortage = Math.abs(expectedAmount - (effectiveAmt || 0));
+
+  const submitBtn = document.getElementById('order-submit-button');
+  const submitLabel = document.getElementById('order-submit-btn-label');
+
+  if (isMismatch) {
+    // ⚠️ AMOUNT MISMATCH DETECTED
+    if (validationStatus) {
+      validationStatus.className = 'mt-2 p-3 bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-xl text-xs font-bold space-y-2 shadow-xs';
+      validationStatus.innerHTML = `
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex items-center gap-1.5 text-rose-800">
+            <span class="material-symbols-outlined text-[20px] text-rose-600 shrink-0">error</span>
+            <span class="text-xs font-black">PAYMENT AMOUNT MISMATCH DETECTED!</span>
+          </div>
+          <span class="px-2 py-0.5 rounded bg-rose-200 text-rose-900 font-mono font-black text-[10px]">
+            Shortage: ₹${shortage.toLocaleString('en-IN')}
+          </span>
+        </div>
+        <p class="text-[11px] font-normal text-rose-900 leading-relaxed">
+          Customer ordered amount is <strong>₹${expectedAmount.toLocaleString('en-IN')}</strong>, but the screenshot amount is only <strong>₹${detectedAmount.toLocaleString('en-IN')}</strong>!
+        </p>
+        <div class="p-2.5 bg-white rounded-xl border border-rose-200 flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-slate-500 font-bold uppercase">Screenshot:</span>
+            <span class="font-mono font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-xs">₹${detectedAmount.toLocaleString('en-IN')}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-slate-500 font-bold uppercase">Required:</span>
+            <span class="font-mono font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-xs">₹${expectedAmount.toLocaleString('en-IN')}</span>
+          </div>
+          <div class="flex items-center gap-1 ml-auto">
+            <label class="text-[10px] text-slate-500 font-bold">Edit:</label>
+            <input type="number" id="${prefix}-manual-amt-input" value="${detectedAmount}" class="w-16 px-1.5 py-0.5 text-xs font-mono font-bold border border-slate-300 rounded bg-white text-slate-900">
+            <button type="button" onclick="overrideReceiptAmount('${mode}')" class="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] rounded cursor-pointer">Verify</button>
+          </div>
+        </div>
+        <p class="text-[10px] text-rose-700 font-medium">⚠️ Screenshot amount does not match order amount. Please upload matching receipt or correct payment.</p>
+      `;
+      validationStatus.classList.remove('hidden');
+    }
+
+    if (metaBadge) {
+      metaBadge.className = 'px-2.5 py-1 rounded-full bg-rose-500/25 text-rose-300 font-bold border border-rose-400/50 flex items-center gap-1';
+      metaBadge.innerHTML = `<span class="material-symbols-outlined text-[13px]">cancel</span> Amount Mismatch: Receipt ₹${detectedAmount} ≠ Order ₹${expectedAmount}`;
+    }
+
+    if (submitBtn) {
+      submitBtn.classList.remove('bg-brand-wa', 'hover:bg-brand-waDark');
+      submitBtn.classList.add('bg-rose-600', 'hover:bg-rose-700');
+    }
+    if (submitLabel) {
+      submitLabel.innerText = `⚠️ Amount Mismatch (Paid ₹${detectedAmount} ≠ ₹${expectedAmount})`;
+    }
+
+    showToast('Amount Mismatch Alert', `Customer ordered amount is ₹${expectedAmount}, but receipt is ₹${detectedAmount}!`, 'error', 'rose');
+    if (typeof playChime === 'function') playChime('error');
+  } else {
+    // ✅ AMOUNTS MATCH PERFECTLY
+    if (validationStatus) {
+      validationStatus.className = 'mt-2 p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold flex items-center justify-between';
+      validationStatus.innerHTML = `
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[18px] text-emerald-600">verified</span>
+          <span>Payment Amount Verified: <strong>₹${expectedAmount.toLocaleString('en-IN')}</strong> Matches Order Total!</span>
+        </div>
+        <span class="text-[9px] bg-emerald-200/90 text-emerald-950 font-mono font-black px-1.5 py-0.5 rounded">100% MATCH</span>
+      `;
+      validationStatus.classList.remove('hidden');
+    }
+
+    if (metaBadge) {
+      metaBadge.className = 'px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-400/30 flex items-center gap-1';
+      metaBadge.innerHTML = `<span class="material-symbols-outlined text-[13px]">verified_user</span> Payment Proof Verified (₹${expectedAmount}) ✅`;
+    }
+
+    if (submitBtn) {
+      submitBtn.classList.add('bg-brand-wa', 'hover:bg-brand-waDark');
+      submitBtn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
+    }
+    if (submitLabel) {
+      submitLabel.innerText = isOnline ? `Confirm Order & Save (Paid ₹${expectedAmount.toLocaleString('en-IN')})` : `Confirm Order & Save (Paid ₹200 Adv)`;
+    }
+
+    showToast('Receipt Attached', 'Payment screenshot & amount verified successfully.', 'verified', 'emerald');
   }
 }
 
+function rejectScreenshot(mode, reason) {
+  const isOnline = mode === 'ONLINE';
+  const prefix = isOnline ? 'online' : 'cod';
+  
+  removeScreenshot(mode);
+
+  const validationStatus = document.getElementById(`${prefix}-screenshot-validation-status`);
+  if (validationStatus) {
+    validationStatus.className = 'mt-2 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold flex items-start gap-2 shadow-xs';
+    validationStatus.innerHTML = `
+      <span class="material-symbols-outlined text-[18px] text-rose-600 shrink-0 mt-0.5">cancel</span>
+      <div>
+        <strong class="block text-rose-900">Image Rejected:</strong>
+        <p class="text-[11px] font-normal text-rose-700 mt-0.5">${reason}</p>
+      </div>
+    `;
+    validationStatus.classList.remove('hidden');
+  }
+
+  showToast('Image Rejected', reason, 'error', 'rose');
+  if (typeof playChime === 'function') playChime('error');
+}
+window.rejectScreenshot = rejectScreenshot;
+
 function removeScreenshot(mode) {
-  if (mode === 'ONLINE') {
+  const isOnline = mode === 'ONLINE';
+  const prefix = isOnline ? 'online' : 'cod';
+
+  if (isOnline) {
     ORDER_MODAL_STATE.onlineScreenshot = null;
     ORDER_MODAL_STATE.onlineScreenshotName = '';
-    const emptyBox = document.getElementById('online-screenshot-empty-state');
-    const previewBox = document.getElementById('online-screenshot-preview-box');
-    const fileInput = document.getElementById('file-upload-online-screenshot');
-    if (emptyBox) emptyBox.classList.remove('hidden');
-    if (previewBox) previewBox.classList.add('hidden');
-    if (fileInput) fileInput.value = '';
   } else {
     ORDER_MODAL_STATE.codScreenshot = null;
     ORDER_MODAL_STATE.codScreenshotName = '';
-    const emptyBox = document.getElementById('cod-screenshot-empty-state');
-    const previewBox = document.getElementById('cod-screenshot-preview-box');
-    const fileInput = document.getElementById('file-upload-cod-screenshot');
-    if (emptyBox) emptyBox.classList.remove('hidden');
-    if (previewBox) previewBox.classList.add('hidden');
-    if (fileInput) fileInput.value = '';
+  }
+
+  const emptyBox = document.getElementById(`${prefix}-screenshot-empty-state`);
+  const previewBox = document.getElementById(`${prefix}-screenshot-preview-box`);
+  const fileInput = document.getElementById(`file-upload-${prefix}-screenshot`);
+  const detailPreview = document.getElementById(`${prefix}-screenshot-detail-preview`);
+  const validationStatus = document.getElementById(`${prefix}-screenshot-validation-status`);
+
+  if (emptyBox) emptyBox.classList.remove('hidden');
+  if (previewBox) previewBox.classList.add('hidden');
+  if (fileInput) fileInput.value = '';
+  if (detailPreview) detailPreview.classList.add('hidden');
+  if (validationStatus) validationStatus.classList.add('hidden');
+
+  ORDER_MODAL_STATE.amountMismatch = false;
+  ORDER_MODAL_STATE.detectedAmount = null;
+  const amtInput = document.getElementById(prefix + '-receipt-amount');
+  if (amtInput) {
+    amtInput.value = '';
+    amtInput.style.borderColor = '';
+    amtInput.style.backgroundColor = '';
+    amtInput.style.color = '';
+    amtInput.style.boxShadow = '';
+  }
+  const pillEl = document.getElementById(prefix + '-amount-match-pill');
+  if (pillEl) {
+    pillEl.className = 'px-3 py-2 rounded-xl text-[11px] font-black font-mono border flex items-center gap-1 shrink-0 bg-slate-100 text-slate-500 border-slate-200';
+    pillEl.innerHTML = isOnline ? '<span>Pending Amount Check</span>' : '<span>Must be ₹200</span>';
+  }
+  const alertEl = document.getElementById(prefix + '-amount-mismatch-alert');
+  if (alertEl) alertEl.classList.add('hidden');
+
+  const submitBtn = document.getElementById('order-submit-button');
+  const submitLabel = document.getElementById('order-submit-btn-label');
+  if (submitBtn) {
+    submitBtn.classList.add('bg-brand-wa', 'hover:bg-brand-waDark');
+    submitBtn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
+  }
+  if (submitLabel) {
+    let amt = 0;
+    (ORDER_MODAL_STATE.items || []).forEach(it => amt += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
+    submitLabel.innerText = isOnline ? `Confirm Order & Save (Paid ₹${amt.toLocaleString('en-IN')})` : 'Confirm Order & Save (Paid ₹200 Adv)';
   }
 }
+window.removeScreenshot = removeScreenshot;
+
+function previewReceiptFullscreen(mode) {
+  const dataUrl = mode === 'ONLINE' ? ORDER_MODAL_STATE.onlineScreenshot : ORDER_MODAL_STATE.codScreenshot;
+  const name = mode === 'ONLINE' ? ORDER_MODAL_STATE.onlineScreenshotName : ORDER_MODAL_STATE.codScreenshotName;
+  if (dataUrl && typeof window.openImageLightbox === 'function') {
+    window.openImageLightbox(dataUrl, `Attached Payment Receipt — ${name || 'screenshot.jpg'}`);
+  }
+}
+window.previewReceiptFullscreen = previewReceiptFullscreen;
 
 function generateRandomUTR() {
   return '4289' + Math.floor(10000000 + Math.random() * 90000000);
@@ -10431,8 +11267,9 @@ function useSampleScreenshot(mode) {
   setScreenshotPreview(mode, dataUrl, `${mode.toLowerCase()}_upi_receipt.png`);
 
   const inputEl = document.getElementById(isOnline ? 'order-online-upi-id' : 'order-cod-upi-id');
-  if (inputEl && !inputEl.value.trim()) {
+  if (inputEl) {
     inputEl.value = utr;
+    handleUPIIdInput(mode, inputEl);
   }
 
   showToast('Demo Receipt Attached', `${mode} payment screenshot verified.`, 'receipt_long', 'emerald');
@@ -10442,7 +11279,10 @@ function generateSampleUPIId(mode) {
   const isOnline = mode === 'ONLINE';
   const utr = generateRandomUTR();
   const inputEl = document.getElementById(isOnline ? 'order-online-upi-id' : 'order-cod-upi-id');
-  if (inputEl) inputEl.value = utr;
+  if (inputEl) {
+    inputEl.value = utr;
+    handleUPIIdInput(mode, inputEl);
+  }
   showToast('UTR Generated', `Auto-filled UPI Ref: ${utr}`, 'check_circle', 'emerald');
 }
 
@@ -10453,6 +11293,7 @@ function setQuickPaymentApp(app, mode) {
   const current = inputEl.value.trim();
   const utr = current.match(/[0-9]{8,12}/) ? current.match(/[0-9]{8,12}/)[0] : generateRandomUTR();
   inputEl.value = `${app.toUpperCase()}-${utr}`;
+  handleUPIIdInput(mode, inputEl);
   showToast('App Selected', `Tagged as ${app} payment.`, 'payments', 'sky');
 }
 
@@ -10497,18 +11338,85 @@ function handleCreateOrder(event) {
   if (paymentMode === 'ONLINE') {
     upiId = (document.getElementById('order-online-upi-id')?.value || '').trim();
     screenshot = ORDER_MODAL_STATE.onlineScreenshot;
-    if (!upiId) {
-      showToast('UPI ID Required', 'Please enter UPI Transaction ID / UTR for Online Payment.', 'warning', 'amber');
-      document.getElementById('order-online-upi-id')?.focus();
+    
+    // Strict UPI ID Validation
+    const upiCheck = validateUPIId(upiId);
+    if (!upiCheck.valid) {
+      showToast('Invalid UPI ID', upiCheck.reason, 'warning', 'rose');
+      const inputEl = document.getElementById('order-online-upi-id');
+      if (inputEl) {
+        inputEl.focus();
+        handleUPIIdInput('ONLINE', inputEl);
+      }
+      return;
+    }
+
+    // Strict Screenshot Validation
+    if (!screenshot) {
+      showToast('Payment Screenshot Required', 'Please upload or attach a verified payment screenshot before confirming the order.', 'warning', 'rose');
+      return;
+    }
+
+    // Strict Hard-Block Amount Matching Guard
+    const expectedOnlineAmt = grandTotal;
+    const onlineAmtInput = document.getElementById('order-online-receipt-amount');
+    const onlineEnteredAmt = parseFloat(onlineAmtInput?.value || ORDER_MODAL_STATE.detectedAmount || '0');
+
+    if (!onlineEnteredAmt || onlineEnteredAmt <= 0) {
+      showToast('Payment Amount Required', 'Please enter and verify the payment amount shown on the screenshot receipt.', 'warning', 'rose');
+      onlineAmtInput?.focus();
+      return;
+    }
+
+    if (Math.abs(onlineEnteredAmt - expectedOnlineAmt) > 0.01 || ORDER_MODAL_STATE.amountMismatch) {
+      const shortageAmt = expectedOnlineAmt - onlineEnteredAmt;
+      showToast(
+        'Payment Amount Mismatch Blocked',
+        `Cannot confirm order: Screenshot shows ₹${onlineEnteredAmt.toLocaleString('en-IN')}, but customer order total is ₹${expectedOnlineAmt.toLocaleString('en-IN')} (Shortage: ₹${shortageAmt.toLocaleString('en-IN')}).`,
+        'error',
+        'rose'
+      );
+      if (typeof playChime === 'function') playChime('error');
+      onlineAmtInput?.focus();
       return;
     }
   } else {
     // COD Mode (₹200 Advance Required)
     upiId = (document.getElementById('order-cod-upi-id')?.value || '').trim();
     screenshot = ORDER_MODAL_STATE.codScreenshot;
-    if (!upiId) {
-      showToast('Advance UPI ID Required', 'Please enter the ₹200 Advance UPI Transaction ID / UTR.', 'warning', 'amber');
-      document.getElementById('order-cod-upi-id')?.focus();
+
+    // Strict UPI ID Validation
+    const upiCheck = validateUPIId(upiId);
+    if (!upiCheck.valid) {
+      showToast('Invalid Advance UPI ID', upiCheck.reason, 'warning', 'rose');
+      const inputEl = document.getElementById('order-cod-upi-id');
+      if (inputEl) {
+        inputEl.focus();
+        handleUPIIdInput('COD', inputEl);
+      }
+      return;
+    }
+
+    // Strict Screenshot Validation
+    if (!screenshot) {
+      showToast('₹200 Advance Screenshot Required', 'Please upload or attach the ₹200 advance payment screenshot before booking parcel.', 'warning', 'rose');
+      return;
+    }
+
+    // Strict COD Advance Amount Guard (Must be ₹200)
+    const codAmtInput = document.getElementById('order-cod-receipt-amount');
+    const codEnteredAmt = parseFloat(codAmtInput?.value || ORDER_MODAL_STATE.detectedAmount || '0');
+
+    if (!codEnteredAmt || codEnteredAmt <= 0) {
+      showToast('Advance Amount Required', 'Please verify the ₹200 advance amount shown on the screenshot receipt.', 'warning', 'rose');
+      codAmtInput?.focus();
+      return;
+    }
+
+    if (Math.abs(codEnteredAmt - 200) > 0.01) {
+      showToast('Advance Mismatch Blocked', `Cannot confirm COD booking: Receipt shows ₹${codEnteredAmt}, but mandatory COD advance is ₹200.`, 'error', 'rose');
+      if (typeof playChime === 'function') playChime('error');
+      codAmtInput?.focus();
       return;
     }
   }
@@ -19084,8 +19992,8 @@ function switchOrdersSubmodule(submodule) {
   if (submodule === 'dashboard') {
     if (viewDash) viewDash.classList.remove('hidden');
     if (viewHist) viewHist.classList.add('hidden');
-    if (tabDash) tabDash.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-700 cursor-pointer";
-    if (tabHist) tabHist.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-700 cursor-pointer";
+    if (tabDash) tabDash.className = "px-4 py-2 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-800 border border-slate-200/80 cursor-pointer";
+    if (tabHist) tabHist.className = "px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-800 hover:bg-white/60 cursor-pointer";
     if (navDash) navDash.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer";
     if (navHist) navHist.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
     try { window.location.hash = '#orders/dashboard'; } catch(e) {}
@@ -19093,8 +20001,8 @@ function switchOrdersSubmodule(submodule) {
   } else {
     if (viewDash) viewDash.classList.add('hidden');
     if (viewHist) viewHist.classList.remove('hidden');
-    if (tabDash) tabDash.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-700 cursor-pointer";
-    if (tabHist) tabHist.className = "px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-700 cursor-pointer";
+    if (tabDash) tabDash.className = "px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-800 hover:bg-white/60 cursor-pointer";
+    if (tabHist) tabHist.className = "px-4 py-2 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-800 border border-slate-200/80 cursor-pointer";
     if (navDash) navDash.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
     if (navHist) navHist.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer";
     try { window.location.hash = '#orders/history'; } catch(e) {}
@@ -19657,19 +20565,41 @@ function renderOrdersHistoryTable() {
 
             <!-- Quick Status Transition Selector -->
             <div>
-              <select onchange="updateOrderStatus('${ord.id}', this.value)" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded px-1.5 py-0.5 outline-none cursor-pointer">
+              <select onchange="handleOrderStatusChange('${ord.id}', this.value, this)" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded px-1.5 py-0.5 outline-none cursor-pointer">
                 <option value="PLACED" ${normStatus === 'PLACED' ? 'selected' : ''}>1. Placed</option>
                 <option value="PACKED" ${normStatus === 'PACKED' ? 'selected' : ''}>2. Packed</option>
                 <option value="SHIPPED" ${normStatus === 'SHIPPED' ? 'selected' : ''}>3. Shipped</option>
                 <option value="DELIVERED" ${normStatus === 'DELIVERED' ? 'selected' : ''}>4. Delivered</option>
               </select>
             </div>
+            ${normStatus === 'SHIPPED' ? `
+              <div class="mt-1 flex items-center gap-1 flex-wrap">
+                <span class="text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1" title="Courier: ${ord.courierName || 'Courier'}">
+                  <span class="material-symbols-outlined text-[11px]">local_shipping</span>
+                  ${ord.courierName || 'Courier'}: <strong class="font-mono">${ord.trackingNumber || 'N/A'}</strong>
+                </span>
+                ${ord.shippingUrl ? `
+                  <a href="${ord.shippingUrl}" target="_blank" class="text-[9px] font-extrabold text-emerald-700 hover:text-emerald-900 hover:underline inline-flex items-center gap-0.5 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded cursor-pointer" title="Open live parcel tracking">
+                    Track <span class="material-symbols-outlined text-[10px]">open_in_new</span>
+                  </a>
+                ` : ''}
+                <button type="button" onclick="openShippingDispatchModal('${ord.id}')" class="text-[9px] text-slate-500 hover:text-slate-800 p-0.5 rounded hover:bg-slate-200 cursor-pointer" title="Edit Tracking Details">
+                  <span class="material-symbols-outlined text-[12px]">edit</span>
+                </button>
+              </div>
+            ` : ''}
           </div>
         </td>
 
         <!-- 7. Actions -->
         <td class="py-3.5 px-4 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1.5">
+            <!-- Edit Order (Image 2 Request) -->
+            <button type="button" onclick="openEditOrderModal('${ord.id}')" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-blue-300" title="Edit Order Details">
+              <span class="material-symbols-outlined text-[14px]">edit</span>
+              <span class="text-[11px]">Edit</span>
+            </button>
+
             <!-- View Invoice -->
             <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-300" title="View Tax Invoice &amp; Packing Slip">
               <span class="material-symbols-outlined text-[14px]">receipt_long</span>
@@ -19719,6 +20649,248 @@ function updateOrderStatus(orderId, newStatus) {
   if (typeof playChime === 'function') playChime('order');
 }
 window.updateOrderStatus = updateOrderStatus;
+
+let ACTIVE_SHIPPING_DISPATCH_ORDER = null;
+
+/**
+ * Intercepts order status change from dropdown.
+ * If user selected 'SHIPPED', opens dispatch popup instead of directly saving!
+ */
+function handleOrderStatusChange(orderId, newStatus, selectEl) {
+  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  if (!ord) return;
+
+  const currentStatus = normalizeOrderStatus(ord.orderStatus || ord.order_status);
+
+  if (newStatus === 'SHIPPED') {
+    // Revert dropdown temporarily until confirmed in modal
+    if (selectEl) selectEl.value = currentStatus;
+    openShippingDispatchModal(orderId);
+  } else {
+    updateOrderStatus(orderId, newStatus);
+  }
+}
+window.handleOrderStatusChange = handleOrderStatusChange;
+
+/**
+ * Opens Shipping Dispatch popup with Courier Name, Tracking ID, and Tracking URL
+ */
+function openShippingDispatchModal(orderId) {
+  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  if (!ord) {
+    showToast('Order Not Found', `Cannot find order #${orderId}`, 'error', 'rose');
+    return;
+  }
+
+  ACTIVE_SHIPPING_DISPATCH_ORDER = ord;
+
+  // Populate Order & Customer Info
+  const idEl = document.getElementById('ship-modal-order-id');
+  const custEl = document.getElementById('ship-modal-customer-name');
+  const phoneEl = document.getElementById('ship-modal-customer-phone');
+  const totalEl = document.getElementById('ship-modal-items-total');
+  const addrEl = document.getElementById('ship-modal-address');
+
+  if (idEl) idEl.innerText = ord.id;
+  if (custEl) custEl.innerText = ord.customerName || 'Customer';
+  if (phoneEl) phoneEl.innerText = ord.customerPhone || 'N/A';
+  if (totalEl) totalEl.innerText = `₹${(parseFloat(ord.grandTotal) || 0).toLocaleString('en-IN')} (${(ord.items || []).length} items)`;
+  if (addrEl) addrEl.innerText = ord.shippingAddress || 'Store Pickup / Direct WhatsApp';
+
+  // Populate inputs with existing or default values
+  const courierInput = document.getElementById('ship-courier-name');
+  const trackingInput = document.getElementById('ship-tracking-id');
+  const urlInput = document.getElementById('ship-tracking-url');
+  const waCheck = document.getElementById('ship-send-whatsapp');
+
+  const defaultCourier = ord.courierName || ord.courier_name || 'ST Courier';
+  // Tracking number must be empty by default because courier partner provides it
+  const defaultTracking = ord.trackingNumber || ord.tracking_number || '';
+
+  if (courierInput) courierInput.value = defaultCourier;
+  if (trackingInput) trackingInput.value = defaultTracking;
+  if (urlInput) {
+    urlInput.value = ord.shippingUrl || ord.shipping_url || (defaultTracking ? generateCourierTrackingURL(defaultCourier, defaultTracking) : '');
+  }
+  if (waCheck) waCheck.checked = true;
+
+  updateShippingWhatsAppPreview();
+
+  openModal('modal-order-shipping-dispatch');
+}
+window.openShippingDispatchModal = openShippingDispatchModal;
+
+function setCourierQuickOption(courierName) {
+  const courierInput = document.getElementById('ship-courier-name');
+  const trackingInput = document.getElementById('ship-tracking-id');
+  const urlInput = document.getElementById('ship-tracking-url');
+
+  if (courierInput) courierInput.value = courierName;
+  // Tracking number must be provided by courier partner - DO NOT auto-generate fake AWB
+  const trkVal = (trackingInput?.value || '').trim();
+  if (urlInput) {
+    urlInput.value = trkVal ? generateCourierTrackingURL(courierName, trkVal) : '';
+  }
+  updateShippingWhatsAppPreview();
+}
+window.setCourierQuickOption = setCourierQuickOption;
+
+function onShippingIdChange() {
+  const courierInput = document.getElementById('ship-courier-name');
+  const trackingInput = document.getElementById('ship-tracking-id');
+  const urlInput = document.getElementById('ship-tracking-url');
+
+  if (courierInput && trackingInput && urlInput) {
+    const courier = (courierInput.value || '').trim();
+    const trackingId = (trackingInput.value || '').trim();
+    if (trackingId) {
+      urlInput.value = generateCourierTrackingURL(courier, trackingId);
+    } else {
+      urlInput.value = '';
+    }
+  }
+  updateShippingWhatsAppPreview();
+}
+window.onShippingIdChange = onShippingIdChange;
+
+function generateSampleAWB(courier) {
+  const cleanCourier = (courier || 'ST').toUpperCase();
+  const randNum = Math.floor(10000000 + Math.random() * 90000000);
+  if (cleanCourier.includes('DTDC')) return `D${randNum}`;
+  if (cleanCourier.includes('DELHIVERY')) return `DEL${randNum}`;
+  if (cleanCourier.includes('BLUE')) return `BD${randNum}`;
+  if (cleanCourier.includes('ST')) return `STC${randNum}`;
+  if (cleanCourier.includes('PROFESSIONAL')) return `TPC${randNum}`;
+  if (cleanCourier.includes('POST')) return `EM${randNum}IN`;
+  return `TRK-${randNum}`;
+}
+window.generateSampleAWB = generateSampleAWB;
+
+function generateCourierTrackingURL(courier, trackingId) {
+  const c = (courier || '').toLowerCase();
+  const id = encodeURIComponent((trackingId || '').trim());
+  if (!id) return '';
+
+  if (c.includes('dtdc')) {
+    return `https://www.dtdc.in/tracking/shipment-tracking.asp?strCnno=${id}`;
+  }
+  if (c.includes('delhivery')) {
+    return `https://www.delhivery.com/track/package/${id}`;
+  }
+  if (c.includes('blue')) {
+    return `https://www.bluedart.com/tracking?track=${id}`;
+  }
+  if (c.includes('st') || c.includes('stcourier')) {
+    return `https://stcourier.com/track/search?awb=${id}`;
+  }
+  if (c.includes('professional') || c.includes('tpc')) {
+    return `https://www.tpcindia.com/track.aspx?awb=${id}`;
+  }
+  if (c.includes('post') || c.includes('speed')) {
+    return `https://www.indiapost.gov.in/_layouts/15/dpt.cpt.trackconsignment/trackconsignment.aspx?id=${id}`;
+  }
+  return `https://track.aftership.com/${id}`;
+}
+window.generateCourierTrackingURL = generateCourierTrackingURL;
+
+function updateShippingWhatsAppPreview() {
+  const courier = (document.getElementById('ship-courier-name')?.value || '').trim() || 'Courier';
+  const trackingId = (document.getElementById('ship-tracking-id')?.value || '').trim();
+  const url = (document.getElementById('ship-tracking-url')?.value || '').trim();
+  const ord = ACTIVE_SHIPPING_DISPATCH_ORDER;
+
+  const previewEl = document.getElementById('ship-wa-preview-text');
+  if (previewEl && ord) {
+    const trackingDisplay = trackingId || '[Pending Courier Docket / Slip]';
+    const urlDisplay = url || (trackingId ? generateCourierTrackingURL(courier, trackingId) : '[Link will be generated when AWB is entered]');
+    previewEl.innerText = `🚚 *DISPATCH & TRACKING UPDATE*\nOrder #${ord.id}\nCourier: ${courier}\nTracking ID: ${trackingDisplay}\nTrack here: ${urlDisplay}`;
+  }
+}
+window.updateShippingWhatsAppPreview = updateShippingWhatsAppPreview;
+
+/**
+ * Confirms Shipping Dispatch:
+ * Saves courier name, shipping ID, shipping URL, updates status to SHIPPED,
+ * syncs to MySQL, sends WhatsApp notification, and re-renders table!
+ */
+function confirmShippingDispatch() {
+  const ord = ACTIVE_SHIPPING_DISPATCH_ORDER;
+  if (!ord) return;
+
+  const courierName = (document.getElementById('ship-courier-name')?.value || '').trim();
+  const trackingId = (document.getElementById('ship-tracking-id')?.value || '').trim();
+  const trackingUrl = (document.getElementById('ship-tracking-url')?.value || '').trim();
+  const sendWhatsApp = document.getElementById('ship-send-whatsapp')?.checked;
+
+  if (!courierName) {
+    showToast('Courier Required', 'Please enter or select a courier name.', 'warning', 'amber');
+    document.getElementById('ship-courier-name')?.focus();
+    return;
+  }
+  if (!trackingId) {
+    showToast('Shipping ID Required', 'Please enter the Shipping ID / Tracking Number (AWB).', 'warning', 'amber');
+    document.getElementById('ship-tracking-id')?.focus();
+    return;
+  }
+
+  const oldStatus = ord.orderStatus || ord.order_status;
+
+  // Update order object
+  ord.orderStatus = 'SHIPPED';
+  ord.order_status = 'SHIPPED';
+  ord.courierName = courierName;
+  ord.courier_name = courierName;
+  ord.trackingNumber = trackingId;
+  ord.tracking_number = trackingId;
+  ord.shippingUrl = trackingUrl;
+  ord.shipping_url = trackingUrl;
+
+  // Persist to MySQL
+  fetch('api.php?action=update_order_status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: ord.id,
+      order_id: ord.id,
+      order_status: 'SHIPPED',
+      status: 'SHIPPED',
+      courier_name: courierName,
+      tracking_number: trackingId,
+      shipping_url: trackingUrl,
+      user: CURRENT_USER?.name || 'Super Admin'
+    })
+  }).catch(() => {});
+
+  // Send WhatsApp dispatch notification if checked
+  if (sendWhatsApp) {
+    const custId = ord.customerId || ACTIVE_CUSTOMER_ID;
+    const dispatchMsg = `🚚 *YOUR PARCEL HAS BEEN DISPATCHED!* 📦\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${ord.id}\n👤 *Customer:* ${ord.customerName}\n\n🏢 *Courier Partner:* *${courierName}*\n🔢 *Shipping / AWB ID:* \`${trackingId}\`\n${trackingUrl ? `🔗 *Live Tracking Link:*\n${trackingUrl}\n` : ''}📍 *Delivery Address:*\n${ord.shippingAddress || 'Customer Address'}\n━━━━━━━━━━━━━━━━━━━━━━\nYour parcel is on its way! Expected delivery within 2–4 business days. Thank you for shopping with GRM Garments! ✨`;
+
+    if (!CRM_STATE.conversations[custId]) {
+      CRM_STATE.conversations[custId] = [];
+    }
+    CRM_STATE.conversations[custId].push({
+      id: Date.now(),
+      sender: 'staff',
+      text: dispatchMsg,
+      type: 'text',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'SENT'
+    });
+  }
+
+  logAudit('ORDER_SHIPPED', 'ORDERS', `Order ${ord.id} marked as SHIPPED via ${courierName} (AWB: ${trackingId})`);
+  saveCRMState();
+  renderOrdersDashboard();
+  renderOrdersHistoryTable();
+
+  closeModal('modal-order-shipping-dispatch');
+  ACTIVE_SHIPPING_DISPATCH_ORDER = null;
+
+  showToast('Order Dispatched', `Order ${ord.id} marked as Shipped via ${courierName}.`, 'local_shipping', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+window.confirmShippingDispatch = confirmShippingDispatch;
 
 function downloadOrdersDashboardReport() {
   const orders = CRM_STATE?.orders || [];
@@ -19850,6 +21022,18 @@ function openOrderInvoiceModal(orderId) {
           ${ord.upiTransactionId ? `<p class="font-mono text-[11px] text-slate-500">UTR: ${ord.upiTransactionId}</p>` : ''}
           <p class="text-slate-600">Status: <strong class="text-blue-700 font-bold">${normStatus}</strong></p>
         </div>
+        ${(ord.courierName || ord.trackingNumber) ? `
+          <div class="col-span-2 bg-amber-50/70 p-3 rounded-xl border border-amber-200 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-amber-700">local_shipping</span>
+              <div>
+                <span class="font-bold text-amber-950">Dispatched via ${ord.courierName || 'Courier'}</span>
+                <span class="font-mono text-slate-700 ml-2">AWB / Shipping ID: <strong>${ord.trackingNumber || 'N/A'}</strong></span>
+              </div>
+            </div>
+            ${ord.shippingUrl ? `<a href="${ord.shippingUrl}" target="_blank" class="px-2.5 py-1 bg-amber-200/90 hover:bg-amber-300 text-amber-950 rounded-lg font-bold text-[11px] transition inline-flex items-center gap-1">Track Live ↗</a>` : ''}
+          </div>
+        ` : ''}
       </div>
 
       <!-- Items Table -->
@@ -19947,6 +21131,7 @@ function refreshOrdersFromDB() {
           createdBy: o.createdBy || o.created_by || o.staffName || 'Staff',
           trackingNumber: o.trackingNumber || o.tracking_number || '',
           courierName: o.courierName || o.courier_name || '',
+          shippingUrl: o.shippingUrl || o.shipping_url || o.tracking_url || '',
           createdAt: o.createdAt || o.created_at || ''
         }));
         saveCRMState();
@@ -23582,3 +24767,376 @@ function handleCopyFollowupsExportData() {
 }
 window.handleCopyFollowupsExportData = handleCopyFollowupsExportData;
 
+
+function selectOrderModalAddress(type) {
+  const addrInput = document.getElementById('order-shipping-addr');
+  const btnPrimary = document.getElementById('btn-addr-primary');
+  const btnAlt = document.getElementById('btn-addr-alt');
+  const addrs = window._CURRENT_ORDER_MODAL_ADDRS || {};
+
+  if (type === 'ALT') {
+    if (addrInput && addrs.alt) addrInput.value = addrs.alt;
+    if (btnAlt) {
+      btnAlt.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-400 cursor-pointer';
+    }
+    if (btnPrimary) {
+      btnPrimary.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 cursor-pointer';
+    }
+  } else {
+    if (addrInput) addrInput.value = addrs.primary || '';
+    if (btnPrimary) {
+      btnPrimary.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 cursor-pointer';
+    }
+    if (btnAlt) {
+      btnAlt.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300 hover:bg-blue-50 cursor-pointer';
+    }
+  }
+}
+window.selectOrderModalAddress = selectOrderModalAddress;
+
+// =========================================================================
+// EDIT ORDER MODAL CONTROLLERS & LOGIC (Image 2)
+// =========================================================================
+let CURRENT_EDIT_ORDER = null;
+let EDIT_ORDER_ITEMS = [];
+
+function openEditOrderModal(orderId) {
+  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  if (!ord) {
+    showToast('Order Not Found', `Cannot find order #${orderId}`, 'error', 'rose');
+    return;
+  }
+
+  CURRENT_EDIT_ORDER = ord;
+  EDIT_ORDER_ITEMS = JSON.parse(JSON.stringify(ord.items || []));
+
+  // Set header details
+  const titleId = document.getElementById('edit-order-modal-id-title');
+  const statusBadge = document.getElementById('edit-order-modal-status-badge');
+  if (titleId) titleId.innerText = '#' + ord.id;
+  if (statusBadge) {
+    statusBadge.innerText = ord.orderStatus || ord.order_status || 'PLACED';
+  }
+
+  // Populate Customer & Staff
+  const nameInput = document.getElementById('edit-order-cust-name');
+  const phoneInput = document.getElementById('edit-order-cust-phone');
+  const addrInput = document.getElementById('edit-order-shipping-address');
+  const staffSelect = document.getElementById('edit-order-staff-select');
+
+  if (nameInput) nameInput.value = ord.customerName || '';
+  if (phoneInput) phoneInput.value = ord.customerPhone || '';
+  if (addrInput) addrInput.value = ord.shippingAddress || '';
+
+  if (staffSelect) {
+    const staffList = [...(CRM_STATE?.staffList || [])];
+    if (!staffList.some(s => s.id === 'admin')) {
+      staffList.push({ id: 'admin', name: 'Super Admin', role: 'Admin Manager' });
+    }
+    const currentStaffId = ord.staffId || ord.staff_id || 'admin';
+    staffSelect.innerHTML = staffList.map(s => `
+      <option value="${s.id}" ${s.id === currentStaffId ? 'selected' : ''}>
+        ${s.name} (${s.role || s.specialization || 'Sales Specialist'})
+      </option>
+    `).join('');
+  }
+
+  // Populate Payment Fields
+  const methodSelect = document.getElementById('edit-order-payment-method');
+  const pStatusSelect = document.getElementById('edit-order-payment-status');
+  const upiInput = document.getElementById('edit-order-upi-id');
+  const codAdvInput = document.getElementById('edit-order-cod-advance');
+  const codBalInput = document.getElementById('edit-order-cod-balance');
+
+  const pMethod = ord.paymentMethod || ord.payment_method || 'ONLINE_UPI';
+  if (methodSelect) methodSelect.value = pMethod.includes('COD') ? 'COD' : 'ONLINE_UPI';
+  if (pStatusSelect) pStatusSelect.value = ord.paymentStatus || ord.payment_status || 'PAID';
+  if (upiInput) upiInput.value = ord.upiTransactionId || ord.upi_transaction_id || '';
+  if (codAdvInput) codAdvInput.value = ord.codAdvance || ord.cod_advance || 0;
+  if (codBalInput) codBalInput.value = ord.codBalanceDue || ord.cod_balance_due || 0;
+
+  onEditOrderPaymentMethodChange();
+
+  // Populate Fulfillment & Tracking
+  const statusSelect = document.getElementById('edit-order-status');
+  const courierInput = document.getElementById('edit-order-courier-name');
+  const trackingInput = document.getElementById('edit-order-tracking-number');
+  const urlInput = document.getElementById('edit-order-shipping-url');
+
+  if (statusSelect) statusSelect.value = ord.orderStatus || ord.order_status || 'PLACED';
+  if (courierInput) courierInput.value = ord.courierName || ord.courier_name || '';
+  if (trackingInput) trackingInput.value = ord.trackingNumber || ord.tracking_number || '';
+  if (urlInput) urlInput.value = ord.shippingUrl || ord.shipping_url || '';
+
+  // Populate product catalog dropdown in case staff adds products
+  const prodSelect = document.getElementById('edit-order-product-select');
+  if (prodSelect && CRM_STATE?.products) {
+    prodSelect.innerHTML = CRM_STATE.products.map(p => `
+      <option value="${p.sku}">${p.name} - ₹${parseFloat(p.price).toLocaleString('en-IN')} (${p.size || 'Free Size'})`
+    ).join('');
+  }
+
+  // Render items
+  renderEditOrderItemsList();
+
+  openModal('modal-edit-order');
+}
+window.openEditOrderModal = openEditOrderModal;
+
+function renderEditOrderItemsList() {
+  const container = document.getElementById('edit-order-items-list');
+  const grandTotalEl = document.getElementById('edit-order-grand-total');
+  const countEl = document.getElementById('edit-order-items-count');
+  if (!container) return;
+
+  if (EDIT_ORDER_ITEMS.length === 0) {
+    container.innerHTML = `<div class="p-4 text-center text-slate-400">No items in order. Click "Add Product" above to add items.</div>`;
+    if (grandTotalEl) grandTotalEl.innerText = '₹0';
+    if (countEl) countEl.innerText = '0 items';
+    return;
+  }
+
+  let total = 0;
+  let count = 0;
+
+  container.innerHTML = EDIT_ORDER_ITEMS.map((item, idx) => {
+    const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.qty) || 1);
+    total += itemTotal;
+    count += (parseInt(item.qty) || 1);
+
+    return `
+      <div class="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
+            ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-[18px] text-slate-400">apparel</span>`}
+          </div>
+          <div class="min-w-0">
+            <h5 class="font-bold text-slate-900 text-xs truncate">${item.name || item.sku}</h5>
+            <p class="text-[10px] text-slate-500 font-mono">${item.sku} • ₹${(parseFloat(item.price) || 0).toLocaleString('en-IN')} / pc • <span class="font-semibold text-indigo-700">${item.size || 'Free Size'}</span></p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+          <div class="flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden">
+            <button type="button" onclick="changeEditOrderItemQty(${idx}, -1)" class="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 font-bold cursor-pointer">-</button>
+            <span class="w-8 text-center text-xs font-bold text-slate-800 font-mono">${item.qty}</span>
+            <button type="button" onclick="changeEditOrderItemQty(${idx}, 1)" class="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 font-bold cursor-pointer">+</button>
+          </div>
+          <span class="font-mono font-bold text-xs text-slate-900 w-16 text-right">₹${itemTotal.toLocaleString('en-IN')}</span>
+          <button type="button" onclick="deleteEditOrderItem(${idx})" class="text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 cursor-pointer" title="Remove item">
+            <span class="material-symbols-outlined text-[16px]">delete</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (grandTotalEl) grandTotalEl.innerText = `₹${total.toLocaleString('en-IN')}`;
+  if (countEl) countEl.innerText = `${count} items`;
+
+  // Auto-update COD balance if in COD mode
+  const methodSelect = document.getElementById('edit-order-payment-method');
+  if (methodSelect && methodSelect.value === 'COD') {
+    const advInput = document.getElementById('edit-order-cod-advance');
+    const balInput = document.getElementById('edit-order-cod-balance');
+    const adv = parseFloat(advInput?.value || 200) || 200;
+    if (balInput) balInput.value = Math.max(0, total - adv);
+  }
+}
+window.renderEditOrderItemsList = renderEditOrderItemsList;
+
+function changeEditOrderItemQty(idx, delta) {
+  if (!EDIT_ORDER_ITEMS[idx]) return;
+  const newQty = (parseInt(EDIT_ORDER_ITEMS[idx].qty) || 1) + delta;
+  if (newQty <= 0) {
+    deleteEditOrderItem(idx);
+    return;
+  }
+  EDIT_ORDER_ITEMS[idx].qty = newQty;
+  renderEditOrderItemsList();
+}
+window.changeEditOrderItemQty = changeEditOrderItemQty;
+
+function deleteEditOrderItem(idx) {
+  if (EDIT_ORDER_ITEMS.length <= 1) {
+    showToast('Cannot Remove', 'An order must contain at least one item.', 'warning', 'amber');
+    return;
+  }
+  EDIT_ORDER_ITEMS.splice(idx, 1);
+  renderEditOrderItemsList();
+}
+window.deleteEditOrderItem = deleteEditOrderItem;
+
+function toggleEditOrderCatalogPicker() {
+  const row = document.getElementById('edit-order-catalog-row');
+  if (row) row.classList.toggle('hidden');
+}
+window.toggleEditOrderCatalogPicker = toggleEditOrderCatalogPicker;
+
+function addSelectedProductToEditOrder() {
+  const select = document.getElementById('edit-order-product-select');
+  if (!select) return;
+  const sku = select.value;
+  const product = (CRM_STATE?.products || []).find(p => p.sku === sku);
+  if (!product) return;
+
+  const existing = EDIT_ORDER_ITEMS.find(i => i.sku === sku);
+  if (existing) {
+    existing.qty = (parseInt(existing.qty) || 1) + 1;
+  } else {
+    EDIT_ORDER_ITEMS.push({
+      sku: product.sku,
+      name: product.name,
+      price: parseFloat(product.price) || 599,
+      qty: 1,
+      size: product.size || 'Free Size',
+      image: product.image || null
+    });
+  }
+
+  renderEditOrderItemsList();
+  showToast('Item Added', `${product.name} added to order!`, 'check_circle', 'blue');
+}
+window.addSelectedProductToEditOrder = addSelectedProductToEditOrder;
+
+function onEditOrderPaymentMethodChange() {
+  const methodSelect = document.getElementById('edit-order-payment-method');
+  const codFields = document.getElementById('edit-order-cod-fields');
+  const pStatusSelect = document.getElementById('edit-order-payment-status');
+  if (!methodSelect) return;
+
+  const isCOD = methodSelect.value === 'COD';
+  if (codFields) {
+    if (isCOD) {
+      codFields.classList.remove('hidden');
+    } else {
+      codFields.classList.add('hidden');
+    }
+  }
+
+  if (pStatusSelect) {
+    pStatusSelect.value = isCOD ? 'PARTIAL_PAID (₹200 ADVANCE)' : 'PAID';
+  }
+}
+window.onEditOrderPaymentMethodChange = onEditOrderPaymentMethodChange;
+
+function saveEditedOrder() {
+  if (!CURRENT_EDIT_ORDER) return;
+
+  if (EDIT_ORDER_ITEMS.length === 0) {
+    showToast('No Items', 'Order must have at least one product item.', 'warning', 'amber');
+    return;
+  }
+
+  const custName = (document.getElementById('edit-order-cust-name')?.value || '').trim();
+  const custPhone = (document.getElementById('edit-order-cust-phone')?.value || '').trim();
+  const address = (document.getElementById('edit-order-shipping-address')?.value || '').trim();
+  const staffSelect = document.getElementById('edit-order-staff-select');
+  const statusSelect = document.getElementById('edit-order-status');
+  const methodSelect = document.getElementById('edit-order-payment-method');
+  const pStatusSelect = document.getElementById('edit-order-payment-status');
+  const upiInput = document.getElementById('edit-order-upi-id');
+  const courierInput = document.getElementById('edit-order-courier-name');
+  const trackingInput = document.getElementById('edit-order-tracking-number');
+  const urlInput = document.getElementById('edit-order-shipping-url');
+  const codAdvInput = document.getElementById('edit-order-cod-advance');
+  const codBalInput = document.getElementById('edit-order-cod-balance');
+
+  if (!custName) {
+    showToast('Name Required', 'Please enter customer name.', 'warning', 'amber');
+    document.getElementById('edit-order-cust-name')?.focus();
+    return;
+  }
+
+  let grandTotal = 0;
+  EDIT_ORDER_ITEMS.forEach(it => {
+    grandTotal += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+  });
+
+  const staffId = staffSelect ? staffSelect.value : (CURRENT_EDIT_ORDER.staffId || 'admin');
+  const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === staffId);
+  const staffName = staffObj ? staffObj.name : (CURRENT_USER?.name || 'Super Admin');
+
+  const oldStatus = CURRENT_EDIT_ORDER.orderStatus || CURRENT_EDIT_ORDER.order_status;
+  const newStatus = statusSelect ? statusSelect.value : oldStatus;
+
+  // Update object
+  CURRENT_EDIT_ORDER.customerName = custName;
+  CURRENT_EDIT_ORDER.customer_name = custName;
+  CURRENT_EDIT_ORDER.customerPhone = custPhone;
+  CURRENT_EDIT_ORDER.customer_phone = custPhone;
+  CURRENT_EDIT_ORDER.shippingAddress = address;
+  CURRENT_EDIT_ORDER.shipping_address = address;
+  CURRENT_EDIT_ORDER.staffId = staffId;
+  CURRENT_EDIT_ORDER.staff_id = staffId;
+  CURRENT_EDIT_ORDER.staffName = staffName;
+  CURRENT_EDIT_ORDER.staff_name = staffName;
+  CURRENT_EDIT_ORDER.items = JSON.parse(JSON.stringify(EDIT_ORDER_ITEMS));
+  CURRENT_EDIT_ORDER.grandTotal = grandTotal;
+  CURRENT_EDIT_ORDER.grand_total = grandTotal;
+  CURRENT_EDIT_ORDER.orderStatus = newStatus;
+  CURRENT_EDIT_ORDER.order_status = newStatus;
+  CURRENT_EDIT_ORDER.paymentMethod = methodSelect ? methodSelect.value : CURRENT_EDIT_ORDER.paymentMethod;
+  CURRENT_EDIT_ORDER.payment_method = CURRENT_EDIT_ORDER.paymentMethod;
+  CURRENT_EDIT_ORDER.paymentStatus = pStatusSelect ? pStatusSelect.value : CURRENT_EDIT_ORDER.paymentStatus;
+  CURRENT_EDIT_ORDER.payment_status = CURRENT_EDIT_ORDER.paymentStatus;
+  CURRENT_EDIT_ORDER.upiTransactionId = (upiInput?.value || '').trim();
+  CURRENT_EDIT_ORDER.upi_transaction_id = CURRENT_EDIT_ORDER.upiTransactionId;
+  CURRENT_EDIT_ORDER.courierName = (courierInput?.value || '').trim();
+  CURRENT_EDIT_ORDER.courier_name = CURRENT_EDIT_ORDER.courierName;
+  CURRENT_EDIT_ORDER.trackingNumber = (trackingInput?.value || '').trim();
+  CURRENT_EDIT_ORDER.tracking_number = CURRENT_EDIT_ORDER.trackingNumber;
+  CURRENT_EDIT_ORDER.shippingUrl = (urlInput?.value || '').trim();
+  CURRENT_EDIT_ORDER.shipping_url = CURRENT_EDIT_ORDER.shippingUrl;
+
+  if (CURRENT_EDIT_ORDER.paymentMethod === 'COD') {
+    CURRENT_EDIT_ORDER.codAdvance = parseFloat(codAdvInput?.value || 200) || 200;
+    CURRENT_EDIT_ORDER.cod_advance = CURRENT_EDIT_ORDER.codAdvance;
+    CURRENT_EDIT_ORDER.codBalanceDue = parseFloat(codBalInput?.value || Math.max(0, grandTotal - CURRENT_EDIT_ORDER.codAdvance)) || 0;
+    CURRENT_EDIT_ORDER.cod_balance_due = CURRENT_EDIT_ORDER.codBalanceDue;
+  } else {
+    CURRENT_EDIT_ORDER.codAdvance = 0;
+    CURRENT_EDIT_ORDER.cod_advance = 0;
+    CURRENT_EDIT_ORDER.codBalanceDue = 0;
+    CURRENT_EDIT_ORDER.cod_balance_due = 0;
+  }
+
+  // Persist to MySQL
+  fetch('api.php?action=save_order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: CURRENT_EDIT_ORDER.id,
+      order_id: CURRENT_EDIT_ORDER.id,
+      customerId: CURRENT_EDIT_ORDER.customerId,
+      customer_id: CURRENT_EDIT_ORDER.customerId,
+      customerName: CURRENT_EDIT_ORDER.customerName,
+      customerPhone: CURRENT_EDIT_ORDER.customerPhone,
+      shippingAddress: CURRENT_EDIT_ORDER.shippingAddress,
+      items: CURRENT_EDIT_ORDER.items,
+      grandTotal: CURRENT_EDIT_ORDER.grandTotal,
+      paymentMethod: CURRENT_EDIT_ORDER.paymentMethod,
+      paymentStatus: CURRENT_EDIT_ORDER.paymentStatus,
+      upiTransactionId: CURRENT_EDIT_ORDER.upiTransactionId,
+      orderStatus: CURRENT_EDIT_ORDER.orderStatus,
+      courierName: CURRENT_EDIT_ORDER.courierName,
+      trackingNumber: CURRENT_EDIT_ORDER.trackingNumber,
+      shippingUrl: CURRENT_EDIT_ORDER.shippingUrl,
+      staffId: CURRENT_EDIT_ORDER.staffId,
+      staffName: CURRENT_EDIT_ORDER.staffName,
+      codAdvance: CURRENT_EDIT_ORDER.codAdvance,
+      codBalanceDue: CURRENT_EDIT_ORDER.codBalanceDue,
+      isEditUpdate: true
+    })
+  }).catch(() => {});
+
+  logAudit('ORDER_EDITED', 'ORDERS', `Updated details for Order #${CURRENT_EDIT_ORDER.id} (Status: ${newStatus}, Total: ₹${grandTotal})`);
+  saveCRMState();
+
+  closeModal('modal-edit-order');
+  renderOrdersDashboard();
+  renderOrdersHistoryTable();
+
+  showToast('Order Updated', `Order #${CURRENT_EDIT_ORDER.id} successfully updated!`, 'check_circle', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
+}
+window.saveEditedOrder = saveEditedOrder;

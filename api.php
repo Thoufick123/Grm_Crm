@@ -670,14 +670,17 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("
                 UPDATE `customers` 
-                SET `name` = ?, `phone` = ?, `whatsapp` = ?, `address` = ?
+                SET `name` = ?, `phone` = ?, `whatsapp` = ?, `alt_phone` = ?, `address` = ?, `alt_address` = ?, `notes` = COALESCE(?, `notes`)
                 WHERE `id` = ?
             ");
             $stmt->execute([
                 $data['name'] ?? '',
                 $data['phone'] ?? '',
                 $data['whatsapp'] ?? ($data['phone'] ?? ''),
+                $data['alt_phone'] ?? ($data['altPhone'] ?? ''),
                 $data['address'] ?? '',
+                $data['alt_address'] ?? ($data['altAddress'] ?? ''),
+                $data['notes'] ?? null,
                 $data['id']
             ]);
         } catch (Exception $e) {}
@@ -1717,6 +1720,7 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $staffName = $order['staffName'] ?? ($order['staff_name'] ?? $createdBy);
         $trackingNumber = $order['trackingNumber'] ?? ($order['tracking_number'] ?? '');
         $courierName = $order['courierName'] ?? ($order['courier_name'] ?? '');
+        $shippingUrl = $order['shippingUrl'] ?? ($order['shipping_url'] ?? ($order['tracking_url'] ?? ''));
 
         // Check and reserve stock atomically
         if (!empty($items) && is_array($items)) {
@@ -1751,9 +1755,9 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 `id`, `query_id`, `customer_id`, `customer_name`, `customer_phone`,
                 `shipping_address`, `items_json`, `grand_total`, `cod_advance`, `cod_balance_due`,
                 `payment_method`, `payment_status`, `upi_transaction_id`, `payment_screenshot`,
-                `order_status`, `tracking_number`, `courier_name`, `created_by`, `staff_id`, `staff_name`
+                `order_status`, `tracking_number`, `courier_name`, `shipping_url`, `created_by`, `staff_id`, `staff_name`
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE 
                 `customer_name` = VALUES(`customer_name`),
                 `customer_phone` = VALUES(`customer_phone`),
@@ -1769,6 +1773,7 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 `order_status` = VALUES(`order_status`),
                 `tracking_number` = VALUES(`tracking_number`),
                 `courier_name` = VALUES(`courier_name`),
+                `shipping_url` = VALUES(`shipping_url`),
                 `staff_id` = VALUES(`staff_id`),
                 `staff_name` = VALUES(`staff_name`)
         ");
@@ -1776,7 +1781,7 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $orderId, $queryId, $customerId, $customerName, $customerPhone,
             $shippingAddress, json_encode($items), $grandTotal, $codAdvance, $codBalanceDue,
             $paymentMethod, $paymentStatus, $upiTransactionId, $paymentScreenshot,
-            $orderStatus, $trackingNumber, $courierName, $createdBy, $staffId, $staffName
+            $orderStatus, $trackingNumber, $courierName, $shippingUrl, $createdBy, $staffId, $staffName
         ]);
 
         // Update Customer metrics
@@ -1870,18 +1875,43 @@ if ($action === 'update_order_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                 }
             }
 
-            if ($payStatus) {
-                $pdo->prepare("UPDATE `orders` SET `order_status` = ?, `payment_status` = ? WHERE `id` = ?")
-                    ->execute([$newStatus, $payStatus, $orderId]);
-            } else {
-                $pdo->prepare("UPDATE `orders` SET `order_status` = ? WHERE `id` = ?")
-                    ->execute([$newStatus, $orderId]);
+            $trackingNumber = $data['tracking_number'] ?? ($data['trackingNumber'] ?? null);
+            $courierName = $data['courier_name'] ?? ($data['courierName'] ?? null);
+            $shippingUrl = $data['shipping_url'] ?? ($data['shippingUrl'] ?? null);
+
+            $updateParts = ["`order_status` = ?"];
+            $params = [$newStatus];
+
+            if ($payStatus !== null) {
+                $updateParts[] = "`payment_status` = ?";
+                $params[] = $payStatus;
+            }
+            if ($trackingNumber !== null) {
+                $updateParts[] = "`tracking_number` = ?";
+                $params[] = $trackingNumber;
+            }
+            if ($courierName !== null) {
+                $updateParts[] = "`courier_name` = ?";
+                $params[] = $courierName;
+            }
+            if ($shippingUrl !== null) {
+                $updateParts[] = "`shipping_url` = ?";
+                $params[] = $shippingUrl;
+            }
+
+            $params[] = $orderId;
+            $pdo->prepare("UPDATE `orders` SET " . implode(", ", $updateParts) . " WHERE `id` = ?")
+                ->execute($params);
+
+            $logDetails = "Order {$orderId} status changed from {$oldStatus} to {$newStatus}";
+            if ($newStatus === 'SHIPPED' && ($trackingNumber || $courierName)) {
+                $logDetails .= " via " . ($courierName ?: 'Courier') . " (AWB: " . ($trackingNumber ?: 'N/A') . ")";
             }
 
             $pdo->prepare("
                 INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
                 VALUES (?, 'ORDER_STATUS_UPDATED', 'ORDERS', ?, ?)
-            ")->execute([$user, "Order {$orderId} status changed from {$oldStatus} to {$newStatus}", date("h:i A")]);
+            ")->execute([$user, $logDetails, date("h:i A")]);
         }
 
         $pdo->commit();
