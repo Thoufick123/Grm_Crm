@@ -2834,6 +2834,71 @@ if ($action === 'health_check') {
 }
 
 // =========================================================================
+// 9.5. BROADCAST TEMPLATES MANAGEMENT (MYSQL DATABASE)
+// =========================================================================
+if ($action === 'save_broadcast_template' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $tpl = json_decode($input, true);
+    $id = $tpl['id'] ?? ($tpl['key'] ?? ('tpl_' . uniqid()));
+    $name = $tpl['name'] ?? ($tpl['label'] ?? 'Custom Template');
+    $category = $tpl['category'] ?? 'MARKETING';
+    $bodyText = $tpl['body_text'] ?? ($tpl['text'] ?? '');
+    $imageUrl = $tpl['image_url'] ?? ($tpl['media_url'] ?? null);
+    $buttonType = $tpl['button_type'] ?? null;
+    $buttonText = $tpl['button_text'] ?? null;
+    $buttonUrl = $tpl['button_url'] ?? null;
+    $status = $tpl['status'] ?? 'ACTIVE';
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO `broadcast_templates` (`id`, `name`, `category`, `body_text`, `image_url`, `button_type`, `button_text`, `button_url`, `status`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    `name` = VALUES(`name`),
+                    `category` = VALUES(`category`),
+                    `body_text` = VALUES(`body_text`),
+                    `image_url` = VALUES(`image_url`),
+                    `button_type` = VALUES(`button_type`),
+                    `button_text` = VALUES(`button_text`),
+                    `button_url` = VALUES(`button_url`),
+                    `status` = VALUES(`status`)
+            ");
+            $stmt->execute([$id, $name, $category, $bodyText, $imageUrl, $buttonType, $buttonText, $buttonUrl, $status]);
+            echo json_encode(["status" => "success", "message" => "Broadcast template saved in database", "id" => $id]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Template saved locally"]);
+    exit;
+}
+
+if ($action === 'delete_broadcast_template' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    $id = $data['id'] ?? ($data['key'] ?? null);
+    if ($id && $pdo) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM `broadcast_templates` WHERE `id` = ?");
+            $stmt->execute([$id]);
+            echo json_encode(["status" => "success", "message" => "Template deleted from database"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Template deleted"]);
+    exit;
+}
+
+
+// =========================================================================
 // 10. DATABASE BACKUP & RESTORE
 // =========================================================================
 if ($action === 'backup_db') {

@@ -83,302 +83,8 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
   customers: [],
   queries: [],
   conversations: {},
-  orders: [
-    {
-      id: 'WA-2026-001126',
-      queryId: 'Q-2026-001245',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      customerPhone: '+91 98401 23456',
-      shippingAddress: '42, 3rd Cross Street, Gandhinagar, Adyar, Chennai - 600020',
-      items: [{ name: 'Baby Cotton Frock (Pink / 2-3Y)', sku: 'BF-001-PNK-2Y', qty: 2, price: 599 }],
-      grandTotal: 1198.00,
-      codAdvance: 0,
-      codBalanceDue: 0,
-      paymentMethod: 'ONLINE_UPI',
-      paymentStatus: 'PAID',
-      upiTransactionId: 'UPI-2026-9882103984',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'PLACED',
-      staffId: 'staff_01',
-      staffName: 'Priya Sharma',
-      createdBy: 'Priya Sharma',
-      createdAt: '2026-10-27 10:15:00'
-    },
-    {
-      id: 'WA-2026-001127',
-      queryId: 'Q-2026-001246',
-      customerId: 'cust_102',
-      customerName: 'Ananya Sharma',
-      customerPhone: '+91 98765 43210',
-      shippingAddress: 'Flat 4B, Lotus Apartments, 100 Feet Rd, Indiranagar, Bengaluru - 560038',
-      items: [{ name: 'Maternity Feeding Kurtis (Teal / L)', sku: 'MD-102-TEA-L', qty: 2, price: 949 }],
-      grandTotal: 1898.00,
-      codAdvance: 200,
-      codBalanceDue: 1698.00,
-      paymentMethod: 'COD',
-      paymentStatus: 'ADVANCE_PAID',
-      upiTransactionId: 'UPI-2026-4433221100',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'PACKED',
-      staffId: 'staff_02',
-      staffName: 'Rahul Verma',
-      createdBy: 'Rahul Verma',
-      createdAt: '2026-10-26 14:30:00'
-    },
-    {
-      id: 'WA-2026-001128',
-      queryId: 'Q-2026-001247',
-      customerId: 'cust_103',
-      customerName: 'Kavitha Ramachandran',
-      customerPhone: '+91 94441 55667',
-      shippingAddress: '12, Saravana Street, T. Nagar, Chennai - 600017',
-      items: [{ name: 'Pure Cotton Rompers Set (3-Pack / 6M)', sku: 'RP-003-AST-6M', qty: 3, price: 599 }],
-      grandTotal: 1797.00,
-      codAdvance: 0,
-      codBalanceDue: 0,
-      paymentMethod: 'ONLINE_UPI',
-      paymentStatus: 'PAID',
-      upiTransactionId: 'UPI-2026-7788990011',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'SHIPPED',
-      staffId: 'staff_01',
-      staffName: 'Priya Sharma',
-      createdBy: 'Priya Sharma',
-      trackingNumber: 'DELHIVERY-778899221',
-      courierName: 'Delhivery Express',
-      createdAt: '2026-10-25 11:20:00'
-    },
-    {
-      id: 'WA-2026-001129',
-      queryId: 'Q-2026-001248',
-      customerId: 'cust_104',
-      customerName: 'SugunaMani',
-      customerPhone: '+91 98410 88990',
-      shippingAddress: '55, Anna Nagar West, Madurai - 625020',
-      items: [{ name: 'Anarkali Feeding Maternity Kurti (Navy / XL)', sku: 'MK-204-NVY-XL', qty: 2, price: 749 }],
-      grandTotal: 1498.00,
-      codAdvance: 200,
-      codBalanceDue: 1298.00,
-      paymentMethod: 'COD',
-      paymentStatus: 'ADVANCE_PAID',
-      upiTransactionId: 'UPI-2026-5566443322',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'SHIPPED',
-      staffId: 'staff_02',
-      staffName: 'Rahul Verma',
-      createdBy: 'Rahul Verma',
-      trackingNumber: 'DTDC-992233441',
-      courierName: 'DTDC Courier',
-      createdAt: '2026-10-24 16:45:00'
-    },
-    {
-      id: 'WA-2026-001130',
-      queryId: 'Q-2026-001249',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      customerPhone: '+91 98401 23456',
-      shippingAddress: '42, 3rd Cross Street, Gandhinagar, Adyar, Chennai - 600020',
-      items: [{ name: 'Kids Organic Cotton Sleepsuits (Yellow / 1Y)', sku: 'SS-101-YLW-1Y', qty: 2, price: 799 }],
-      grandTotal: 1598.00,
-      codAdvance: 0,
-      codBalanceDue: 0,
-      paymentMethod: 'ONLINE_UPI',
-      paymentStatus: 'PAID',
-      upiTransactionId: 'UPI-2026-1122334455',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'DELIVERED',
-      staffId: 'staff_03',
-      staffName: 'Sneha Patel',
-      createdBy: 'Sneha Patel',
-      trackingNumber: 'BLUE-DART-8822991',
-      courierName: 'Blue Dart Surface',
-      createdAt: '2026-10-22 09:30:00'
-    },
-    {
-      id: 'WA-2026-001131',
-      queryId: 'Q-2026-001250',
-      customerId: 'cust_102',
-      customerName: 'Ananya Sharma',
-      customerPhone: '+91 98765 43210',
-      shippingAddress: 'Flat 4B, Lotus Apartments, 100 Feet Rd, Indiranagar, Bengaluru - 560038',
-      items: [{ name: 'Baby Cotton Romper & Cap Set (Sky Blue)', sku: 'RP-005-BLU-3M', qty: 3, price: 449 }],
-      grandTotal: 1347.00,
-      codAdvance: 0,
-      codBalanceDue: 0,
-      paymentMethod: 'ONLINE_UPI',
-      paymentStatus: 'PAID',
-      upiTransactionId: 'UPI-2026-9900112233',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'DELIVERED',
-      staffId: 'staff_03',
-      staffName: 'Sneha Patel',
-      createdBy: 'Sneha Patel',
-      trackingNumber: 'DELHIVERY-334455667',
-      courierName: 'Delhivery Express',
-      createdAt: '2026-10-20 15:10:00'
-    }
-  ],
-  auditLogs: [],
-  followups: [
-    {
-      id: 'FU-2026-0001',
-      queryId: 'Q-2026-001245',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      assignedTo: 'staff_01',
-      date: new Date().toISOString().split('T')[0],
-      time: '11:30 AM',
-      reason: 'Customer asked to confirm pure cotton frock BF-001 pink size availability for 2-year-old before ordering.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'HIGH',
-      channel: 'WHATSAPP',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0002',
-      queryId: 'Q-2026-001246',
-      customerId: 'cust_102',
-      customerName: 'Ananya Sharma',
-      assignedTo: 'staff_02',
-      date: new Date().toISOString().split('T')[0],
-      time: '04:00 PM',
-      reason: 'Call to discuss feeding gown MD-102 fabric details & COD shipping options to Bengaluru.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'URGENT',
-      channel: 'CALL',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0003',
-      queryId: 'Q-2026-001247',
-      customerId: 'cust_103',
-      customerName: 'Kavitha Ramachandran',
-      assignedTo: 'staff_03',
-      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      time: '10:00 AM',
-      reason: 'Follow up regarding wholesale 25-piece bulk frock lot inquiry and payment quotation.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'NORMAL',
-      channel: 'CALL',
-      createdAt: new Date(Date.now() - 86400000).toISOString()
-    },
-    {
-      id: 'FU-2026-0004',
-      queryId: 'Q-2026-001248',
-      customerId: 'cust_104',
-      customerName: 'Lakshmi Narayanan',
-      assignedTo: 'staff_01',
-      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      time: '02:30 PM',
-      reason: 'Check if customer received catalog photos of newborn 5-piece gift sets & organic cotton swaddles.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'NORMAL',
-      channel: 'WHATSAPP',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0005',
-      queryId: 'Q-2026-001249',
-      customerId: 'cust_105',
-      customerName: 'Deepa Krishnan',
-      assignedTo: 'staff_03',
-      date: new Date().toISOString().split('T')[0],
-      time: '09:30 AM',
-      reason: 'Pattu Pavadai festive silk set size 4-5 years price and delivery confirmation.',
-      status: 'COMPLETED',
-      outcome: 'ORDER_PLACED',
-      priority: 'HIGH',
-      channel: 'WHATSAPP',
-      outcomeNotes: 'Customer confirmed order #ORD-2026-0881 via UPI advance payment.',
-      completedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0006',
-      queryId: 'Q-2026-001250',
-      customerId: 'cust_106',
-      customerName: 'Ramesh Babu',
-      assignedTo: 'staff_02',
-      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      time: '03:00 PM',
-      reason: 'Bulk wholesale inquiry for 50-piece newborn rompers box.',
-      status: 'COMPLETED',
-      outcome: 'LOST',
-      priority: 'LOW',
-      channel: 'CALL',
-      outcomeNotes: 'Client postponed purchase until next season.',
-      completedAt: new Date(Date.now() - 86400000).toISOString(),
-      createdAt: new Date(Date.now() - 172800000).toISOString()
-    },
-    {
-      id: 'FU-2026-0007',
-      queryId: 'Q-2026-001251',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      assignedTo: 'staff_01',
-      date: new Date().toISOString().split('T')[0],
-      time: '05:00 PM',
-      reason: 'Awaiting GPay ₹2,450 for 3x Pure Cotton Baby Frocks (BF-001 Pink & Yellow)',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'HIGH',
-      channel: 'WHATSAPP',
-      isPaymentPending: true,
-      paymentAmount: 2450.00,
-      paymentMode: 'UPI',
-      paymentDueDate: new Date().toISOString().split('T')[0],
-      paymentNotes: 'Customer promised to pay via GPay after 6 PM today',
-      quotedItems: '3x Pure Cotton Frocks (Size 2Y)',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0008',
-      queryId: 'Q-2026-001252',
-      customerId: 'cust_104',
-      customerName: 'Lakshmi Narayanan',
-      assignedTo: 'staff_01',
-      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      time: '01:00 PM',
-      reason: 'Bank transfer advance ₹4,800 for 5-Piece Organic Gift Sets',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'NORMAL',
-      channel: 'WHATSAPP',
-      isPaymentPending: true,
-      paymentAmount: 4800.00,
-      paymentMode: 'BANK',
-      paymentDueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      paymentNotes: 'IMPS/NEFT confirmation pending from customer accounts team',
-      quotedItems: '4x Organic Newborn Gift Sets',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0009',
-      queryId: 'Q-2026-001253',
-      customerId: 'cust_103',
-      customerName: 'Kavitha Ramachandran',
-      assignedTo: 'staff_03',
-      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      time: '11:00 AM',
-      reason: 'Overdue COD Advance ₹1,200 for Festive Pattu Pavadai',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'URGENT',
-      channel: 'CALL',
-      isPaymentPending: true,
-      paymentAmount: 1200.00,
-      paymentMode: 'COD_ADVANCE',
-      paymentDueDate: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      paymentNotes: 'Promised yesterday, pending advance confirmation for COD dispatch',
-      quotedItems: 'Festive Pattu Pavadai (4-5 Years)',
-      createdAt: new Date(Date.now() - 86400000).toISOString()
-    }
-  ],
+  orders: [],
+  followups: [],
   categories: [
     { id: 1, name: 'Baby Collection', slug: 'baby_collection', icon: 'child_care', description: 'Pure cotton frocks, rompers & soft babywear (0–3 Years)' },
     { id: 2, name: 'Maternity & Feeding', slug: 'maternity_wear', icon: 'pregnant_woman', description: 'Feeding kurtis, maxi gowns & maternity comfort dresses' },
@@ -1879,38 +1585,111 @@ function initCRMState() {
     .catch(() => { }); // Bridge may not be running — fail silently
 
 
-  // Asynchronously synchronize garment products, catalog taxonomy & stock from database
+  // Asynchronously synchronize entire CRM database state dynamically from MySQL
   fetch('api.php?action=get_all')
     .then(r => r.json())
     .then(res => {
       const data = res.data || res;
-      if (data && data.products && Array.isArray(data.products)) {
+      if (!data) return;
+
+      // 1. Products & Inventory
+      if (data.products && Array.isArray(data.products)) {
         mergeCatalogProductsWithDB(data.products);
       }
 
-      if (data && data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+      // 2. Taxonomy & Catalog Attributes
+      if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
         CRM_STATE.categories = data.categories;
       }
-      if (data && data.subcategories && Array.isArray(data.subcategories) && data.subcategories.length > 0) {
+      if (data.subcategories && Array.isArray(data.subcategories) && data.subcategories.length > 0) {
         CRM_STATE.subcategories = data.subcategories;
       }
-      if (data && data.attributes) {
+      if (data.attributes) {
         CRM_STATE.attributes = data.attributes;
       }
-      if (data && data.queries && Array.isArray(data.queries) && data.queries.length > 0) {
-        if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
-        data.queries.forEach(dbQ => {
-          const localQ = CRM_STATE.queries.find(q => q.id === dbQ.id || q.customerId === dbQ.customer_id);
-          if (localQ) {
-            if (dbQ.status) localQ.status = dbQ.status;
-            if (dbQ.assigned_to) localQ.assignedTo = dbQ.assigned_to;
-            if (dbQ.status_notes !== undefined && dbQ.status_notes !== null) localQ.statusNotes = dbQ.status_notes;
-          }
-        });
+
+      // 3. Customers (Dynamic database sync)
+      if (data.customers && Array.isArray(data.customers) && data.customers.length > 0) {
+        CRM_STATE.customers = data.customers.map(c => ({
+          id: c.id,
+          code: c.code || '',
+          name: c.name || 'Customer',
+          phone: c.phone || '',
+          whatsapp: c.whatsapp || c.phone || '',
+          customerType: c.customer_type || c.customerType || 'Live WhatsApp Lead',
+          address: c.address || '',
+          email: c.email || '',
+          gender: c.gender || '',
+          age: c.age || '',
+          notes: c.notes || '',
+          tags: Array.isArray(c.tags) ? c.tags : (typeof c.tags === 'string' ? (JSON.parse(c.tags || '[]') || []) : []),
+          totalOrders: parseInt(c.total_orders || c.totalOrders || 0),
+          totalSpend: parseFloat(c.total_spend || c.totalSpend || 0),
+          isDND: Boolean(c.is_dnd || c.isDND),
+          dndReason: c.dnd_reason || '',
+          dndNotes: c.dnd_notes || '',
+          dndMarkedBy: c.dnd_marked_by || '',
+          dndTimestamp: c.dnd_timestamp || '',
+          createdAt: c.created_at || '',
+          avatar: (c.name ? c.name.slice(0, 2) : 'CU').toUpperCase()
+        }));
       }
 
-      if (data && data.followups && Array.isArray(data.followups) && data.followups.length > 0) {
-        const dbFollowups = data.followups.map(fu => ({
+      // 4. Orders (Dynamic database sync)
+      if (data.orders && Array.isArray(data.orders)) {
+        CRM_STATE.orders = data.orders.map(o => ({
+          id: o.id,
+          queryId: o.queryId || o.query_id || '',
+          customerId: o.customerId || o.customer_id || '',
+          customerName: o.customerName || o.customer_name || 'Customer',
+          customerPhone: o.customerPhone || o.customer_phone || '',
+          shippingAddress: o.shippingAddress || o.shipping_address || '',
+          items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
+          grandTotal: parseFloat(o.grandTotal || o.grand_total || 0),
+          codAdvance: parseFloat(o.codAdvance || o.cod_advance || 0),
+          codBalanceDue: parseFloat(o.codBalanceDue || o.cod_balance_due || 0),
+          paymentMethod: o.paymentMethod || o.payment_method || 'COD',
+          paymentStatus: o.paymentStatus || o.payment_status || 'PENDING',
+          upiTransactionId: o.upiTransactionId || o.upi_transaction_id || '',
+          paymentScreenshot: o.paymentScreenshot || o.payment_screenshot || '',
+          orderStatus: o.orderStatus || o.order_status || 'PLACED',
+          staffId: o.staffId || o.staff_id || 'staff_01',
+          staffName: o.staffName || o.staff_name || 'Staff',
+          createdBy: o.createdBy || o.created_by || 'Staff',
+          trackingNumber: o.trackingNumber || o.tracking_number || '',
+          courierName: o.courierName || o.courier_name || '',
+          createdAt: o.createdAt || o.created_at || ''
+        }));
+      }
+
+      // 5. Customer Enquiries & Leads (Dynamic database sync)
+      if (data.queries && Array.isArray(data.queries) && data.queries.length > 0) {
+        CRM_STATE.queries = data.queries.map(q => ({
+          id: q.id,
+          customerId: q.customerId || q.customer_id || '',
+          assignedTo: q.assignedTo || q.assigned_to || 'UNASSIGNED',
+          status: q.status || 'NEW',
+          priority: q.priority || 'NORMAL',
+          queryText: q.queryText || q.query_text || '',
+          statusNotes: q.statusNotes !== undefined ? q.statusNotes : (q.status_notes || ''),
+          isPaymentPending: Boolean(q.isPaymentPending || q.is_payment_pending),
+          paymentAmount: parseFloat(q.paymentAmount || q.payment_amount || 0),
+          shippingAmount: parseFloat(q.shippingAmount || q.shipping_amount || 0),
+          paymentMode: q.paymentMode || q.payment_mode || 'UPI',
+          advancePayment: parseFloat(q.advancePayment || q.advance_payment || 0),
+          paymentDueDate: q.paymentDueDate || q.payment_due_date || '',
+          paymentNotes: q.paymentNotes || q.payment_notes || '',
+          quotedItems: q.quotedItems || q.quoted_items || '',
+          callbackDate: q.callbackDate || q.callback_date || '',
+          callbackTime: q.callbackTime || q.callback_time || '11:00 AM',
+          statusHistory: Array.isArray(q.statusHistory) ? q.statusHistory : (typeof q.status_history === 'string' ? (JSON.parse(q.status_history || '[]') || []) : []),
+          createdAt: q.createdAt || q.created_at || ''
+        }));
+      }
+
+      // 6. Follow-ups (Dynamic database sync)
+      if (data.followups && Array.isArray(data.followups) && data.followups.length > 0) {
+        CRM_STATE.followups = data.followups.map(fu => ({
           id: fu.id,
           queryId: fu.queryId || fu.query_id || '',
           customerId: fu.customerId || fu.customer_id || '',
@@ -1934,42 +1713,85 @@ function initCRMState() {
           paymentNotes: fu.paymentNotes || fu.payment_notes || '',
           quotedItems: fu.quotedItems || fu.quoted_items || ''
         }));
+      }
 
-        // Safely merge DB follow-ups with local follow-ups so active customer records are NEVER destroyed on refresh
-        const localFollowups = Array.isArray(CRM_STATE.followups) ? CRM_STATE.followups : [];
-        const mergedFollowups = [...dbFollowups];
-        localFollowups.forEach(locFu => {
-          if (!locFu) return;
-          const matchIndex = mergedFollowups.findIndex(m => m && (m.id === locFu.id || (m.customerId && locFu.customerId && String(m.customerId) === String(locFu.customerId) && m.status === 'PENDING' && locFu.status === 'PENDING')));
-          if (matchIndex < 0) {
-            mergedFollowups.unshift(locFu);
-          } else {
-            // Keep richer local data if present
-            mergedFollowups[matchIndex] = { ...mergedFollowups[matchIndex], ...locFu };
+      // 7. Staff Management (Dynamic database sync)
+      if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
+        CRM_STATE.staffList = data.staffList.map(s => ({
+          id: s.id,
+          name: s.name,
+          role: s.role,
+          avatar: s.avatar || (s.name ? s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'ST'),
+          activeQueries: parseInt(s.active_queries || s.activeQueries || 0),
+          converted: parseInt(s.converted || 0),
+          dailyQuota: parseInt(s.daily_quota || s.dailyQuota || 70),
+          todayHandled: parseInt(s.today_handled || s.todayHandled || 0),
+          email: s.email || '',
+          phone: s.phone || '',
+          specialization: s.specialization || s.role || 'Sales Specialist',
+          status: s.status || 'ACTIVE'
+        }));
+      }
+
+      // 8. Conversations & Message History
+      if (data.conversations && typeof data.conversations === 'object') {
+        CRM_STATE.conversations = data.conversations;
+      }
+
+      // 9. DND Suppression Records
+      if (data.dndRecords && Array.isArray(data.dndRecords)) {
+        CRM_STATE.dndRecords = data.dndRecords;
+      }
+
+      // 10. Auto-reply Rules
+      if (data.autoReplyRules && Array.isArray(data.autoReplyRules) && data.autoReplyRules.length > 0) {
+        CRM_STATE.autoReplyRules = data.autoReplyRules;
+      }
+
+      // 11. Broadcast Templates
+      if (data.broadcastTemplates && Array.isArray(data.broadcastTemplates) && data.broadcastTemplates.length > 0) {
+        CRM_STATE.broadcastTemplates = data.broadcastTemplates;
+        data.broadcastTemplates.forEach(bt => {
+          if (typeof BROADCAST_PRESETS_DATA !== 'undefined') {
+            BROADCAST_PRESETS_DATA[bt.id] = {
+              label: bt.name,
+              text: bt.body_text,
+              category: bt.category
+            };
           }
         });
-        CRM_STATE.followups = mergedFollowups;
-        if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
-        if (ACTIVE_VIEW === 'followups' && typeof filterFollowupsCards === 'function') filterFollowupsCards();
-      } else if (!CRM_STATE.followups || CRM_STATE.followups.length === 0) {
-        CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
-        if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
-        if (ACTIVE_VIEW === 'followups' && typeof filterFollowupsCards === 'function') filterFollowupsCards();
       }
 
-      if (typeof populateCatalogCategoryFilters === 'function') {
-        populateCatalogCategoryFilters();
+      // 12. Audit Logs
+      if (data.auditLogs && Array.isArray(data.auditLogs) && data.auditLogs.length > 0) {
+        CRM_STATE.auditLogs = data.auditLogs;
       }
-      if (typeof populateProductFormCategories === 'function') {
-        populateProductFormCategories();
-      }
-      if (ACTIVE_VIEW === 'catalog') filterCatalogGrid();
-      updateOrderProductDropdown();
+
+      // Update UI components dynamically to reflect live database state
+      if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
+      if (typeof populateProductFormCategories === 'function') populateProductFormCategories();
+      if (ACTIVE_VIEW === 'catalog' && typeof filterCatalogGrid === 'function') filterCatalogGrid();
+      if (typeof updateOrderProductDropdown === 'function') updateOrderProductDropdown();
+      if (typeof renderOrdersModule === 'function') renderOrdersModule();
+      if (typeof renderCustomersGrid === 'function') renderCustomersGrid();
+      if (typeof renderCustomersTable === 'function') renderCustomersTable();
+      if (typeof renderInbox === 'function') renderInbox();
+      if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+      if (typeof renderStaffCards === 'function') renderStaffCards();
+      if (typeof renderStaffKPIOverview === 'function') renderStaffKPIOverview();
+      if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
+      if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+      if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+      if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+      if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+      if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+      if (typeof renderBroadcastTemplateDropdown === 'function') renderBroadcastTemplateDropdown();
+
       saveCRMState();
     })
     .catch(() => { });
 
-  cleanupAndDeduplicateCRMState();
+    cleanupAndDeduplicateCRMState();
   if (typeof populateCatalogCategoryFilters === 'function') {
     populateCatalogCategoryFilters();
   }
@@ -4228,7 +4050,18 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         phone: customer ? customer.phone : null,
         whatsapp: customer ? customer.whatsapp : null,
         reason: notes || (customer ? customer.dndReason : 'Customer not interested in products (Requested DND)'),
-        dnd_timestamp: timeFormatted
+        dnd_timestamp: timeFormatted,
+        isPaymentPending: query.isPaymentPending,
+        paymentAmount: query.paymentAmount,
+        shippingAmount: query.shippingAmount,
+        paymentMode: query.paymentMode,
+        advancePayment: query.advancePayment,
+        paymentDueDate: query.paymentDueDate,
+        paymentNotes: query.paymentNotes,
+        quotedItems: query.quotedItems,
+        callbackDate: query.callbackDate,
+        callbackTime: query.callbackTime,
+        statusHistory: query.statusHistory
       })
     }).catch(() => {});
   }

@@ -26,6 +26,42 @@
   "autoReplyKeywordMatching": true,
   "autoReplyRules": [
     {
+      "id": "rule_1793172582175",
+      "name": "vanakkam",
+      "keywords": [
+        "VanakkaM"
+      ],
+      "actionType": "custom_text",
+      "categoryId": null,
+      "replyText": "jehuiemuieiome;ol;qwo,,po",
+      "enabled": true,
+      "autoSend": true
+    },
+    {
+      "id": "rule_1793171996880",
+      "name": "hiiiii",
+      "keywords": [
+        "hello"
+      ],
+      "actionType": "custom_text",
+      "categoryId": null,
+      "replyText": "jnndsjlmjiskol,wop,,wo'ewppep[qwep[",
+      "enabled": true,
+      "autoSend": true
+    },
+    {
+      "id": "rule_1793165523488",
+      "name": "hiiii",
+      "keywords": [
+        "hi Dear customer"
+      ],
+      "actionType": "custom_text",
+      "categoryId": null,
+      "replyText": "jsjhuijmkeikmewio;lek,powl;",
+      "enabled": true,
+      "autoSend": true
+    },
+    {
       "id": "rule_1792127148863",
       "name": "maternity",
       "keywords": [
