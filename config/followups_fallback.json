@@ -1,0 +1,25 @@
+[
+    {
+        "id": "FU-2026-00109",
+        "queryId": "Q-2026-801591",
+        "customerId": "cust_84297757_account_1",
+        "customerName": "\ud835\ude45\ud835\ude5a\ud835\ude5a\ud835\ude6b\ud835\ude56 \u2661",
+        "assignedTo": "admin",
+        "date": "2026-10-27",
+        "time": "11:00 AM",
+        "reason": "Gud an na\u2728",
+        "status": "PENDING",
+        "outcome": "PENDING",
+        "priority": "HIGH",
+        "channel": "WHATSAPP",
+        "createdAt": "2026-10-27T12:08:06.489Z",
+        "isPaymentPending": false,
+        "paymentAmount": 0,
+        "shippingAmount": 0,
+        "advancePayment": 0,
+        "paymentMode": "UPI",
+        "paymentDueDate": "",
+        "paymentNotes": "",
+        "quotedItems": ""
+    }
+]
