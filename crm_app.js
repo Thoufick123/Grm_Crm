@@ -5515,68 +5515,77 @@ function renderCustomer360Panel() {
       ${query ? `
         <!-- Status Dropdown Selector & Follow-up & Save Button Below -->
         <div class="space-y-3">
-          <!-- ROW 1: STATUS DROPDOWN SELECTOR -->
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide">Change Status:</label>
-              ${isQueryEditing ? `
-                <span class="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded animate-pulse">Editing Status</span>
-              ` : `
-                <span class="text-[9px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded">Locked</span>
-              `}
+          <!-- ROW 1: STATUS DROPDOWN & CALLBACK DATE IN A SINGLE ROW -->
+          <div class="grid grid-cols-2 gap-2.5 items-start">
+            <!-- COLUMN 1: STATUS DROPDOWN SELECTOR -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5 h-4">
+                <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide truncate">Change Status:</label>
+                ${isQueryEditing ? `
+                  <span class="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded animate-pulse shrink-0">Editing</span>
+                ` : `
+                  <span class="text-[9px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded shrink-0">Locked</span>
+                `}
+              </div>
+              <div class="relative">
+                <select id="query-status-select" ${isQueryEditing ? '' : 'disabled'} onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full h-[42px] ${isQueryEditing ? 'bg-white border-brand-wa ring-1 ring-brand-wa text-slate-900 cursor-pointer shadow-xs' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none opacity-90'} border rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
+                  <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 New Lead</option>
+                  <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 Pending Action</option>
+                  <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 Follow Up</option>
+                  <option value="IN_PROGRESS" ${qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED' ? 'selected' : ''}>🟣 In Progress</option>
+                  <option value="RESOLVED" ${qStatus === 'RESOLVED' ? 'selected' : ''}>✅ Resolved / Closed</option>
+                  <option value="CONVERTED" ${qStatus === 'CONVERTED' ? 'selected' : ''}>🏆 Converted to Sale</option>
+                  <option value="DND" ${qStatus === 'DND' ? 'selected' : ''}>🚫 DND / Not Interested</option>
+                </select>
+                <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+              </div>
             </div>
-            <div class="relative">
-              <select id="query-status-select" ${isQueryEditing ? '' : 'disabled'} onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full ${isQueryEditing ? 'bg-white border-brand-wa ring-1 ring-brand-wa text-slate-900 cursor-pointer shadow-xs' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none opacity-90'} border rounded-xl p-2.5 text-xs font-bold appearance-none pr-8 transition">
-                <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 New Lead</option>
-                <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 Pending Action</option>
-                <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 Follow Up</option>
-                <option value="IN_PROGRESS" ${qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED' ? 'selected' : ''}>🟣 In Progress</option>
-                <option value="RESOLVED" ${qStatus === 'RESOLVED' ? 'selected' : ''}>✅ Resolved / Closed</option>
-                <option value="CONVERTED" ${qStatus === 'CONVERTED' ? 'selected' : ''}>🏆 Converted to Sale</option>
-                <option value="DND" ${qStatus === 'DND' ? 'selected' : ''}>🚫 DND / Not Interested</option>
-              </select>
-              <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
-            </div>
-          </div>
 
-          <!-- ROW 2: CALLBACK DATE (Callback Time 12-Hour removed as requested) -->
-          ${(() => {
-            const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
-            const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
+            <!-- COLUMN 2: CALLBACK DATE -->
+            ${(() => {
+              const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
+              const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
+              const hasCallback = Boolean(customerFollowup) || (histItem && histItem.followupDate) || (qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS');
 
-            return isQueryEditing ? `
-              <!-- Editable Callback Date Row -->
-              <div id="query-callback-edit-row" class="${(qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS' || Boolean(customerFollowup)) ? '' : 'hidden'} bg-gradient-to-br from-blue-50/90 via-indigo-50/40 to-white border border-blue-200/90 p-3 rounded-2xl space-y-2 shadow-2xs transition-all">
-                <div>
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
-                      <span class="material-symbols-outlined text-[14px] text-blue-600">calendar_month</span>
-                      <span>Callback Date *</span>
+              return isQueryEditing ? `
+                <!-- Editable Callback Date Column -->
+                <div id="query-callback-edit-row" class="${(qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS' || Boolean(customerFollowup)) ? '' : 'hidden'}">
+                  <div class="flex items-center justify-between mb-1.5 h-4">
+                    <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1 truncate">
+                      <span class="material-symbols-outlined text-[13px] text-blue-600 shrink-0">calendar_month</span>
+                      <span class="truncate">Callback Date:</span>
                     </span>
-                    <div class="flex items-center gap-1">
-                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">Today</button>
-                      <button type="button" onclick="setQueryQuickDate(1)" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">Tomorrow</button>
-                      <button type="button" onclick="setQueryQuickDate(2)" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2 Days</button>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">Today</button>
+                      <button type="button" onclick="setQueryQuickDate(1)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+1D</button>
+                      <button type="button" onclick="setQueryQuickDate(2)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2D</button>
                     </div>
                   </div>
-                  <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full bg-white border border-blue-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                  <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full h-[42px] bg-white border border-blue-300 rounded-xl px-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
                 </div>
-              </div>
-            ` : `
-              <!-- Locked Display for Active Callback Date -->
-              ${(qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS' || Boolean(customerFollowup)) ? `
-                <div class="p-2.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-200 flex items-center justify-between text-xs">
-                  <span class="text-blue-900 font-bold flex items-center gap-1.5 text-[11px]">
-                    <span class="material-symbols-outlined text-[16px] text-blue-600">calendar_month</span>
-                    <span>Callback Date:</span>
-                  </span>
-                  <span class="font-mono font-black text-blue-950 bg-white px-2.5 py-1 rounded-lg border border-blue-200 text-xs shadow-2xs">
-                    ${cbDateVal}
-                  </span>
+              ` : `
+                <!-- Locked Display for Active Callback Date Column -->
+                <div>
+                  <div class="flex items-center justify-between mb-1.5 h-4">
+                    <span class="font-bold text-slate-700 uppercase text-[10px] tracking-wide flex items-center gap-1 truncate">
+                      <span class="material-symbols-outlined text-[13px] text-blue-600 shrink-0">calendar_month</span>
+                      <span class="truncate">Callback Date:</span>
+                    </span>
+                    <span class="text-[9px] ${hasCallback ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-500'} font-bold px-1.5 py-0.2 rounded shrink-0">${hasCallback ? 'Active' : 'None'}</span>
+                  </div>
+                  <div class="h-[42px] px-2.5 rounded-xl ${hasCallback ? 'bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-200' : 'bg-slate-100 border border-slate-200'} flex items-center justify-between text-xs">
+                    <span class="${hasCallback ? 'text-blue-900' : 'text-slate-400'} font-bold flex items-center gap-1 text-[11px] truncate">
+                      <span class="material-symbols-outlined text-[15px] ${hasCallback ? 'text-blue-600' : 'text-slate-400'}">event</span>
+                      <span class="truncate">${hasCallback ? 'Date:' : 'No callback'}</span>
+                    </span>
+                    <span class="font-mono font-black ${hasCallback ? 'text-blue-950 bg-white border border-blue-200 shadow-2xs' : 'text-slate-400 bg-white/70 border border-slate-200'} px-2 py-0.5 rounded-lg text-xs shrink-0">
+                      ${hasCallback ? cbDateVal : '—'}
+                    </span>
+                  </div>
                 </div>
-              ` : ''}
-            `;
-          })()}
+              `;
+            })()}
+          </div>
 
           <!-- ROW 3: STATUS CHANGE NOTES & REMARKS (With Quick Note Chips) -->
           <div>
