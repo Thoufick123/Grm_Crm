@@ -270,6 +270,23 @@ if ($action === 'get_state' || $action === 'get_all') {
             }
         } catch (Exception $e) {}
 
+        // Auto-reply rules
+        $arRules = [];
+        try {
+            $arRules = $pdo->query("SELECT * FROM `auto_reply_rules` ORDER BY `created_at` ASC")->fetchAll();
+            foreach ($arRules as &$r) {
+                if (!empty($r['keywords']) && is_string($r['keywords'])) {
+                    $r['keywords'] = json_decode($r['keywords'], true) ?: [$r['keywords']];
+                }
+            }
+        } catch (Exception $e) {}
+
+        // Broadcast templates
+        $bcTemplates = [];
+        try {
+            $bcTemplates = $pdo->query("SELECT * FROM `broadcast_templates` ORDER BY `created_at` ASC")->fetchAll();
+        } catch (Exception $e) {}
+
         echo json_encode([
             "status" => "success",
             "source" => "MYSQL_DATABASE",
@@ -285,6 +302,10 @@ if ($action === 'get_state' || $action === 'get_all') {
             "attributes" => $attributes,
             "dnd_records" => $dndRecords,
             "dndRecords" => $dndRecords,
+            "auto_reply_rules" => $arRules,
+            "autoReplyRules" => $arRules,
+            "broadcast_templates" => $bcTemplates,
+            "broadcastTemplates" => $bcTemplates,
             "data" => [
                 "whatsappAccount" => $primaryWA,
                 "whatsappAccounts" => $waAccounts,
@@ -300,7 +321,9 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "subcategories" => $subcategories,
                 "attributes" => $attributes,
                 "dndRecords" => $dndRecords,
-                "dnd_records" => $dndRecords
+                "dnd_records" => $dndRecords,
+                "autoReplyRules" => $arRules,
+                "broadcastTemplates" => $bcTemplates
             ]
         ]);
         exit;
@@ -670,7 +693,7 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("
                 UPDATE `customers` 
-                SET `name` = ?, `phone` = ?, `whatsapp` = ?, `address` = ?
+                SET `name` = ?, `phone` = ?, `whatsapp` = ?, `address` = ?, `email` = ?, `gender` = ?, `age` = ?, `notes` = ?
                 WHERE `id` = ?
             ");
             $stmt->execute([
@@ -678,6 +701,10 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $data['phone'] ?? '',
                 $data['whatsapp'] ?? ($data['phone'] ?? ''),
                 $data['address'] ?? '',
+                $data['email'] ?? null,
+                $data['gender'] ?? null,
+                $data['age'] ?? null,
+                $data['notes'] ?? null,
                 $data['id']
             ]);
         } catch (Exception $e) {}
