@@ -10614,6 +10614,22 @@ function handleCreateOrder(event) {
 
   // Save state
   saveCRMState();
+
+  // Persist directly into MySQL database
+  fetch('api.php?action=save_order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newOrder)
+  }).then(r => r.json()).then(data => {
+    if (data.status === 'success') {
+      console.log('Order successfully saved to MySQL database:', newOrderId);
+    } else {
+      console.warn('MySQL Order save note:', data.message);
+    }
+  }).catch(err => {
+    console.error('Failed to sync order to MySQL:', err);
+  });
+
   closeModal('modal-convert-order');
   if (typeof playChime === 'function') playChime('order');
 

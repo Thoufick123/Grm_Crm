@@ -1712,8 +1712,9 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $codBalanceDue = (float)($order['codBalanceDue'] ?? ($order['cod_balance_due'] ?? 0));
         $upiTransactionId = $order['upiTransactionId'] ?? ($order['upi_transaction_id'] ?? '');
         $paymentScreenshot = $order['paymentScreenshot'] ?? ($order['payment_screenshot'] ?? '');
+        $createdBy = $order['createdBy'] ?? ($order['created_by'] ?? ($order['user'] ?? 'Staff'));
         $staffId = $order['staffId'] ?? ($order['staff_id'] ?? '');
-        $staffName = $order['staffName'] ?? ($order['staff_name'] ?? ($order['createdBy'] ?? $createdBy));
+        $staffName = $order['staffName'] ?? ($order['staff_name'] ?? $createdBy);
         $trackingNumber = $order['trackingNumber'] ?? ($order['tracking_number'] ?? '');
         $courierName = $order['courierName'] ?? ($order['courier_name'] ?? '');
 
