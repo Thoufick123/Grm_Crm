@@ -1098,35 +1098,6 @@
       <!-- ========================================== -->
       <section id="view-inbox" class="h-full flex flex-col overflow-hidden w-full relative">
 
-        <!-- WhatsApp Inbox Sub-Modules Navigation Strip (Shown for Auto-Reply / Broadcast, Hidden for 3-Panel Chats) -->
-        <div id="inbox-submodules-nav-strip"
-          class="hidden min-h-[46px] bg-white border-b border-slate-200 px-3 sm:px-6 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-xs z-10 gap-2">
-          <div class="flex items-center gap-1.5 sm:gap-2">
-            <!-- Sub-module 1: Live Conversations Tab -->
-            <button type="button" onclick="switchInboxSubmodule('chats')" id="tab-sub-inbox-chats"
-              class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer"
-              title="Active WhatsApp Chats, Customer Queue & Live Chatbot">
-              <span class="material-symbols-outlined text-[17px]">forum</span>
-              <span>Live Conversations</span>
-              <span id="subtab-unread-badge"
-                class="bg-white/20 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
-            </button>
-            <!-- Sub-module 2: Auto-Reply Rules Tab -->
-            <button type="button" onclick="switchInboxSubmodule('autoreply')" id="tab-sub-inbox-autoreply"
-              class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-              title="Auto-Reply Bot Rules & Q&A Templates">
-              <span class="material-symbols-outlined text-[17px]">smart_toy</span>
-              <span>Auto-Reply &amp; Templates</span>
-            </button>
-            <!-- Sub-module 3: Broadcast Tab -->
-            <button type="button" onclick="switchInboxSubmodule('broadcast')" id="tab-sub-inbox-broadcast"
-              class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-              title="Custom Broadcast Templates & Blast Engine">
-              <span class="material-symbols-outlined text-[17px]">campaign</span>
-              <span>Broadcast Engine</span>
-            </button>
-          </div>
-        </div>
 
         <!-- ======================================================== -->
         <!-- SUB-MODULE 1: LIVE CONVERSATIONS WORKSTATION (3-PANEL)  -->
