@@ -960,17 +960,17 @@
         <div id="header-title-container" class="flex items-center gap-3 min-w-0">
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight">
+              <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight" data-i18n="inbox.title">
                 WhatsApp Inbox &amp; Customer Queue</h2>
               <span id="header-live-queue-pill"
                 class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Live Queue</span>
+                <span data-i18n="header.live_queue">Live Queue</span>
                 <span id="header-live-queue-count"
                   class="bg-emerald-600 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
               </span>
             </div>
-            <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management
+            <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block" data-i18n="inbox.subtitle">Live conversation management
               with instant staff assignment &amp; order booking</p>
           </div>
         </div>
@@ -1135,7 +1135,7 @@
               class="px-3 py-2 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200/80 flex items-center justify-between text-xs min-w-0 gap-1.5">
               <div class="flex items-center gap-1.5 min-w-0">
                 <span class="material-symbols-outlined text-[16px] text-brand-wa shrink-0">mark_chat_unread</span>
-                <span class="font-bold text-slate-800 text-[11px] whitespace-nowrap">Today's Messages:</span>
+                <span class="font-bold text-slate-800 text-[11px] whitespace-nowrap" data-i18n="inbox.todays_messages">Today's Messages:</span>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
                 <span id="inbox-today-message-count"
@@ -1159,27 +1159,28 @@
                   class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
                 <input type="text" id="chat-search-input" onkeyup="filterConversations(this.value)"
                   placeholder="Search customer, phone, SKU, Query ID..."
+                  data-i18n-placeholder="inbox.search_placeholder"
                   class="w-full pl-9 pr-3 py-1.5 text-xs bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-brand-wa shadow-sm placeholder:text-slate-400 font-medium">
               </div>
 
               <!-- Filter Pills -->
               <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs min-w-0 custom-chat-scroll">
                 <button onclick="setInboxFilter('all')" id="filter-all"
-                  class="px-2.5 py-1 rounded-lg font-semibold bg-brand-wa text-white text-[11px] shrink-0 shadow-sm">All
+                  class="px-2.5 py-1 rounded-lg font-semibold bg-brand-wa text-white text-[11px] shrink-0 shadow-sm"><span data-i18n="common.all">All</span>
                   (<span id="count-all">0</span>)</button>
                 <button onclick="setInboxFilter('unassigned')" id="filter-unassigned"
-                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">Unassigned
+                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0"><span data-i18n="common.unassigned">Unassigned</span>
                   (<span id="count-unassigned" class="text-amber-600 font-bold">0</span>)</button>
                 <button onclick="setInboxFilter('my')" id="filter-my"
-                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">My
-                  Queue (<span id="count-my">0</span>)</button>
+                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0"><span data-i18n="common.my_queue">My
+                  Queue</span> (<span id="count-my">0</span>)</button>
                 <button onclick="setInboxFilter('urgent')" id="filter-urgent"
-                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">Urgent</button>
+                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0" data-i18n="badge.urgent">Urgent</button>
                 <button onclick="confirmResetInboxMessages()"
                   class="ml-auto px-2 py-1 rounded-lg font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] shrink-0 flex items-center gap-1 transition shadow-sm"
                   title="Reset all test messages to initial state">
                   <span class="material-symbols-outlined text-[14px] text-rose-600">restart_alt</span>
-                  <span class="hidden sm:inline">Reset</span>
+                  <span class="hidden sm:inline" data-i18n="common.reset">Reset</span>
                 </button>
               </div>
             </div>

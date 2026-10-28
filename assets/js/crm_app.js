@@ -2168,19 +2168,20 @@ function switchInboxSubmodule(submodule) {
 
   const pTitle = document.getElementById('page-title');
   const pSub = document.getElementById('page-subtitle');
+  const t = window.t || ((k, f) => f || k);
 
   if (submodule === 'chats') {
     if (chatSub) chatSub.classList.remove('hidden');
     if (tabChat) tabChat.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer";
     if (navSubChat) navSubChat.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
-    if (pTitle) pTitle.innerText = 'WhatsApp Inbox & Customer Queue';
-    if (pSub) pSub.innerText = `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`;
+    if (pTitle) pTitle.innerText = t('header.title.inbox_chats', 'WhatsApp Inbox & Customer Queue');
+    if (pSub) pSub.innerText = t('header.sub.inbox_chats', `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`);
   } else if (submodule === 'autoreply') {
     if (autoSub) autoSub.classList.remove('hidden');
     if (tabAuto) tabAuto.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-teal-600 to-emerald-600 text-white cursor-pointer";
     if (navSubAuto) navSubAuto.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-teal-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
-    if (pTitle) pTitle.innerText = 'WhatsApp Inbox — Pre-Set Templates & Auto-Reply Hub';
-    if (pSub) pSub.innerText = 'Configure automated responses, stock catalog links, trigger keywords & smart question answering';
+    if (pTitle) pTitle.innerText = t('header.title.inbox_autoreply', 'WhatsApp Inbox — Pre-Set Templates & Auto-Reply Hub');
+    if (pSub) pSub.innerText = t('header.sub.inbox_autoreply', 'Configure automated responses, stock catalog links, trigger keywords & smart question answering');
 
     if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
     if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
@@ -2188,8 +2189,8 @@ function switchInboxSubmodule(submodule) {
     if (bcastSub) bcastSub.classList.remove('hidden');
     if (tabBcast) tabBcast.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white cursor-pointer";
     if (navSubBcast) navSubBcast.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-purple-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
-    if (pTitle) pTitle.innerText = 'WhatsApp Inbox — Automated Template Broadcast';
-    if (pSub) pSub.innerText = 'Send personalized promotional templates & announcements to customer chats with variable tags';
+    if (pTitle) pTitle.innerText = t('header.title.inbox_broadcast', 'WhatsApp Inbox — Automated Template Broadcast');
+    if (pSub) pSub.innerText = t('header.sub.inbox_broadcast', 'Send personalized promotional templates & announcements to customer chats with variable tags');
 
     if (typeof renderBroadcastTemplateDropdown === 'function') renderBroadcastTemplateDropdown('festive_offer');
     if (typeof applyBroadcastPreset === 'function') applyBroadcastPreset('festive_offer');
@@ -2876,12 +2877,13 @@ function renderInboxConversationList() {
       }
     }
 
-    let lastText = 'No messages yet';
-    let timeDisplay = query ? query.createdAt : 'Recent';
+    const t = window.t || ((k, f) => f || k);
+    let lastText = t('chat.no_messages', 'No messages yet');
+    let timeDisplay = query ? query.createdAt : t('chat.recent', 'Recent');
     let lastTimeEpoch = lastMsgObj ? (lastMsgObj.id || 0) : 0;
 
     if (lastMsgObj) {
-      lastText = (lastMsgObj.sender === 'staff' ? 'Staff: ' : 'Customer: ') + `"${lastMsgObj.text.substring(0, 38)}..."`;
+      lastText = (lastMsgObj.sender === 'staff' ? t('chat.staff_prefix', 'Staff: ') : t('chat.customer_prefix', 'Customer: ')) + `"${lastMsgObj.text.substring(0, 38)}..."`;
       timeDisplay = lastMsgObj.time || timeDisplay;
     } else if (query) {
       lastText = query.lastMessage || query.queryText;
@@ -2973,18 +2975,18 @@ function renderInboxConversationList() {
 
     // Priority badge
     let priorityBadge = '';
-    if (item.priority === 'URGENT') priorityBadge = `<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-200">URGENT</span>`;
-    else if (item.priority === 'HIGH') priorityBadge = `<span class="bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200">HIGH</span>`;
+    if (item.priority === 'URGENT') priorityBadge = `<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-200">${t('badge.urgent', 'URGENT')}</span>`;
+    else if (item.priority === 'HIGH') priorityBadge = `<span class="bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200">${t('badge.high', 'HIGH')}</span>`;
 
     // Status Badge
     let statusBadge = '';
     const qStatus = item.status || 'NEW';
-    if (qStatus === 'DND' || item.customer?.isDND) statusBadge = `<span class="bg-rose-100 text-rose-900 border border-rose-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">🚫 DND</span>`;
-    else if (qStatus === 'PAYMENT_PENDING') statusBadge = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">PAYMENT PENDING</span>`;
-    else if (qStatus === 'FOLLOW_UP') statusBadge = `<span class="bg-blue-100 text-blue-900 border border-blue-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">FOLLOW-UP</span>`;
-    else if (qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED') statusBadge = `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">IN PROGRESS</span>`;
-    else if (qStatus === 'RESOLVED') statusBadge = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">RESOLVED</span>`;
-    else if (qStatus === 'CONVERTED') statusBadge = `<span class="bg-purple-100 text-purple-900 border border-purple-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">CONVERTED</span>`;
+    if (qStatus === 'DND' || item.customer?.isDND) statusBadge = `<span class="bg-rose-100 text-rose-900 border border-rose-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">🚫 ${t('badge.dnd', 'DND')}</span>`;
+    else if (qStatus === 'PAYMENT_PENDING') statusBadge = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.payment_pending', 'PAYMENT PENDING')}</span>`;
+    else if (qStatus === 'FOLLOW_UP') statusBadge = `<span class="bg-blue-100 text-blue-900 border border-blue-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.follow_up', 'FOLLOW-UP')}</span>`;
+    else if (qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED') statusBadge = `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.in_progress', 'IN PROGRESS')}</span>`;
+    else if (qStatus === 'RESOLVED') statusBadge = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.resolved', 'RESOLVED')}</span>`;
+    else if (qStatus === 'CONVERTED') statusBadge = `<span class="bg-purple-100 text-purple-900 border border-purple-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.converted', 'CONVERTED')}</span>`;
 
     // Line Badge
     const isLine1Card = (item.accountId === 'account_1');
@@ -3030,13 +3032,13 @@ function renderInboxConversationList() {
 
             <!-- Staff Assignment Tag -->
             ${isUnassigned ? `
-              <button onclick="event.stopPropagation(); openStaffAssignModal('${item.queryId}')" class="text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded-full font-bold shadow-sm flex items-center gap-0.5">
-                <span class="material-symbols-outlined text-[12px]">person_add</span> Assign
+              <button onclick="event.stopPropagation(); openStaffAssignModal('${item.queryId}')" class="text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded-full font-bold shadow-sm flex items-center gap-0.5 cursor-pointer">
+                <span class="material-symbols-outlined text-[12px]">person_add</span> ${t('common.assign', 'Assign')}
               </button>
             ` : `
               <span class="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
                 <span class="material-symbols-outlined text-[12px] text-emerald-600">badge</span>
-                ${item.staff ? item.staff.name.split(' ')[0] : 'Staff'}
+                ${item.staff ? item.staff.name.split(' ')[0] : t('chat.staff_label', 'Staff')}
               </span>
             `}
           </div>
@@ -3431,8 +3433,10 @@ function renderChatHeader() {
   const staff = query ? (CRM_STATE.staffList || []).find(s => s && (s.id === query.assignedTo || String(s.id) === String(query.assignedTo))) : null;
   const isUnassigned = query && (query.assignedTo === 'UNASSIGNED' || !query.assignedTo);
 
+  const t = window.t || ((k, f) => f || k);
+
   if (!customer) {
-    bar.innerHTML = `<p class="text-xs text-slate-400">Select a conversation to start chatting</p>`;
+    bar.innerHTML = `<p class="text-xs text-slate-400">${t('chat.select_conversation', 'Select a conversation to start chatting')}</p>`;
     return;
   }
 
@@ -3447,7 +3451,7 @@ function renderChatHeader() {
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-1.5 min-w-0">
           <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate" title="${customer.name}">${customer.name}</h3>
-          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0 hidden md:inline-block">${customer.customerType || 'Customer'}</span>
+          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0 hidden md:inline-block">${customer.customerType || t('common.customer', 'Customer')}</span>
         </div>
         <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5">
           <span class="font-mono text-emerald-700 font-bold text-[11px] whitespace-nowrap">${displayPhone}</span>
@@ -3463,11 +3467,11 @@ function renderChatHeader() {
           <span class="hidden sm:inline">${t('common.assign', 'Assign')}</span>
         </button>
       ` : `
-        <div class="hidden lg:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0" title="Assigned staff: ${staff ? staff.name : 'Assigned'}">
-          <span class="text-slate-500 hidden xl:inline">Staff:</span>
-          <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : 'Staff'}</span>
+        <div class="hidden lg:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0" title="${t('chat.staff', 'Staff:')} ${staff ? staff.name : t('common.assigned', 'Assigned')}">
+          <span class="text-slate-500 hidden xl:inline">${t('chat.staff', 'Staff:')}</span>
+          <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : t('chat.staff_label', 'Staff')}</span>
           ${ACTIVE_ROLE === 'admin' ? `
-            <button onclick="openStaffAssignModal('${query ? query.id : ''}')" class="text-brand-wa hover:underline font-bold text-[10px] ml-0.5 cursor-pointer">Reassign</button>
+            <button onclick="openStaffAssignModal('${query ? query.id : ''}')" class="text-brand-wa hover:underline font-bold text-[10px] ml-0.5 cursor-pointer">${t('common.reassign', 'Reassign')}</button>
           ` : ''}
         </div>
       `}
