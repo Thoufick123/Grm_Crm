@@ -7214,7 +7214,7 @@ function openRuleEditor(ruleId = null) {
 
   handleRuleActionTypeChange();
   card.classList.remove('hidden');
-  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeRuleEditor() {
@@ -7224,18 +7224,22 @@ function closeRuleEditor() {
 
 function handleRuleActionTypeChange() {
   const actionSelect = document.getElementById('edit-rule-action');
+  const actionWrapper = document.getElementById('edit-rule-action-wrapper');
   const catBox = document.getElementById('edit-rule-category-container');
   const textBox = document.getElementById('edit-rule-text-container');
   if (!actionSelect) return;
 
   const mode = actionSelect.value;
   if (mode === 'category_reply') {
+    if (actionWrapper) actionWrapper.className = 'sm:col-span-1';
     if (catBox) catBox.classList.remove('hidden');
     if (textBox) textBox.classList.add('hidden');
   } else if (mode === 'custom_text') {
+    if (actionWrapper) actionWrapper.className = 'sm:col-span-2';
     if (catBox) catBox.classList.add('hidden');
     if (textBox) textBox.classList.remove('hidden');
   } else {
+    if (actionWrapper) actionWrapper.className = 'sm:col-span-1';
     if (catBox) catBox.classList.remove('hidden');
     if (textBox) textBox.classList.remove('hidden');
   }
