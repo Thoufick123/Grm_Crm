@@ -1264,12 +1264,13 @@
               <form onsubmit="handleSendMessage(event)" class="flex items-center gap-2 min-w-0">
                 <button type="button" onclick="openProductSearchModal()"
                   class="px-2.5 py-2 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-xl transition shrink-0 flex items-center gap-1.5 font-bold text-xs shadow-2xs cursor-pointer"
-                  title="Search Stock &amp; Share to WhatsApp (Choose Category, Subcategory &amp; Stock Options)">
+                  title="Search Stock &amp; Share to WhatsApp">
                   <span class="material-symbols-outlined text-[19px] text-teal-600">inventory_2</span>
-                  <span class="hidden sm:inline text-[11px] font-bold text-slate-700">Stock &amp; Share</span>
+                  <span class="hidden sm:inline text-[11px] font-bold text-slate-700" data-i18n="customer.send_catalog">Stock &amp; Share</span>
                 </button>
                 <input type="text" id="chat-input-text"
                   placeholder="Type a message or response to customer (Press Enter to send)..."
+                  data-i18n-placeholder="customer.type_message"
                   class="flex-1 min-w-0 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-wa focus:bg-white transition"
                   autocomplete="off">
                 <button type="submit"

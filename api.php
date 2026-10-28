@@ -1779,7 +1779,7 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $items = $order['items'] ?? [];
         $grandTotal = (float)($order['grandTotal'] ?? ($order['grand_total'] ?? 0));
         $paymentMethod = $order['paymentMethod'] ?? ($order['payment_method'] ?? 'COD');
-        $paymentStatus = $order['paymentStatus'] ?? ($order['payment_status'] ?? 'PENDING');
+        $paymentStatus = $order['paymentStatus'] ?? ($order['payment_status'] ?? 'PAYMENT_PENDING');
         $orderStatus = $order['orderStatus'] ?? ($order['order_status'] ?? 'STOCK_RESERVED');
         $customerPhone = $order['customerPhone'] ?? ($order['customer_phone'] ?? '');
         $shippingAddress = $order['shippingAddress'] ?? ($order['shipping_address'] ?? '');
@@ -2945,3 +2945,4 @@ if ($action === 'save_user_preference' && $_SERVER['REQUEST_METHOD'] === 'POST')
 // Default fallback response
 echo json_encode(["status" => "success", "message" => "GRM CRM Backend API Active"]);
 exit;
+}

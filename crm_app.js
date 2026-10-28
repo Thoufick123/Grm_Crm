@@ -3112,15 +3112,16 @@ function toggleRightPanel(forceState = null, isUserAction = false) {
     }
   }
 
+  const t = window.t || ((k, f) => f || k);
   if (toggleBtn) {
     if (IS_RIGHT_PANEL_OPEN) {
       toggleBtn.className = "px-2 sm:px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-emerald-100 shrink-0";
-      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_right</span><span class="hidden xl:inline">Hide Profile</span>`;
-      toggleBtn.title = "Minimize Customer Profile Panel";
+      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_right</span><span class="hidden xl:inline">${t('customer.hide_profile', 'Hide Profile')}</span>`;
+      toggleBtn.title = t('customer.hide_profile', 'Hide Profile');
     } else {
       toggleBtn.className = "px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-slate-200 shrink-0";
-      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_left</span><span class="hidden xl:inline">Customer Profile</span>`;
-      toggleBtn.title = "Expand Customer Profile Panel";
+      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_left</span><span class="hidden xl:inline">${t('customer.profile', 'Profile')}</span>`;
+      toggleBtn.title = t('customer.profile', 'Profile');
     }
   }
 
@@ -3413,9 +3414,9 @@ function renderChatHeader() {
     <!-- Actions & Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
       ${isUnassigned ? `
-        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2 sm:px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="Assign Staff Member">
+        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2 sm:px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="${t('common.assign', 'Assign')}">
           <span class="material-symbols-outlined text-[15px]">person_add</span>
-          <span class="hidden sm:inline">Assign</span>
+          <span class="hidden sm:inline">${t('common.assign', 'Assign')}</span>
         </button>
       ` : `
         <div class="hidden lg:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0" title="Assigned staff: ${staff ? staff.name : 'Assigned'}">
@@ -3428,9 +3429,9 @@ function renderChatHeader() {
       `}
       
       <!-- BRAND-MASKED WHATSAPP CALL BUTTON -->
-      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="Call customer via Brand Masked Line">
+      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="${t('customer.call_via', 'Call via')} ${getBrandName()}">
         <span class="material-symbols-outlined text-[15px]">call</span>
-        <span class="hidden xl:inline">Call</span>
+        <span class="hidden xl:inline">${t('common.call', 'Call')}</span>
       </button>
 
       <a href="https://wa.me/${(customer.phone || '').replace(/[^0-9]/g, '')}" target="_blank" class="p-1.5 text-slate-600 hover:text-brand-wa hover:bg-emerald-50 rounded-lg transition shrink-0" title="Open Native WhatsApp Web">
@@ -3438,9 +3439,9 @@ function renderChatHeader() {
       </a>
 
       <!-- Slide Hide / Show Toggle Button for Customer Profile Panel -->
-      <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel(null, true)" class="px-2 sm:px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition shrink-0 cursor-pointer" title="${IS_RIGHT_PANEL_OPEN ? 'Hide Customer Profile' : 'Show Customer Profile'}">
+      <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel(null, true)" class="px-2 sm:px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition shrink-0 cursor-pointer" title="${IS_RIGHT_PANEL_OPEN ? t('customer.hide_profile', 'Hide Profile') : t('customer.profile', 'Profile')}">
         <span class="material-symbols-outlined text-[16px]">${IS_RIGHT_PANEL_OPEN ? 'dock_to_right' : 'dock_to_left'}</span>
-        <span class="hidden sm:inline">${IS_RIGHT_PANEL_OPEN ? 'Hide Profile' : 'Profile'}</span>
+        <span class="hidden sm:inline">${IS_RIGHT_PANEL_OPEN ? t('customer.hide_profile', 'Hide Profile') : t('customer.profile', 'Profile')}</span>
       </button>
     </div>
   `;
@@ -5225,10 +5226,10 @@ function renderCustomer360Panel() {
     <div class="px-4 py-2.5 bg-slate-100/90 border-b border-slate-200 flex items-center justify-between shrink-0 sticky top-0 z-10 backdrop-blur">
       <span class="text-[11px] font-extrabold uppercase text-slate-700 flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[16px] text-emerald-700">account_box</span>
-        <span>Customer 360 Details</span>
+        <span>${t('customer.title', 'Customer 360 Details')}</span>
       </span>
-      <button type="button" onclick="toggleRightPanel(false, true)" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-[10px] font-bold shadow-sm" title="Slide Hide Customer Profile Panel">
-        <span>Hide</span>
+      <button type="button" onclick="toggleRightPanel(false, true)" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-[10px] font-bold shadow-sm" title="${t('common.hide', 'Hide')}">
+        <span>${t('common.hide', 'Hide')}</span>
         <span class="material-symbols-outlined text-[16px]">chevron_right</span>
       </button>
     </div>
@@ -5247,7 +5248,7 @@ function renderCustomer360Panel() {
       <div class="mt-2 flex items-center justify-center">
         <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${staff || query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'} px-2.5 py-0.5 rounded-full">
           <span class="material-symbols-outlined text-[13px]">${staff || query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'badge' : 'person_alert'}</span>
-          <span>Handled by: <strong>${staff ? staff.name : (query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'Super Admin' : (query?.assignedTo && query.assignedTo !== 'UNASSIGNED' ? query.assignedTo : 'Unassigned'))}</strong></span>
+          <span>${t('customer.handled_by', 'Handled by:')} <strong>${staff ? staff.name : (query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'Super Admin' : (query?.assignedTo && query.assignedTo !== 'UNASSIGNED' ? query.assignedTo : t('customer.unassigned', 'Unassigned')))}</strong></span>
         </span>
       </div>
       
@@ -5259,13 +5260,13 @@ function renderCustomer360Panel() {
 
     <!-- BRAND-MASKED VOICE CALL ACTION -->
     <div class="p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200">
-      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-[0.99]" title="Customer receives call under official Brand Name: ${getBrandName()}">
+      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-[0.99]" title="${t('customer.call_via', 'Call via')} ${getBrandName()}">
         <span class="material-symbols-outlined text-[18px] animate-pulse">call</span>
-        <span>Call via ${getBrandName()} (Masked Caller ID)</span>
+        <span>${t('customer.call_via', 'Call via')} ${getBrandName()} (${t('customer.masked_caller_id', 'Masked Caller ID')})</span>
       </button>
       <p class="text-[10px] text-center text-emerald-800 font-medium mt-1.5 flex items-center justify-center gap-1">
         <span class="material-symbols-outlined text-[13px] text-emerald-600">verified_user</span>
-        <span>Customer sees only <strong>${getBrandName()}</strong> &bull; Staff SIM hidden</span>
+        <span>${t('customer.call_subtext', 'Customer sees only')} <strong>${getBrandName()}</strong> &bull; ${t('customer.sim_hidden', 'Staff SIM hidden')}</span>
       </p>
     </div>
 
@@ -5274,15 +5275,15 @@ function renderCustomer360Panel() {
       <div class="flex items-center justify-between">
         <span class="text-[11px] font-bold uppercase text-slate-700 flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px] text-brand-wa">person_pin</span>
-          <span>Customer Profile Details</span>
+          <span>${t('customer.profile_details', 'Customer Profile Details')}</span>
         </span>
         ${isEditing ? `
           <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Editing Mode
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> ${t('customer.editing_mode', 'Editing Mode')}
           </span>
         ` : `
           <span class="text-[9px] bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-            <span class="material-symbols-outlined text-[12px] text-slate-500">lock</span> Saved &amp; Locked
+            <span class="material-symbols-outlined text-[12px] text-slate-500">lock</span> ${t('customer.saved_locked', 'Saved & Locked')}
           </span>
         `}
       </div>
@@ -5290,16 +5291,16 @@ function renderCustomer360Panel() {
       <form id="form-quick-customer-edit" onsubmit="handleQuickCustomerSave(event, '${customer.id}')" class="space-y-2.5 text-xs">
         <!-- Customer Name -->
         <div>
-          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Name *:</label>
-          <input type="text" id="cust-edit-name" value="${customer.name || ''}" ${isEditing ? '' : 'disabled'} required placeholder="Full Name" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">${t('customer.name', 'Customer Name *:')}</label>
+          <input type="text" id="cust-edit-name" value="${customer.name || ''}" ${isEditing ? '' : 'disabled'} required placeholder="${t('customer.full_name', 'Full Name')}" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
         </div>
 
         <!-- Phone Number (Auto-Fetched from WhatsApp Message) -->
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide">WhatsApp Phone *:</label>
+            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide">${t('customer.phone', 'WhatsApp Phone *:')}</label>
             <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Auto-Fetched
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ${t('customer.auto_fetched', 'Auto-Fetched')}
             </span>
           </div>
           <div class="relative">
@@ -5310,19 +5311,19 @@ function renderCustomer360Panel() {
 
         <!-- Gender -->
         <div>
-          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Gender:</label>
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">${t('customer.gender', 'Gender:')}</label>
           <select id="cust-edit-gender" ${isEditing ? '' : 'disabled'} class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
-            <option value="" ${!customer.gender ? 'selected' : ''}>-- Select --</option>
-            <option value="Female" ${customer.gender === 'Female' ? 'selected' : ''}>Female</option>
-            <option value="Male" ${customer.gender === 'Male' ? 'selected' : ''}>Male</option>
-            <option value="Other" ${customer.gender === 'Other' ? 'selected' : ''}>Other</option>
+            <option value="" ${!customer.gender ? 'selected' : ''}>${t('customer.select', '-- Select --')}</option>
+            <option value="Female" ${customer.gender === 'Female' ? 'selected' : ''}>${t('customer.female', 'Female')}</option>
+            <option value="Male" ${customer.gender === 'Male' ? 'selected' : ''}>${t('customer.male', 'Male')}</option>
+            <option value="Other" ${customer.gender === 'Other' ? 'selected' : ''}>${t('customer.other', 'Other')}</option>
           </select>
         </div>
 
         <!-- Delivery Address -->
         <div>
-          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Delivery Address:</label>
-          <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Door No, Street, Landmark, City, Pincode" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${customer.address || ''}</textarea>
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">${t('customer.address', 'Delivery Address:')}</label>
+          <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.address_placeholder', 'Door No, Street, Landmark, City, Pincode')}" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${customer.address || ''}</textarea>
         </div>
 
         <!-- Customer Mindset & Records Notes Field -->
@@ -5330,11 +5331,11 @@ function renderCustomer360Panel() {
           <div class="flex items-center justify-between mb-1">
             <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
               <span class="material-symbols-outlined text-[15px] text-amber-600">psychology</span>
-              <span>Customer Mindset &amp; Notes:</span>
+              <span>${t('customer.mindset_notes', 'Customer Mindset & Notes:')}</span>
             </label>
-            <span class="text-[9px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">Mindset Log</span>
+            <span class="text-[9px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">${t('customer.mindset_log', 'Mindset Log')}</span>
           </div>
-          <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions..." class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${customer.notes || ''}</textarea>
+          <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.notes_placeholder', 'Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions...')}" class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${customer.notes || ''}</textarea>
         </div>
 
         <!-- Action Buttons (Locked vs Editing) -->
@@ -5342,17 +5343,17 @@ function renderCustomer360Panel() {
           ${isEditing ? `
             <div class="flex gap-2">
               <button type="button" onclick="toggleCustomerEditMode('${customer.id}', false)" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center">
-                Cancel
+                ${t('common.cancel', 'Cancel')}
               </button>
               <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
                 <span class="material-symbols-outlined text-[16px]">save</span>
-                <span>Save Customer Details</span>
+                <span>${t('customer.save_details', 'Save Customer Details')}</span>
               </button>
             </div>
           ` : `
             <button type="button" onclick="toggleCustomerEditMode('${customer.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
               <span class="material-symbols-outlined text-[16px]">edit_note</span>
-              <span>Edit Customer Details &amp; Notes</span>
+              <span>${t('customer.edit_details', 'Edit Customer Details & Notes')}</span>
             </button>
           `}
         </div>
@@ -5364,7 +5365,7 @@ function renderCustomer360Panel() {
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px] text-brand-wa">assignment</span>
-          <span class="text-[11px] font-bold uppercase text-slate-700">Enquiry Status &amp; State</span>
+          <span class="text-[11px] font-bold uppercase text-slate-700">${t('customer.enquiry_status', 'Enquiry Status & State')}</span>
         </div>
         <div class="flex items-center gap-1.5">
           ${statusBadgeHtml}
@@ -5379,8 +5380,8 @@ function renderCustomer360Panel() {
             <!-- COLUMN 1: STATUS DROPDOWN SELECTOR -->
             <div>
               <div class="flex items-center justify-between mb-1.5 h-4">
-                <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide truncate">Change Status:</label>
-                <span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-1.5 py-0.2 rounded shrink-0">Editable</span>
+                <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide truncate">${t('customer.change_status', 'Change Status:')}</label>
+                <span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-1.5 py-0.2 rounded shrink-0">${t('customer.editable', 'Editable')}</span>
               </div>
               <div class="relative">
                 <select id="query-status-select" onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full h-[42px] bg-white border border-slate-300 hover:border-brand-wa ring-0 focus:ring-1 focus:ring-brand-wa text-slate-900 cursor-pointer shadow-2xs rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
@@ -5406,10 +5407,10 @@ function renderCustomer360Panel() {
                   <div class="flex items-center justify-between mb-1.5 h-4">
                     <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1 truncate">
                       <span class="material-symbols-outlined text-[13px] text-blue-600 shrink-0">calendar_month</span>
-                      <span class="truncate">Callback Date:</span>
+                      <span class="truncate">${t('customer.callback_date', 'Callback Date:')}</span>
                     </span>
                     <div class="flex items-center gap-1 shrink-0">
-                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">Today</button>
+                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">${t('common.today', 'Today')}</button>
                       <button type="button" onclick="setQueryQuickDate(1)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+1D</button>
                       <button type="button" onclick="setQueryQuickDate(2)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2D</button>
                     </div>
@@ -5425,12 +5426,12 @@ function renderCustomer360Panel() {
             <div class="flex items-center justify-between mb-1">
               <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px] text-amber-600">note_alt</span>
-                <span>Status Change Notes &amp; Remarks:</span>
+                <span>${t('customer.status_notes', 'Status Change Notes & Remarks:')}</span>
               </label>
               ${isQueryEditing ? `
-                <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 font-extrabold px-1.5 py-0.2 rounded">Add Note for State</span>
+                <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 font-extrabold px-1.5 py-0.2 rounded">${t('customer.add_note_state', 'Add Note for State')}</span>
               ` : `
-                <span class="text-[9px] bg-slate-100 text-slate-500 font-medium px-1.5 py-0.2 rounded">Notes Log</span>
+                <span class="text-[9px] bg-slate-100 text-slate-500 font-medium px-1.5 py-0.2 rounded">${t('customer.notes_log', 'Notes Log')}</span>
               `}
             </div>
 
@@ -5438,14 +5439,14 @@ function renderCustomer360Panel() {
             <div class="flex items-center gap-1 flex-wrap mb-1.5" id="enquiry-quick-notes-container">
               <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-0.5 shrink-0">
                 <span class="material-symbols-outlined text-[11px] text-amber-500">bolt</span>
-                <span>Quick:</span>
+                <span>${t('customer.quick', 'Quick:')}</span>
               </span>
               <div id="enquiry-quick-notes-list" class="flex items-center gap-1 flex-wrap">
                 <!-- Default Presets -->
-                <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Order Complete', 'CONVERTED')"` : `disabled`} class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}" title="${isQueryEditing ? 'Click to fill Order Complete' : 'Touch Edit Enquiry Status to use'}">
+                <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Order Complete', 'CONVERTED')"` : `disabled`} class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}">
                   <span>📦 Order Complete</span>
                 </button>
-                <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Callback Promise - Customer requested call back', 'FOLLOW_UP')"` : `disabled`} class="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}" title="${isQueryEditing ? 'Click to set Callback Promise' : 'Touch Edit Enquiry Status to use'}">
+                <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Callback Promise - Customer requested call back', 'FOLLOW_UP')"` : `disabled`} class="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}">
                   <span>📞 Callback Promise</span>
                 </button>
                 <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Price Quoted / Catalog Shared', 'IN_PROGRESS')"` : `disabled`} class="px-2 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}">
@@ -5484,18 +5485,18 @@ function renderCustomer360Panel() {
 
               ${isQueryEditing ? `
                 <!-- Inline Add Quick Note Trigger (Visible ONLY in Admin Edit Mode) -->
-                <button type="button" id="btn-show-add-quick-note" onclick="showInlineAddQuickNote()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-900 border border-dashed border-slate-300 hover:border-amber-400 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-2xs" title="Add new quick note dynamically (inline without popup)">
+                <button type="button" id="btn-show-add-quick-note" onclick="showInlineAddQuickNote()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-900 border border-dashed border-slate-300 hover:border-amber-400 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-2xs" title="Add new quick note dynamically">
                   <span class="material-symbols-outlined text-[12px] text-amber-600">add</span>
-                  <span>Add Note</span>
+                  <span>${t('customer.add_note', 'Add Note')}</span>
                 </button>
 
                 <!-- Inline Add Input Box (Hidden by default, displayed inline with NO POPUP) -->
                 <div id="inline-add-quick-note-box" class="hidden items-center gap-1 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded-lg shadow-2xs">
-                  <input type="text" id="inline-quick-note-text" placeholder="Type new note..." onkeydown="if(event.key==='Enter'){event.preventDefault();saveCustomQuickNote();}" class="bg-white border border-amber-300 rounded px-1.5 py-0.5 text-[10px] text-slate-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500 w-36">
+                  <input type="text" id="inline-quick-note-text" placeholder="${t('customer.type_note', 'Type new note...')}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveCustomQuickNote();}" class="bg-white border border-amber-300 rounded px-1.5 py-0.5 text-[10px] text-slate-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500 w-36">
                   <button type="button" onclick="saveCustomQuickNote()" class="p-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded cursor-pointer transition flex items-center" title="Save quick note">
                     <span class="material-symbols-outlined text-[12px]">check</span>
                   </button>
-                  <button type="button" onclick="hideInlineAddQuickNote()" class="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer transition flex items-center" title="Cancel">
+                  <button type="button" onclick="hideInlineAddQuickNote()" class="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer transition flex items-center" title="${t('common.cancel', 'Cancel')}">
                     <span class="material-symbols-outlined text-[12px]">close</span>
                   </button>
                 </div>
@@ -5508,7 +5509,7 @@ function renderCustomer360Panel() {
           <!-- Query Meta Priority Details (Query ID and Schedule Action removed) -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
             <div class="flex justify-between items-center">
-              <span class="text-slate-500 font-medium">Priority:</span>
+              <span class="text-slate-500 font-medium">${t('common.priority', 'Priority:')}</span>
               <span class="font-bold ${query.priority === 'URGENT' ? 'text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200' : 'text-amber-700'}">${query.priority}</span>
             </div>
           </div>
@@ -5532,9 +5533,9 @@ function renderCustomer360Panel() {
                 <div class="flex items-center justify-between">
                   <label class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 cursor-pointer select-none">
                     <input type="checkbox" id="query-pay-pending-toggle" onchange="handlePayPendingToggle(this.checked)" class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300 cursor-pointer">
-                    <span>Payment Pending Option</span>
+                    <span>${t('customer.pay_option', 'Payment Pending Option')}</span>
                   </label>
-                  <span id="query-pay-pending-badge" class="text-[8.5px] text-slate-400 font-medium">Optional</span>
+                  <span id="query-pay-pending-badge" class="text-[8.5px] text-slate-400 font-medium">${t('common.optional', 'Optional')}</span>
                 </div>
 
                 ${!isQueryEditing ? `
@@ -5542,17 +5543,17 @@ function renderCustomer360Panel() {
                   <div id="query-pay-fields" class="${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
                     <div class="grid grid-cols-2 gap-2">
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">Total Amount:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.total_amount', 'Total Amount:')}</span>
                         <span class="font-mono font-bold text-slate-900 text-xs">₹${totalNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                       </div>
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">Shipping:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.shipping', 'Shipping:')}</span>
                         <span class="font-mono font-bold text-slate-900 text-xs">₹${shipNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                       </div>
                     </div>
 
                     <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                      <span class="text-[9.5px] font-bold text-slate-500 uppercase">Mode:</span>
+                      <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.payment_mode', 'Mode:')}</span>
                       <span class="font-bold text-amber-950 text-xs">${(() => {
                         const mLabels = {
                           'ALL': '💳 All Payment Modes',
@@ -5569,11 +5570,11 @@ function renderCustomer360Panel() {
                     ${payMode === 'COD_ADVANCE' ? `
                       <div class="grid grid-cols-2 gap-2 bg-amber-100/60 p-2 rounded-lg border border-amber-300/80">
                         <div class="flex items-center justify-between">
-                          <span class="text-[9px] font-bold text-amber-900 uppercase">Advance:</span>
+                          <span class="text-[9px] font-bold text-amber-900 uppercase">${t('customer.advance', 'Advance:')}</span>
                           <span class="font-mono font-black text-amber-950 text-xs">₹${advNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                         </div>
                         <div class="flex items-center justify-between border-l border-amber-300/80 pl-2">
-                          <span class="text-[9px] font-bold text-amber-900 uppercase">Balance:</span>
+                          <span class="text-[9px] font-bold text-amber-900 uppercase">${t('customer.balance', 'Balance:')}</span>
                           <span class="font-mono font-black text-emerald-800 text-xs">₹${balanceNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                         </div>
                       </div>
@@ -5581,18 +5582,18 @@ function renderCustomer360Panel() {
 
                     <div class="grid grid-cols-2 gap-2">
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">Due Date:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.due_date', 'Payment Due Date:')}</span>
                         <span class="font-mono font-bold text-slate-800 text-xs">${payDue || '—'}</span>
                       </div>
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">Quoted Items:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.quoted_items', 'Quoted Items:')}</span>
                         <span class="font-bold text-slate-800 text-xs truncate ml-1">${payItems || '—'}</span>
                       </div>
                     </div>
 
                     ${payNotes ? `
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-start gap-1">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase shrink-0">Notes:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase shrink-0">${t('common.notes', 'Notes')}:</span>
                         <span class="italic text-slate-800 text-xs truncate">"${payNotes}"</span>
                       </div>
                     ` : ''}
@@ -5600,7 +5601,7 @@ function renderCustomer360Panel() {
                     <!-- Quick Action: Share to WhatsApp Chat -->
                     <button type="button" onclick="sendWhatsAppPaymentRequest('${customer.id}', '${customerFollowup?.id || ''}')" class="w-full mt-0.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95">
                       <span class="material-symbols-outlined text-[14px]">send_to_mobile</span>
-                      <span>Share Payment Request to Chat</span>
+                      <span>${t('customer.share_payment', 'Share Payment Request to Chat')}</span>
                     </button>
                   </div>
                 ` : `
@@ -5608,14 +5609,14 @@ function renderCustomer360Panel() {
                   <div id="query-pay-fields" class="hidden space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
                     <div class="grid grid-cols-2 gap-2">
                       <div>
-                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Total Amount (₹):</label>
+                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.total_amount', 'Total Amount:')}</label>
                         <div class="relative">
                           <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
                           <input type="text" inputmode="decimal" id="query-pay-amount-input" value="${payTotal}" oninput="handleDynamicPaymentCalc()" placeholder="0.00" class="w-full pl-6 pr-2 py-1 rounded-lg border border-amber-300 bg-white text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-amber-500">
                         </div>
                       </div>
                       <div>
-                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Shipping Amount (₹):</label>
+                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.shipping', 'Shipping:')}</label>
                         <div class="relative">
                           <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
                           <input type="text" inputmode="decimal" id="query-pay-shipping-input" value="${payShipping}" oninput="handleDynamicPaymentCalc()" placeholder="0.00" class="w-full pl-6 pr-2 py-1 rounded-lg border border-amber-300 bg-white text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-amber-500">
@@ -5624,7 +5625,7 @@ function renderCustomer360Panel() {
                     </div>
 
                     <div>
-                      <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Mode:</label>
+                      <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.payment_mode', 'Mode:')}</label>
                       <select id="query-pay-mode-select" onchange="handlePayModeChange(this.value)" class="w-full py-1 px-2 rounded-lg border border-amber-300 bg-white text-xs font-bold text-slate-800 focus:ring-1 focus:ring-amber-500">
                         <option value="ALL" ${payMode === 'ALL' ? 'selected' : ''}>💳 All Payment Modes</option>
                         <option value="UPI" ${payMode === 'UPI' ? 'selected' : ''}>📱 GPay / PhonePe / Paytm (UPI)</option>
@@ -5640,7 +5641,7 @@ function renderCustomer360Panel() {
                       <div class="flex items-center justify-between">
                         <label class="font-bold text-amber-950 text-[9.5px] uppercase tracking-wide flex items-center gap-1">
                           <span class="material-symbols-outlined text-[13px] text-amber-700">local_shipping</span>
-                          <span>Advance Payment (₹):</span>
+                          <span>${t('customer.advance_payment', 'Advance Payment (₹):')}</span>
                         </label>
                         <span class="text-[8.5px] bg-amber-200 text-amber-900 font-extrabold px-1.5 py-0.2 rounded border border-amber-300">COD Advance</span>
                       </div>
@@ -5650,7 +5651,7 @@ function renderCustomer360Panel() {
                           <input type="text" inputmode="decimal" id="query-pay-advance-input" value="${payAdvance}" oninput="handleDynamicPaymentCalc()" placeholder="0.00" class="w-full pl-6 pr-2 py-1 rounded-lg border border-amber-400 bg-white text-xs font-mono font-bold text-amber-950 focus:ring-1 focus:ring-amber-600">
                         </div>
                         <div class="text-[10px] text-amber-950 font-semibold bg-white/80 px-2 py-1 rounded-lg border border-amber-200 flex items-center justify-between">
-                          <span class="text-[8.5px] uppercase font-bold text-slate-500">Balance:</span>
+                          <span class="text-[8.5px] uppercase font-bold text-slate-500">${t('customer.balance', 'Balance:')}</span>
                           <span class="font-mono font-black text-emerald-800 text-xs" id="query-pay-balance-val">₹${balanceNum.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </div>
                       </div>
@@ -5659,24 +5660,24 @@ function renderCustomer360Panel() {
                     <!-- 2-Column Aligned Due Date & Quoted Items -->
                     <div class="grid grid-cols-2 gap-2">
                       <div>
-                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Payment Due Date:</label>
+                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.due_date', 'Payment Due Date:')}</label>
                         <input type="date" id="query-pay-due-input" value="${payDue}" class="w-full px-2 py-1 rounded-lg border border-amber-300 bg-white text-xs font-mono font-bold text-slate-800 focus:ring-1 focus:ring-amber-500">
                       </div>
                       <div>
-                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Quoted Items:</label>
+                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.quoted_items', 'Quoted Items:')}</label>
                         <input type="text" id="query-pay-items-input" value="${payItems}" placeholder="e.g. 13 pcs" class="w-full px-2 py-1 rounded-lg border border-amber-300 bg-white text-xs text-slate-900 font-medium">
                       </div>
                     </div>
 
                     <div>
-                      <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Payment Promise Notes:</label>
+                      <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.promise_notes', 'Payment Promise Notes:')}</label>
                       <input type="text" id="query-pay-notes-input" value="${payNotes}" placeholder="e.g. Promised advance GPay after banking hours" class="w-full px-2.5 py-1 rounded-lg border border-amber-300 bg-white text-xs text-slate-900 font-medium">
                     </div>
 
                     <!-- Quick Action: Share to WhatsApp Chat -->
                     <button type="button" onclick="sendWhatsAppPaymentRequest('${customer.id}', '${customerFollowup?.id || ''}')" class="w-full mt-0.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95">
                       <span class="material-symbols-outlined text-[14px]">send_to_mobile</span>
-                      <span>Share Payment Request to Chat</span>
+                      <span>${t('customer.share_payment', 'Share Payment Request to Chat')}</span>
                     </button>
                   </div>
                 `}
@@ -5689,11 +5690,11 @@ function renderCustomer360Panel() {
             <div class="flex gap-2">
               <button type="button" onclick="handleCancelQueryEdit('${query.id}')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-2xs">
                 <span class="material-symbols-outlined text-[15px]">close</span>
-                <span>Cancel</span>
+                <span>${t('common.cancel', 'Cancel')}</span>
               </button>
               <button type="button" onclick="handleSaveQueryStatus('${query.id}')" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer">
                 <span class="material-symbols-outlined text-[16px]">save</span>
-                <span>Save Status &amp; Log History</span>
+                <span>${t('customer.save_status_log', 'Save Status & Log History')}</span>
               </button>
             </div>
           </div>
