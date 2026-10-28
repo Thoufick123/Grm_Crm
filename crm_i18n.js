@@ -136,6 +136,80 @@
       'customer.send_catalog': 'Stock & Share',
       'customer.order_booking': 'Book Order',
 
+      // Header Titles
+      'header.title.dashboard': 'WhatsApp Operations Dashboard',
+      'header.sub.dashboard': 'Real-time overview of inquiries, active sessions, and communication health',
+      'header.title.inbox': 'WhatsApp Inbox & Customer Queue',
+      'header.sub.inbox': 'Live conversation management with instant staff assignment & order booking',
+      'header.title.followups': 'Customer Follow-up Scheduler',
+      'header.sub.followups': 'Automated reminders to prevent lost customer enquiries',
+      'header.title.catalog': 'Garment Product Catalog & Live Stock',
+      'header.sub.catalog': 'Live available stock calculator and 1-click WhatsApp card sharing',
+      'header.title.orders': 'WhatsApp Sales Orders & Reservations',
+      'header.sub.orders': 'Direct orders booked from WhatsApp chats with reserved inventory',
+      'header.title.customers': 'Customer 360 & Tag Directory',
+      'header.sub.customers': 'Profiles, purchase history, and communication preferences',
+      'header.title.dnd': 'DND & Opt-Out Customer Hub',
+      'header.sub.dnd': 'Customers who requested not to receive garment product offers or messages',
+      'header.title.staff': 'Staff & Team Management Hub',
+      'header.sub.staff': 'Onboard team members, assign operational roles & permissions, and monitor workloads',
+      'header.title.audit': 'System Audit Trail & Security Logs',
+      'header.sub.audit': 'Tamper-proof record of every staff assignment and order update',
+      'header.title.analytics': 'Staff Performance Analytics & KPIs',
+      'header.sub.analytics': 'Factual metrics on response times, volume handled, and conversions',
+      'header.title.settings': 'WhatsApp Business Settings & Phone Configuration',
+      'header.sub.settings': 'Set your primary WhatsApp Business number for dynamic live message routing',
+      'header.title.backup': 'Data Backup & Recovery Hub',
+      'header.sub.backup': 'Full database snapshot export, restore, and zero-data-loss protection',
+
+      // Dashboard
+      'dash.total_enquiries': 'Total Enquiries Today',
+      'dash.inbound_capture': '100% Inbound Capture',
+      'dash.unassigned_queries': 'Unassigned Queries',
+      'dash.action_required': 'Action required by Admin',
+      'dash.orders_booked': 'WhatsApp Orders Booked',
+      'dash.total_sales': 'Total Sales',
+      'dash.followups_scheduled': 'Follow-ups Scheduled',
+      'dash.automated_reminders': 'Automated Reminders Active',
+      'dash.active_conversations': 'Active WhatsApp Conversations',
+      'dash.active_conversations_sub': 'Live feed of pending customer chats across all staff',
+      'dash.open_inbox': 'Open Inbox →',
+      'dash.staff_performance': 'Staff Performance Snapshot',
+      'dash.orders_converted': 'Orders Converted',
+      'dash.active_leads': 'Active Leads',
+      'dash.open': 'Open',
+
+      // Inbox Queue & Workstation
+      'inbox.todays_messages': 'Today\'s Messages:',
+      'inbox.search_placeholder': 'Search customer, phone, SKU, Query ID...',
+      'inbox.all': 'All',
+      'inbox.unassigned': 'Unassigned',
+      'inbox.my_queue': 'My Queue',
+      'inbox.urgent': 'Urgent',
+      'inbox.autoreply_paused': 'Auto-Reply is PAUSED:',
+      'inbox.autoreply_paused_sub': 'Automated WhatsApp messages are OFF. Manual staff reply is required for incoming messages.',
+      'inbox.resume_autoreply': 'Resume Auto-Reply',
+      'inbox.no_messages': 'No messages recorded in this chat yet',
+      'inbox.quick_templates': 'Quick Templates:',
+      'inbox.repeat_customer': 'Repeat Customer',
+      'inbox.new_customer': 'New Customer',
+      'inbox.reassign': 'Reassign',
+      'inbox.staff_label': 'Staff',
+      'inbox.customer': 'Customer',
+
+      // Auto-Reply Hub
+      'ar.title': 'WhatsApp Pre-Set Templates & Auto-Reply Hub',
+      'ar.subtitle': 'Admin pre-set questions, stock templates & instant automated responses',
+      'ar.bot_label': 'Auto-Reply Bot:',
+      'ar.back_to_chats': 'Back to Chats',
+      'ar.search_placeholder': 'Search pre-set questions or keywords (e.g. feeding kurti, frocks, address)...',
+      'ar.all_templates': 'All Templates',
+      'ar.active_only': 'Active Auto-Replies Only',
+      'ar.category_links': 'Category Stock Links',
+      'ar.custom_answers': 'Custom Answers',
+      'ar.add_template': '+ Add Pre-Set Question & Reply',
+      'ar.active_templates': 'Active Templates',
+
       // Toasts & Notifications
       'toast.lang_changed': 'Language Updated',
       'toast.lang_desc': 'CRM language successfully switched to'
@@ -258,6 +332,80 @@
       'customer.send': 'அனுப்புக',
       'customer.send_catalog': 'பட்டியல் பகிர்வு',
       'customer.order_booking': 'ஆர்டர் பதிவு',
+
+      // Header Titles
+      'header.title.dashboard': 'வாட்ஸ்அப் செயல்பாடுகள் டாஷ்போர்டு',
+      'header.sub.dashboard': 'விசாரணைகள், உரையாடல்கள் மற்றும் செயல்பாடுகளின் நேரலை கண்ணோட்டம்',
+      'header.title.inbox': 'வாட்ஸ்அப் இன்பாக்ஸ் & வாடிக்கையாளர் வரிசை',
+      'header.sub.inbox': 'பணியாளர் ஒதுக்கீடு மற்றும் நேரலை உரையாடல் மேலாண்மை',
+      'header.title.followups': 'பின்தொடர்தல் அட்டவணை மையம்',
+      'header.sub.followups': 'விசாரணைகள் தவறாமல் இருக்க தானியங்கி நினைவூட்டல்கள்',
+      'header.title.catalog': 'ஆடை பட்டியல் & நேரடி இருப்பு',
+      'header.sub.catalog': 'நேரடி இருப்பு கணக்கீடு மற்றும் வாட்ஸ்அப் பகிர்வு',
+      'header.title.orders': 'வாட்ஸ்அப் விற்பனை ஆர்டர்கள்',
+      'header.sub.orders': 'வாட்ஸ்அப் அரட்டையிலிருந்து முன்பதிவு செய்யப்பட்ட ஆர்டர்கள்',
+      'header.title.customers': 'வாடிக்கையாளர் 360 & விபரங்கள்',
+      'header.sub.customers': 'சுயவிவரங்கள், வாங்கிய வரலாறு மற்றும் விருப்பங்கள்',
+      'header.title.dnd': 'DND & விலகல் வாடிக்கையாளர் மையம்',
+      'header.sub.dnd': 'சலுகை செய்திகள் பெற விரும்பாத வாடிக்கையாளர்கள்',
+      'header.title.staff': 'பணியாளர் மேலாண்மை மையம்',
+      'header.sub.staff': 'பணியாளர் பொறுப்புகள் மற்றும் பணிச்சுமை கண்காணிப்பு',
+      'header.title.audit': 'பாதுகாப்பு & தணிக்கை பதிவுகள்',
+      'header.sub.audit': 'பணியாளர் மாற்றங்கள் மற்றும் ஆர்டர் பதிவுகள்',
+      'header.title.analytics': 'பணியாளர் செயல்திறன் & அறிக்கைகள்',
+      'header.sub.analytics': 'பதிலளிக்கும் நேரம் மற்றும் ஆர்டர் மாற்றங்களின் அளவீடுகள்',
+      'header.title.settings': 'வாட்ஸ்அப் வணிக அமைப்புகள்',
+      'header.sub.settings': 'வாட்ஸ்அப் எண்கள் மற்றும் தானியங்கி கட்டமைப்பு',
+      'header.title.backup': 'தரவு காப்பு & மீட்டெடுப்பு',
+      'header.sub.backup': 'முழு தரவுத்தள காப்புநகல் மற்றும் பாதுகாப்பு',
+
+      // Dashboard
+      'dash.total_enquiries': 'இன்றைய மொத்த விசாரணைகள்',
+      'dash.inbound_capture': '100% நேரலை பிடிப்பு',
+      'dash.unassigned_queries': 'ஒதுக்கப்படாத விசாரணைகள்',
+      'dash.action_required': 'நிர்வாகி நடவடிக்கை தேவை',
+      'dash.orders_booked': 'பதிவு செய்யப்பட்ட ஆர்டர்கள்',
+      'dash.total_sales': 'மொத்த விற்பனை',
+      'dash.followups_scheduled': 'திட்டமிடப்பட்ட பின்தொடர்தல்கள்',
+      'dash.automated_reminders': 'தானியங்கி நினைவூட்டல்கள் செயலில்',
+      'dash.active_conversations': 'செயலில் உள்ள வாட்ஸ்அப் உரையாடல்கள்',
+      'dash.active_conversations_sub': 'பணியாளர்கள் கையாளும் நேரலை அரட்டைகள்',
+      'dash.open_inbox': 'இன்பாக்ஸ் திற →',
+      'dash.staff_performance': 'பணியாளர் செயல்திறன் சுருக்கம்',
+      'dash.orders_converted': 'மாற்றப்பட்ட ஆர்டர்கள்',
+      'dash.active_leads': 'செயலில் உள்ள விசாரணைகள்',
+      'dash.open': 'திறக்க',
+
+      // Inbox Queue & Workstation
+      'inbox.todays_messages': 'இன்றைய செய்திகள்:',
+      'inbox.search_placeholder': 'வாடிக்கையாளர் பெயர், எண், SKU, விசாரணை தேடு...',
+      'inbox.all': 'அனைத்தும்',
+      'inbox.unassigned': 'ஒதுக்கப்படாதவை',
+      'inbox.my_queue': 'எனது வரிசை',
+      'inbox.urgent': 'அவசரம்',
+      'inbox.autoreply_paused': 'தானியங்கி பதில் இடைநிறுத்தப்பட்டுள்ளது:',
+      'inbox.autoreply_paused_sub': 'தானியங்கி வாட்ஸ்அப் செய்திகள் முடக்கப்பட்டுள்ளன. கைமுறையாக பதிலளிக்கவும்.',
+      'inbox.resume_autoreply': 'தானியங்கி பதிலை இயக்கு',
+      'inbox.no_messages': 'இந்த உரையாடலில் இன்னும் செய்திகள் இல்லை',
+      'inbox.quick_templates': 'விரைவு மாதிரிகள்:',
+      'inbox.repeat_customer': 'மீண்டும் வந்த வாடிக்கையாளர்',
+      'inbox.new_customer': 'புதிய வாடிக்கையாளர்',
+      'inbox.reassign': 'மீண்டும் ஒதுக்கு',
+      'inbox.staff_label': 'பணியாளர்',
+      'inbox.customer': 'வாடிக்கையாளர்',
+
+      // Auto-Reply Hub
+      'ar.title': 'முன்செட் மாதிரிகள் & தானியங்கி பதில் மையம்',
+      'ar.subtitle': 'முன்பதிவு செய்யப்பட்ட கேள்விகள் மற்றும் உடனடி தானியங்கி பதில்கள்',
+      'ar.bot_label': 'தானியங்கி பாட்:',
+      'ar.back_to_chats': 'அரட்டைக்குத் திரும்பு',
+      'ar.search_placeholder': 'முன்செட் கேள்விகள் அல்லது முக்கிய வார்த்தைகளைத் தேடுங்கள்...',
+      'ar.all_templates': 'அனைத்து மாதிரிகள்',
+      'ar.active_only': 'செயலில் உள்ளவை மட்டும்',
+      'ar.category_links': 'பிரிவு இருப்பு இணைப்புகள்',
+      'ar.custom_answers': 'தனிப்பயன் பதில்கள்',
+      'ar.add_template': '+ புதிய கேள்வி & பதிலைச் சேர்',
+      'ar.active_templates': 'செயலில் உள்ள மாதிரிகள்',
 
       // Toasts & Notifications
       'toast.lang_changed': 'மொழி மாற்றப்பட்டது',
@@ -382,6 +530,80 @@
       'customer.send_catalog': 'स्टॉक और शेयर',
       'customer.order_booking': 'ऑर्डर बुक करें',
 
+      // Header Titles
+      'header.title.dashboard': 'व्हाट्सएप संचालन डैशबोर्ड',
+      'header.sub.dashboard': 'पूछताछ, सक्रिय सत्र और संचार स्वास्थ्य का वास्तविक समय अवलोकन',
+      'header.title.inbox': 'व्हाट्सएप इनबॉक्स और ग्राहक कतार',
+      'header.sub.inbox': 'त्वरित कर्मचारी आवंटन और ऑर्डर बुकिंग के साथ बातचीत प्रबंधन',
+      'header.title.followups': 'ग्राहक फॉलो-अप अनुसूचक',
+      'header.sub.followups': 'पूछताछ छूटने से रोकने के लिए स्वचालित अनुस्मारक',
+      'header.title.catalog': 'कपड़ा उत्पाद सूची और लाइव स्टॉक',
+      'header.sub.catalog': 'लाइव स्टॉक कैलकुलेटर और व्हाट्सएप कार्ड साझाकरण',
+      'header.title.orders': 'व्हाट्सएप बिक्री ऑर्डर',
+      'header.sub.orders': 'व्हाट्सएप चैट से सीधे बुक किए गए ऑर्डर',
+      'header.title.customers': 'ग्राहक 360 और निर्देशिका',
+      'header.sub.customers': 'प्रोफाइल, खरीद इतिहास और प्राथमिकताएं',
+      'header.title.dnd': 'डीएनडी और ऑप्ट-आउट ग्राहक हब',
+      'header.sub.dnd': 'ऑफर संदेश प्राप्त न करने का अनुरोध करने वाले ग्राहक',
+      'header.title.staff': 'कर्मचारी प्रबंधन हब',
+      'header.sub.staff': 'टीम के सदस्य, भूमिकाएं और कार्यभार की निगरानी',
+      'header.title.audit': 'सुरक्षा और ऑडिट लॉग',
+      'header.sub.audit': 'कर्मचारी आवंटन और ऑर्डर अपडेट का रिकॉर्ड',
+      'header.title.analytics': 'कर्मचारी प्रदर्शन और विश्लेषण',
+      'header.sub.analytics': 'प्रतिक्रिया समय और ऑर्डर रूपांतरण के आंकड़े',
+      'header.title.settings': 'व्हाट्सएप व्यापार सेटिंग्स',
+      'header.sub.settings': 'लाइव संदेश रूटिंग के लिए प्राथमिक व्हाट्सएप नंबर सेट करें',
+      'header.title.backup': 'डेटा बैकअप और रिकवरी',
+      'header.sub.backup': 'पूर्ण डेटाबेस बैकअप और सुरक्षा',
+
+      // Dashboard
+      'dash.total_enquiries': 'आज की कुल पूछताछ',
+      'dash.inbound_capture': '100% इनबाउंड कैप्चर',
+      'dash.unassigned_queries': 'अनावंटित पूछताछ',
+      'dash.action_required': 'व्यवस्थापक कार्रवाई आवश्यक',
+      'dash.orders_booked': 'व्हाट्सएप ऑर्डर बुक किए गए',
+      'dash.total_sales': 'कुल बिक्री',
+      'dash.followups_scheduled': 'फॉलो-अप निर्धारित',
+      'dash.automated_reminders': 'स्वचालित अनुस्मारक सक्रिय',
+      'dash.active_conversations': 'सक्रिय व्हाट्सएप बातचीत',
+      'dash.active_conversations_sub': 'सभी कर्मचारियों में लंबित चैट का लाइव फीड',
+      'dash.open_inbox': 'इनबॉक्स खोलें →',
+      'dash.staff_performance': 'कर्मचारी प्रदर्शन सारांश',
+      'dash.orders_converted': 'ऑर्डर परिवर्तित',
+      'dash.active_leads': 'सक्रिय लीड',
+      'dash.open': 'खोलें',
+
+      // Inbox Queue & Workstation
+      'inbox.todays_messages': 'आज के संदेश:',
+      'inbox.search_placeholder': 'ग्राहक, फोन, एसकेयू, पूछताछ खोजें...',
+      'inbox.all': 'सभी',
+      'inbox.unassigned': 'अनावंटित',
+      'inbox.my_queue': 'मेरी कतार',
+      'inbox.urgent': 'अति आवश्यक',
+      'inbox.autoreply_paused': 'ऑटो-रिप्लाई रुका हुआ है:',
+      'inbox.autoreply_paused_sub': 'स्वचालित संदेश बंद हैं। कर्मचारियों द्वारा हस्तचालित उत्तर आवश्यक है।',
+      'inbox.resume_autoreply': 'ऑटो-रिप्लाई फिर चालू करें',
+      'inbox.no_messages': 'इस चैट में अभी तक कोई संदेश नहीं है',
+      'inbox.quick_templates': 'त्वरित टेम्पलेट:',
+      'inbox.repeat_customer': 'पुनरावर्ती ग्राहक',
+      'inbox.new_customer': 'नया ग्राहक',
+      'inbox.reassign': 'पुनः सौंपें',
+      'inbox.staff_label': 'कर्मचारी',
+      'inbox.customer': 'ग्राहक',
+
+      // Auto-Reply Hub
+      'ar.title': 'प्री-सेट टेम्पलेट और ऑटो-रिप्लाई हब',
+      'ar.subtitle': 'व्यवस्थापक प्री-सेट प्रश्न, स्टॉक टेम्पलेट और त्वरित स्वचालित प्रतिक्रियाएं',
+      'ar.bot_label': 'ऑटो-रिप्लाई बॉट:',
+      'ar.back_to_chats': 'चैट पर वापस जाएं',
+      'ar.search_placeholder': 'प्रश्न या कीवर्ड खोजें...',
+      'ar.all_templates': 'सभी टेम्पलेट',
+      'ar.active_only': 'केवल सक्रिय ऑटो-रिप्लाई',
+      'ar.category_links': 'श्रेणी स्टॉक लिंक',
+      'ar.custom_answers': 'कस्टम उत्तर',
+      'ar.add_template': '+ नया प्रश्न और उत्तर जोड़ें',
+      'ar.active_templates': 'सक्रिय टेम्पलेट',
+
       // Toasts & Notifications
       'toast.lang_changed': 'भाषा बदली गई',
       'toast.lang_desc': 'सीआरएम भाषा सफलतापूर्वक बदल दी गई:'
@@ -504,6 +726,80 @@
       'customer.send': 'పంపండి',
       'customer.send_catalog': 'కేటలాగ్ షేర్',
       'customer.order_booking': 'ఆర్డర్ బుకింగ్',
+
+      // Header Titles
+      'header.title.dashboard': 'వాట్సాప్ ఆపరేషన్స్ డాష్‌బోర్డ్',
+      'header.sub.dashboard': 'విచారణలు మరియు సమాచార ప్రసారాల ప్రత్యక్ష సమీక్ష',
+      'header.title.inbox': 'వాట్సాప్ ఇన్‌బాక్స్ & కస్టమర్ వరుసక్రమం',
+      'header.sub.inbox': 'సిబ్బంది కేటాయింపు మరియు ప్రత్యక్ష సంభాషణ నిర్వహణ',
+      'header.title.followups': 'కస్టమర్ ఫాలో-అప్ షెడ్యూలర్',
+      'header.sub.followups': 'విచారణలు తప్పిపోకుండా ఆటోమేటిక్ రిమైండర్లు',
+      'header.title.catalog': 'వస్త్ర ఉత్పత్తుల కేటలాగ్ & ప్రత్యక్ష స్టాక్',
+      'header.sub.catalog': 'ప్రత్యక్ష స్టాక్ లెక్కింపు మరియు వాట్సాప్ భాగస్వామ్యం',
+      'header.title.orders': 'వాట్సాప్ విక్రయ ఆర్డర్లు',
+      'header.sub.orders': 'వాట్సాప్ చాట్ నుండి నేరుగా బుక్ చేసిన ఆర్డర్లు',
+      'header.title.customers': 'కస్టమర్ 360 & డైరెక్టరీ',
+      'header.sub.customers': 'ప్రొఫైల్స్, కొనుగోలు చరిత్ర మరియు ప్రాధాన్యతలు',
+      'header.title.dnd': 'DND & నిలిపివేత కస్టమర్ హబ్',
+      'header.sub.dnd': 'సందేశాలు వద్దనుకున్న కస్టమర్లు',
+      'header.title.staff': 'సిబ్బంది నిర్వహణ కేంద్రం',
+      'header.sub.staff': 'సిబ్బంది బాధ్యతలు మరియు పనిభారం పర్యవేక్షణ',
+      'header.title.audit': 'భద్రత & ఆడిట్ లాగ్స్',
+      'header.sub.audit': 'సిబ్బంది కేటాయింపులు మరియు ఆర్డర్ నవీకరణల రికార్డు',
+      'header.title.analytics': 'సిబ్బంది పనితీరు విశ్లేషణ',
+      'header.sub.analytics': 'ప్రతిస్పందన సమయాలు మరియు ఆర్డర్ గణాంకాలు',
+      'header.title.settings': 'వాట్సాప్ వ్యాపార సెట్టింగ్‌లు',
+      'header.sub.settings': 'సందేశ రూటింగ్ కోసం ప్రాథమిక వాట్సాప్ నంబర్ సెట్ చేయండి',
+      'header.title.backup': 'డేటా బ్యాకప్ & పునరుద్ధరణ',
+      'header.sub.backup': 'పూర్తి డేటాబేస్ బ్యాకప్ మరియు రక్షణ',
+
+      // Dashboard
+      'dash.total_enquiries': 'నేటి మొత్తం విచారణలు',
+      'dash.inbound_capture': '100% ప్రత్యక్ష క్యాప్చర్',
+      'dash.unassigned_queries': 'కేటాయించని విచారణలు',
+      'dash.action_required': 'నిర్వాహక చర్య అవసరం',
+      'dash.orders_booked': 'బుక్ చేసిన ఆర్డర్లు',
+      'dash.total_sales': 'మొత్తం అమ్మకాలు',
+      'dash.followups_scheduled': 'షెడ్యూల్ చేసిన ఫాలో-అప్‌లు',
+      'dash.automated_reminders': 'ఆటోమేటెడ్ రిమైండర్‌లు యాక్టివ్',
+      'dash.active_conversations': 'క్రియాశీల వాట్సాప్ సంభాషణలు',
+      'dash.active_conversations_sub': 'సిబ్బంది నిర్వహిస్తున్న చాట్‌ల ఫీడ్',
+      'dash.open_inbox': 'ఇన్‌బాక్స్ తెరవండి →',
+      'dash.staff_performance': 'సిబ్బంది పనితీరు సంక్షిప్తం',
+      'dash.orders_converted': 'ఆర్డర్లు మారినవి',
+      'dash.active_leads': 'యాక్టివ్ లೀడ్స్',
+      'dash.open': 'తెరవండి',
+
+      // Inbox Queue & Workstation
+      'inbox.todays_messages': 'నేటి సందేశాలు:',
+      'inbox.search_placeholder': 'కస్టమర్, ఫోన్, SKU, విచారణ శోధించండి...',
+      'inbox.all': 'అన్నీ',
+      'inbox.unassigned': 'కేటాయించనివి',
+      'inbox.my_queue': 'నా క్యూ',
+      'inbox.urgent': 'అత్యవసరం',
+      'inbox.autoreply_paused': 'ఆటో-రిప్లై నిలిపివేయబడింది:',
+      'inbox.autoreply_paused_sub': 'ఆటోమేటెడ్ సందేశాలు ఆఫ్‌లో ఉన్నాయి. మాన్యువల్ సమాధానం అవసరం.',
+      'inbox.resume_autoreply': 'ఆటో-రిప్లై పునఃప్రారంభించండి',
+      'inbox.no_messages': 'ఈ చాట్‌లో ఇంకా సందేశాలు లేవు',
+      'inbox.quick_templates': 'త్వరిత టెంప్లేట్‌లు:',
+      'inbox.repeat_customer': 'పునరావృత కస్టమర్',
+      'inbox.new_customer': 'కొత్త కస్టమర్',
+      'inbox.reassign': 'తిరిగి కేటాయించండి',
+      'inbox.staff_label': 'సిబ్బంది',
+      'inbox.customer': 'కస్టమర్',
+
+      // Auto-Reply Hub
+      'ar.title': 'ప్రీ-సెట్ టెంప్లేట్‌లు & ఆటో-రిప్లై హబ్',
+      'ar.subtitle': 'ముందుగా నిర్ణయించిన ప్రశ్నలు మరియు తక్షణ సమాధానాలు',
+      'ar.bot_label': 'ఆటో-రిప్లై బాట్:',
+      'ar.back_to_chats': 'చాట్‌లకు తిరిగి వెళ్ళండి',
+      'ar.search_placeholder': 'ప్రశ్నలు లేదా కీలకపదాలను శోధించండి...',
+      'ar.all_templates': 'అన్ని టెంప్లేట్‌లు',
+      'ar.active_only': 'యాక్టివ్ మాత్రమే',
+      'ar.category_links': 'వర్గం స్టాక్ లింకులు',
+      'ar.custom_answers': 'అనుకూల సమాధానాలు',
+      'ar.add_template': '+ కొత్త ప్రశ్న & సమాధానం జోడించండి',
+      'ar.active_templates': 'క్రియాశీల టెంప్లేట్‌లు',
 
       // Toasts & Notifications
       'toast.lang_changed': 'భాష మార్చబడింది',
@@ -628,6 +924,80 @@
       'customer.send_catalog': 'കാറ്റലോഗ് അയക്കുക',
       'customer.order_booking': 'ഓർഡർ ബുക്കിംഗ്',
 
+      // Header Titles
+      'header.title.dashboard': 'വാട്ട്‌സ്ആപ്പ് പ്രവർത്തന ഡാഷ്‌ബോർഡ്',
+      'header.sub.dashboard': 'അന്വേഷണങ്ങളുടെയും സംഭാഷണങ്ങളുടെയും തത്സമയ അവലോകനം',
+      'header.title.inbox': 'വാട്ട്‌സ്ആപ്പ് ഇൻബോക്സും ഉപഭോക്തൃ നിരയും',
+      'header.sub.inbox': 'തത്സമയ സംഭാഷണങ്ങളും ഓർഡർ ബുക്കിംഗും',
+      'header.title.followups': 'ഫോളോ-അപ്പ് ഷെഡ്യൂളർ',
+      'header.sub.followups': 'അന്വേഷണങ്ങൾ നഷ്ടപ്പെടാതിരിക്കാൻ ഓർമ്മപ്പെടുത്തലുകൾ',
+      'header.title.catalog': 'ഉൽപ്പന്ന കാറ്റലോഗും തത്സമയ സ്റ്റോക്കും',
+      'header.sub.catalog': 'സ്റ്റോക്ക് കണക്കുകൂട്ടലും വാട്ട്‌സ്ആപ്പ് ഷെയറിംഗും',
+      'header.title.orders': 'വാട്ട്‌സ്ആപ്പ് വിൽപ്പന ഓർഡറുകൾ',
+      'header.sub.orders': 'വാട്ട്‌സ്ആപ്പ് ചാറ്റുകളിൽ നിന്നുള്ള നേരിട്ടുള്ള ഓർഡറുകൾ',
+      'header.title.customers': 'ഉപഭോക്താവ് 360 & ഡയറക്ടറി',
+      'header.sub.customers': 'പ്രൊഫൈലുകൾ, വാങ്ങൽ ചരിത്രം, മുൻഗണനകൾ',
+      'header.title.dnd': 'ഡിഎൻഡി ഉപഭോക്തൃ കേന്ദ്രം',
+      'header.sub.dnd': 'സന്ദേശങ്ങൾ ഒഴിവാക്കാൻ അഭ്യർത്ഥിച്ച ഉപഭോക്താക്കൾ',
+      'header.title.staff': 'ജീവനക്കാരുടെ മാനേജ്മെന്റ്',
+      'header.sub.staff': 'ടീം അംഗങ്ങളുടെ ചുമതലകളും നിരീക്ഷണവും',
+      'header.title.audit': 'സുരക്ഷാ & ഓഡിറ്റ് ലോഗുകൾ',
+      'header.sub.audit': 'ഓർഡർ അപ്‌ഡേറ്റുകളുടെ സുരക്ഷിത രേഖ',
+      'header.title.analytics': 'പ്രകടന വിശകലനം & റിപ്പോർട്ടുകൾ',
+      'header.sub.analytics': 'പ്രതികരണ സമയവും ഓർഡർ പരിവർത്തന നിരക്കും',
+      'header.title.settings': 'വാട്ട്‌സ്ആപ്പ് ബിസിനസ്സ് ക്രമീകരണങ്ങൾ',
+      'header.sub.settings': 'പ്രാഥമിക വാട്ട്‌സ്ആപ്പ് നമ്പർ സജ്ജീകരിക്കുക',
+      'header.title.backup': 'ഡാറ്റ ബാക്കപ്പും വീണ്ടെടുക്കലും',
+      'header.sub.backup': 'പൂർണ്ണ ഡാറ്റാബേസ് ബാക്കപ്പും സംരക്ഷണവും',
+
+      // Dashboard
+      'dash.total_enquiries': 'ഇന്നത്തെ ആകെ അന്വേഷണങ്ങൾ',
+      'dash.inbound_capture': '100% തത്സമയ ക്യാപ്ചർ',
+      'dash.unassigned_queries': 'ചുമതലപ്പെടുത്താത്ത അന്വേഷണങ്ങൾ',
+      'dash.action_required': 'അഡ്മിൻ നടപടി ആവശ്യമാണ്',
+      'dash.orders_booked': 'ബുക്ക് ചെയ്ത ഓർഡറുകൾ',
+      'dash.total_sales': 'ആകെ വിൽപ്പന',
+      'dash.followups_scheduled': 'ഷെഡ്യൂൾ ചെയ്ത ഫോളോ-അപ്പുകൾ',
+      'dash.automated_reminders': 'ഓട്ടോമേറ്റഡ് ഓർമ്മപ്പെടുത്തലുകൾ സജീവം',
+      'dash.active_conversations': 'സജീവ വാട്ട്‌സ്ആപ്പ് സംഭാഷണങ്ങൾ',
+      'dash.active_conversations_sub': 'ജീവനക്കാർ കൈകാര്യം ചെയ്യുന്ന ചാറ്റുകൾ',
+      'dash.open_inbox': 'ഇൻബോക്സ് തുറക്കുക →',
+      'dash.staff_performance': 'ജീവനക്കാരുടെ പ്രകടന സംഗ്രഹം',
+      'dash.orders_converted': 'മാറിയ ഓർഡറുകൾ',
+      'dash.active_leads': 'സജീവ ലീഡുകൾ',
+      'dash.open': 'തുറക്കുക',
+
+      // Inbox Queue & Workstation
+      'inbox.todays_messages': 'ഇന്നത്തെ സന്ദേശങ്ങൾ:',
+      'inbox.search_placeholder': 'ഉപഭോക്താവ്, ഫോൺ, SKU, അന്വേഷണം തിരയുക...',
+      'inbox.all': 'എല്ലാം',
+      'inbox.unassigned': 'ചുമതലപ്പെടുത്താത്തവ',
+      'inbox.my_queue': 'എന്റെ നിര',
+      'inbox.urgent': 'അടിയന്തിരം',
+      'inbox.autoreply_paused': 'ഓട്ടോ-റിപ്ലൈ താൽക്കാലികമായി നിർത്തി:',
+      'inbox.autoreply_paused_sub': 'ഓട്ടോമേറ്റഡ് സന്ദേശങ്ങൾ ഓഫാണ്. നേരിട്ടുള്ള മറുപടി ആവശ്യമാണ്.',
+      'inbox.resume_autoreply': 'ഓട്ടോ-റിപ്ലൈ പുനരാരംഭിക്കുക',
+      'inbox.no_messages': 'ഈ ചാറ്റിൽ ഇതുവരെ സന്ദേശങ്ങളൊന്നുമില്ല',
+      'inbox.quick_templates': 'ദ്രുത ടെംപ്ലേറ്റുകൾ:',
+      'inbox.repeat_customer': 'ആവർത്തിച്ചുള്ള ഉപഭോക്താവ്',
+      'inbox.new_customer': 'പുതിയ ഉപഭോക്താവ്',
+      'inbox.reassign': 'വീണ്ടും ചുമതലപ്പെടുത്തുക',
+      'inbox.staff_label': 'ജീവനക്കാരൻ',
+      'inbox.customer': 'ഉപഭോക്താവ്',
+
+      // Auto-Reply Hub
+      'ar.title': 'പ്രീ-സെറ്റ് ടെംപ്ലേറ്റുകളും ഓട്ടോ-റിപ്ലൈ ഹബ്ബും',
+      'ar.subtitle': 'മുൻകൂട്ടി നിശ്ചയിച്ച ചോദ്യങ്ങളും തത്സമയ മറുപടികളും',
+      'ar.bot_label': 'ഓട്ടോ-റിപ്ലൈ ബോട്ട്:',
+      'ar.back_to_chats': 'ചാറ്റുകളിലേക്ക് മടങ്ങുക',
+      'ar.search_placeholder': 'ചോദ്യങ്ങൾ തിരയുക...',
+      'ar.all_templates': 'എല്ലാ ടെംപ്ലേറ്റുകളും',
+      'ar.active_only': 'സജീവമായവ മാത്രം',
+      'ar.category_links': 'വിഭാഗം സ്റ്റോക്ക് ലിങ്കുകൾ',
+      'ar.custom_answers': 'ഇഷ്‌ടാനുസൃത ഉത്തരങ്ങൾ',
+      'ar.add_template': '+ പുതിയ ചോദ്യവും ഉത്തരവും ചേർക്കുക',
+      'ar.active_templates': 'സജീവ ടെംപ്ലേറ്റുകൾ',
+
       // Toasts & Notifications
       'toast.lang_changed': 'ഭാഷ മാറ്റി',
       'toast.lang_desc': 'CRM ഭാഷ വിജയകരമായി മാറ്റി:'
@@ -750,6 +1120,80 @@
       'customer.send': 'ಕಳುಹಿಸಿ',
       'customer.send_catalog': 'ಕ್ಯಾಟಲಾಗ್ ಹಂಚಿಕೊಳ್ಳಿ',
       'customer.order_booking': 'ಆದೇಶ ಬುಕಿಂಗ್',
+
+      // Header Titles
+      'header.title.dashboard': 'ವಾಟ್ಸಾಪ್ ಕಾರ್ಯಾಚರಣೆಗಳ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
+      'header.sub.dashboard': 'ವಿಚಾರಣೆಗಳು ಮತ್ತು ಸಂವಹನ ಸ್ಥಿತಿಯ ನೈಜ ಸಮಯದ ಅವಲೋಕನ',
+      'header.title.inbox': 'ವಾಟ್ಸಾಪ್ ಇನ್‌ಬಾಕ್ಸ್ ಮತ್ತು ಗ್ರಾಹಕರ ಕ್ಯೂ',
+      'header.sub.inbox': 'ತ್ವರಿತ ಸಿಬ್ಬಂದಿ ನಿಯೋಜನೆ ಮತ್ತು ಆರ್ಡರ್ ಬುಕಿಂಗ್',
+      'header.title.followups': 'ಗ್ರಾಹಕರ ಫಾಲೋ-ಅಪ್ ಶೆಡ್ಯೂಲರ್',
+      'header.sub.followups': 'ವಿಚಾರಣೆಗಳು ಕಳೆದುಹೋಗದಂತೆ ಸ್ವಯಂಚಾಲಿತ ಜ್ಞಾಪನೆಗಳು',
+      'header.title.catalog': 'ಉಡುಪು ಉತ್ಪನ್ನಗಳ ಕ್ಯಾಟಲಾಗ್ & ನೇರ ಸ್ಟಾಕ್',
+      'header.sub.catalog': 'ಲೈವ್ ಲಭ್ಯವಿರುವ ಸ್ಟಾಕ್ ಕ್ಯಾಲ್ಕುಲೇಟರ್ ಮತ್ತು ವಾಟ್ಸಾಪ್ ಹಂಚಿಕೆ',
+      'header.title.orders': 'ವಾಟ್ಸಾಪ್ ಮಾರಾಟದ ಆದೇಶಗಳು',
+      'header.sub.orders': 'ವಾಟ್ಸಾಪ್ ಚಾಟ್‌ನಿಂದ ನೇರವಾಗಿ ಬುಕ್ ಮಾಡಿದ ಆದೇಶಗಳು',
+      'header.title.customers': 'ಗ್ರಾಹಕ 360 & ಡೈರೆಕ್ಟರಿ',
+      'header.sub.customers': 'ಪ್ರೊಫೈಲ್‌ಗಳು, ಖರೀದಿ ಇತಿಹಾಸ ಮತ್ತು ಆದ್ಯತೆಗಳು',
+      'header.title.dnd': 'ಡಿಎನ್‌ಡಿ ಮತ್ತು ಆಪ್ಟ್-ಔಟ್ ಗ್ರಾಹಕ ಹಬ್',
+      'header.sub.dnd': 'ಕೊಡುಗೆ ಸಂದೇಶಗಳನ್ನು ನಿರಾಕರಿಸಿದ ಗ್ರಾಹಕರು',
+      'header.title.staff': 'ಸಿಬ್ಬಂದಿ ನಿರ್ವಹಣಾ ಹಬ್',
+      'header.sub.staff': 'ತಂಡದ ಸದಸ್ಯರ ಕಾರ್ಯಭಾರ ಮತ್ತು ಜವಾಬ್ದಾರಿಗಳ ಮೇಲ್ವಿಚಾರಣೆ',
+      'header.title.audit': 'ಭದ್ರತೆ & ಆಡಿಟ್ ಲಾಗ್‌ಗಳು',
+      'header.sub.audit': 'ಸಿಬ್ಬಂದಿ ನಿಯೋಜನೆ ಮತ್ತು ಆರ್ಡರ್ ನವೀಕರಣಗಳ ದಾಖಲೆ',
+      'header.title.analytics': 'ಸಿಬ್ಬಂದಿ ಕಾರ್ಯಕ್ಷಮತೆ ಮತ್ತು ವಿಶ್ಲೇಷಣೆ',
+      'header.sub.analytics': 'ಪ್ರತಿಕ್ರಿಯೆ ಸಮಯ ಮತ್ತು ಆರ್ಡರ್ ಪರಿವರ್ತನೆ ದರಗಳು',
+      'header.title.settings': 'ವಾಟ್ಸಾಪ್ ವ್ಯಾಪಾರ ಸೆಟ್ಟಿಂಗ್‌ಗಳು',
+      'header.sub.settings': 'ಲೈವ್ ಸಂದೇಶ ರೂಟಿಂಗ್‌ಗಾಗಿ ಪ್ರಾಥಮಿಕ ವಾಟ್ಸಾಪ್ ಸಂಖ್ಯೆ ಹೊಂದಿಸಿ',
+      'header.title.backup': 'ಡೇಟಾ ಬ್ಯಾಕಪ್ & ಮರುಪಡೆಯುವಿಕೆ',
+      'header.sub.backup': 'ಸಂಪೂರ್ಣ ಡೇಟಾಬೇಸ್ ಬ್ಯಾಕಪ್ ಮತ್ತು ರಕ್ಷಣೆ',
+
+      // Dashboard
+      'dash.total_enquiries': 'ಇಂದಿನ ಒಟ್ಟು ವಿಚಾರಣೆಗಳು',
+      'dash.inbound_capture': '100% ಲೈವ್ ಕ್ಯಾಪ್ಚರ್',
+      'dash.unassigned_queries': 'ನಿಯೋಜಿಸದ ವಿಚಾರಣೆಗಳು',
+      'dash.action_required': 'ನಿರ್ವಾಹಕರ ಕ್ರಮ ಅಗತ್ಯವಿದೆ',
+      'dash.orders_booked': 'ವಾಟ್ಸಾಪ್ ಆರ್ಡರ್‌ಗಳು ಬುಕ್ ಆಗಿವೆ',
+      'dash.total_sales': 'ಒಟ್ಟು ಮಾರಾಟ',
+      'dash.followups_scheduled': 'ನಿಗದಿತ ಫಾಲೋ-ಅಪ್‌ಗಳು',
+      'dash.automated_reminders': 'ಸ್ವಯಂಚಾಲಿತ ಜ್ಞಾಪನೆಗಳು ಸಕ್ರಿಯ',
+      'dash.active_conversations': 'ಸಕ್ರಿಯ ವಾಟ್ಸಾಪ್ ಸಂಭಾಷಣೆಗಳು',
+      'dash.active_conversations_sub': 'ಸಿಬ್ಬಂದಿ ನಿರ್ವಹಿಸುತ್ತಿರುವ ಚಾಟ್‌ಗಳ ಫೀಡ್',
+      'dash.open_inbox': 'ಇನ್‌ಬಾಕ್ಸ್ ತೆರೆಯಿರಿ →',
+      'dash.staff_performance': 'ಸಿಬ್ಬಂದಿ ಕಾರ್ಯಕ್ಷಮತೆಯ ಸ್ನ್ಯಾಪ್‌ಶಾಟ್',
+      'dash.orders_converted': 'ಪರಿವರ್ತಿತ ಆರ್ಡರ್‌ಗಳು',
+      'dash.active_leads': 'ಸಕ್ರಿಯ ಲೀಡ್‌ಗಳು',
+      'dash.open': 'ತೆರೆಯಿರಿ',
+
+      // Inbox Queue & Workstation
+      'inbox.todays_messages': 'ಇಂದಿನ ಸಂದೇಶಗಳು:',
+      'inbox.search_placeholder': 'ಗ್ರಾಹಕ, ಫೋನ್, ಎಸ್‌ಕೆಯು, ವಿಚಾರಣೆ ಹುಡುಕಿ...',
+      'inbox.all': 'ಎಲ್ಲಾ',
+      'inbox.unassigned': 'ನಿಯೋಜಿಸದವು',
+      'inbox.my_queue': 'ನನ್ನ ಸರತಿ',
+      'inbox.urgent': 'ತುರ್ತು',
+      'inbox.autoreply_paused': 'ಆಟೋ-ರಿಪ್ಲೈ ವಿರಾಮಗೊಳಿಸಲಾಗಿದೆ:',
+      'inbox.autoreply_paused_sub': 'ಸ್ವಯಂಚಾಲಿತ ಸಂದೇಶಗಳು ಆಫ್ ಆಗಿವೆ. ಕೈಯಾರೆ ಉತ್ತರಿಸುವುದು ಅಗತ್ಯವಿದೆ.',
+      'inbox.resume_autoreply': 'ಆಟೋ-ರಿಪ್ಲೈ ಪುನರಾರಂಭಿಸಿ',
+      'inbox.no_messages': 'ಈ ಚಾಟ್‌ನಲ್ಲಿ ಇನ್ನೂ ಯಾವುದೇ ಸಂದೇಶಗಳಿಲ್ಲ',
+      'inbox.quick_templates': 'ತ್ವರಿತ ಟೆಂಪ್ಲೇಟ್‌ಗಳು:',
+      'inbox.repeat_customer': 'ಮರುಕಳಿಸುವ ಗ್ರಾಹಕ',
+      'inbox.new_customer': 'ಹೊಸ ಗ್ರಾಹಕ',
+      'inbox.reassign': 'ಮರುನಿಯೋಜಿಸಿ',
+      'inbox.staff_label': 'ಸಿಬ್ಬಂದಿ',
+      'inbox.customer': 'ಗ್ರಾಹಕ',
+
+      // Auto-Reply Hub
+      'ar.title': 'ಪೂರ್ವನಿಗದಿ ಟೆಂಪ್ಲೇಟ್‌ಗಳು & ಆಟೋ-ರಿಪ್ಲೈ ಹಬ್',
+      'ar.subtitle': 'ಪೂರ್ವನಿಗದಿ ಪ್ರಶ್ನೆಗಳು ಮತ್ತು ತ್ವರಿತ ಸ್ವಯಂಚಾಲಿತ ಪ್ರತಿಕ್ರಿಯೆಗಳು',
+      'ar.bot_label': 'ಆಟೋ-ರಿಪ್ಲೈ ಬಾಟ್:',
+      'ar.back_to_chats': 'ಚಾಟ್‌ಗಳಿಗೆ ಹಿಂತಿರುಗಿ',
+      'ar.search_placeholder': 'ಪ್ರಶ್ನೆಗಳು ಅಥವಾ ಕೀವರ್ಡ್‌ಗಳನ್ನು ಹುಡುಕಿ...',
+      'ar.all_templates': 'ಎಲ್ಲಾ ಟೆಂಪ್ಲೇಟ್‌ಗಳು',
+      'ar.active_only': 'ಸಕ್ರಿಯವಾದವು ಮಾತ್ರ',
+      'ar.category_links': 'ವರ್ಗ ಸ್ಟಾಕ್ ಲಿಂಕ್‌ಗಳು',
+      'ar.custom_answers': 'ಕಸ್ಟಮ್ ಉತ್ತರಗಳು',
+      'ar.add_template': '+ ಹೊಸ ಪ್ರಶ್ನೆ & ಉತ್ತರ ಸೇರಿಸಿ',
+      'ar.active_templates': 'ಸಕ್ರಿಯ ಟೆಂಪ್ಲೇಟ್‌ಗಳು',
 
       // Toasts & Notifications
       'toast.lang_changed': 'ಭಾಷೆ ಬದಲಾಗಿದೆ',
@@ -898,6 +1342,11 @@
       }
     });
 
+    // Update Topbar page titles in real-time
+    if (typeof window.updatePageHeaderTitle === 'function') {
+      try { window.updatePageHeaderTitle(); } catch (e) {}
+    }
+
     // Re-render active views if app runtime is ready
     if (typeof window.renderCustomer360Panel === 'function') {
       try { window.renderCustomer360Panel(); } catch (e) {}
@@ -907,6 +1356,24 @@
     }
     if (typeof window.renderChatHeader === 'function') {
       try { window.renderChatHeader(); } catch (e) {}
+    }
+    if (window.ACTIVE_VIEW === 'dashboard' && typeof window.renderDashboard === 'function') {
+      try { window.renderDashboard(); } catch (e) {}
+    }
+    if (window.ACTIVE_VIEW === 'followups' && typeof window.renderFollowupsCards === 'function') {
+      try { window.renderFollowupsCards(); } catch (e) {}
+    }
+    if (window.ACTIVE_VIEW === 'customers' && typeof window.renderCustomersGrid === 'function') {
+      try { window.renderCustomersGrid(); } catch (e) {}
+    }
+    if (window.ACTIVE_VIEW === 'orders' && typeof window.renderOrdersModule === 'function') {
+      try { window.renderOrdersModule(); } catch (e) {}
+    }
+    if (window.ACTIVE_VIEW === 'catalog' && typeof window.renderCatalogGrid === 'function') {
+      try { window.renderCatalogGrid(''); } catch (e) {}
+    }
+    if (window.ACTIVE_VIEW === 'dnd' && typeof window.renderDndModule === 'function') {
+      try { window.renderDndModule(); } catch (e) {}
     }
 
     const curLangObj = getCurrentLanguage();

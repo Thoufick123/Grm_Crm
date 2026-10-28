@@ -2261,10 +2261,89 @@ function toggleSidebar(forceState) {
       toggleBtn.setAttribute('aria-expanded', 'false');
       toggleBtn.title = 'Open Navigation Sidebar';
     }
-    try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'false'); } catch (e) {}
   }
 }
 window.toggleSidebar = toggleSidebar;
+
+function updatePageHeaderTitle() {
+  const t = window.t || ((k, f) => f || k);
+  const viewName = ACTIVE_VIEW || 'inbox';
+  const titles = {
+    inbox: {
+      title: t('header.title.inbox', 'WhatsApp Inbox & Customer Queue'),
+      sub: t('header.sub.inbox', `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`)
+    },
+    enquiries: {
+      title: t('header.title.enquiries', 'Customer Enquiries & Staff Assignment Hub'),
+      sub: t('header.sub.enquiries', 'Admin control room to distribute new customer leads to staff')
+    },
+    dashboard: {
+      title: t('header.title.dashboard', 'WhatsApp Operations Dashboard'),
+      sub: t('header.sub.dashboard', 'Real-time overview of inquiries, active sessions, and communication health')
+    },
+    catalog: {
+      title: t('header.title.catalog', 'Garment Product Catalog & Live Stock'),
+      sub: t('header.sub.catalog', 'Live available stock calculator and 1-click WhatsApp card sharing')
+    },
+    orders: {
+      title: t('header.title.orders', 'WhatsApp Sales Orders & Reservations'),
+      sub: t('header.sub.orders', 'Direct orders booked from WhatsApp chats with reserved inventory')
+    },
+    followups: {
+      title: t('header.title.followups', 'Customer Follow-up Scheduler'),
+      sub: t('header.sub.followups', 'Automated reminders to prevent lost customer enquiries')
+    },
+    customers: {
+      title: t('header.title.customers', 'Customer 360 & Tag Directory'),
+      sub: t('header.sub.customers', 'Profiles, purchase history, and communication preferences')
+    },
+    dnd: {
+      title: t('header.title.dnd', 'DND & Opt-Out Customer Hub'),
+      sub: t('header.sub.dnd', 'Customers who requested not to receive garment product offers or messages')
+    },
+    staff: {
+      title: t('header.title.staff', 'Staff & Team Management Hub'),
+      sub: t('header.sub.staff', 'Onboard team members, assign operational roles & permissions, and monitor workloads')
+    },
+    audit: {
+      title: t('header.title.audit', 'System Audit Trail & Security Logs'),
+      sub: t('header.sub.audit', 'Tamper-proof record of every staff assignment and order update')
+    },
+    analytics: {
+      title: t('header.title.analytics', 'Staff Performance Analytics & KPIs'),
+      sub: t('header.sub.analytics', 'Factual metrics on response times, volume handled, and conversions')
+    },
+    settings: {
+      title: t('header.title.settings', 'WhatsApp Business Settings & Phone Configuration'),
+      sub: t('header.sub.settings', 'Set your primary WhatsApp Business number for dynamic live message routing')
+    },
+    backup: {
+      title: t('header.title.backup', 'Data Backup & Recovery Hub'),
+      sub: t('header.sub.backup', 'Full database snapshot export, restore, and zero-data-loss protection')
+    }
+  };
+
+  const titleContainer = document.getElementById('header-title-container');
+  const liveQueuePill = document.getElementById('header-live-queue-pill');
+  if (titleContainer) {
+    titleContainer.classList.remove('hidden');
+  }
+  if (liveQueuePill) {
+    if (viewName === 'inbox') {
+      liveQueuePill.classList.remove('hidden');
+    } else {
+      liveQueuePill.classList.add('hidden');
+    }
+  }
+
+  if (titles[viewName]) {
+    const pTitle = document.getElementById('page-title');
+    const pSub = document.getElementById('page-subtitle');
+    if (pTitle) pTitle.innerText = titles[viewName].title;
+    if (pSub) pSub.innerText = titles[viewName].sub;
+  }
+}
+window.updatePageHeaderTitle = updatePageHeaderTitle;
 
 function switchView(viewName, subName) {
   // Clear instant-view-shield if present to allow instant view transitions
@@ -2332,42 +2411,7 @@ function switchView(viewName, subName) {
     }
   }
 
-  // Update Topbar page titles
-  const titles = {
-    inbox: { title: 'WhatsApp Inbox & Customer Queue', sub: `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking` },
-    enquiries: { title: 'Customer Enquiries & Staff Assignment Hub', sub: 'Admin control room to distribute new customer leads to staff' },
-    dashboard: { title: 'WhatsApp Operations Dashboard', sub: 'Real-time overview of inquiries, active sessions, and communication health' },
-    catalog: { title: 'Garment Product Catalog & Live Stock', sub: 'Live available stock calculator and 1-click WhatsApp card sharing' },
-    orders: { title: 'WhatsApp Sales Orders & Reservations', sub: 'Direct orders booked from WhatsApp chats with reserved inventory' },
-    followups: { title: 'Customer Follow-up Scheduler', sub: 'Automated reminders to prevent lost customer enquiries' },
-    customers: { title: 'Customer 360 & Tag Directory', sub: 'Profiles, purchase history, and communication preferences' },
-    dnd: { title: 'DND & Opt-Out Customer Hub', sub: 'Customers who requested not to receive garment product offers or messages' },
-    staff: { title: 'Staff & Team Management Hub', sub: 'Onboard team members, assign operational roles & permissions, and monitor workloads' },
-    audit: { title: 'System Audit Trail & Security Logs', sub: 'Tamper-proof record of every staff assignment and order update' },
-    analytics: { title: 'Staff Performance Analytics & KPIs', sub: 'Factual metrics on response times, volume handled, and conversions' },
-    settings: { title: 'WhatsApp Business Settings & Phone Configuration', sub: 'Set your primary WhatsApp Business number for dynamic live message routing' },
-    backup: { title: 'Data Backup & Recovery Hub', sub: 'Full database snapshot export, restore, and zero-data-loss protection (Section 53)' }
-  };
-
-  const titleContainer = document.getElementById('header-title-container');
-  const liveQueuePill = document.getElementById('header-live-queue-pill');
-  if (titleContainer) {
-    titleContainer.classList.remove('hidden');
-  }
-  if (liveQueuePill) {
-    if (viewName === 'inbox') {
-      liveQueuePill.classList.remove('hidden');
-    } else {
-      liveQueuePill.classList.add('hidden');
-    }
-  }
-
-  if (titles[viewName]) {
-    const pTitle = document.getElementById('page-title');
-    const pSub = document.getElementById('page-subtitle');
-    if (pTitle) pTitle.innerText = titles[viewName].title;
-    if (pSub) pSub.innerText = titles[viewName].sub;
-  }
+  updatePageHeaderTitle();
 
   // Trigger specific view renders
   if (viewName === 'inbox') {
@@ -12444,13 +12488,19 @@ window.clearEnquirySearch = clearEnquirySearch;
 // 11. DASHBOARD, CATALOG, ORDERS, FOLLOWUPS & AUDIT RENDERING
 // =========================================================================
 function renderDashboard() {
-  document.getElementById('dash-total-queries').innerText = CRM_STATE.queries.length;
-  document.getElementById('dash-unassigned-queries').innerText = CRM_STATE.queries.filter(q => q.assignedTo === 'UNASSIGNED').length;
-  document.getElementById('dash-total-orders').innerText = CRM_STATE.orders.length;
-  document.getElementById('dash-total-followups').innerText = CRM_STATE.followups.length;
+  const t = window.t || ((k, f) => f || k);
+  const qEl = document.getElementById('dash-total-queries');
+  if (qEl) qEl.innerText = CRM_STATE.queries.length;
+  const uqEl = document.getElementById('dash-unassigned-queries');
+  if (uqEl) uqEl.innerText = CRM_STATE.queries.filter(q => q.assignedTo === 'UNASSIGNED').length;
+  const toEl = document.getElementById('dash-total-orders');
+  if (toEl) toEl.innerText = CRM_STATE.orders.length;
+  const tfEl = document.getElementById('dash-total-followups');
+  if (tfEl) tfEl.innerText = CRM_STATE.followups.length;
 
   const totalRev = CRM_STATE.orders.reduce((acc, o) => acc + o.grandTotal, 0);
-  document.getElementById('dash-total-revenue').innerText = '₹' + totalRev.toLocaleString('en-IN');
+  const revEl = document.getElementById('dash-total-revenue');
+  if (revEl) revEl.innerText = '₹' + totalRev.toLocaleString('en-IN');
 
   const recentList = document.getElementById('dash-recent-chats');
   if (recentList) {
@@ -12459,10 +12509,10 @@ function renderDashboard() {
       return `
         <div class="py-2.5 flex items-center justify-between">
           <div>
-            <p class="font-bold text-slate-800">${cust ? cust.name : 'Customer'} <span class="font-normal text-slate-400 text-[10px]">(${q.id})</span></p>
+            <p class="font-bold text-slate-800">${cust ? cust.name : t('common.customer', 'Customer')} <span class="font-normal text-slate-400 text-[10px]">(${q.id})</span></p>
             <p class="text-slate-500 text-[11px] truncate">${q.queryText}</p>
           </div>
-          <button onclick="selectCustomerChat('${q.customerId}'); switchView('inbox');" class="text-brand-wa font-bold text-xs hover:underline">Open &rarr;</button>
+          <button onclick="selectCustomerChat('${q.customerId}'); switchView('inbox');" class="text-brand-wa font-bold text-xs hover:underline flex items-center gap-1">${t('dash.open', 'Open')} &rarr;</button>
         </div>
       `;
     }).join('');
@@ -12477,8 +12527,8 @@ function renderDashboard() {
           <p class="text-[10px] text-slate-500">${s.role}</p>
         </div>
         <div class="text-right">
-          <p class="font-bold text-emerald-700">${s.converted} Orders Converted</p>
-          <p class="text-[10px] text-slate-400">${s.activeQueries} Active Leads</p>
+          <p class="font-bold text-emerald-700">${s.converted} ${t('dash.orders_converted', 'Orders Converted')}</p>
+          <p class="text-[10px] text-slate-400">${s.activeQueries} ${t('dash.active_leads', 'Active Leads')}</p>
         </div>
       </div>
     `).join('');
