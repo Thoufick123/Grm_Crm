@@ -2149,7 +2149,13 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             if ($qId && $qId !== 'N/A') {
-                $pdo->prepare("UPDATE `queries` SET `status` = 'FOLLOW_UP' WHERE `id` = ?")->execute([$qId]);
+                $qCheck = $pdo->prepare("SELECT `status` FROM `queries` WHERE `id` = ?");
+                $qCheck->execute([$qId]);
+                $currQ = $qCheck->fetch(PDO::FETCH_ASSOC);
+                if ($currQ && $currQ['status'] !== 'PENDING' && $currQ['status'] !== 'FOLLOW_UP') {
+                    $newQStatus = $isPaymentPending ? 'PENDING' : 'FOLLOW_UP';
+                    $pdo->prepare("UPDATE `queries` SET `status` = ? WHERE `id` = ?")->execute([$newQStatus, $qId]);
+                }
             }
 
             // Record in audit log
@@ -2528,6 +2534,55 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         WHERE `customer_id` = ? AND `status` = 'ACTIVE'
                     ")->execute([$user, $cid]);
                 }
+            }
+
+            // 4. Synchronize followups table in MySQL
+            if ($cid && ($status === 'FOLLOW_UP' || $status === 'PENDING' || !empty($cbDate) || $isPayPending)) {
+                $fuCheck = $pdo->prepare("SELECT `id` FROM `followups` WHERE (`customer_id` = ? OR `query_id` = ?) AND `status` = 'PENDING' LIMIT 1");
+                $fuCheck->execute([$cid, $queryId]);
+                $existingFu = $fuCheck->fetch(PDO::FETCH_ASSOC);
+
+                $fuDate = $cbDate ?: ($payDue ?: date('Y-m-d'));
+                $fuTime = $cbTime ?: '11:00 AM';
+                $fuReason = $notes ?: ($status === 'PENDING' ? 'Payment Pending follow-up' : 'Customer callback requested');
+                $fuIsPay = ($status === 'PENDING' || $isPayPending) ? 1 : 0;
+
+                if ($existingFu) {
+                    $pdo->prepare("
+                        UPDATE `followups`
+                        SET `date_str` = ?, `time_str` = ?, `reason` = ?, `assigned_to` = ?,
+                            `is_payment_pending` = ?, `payment_amount` = ?, `shipping_amount` = ?,
+                            `payment_mode` = ?, `advance_payment` = ?, `payment_due_date` = ?,
+                            `payment_notes` = ?, `quoted_items` = ?
+                        WHERE `id` = ?
+                    ")->execute([
+                        $fuDate, $fuTime, $fuReason, $assignedTo,
+                        $fuIsPay, $payAmt, $shipAmt,
+                        $payMode, $advAmt, $payDue ?: $fuDate,
+                        $payNotes ?: $notes, $quotedItems,
+                        $existingFu['id']
+                    ]);
+                } else {
+                    $newFuId = 'FU-' . date('Y') . '-' . rand(100000, 999999);
+                    $pdo->prepare("
+                        INSERT INTO `followups` (
+                            `id`, `query_id`, `customer_id`, `customer_name`, `assigned_to`,
+                            `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`,
+                            `contact_channel`, `is_payment_pending`, `payment_amount`, `shipping_amount`,
+                            `payment_mode`, `advance_payment`, `payment_due_date`, `payment_notes`, `quoted_items`
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', 'NORMAL', 'WHATSAPP', ?, ?, ?, ?, ?, ?, ?, ?)
+                    ")->execute([
+                        $newFuId, $queryId, $cid, $cData['name'] ?? ($customerName ?: 'Customer'), $assignedTo,
+                        $fuDate, $fuTime, $fuReason,
+                        $fuIsPay, $payAmt, $shipAmt,
+                        $payMode, $advAmt, $payDue ?: $fuDate,
+                        $payNotes ?: $notes, $quotedItems
+                    ]);
+                }
+            } else if ($cid && ($status === 'CONVERTED' || $status === 'RESOLVED')) {
+                $outcome = ($status === 'CONVERTED') ? 'ORDER_PLACED' : 'RESOLVED';
+                $pdo->prepare("UPDATE `followups` SET `status` = 'COMPLETED', `outcome` = ?, `outcome_notes` = ?, `completed_at` = NOW() WHERE (`customer_id` = ? OR `query_id` = ?) AND `status` = 'PENDING'")
+                    ->execute([$outcome, $notes, $cid, $queryId]);
             }
 
             // Update user active queries counter

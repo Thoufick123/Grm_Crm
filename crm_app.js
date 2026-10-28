@@ -4026,8 +4026,8 @@ window.playSimulatedVoice = function (msgId) {
 
 // Update Query Status (Pending, Follow-up, In Progress, Converted, Resolved, DND) with optional Notes
 function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData = null, callbackSchedule = null) {
-  const query = CRM_STATE.queries.find(q => q.id === queryId || q.customerId === queryId);
-  const customer = query ? CRM_STATE.customers.find(c => c.id === query.customerId) : CRM_STATE.customers.find(c => c.id === queryId);
+  let query = (CRM_STATE.queries || []).find(q => q && (q.id === queryId || q.customerId === queryId));
+  const customer = query ? (CRM_STATE.customers || []).find(c => c && (c.id === query.customerId || String(c.id) === String(query.customerId))) : (CRM_STATE.customers || []).find(c => c && (c.id === queryId || String(c.id) === String(queryId)));
   if (!query && !customer) return;
 
   const oldStatus = query ? query.status : 'NEW';
@@ -4035,6 +4035,36 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
   const staffName = currentUser ? (currentUser.name || currentUser.username || (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff')) : (ACTIVE_ROLE === 'admin' ? 'Super Admin' : (CRM_STATE.staffList?.find(s => s.id === ACTIVE_ROLE)?.name || 'Staff'));
   const now = new Date();
   const timeFormatted = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' at ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  // If customer didn't have an existing query entry, instantiate one dynamically
+  if (!query && customer) {
+    const newQId = 'Q-' + now.getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
+    query = {
+      id: newQId,
+      customerId: customer.id,
+      assignedTo: 'UNASSIGNED',
+      status: newStatus,
+      priority: 'NORMAL',
+      queryText: notes || 'WhatsApp Lead Enquiry',
+      statusNotes: notes,
+      isPaymentPending: Boolean(paymentData && paymentData.isPaymentPending),
+      paymentAmount: paymentData && paymentData.isPaymentPending ? parseFloat(paymentData.paymentAmount || 0) : 0,
+      shippingAmount: paymentData && paymentData.isPaymentPending ? parseFloat(paymentData.shippingAmount || 0) : 0,
+      paymentMode: paymentData?.paymentMode || 'UPI',
+      advancePayment: paymentData && paymentData.isPaymentPending ? parseFloat(paymentData.advancePayment || 0) : 0,
+      paymentDueDate: paymentData?.paymentDueDate || '',
+      paymentNotes: paymentData?.paymentNotes || '',
+      quotedItems: paymentData?.quotedItems || '',
+      callback_date: callbackSchedule?.date || '',
+      callback_time: callbackSchedule?.time || '11:00 AM',
+      callbackDate: callbackSchedule?.date || '',
+      callbackTime: callbackSchedule?.time || '11:00 AM',
+      statusHistory: [],
+      createdAt: now.toISOString()
+    };
+    if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+    CRM_STATE.queries.unshift(query);
+  }
 
   if (query) {
     query.status = newStatus;
@@ -4059,6 +4089,8 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
     if (callbackSchedule && callbackSchedule.date) {
       query.callback_date = callbackSchedule.date;
       query.callback_time = callbackSchedule.time || '11:00 AM';
+      query.callbackDate = callbackSchedule.date;
+      query.callbackTime = callbackSchedule.time || '11:00 AM';
     }
     query.statusHistory = query.statusHistory || [];
     const isReschedAction = (oldStatus === 'FOLLOW_UP' && newStatus === 'FOLLOW_UP');
@@ -4108,8 +4140,8 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         paymentDueDate: query.paymentDueDate,
         paymentNotes: query.paymentNotes,
         quotedItems: query.quotedItems,
-        callbackDate: query.callbackDate,
-        callbackTime: query.callbackTime,
+        callbackDate: (callbackSchedule && callbackSchedule.date) || query.callback_date || query.callbackDate || '',
+        callbackTime: (callbackSchedule && callbackSchedule.time) || query.callback_time || query.callbackTime || '11:00 AM',
         statusHistory: query.statusHistory
       })
     }).catch(() => {});
@@ -4205,45 +4237,41 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
   if (newStatus === 'FOLLOW_UP' || newStatus === 'PENDING' || (callbackSchedule && callbackSchedule.date)) {
     if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
     let existingFu = CRM_STATE.followups.find(f => f && (f.customerId === customer?.id || (query && f.queryId === query.id)) && f.status === 'PENDING');
-    const fuReason = notes || query?.queryText || (newStatus === 'FOLLOW_UP' ? 'Customer callback requested' : 'Pending enquiry callback');
-    const isPayPending = Boolean(paymentData && paymentData.isPaymentPending);
-    const payAmt = parseFloat(paymentData?.paymentAmount || 0);
-    const shippingAmt = parseFloat(paymentData?.shippingAmount || 0);
-    const advanceAmt = parseFloat(paymentData?.advancePayment || 0);
-    const payMode = paymentData?.paymentMode || 'UPI';
-    const payDue = paymentData?.paymentDueDate || '';
-    const payNotes = paymentData?.paymentNotes || notes || '';
-    const payItems = paymentData?.quotedItems || '';
+    const fuReason = notes || query?.queryText || (newStatus === 'PENDING' ? 'Payment Pending follow-up' : (newStatus === 'FOLLOW_UP' ? 'Customer callback requested' : 'Customer enquiry callback'));
+    const isPayPending = (newStatus === 'PENDING') || Boolean(paymentData && paymentData.isPaymentPending);
+    const payAmt = isPayPending 
+      ? (parseFloat(paymentData?.paymentAmount || 0) || query?.paymentAmount || existingFu?.paymentAmount || 0) 
+      : 0;
+    const shippingAmt = isPayPending ? (parseFloat(paymentData?.shippingAmount || 0) || query?.shippingAmount || existingFu?.shippingAmount || 0) : 0;
+    const advanceAmt = isPayPending ? (parseFloat(paymentData?.advancePayment || 0) || query?.advancePayment || existingFu?.advancePayment || 0) : 0;
+    const payMode = paymentData?.paymentMode || query?.paymentMode || existingFu?.paymentMode || 'UPI';
+    const payDue = paymentData?.paymentDueDate || callbackSchedule?.date || existingFu?.paymentDueDate || query?.paymentDueDate || '';
+    const payNotes = paymentData?.paymentNotes || notes || existingFu?.paymentNotes || query?.paymentNotes || '';
+    const payItems = paymentData?.quotedItems || existingFu?.quotedItems || query?.quotedItems || '';
 
     if (query) {
-      if (isPayPending) {
-        query.isPaymentPending = true;
-        query.paymentAmount = payAmt;
-        query.shippingAmount = shippingAmt;
-        query.advancePayment = advanceAmt;
-        query.paymentMode = payMode;
-        query.paymentDueDate = payDue;
-        query.paymentNotes = payNotes;
-        query.quotedItems = payItems;
-      } else if (paymentData && paymentData.isPaymentPending === false) {
-        query.isPaymentPending = false;
-      }
+      query.isPaymentPending = isPayPending;
+      query.paymentAmount = payAmt;
+      query.shippingAmount = shippingAmt;
+      query.advancePayment = advanceAmt;
+      query.paymentMode = payMode;
+      query.paymentDueDate = payDue;
+      query.paymentNotes = payNotes;
+      query.quotedItems = payItems;
     }
 
     if (!existingFu) {
       const todayStr = now.toISOString().split('T')[0];
-      let nextH = (now.getHours() + 1) % 24;
-      const ampm = nextH >= 12 ? 'PM' : 'AM';
-      let h12 = nextH % 12 || 12;
-      const defaultTime = `${String(h12).padStart(2, '0')}:00 ${ampm}`;
       const newFu = {
-        id: `FU-2026-00${CRM_STATE.followups.length + 101}`,
+        id: `FU-${now.getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
         queryId: query ? query.id : 'Q-2026-0000',
         customerId: customer ? customer.id : (query ? query.customerId : 'cust_101'),
         customerName: customer ? customer.name : 'Customer',
         assignedTo: (query && query.assignedTo && query.assignedTo !== 'UNASSIGNED') ? query.assignedTo : (currentUser?.staffId || currentUser?.id || 'staff_01'),
         date: (callbackSchedule && callbackSchedule.date) ? callbackSchedule.date : (payDue || todayStr),
-        time: (callbackSchedule && callbackSchedule.time) ? callbackSchedule.time : defaultTime,
+        date_str: (callbackSchedule && callbackSchedule.date) ? callbackSchedule.date : (payDue || todayStr),
+        time: (callbackSchedule && callbackSchedule.time) ? callbackSchedule.time : '11:00 AM',
+        time_str: (callbackSchedule && callbackSchedule.time) ? callbackSchedule.time : '11:00 AM',
         reason: fuReason,
         status: 'PENDING',
         outcome: 'PENDING',
@@ -4251,13 +4279,21 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         channel: 'WHATSAPP',
         createdAt: now.toISOString(),
         isPaymentPending: isPayPending,
+        is_payment_pending: isPayPending ? 1 : 0,
         paymentAmount: payAmt,
+        payment_amount: payAmt,
         shippingAmount: shippingAmt,
+        shipping_amount: shippingAmt,
         advancePayment: advanceAmt,
+        advance_payment: advanceAmt,
         paymentMode: payMode,
+        payment_mode: payMode,
         paymentDueDate: payDue,
+        payment_due_date: payDue,
         paymentNotes: payNotes,
-        quotedItems: payItems
+        payment_notes: payNotes,
+        quotedItems: payItems,
+        quoted_items: payItems
       };
       CRM_STATE.followups.unshift(newFu);
       fetch('api.php?action=save_followup', {
@@ -4269,21 +4305,33 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
       if (notes) existingFu.reason = notes;
       if (callbackSchedule && callbackSchedule.date) {
         existingFu.date = callbackSchedule.date;
-        if (callbackSchedule.time) existingFu.time = callbackSchedule.time;
-      }
-      if (paymentData) {
-        if (paymentData.isPaymentPending) {
-          existingFu.isPaymentPending = true;
-          existingFu.paymentAmount = payAmt;
-          existingFu.shippingAmount = shippingAmt;
-          existingFu.advancePayment = advanceAmt;
-          existingFu.paymentMode = payMode;
-          if (payDue) existingFu.paymentDueDate = payDue;
-          if (payNotes) existingFu.paymentNotes = payNotes;
-          if (payItems) existingFu.quotedItems = payItems;
-        } else if (paymentData.isPaymentPending === false) {
-          existingFu.isPaymentPending = false;
+        existingFu.date_str = callbackSchedule.date;
+        if (callbackSchedule.time) {
+          existingFu.time = callbackSchedule.time;
+          existingFu.time_str = callbackSchedule.time;
         }
+      }
+      existingFu.isPaymentPending = isPayPending;
+      existingFu.is_payment_pending = isPayPending ? 1 : 0;
+      existingFu.paymentAmount = payAmt;
+      existingFu.payment_amount = payAmt;
+      existingFu.shippingAmount = shippingAmt;
+      existingFu.shipping_amount = shippingAmt;
+      existingFu.advancePayment = advanceAmt;
+      existingFu.advance_payment = advanceAmt;
+      existingFu.paymentMode = payMode;
+      existingFu.payment_mode = payMode;
+      if (payDue) {
+        existingFu.paymentDueDate = payDue;
+        existingFu.payment_due_date = payDue;
+      }
+      if (payNotes) {
+        existingFu.paymentNotes = payNotes;
+        existingFu.payment_notes = payNotes;
+      }
+      if (payItems) {
+        existingFu.quotedItems = payItems;
+        existingFu.quoted_items = payItems;
       }
       fetch('api.php?action=save_followup', {
         method: 'POST',
@@ -4309,7 +4357,10 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
   renderCustomer360Panel();
   if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
   if (typeof renderFollowupsCards === 'function') renderFollowupsCards();
+  if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+  if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
   if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+  if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
   if (typeof renderDndModule === 'function') renderDndModule();
   updateBadgeCounters();
 
@@ -4712,11 +4763,22 @@ function handleQueryStatusSelectChange(selectedStatus, queryId, customerId) {
   const container = document.getElementById('enquiry-dynamic-followup-container');
   const payContainer = document.getElementById('enquiry-payment-pending-wrapper');
   const cbEditRow = document.getElementById('query-callback-edit-row');
+  const payToggle = document.getElementById('query-pay-pending-toggle');
+
   if (selectedStatus === 'FOLLOW_UP') {
     if (container) container.classList.remove('hidden');
     if (payContainer) payContainer.classList.remove('hidden');
     if (cbEditRow) cbEditRow.classList.remove('hidden');
-  } else if (selectedStatus === 'PENDING' || selectedStatus === 'NEW' || selectedStatus === 'IN_PROGRESS') {
+  } else if (selectedStatus === 'PENDING') {
+    if (container) container.classList.remove('hidden');
+    if (payContainer) payContainer.classList.remove('hidden');
+    if (cbEditRow) cbEditRow.classList.remove('hidden');
+    // Automatically check Payment Pending option & reveal input fields
+    if (payToggle) {
+      payToggle.checked = true;
+      handlePayPendingToggle(true);
+    }
+  } else if (selectedStatus === 'NEW' || selectedStatus === 'IN_PROGRESS') {
     if (container) container.classList.add('hidden');
     if (payContainer) payContainer.classList.remove('hidden');
     if (cbEditRow) cbEditRow.classList.remove('hidden');
@@ -4779,35 +4841,58 @@ function handleSaveQueryStatus(queryId) {
   const newStatus = select.value;
   const notes = document.getElementById('query-status-notes-input')?.value.trim() || '';
 
-  // Extract Callback Date if present (12-hour time removed per requirement)
-  const cbDate = document.getElementById('query-callback-date')?.value;
+  // Extract Callback Date if present
+  const cbDate = document.getElementById('query-callback-date')?.value || new Date().toISOString().split('T')[0];
   const cbTime = '11:00 AM';
-  const callbackSchedule = cbDate ? { date: cbDate, time: cbTime } : null;
+  const callbackSchedule = { date: cbDate, time: cbTime };
 
-  // Extract Payment Pending details from right panel if enabled
+  // Locate existing query & customer for smart fallbacks
+  let query = (CRM_STATE.queries || []).find(q => q && (q.id === queryId || q.customerId === queryId));
+  const customerId = query ? query.customerId : queryId;
+  const custFu = (CRM_STATE.followups || []).find(f => f && (f.customerId === customerId || (query && f.queryId === query.id)));
+
+  // Extract Payment Pending details from right panel
   const payToggle = document.getElementById('query-pay-pending-toggle');
+  const isPayActive = (newStatus === 'PENDING') || Boolean(payToggle && payToggle.checked);
+
   let paymentData = null;
-  if (payToggle) {
-    if (payToggle.checked) {
-      const totalAmt = parseFloat(document.getElementById('query-pay-amount-input')?.value || 0);
-      const shippingAmt = parseFloat(document.getElementById('query-pay-shipping-input')?.value || 0);
-      const mode = document.getElementById('query-pay-mode-select')?.value || 'UPI';
-      const advanceAmt = parseFloat(document.getElementById('query-pay-advance-input')?.value || 0);
-      paymentData = {
-        isPaymentPending: true,
-        paymentAmount: totalAmt,
-        shippingAmount: shippingAmt,
-        paymentMode: mode,
-        advancePayment: (mode === 'COD_ADVANCE') ? advanceAmt : 0,
-        paymentDueDate: document.getElementById('query-pay-due-input')?.value || '',
-        paymentNotes: document.getElementById('query-pay-notes-input')?.value?.trim() || '',
-        quotedItems: document.getElementById('query-pay-items-input')?.value?.trim() || ''
-      };
-    } else {
-      paymentData = {
-        isPaymentPending: false
-      };
-    }
+  if (isPayActive) {
+    const totalAmtVal = document.getElementById('query-pay-amount-input')?.value;
+    const shippingAmtVal = document.getElementById('query-pay-shipping-input')?.value;
+    const advanceAmtVal = document.getElementById('query-pay-advance-input')?.value;
+
+    const totalAmt = (totalAmtVal !== undefined && totalAmtVal !== '') 
+      ? (parseFloat(totalAmtVal) || 0) 
+      : (custFu?.paymentAmount || query?.paymentAmount || 0);
+
+    const shippingAmt = (shippingAmtVal !== undefined && shippingAmtVal !== '') 
+      ? (parseFloat(shippingAmtVal) || 0) 
+      : (custFu?.shippingAmount || query?.shippingAmount || 0);
+
+    const mode = document.getElementById('query-pay-mode-select')?.value || custFu?.paymentMode || query?.paymentMode || 'UPI';
+
+    const advanceAmt = (advanceAmtVal !== undefined && advanceAmtVal !== '') 
+      ? (parseFloat(advanceAmtVal) || 0) 
+      : (custFu?.advancePayment || query?.advancePayment || 0);
+
+    const payDueDate = document.getElementById('query-pay-due-input')?.value || cbDate || custFu?.paymentDueDate || query?.paymentDueDate || '';
+    const payNotes = document.getElementById('query-pay-notes-input')?.value?.trim() || custFu?.paymentNotes || query?.paymentNotes || notes || '';
+    const quotedItems = document.getElementById('query-pay-items-input')?.value?.trim() || custFu?.quotedItems || query?.quotedItems || '';
+
+    paymentData = {
+      isPaymentPending: true,
+      paymentAmount: totalAmt,
+      shippingAmount: shippingAmt,
+      paymentMode: mode,
+      advancePayment: (mode === 'COD_ADVANCE') ? advanceAmt : 0,
+      paymentDueDate: payDueDate,
+      paymentNotes: payNotes,
+      quotedItems: quotedItems
+    };
+  } else {
+    paymentData = {
+      isPaymentPending: false
+    };
   }
 
   updateCustomerQueryStatus(queryId, newStatus, notes, paymentData, callbackSchedule);
@@ -11251,8 +11336,18 @@ function setFollowupTabFilter(tab) {
 }
 window.setFollowupTabFilter = setFollowupTabFilter;
 
+function isPayPendingRecord(f) {
+  if (!f) return false;
+  if (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1) return true;
+  if (f.paymentAmount && parseFloat(f.paymentAmount) > 0) return true;
+  const q = (CRM_STATE.queries || []).find(qry => qry && (qry.id === f.queryId || qry.customerId === f.customerId));
+  if (q && (q.status === 'PENDING' || q.isPaymentPending || (q.paymentAmount && parseFloat(q.paymentAmount) > 0))) return true;
+  return false;
+}
+window.isPayPendingRecord = isPayPendingRecord;
+
 function updateFollowupsKPICounters() {
-  const all = (CRM_STATE.followups || []).filter(f => f && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw')));
+  const all = (CRM_STATE.followups || []).filter(f => f && !(f.reason && f.reason.includes('ytfdw')));
   const currentUser = getCurrentUser();
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
 
@@ -11264,7 +11359,7 @@ function updateFollowupsKPICounters() {
   const todayDue = scopedList.filter(f => f.status === 'PENDING' && f.date === todayStr).length;
   const upcoming = scopedList.filter(f => f.status === 'PENDING' && f.date > todayStr).length;
   const overdue = scopedList.filter(f => isFollowupOverdue(f)).length;
-  const paymentPendingList = scopedList.filter(f => (f.status === 'PENDING' || !f.status || f.status === 'SCHEDULED') && (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1'));
+  const paymentPendingList = scopedList.filter(f => (f.status === 'PENDING' || !f.status || f.status === 'SCHEDULED') && isPayPendingRecord(f));
   const paymentPendingCount = paymentPendingList.length;
   const paymentPendingTotalAmt = paymentPendingList.reduce((sum, f) => sum + (parseFloat(f.paymentAmount) || 0), 0);
   const converted = scopedList.filter(f => f.status === 'COMPLETED' && f.outcome !== 'LOST').length;
@@ -11348,13 +11443,13 @@ function updateFollowupsKPICounters() {
 window.updateFollowupsKPICounters = updateFollowupsKPICounters;
 
 function updatePaymentPendingKPICounters() {
-  const all = (CRM_STATE.followups || []).filter(f => f && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw')));
+  const all = (CRM_STATE.followups || []).filter(f => f && !(f.reason && f.reason.includes('ytfdw')));
   const currentUser = getCurrentUser();
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
 
   // RBAC scope
   const scopedList = isAdmin ? all : all.filter(f => f.assignedTo === currentUser.id || f.assignedTo === currentUser.staffId);
-  const payRecords = scopedList.filter(f => f && (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1));
+  const payRecords = scopedList.filter(f => isPayPendingRecord(f));
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -11504,7 +11599,7 @@ function filterPaymentPendingCards() {
   const tabFilter = ACTIVE_PAYMENT_PENDING_TAB || 'ALL';
   const todayStr = new Date().toISOString().split('T')[0];
 
-  let list = (CRM_STATE.followups || []).filter(fu => fu && (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1));
+  let list = (CRM_STATE.followups || []).filter(fu => fu && isPayPendingRecord(fu) && !(fu.reason && fu.reason.includes('ytfdw')));
 
   // 1. RBAC Isolation
   if (!isAdmin) {
@@ -11767,7 +11862,7 @@ function filterFollowupsCards() {
   const todayStr = new Date().toISOString().split('T')[0];
 
   let list = (CRM_STATE.followups || []).filter(fu => 
-    fu && fu.id !== 'FU-2026-00108' && fu.id !== 'FU-2026-00107' && !(fu.reason && fu.reason.includes('ytfdw'))
+    fu && !(fu.reason && fu.reason.includes('ytfdw'))
   );
 
   // 1. RBAC Isolation
@@ -11785,7 +11880,7 @@ function filterFollowupsCards() {
   } else if (tabFilter === 'OVERDUE') {
     list = list.filter(fu => isFollowupOverdue(fu));
   } else if (tabFilter === 'PAYMENT_PENDING') {
-    list = list.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1'));
+    list = list.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && isPayPendingRecord(fu));
   } else if (tabFilter === 'COMPLETED') {
     list = list.filter(fu => fu.status === 'COMPLETED' && fu.outcome !== 'LOST');
   } else if (tabFilter === 'LOST') {
