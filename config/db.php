@@ -414,7 +414,7 @@ function initializeDatabaseSchema($pdo) {
             }
         }
 
-        // Ensure queries table status supports FOLLOW_UP, CONVERTED, LOST and has all payment/callback fields
+        // Ensure queries table status supports FOLLOW_UP, CONVERTED, LOST, DND and has all payment/callback fields
         $pdo->exec("ALTER TABLE `queries` MODIFY COLUMN `status` VARCHAR(50) DEFAULT 'NEW'");
         $existingQueryCols = $pdo->query("SHOW COLUMNS FROM `queries`")->fetchAll(PDO::FETCH_COLUMN);
         $queryColDefs = [
@@ -436,8 +436,23 @@ function initializeDatabaseSchema($pdo) {
                 $pdo->exec($sql);
             }
         }
+
+        // Ensure customers table has DND tracking columns
+        $existingCustCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN);
+        $custColDefs = [
+            'is_dnd'        => "ALTER TABLE `customers` ADD COLUMN `is_dnd` TINYINT(1) DEFAULT 0",
+            'dnd_reason'    => "ALTER TABLE `customers` ADD COLUMN `dnd_reason` TEXT NULL",
+            'dnd_notes'     => "ALTER TABLE `customers` ADD COLUMN `dnd_notes` TEXT NULL",
+            'dnd_marked_by' => "ALTER TABLE `customers` ADD COLUMN `dnd_marked_by` VARCHAR(100) NULL",
+            'dnd_timestamp' => "ALTER TABLE `customers` ADD COLUMN `dnd_timestamp` VARCHAR(50) NULL"
+        ];
+        foreach ($custColDefs as $cName => $sql) {
+            if (!in_array($cName, $existingCustCols)) {
+                $pdo->exec($sql);
+            }
+        }
     } catch (Exception $e) {
-        error_log("Follow-up / Queries migration note: " . $e->getMessage());
+        error_log("Schema migration note: " . $e->getMessage());
     }
 
     // 9. Audit Logs Table

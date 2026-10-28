@@ -2760,11 +2760,12 @@ function renderQuickLineSwitcher() {
     (CRM_STATE?.customers || []).some(c => (c.accountId || 'account_1') === acc.id)
   );
 
-  // Count only customers that have actual conversation messages or active queries
+  // Count only customers that have actual conversation messages or active queries (Excluding DND)
   const getActiveCustomerCountForAccount = (accId) => {
     return (CRM_STATE?.customers || []).filter(c => {
       if (c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || c.name.startsWith('WhatsApp Linked')) return false;
       const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+      if (c.isDND === true || (q && q.status === 'DND') || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'))) return false;
       const conv = CRM_STATE?.conversations?.[c.id] || [];
       if (conv.length === 0 && !q) return false;
       const customerAccId = c.accountId || (q ? q.accountId : 'account_1');
@@ -2775,6 +2776,7 @@ function renderQuickLineSwitcher() {
   const totalChats = (CRM_STATE?.customers || []).filter(c => {
     if (c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || c.name.startsWith('WhatsApp Linked')) return false;
     const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+    if (c.isDND === true || (q && q.status === 'DND') || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'))) return false;
     const conv = CRM_STATE?.conversations?.[c.id] || [];
     if (conv.length === 0 && !q) return false;
     const customerAccId = c.accountId || (q ? q.accountId : 'account_1');
@@ -2852,6 +2854,17 @@ function renderInboxConversationList() {
     // Filter out contacts with no messages and no active query from the inbox list
     if (conv.length === 0 && !query) {
       return;
+    }
+
+    // Dynamic DND Removal: Customers marked as DND are excluded from the active WhatsApp inbox queue
+    const isCustomerDND = (cust.isDND === true) || 
+                          (query && query.status === 'DND') || 
+                          (Array.isArray(cust.tags) && cust.tags.includes('DND / Opt-Out'));
+    if (isCustomerDND) {
+      // Only keep in active view if user specifically clicked to review conversation history from DND hub
+      if (!ACTIVE_CUSTOMER_ID || String(cust.id) !== String(ACTIVE_CUSTOMER_ID)) {
+        return;
+      }
     }
 
     let lastText = 'No messages yet';
@@ -4073,10 +4086,26 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
     if (newStatus === 'DND') {
       customer.isDND = true;
       customer.dndReason = notes || 'Customer not interested in products (Requested DND)';
+      customer.dndNotes = notes || '';
       customer.dndTimestamp = timeFormatted;
       customer.dndMarkedBy = staffName;
       if (!Array.isArray(customer.tags)) customer.tags = [];
       if (!customer.tags.includes('DND / Opt-Out')) customer.tags.push('DND / Opt-Out');
+
+      // Dynamically remove from active inbox view by switching active selection if current customer was marked DND
+      if (ACTIVE_CUSTOMER_ID === customer.id || String(ACTIVE_CUSTOMER_ID) === String(customer.id)) {
+        const remainingNonDnd = (CRM_STATE.customers || []).filter(c => {
+          if (!c || c.id === customer.id) return false;
+          if (c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || c.name.startsWith('WhatsApp Linked')) return false;
+          const q = (CRM_STATE.queries || []).find(qry => qry.customerId === c.id);
+          const isDnd = (c.isDND === true) || (q && q.status === 'DND') || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'));
+          if (isDnd) return false;
+          const conv = CRM_STATE.conversations[c.id] || [];
+          return (conv.length > 0 || q);
+        });
+        ACTIVE_CUSTOMER_ID = remainingNonDnd.length > 0 ? remainingNonDnd[0].id : null;
+        if (CRM_STATE) CRM_STATE.activeCustomerId = ACTIVE_CUSTOMER_ID;
+      }
     } else {
       customer.isDND = false;
       if (Array.isArray(customer.tags)) {
@@ -4234,6 +4263,41 @@ function reactivateCustomerFromDND(customerId) {
   if (typeof playChime === 'function') playChime('order');
 }
 
+function openStaffAssignForDndCustomer(customerId) {
+  let query = (CRM_STATE?.queries || []).find(q => q.customerId === customerId);
+  const customer = (CRM_STATE?.customers || []).find(c => c.id === customerId);
+  if (!customer) return;
+
+  if (!query) {
+    query = {
+      id: 'Q-' + (customer.code || customer.id || Date.now()),
+      customerId: customer.id,
+      assignedTo: 'UNASSIGNED',
+      status: 'DND',
+      priority: 'NORMAL',
+      queryText: customer.dndReason || customer.dndNotes || 'DND Customer Enquiry',
+      statusNotes: customer.dndNotes || customer.dndReason || '',
+      unreadCount: 0,
+      createdAt: new Date().toISOString()
+    };
+    if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+    CRM_STATE.queries.unshift(query);
+    saveCRMState();
+  }
+
+  openStaffAssignModal(query.id);
+}
+window.openStaffAssignForDndCustomer = openStaffAssignForDndCustomer;
+
+function viewDndCustomerChat(customerId) {
+  ACTIVE_CUSTOMER_ID = customerId;
+  if (CRM_STATE) CRM_STATE.activeCustomerId = customerId;
+  switchView('inbox');
+  renderInbox();
+  showToast('Viewing DND Chat', 'Customer is on DND. This chat is removed from the active WhatsApp Inbox queue.', 'block', 'rose');
+}
+window.viewDndCustomerChat = viewDndCustomerChat;
+
 function renderDndModule() {
   const tableBody = document.getElementById('dnd-table-body');
   const countSummary = document.getElementById('dnd-count-summary');
@@ -4255,12 +4319,15 @@ function renderDndModule() {
 
   let filtered = dndCustomers;
   if (searchVal) {
-    filtered = filtered.filter(c => 
-      (c.name && c.name.toLowerCase().includes(searchVal)) ||
-      (c.phone && c.phone.includes(searchVal)) ||
-      (c.whatsapp && c.whatsapp.includes(searchVal)) ||
-      (c.dndReason && c.dndReason.toLowerCase().includes(searchVal))
-    );
+    filtered = filtered.filter(c => {
+      const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
+      return (c.name && c.name.toLowerCase().includes(searchVal)) ||
+        (c.phone && c.phone.includes(searchVal)) ||
+        (c.whatsapp && c.whatsapp.includes(searchVal)) ||
+        (c.dndReason && c.dndReason.toLowerCase().includes(searchVal)) ||
+        (c.dndNotes && c.dndNotes.toLowerCase().includes(searchVal)) ||
+        (q && q.statusNotes && q.statusNotes.toLowerCase().includes(searchVal));
+    });
   }
 
   if (!tableBody) return;
@@ -4268,10 +4335,10 @@ function renderDndModule() {
   if (filtered.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="6" class="p-8 text-center text-slate-400">
+        <td colspan="7" class="p-8 text-center text-slate-400">
           <span class="material-symbols-outlined text-[36px] text-slate-300">verified_user</span>
           <p class="text-xs font-semibold mt-1">No DND customers found</p>
-          <p class="text-[11px] text-slate-400">When staff changes a customer's enquiry status to "🚫 DND", they will be listed here separately.</p>
+          <p class="text-[11px] text-slate-400">When staff changes a customer's enquiry status to "🚫 DND", their chat is dynamically removed from the WhatsApp inbox and listed here.</p>
         </td>
       </tr>
     `;
@@ -4282,15 +4349,25 @@ function renderDndModule() {
     const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
     const conv = CRM_STATE?.conversations?.[c.id] || [];
     const lastMsg = conv.length > 0 ? conv[conv.length - 1].text : (q ? q.lastMessage : 'No recent messages');
-    const dndTime = c.dndTimestamp || (q ? q.createdAt : 'Recent');
-    const markedBy = c.dndMarkedBy || 'Staff';
-    const reason = c.dndReason || 'Customer not interested in products';
+    const dndTime = c.dndTimestamp || (q ? q.statusLastEditedAt || q.createdAt : 'Recent');
+    const markedBy = c.dndMarkedBy || (q ? q.statusLastEditedBy : 'Super Admin') || 'Super Admin';
+    
+    // Notes fetched from WhatsApp Inbox why the user was set to DND
+    const inboxNotes = c.dndNotes || (q ? q.statusNotes : '') || (q?.statusHistory?.find(h => h.to === 'DND')?.notes) || (c.dndReason && !c.dndReason.includes('(Requested DND)') ? c.dndReason : '');
+    const mainReason = c.dndReason || (inboxNotes ? inboxNotes : 'Customer not interested in products (Requested DND)');
     const displayPhone = formatPhoneNumberPretty(c.whatsapp || c.phone);
 
+    // Assigned Staff
+    const staffId = q ? q.assignedTo : 'UNASSIGNED';
+    const staff = (CRM_STATE?.staffList || []).find(s => s.id === staffId);
+    const assignedStaffName = staff ? staff.name : (staffId === 'admin' || staffId === 'Super Admin' ? 'Super Admin' : (staffId && staffId !== 'UNASSIGNED' ? staffId : 'Unassigned'));
+    const isUnassigned = (!staffId || staffId === 'UNASSIGNED');
+
     return `
-      <tr class="hover:bg-slate-50 transition">
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+        <!-- 1. Customer Details -->
         <td class="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-700 to-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-700 to-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
             ${c.avatar || 'CU'}
           </div>
           <div class="min-w-0">
@@ -4298,29 +4375,73 @@ function renderDndModule() {
             <p class="text-[10px] text-slate-400 font-mono">${c.code || c.id}</p>
           </div>
         </td>
-        <td class="py-3.5 px-4 font-mono font-bold text-emerald-950 text-xs">
+
+        <!-- 2. Phone / WhatsApp -->
+        <td class="py-3.5 px-4 font-mono font-bold text-emerald-950 text-xs whitespace-nowrap">
           ${displayPhone}
         </td>
-        <td class="py-3.5 px-4">
-          <span class="bg-rose-50 text-rose-800 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-            <span class="material-symbols-outlined text-[12px] text-rose-600">block</span>
-            <span>${reason}</span>
-          </span>
-          <p class="text-[10px] text-slate-500 truncate max-w-xs mt-1 italic">"${lastMsg.length > 40 ? lastMsg.substring(0, 37) + '...' : lastMsg}"</p>
+
+        <!-- 3. Opt-Out Reason & WhatsApp Inbox Notes -->
+        <td class="py-3.5 px-4 max-w-sm">
+          <div class="space-y-1.5">
+            <div>
+              <span class="bg-rose-50 text-rose-800 border border-rose-200 text-[10px] font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-2xs">
+                <span class="material-symbols-outlined text-[12px] text-rose-600">block</span>
+                <span>${mainReason}</span>
+              </span>
+            </div>
+            ${inboxNotes ? `
+              <div class="p-2 bg-amber-50/90 border border-amber-200/90 rounded-xl text-xs text-amber-950 shadow-2xs">
+                <div class="text-[9px] font-extrabold text-amber-800 uppercase tracking-wide flex items-center gap-1 mb-0.5">
+                  <span class="material-symbols-outlined text-[13px] text-amber-600">note_alt</span>
+                  <span>WhatsApp Inbox Notes:</span>
+                </div>
+                <p class="font-semibold text-slate-800 italic leading-snug">"${inboxNotes}"</p>
+              </div>
+            ` : ''}
+            <p class="text-[10px] text-slate-400 truncate max-w-xs mt-0.5" title="${lastMsg}">
+              <span class="text-slate-500 font-semibold">Last Message:</span> "${lastMsg.length > 35 ? lastMsg.substring(0, 32) + '...' : lastMsg}"
+            </p>
+          </div>
         </td>
-        <td class="py-3.5 px-4 text-xs font-semibold text-slate-700">
-          <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-lg border border-slate-200">${markedBy}</span>
+
+        <!-- 4. Assigned Staff -->
+        <td class="py-3.5 px-4 whitespace-nowrap">
+          ${isUnassigned ? `
+            <span class="bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
+              <span class="material-symbols-outlined text-[14px] text-amber-600">person_off</span>
+              <span>Unassigned</span>
+            </span>
+          ` : `
+            <span class="bg-indigo-50 text-indigo-900 border border-indigo-200 px-2.5 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
+              <span class="material-symbols-outlined text-[14px] text-indigo-600">badge</span>
+              <span>${assignedStaffName}</span>
+            </span>
+          `}
         </td>
-        <td class="py-3.5 px-4 text-xs text-slate-500 font-medium">
+
+        <!-- 5. Marked By Staff -->
+        <td class="py-3.5 px-4 text-xs font-semibold text-slate-700 whitespace-nowrap">
+          <span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 text-xs">${markedBy}</span>
+        </td>
+
+        <!-- 6. Date / Time -->
+        <td class="py-3.5 px-4 text-xs text-slate-500 font-medium whitespace-nowrap">
           ${dndTime}
         </td>
-        <td class="py-3.5 px-4 text-right">
-          <div class="flex items-center justify-end gap-1.5">
-            <button onclick="reactivateCustomerFromDND('${c.id}')" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Reactivate customer to allow messages and orders">
+
+        <!-- 7. Actions: Assign, Re-activate, View Chat -->
+        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+          <div class="flex items-center justify-end gap-1.5 flex-wrap">
+            <button onclick="openStaffAssignForDndCustomer('${c.id}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95" title="Assign this customer to staff member to communicate">
+              <span class="material-symbols-outlined text-[14px]">how_to_reg</span>
+              <span>Assign</span>
+            </button>
+            <button onclick="reactivateCustomerFromDND('${c.id}')" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95" title="Reactivate customer to allow messages and orders in WhatsApp Inbox">
               <span class="material-symbols-outlined text-[14px]">check_circle</span>
               <span>Re-activate</span>
             </button>
-            <button onclick="ACTIVE_CUSTOMER_ID='${c.id}'; switchView('inbox');" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1" title="View chat in inbox">
+            <button onclick="viewDndCustomerChat('${c.id}')" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="View conversation history">
               <span class="material-symbols-outlined text-[14px]">chat</span>
             </button>
           </div>
@@ -7887,6 +8008,19 @@ function openStaffAssignModal(queryId) {
   document.getElementById('assign-target-query-id').value = queryId;
   document.getElementById('assign-modal-subtitle').innerText = `Assign ${query.id} (${customer ? customer.name : 'Customer'}) to a dedicated staff`;
 
+  // Toggle DND communication & inbox restoration option if customer is currently on DND
+  const dndContainer = document.getElementById('assign-dnd-options-container');
+  const isDnd = query.status === 'DND' || customer?.isDND;
+  if (dndContainer) {
+    if (isDnd) {
+      dndContainer.classList.remove('hidden');
+      const dndCheck = document.getElementById('assign-dnd-reactivate');
+      if (dndCheck) dndCheck.checked = true;
+    } else {
+      dndContainer.classList.add('hidden');
+    }
+  }
+
   const optionsContainer = document.getElementById('assign-staff-options');
   optionsContainer.innerHTML = CRM_STATE.staffList.map(staff => `
     <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
@@ -7909,6 +8043,8 @@ function handleConfirmAssignment(event) {
   const queryId = document.getElementById('assign-target-query-id').value;
   const selectedRadio = document.querySelector('input[name="selected_staff"]:checked');
   const note = document.getElementById('assign-note').value;
+  const dndCheck = document.getElementById('assign-dnd-reactivate');
+  const shouldReactivateFromDnd = dndCheck && !dndCheck.closest('#assign-dnd-options-container').classList.contains('hidden') && dndCheck.checked;
 
   if (!selectedRadio) {
     alert('Please select a staff member');
@@ -7918,11 +8054,26 @@ function handleConfirmAssignment(event) {
   const staffId = selectedRadio.value;
   const staff = CRM_STATE.staffList.find(s => s.id === staffId);
   const query = CRM_STATE.queries.find(q => q.id === queryId);
+  const customer = query ? CRM_STATE.customers.find(c => c.id === query.customerId) : null;
 
   if (query && staff) {
     const oldStaff = query.assignedTo;
     query.assignedTo = staffId;
-    if (query.status === 'NEW') query.status = 'ASSIGNED';
+    
+    if (shouldReactivateFromDnd) {
+      if (customer) {
+        customer.isDND = false;
+        if (Array.isArray(customer.tags)) {
+          customer.tags = customer.tags.filter(t => t !== 'DND / Opt-Out');
+        }
+      }
+      query.status = 'ASSIGNED';
+      logAudit('STAFF_ASSIGNMENT', 'DND_MODULE', `Assigned DND Customer ${customer ? customer.name : query.id} to ${staff.name} and restored to active WhatsApp Inbox for communication. Note: ${note || 'None'}`);
+    } else {
+      if (query.status === 'NEW') query.status = 'ASSIGNED';
+      logAudit('STAFF_ASSIGNMENT', 'STAFF_ASSIGN', `Assigned query ${query.id} to ${staff.name} by Admin. Note: ${note || 'None'}`);
+    }
+    
     staff.activeQueries += 1;
 
     // Asynchronously sync query assignment to MySQL Database
@@ -7933,21 +8084,25 @@ function handleConfirmAssignment(event) {
         id: query.id,
         assigned_to: staffId,
         status: query.status,
+        notes: note || query.statusNotes || '',
         user: CURRENT_USER?.name || 'Admin'
       })
     }).catch(() => {});
 
-    // Log audit
-    logAudit('STAFF_ASSIGNMENT', 'STAFF_ASSIGN', `Assigned query ${query.id} to ${staff.name} by Admin. Note: ${note || 'None'}`);
-
     saveCRMState();
     closeModal('modal-staff-assign');
-    showToast('Staff Assigned', `Query ${query.id} successfully assigned to ${staff.name}!`, 'how_to_reg', 'emerald');
+    
+    const msg = shouldReactivateFromDnd 
+      ? `Query ${query.id} assigned to ${staff.name} and restored to active WhatsApp Inbox!`
+      : `Query ${query.id} successfully assigned to ${staff.name}!`;
+    showToast('Staff Assigned', msg, 'how_to_reg', 'emerald');
     playChime('inbound');
 
     // Refresh UI
     renderInbox();
     renderEnquiriesTable();
+    if (typeof renderDndModule === 'function') renderDndModule();
+    updateBadgeCounters();
   }
 }
 
@@ -20154,7 +20309,13 @@ function logAudit(action, module, details) {
 
 function updateBadgeCounters() {
   const availableAccountIds = getAvailableWhatsAppAccounts().map(a => a.id);
-  const activeQueries = (CRM_STATE.queries || []).filter(q => availableAccountIds.includes(q.accountId || 'account_1'));
+  // Exclude DND queries from active inbox queries count
+  const activeQueries = (CRM_STATE.queries || []).filter(q => {
+    if (!availableAccountIds.includes(q.accountId || 'account_1')) return false;
+    const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
+    const isDnd = (q.status === 'DND') || (cust && (cust.isDND === true || (Array.isArray(cust.tags) && cust.tags.includes('DND / Opt-Out'))));
+    return !isDnd;
+  });
 
   const unassignedCount = activeQueries.filter(q => q.assignedTo === 'UNASSIGNED').length;
   const unreadCount = activeQueries.reduce((acc, q) => acc + (q.unreadCount || 0), 0);
@@ -20176,6 +20337,20 @@ function updateBadgeCounters() {
 
   const countMy = document.getElementById('count-my');
   if (countMy) countMy.innerText = myQueueCount;
+
+  // DND count update
+  const dndEl = document.getElementById('badge-dnd-count');
+  const kpiDndEl = document.getElementById('kpi-dnd-total');
+  const dndSummaryEl = document.getElementById('dnd-count-summary');
+  const dndCustomers = (CRM_STATE.customers || []).filter(c => {
+    if (!c) return false;
+    const q = (CRM_STATE.queries || []).find(qry => qry.customerId === c.id);
+    return c.isDND === true || (q && q.status === 'DND') || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'));
+  });
+  const dndCount = dndCustomers.length;
+  if (dndEl) dndEl.innerText = dndCount;
+  if (kpiDndEl) kpiDndEl.innerText = dndCount;
+  if (dndSummaryEl) dndSummaryEl.innerText = `${dndCount} DND Customer${dndCount === 1 ? '' : 's'}`;
 
   // Update Daily Inbound Messages Progress Counter (e.g. 200 msgs target)
   const target = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
