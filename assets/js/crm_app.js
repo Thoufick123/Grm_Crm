@@ -19790,7 +19790,40 @@ function renderFollowupsCards() {
   }
 }
 
-function renderCustomersGrid() {
+var CURRENT_CUSTOMER_SEARCH_QUERY = '';
+
+function handleCustomerSearchInput(query) {
+  CURRENT_CUSTOMER_SEARCH_QUERY = (query || '').trim();
+  const clearBtn = document.getElementById('customer-search-clear-btn');
+  if (clearBtn) {
+    if (CURRENT_CUSTOMER_SEARCH_QUERY) {
+      clearBtn.classList.remove('hidden');
+    } else {
+      clearBtn.classList.add('hidden');
+    }
+  }
+  renderCustomersGrid(CURRENT_CUSTOMER_SEARCH_QUERY);
+}
+window.handleCustomerSearchInput = handleCustomerSearchInput;
+
+function clearCustomerSearch() {
+  const input = document.getElementById('customer-search-input');
+  if (input) input.value = '';
+  CURRENT_CUSTOMER_SEARCH_QUERY = '';
+  const clearBtn = document.getElementById('customer-search-clear-btn');
+  if (clearBtn) clearBtn.classList.add('hidden');
+  renderCustomersGrid('');
+}
+window.clearCustomerSearch = clearCustomerSearch;
+
+function triggerCustomerSearch() {
+  const input = document.getElementById('customer-search-input');
+  const val = input ? input.value : '';
+  handleCustomerSearchInput(val);
+}
+window.triggerCustomerSearch = triggerCustomerSearch;
+
+function renderCustomersGrid(searchFilter = '') {
   const container = document.getElementById('customers-grid-container');
   if (!container) return;
 
@@ -19814,38 +19847,180 @@ function renderCustomersGrid() {
     }
   });
 
-  if (displayCustomers.length === 0) {
+  const query = (searchFilter !== undefined && searchFilter !== null && searchFilter !== '' ? searchFilter : CURRENT_CUSTOMER_SEARCH_QUERY || '').toLowerCase().trim();
+
+  const filteredCustomers = query ? displayCustomers.filter(c => {
+    const name = (c.name || '').toLowerCase();
+    const phone = (c.phone || '').toLowerCase();
+    const wa = (c.whatsapp || '').toLowerCase();
+    const email = (c.email || '').toLowerCase();
+    const code = (c.code || c.id || '').toLowerCase();
+    const address = (c.address || '').toLowerCase();
+    const notes = (c.notes || '').toLowerCase();
+    const tags = Array.isArray(c.tags) ? c.tags.join(' ').toLowerCase() : '';
+    const cleanDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+    const cleanQueryDigits = query.replace(/[^0-9]/g, '');
+
+    return name.includes(query) ||
+      phone.includes(query) ||
+      wa.includes(query) ||
+      (cleanQueryDigits.length >= 3 && cleanDigits.includes(cleanQueryDigits)) ||
+      email.includes(query) ||
+      code.includes(query) ||
+      address.includes(query) ||
+      notes.includes(query) ||
+      tags.includes(query);
+  }) : displayCustomers;
+
+  // Update dynamic count summary badge in header
+  const countBadge = document.getElementById('customer-count-badge');
+  if (countBadge) {
+    if (query) {
+      countBadge.innerText = `${filteredCustomers.length} of ${displayCustomers.length} Customers`;
+      countBadge.className = 'bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold px-2.5 py-0.5 rounded-full';
+    } else {
+      countBadge.innerText = `${displayCustomers.length} Customer${displayCustomers.length === 1 ? '' : 's'}`;
+      countBadge.className = 'bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-0.5 rounded-full';
+    }
+  }
+
+  if (filteredCustomers.length === 0) {
     container.innerHTML = `
       <div class="col-span-full p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
-        <span class="material-symbols-outlined text-4xl text-slate-300 mb-2">person_off</span>
-        <p class="text-slate-500 font-semibold text-sm">No customer profiles found yet.</p>
-        <p class="text-slate-400 text-xs mt-1">Inbound WhatsApp customer profiles will automatically appear here.</p>
+        <span class="material-symbols-outlined text-4xl text-slate-300 mb-2">${query ? 'person_search' : 'person_off'}</span>
+        <p class="text-slate-800 font-bold text-sm">${query ? `No customers found matching "${query}"` : 'No customer profiles found yet.'}</p>
+        <p class="text-slate-500 text-xs mt-1">${query ? 'Try searching with another name, phone number or tag keyword.' : 'Inbound WhatsApp customer profiles will automatically appear here.'}</p>
+        ${query ? `<button onclick="clearCustomerSearch()" class="mt-4 px-3.5 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-all cursor-pointer">Show All Customers</button>` : ''}
       </div>
     `;
     return;
   }
 
-  container.innerHTML = displayCustomers.map(c => `
+  container.innerHTML = filteredCustomers.map(c => `
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 hover:shadow-md transition-shadow">
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-base flex items-center justify-center shrink-0">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-base flex items-center justify-center shrink-0 shadow-sm">
           ${c.avatar || (c.name ? c.name.slice(0, 2).toUpperCase() : 'CU')}
         </div>
-        <div class="min-w-0">
-          <h4 class="font-bold text-slate-900 text-sm truncate">${c.name || 'Customer'}</h4>
-          <p class="text-xs text-slate-500 font-mono">${c.whatsapp || c.phone || 'No phone'}</p>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-1.5">
+            <h4 class="font-bold text-slate-900 text-sm truncate">${c.name || 'Customer'}</h4>
+            ${c.isDND ? '<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0">DND</span>' : ''}
+          </div>
+          <p class="text-xs text-slate-500 font-mono mt-0.5">${c.whatsapp || c.phone || 'No phone'}</p>
         </div>
       </div>
       <div class="flex items-center gap-1.5 flex-wrap">
         ${(c.tags || []).map(t => `<span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${t}</span>`).join('')}
       </div>
       <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-        <span class="text-slate-500">${c.totalOrders || 0} Orders &bull; ₹${(c.totalSpend || 0).toLocaleString('en-IN')} Spend</span>
-        <button onclick="selectCustomerChat('${c.id}'); switchView('inbox');" class="text-brand-wa font-bold hover:underline cursor-pointer">Chat</button>
+        <span class="text-slate-500 font-medium">${c.totalOrders || 0} Orders &bull; ₹${(c.totalSpend || 0).toLocaleString('en-IN')} Spend</span>
+        <button onclick="selectCustomerChat('${c.id}'); switchView('inbox');" class="text-brand-wa font-bold hover:underline cursor-pointer flex items-center gap-1">
+          <span>Chat</span>
+          <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+        </button>
       </div>
     </div>
   `).join('');
 }
+window.renderCustomersGrid = renderCustomersGrid;
+
+// EXPORT ALL CUSTOMER DETAILS TO SPREADSHEET (CSV)
+function exportAllCustomerDetails() {
+  const customers = (CRM_STATE.customers || []).filter(c => {
+    if (!c) return false;
+    if (c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || (c.name && c.name.startsWith('WhatsApp Linked'))) return false;
+    return true;
+  });
+
+  if (customers.length === 0) {
+    showToast('No Data', 'No customer records available to export.', 'info', 'amber');
+    return;
+  }
+
+  // Deduplicate by normalized 10-digit phone
+  const seenKeys = new Set();
+  const exportList = [];
+  customers.forEach(c => {
+    const digits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+    const key = digits.length >= 10 ? digits.slice(-10) : (digits || c.id);
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      exportList.push(c);
+    }
+  });
+
+  // Prepare CSV Columns
+  const headers = [
+    'Customer ID',
+    'Customer Code',
+    'Full Name',
+    'Phone Number',
+    'WhatsApp Number',
+    'Email Address',
+    'Gender',
+    'Age',
+    'Customer Type / Mindset',
+    'Shipping Address',
+    'Total Orders',
+    'Total Spend (INR)',
+    'DND Status',
+    'DND Reason',
+    'Customer Tags',
+    'Mindset & Profile Notes',
+    'Profile Created At'
+  ];
+
+  function escapeCSV(val) {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  }
+
+  const rows = exportList.map(c => [
+    escapeCSV(c.id),
+    escapeCSV(c.code || ''),
+    escapeCSV(c.name || 'Customer'),
+    escapeCSV(c.phone || ''),
+    escapeCSV(c.whatsapp || c.phone || ''),
+    escapeCSV(c.email || ''),
+    escapeCSV(c.gender || ''),
+    escapeCSV(c.age || ''),
+    escapeCSV(c.customerType || 'Live WhatsApp Lead'),
+    escapeCSV(c.address || ''),
+    escapeCSV(c.totalOrders || 0),
+    escapeCSV((c.totalSpend || 0).toFixed(2)),
+    escapeCSV(c.isDND ? 'YES (DND Opted-Out)' : 'NO (Active)'),
+    escapeCSV(c.dndReason || ''),
+    escapeCSV(Array.isArray(c.tags) ? c.tags.join('; ') : (c.tags || '')),
+    escapeCSV(c.notes || ''),
+    escapeCSV(c.createdAt || '')
+  ].join(','));
+
+  // UTF-8 BOM so Excel opens Tamil and unicode characters correctly
+  const csvContent = '\uFEFF' + headers.map(h => `"${h}"`).join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  const today = new Date().toISOString().split('T')[0];
+  link.setAttribute('href', url);
+  link.setAttribute('download', `grm_customers_export_${today}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  showToast(
+    'Customers Exported! 📊',
+    `Successfully exported all ${exportList.length} customer records to CSV.`,
+    'file_download_done',
+    'emerald'
+  );
+  if (typeof playChime === 'function') playChime('order');
+}
+window.exportAllCustomerDetails = exportAllCustomerDetails;
+
 
 function renderAuditTable() {
   const tbody = document.getElementById('audit-logs-table-body');
