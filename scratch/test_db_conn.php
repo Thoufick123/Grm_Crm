@@ -4,7 +4,7 @@ $pdo = getDBConnection();
 if (!$pdo) {
     die("NO_PDO\n");
 }
-$tables = ['users','customers','queries','messages','orders','followups','products'];
+$tables = ['users','customers','queries','messages','orders','followups','products','dnd_records'];
 foreach ($tables as $t) {
     try {
         $c = $pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn();
