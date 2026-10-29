@@ -1024,13 +1024,25 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     curl_close($ch);
 
     // Also persist message in MySQL
-    if ($pdo && $customerId) {
+    if ($pdo) {
         try {
-            $pdo->prepare("
-                INSERT INTO `messages` (`customer_id`, `sender`, `text`, `media_type`, `media_url`, `time_str`, `status`)
-                VALUES (?, 'staff', ?, ?, ?, ?, 'DELIVERED')
-            ")->execute([$customerId, $text, $mediaType, $mediaUrl, date("h:i A")]);
-        } catch (Exception $e) {}
+            $effectiveCustId = $customerId;
+            if (empty($effectiveCustId) && !empty($phone)) {
+                $cleanP = preg_replace('/[^0-9]/', '', $phone);
+                $cStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `phone` LIKE ? OR `whatsapp` LIKE ? LIMIT 1");
+                $cStmt->execute(["%$cleanP%", "%$cleanP%"]);
+                $effectiveCustId = $cStmt->fetchColumn() ?: null;
+            }
+            if (!empty($effectiveCustId)) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO `messages` (`customer_id`, `sender`, `text`, `media_type`, `media_url`, `time_str`, `status`)
+                    VALUES (?, 'staff', ?, ?, ?, ?, 'DELIVERED')
+                ");
+                $stmt->execute([$effectiveCustId, $text, $mediaType, $mediaUrl, date("h:i A")]);
+            }
+        } catch (Exception $e) {
+            error_log("Error saving outbound message: " . $e->getMessage());
+        }
     }
 
     if ($response && $httpCode === 200) {
@@ -1251,6 +1263,14 @@ if ($action === 'save_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 if ($rowExists && $targetId) {
+                    if (empty($image)) {
+                        $imgStmt = $pdo->prepare("SELECT `image` FROM `products` WHERE `id` = ?");
+                        $imgStmt->execute([$targetId]);
+                        $prevImg = $imgStmt->fetchColumn();
+                        if (!empty($prevImg)) {
+                            $image = $prevImg;
+                        }
+                    }
                     $stmt = $pdo->prepare("
                         UPDATE `products` SET 
                             `sku` = ?, `name` = ?, `category` = ?, `subcategory` = ?, `size` = ?, `color` = ?, 
@@ -3162,6 +3182,9 @@ if ($action === 'save_broadcast_template' && $_SERVER['REQUEST_METHOD'] === 'POS
     $name = $tpl['name'] ?? ($tpl['label'] ?? 'Custom Template');
     $category = $tpl['category'] ?? 'MARKETING';
     $bodyText = $tpl['body_text'] ?? ($tpl['text'] ?? '');
+    $variablesJson = !empty($tpl['variables_json']) 
+        ? (is_string($tpl['variables_json']) ? $tpl['variables_json'] : json_encode($tpl['variables_json'], JSON_UNESCAPED_UNICODE))
+        : (!empty($tpl['variables']) ? (is_string($tpl['variables']) ? $tpl['variables'] : json_encode($tpl['variables'], JSON_UNESCAPED_UNICODE)) : null);
     $imageUrl = $tpl['image_url'] ?? ($tpl['media_url'] ?? null);
     $buttonType = $tpl['button_type'] ?? null;
     $buttonText = $tpl['button_text'] ?? null;
@@ -3171,19 +3194,20 @@ if ($action === 'save_broadcast_template' && $_SERVER['REQUEST_METHOD'] === 'POS
     if ($pdo) {
         try {
             $stmt = $pdo->prepare("
-                INSERT INTO `broadcast_templates` (`id`, `name`, `category`, `body_text`, `image_url`, `button_type`, `button_text`, `button_url`, `status`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO `broadcast_templates` (`id`, `name`, `category`, `body_text`, `variables_json`, `image_url`, `button_type`, `button_text`, `button_url`, `status`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     `name` = VALUES(`name`),
                     `category` = VALUES(`category`),
                     `body_text` = VALUES(`body_text`),
+                    `variables_json` = VALUES(`variables_json`),
                     `image_url` = VALUES(`image_url`),
                     `button_type` = VALUES(`button_type`),
                     `button_text` = VALUES(`button_text`),
                     `button_url` = VALUES(`button_url`),
                     `status` = VALUES(`status`)
             ");
-            $stmt->execute([$id, $name, $category, $bodyText, $imageUrl, $buttonType, $buttonText, $buttonUrl, $status]);
+            $stmt->execute([$id, $name, $category, $bodyText, $variablesJson, $imageUrl, $buttonType, $buttonText, $buttonUrl, $status]);
             echo json_encode(["status" => "success", "message" => "Broadcast template saved in database", "id" => $id]);
             exit;
         } catch (Exception $e) {

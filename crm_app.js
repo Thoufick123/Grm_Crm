@@ -2251,11 +2251,16 @@ function initCRMState() {
       if (data.broadcastTemplates && Array.isArray(data.broadcastTemplates) && data.broadcastTemplates.length > 0) {
         CRM_STATE.broadcastTemplates = data.broadcastTemplates;
         data.broadcastTemplates.forEach(bt => {
+          let varObj = {};
+          if (bt.variables_json) {
+            try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) {}
+          }
           if (typeof BROADCAST_PRESETS_DATA !== 'undefined') {
             BROADCAST_PRESETS_DATA[bt.id] = {
               label: bt.name,
               text: bt.body_text,
-              category: bt.category
+              category: bt.category,
+              variables: varObj
             };
           }
         });
@@ -6042,53 +6047,139 @@ function syncCustomerAutomationHistory(customer) {
       }
     }
 
-    // 3. Check for specific catalog products in the message
-    for (const [catKey, catData] of Object.entries(GRM_BOT_CATALOG)) {
-      for (const [pNum, prod] of Object.entries(catData.items)) {
+    // 3A. Check for products in CRM_STATE.products (Actual Inventory & Admin Catalog)
+    if (CRM_STATE && Array.isArray(CRM_STATE.products) && CRM_STATE.products.length > 0) {
+      for (const prod of CRM_STATE.products) {
+        if (!prod) continue;
+        const skuTrim = (prod.sku || '').trim();
+        const nameTrim = (prod.name || '').trim();
+        const hasSku = skuTrim.length > 0;
+        const hasName = nameTrim.length > 2;
+
         const isMatched = (
-          (prod.sku && txt.includes(prod.sku)) ||
-          (prod.name && txt.includes(prod.name)) ||
-          (msg.media_url && msg.media_url === prod.image)
+          (hasSku && txt.toLowerCase().includes(skuTrim.toLowerCase())) ||
+          (hasName && txt.toLowerCase().includes(nameTrim.toLowerCase())) ||
+          (msg.media_url && prod.image && (msg.media_url === prod.image || msg.media_url.includes(prod.image)))
         );
 
         if (isMatched) {
           actions.push({
-            id: 'prod_' + prod.sku + '_' + (msg.id || i),
+            id: 'inv_prod_' + (prod.sku || prod.id) + '_' + (msg.id || i),
             timestamp: msgEpoch,
             time: timeStr,
             type: 'PRODUCT_VIEWED',
             title: prod.name,
-            price: prod.price,
+            price: prod.price ? (String(prod.price).startsWith('₹') ? prod.price : `₹${prod.price}`) : '₹0',
             sku: prod.sku,
-            size: prod.size,
+            size: prod.size || 'Standard',
+            category: prod.category || 'General Garments',
+            subcategory: prod.subcategory || 'General',
+            subsub: prod.size || 'Standard Size',
             image: msg.media_url || prod.image,
-            badge: '📸 Product Photo Viewed'
+            badge: msg.sender === 'staff' ? '📤 Shared by Admin' : '🛍️ Product in Chat'
           });
         }
       }
     }
 
-    // 4. Generic Product Card / Photo detection (if not in hardcoded catalog)
-    const skuMatch = txt.match(/SKU:\s*`?([A-Z0-9_-]+)`?/i);
-    const priceMatch = txt.match(/(?:💰 Price:|Price:|₹)\s*[*]?:?\s*₹?([0-9,]+)/i);
-    const headerMatch = txt.match(/•\s*([^\n\r]+)/);
+    // 3B. Check for specific catalog products in hardcoded bot catalog
+    if (typeof GRM_BOT_CATALOG !== 'undefined') {
+      for (const [catKey, catData] of Object.entries(GRM_BOT_CATALOG)) {
+        for (const [pNum, prod] of Object.entries(catData.items || {})) {
+          const isMatched = (
+            (prod.sku && txt.toLowerCase().includes(prod.sku.toLowerCase())) ||
+            (prod.name && txt.toLowerCase().includes(prod.name.toLowerCase())) ||
+            (msg.media_url && msg.media_url === prod.image)
+          );
 
-    if ((msg.type === 'image' || msg.media_url || (skuMatch && priceMatch)) && headerMatch) {
-      const headerTitle = headerMatch[1].replace(/[*_#]/g, '').trim();
-      const skuVal = skuMatch ? skuMatch[1] : '';
-      const priceVal = priceMatch ? `₹${priceMatch[1]}` : '';
+          if (isMatched) {
+            actions.push({
+              id: 'prod_' + prod.sku + '_' + (msg.id || i),
+              timestamp: msgEpoch,
+              time: timeStr,
+              type: 'PRODUCT_VIEWED',
+              title: prod.name,
+              price: prod.price,
+              sku: prod.sku,
+              size: prod.size,
+              category: catData.categoryName,
+              subcategory: prod.name,
+              subsub: prod.size,
+              image: msg.media_url || prod.image,
+              badge: '📸 Product Photo Viewed'
+            });
+          }
+        }
+      }
+    }
 
-      if (!actions.some(a => (a.sku && a.sku === skuVal) || a.title === headerTitle)) {
+    // 4. Intelligent Dynamic Product Card & Photo Detection (Admin Shares, Stock Cards, Formats)
+    // Matches: *SKU Code:* ABC, 🏷️ *SKU Code:*, SKU: ABC, *SKU:* ABC, etc.
+    const skuCodeMatch = txt.match(/(?:SKU(?:\s*Code)?|Item\s*Code)\s*:\*?\s*`?([A-Za-z0-9_.-]+)`?/i);
+    // Matches: 💰 Price: ₹123, 💰 Offer Price: ₹123, Price: ₹123, ₹599, etc.
+    const priceValMatch = txt.match(/(?:Offer\s*Price|Price|Rate)\s*:\*?\s*₹?\s*([0-9,]+)/i) || txt.match(/₹\s*([0-9,]+)/);
+    // Matches: 📁 Catalog: *kids > kid, 📁 Category: Baby Collection
+    const catalogMatch = txt.match(/(?:📁\s*(?:Catalog|Category)|Catalog|Category)\s*:\*?\s*([^\n\r]+)/i);
+    // Matches: 📏 Size / Age: * 0-6 Months, Size: 0-6 Months
+    const sizeMatch = txt.match(/(?:📏\s*(?:Size\s*\/\s*Age|Size)|Size\s*\/\s*Age|Size)\s*:\*?\s*([^\n\r]+)/i);
+    // Matches: 🎨 Color: * Pink
+    const colorMatch = txt.match(/(?:🎨\s*Color|Color)\s*:\*?\s*([^\n\r]+)/i);
+
+    // Extract Title: First bold text line or first line with product indicators
+    let detectedTitle = '';
+    const boldTitleMatch = txt.match(/(?:🛍️|👗|•|✨)?\s*\*([^*\n\r]{2,80})\*/);
+    if (boldTitleMatch) {
+      detectedTitle = boldTitleMatch[1].replace(/[*_#]/g, '').trim();
+    } else {
+      const firstLine = (txt.split('\n')[0] || '').replace(/[*_#•🛍️👗✨]/g, '').trim();
+      if (firstLine.length > 2 && firstLine.length < 80) {
+        detectedTitle = firstLine;
+      }
+    }
+
+    // Determine if this message represents a shared product
+    const hasProductIndicator = !!(
+      skuCodeMatch || 
+      catalogMatch || 
+      (msg.media_url && (detectedTitle || priceValMatch)) ||
+      (detectedTitle && priceValMatch)
+    );
+
+    if (hasProductIndicator) {
+      const skuVal = skuCodeMatch ? skuCodeMatch[1].trim() : '';
+      const priceVal = priceValMatch ? `₹${priceValMatch[1].trim()}` : '';
+      const sizeVal = sizeMatch ? sizeMatch[1].replace(/[*_]/g, '').trim() : 'Standard';
+      
+      let catVal = 'General Garments';
+      let subcatVal = 'General';
+      if (catalogMatch) {
+        const catRaw = catalogMatch[1].replace(/[*_]/g, '').trim();
+        if (catRaw.includes('>') || catRaw.includes('›')) {
+          const parts = catRaw.split(/[>›]/).map(s => s.trim());
+          catVal = parts[0] || 'General Garments';
+          subcatVal = parts[1] || 'General';
+        } else {
+          catVal = catRaw;
+        }
+      }
+
+      const finalTitle = detectedTitle || (skuVal ? `Product (${skuVal})` : 'Shared Garment');
+
+      if (!actions.some(a => (skuVal && a.sku && a.sku.toLowerCase() === skuVal.toLowerCase()) || (a.title && a.title.toLowerCase() === finalTitle.toLowerCase()))) {
         actions.push({
-          id: 'dyn_prod_' + (msg.id || i),
+          id: 'dyn_prod_' + (skuVal || msg.id || i),
           timestamp: msgEpoch,
           time: timeStr,
           type: 'PRODUCT_VIEWED',
-          title: headerTitle,
+          title: finalTitle,
           price: priceVal,
           sku: skuVal,
+          size: sizeVal,
+          category: catVal,
+          subcategory: subcatVal,
+          subsub: sizeVal,
           image: msg.media_url || null,
-          badge: '📸 Product Viewed'
+          badge: msg.sender === 'staff' ? '📤 Shared by Admin' : '📸 Product in Chat'
         });
       }
     }
@@ -6100,14 +6191,14 @@ function syncCustomerAutomationHistory(customer) {
 
   for (let j = actions.length - 1; j >= 0; j--) {
     const act = actions[j];
-    const key = (act.sku ? act.sku : act.title) + '_' + act.type;
+    const key = (act.sku ? act.sku.toLowerCase() : act.title.toLowerCase()) + '_' + act.type;
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
       uniqueActions.push(act);
     }
   }
 
-  customer.automationHistory = uniqueActions.slice(0, 25);
+  customer.automationHistory = uniqueActions.slice(0, 50);
 }
 window.GRM_BOT_CATALOG = GRM_BOT_CATALOG;
 window.syncCustomerAutomationHistory = syncCustomerAutomationHistory;
@@ -6164,6 +6255,14 @@ window.CHOSEN_PRODUCTS_FILTER = CHOSEN_PRODUCTS_FILTER;
 
 // Helper to determine 3-tier Category Hierarchy for any item
 function getItemCategoryHierarchy(item) {
+  // 0. Use explicitly parsed category / subcategory from message if present
+  if (item && item.category && item.category !== 'General Garments' && item.category !== 'General') {
+    return {
+      category: item.category,
+      subcategory: item.subcategory || 'General',
+      subsub: item.subsub || item.size || 'Standard Size'
+    };
+  }
   if (!item) return { category: 'Baby Collection (0–3 Years)', subcategory: 'General Garments', subsub: 'Standard' };
 
   // 1. Try matching with full products in CRM_STATE.products
@@ -6350,6 +6449,12 @@ function shareChosenProductDirectly(sku, name, price, img, size) {
   renderChatMessages();
   if (typeof playChime === 'function') playChime('order');
   showToast('Product Shared', `Sent ${sku} card to customer on WhatsApp!`, 'send', 'emerald');
+
+  if (customer) {
+    if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    if (typeof saveCRMState === 'function') saveCRMState();
+  }
 
   if (customer && typeof dispatchWhatsAppOutbound === 'function') {
     dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, shareText, newMsg, customer.jid, customer.accountId, false, img);
@@ -10582,6 +10687,11 @@ function shareProductCardToChat(productId) {
   renderChatMessages();
   if (typeof playChime === 'function') playChime('order');
   showToast('Stock Shared', `Sent ${p.sku} live stock card to customer on WhatsApp.`, 'share', 'emerald');
+  if (customer) {
+    if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    if (typeof saveCRMState === 'function') saveCRMState();
+  }
 
   if (customer && typeof dispatchWhatsAppOutbound === 'function') {
     dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, shareText, newMsg, customer.jid, customer.accountId, false, validImg);
@@ -10646,7 +10756,12 @@ function shareSelectedProductsToChat() {
   closeModal('modal-product-search');
   renderChatMessages();
   if (typeof playChime === 'function') playChime('order');
-  showToast(
+    if (customer) {
+    if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    if (typeof saveCRMState === 'function') saveCRMState();
+  }
+showToast(
     'Dispatched to WhatsApp',
     `Sent ${selectedProducts.length} selected garments to ${customer.name}.`,
     'send',
@@ -11133,7 +11248,12 @@ function dispatchPreviewedCatalogFormat() {
 
   showToast(toastTitle, `Sent customized message to ${customer.name} on WhatsApp.`, 'send', 'emerald');
 
-  if (typeof dispatchWhatsAppOutbound === 'function') {
+    if (customer) {
+    if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    if (typeof saveCRMState === 'function') saveCRMState();
+  }
+if (typeof dispatchWhatsAppOutbound === 'function') {
     dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, finalMessageText, newMsg, customer.jid, customer.accountId, false, validImg);
   }
 }
@@ -16787,10 +16907,15 @@ function populateProductFormCategories(selectedCat, selectedSubcat) {
     const isSel = selectedCat && selectedCat === c.name ? ' selected' : '';
     html += `<option value="${c.name}"${isSel}>${c.name}</option>`;
   });
+  if (selectedCat && !categories.some(c => c.name === selectedCat)) {
+    html += `<option value="${selectedCat}" selected>${selectedCat}</option>`;
+  }
   catSelect.innerHTML = html;
 
   if (selectedCat && [...catSelect.options].some(o => o.value === selectedCat)) {
     catSelect.value = selectedCat;
+  } else if (categories.length > 0) {
+    catSelect.value = categories[0].name;
   } else {
     catSelect.value = '';
   }
@@ -16820,16 +16945,27 @@ function onProductFormCategoryChange(preserveSubcat) {
   } else {
     filtered.forEach(s => {
       const prefix = s.sku_prefix || 'GRM';
-      const isSel = preserveSubcat && preserveSubcat === s.name ? ' selected' : '';
+      const isSel = preserveSubcat && (preserveSubcat === s.name || preserveSubcat === s.slug) ? ' selected' : '';
       html += `<option value="${s.name}" data-prefix="${prefix}"${isSel}>${s.name} (Prefix: ${prefix})</option>`;
     });
   }
+
+  // Preserve active product subcategory even if not in standard list
+  if (preserveSubcat && preserveSubcat !== 'General') {
+    const inFiltered = filtered.some(s => s.name === preserveSubcat || s.slug === preserveSubcat);
+    if (!inFiltered) {
+      html += `<option value="${preserveSubcat}" data-prefix="GRM" selected>${preserveSubcat}</option>`;
+    }
+  }
+
   subcatSelect.innerHTML = html;
 
   if (preserveSubcat && [...subcatSelect.options].some(o => o.value === preserveSubcat)) {
     subcatSelect.value = preserveSubcat;
+  } else if (filtered.length > 0) {
+    subcatSelect.value = filtered[0].name;
   } else {
-    subcatSelect.value = '';
+    subcatSelect.value = 'General';
   }
 
   updateProductFormPreview();
@@ -18611,7 +18747,10 @@ async function handleProductFormSubmit(e) {
 
     let existing = null;
     if (idVal) {
-      existing = CRM_STATE.products.find(p => String(p.id) === String(idVal));
+      existing = CRM_STATE.products.find(p => String(p.id) === String(idVal) || (p.sku && String(p.sku).toUpperCase() === String(idVal).toUpperCase()));
+    }
+    if (!existing && sku) {
+      existing = CRM_STATE.products.find(p => p.sku && String(p.sku).toUpperCase() === String(sku).toUpperCase());
     }
 
     if (existing) {
@@ -18688,10 +18827,13 @@ async function handleProductFormSubmit(e) {
     }
 
     closeModal('modal-product-edit');
-    filterCatalogGrid();
-    updateOrderProductDropdown();
+    if (typeof filterCatalogGrid === 'function') filterCatalogGrid();
+    if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+    if (typeof updateOrderProductDropdown === 'function') updateOrderProductDropdown();
     if (typeof refreshVariantsModalIfOpen === 'function') refreshVariantsModalIfOpen();
-    showToast('Garment Catalog Updated', `${sku} (${name}) saved with live WhatsApp dispatch card!`, 'check_circle', 'emerald');
+    if (typeof renderModalProductList === 'function') renderModalProductList();
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    showToast('Garment Catalog Updated', `${sku} (${name}) price (₹${price}) saved successfully!`, 'check_circle', 'emerald');
   } catch (err) {
     console.error('Critical handleProductFormSubmit error:', err);
     showToast('Save Error', 'Failed to save product: ' + err.message, 'error', 'rose');
@@ -24816,8 +24958,64 @@ function renderBroadcastTemplateDropdown(selectedKey = null) {
   }
 }
 
+// 0. Admin Action: Save Changes to Current Template (Text + Dynamic Variable Values to DB)
+async function handleSaveCurrentTemplateChanges() {
+  const presetSelect = document.getElementById('bcast-preset-select');
+  const msgInput = document.getElementById('bcast-message-text');
+  if (!presetSelect || !msgInput) return;
+
+  const currentKey = presetSelect.value;
+  const text = msgInput.value.trim();
+
+  if (!currentKey || !BROADCAST_PRESETS_DATA[currentKey]) {
+    showToast('Select Template', 'Please select a template to save.', 'warning', 'amber');
+    return;
+  }
+
+  if (!text) {
+    showToast('Empty Message', 'Please enter some message text.', 'warning', 'amber');
+    return;
+  }
+
+  BROADCAST_PRESETS_DATA[currentKey].text = text;
+  BROADCAST_PRESETS_DATA[currentKey].variables = { ...BROADCAST_CUSTOM_TAGS };
+
+  try {
+    localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+  } catch (e) {}
+
+  const currentLabel = BROADCAST_PRESETS_DATA[currentKey].label || 'Custom Template';
+
+  // Persist directly to MySQL Database
+  try {
+    const res = await fetch('api.php?action=save_broadcast_template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: currentKey,
+        name: currentLabel,
+        category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
+        body_text: text,
+        variables_json: BROADCAST_CUSTOM_TAGS
+      })
+    });
+    if (res.ok) {
+      showToast('Template Saved in DB', `Template "${currentLabel}" and dynamic values saved to database!`, 'check_circle', 'emerald');
+      if (typeof playChime === 'function') playChime('order');
+    } else {
+      showToast('Template Saved', 'Saved locally in browser memory.', 'info', 'blue');
+    }
+  } catch (err) {
+    console.warn('API save_broadcast_template error:', err);
+    showToast('Template Saved', 'Saved locally in browser memory.', 'info', 'blue');
+  }
+
+  updateBroadcastPreview();
+}
+window.handleSaveCurrentTemplateChanges = handleSaveCurrentTemplateChanges;
+
 // 1. Admin Action: Save Current Message as a New Named Template
-function handleSaveCurrentAsNewTemplate() {
+async function handleSaveCurrentAsNewTemplate() {
   const msgInput = document.getElementById('bcast-message-text');
   const text = msgInput ? msgInput.value.trim() : '';
 
@@ -24831,22 +25029,42 @@ function handleSaveCurrentAsNewTemplate() {
   if (!templateName || !templateName.trim()) return;
 
   const cleanKey = 'template_' + Date.now();
-  BROADCAST_PRESETS_DATA[cleanKey] = {
+  const newTpl = {
     label: `📋 ${templateName.trim()}`,
-    text: text
+    text: text,
+    category: 'MARKETING',
+    variables: { ...BROADCAST_CUSTOM_TAGS }
   };
+  BROADCAST_PRESETS_DATA[cleanKey] = newTpl;
 
   try {
     localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
   } catch (e) {}
 
+  // Persist to MySQL Database!
+  try {
+    await fetch('api.php?action=save_broadcast_template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: cleanKey,
+        name: newTpl.label,
+        category: 'MARKETING',
+        body_text: text,
+        variables_json: BROADCAST_CUSTOM_TAGS
+      })
+    });
+  } catch (err) {
+    console.warn('API save_broadcast_template error:', err);
+  }
+
   renderBroadcastTemplateDropdown(cleanKey);
-  showToast('Template Saved', `Template "${templateName.trim()}" saved successfully!`, 'bookmark_added', 'emerald');
+  showToast('Template Saved in DB', `Template "${templateName.trim()}" saved to database!`, 'bookmark_added', 'emerald');
   if (typeof playChime === 'function') playChime('order');
 }
 
 // 2. Admin Action: Rename the Currently Selected Template
-function handleRenameCurrentTemplate() {
+async function handleRenameCurrentTemplate() {
   const presetSelect = document.getElementById('bcast-preset-select');
   if (!presetSelect) return;
 
@@ -24863,13 +25081,31 @@ function handleRenameCurrentTemplate() {
     try {
       localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
     } catch (e) {}
+
+    // Persist rename to MySQL Database!
+    try {
+      await fetch('api.php?action=save_broadcast_template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentKey,
+          name: newName.trim(),
+          category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
+          body_text: BROADCAST_PRESETS_DATA[currentKey].text,
+          variables_json: BROADCAST_PRESETS_DATA[currentKey].variables || BROADCAST_CUSTOM_TAGS
+        })
+      });
+    } catch (err) {
+      console.warn('API save_broadcast_template rename error:', err);
+    }
+
     renderBroadcastTemplateDropdown(currentKey);
-    showToast('Template Renamed', `Template renamed to "${newName.trim()}".`, 'edit', 'blue');
+    showToast('Template Renamed', `Template renamed to "${newName.trim()}" in database.`, 'edit', 'blue');
   }
 }
 
 // 3. Admin Action: Delete Selected Custom Template
-function handleDeleteCurrentTemplate() {
+async function handleDeleteCurrentTemplate() {
   const presetSelect = document.getElementById('bcast-preset-select');
   if (!presetSelect) return;
 
@@ -24887,9 +25123,21 @@ function handleDeleteCurrentTemplate() {
     try {
       localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
     } catch (e) {}
+
+    // Persist delete to MySQL Database!
+    try {
+      await fetch('api.php?action=delete_broadcast_template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: currentKey })
+      });
+    } catch (err) {
+      console.warn('API delete_broadcast_template error:', err);
+    }
+
     renderBroadcastTemplateDropdown(Object.keys(BROADCAST_PRESETS_DATA)[0]);
     applyBroadcastPreset(Object.keys(BROADCAST_PRESETS_DATA)[0]);
-    showToast('Template Deleted', 'Template removed successfully.', 'delete', 'amber');
+    showToast('Template Deleted', 'Template removed from database.', 'delete', 'amber');
   }
 }
 
@@ -24897,7 +25145,23 @@ function openBroadcastModal() {
   BROADCAST_CANCEL_FLAG = false;
   IS_BROADCASTING_ACTIVE = false;
 
-  // Load saved custom templates from storage if present
+  // 1. Sync templates from CRM_STATE if loaded from MySQL DB
+  if (CRM_STATE && Array.isArray(CRM_STATE.broadcastTemplates) && CRM_STATE.broadcastTemplates.length > 0) {
+    CRM_STATE.broadcastTemplates.forEach(bt => {
+      let varObj = {};
+      if (bt.variables_json) {
+        try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) {}
+      }
+      BROADCAST_PRESETS_DATA[bt.id] = {
+        label: bt.name,
+        text: bt.body_text,
+        category: bt.category,
+        variables: varObj
+      };
+    });
+  }
+
+  // 2. Load saved custom templates from storage if present
   try {
     const saved = localStorage.getItem('GRM_CUSTOM_BROADCAST_TEMPLATES');
     if (saved) {
@@ -24908,8 +25172,9 @@ function openBroadcastModal() {
     }
   } catch (e) {}
 
-  renderBroadcastTemplateDropdown('festive_offer');
-  applyBroadcastPreset('festive_offer');
+  const initialKey = Object.keys(BROADCAST_PRESETS_DATA)[0] || 'festive_offer';
+  renderBroadcastTemplateDropdown(initialKey);
+  applyBroadcastPreset(initialKey);
   refreshBroadcastAutoFetchedNumbers();
   renderDynamicTemplateFields();
   updateBroadcastPreview();
@@ -24972,6 +25237,13 @@ function applyBroadcastPreset(presetKey) {
     const cleanLabel = (BROADCAST_PRESETS_DATA[presetKey].label || 'Template Message Text').replace(/^[^\w\s]+/, '').trim();
     CURRENT_BROADCAST_TEMPLATE_TITLE = cleanLabel || 'Template Message Text';
     updateBroadcastTemplateTitleUI();
+
+    // Restore saved template dynamic variable values from database
+    if (BROADCAST_PRESETS_DATA[presetKey].variables && typeof BROADCAST_PRESETS_DATA[presetKey].variables === 'object') {
+      Object.entries(BROADCAST_PRESETS_DATA[presetKey].variables).forEach(([k, v]) => {
+        BROADCAST_CUSTOM_TAGS[k] = v;
+      });
+    }
   }
   renderDynamicTemplateFields();
   updateBroadcastPreview();
@@ -25178,10 +25450,37 @@ function renderDynamicTemplateFields(preserveActiveFocus = false) {
   }
 }
 
-// 1-Click Inline Value Change Handler
+// 1-Click Inline Value Change Handler with Auto-Save to Database
+let BCAST_TAG_SAVE_TIMER = null;
 function handleDynamicTagChange(tag, val) {
   BROADCAST_CUSTOM_TAGS[tag] = val;
+  const presetSelect = document.getElementById('bcast-preset-select');
+  const currentKey = presetSelect ? presetSelect.value : null;
+  if (currentKey && BROADCAST_PRESETS_DATA[currentKey]) {
+    if (!BROADCAST_PRESETS_DATA[currentKey].variables) {
+      BROADCAST_PRESETS_DATA[currentKey].variables = {};
+    }
+    BROADCAST_PRESETS_DATA[currentKey].variables[tag] = val;
+  }
   updateBroadcastPreview();
+
+  // Debounced auto-save of dynamic variable values to MySQL DB
+  if (currentKey && BROADCAST_PRESETS_DATA[currentKey]) {
+    clearTimeout(BCAST_TAG_SAVE_TIMER);
+    BCAST_TAG_SAVE_TIMER = setTimeout(() => {
+      fetch('api.php?action=save_broadcast_template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentKey,
+          name: BROADCAST_PRESETS_DATA[currentKey].label || 'Template',
+          category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
+          body_text: BROADCAST_PRESETS_DATA[currentKey].text,
+          variables_json: BROADCAST_CUSTOM_TAGS
+        })
+      }).catch(() => {});
+    }, 1000);
+  }
 }
 
 // Reset dynamic tag to default value
@@ -25794,6 +26093,38 @@ async function startAutomatedBroadcast() {
     return;
   }
 
+  // Auto-save the active broadcast template & dynamic variables to MySQL database
+  const presetSelect = document.getElementById('bcast-preset-select');
+  const currentKey = presetSelect ? presetSelect.value : ('tmpl_' + Date.now());
+  const currentLabel = (BROADCAST_PRESETS_DATA[currentKey] && BROADCAST_PRESETS_DATA[currentKey].label) 
+    ? BROADCAST_PRESETS_DATA[currentKey].label 
+    : (CURRENT_BROADCAST_TEMPLATE_TITLE || 'Broadcast Template');
+
+  if (!BROADCAST_PRESETS_DATA[currentKey]) {
+    BROADCAST_PRESETS_DATA[currentKey] = {};
+  }
+  BROADCAST_PRESETS_DATA[currentKey].text = rawTemplate;
+  BROADCAST_PRESETS_DATA[currentKey].label = currentLabel;
+  BROADCAST_PRESETS_DATA[currentKey].variables = { ...BROADCAST_CUSTOM_TAGS };
+
+  try {
+    localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+  } catch (e) {}
+
+  // Save template & dynamic values to MySQL DB!
+  fetch('api.php?action=save_broadcast_template', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: currentKey,
+      name: currentLabel,
+      category: BROADCAST_PRESETS_DATA[currentKey]?.category || 'MARKETING',
+      body_text: rawTemplate,
+      image_url: attachedBroadcastImage || null,
+      variables_json: BROADCAST_CUSTOM_TAGS
+    })
+  }).catch(err => console.warn('Could not auto-save template to DB:', err));
+
   // Setup UI State for broadcast in progress
   IS_BROADCASTING_ACTIVE = true;
   BROADCAST_CANCEL_FLAG = false;
@@ -25859,6 +26190,21 @@ async function startAutomatedBroadcast() {
       };
 
       CRM_STATE.conversations[customer.id].push(newMsg);
+
+      // Persist the dispatched broadcast message to MySQL database
+      fetch('api.php?action=send_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: customer.id,
+          phone: targetPhone,
+          text: personalizedText,
+          media_url: attachedBroadcastImage,
+          type: attachedBroadcastImage ? 'image' : 'text',
+          status: 'DELIVERED',
+          isBroadcast: true
+        })
+      }).catch(err => console.warn('Could not persist broadcast message to DB:', err));
 
       // Update query summary in list
       const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);

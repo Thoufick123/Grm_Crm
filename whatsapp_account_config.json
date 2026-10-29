@@ -11,7 +11,7 @@
     "webhook_verify_token": "GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026",
     "provider": "META_CLOUD_API",
     "status": "DISCONNECTED",
-    "last_sync": "2026-10-06 10:00:00",
+    "last_sync": "2026-10-29 11:10:28",
     "connected_lines": [
         {
             "id": "account_1",
@@ -212,7 +212,7 @@
             ],
             "actionType": "custom_text",
             "categoryId": null,
-            "replyText": "💳 *Payment Details — {brand_name}*\n\n📱 UPI ID: `grmgarments@upi`\n📲 GPay / PhonePe: {business_phone}\n\n🏦 *Bank Transfer:*\nBank: HDFC Bank\nA/C Name: GRM Garments Hub\nA/C No: 50200088991122\nIFSC: HDFC0001234\n\n📸 *Please reply with your payment screenshot once paid for immediate dispatch!*",
+            "replyText": "💳 *Payment Details — {brand_name}*\n\n📱 UPI ID: `grmgarments@upi`\n📲 GPay \/ PhonePe: {business_phone}\n\n🏦 *Bank Transfer:*\nBank: HDFC Bank\nA\/C Name: GRM Garments Hub\nA\/C No: 50200088991122\nIFSC: HDFC0001234\n\n📸 *Please reply with your payment screenshot once paid for immediate dispatch!*",
             "enabled": true,
             "autoSend": true
         },
@@ -230,7 +230,7 @@
             ],
             "actionType": "custom_text",
             "categoryId": null,
-            "replyText": "🚚 *Shipping & Delivery Information*\n\n⚡ Dispatch: Same day / within 24 hours of confirmation\n📦 Courier Partners: ST Courier, Professional Couriers & DTDC\n⏱️ Delivery Time: 2–3 days within South India, 4–5 days Rest of India\n\nLive tracking link will be sent to your WhatsApp upon courier pickup! 📦",
+            "replyText": "🚚 *Shipping & Delivery Information*\n\n⚡ Dispatch: Same day \/ within 24 hours of confirmation\n📦 Courier Partners: ST Courier, Professional Couriers & DTDC\n⏱️ Delivery Time: 2–3 days within South India, 4–5 days Rest of India\n\nLive tracking link will be sent to your WhatsApp upon courier pickup! 📦",
             "enabled": true,
             "autoSend": true
         },
