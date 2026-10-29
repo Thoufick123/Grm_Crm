@@ -212,3 +212,4 @@ if (nCode.includes(nBcastTarget)) {
 }
 
 fs.writeFileSync('api.php', nCode, 'utf8');
+

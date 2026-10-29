@@ -19,3 +19,4 @@ const norm = s => s.replace(/\r\n/g, '\n');
 suite = norm(suite).replace(norm(oldCheck), norm(newCheck));
 fs.writeFileSync('scratch/verify_rbac_suite.js', suite, 'utf8');
 console.log('Updated verify_rbac_suite.js');
+

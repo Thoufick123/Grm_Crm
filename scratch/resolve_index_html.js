@@ -91,3 +91,4 @@ if (scriptRegex.test(s)) {
 }
 
 fs.writeFileSync('index.html', s, 'utf8');
+

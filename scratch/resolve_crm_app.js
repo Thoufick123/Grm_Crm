@@ -158,3 +158,4 @@ let nCode = norm(code);
 fs.writeFileSync('crm_app.js', nCode, 'utf8');
 fs.copyFileSync('crm_app.js', 'assets/js/crm_app.js');
 console.log('Synchronized to assets/js/crm_app.js');
+
