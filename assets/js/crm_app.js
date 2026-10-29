@@ -1452,7 +1452,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
       jid: payload.sender_jid || '',
       accountId: payloadAccountId,
       businessNumber: payloadBusinessNum,
-      address: 'Online WhatsApp Customer',
+      address: '',
       city: 'Direct Inbound',
       customerType: 'Live WhatsApp Lead',
       tags: ['Live WhatsApp', lineTag],
@@ -3083,7 +3083,11 @@ function renderInbox() {
   try { renderInboxConversationList(); } catch (e) { console.error('[renderInbox] renderInboxConversationList error:', e); }
   try { renderChatHeader(); } catch (e) { console.error('[renderInbox] renderChatHeader error:', e); }
   try { renderChatMessages(); } catch (e) { console.error('[renderInbox] renderChatMessages error:', e); }
-  try { renderCustomer360Panel(); } catch (e) { console.error('[renderInbox] renderCustomer360Panel error:', e); }
+  const rightPanel = document.getElementById('chat-right-panel');
+  const isTypingInRightPanel = rightPanel && document.activeElement && rightPanel.contains(document.activeElement);
+  if (!isTypingInRightPanel) {
+    try { renderCustomer360Panel(); } catch (e) { console.error('[renderInbox] renderCustomer360Panel error:', e); }
+  }
   try { renderInboxPresetTemplatesBar(); } catch (e) { console.error('[renderInbox] renderInboxPresetTemplatesBar error:', e); }
   try { updateRulesCountBadge(); updateBadgeCounters(); } catch (e) { console.error('[renderInbox] updateBadgeCounters error:', e); }
   try { if (typeof initPanelResizers === 'function') initPanelResizers(); } catch (e) { console.error('[renderInbox] initPanelResizers error:', e); }
@@ -5550,6 +5554,33 @@ function renderCustomer360Panel() {
   const isEditing = CUSTOMER_EDIT_MODES.has(customer.id);
   const isQueryEditing = query ? QUERY_EDIT_MODES.has(query.id) : false;
 
+  // Preserve active uncommitted user typing if right panel re-renders during editing
+  let draft = null;
+  const existingEditForm = document.getElementById('form-quick-customer-edit');
+  if (isEditing && existingEditForm) {
+    draft = {
+      name: document.getElementById('cust-edit-name')?.value,
+      phone: document.getElementById('cust-edit-phone')?.value,
+      altPhone: document.getElementById('cust-edit-alt-phone')?.value,
+      gender: document.getElementById('cust-edit-gender')?.value,
+      address: document.getElementById('cust-edit-address')?.value,
+      altAddress: document.getElementById('cust-edit-alt-address')?.value,
+      notes: document.getElementById('cust-edit-notes')?.value,
+      focusedId: document.activeElement ? document.activeElement.id : null,
+      selStart: document.activeElement ? document.activeElement.selectionStart : null,
+      selEnd: document.activeElement ? document.activeElement.selectionEnd : null
+    };
+  }
+
+  const valName = (draft && draft.name !== undefined) ? draft.name : (customer.name || '');
+  const valPhone = (draft && draft.phone !== undefined) ? draft.phone : (customer.whatsapp || customer.phone || '');
+  const valAltPhone = (draft && draft.altPhone !== undefined) ? draft.altPhone : (customer.altPhone || customer.alt_phone || '');
+  const valGender = (draft && draft.gender !== undefined) ? draft.gender : (customer.gender || '');
+  const cleanSavedAddr = (customer.address && customer.address !== 'Online WhatsApp Customer') ? customer.address : '';
+  const valAddress = (draft && draft.address !== undefined) ? draft.address : cleanSavedAddr;
+  const valAltAddress = (draft && draft.altAddress !== undefined) ? draft.altAddress : (customer.altAddress || customer.alt_address || '');
+  const valNotes = (draft && draft.notes !== undefined) ? draft.notes : (customer.notes || '');
+
   // Status Badge Formatting
   const qStatus = query ? (query.status || 'NEW') : (customer.isDND ? 'DND' : 'NONE');
   let statusBadgeHtml = '';
@@ -5640,7 +5671,7 @@ function renderCustomer360Panel() {
         <!-- Customer Name -->
         <div>
           <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Name *:</label>
-          <input type="text" id="cust-edit-name" value="${customer.name || ''}" ${isEditing ? '' : 'disabled'} required placeholder="Full Name" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
+          <input type="text" id="cust-edit-name" value="${valName}" ${isEditing ? '' : 'disabled'} required placeholder="Full Name" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
         </div>
 
         <!-- Phone Number (Auto-Fetched from WhatsApp Message) -->
@@ -5653,7 +5684,7 @@ function renderCustomer360Panel() {
           </div>
           <div class="relative">
             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-emerald-600">call</span>
-            <input type="text" id="cust-edit-phone" value="${customer.whatsapp || customer.phone || ''}" ${isEditing ? '' : 'disabled'} required placeholder="+91 98765 43210" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-emerald-950 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-bold">
+            <input type="text" id="cust-edit-phone" value="${valPhone}" ${isEditing ? '' : 'disabled'} required placeholder="+91 98765 43210" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-emerald-950 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-bold">
           </div>
         </div>
 
@@ -5668,7 +5699,7 @@ function renderCustomer360Panel() {
           </div>
           <div class="relative">
             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-slate-400">ring_volume</span>
-            <input type="text" id="cust-edit-alt-phone" value="${customer.altPhone || customer.alt_phone || ''}" ${isEditing ? '' : 'disabled'} placeholder="Secondary Mobile / Landline" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-medium">
+            <input type="text" id="cust-edit-alt-phone" value="${valAltPhone}" ${isEditing ? '' : 'disabled'} placeholder="Secondary Mobile / Landline" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-medium">
           </div>
         </div>
 
@@ -5686,7 +5717,7 @@ function renderCustomer360Panel() {
         <!-- Delivery Address (Primary) -->
         <div>
           <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Delivery Address:</label>
-          <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Door No, Street, Landmark, City, Pincode" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${customer.address || ''}</textarea>
+          <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Door No, Street, Landmark, City, Pincode" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${valAddress}</textarea>
         </div>
 
         <!-- Alternative Delivery Address -->
@@ -5698,7 +5729,7 @@ function renderCustomer360Panel() {
             </label>
             <span class="text-[9px] text-blue-700 font-bold bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded">Secondary</span>
           </div>
-          <textarea id="cust-edit-alt-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Alternative delivery address, office address, or hometown..." class="w-full ${isEditing ? 'bg-blue-50/40 border-blue-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${customer.altAddress || customer.alt_address || ''}</textarea>
+          <textarea id="cust-edit-alt-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Alternative delivery address, office address, or hometown..." class="w-full ${isEditing ? 'bg-blue-50/40 border-blue-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${valAltAddress}</textarea>
         </div>
 
         <!-- Customer Mindset & Records Notes Field -->
@@ -5710,7 +5741,7 @@ function renderCustomer360Panel() {
             </label>
             <span class="text-[9px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">Mindset Log</span>
           </div>
-          <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions..." class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${customer.notes || ''}</textarea>
+          <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions..." class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${valNotes}</textarea>
         </div>
 
         <!-- Action Buttons (Locked vs Editing) -->
@@ -6600,6 +6631,17 @@ function renderCustomer360Panel() {
       </div>
     </div>
   `;
+
+  // Restore focus and cursor position to active field if re-rendered during editing
+  if (draft && draft.focusedId) {
+    const el = document.getElementById(draft.focusedId);
+    if (el) {
+      el.focus();
+      if (typeof draft.selStart === 'number' && typeof draft.selEnd === 'number' && el.setSelectionRange) {
+        try { el.setSelectionRange(draft.selStart, draft.selEnd); } catch (e) {}
+      }
+    }
+  }
 }
 
 // Dedicated Admin & Staff Internal Notes Controllers
@@ -10295,7 +10337,7 @@ function initOrderModal(customer, items) {
     codUpiId: '',
     codScreenshot: null,
     codScreenshotName: '',
-    shippingAddress: customer.address || 'No. 45, Gandhi Road, Chennai - 600020'
+    shippingAddress: (customer.address && customer.address !== 'Online WhatsApp Customer') ? customer.address : ''
   };
 
   const cName = document.getElementById('order-modal-customer-name');
@@ -10308,7 +10350,7 @@ function initOrderModal(customer, items) {
   if (cPhone) cPhone.innerText = customer.whatsapp || customer.phone || '+91 97896 60115';
   if (qId) qId.innerText = query ? query.id : 'Q-2026-AUTO';
   if (cAvatar) cAvatar.innerText = customer.avatar || customer.name.charAt(0);
-  const primaryAddr = customer.address || 'No. 45, Gandhi Road, Chennai - 600020';
+  const primaryAddr = (customer.address && customer.address !== 'Online WhatsApp Customer') ? customer.address : '';
   const altAddr = customer.altAddress || customer.alt_address || '';
   if (addrInput) addrInput.value = primaryAddr;
 
