@@ -212,7 +212,7 @@
             ],
             "actionType": "custom_text",
             "categoryId": null,
-            "replyText": "💳 *Payment Details — {brand_name}*\n\n📱 UPI ID: `grmgarments@upi`\n📲 GPay \/ PhonePe: {business_phone}\n\n🏦 *Bank Transfer:*\nBank: HDFC Bank\nA\/C Name: GRM Garments Hub\nA\/C No: 50200088991122\nIFSC: HDFC0001234\n\n📸 *Please reply with your payment screenshot once paid for immediate dispatch!*",
+            "replyText": "💳 *Payment Details — {brand_name}*\n\n📱 UPI ID: `grmgarments@upi`\n📲 GPay / PhonePe: {business_phone}\n\n🏦 *Bank Transfer:*\nBank: HDFC Bank\nA/C Name: GRM Garments Hub\nA/C No: 50200088991122\nIFSC: HDFC0001234\n\n📸 *Please reply with your payment screenshot once paid for immediate dispatch!*",
             "enabled": true,
             "autoSend": true
         },
@@ -230,7 +230,43 @@
             ],
             "actionType": "custom_text",
             "categoryId": null,
-            "replyText": "🚚 *Shipping & Delivery Information*\n\n⚡ Dispatch: Same day \/ within 24 hours of confirmation\n📦 Courier Partners: ST Courier, Professional Couriers & DTDC\n⏱️ Delivery Time: 2–3 days within South India, 4–5 days Rest of India\n\nLive tracking link will be sent to your WhatsApp upon courier pickup! 📦",
+            "replyText": "🚚 *Shipping & Delivery Information*\n\n⚡ Dispatch: Same day / within 24 hours of confirmation\n📦 Courier Partners: ST Courier, Professional Couriers & DTDC\n⏱️ Delivery Time: 2–3 days within South India, 4–5 days Rest of India\n\nLive tracking link will be sent to your WhatsApp upon courier pickup! 📦",
+            "enabled": true,
+            "autoSend": true
+        },
+        {
+            "id": "rule_1793172582175",
+            "name": "vanakkam",
+            "keywords": [
+                "VanakkaM"
+            ],
+            "actionType": "custom_text",
+            "categoryId": null,
+            "replyText": "jehuiemuieiome;ol;qwo,,po",
+            "enabled": true,
+            "autoSend": true
+        },
+        {
+            "id": "rule_1793171996880",
+            "name": "hiiiii",
+            "keywords": [
+                "hello"
+            ],
+            "actionType": "custom_text",
+            "categoryId": null,
+            "replyText": "jnndsjlmjiskol,wop,,wo'ewppep[qwep[",
+            "enabled": true,
+            "autoSend": true
+        },
+        {
+            "id": "rule_1793165523488",
+            "name": "hiiii",
+            "keywords": [
+                "hi Dear customer"
+            ],
+            "actionType": "custom_text",
+            "categoryId": null,
+            "replyText": "jsjhuijmkeikmewio;lek,powl;",
             "enabled": true,
             "autoSend": true
         }

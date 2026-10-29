@@ -285,302 +285,8 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
   customers: [],
   queries: [],
   conversations: {},
-  orders: [
-    {
-      id: 'WA-2026-001126',
-      queryId: 'Q-2026-001245',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      customerPhone: '+91 98401 23456',
-      shippingAddress: '42, 3rd Cross Street, Gandhinagar, Adyar, Chennai - 600020',
-      items: [{ name: 'Baby Cotton Frock (Pink / 2-3Y)', sku: 'BF-001-PNK-2Y', qty: 2, price: 599 }],
-      grandTotal: 1198.00,
-      codAdvance: 0,
-      codBalanceDue: 0,
-      paymentMethod: 'ONLINE_UPI',
-      paymentStatus: 'PAID',
-      upiTransactionId: 'UPI-2026-9882103984',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'PLACED',
-      staffId: 'staff_01',
-      staffName: 'Priya Sharma',
-      createdBy: 'Priya Sharma',
-      createdAt: '2026-10-27 10:15:00'
-    },
-    {
-      id: 'WA-2026-001127',
-      queryId: 'Q-2026-001246',
-      customerId: 'cust_102',
-      customerName: 'Ananya Sharma',
-      customerPhone: '+91 98765 43210',
-      shippingAddress: 'Flat 4B, Lotus Apartments, 100 Feet Rd, Indiranagar, Bengaluru - 560038',
-      items: [{ name: 'Maternity Feeding Kurtis (Teal / L)', sku: 'MD-102-TEA-L', qty: 2, price: 949 }],
-      grandTotal: 1898.00,
-      codAdvance: 200,
-      codBalanceDue: 1698.00,
-      paymentMethod: 'COD',
-      paymentStatus: 'ADVANCE_PAID',
-      upiTransactionId: 'UPI-2026-4433221100',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'PACKED',
-      staffId: 'staff_02',
-      staffName: 'Rahul Verma',
-      createdBy: 'Rahul Verma',
-      createdAt: '2026-10-26 14:30:00'
-    },
-    {
-      id: 'WA-2026-001128',
-      queryId: 'Q-2026-001247',
-      customerId: 'cust_103',
-      customerName: 'Kavitha Ramachandran',
-      customerPhone: '+91 94441 55667',
-      shippingAddress: '12, Saravana Street, T. Nagar, Chennai - 600017',
-      items: [{ name: 'Pure Cotton Rompers Set (3-Pack / 6M)', sku: 'RP-003-AST-6M', qty: 3, price: 599 }],
-      grandTotal: 1797.00,
-      codAdvance: 0,
-      codBalanceDue: 0,
-      paymentMethod: 'ONLINE_UPI',
-      paymentStatus: 'PAID',
-      upiTransactionId: 'UPI-2026-7788990011',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'SHIPPED',
-      staffId: 'staff_01',
-      staffName: 'Priya Sharma',
-      createdBy: 'Priya Sharma',
-      trackingNumber: 'DELHIVERY-778899221',
-      courierName: 'Delhivery Express',
-      createdAt: '2026-10-25 11:20:00'
-    },
-    {
-      id: 'WA-2026-001129',
-      queryId: 'Q-2026-001248',
-      customerId: 'cust_104',
-      customerName: 'SugunaMani',
-      customerPhone: '+91 98410 88990',
-      shippingAddress: '55, Anna Nagar West, Madurai - 625020',
-      items: [{ name: 'Anarkali Feeding Maternity Kurti (Navy / XL)', sku: 'MK-204-NVY-XL', qty: 2, price: 749 }],
-      grandTotal: 1498.00,
-      codAdvance: 200,
-      codBalanceDue: 1298.00,
-      paymentMethod: 'COD',
-      paymentStatus: 'ADVANCE_PAID',
-      upiTransactionId: 'UPI-2026-5566443322',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'SHIPPED',
-      staffId: 'staff_02',
-      staffName: 'Rahul Verma',
-      createdBy: 'Rahul Verma',
-      trackingNumber: 'DTDC-992233441',
-      courierName: 'DTDC Courier',
-      createdAt: '2026-10-24 16:45:00'
-    },
-    {
-      id: 'WA-2026-001130',
-      queryId: 'Q-2026-001249',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      customerPhone: '+91 98401 23456',
-      shippingAddress: '42, 3rd Cross Street, Gandhinagar, Adyar, Chennai - 600020',
-      items: [{ name: 'Kids Organic Cotton Sleepsuits (Yellow / 1Y)', sku: 'SS-101-YLW-1Y', qty: 2, price: 799 }],
-      grandTotal: 1598.00,
-      codAdvance: 0,
-      codBalanceDue: 0,
-      paymentMethod: 'ONLINE_UPI',
-      paymentStatus: 'PAID',
-      upiTransactionId: 'UPI-2026-1122334455',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'DELIVERED',
-      staffId: 'staff_03',
-      staffName: 'Sneha Patel',
-      createdBy: 'Sneha Patel',
-      trackingNumber: 'BLUE-DART-8822991',
-      courierName: 'Blue Dart Surface',
-      createdAt: '2026-10-22 09:30:00'
-    },
-    {
-      id: 'WA-2026-001131',
-      queryId: 'Q-2026-001250',
-      customerId: 'cust_102',
-      customerName: 'Ananya Sharma',
-      customerPhone: '+91 98765 43210',
-      shippingAddress: 'Flat 4B, Lotus Apartments, 100 Feet Rd, Indiranagar, Bengaluru - 560038',
-      items: [{ name: 'Baby Cotton Romper & Cap Set (Sky Blue)', sku: 'RP-005-BLU-3M', qty: 3, price: 449 }],
-      grandTotal: 1347.00,
-      codAdvance: 0,
-      codBalanceDue: 0,
-      paymentMethod: 'ONLINE_UPI',
-      paymentStatus: 'PAID',
-      upiTransactionId: 'UPI-2026-9900112233',
-      paymentScreenshot: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=60',
-      orderStatus: 'DELIVERED',
-      staffId: 'staff_03',
-      staffName: 'Sneha Patel',
-      createdBy: 'Sneha Patel',
-      trackingNumber: 'DELHIVERY-334455667',
-      courierName: 'Delhivery Express',
-      createdAt: '2026-10-20 15:10:00'
-    }
-  ],
-  auditLogs: [],
-  followups: [
-    {
-      id: 'FU-2026-0001',
-      queryId: 'Q-2026-001245',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      assignedTo: 'staff_01',
-      date: new Date().toISOString().split('T')[0],
-      time: '11:30 AM',
-      reason: 'Customer asked to confirm pure cotton frock BF-001 pink size availability for 2-year-old before ordering.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'HIGH',
-      channel: 'WHATSAPP',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0002',
-      queryId: 'Q-2026-001246',
-      customerId: 'cust_102',
-      customerName: 'Ananya Sharma',
-      assignedTo: 'staff_02',
-      date: new Date().toISOString().split('T')[0],
-      time: '04:00 PM',
-      reason: 'Call to discuss feeding gown MD-102 fabric details & COD shipping options to Bengaluru.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'URGENT',
-      channel: 'CALL',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0003',
-      queryId: 'Q-2026-001247',
-      customerId: 'cust_103',
-      customerName: 'Kavitha Ramachandran',
-      assignedTo: 'staff_03',
-      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      time: '10:00 AM',
-      reason: 'Follow up regarding wholesale 25-piece bulk frock lot inquiry and payment quotation.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'NORMAL',
-      channel: 'CALL',
-      createdAt: new Date(Date.now() - 86400000).toISOString()
-    },
-    {
-      id: 'FU-2026-0004',
-      queryId: 'Q-2026-001248',
-      customerId: 'cust_104',
-      customerName: 'Lakshmi Narayanan',
-      assignedTo: 'staff_01',
-      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      time: '02:30 PM',
-      reason: 'Check if customer received catalog photos of newborn 5-piece gift sets & organic cotton swaddles.',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'NORMAL',
-      channel: 'WHATSAPP',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0005',
-      queryId: 'Q-2026-001249',
-      customerId: 'cust_105',
-      customerName: 'Deepa Krishnan',
-      assignedTo: 'staff_03',
-      date: new Date().toISOString().split('T')[0],
-      time: '09:30 AM',
-      reason: 'Pattu Pavadai festive silk set size 4-5 years price and delivery confirmation.',
-      status: 'COMPLETED',
-      outcome: 'ORDER_PLACED',
-      priority: 'HIGH',
-      channel: 'WHATSAPP',
-      outcomeNotes: 'Customer confirmed order #ORD-2026-0881 via UPI advance payment.',
-      completedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0006',
-      queryId: 'Q-2026-001250',
-      customerId: 'cust_106',
-      customerName: 'Ramesh Babu',
-      assignedTo: 'staff_02',
-      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      time: '03:00 PM',
-      reason: 'Bulk wholesale inquiry for 50-piece newborn rompers box.',
-      status: 'COMPLETED',
-      outcome: 'LOST',
-      priority: 'LOW',
-      channel: 'CALL',
-      outcomeNotes: 'Client postponed purchase until next season.',
-      completedAt: new Date(Date.now() - 86400000).toISOString(),
-      createdAt: new Date(Date.now() - 172800000).toISOString()
-    },
-    {
-      id: 'FU-2026-0007',
-      queryId: 'Q-2026-001251',
-      customerId: 'cust_101',
-      customerName: 'Priya Sundaram',
-      assignedTo: 'staff_01',
-      date: new Date().toISOString().split('T')[0],
-      time: '05:00 PM',
-      reason: 'Awaiting GPay ₹2,450 for 3x Pure Cotton Baby Frocks (BF-001 Pink & Yellow)',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'HIGH',
-      channel: 'WHATSAPP',
-      isPaymentPending: true,
-      paymentAmount: 2450.00,
-      paymentMode: 'UPI',
-      paymentDueDate: new Date().toISOString().split('T')[0],
-      paymentNotes: 'Customer promised to pay via GPay after 6 PM today',
-      quotedItems: '3x Pure Cotton Frocks (Size 2Y)',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0008',
-      queryId: 'Q-2026-001252',
-      customerId: 'cust_104',
-      customerName: 'Lakshmi Narayanan',
-      assignedTo: 'staff_01',
-      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      time: '01:00 PM',
-      reason: 'Bank transfer advance ₹4,800 for 5-Piece Organic Gift Sets',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'NORMAL',
-      channel: 'WHATSAPP',
-      isPaymentPending: true,
-      paymentAmount: 4800.00,
-      paymentMode: 'BANK',
-      paymentDueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      paymentNotes: 'IMPS/NEFT confirmation pending from customer accounts team',
-      quotedItems: '4x Organic Newborn Gift Sets',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'FU-2026-0009',
-      queryId: 'Q-2026-001253',
-      customerId: 'cust_103',
-      customerName: 'Kavitha Ramachandran',
-      assignedTo: 'staff_03',
-      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      time: '11:00 AM',
-      reason: 'Overdue COD Advance ₹1,200 for Festive Pattu Pavadai',
-      status: 'PENDING',
-      outcome: 'PENDING',
-      priority: 'URGENT',
-      channel: 'CALL',
-      isPaymentPending: true,
-      paymentAmount: 1200.00,
-      paymentMode: 'COD_ADVANCE',
-      paymentDueDate: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      paymentNotes: 'Promised yesterday, pending advance confirmation for COD dispatch',
-      quotedItems: 'Festive Pattu Pavadai (4-5 Years)',
-      createdAt: new Date(Date.now() - 86400000).toISOString()
-    }
-  ],
+  orders: [],
+  followups: [],
   categories: [
     { id: 1, name: 'Baby Collection', slug: 'baby_collection', icon: 'child_care', description: 'Pure cotton frocks, rompers & soft babywear (0–3 Years)' },
     { id: 2, name: 'Maternity & Feeding', slug: 'maternity_wear', icon: 'pregnant_woman', description: 'Feeding kurtis, maxi gowns & maternity comfort dresses' },
@@ -2377,38 +2083,111 @@ function initCRMState() {
     .catch(() => { }); // Bridge may not be running — fail silently
 
 
-  // Asynchronously synchronize garment products, catalog taxonomy & stock from database
+  // Asynchronously synchronize entire CRM database state dynamically from MySQL
   fetch('api.php?action=get_all')
     .then(r => r.json())
     .then(res => {
       const data = res.data || res;
-      if (data && data.products && Array.isArray(data.products)) {
+      if (!data) return;
+
+      // 1. Products & Inventory
+      if (data.products && Array.isArray(data.products)) {
         mergeCatalogProductsWithDB(data.products);
       }
 
-      if (data && data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+      // 2. Taxonomy & Catalog Attributes
+      if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
         CRM_STATE.categories = data.categories;
       }
-      if (data && data.subcategories && Array.isArray(data.subcategories) && data.subcategories.length > 0) {
+      if (data.subcategories && Array.isArray(data.subcategories) && data.subcategories.length > 0) {
         CRM_STATE.subcategories = data.subcategories;
       }
-      if (data && data.attributes) {
+      if (data.attributes) {
         CRM_STATE.attributes = data.attributes;
       }
-      if (data && data.queries && Array.isArray(data.queries) && data.queries.length > 0) {
-        if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
-        data.queries.forEach(dbQ => {
-          const localQ = CRM_STATE.queries.find(q => q.id === dbQ.id || q.customerId === dbQ.customer_id);
-          if (localQ) {
-            if (dbQ.status) localQ.status = dbQ.status;
-            if (dbQ.assigned_to) localQ.assignedTo = dbQ.assigned_to;
-            if (dbQ.status_notes !== undefined && dbQ.status_notes !== null) localQ.statusNotes = dbQ.status_notes;
-          }
-        });
+
+      // 3. Customers (Dynamic database sync)
+      if (data.customers && Array.isArray(data.customers) && data.customers.length > 0) {
+        CRM_STATE.customers = data.customers.map(c => ({
+          id: c.id,
+          code: c.code || '',
+          name: c.name || 'Customer',
+          phone: c.phone || '',
+          whatsapp: c.whatsapp || c.phone || '',
+          customerType: c.customer_type || c.customerType || 'Live WhatsApp Lead',
+          address: c.address || '',
+          email: c.email || '',
+          gender: c.gender || '',
+          age: c.age || '',
+          notes: c.notes || '',
+          tags: Array.isArray(c.tags) ? c.tags : (typeof c.tags === 'string' ? (JSON.parse(c.tags || '[]') || []) : []),
+          totalOrders: parseInt(c.total_orders || c.totalOrders || 0),
+          totalSpend: parseFloat(c.total_spend || c.totalSpend || 0),
+          isDND: Boolean(c.is_dnd || c.isDND),
+          dndReason: c.dnd_reason || '',
+          dndNotes: c.dnd_notes || '',
+          dndMarkedBy: c.dnd_marked_by || '',
+          dndTimestamp: c.dnd_timestamp || '',
+          createdAt: c.created_at || '',
+          avatar: (c.name ? c.name.slice(0, 2) : 'CU').toUpperCase()
+        }));
       }
 
-      if (data && data.followups && Array.isArray(data.followups) && data.followups.length > 0) {
-        const dbFollowups = data.followups.map(fu => ({
+      // 4. Orders (Dynamic database sync)
+      if (data.orders && Array.isArray(data.orders)) {
+        CRM_STATE.orders = data.orders.map(o => ({
+          id: o.id,
+          queryId: o.queryId || o.query_id || '',
+          customerId: o.customerId || o.customer_id || '',
+          customerName: o.customerName || o.customer_name || 'Customer',
+          customerPhone: o.customerPhone || o.customer_phone || '',
+          shippingAddress: o.shippingAddress || o.shipping_address || '',
+          items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
+          grandTotal: parseFloat(o.grandTotal || o.grand_total || 0),
+          codAdvance: parseFloat(o.codAdvance || o.cod_advance || 0),
+          codBalanceDue: parseFloat(o.codBalanceDue || o.cod_balance_due || 0),
+          paymentMethod: o.paymentMethod || o.payment_method || 'COD',
+          paymentStatus: o.paymentStatus || o.payment_status || 'PENDING',
+          upiTransactionId: o.upiTransactionId || o.upi_transaction_id || '',
+          paymentScreenshot: o.paymentScreenshot || o.payment_screenshot || '',
+          orderStatus: o.orderStatus || o.order_status || 'PLACED',
+          staffId: o.staffId || o.staff_id || 'staff_01',
+          staffName: o.staffName || o.staff_name || 'Staff',
+          createdBy: o.createdBy || o.created_by || 'Staff',
+          trackingNumber: o.trackingNumber || o.tracking_number || '',
+          courierName: o.courierName || o.courier_name || '',
+          createdAt: o.createdAt || o.created_at || ''
+        }));
+      }
+
+      // 5. Customer Enquiries & Leads (Dynamic database sync)
+      if (data.queries && Array.isArray(data.queries) && data.queries.length > 0) {
+        CRM_STATE.queries = data.queries.map(q => ({
+          id: q.id,
+          customerId: q.customerId || q.customer_id || '',
+          assignedTo: q.assignedTo || q.assigned_to || 'UNASSIGNED',
+          status: q.status || 'NEW',
+          priority: q.priority || 'NORMAL',
+          queryText: q.queryText || q.query_text || '',
+          statusNotes: q.statusNotes !== undefined ? q.statusNotes : (q.status_notes || ''),
+          isPaymentPending: Boolean(q.isPaymentPending || q.is_payment_pending),
+          paymentAmount: parseFloat(q.paymentAmount || q.payment_amount || 0),
+          shippingAmount: parseFloat(q.shippingAmount || q.shipping_amount || 0),
+          paymentMode: q.paymentMode || q.payment_mode || 'UPI',
+          advancePayment: parseFloat(q.advancePayment || q.advance_payment || 0),
+          paymentDueDate: q.paymentDueDate || q.payment_due_date || '',
+          paymentNotes: q.paymentNotes || q.payment_notes || '',
+          quotedItems: q.quotedItems || q.quoted_items || '',
+          callbackDate: q.callbackDate || q.callback_date || '',
+          callbackTime: q.callbackTime || q.callback_time || '11:00 AM',
+          statusHistory: Array.isArray(q.statusHistory) ? q.statusHistory : (typeof q.status_history === 'string' ? (JSON.parse(q.status_history || '[]') || []) : []),
+          createdAt: q.createdAt || q.created_at || ''
+        }));
+      }
+
+      // 6. Follow-ups (Dynamic database sync)
+      if (data.followups && Array.isArray(data.followups) && data.followups.length > 0) {
+        CRM_STATE.followups = data.followups.map(fu => ({
           id: fu.id,
           queryId: fu.queryId || fu.query_id || '',
           customerId: fu.customerId || fu.customer_id || '',
@@ -2432,42 +2211,85 @@ function initCRMState() {
           paymentNotes: fu.paymentNotes || fu.payment_notes || '',
           quotedItems: fu.quotedItems || fu.quoted_items || ''
         }));
+      }
 
-        // Safely merge DB follow-ups with local follow-ups so active customer records are NEVER destroyed on refresh
-        const localFollowups = Array.isArray(CRM_STATE.followups) ? CRM_STATE.followups : [];
-        const mergedFollowups = [...dbFollowups];
-        localFollowups.forEach(locFu => {
-          if (!locFu) return;
-          const matchIndex = mergedFollowups.findIndex(m => m && (m.id === locFu.id || (m.customerId && locFu.customerId && String(m.customerId) === String(locFu.customerId) && m.status === 'PENDING' && locFu.status === 'PENDING')));
-          if (matchIndex < 0) {
-            mergedFollowups.unshift(locFu);
-          } else {
-            // Keep richer local data if present
-            mergedFollowups[matchIndex] = { ...mergedFollowups[matchIndex], ...locFu };
+      // 7. Staff Management (Dynamic database sync)
+      if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
+        CRM_STATE.staffList = data.staffList.map(s => ({
+          id: s.id,
+          name: s.name,
+          role: s.role,
+          avatar: s.avatar || (s.name ? s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'ST'),
+          activeQueries: parseInt(s.active_queries || s.activeQueries || 0),
+          converted: parseInt(s.converted || 0),
+          dailyQuota: parseInt(s.daily_quota || s.dailyQuota || 70),
+          todayHandled: parseInt(s.today_handled || s.todayHandled || 0),
+          email: s.email || '',
+          phone: s.phone || '',
+          specialization: s.specialization || s.role || 'Sales Specialist',
+          status: s.status || 'ACTIVE'
+        }));
+      }
+
+      // 8. Conversations & Message History
+      if (data.conversations && typeof data.conversations === 'object') {
+        CRM_STATE.conversations = data.conversations;
+      }
+
+      // 9. DND Suppression Records
+      if (data.dndRecords && Array.isArray(data.dndRecords)) {
+        CRM_STATE.dndRecords = data.dndRecords;
+      }
+
+      // 10. Auto-reply Rules
+      if (data.autoReplyRules && Array.isArray(data.autoReplyRules) && data.autoReplyRules.length > 0) {
+        CRM_STATE.autoReplyRules = data.autoReplyRules;
+      }
+
+      // 11. Broadcast Templates
+      if (data.broadcastTemplates && Array.isArray(data.broadcastTemplates) && data.broadcastTemplates.length > 0) {
+        CRM_STATE.broadcastTemplates = data.broadcastTemplates;
+        data.broadcastTemplates.forEach(bt => {
+          if (typeof BROADCAST_PRESETS_DATA !== 'undefined') {
+            BROADCAST_PRESETS_DATA[bt.id] = {
+              label: bt.name,
+              text: bt.body_text,
+              category: bt.category
+            };
           }
         });
-        CRM_STATE.followups = mergedFollowups;
-        if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
-        if (ACTIVE_VIEW === 'followups' && typeof filterFollowupsCards === 'function') filterFollowupsCards();
-      } else if (!CRM_STATE.followups || CRM_STATE.followups.length === 0) {
-        CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
-        if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
-        if (ACTIVE_VIEW === 'followups' && typeof filterFollowupsCards === 'function') filterFollowupsCards();
       }
 
-      if (typeof populateCatalogCategoryFilters === 'function') {
-        populateCatalogCategoryFilters();
+      // 12. Audit Logs
+      if (data.auditLogs && Array.isArray(data.auditLogs) && data.auditLogs.length > 0) {
+        CRM_STATE.auditLogs = data.auditLogs;
       }
-      if (typeof populateProductFormCategories === 'function') {
-        populateProductFormCategories();
-      }
-      if (ACTIVE_VIEW === 'catalog') filterCatalogGrid();
-      updateOrderProductDropdown();
+
+      // Update UI components dynamically to reflect live database state
+      if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
+      if (typeof populateProductFormCategories === 'function') populateProductFormCategories();
+      if (ACTIVE_VIEW === 'catalog' && typeof filterCatalogGrid === 'function') filterCatalogGrid();
+      if (typeof updateOrderProductDropdown === 'function') updateOrderProductDropdown();
+      if (typeof renderOrdersModule === 'function') renderOrdersModule();
+      if (typeof renderCustomersGrid === 'function') renderCustomersGrid();
+      if (typeof renderCustomersTable === 'function') renderCustomersTable();
+      if (typeof renderInbox === 'function') renderInbox();
+      if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+      if (typeof renderStaffCards === 'function') renderStaffCards();
+      if (typeof renderStaffKPIOverview === 'function') renderStaffKPIOverview();
+      if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
+      if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+      if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+      if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+      if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+      if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+      if (typeof renderBroadcastTemplateDropdown === 'function') renderBroadcastTemplateDropdown();
+
       saveCRMState();
     })
     .catch(() => { });
 
-  cleanupAndDeduplicateCRMState();
+    cleanupAndDeduplicateCRMState();
   if (typeof populateCatalogCategoryFilters === 'function') {
     populateCatalogCategoryFilters();
   }
@@ -2844,19 +2666,20 @@ function switchInboxSubmodule(submodule) {
 
   const pTitle = document.getElementById('page-title');
   const pSub = document.getElementById('page-subtitle');
+  const t = window.t || ((k, f) => f || k);
 
   if (submodule === 'chats') {
     if (chatSub) chatSub.classList.remove('hidden');
     if (tabChat) tabChat.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer";
     if (navSubChat) navSubChat.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
-    if (pTitle) pTitle.innerText = 'WhatsApp Inbox & Customer Queue';
-    if (pSub) pSub.innerText = `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`;
+    if (pTitle) pTitle.innerText = t('header.title.inbox_chats', 'WhatsApp Inbox & Customer Queue');
+    if (pSub) pSub.innerText = t('header.sub.inbox_chats', `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`);
   } else if (submodule === 'autoreply') {
     if (autoSub) autoSub.classList.remove('hidden');
     if (tabAuto) tabAuto.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-teal-600 to-emerald-600 text-white cursor-pointer";
     if (navSubAuto) navSubAuto.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-teal-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
-    if (pTitle) pTitle.innerText = 'WhatsApp Inbox — Pre-Set Templates & Auto-Reply Hub';
-    if (pSub) pSub.innerText = 'Configure automated responses, stock catalog links, trigger keywords & smart question answering';
+    if (pTitle) pTitle.innerText = t('header.title.inbox_autoreply', 'WhatsApp Inbox — Pre-Set Templates & Auto-Reply Hub');
+    if (pSub) pSub.innerText = t('header.sub.inbox_autoreply', 'Configure automated responses, stock catalog links, trigger keywords & smart question answering');
 
     if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
     if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
@@ -2864,8 +2687,8 @@ function switchInboxSubmodule(submodule) {
     if (bcastSub) bcastSub.classList.remove('hidden');
     if (tabBcast) tabBcast.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white cursor-pointer";
     if (navSubBcast) navSubBcast.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-purple-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
-    if (pTitle) pTitle.innerText = 'WhatsApp Inbox — Automated Template Broadcast';
-    if (pSub) pSub.innerText = 'Send personalized promotional templates & announcements to customer chats with variable tags';
+    if (pTitle) pTitle.innerText = t('header.title.inbox_broadcast', 'WhatsApp Inbox — Automated Template Broadcast');
+    if (pSub) pSub.innerText = t('header.sub.inbox_broadcast', 'Send personalized promotional templates & announcements to customer chats with variable tags');
 
     if (typeof renderBroadcastTemplateDropdown === 'function') renderBroadcastTemplateDropdown('festive_offer');
     if (typeof applyBroadcastPreset === 'function') applyBroadcastPreset('festive_offer');
@@ -2937,10 +2760,89 @@ function toggleSidebar(forceState) {
       toggleBtn.setAttribute('aria-expanded', 'false');
       toggleBtn.title = 'Open Navigation Sidebar';
     }
-    try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'false'); } catch (e) {}
   }
 }
 window.toggleSidebar = toggleSidebar;
+
+function updatePageHeaderTitle() {
+  const t = window.t || ((k, f) => f || k);
+  const viewName = ACTIVE_VIEW || 'inbox';
+  const titles = {
+    inbox: {
+      title: t('header.title.inbox', 'WhatsApp Inbox & Customer Queue'),
+      sub: t('header.sub.inbox', `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`)
+    },
+    enquiries: {
+      title: t('header.title.enquiries', 'Customer Enquiries & Staff Assignment Hub'),
+      sub: t('header.sub.enquiries', 'Admin control room to distribute new customer leads to staff')
+    },
+    dashboard: {
+      title: t('header.title.dashboard', 'WhatsApp Operations Dashboard'),
+      sub: t('header.sub.dashboard', 'Real-time overview of inquiries, active sessions, and communication health')
+    },
+    catalog: {
+      title: t('header.title.catalog', 'Garment Product Catalog & Live Stock'),
+      sub: t('header.sub.catalog', 'Live available stock calculator and 1-click WhatsApp card sharing')
+    },
+    orders: {
+      title: t('header.title.orders', 'WhatsApp Sales Orders & Reservations'),
+      sub: t('header.sub.orders', 'Direct orders booked from WhatsApp chats with reserved inventory')
+    },
+    followups: {
+      title: t('header.title.followups', 'Customer Follow-up Scheduler'),
+      sub: t('header.sub.followups', 'Automated reminders to prevent lost customer enquiries')
+    },
+    customers: {
+      title: t('header.title.customers', 'Customer 360 & Tag Directory'),
+      sub: t('header.sub.customers', 'Profiles, purchase history, and communication preferences')
+    },
+    dnd: {
+      title: t('header.title.dnd', 'DND & Opt-Out Customer Hub'),
+      sub: t('header.sub.dnd', 'Customers who requested not to receive garment product offers or messages')
+    },
+    staff: {
+      title: t('header.title.staff', 'Staff & Team Management Hub'),
+      sub: t('header.sub.staff', 'Onboard team members, assign operational roles & permissions, and monitor workloads')
+    },
+    audit: {
+      title: t('header.title.audit', 'System Audit Trail & Security Logs'),
+      sub: t('header.sub.audit', 'Tamper-proof record of every staff assignment and order update')
+    },
+    analytics: {
+      title: t('header.title.analytics', 'Staff Performance Analytics & KPIs'),
+      sub: t('header.sub.analytics', 'Factual metrics on response times, volume handled, and conversions')
+    },
+    settings: {
+      title: t('header.title.settings', 'WhatsApp Business Settings & Phone Configuration'),
+      sub: t('header.sub.settings', 'Set your primary WhatsApp Business number for dynamic live message routing')
+    },
+    backup: {
+      title: t('header.title.backup', 'Data Backup & Recovery Hub'),
+      sub: t('header.sub.backup', 'Full database snapshot export, restore, and zero-data-loss protection')
+    }
+  };
+
+  const titleContainer = document.getElementById('header-title-container');
+  const liveQueuePill = document.getElementById('header-live-queue-pill');
+  if (titleContainer) {
+    titleContainer.classList.remove('hidden');
+  }
+  if (liveQueuePill) {
+    if (viewName === 'inbox') {
+      liveQueuePill.classList.remove('hidden');
+    } else {
+      liveQueuePill.classList.add('hidden');
+    }
+  }
+
+  if (titles[viewName]) {
+    const pTitle = document.getElementById('page-title');
+    const pSub = document.getElementById('page-subtitle');
+    if (pTitle) pTitle.innerText = titles[viewName].title;
+    if (pSub) pSub.innerText = titles[viewName].sub;
+  }
+}
+window.updatePageHeaderTitle = updatePageHeaderTitle;
 
 function switchView(viewName, subName) {
   // Clear instant-view-shield if present to allow instant view transitions
@@ -3011,42 +2913,7 @@ function switchView(viewName, subName) {
     }
   }
 
-  // Update Topbar page titles
-  const titles = {
-    inbox: { title: 'WhatsApp Inbox & Customer Queue', sub: `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking` },
-    enquiries: { title: 'Customer Enquiries & Staff Assignment Hub', sub: 'Admin control room to distribute new customer leads to staff' },
-    dashboard: { title: 'WhatsApp Operations Dashboard', sub: 'Real-time overview of inquiries, active sessions, and communication health' },
-    catalog: { title: 'Garment Product Catalog & Live Stock', sub: 'Live available stock calculator and 1-click WhatsApp card sharing' },
-    orders: { title: 'WhatsApp Sales Orders & Reservations', sub: 'Direct orders booked from WhatsApp chats with reserved inventory' },
-    followups: { title: 'Customer Follow-up Scheduler', sub: 'Automated reminders to prevent lost customer enquiries' },
-    customers: { title: 'Customer 360 & Tag Directory', sub: 'Profiles, purchase history, and communication preferences' },
-    dnd: { title: 'DND & Opt-Out Customer Hub', sub: 'Customers who requested not to receive garment product offers or messages' },
-    staff: { title: 'Staff & Team Management Hub', sub: 'Onboard team members, assign operational roles & permissions, and monitor workloads' },
-    audit: { title: 'System Audit Trail & Security Logs', sub: 'Tamper-proof record of every staff assignment and order update' },
-    analytics: { title: 'Staff Performance Analytics & KPIs', sub: 'Factual metrics on response times, volume handled, and conversions' },
-    settings: { title: 'WhatsApp Business Settings & Phone Configuration', sub: 'Set your primary WhatsApp Business number for dynamic live message routing' },
-    backup: { title: 'Data Backup & Recovery Hub', sub: 'Full database snapshot export, restore, and zero-data-loss protection (Section 53)' }
-  };
-
-  const titleContainer = document.getElementById('header-title-container');
-  const liveQueuePill = document.getElementById('header-live-queue-pill');
-  if (titleContainer) {
-    titleContainer.classList.remove('hidden');
-  }
-  if (liveQueuePill) {
-    if (viewName === 'inbox') {
-      liveQueuePill.classList.remove('hidden');
-    } else {
-      liveQueuePill.classList.add('hidden');
-    }
-  }
-
-  if (titles[viewName]) {
-    const pTitle = document.getElementById('page-title');
-    const pSub = document.getElementById('page-subtitle');
-    if (pTitle) pTitle.innerText = titles[viewName].title;
-    if (pSub) pSub.innerText = titles[viewName].sub;
-  }
+  updatePageHeaderTitle();
 
   // Trigger specific view renders
   if (viewName === 'inbox') {
@@ -3524,15 +3391,17 @@ function renderInboxConversationList() {
       }
     }
 
-    let lastText = 'No messages yet';
-    let timeDisplay = query ? query.createdAt : 'Recent';
+    const t = window.t || ((k, f) => f || k);
+    let lastText = t('chat.no_messages', 'No messages yet');
+    let timeDisplay = query ? query.createdAt : t('chat.recent', 'Recent');
     let lastTimeEpoch = lastMsgObj ? (lastMsgObj.id || 0) : 0;
 
     if (lastMsgObj) {
-      lastText = (lastMsgObj.sender === 'staff' ? 'Staff: ' : 'Customer: ') + `"${lastMsgObj.text.substring(0, 38)}..."`;
+      lastText = (lastMsgObj.sender === 'staff' ? t('chat.staff_prefix', 'Staff: ') : t('chat.customer_prefix', 'Customer: ')) + `"${lastMsgObj.text.substring(0, 38)}..."`;
       timeDisplay = lastMsgObj.time || timeDisplay;
     } else if (query) {
-      lastText = query.lastMessage || query.queryText;
+      const qText = query.lastMessage || query.queryText || '';
+      lastText = t('chat.customer_prefix', 'Customer: ') + `"${qText.substring(0, 38)}..."`;
     }
 
     const custAccountId = cust.accountId || (query ? query.accountId : null) || 'account_1';
@@ -3621,18 +3490,18 @@ function renderInboxConversationList() {
 
     // Priority badge
     let priorityBadge = '';
-    if (item.priority === 'URGENT') priorityBadge = `<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-200">URGENT</span>`;
-    else if (item.priority === 'HIGH') priorityBadge = `<span class="bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200">HIGH</span>`;
+    if (item.priority === 'URGENT') priorityBadge = `<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-200">${t('badge.urgent', 'URGENT')}</span>`;
+    else if (item.priority === 'HIGH') priorityBadge = `<span class="bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200">${t('badge.high', 'HIGH')}</span>`;
 
     // Status Badge
     let statusBadge = '';
     const qStatus = item.status || 'NEW';
-    if (qStatus === 'DND' || item.customer?.isDND) statusBadge = `<span class="bg-rose-100 text-rose-900 border border-rose-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">🚫 DND</span>`;
-    else if (qStatus === 'PENDING') statusBadge = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">PENDING</span>`;
-    else if (qStatus === 'FOLLOW_UP') statusBadge = `<span class="bg-blue-100 text-blue-900 border border-blue-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">FOLLOW-UP</span>`;
-    else if (qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED') statusBadge = `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">IN PROGRESS</span>`;
-    else if (qStatus === 'RESOLVED') statusBadge = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">RESOLVED</span>`;
-    else if (qStatus === 'CONVERTED') statusBadge = `<span class="bg-purple-100 text-purple-900 border border-purple-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">CONVERTED</span>`;
+    if (qStatus === 'DND' || item.customer?.isDND) statusBadge = `<span class="bg-rose-100 text-rose-900 border border-rose-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">🚫 ${t('badge.dnd', 'DND')}</span>`;
+    else if (qStatus === 'PAYMENT_PENDING') statusBadge = `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.payment_pending', 'PAYMENT PENDING')}</span>`;
+    else if (qStatus === 'FOLLOW_UP') statusBadge = `<span class="bg-blue-100 text-blue-900 border border-blue-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.follow_up', 'FOLLOW-UP')}</span>`;
+    else if (qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED') statusBadge = `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.in_progress', 'IN PROGRESS')}</span>`;
+    else if (qStatus === 'RESOLVED') statusBadge = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.resolved', 'RESOLVED')}</span>`;
+    else if (qStatus === 'CONVERTED') statusBadge = `<span class="bg-purple-100 text-purple-900 border border-purple-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded">${t('badge.converted', 'CONVERTED')}</span>`;
 
     // Line Badge
     const isLine1Card = (item.accountId === 'account_1');
@@ -3678,13 +3547,13 @@ function renderInboxConversationList() {
 
             <!-- Staff Assignment Tag -->
             ${isUnassigned ? `
-              <button onclick="event.stopPropagation(); openStaffAssignModal('${item.queryId}')" class="text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded-full font-bold shadow-sm flex items-center gap-0.5">
-                <span class="material-symbols-outlined text-[12px]">person_add</span> Assign
+              <button onclick="event.stopPropagation(); openStaffAssignModal('${item.queryId}')" class="text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded-full font-bold shadow-sm flex items-center gap-0.5 cursor-pointer">
+                <span class="material-symbols-outlined text-[12px]">person_add</span> ${t('common.assign', 'Assign')}
               </button>
             ` : `
               <span class="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
                 <span class="material-symbols-outlined text-[12px] text-emerald-600">badge</span>
-                ${item.staff ? item.staff.name.split(' ')[0] : 'Staff'}
+                ${item.staff ? item.staff.name.split(' ')[0] : t('chat.staff_label', 'Staff')}
               </span>
             `}
           </div>
@@ -3792,9 +3661,9 @@ function toggleRightPanel(forceState = null, isUserAction = false) {
       panel.style.display = '';
       panel.classList.remove('hidden');
       panel.classList.add('flex');
-      const savedWidth = localStorage.getItem('GRM_INBOX_RIGHT_WIDTH') || '350';
-      panel.style.width = savedWidth + 'px';
-      panel.style.minWidth = savedWidth + 'px';
+      const savedWidth = localStorage.getItem('GRM_INBOX_RIGHT_WIDTH') || '320';
+      panel.style.width = Math.min(340, parseInt(savedWidth)) + 'px';
+      panel.style.minWidth = Math.min(340, parseInt(savedWidth)) + 'px';
       if (resizer) resizer.style.display = '';
     } else {
       panel.style.display = 'none';
@@ -3804,15 +3673,16 @@ function toggleRightPanel(forceState = null, isUserAction = false) {
     }
   }
 
+  const t = window.t || ((k, f) => f || k);
   if (toggleBtn) {
     if (IS_RIGHT_PANEL_OPEN) {
       toggleBtn.className = "px-2 sm:px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-emerald-100 shrink-0";
-      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_right</span><span class="hidden xl:inline">Hide Profile</span>`;
-      toggleBtn.title = "Minimize Customer Profile Panel";
+      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_right</span><span class="hidden xl:inline">${t('customer.hide_profile', 'Hide Profile')}</span>`;
+      toggleBtn.title = t('customer.hide_profile', 'Hide Profile');
     } else {
       toggleBtn.className = "px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1 shadow-sm transition hover:bg-slate-200 shrink-0";
-      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_left</span><span class="hidden xl:inline">Customer Profile</span>`;
-      toggleBtn.title = "Expand Customer Profile Panel";
+      toggleBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">dock_to_left</span><span class="hidden xl:inline">${t('customer.profile', 'Profile')}</span>`;
+      toggleBtn.title = t('customer.profile', 'Profile');
     }
   }
 
@@ -3848,13 +3718,15 @@ function initPanelResizers() {
   try {
     const savedLeftWidth = localStorage.getItem('GRM_INBOX_LEFT_WIDTH');
     if (savedLeftWidth && leftPanel && parseInt(savedLeftWidth) > 160) {
-      leftPanel.style.width = savedLeftWidth + 'px';
-      leftPanel.style.minWidth = savedLeftWidth + 'px';
+      const lW = Math.min(320, parseInt(savedLeftWidth));
+      leftPanel.style.width = lW + 'px';
+      leftPanel.style.minWidth = lW + 'px';
     }
     const savedRightWidth = localStorage.getItem('GRM_INBOX_RIGHT_WIDTH');
     if (savedRightWidth && rightPanel && parseInt(savedRightWidth) > 200) {
-      rightPanel.style.width = savedRightWidth + 'px';
-      rightPanel.style.minWidth = savedRightWidth + 'px';
+      const rW = Math.min(340, parseInt(savedRightWidth));
+      rightPanel.style.width = rW + 'px';
+      rightPanel.style.minWidth = rW + 'px';
     }
     const savedSidebarWidth = localStorage.getItem('GRM_APP_SIDEBAR_WIDTH');
     if (savedSidebarWidth && appSidebar && parseInt(savedSidebarWidth) > 160) {
@@ -4076,8 +3948,10 @@ function renderChatHeader() {
   const staff = query ? (CRM_STATE.staffList || []).find(s => s && (s.id === query.assignedTo || String(s.id) === String(query.assignedTo))) : null;
   const isUnassigned = query && (query.assignedTo === 'UNASSIGNED' || !query.assignedTo);
 
+  const t = window.t || ((k, f) => f || k);
+
   if (!customer) {
-    bar.innerHTML = `<p class="text-xs text-slate-400">Select a conversation to start chatting</p>`;
+    bar.innerHTML = `<p class="text-xs text-slate-400">${t('chat.select_conversation', 'Select a conversation to start chatting')}</p>`;
     return;
   }
 
@@ -4092,10 +3966,10 @@ function renderChatHeader() {
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-1.5 min-w-0">
           <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate" title="${customer.name}">${customer.name}</h3>
-          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0 hidden sm:inline-block">${customer.customerType}</span>
+          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0 hidden md:inline-block">${customer.customerType || t('common.customer', 'Customer')}</span>
         </div>
-        <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium truncate mt-0.5">
-          <span class="font-mono text-emerald-700 font-bold truncate">${displayPhone}</span>
+        <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5">
+          <span class="font-mono text-emerald-700 font-bold text-[11px] whitespace-nowrap">${displayPhone}</span>
         </div>
       </div>
     </div>
@@ -4103,24 +3977,24 @@ function renderChatHeader() {
     <!-- Actions & Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
       ${isUnassigned ? `
-        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2 sm:px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 animate-pulse shrink-0" title="Assign Staff Member">
+        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2 sm:px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="${t('common.assign', 'Assign')}">
           <span class="material-symbols-outlined text-[15px]">person_add</span>
-          <span class="hidden lg:inline">Assign</span>
+          <span class="hidden sm:inline">${t('common.assign', 'Assign')}</span>
         </button>
       ` : `
-        <div class="hidden xl:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0">
-          <span class="text-slate-500 hidden 2xl:inline">Handled by:</span>
-          <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : 'Assigned'}</span>
+        <div class="hidden lg:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0" title="${t('chat.staff', 'Staff:')} ${staff ? staff.name : t('common.assigned', 'Assigned')}">
+          <span class="text-slate-500 hidden xl:inline">${t('chat.staff', 'Staff:')}</span>
+          <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : t('chat.staff_label', 'Staff')}</span>
           ${ACTIVE_ROLE === 'admin' ? `
-            <button onclick="openStaffAssignModal('${query ? query.id : ''}')" class="text-brand-wa hover:underline font-bold text-[11px] ml-1">Reassign</button>
+            <button onclick="openStaffAssignModal('${query ? query.id : ''}')" class="text-brand-wa hover:underline font-bold text-[10px] ml-0.5 cursor-pointer">${t('common.reassign', 'Reassign')}</button>
           ` : ''}
         </div>
       `}
       
       <!-- BRAND-MASKED WHATSAPP CALL BUTTON -->
-      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98] shrink-0" title="Call customer via Brand Masked Line (Customer receives call as: ${getBrandName()})">
+      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="${t('customer.call_via', 'Call via')} ${getBrandName()}">
         <span class="material-symbols-outlined text-[15px]">call</span>
-        <span class="hidden 2xl:inline">Brand Call</span>
+        <span class="hidden xl:inline">${t('common.call', 'Call')}</span>
       </button>
 
       <a href="https://wa.me/${(customer.phone || '').replace(/[^0-9]/g, '')}" target="_blank" class="p-1.5 text-slate-600 hover:text-brand-wa hover:bg-emerald-50 rounded-lg transition shrink-0" title="Open Native WhatsApp Web">
@@ -4128,9 +4002,9 @@ function renderChatHeader() {
       </a>
 
       <!-- Slide Hide / Show Toggle Button for Customer Profile Panel -->
-      <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel(null, true)" class="px-2 sm:px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition shrink-0" title="Slide Hide / Show Customer Profile Panel">
+      <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel(null, true)" class="px-2 sm:px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition shrink-0 cursor-pointer" title="${IS_RIGHT_PANEL_OPEN ? t('customer.hide_profile', 'Hide Profile') : t('customer.profile', 'Profile')}">
         <span class="material-symbols-outlined text-[16px]">${IS_RIGHT_PANEL_OPEN ? 'dock_to_right' : 'dock_to_left'}</span>
-        <span class="hidden xl:inline">${IS_RIGHT_PANEL_OPEN ? 'Hide Profile' : 'Profile'}</span>
+        <span class="hidden sm:inline">${IS_RIGHT_PANEL_OPEN ? t('customer.hide_profile', 'Hide Profile') : t('customer.profile', 'Profile')}</span>
       </button>
     </div>
   `;
@@ -4144,12 +4018,14 @@ function renderChatMessages() {
 
   const messages = CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] || [];
 
+  const t = window.t || ((k, f) => f || k);
+
   if (messages.length === 0) {
     stream.innerHTML = `
       <div class="h-full flex items-center justify-center text-center text-slate-400">
         <div>
           <span class="material-symbols-outlined text-[40px] text-slate-300">chat</span>
-          <p class="text-xs mt-2">No messages recorded in this chat yet</p>
+          <p class="text-xs mt-2">${t('inbox.no_messages', 'No messages recorded in this chat yet')}</p>
         </div>
       </div>
     `;
@@ -4251,7 +4127,7 @@ function renderChatMessages() {
     <div class="flex justify-center my-2">
       <div class="bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-medium px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
         <span class="material-symbols-outlined text-[14px]">lock</span>
-        <span>Connected to Business Number: <strong>${CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115'}</strong> &bull; GRM Central Record</span>
+        <span>${t('inbox.connected_business', 'Connected to Business Number:')} <strong>${CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115'}</strong> &bull; ${t('inbox.central_record', 'GRM Central Record')}</span>
       </div>
     </div>
     ${filterBannerHtml}
@@ -4261,6 +4137,12 @@ function renderChatMessages() {
     const isAudio = msg.type === 'audio' || (msg.media_url && (msg.media_url.includes('audio') || msg.media_url.startsWith('data:audio') || msg.media_url.includes('.ogg') || msg.media_url.includes('.mp3') || msg.media_url.includes('.m4a'))) || (msg.text && (msg.text.includes('Voice Message') || msg.text.includes('Audio Message')));
     const isImage = msg.type === 'image' || (msg.media_url && (msg.media_url.startsWith('data:image') || msg.media_url.includes('http') || msg.media_url.includes('.png') || msg.media_url.includes('.jpg') || msg.media_url.includes('blob:')));
     const duration = msg.duration || 12;
+
+    window.ACTIVE_CHAT_MESSAGES_MAP = window.ACTIVE_CHAT_MESSAGES_MAP || {};
+    if (msg.text) {
+      window.ACTIVE_CHAT_MESSAGES_MAP[msgId] = msg.text;
+    }
+    const hasText = !!(msg.text && msg.text.trim().length > 0 && msg.text !== '[Photo Attachment]' && !msg.text.includes('Voice Message'));
 
     // Check if this message bubble is a matching product in the live stream
     const msgTextLower = (msg.text || '').toLowerCase();
@@ -4409,11 +4291,28 @@ function renderChatMessages() {
             </div>
           ` : ''}
           ${contentHtml}
-          <div class="flex items-center justify-end gap-1 text-[10px] text-slate-400 pt-0.5">
-            <span>${msg.time}</span>
-            ${isOut ? `
-              <span class="material-symbols-outlined text-[14px] text-brand-wa font-bold">done_all</span>
-            ` : ''}
+          <!-- On-Demand Translation Container -->
+          <div id="trans-box-${msgId}" class="empty:hidden"></div>
+
+          <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400 pt-1 border-t border-slate-100/70 mt-1">
+            <!-- 1-Click On-Demand Translate Button -->
+            ${hasText ? `
+              <button type="button" 
+                      id="btn-trans-${msgId}" 
+                      onclick="toggleTranslateMessage('${msgId}', event)" 
+                      class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 active:scale-95 border border-emerald-200/90 px-1.5 py-0.5 rounded-md transition shadow-2xs cursor-pointer select-none"
+                      title="Translate (மொழிபெயர் 🌐)">
+                <span class="material-symbols-outlined text-[12px] text-emerald-600">translate</span>
+                <span id="btn-trans-text-${msgId}">${getTranslateBtnText()}</span>
+              </button>
+            ` : '<span></span>'}
+
+            <div class="flex items-center gap-1">
+              <span>${msg.time}</span>
+              ${isOut ? `
+                <span class="material-symbols-outlined text-[14px] text-brand-wa font-bold">done_all</span>
+              ` : ''}
+            </div>
           </div>
         </div>
       </div>
@@ -4422,11 +4321,224 @@ function renderChatMessages() {
 
   stream.innerHTML = `<div class="max-w-3xl xl:max-w-4xl mx-auto w-full space-y-3 min-w-0">${messagesContent}</div>`;
 
+  // Auto-restore any currently open translations across re-renders
+  if (window.ACTIVE_MESSAGE_TRANSLATIONS) {
+    Object.keys(window.ACTIVE_MESSAGE_TRANSLATIONS).forEach(mId => {
+      const tLang = window.ACTIVE_MESSAGE_TRANSLATIONS[mId];
+      const raw = window.ACTIVE_CHAT_MESSAGES_MAP ? window.ACTIVE_CHAT_MESSAGES_MAP[mId] : null;
+      const cached = window.MESSAGE_TRANSLATIONS_CACHE ? window.MESSAGE_TRANSLATIONS_CACHE[`${mId}_${tLang}`] : null;
+      if (cached && raw) {
+        setTimeout(() => {
+          renderTranslationBox(mId, raw, cached, tLang);
+        }, 10);
+      }
+    });
+  }
+
   // Auto-scroll to bottom only if no active product filter is focused
   if (!hasActiveFilter) {
     stream.scrollTop = stream.scrollHeight;
   }
 }
+
+// =========================================================================
+// ON-DEMAND MULTI-LANGUAGE MESSAGE TRANSLATION ENGINE (TAMIL, ENGLISH, HINDI, TELUGU, MALAYALAM, KANNADA)
+// =========================================================================
+window.MESSAGE_TRANSLATIONS_CACHE = window.MESSAGE_TRANSLATIONS_CACHE || {};
+window.ACTIVE_MESSAGE_TRANSLATIONS = window.ACTIVE_MESSAGE_TRANSLATIONS || {};
+window.ACTIVE_CHAT_MESSAGES_MAP = window.ACTIVE_CHAT_MESSAGES_MAP || {};
+
+const TRANSLATION_LANGUAGES = [
+  { code: 'ta', label: 'Tamil', native: 'தமிழ்' },
+  { code: 'en', label: 'English', native: 'English' },
+  { code: 'hi', label: 'Hindi', native: 'हिंदी' },
+  { code: 'te', label: 'Telugu', native: 'తెలుగు' },
+  { code: 'ml', label: 'Malayalam', native: 'മലയാളം' },
+  { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ' }
+];
+
+function getTranslateBtnText() {
+  const currentLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage()) 
+    ? getCurrentLanguage().code 
+    : (localStorage.getItem('GRM_APP_LANG') || 'ta');
+    
+  switch (currentLang) {
+    case 'ta': return 'மொழிபெயர் 🌐';
+    case 'hi': return 'अनुवाद 🌐';
+    case 'te': return 'అనువదించు 🌐';
+    case 'ml': return 'വിവർത്തനം 🌐';
+    case 'kn': return 'ಅನುವಾದ 🌐';
+    case 'en': 
+    default:
+      return 'Translate 🌐';
+  }
+}
+
+function getLangNativeName(code) {
+  const found = TRANSLATION_LANGUAGES.find(l => l.code === code);
+  return found ? `${found.native} (${found.label})` : code.toUpperCase();
+}
+
+async function toggleTranslateMessage(msgId, ev) {
+  if (ev) ev.stopPropagation();
+  const box = document.getElementById(`trans-box-${msgId}`);
+  if (!box) return;
+
+  // If already open and visible, clicking again collapses/hides it
+  if (!box.classList.contains('hidden') && box.innerHTML.trim().length > 0 && window.ACTIVE_MESSAGE_TRANSLATIONS[msgId]) {
+    hideMessageTranslation(msgId);
+    return;
+  }
+
+  // Determine target language: default to current CRM language (fallback 'ta')
+  let targetLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage()) 
+    ? getCurrentLanguage().code 
+    : (localStorage.getItem('GRM_APP_LANG') || 'ta');
+
+  await translateMessageToLang(msgId, targetLang);
+}
+
+async function translateMessageToLang(msgId, targetLang) {
+  const box = document.getElementById(`trans-box-${msgId}`);
+  const btn = document.getElementById(`btn-trans-${msgId}`);
+  const rawText = window.ACTIVE_CHAT_MESSAGES_MAP[msgId];
+
+  if (!box || !rawText) return;
+
+  targetLang = targetLang || 'ta';
+  const cacheKey = `${msgId}_${targetLang}`;
+
+  // Check in-memory cache first for instant 0ms rendering
+  if (window.MESSAGE_TRANSLATIONS_CACHE[cacheKey]) {
+    renderTranslationBox(msgId, rawText, window.MESSAGE_TRANSLATIONS_CACHE[cacheKey], targetLang);
+    return;
+  }
+
+  // Show loading indicator
+  box.classList.remove('hidden');
+  box.innerHTML = `
+    <div class="mt-1.5 p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center gap-2 text-slate-500 animate-pulse">
+      <span class="material-symbols-outlined text-[16px] animate-spin text-emerald-600">sync</span>
+      <span class="text-[11px] font-medium">Translating into ${getLangNativeName(targetLang)}...</span>
+    </div>
+  `;
+
+  try {
+    let translatedText = '';
+    
+    // 1. Direct Ultra-Fast Google Translate Client Call (100 - 300ms, zero server delay)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(rawText)}`;
+      const gResp = await fetch(gUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (gResp.ok) {
+        const gData = await gResp.json();
+        if (Array.isArray(gData) && Array.isArray(gData[0])) {
+          translatedText = gData[0].map(s => s[0] || '').join('');
+        }
+      }
+    } catch (gErr) {
+      console.warn('[Translate] Direct fetch bypassed, using backend fallback:', gErr);
+    }
+
+    // 2. High-Speed Backend Fallback if direct fetch is blocked by network
+    if (!translatedText) {
+      try {
+        const resp = await fetch('api.php?action=translate_text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: rawText, target_lang: targetLang })
+        });
+        const data = await resp.json();
+        if (data && data.success && data.translated) {
+          translatedText = data.translated;
+        }
+      } catch (e) {
+        console.warn('[Translate] Backend endpoint error:', e);
+      }
+    }
+
+    if (!translatedText) {
+      throw new Error('Unable to translate message');
+    }
+
+    // Cache the result
+    window.MESSAGE_TRANSLATIONS_CACHE[cacheKey] = translatedText;
+    renderTranslationBox(msgId, rawText, translatedText, targetLang);
+
+  } catch (err) {
+    console.error('[Translate Error]', err);
+    box.innerHTML = `
+      <div class="mt-1.5 p-2 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between">
+        <span class="text-[11px]">Translation failed. Check network connection.</span>
+        <button type="button" onclick="translateMessageToLang('${msgId}', '${targetLang}')" class="text-[10px] font-bold text-rose-800 underline ml-2 cursor-pointer">Retry</button>
+      </div>
+    `;
+  }
+}
+
+function renderTranslationBox(msgId, originalText, translatedText, targetLang) {
+  const box = document.getElementById(`trans-box-${msgId}`);
+  if (!box) return;
+
+  window.ACTIVE_MESSAGE_TRANSLATIONS[msgId] = targetLang;
+  box.classList.remove('hidden');
+
+  const langButtonsHtml = TRANSLATION_LANGUAGES.map(lang => {
+    const isCur = (lang.code === targetLang);
+    const activeClass = isCur 
+      ? 'bg-emerald-700 text-white shadow-2xs font-bold ring-1 ring-emerald-600' 
+      : 'bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 font-medium';
+    return `
+      <button type="button" 
+              onclick="translateMessageToLang('${msgId}', '${lang.code}')" 
+              class="px-1.5 py-0.5 rounded text-[10px] transition cursor-pointer ${activeClass}" 
+              title="Translate to ${lang.label}">
+        ${lang.native}
+      </button>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="mt-1.5 p-2.5 rounded-xl bg-gradient-to-br from-emerald-50/95 via-teal-50/90 to-slate-50 border border-emerald-300/80 shadow-xs space-y-1.5 text-xs text-left">
+      <div class="flex items-center justify-between gap-1 flex-wrap text-[10px]">
+        <div class="flex items-center gap-1 font-bold text-emerald-950">
+          <span class="material-symbols-outlined text-[13px] text-emerald-700">g_translate</span>
+          <span>${getLangNativeName(targetLang)}:</span>
+        </div>
+        
+        <div class="flex items-center gap-1 flex-wrap">
+          ${langButtonsHtml}
+          <button type="button" onclick="hideMessageTranslation('${msgId}')" class="text-slate-400 hover:text-slate-800 ml-1 p-0.5 font-bold hover:scale-110 transition cursor-pointer" title="Close Translation">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-800 font-medium leading-relaxed bg-white/95 p-2 rounded-lg border border-emerald-200/70 shadow-2xs select-text">
+        ${translatedText.replace(/\n/g, '<br>')}
+      </div>
+    </div>
+  `;
+}
+
+function hideMessageTranslation(msgId) {
+  const box = document.getElementById(`trans-box-${msgId}`);
+  if (box) {
+    box.innerHTML = '';
+    box.classList.add('hidden');
+  }
+  delete window.ACTIVE_MESSAGE_TRANSLATIONS[msgId];
+}
+
+// Global Exports
+window.toggleTranslateMessage = toggleTranslateMessage;
+window.translateMessageToLang = translateMessageToLang;
+window.renderTranslationBox = renderTranslationBox;
+window.hideMessageTranslation = hideMessageTranslation;
+window.getTranslateBtnText = getTranslateBtnText;
 
 window.renderChatStream = renderChatMessages;
 
@@ -4770,8 +4882,8 @@ window.playSimulatedVoice = function (msgId) {
 
 // Update Query Status (Pending, Follow-up, In Progress, Converted, Resolved, DND) with optional Notes
 function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData = null, callbackSchedule = null) {
-  const query = CRM_STATE.queries.find(q => q.id === queryId || q.customerId === queryId);
-  const customer = query ? CRM_STATE.customers.find(c => c.id === query.customerId) : CRM_STATE.customers.find(c => c.id === queryId);
+  let query = (CRM_STATE.queries || []).find(q => q && (q.id === queryId || q.customerId === queryId));
+  const customer = query ? (CRM_STATE.customers || []).find(c => c && (c.id === query.customerId || String(c.id) === String(query.customerId))) : (CRM_STATE.customers || []).find(c => c && (c.id === queryId || String(c.id) === String(queryId)));
   if (!query && !customer) return;
 
   const oldStatus = query ? query.status : 'NEW';
@@ -4779,6 +4891,36 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
   const staffName = currentUser ? (currentUser.name || currentUser.username || (ACTIVE_ROLE === 'admin' ? 'Super Admin' : 'Staff')) : (ACTIVE_ROLE === 'admin' ? 'Super Admin' : (CRM_STATE.staffList?.find(s => s.id === ACTIVE_ROLE)?.name || 'Staff'));
   const now = new Date();
   const timeFormatted = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' at ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  // If customer didn't have an existing query entry, instantiate one dynamically
+  if (!query && customer) {
+    const newQId = 'Q-' + now.getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
+    query = {
+      id: newQId,
+      customerId: customer.id,
+      assignedTo: 'UNASSIGNED',
+      status: newStatus,
+      priority: 'NORMAL',
+      queryText: notes || 'WhatsApp Lead Enquiry',
+      statusNotes: notes,
+      isPaymentPending: Boolean(paymentData && paymentData.isPaymentPending),
+      paymentAmount: paymentData && paymentData.isPaymentPending ? parseFloat(paymentData.paymentAmount || 0) : 0,
+      shippingAmount: paymentData && paymentData.isPaymentPending ? parseFloat(paymentData.shippingAmount || 0) : 0,
+      paymentMode: paymentData?.paymentMode || 'UPI',
+      advancePayment: paymentData && paymentData.isPaymentPending ? parseFloat(paymentData.advancePayment || 0) : 0,
+      paymentDueDate: paymentData?.paymentDueDate || '',
+      paymentNotes: paymentData?.paymentNotes || '',
+      quotedItems: paymentData?.quotedItems || '',
+      callback_date: callbackSchedule?.date || '',
+      callback_time: callbackSchedule?.time || '11:00 AM',
+      callbackDate: callbackSchedule?.date || '',
+      callbackTime: callbackSchedule?.time || '11:00 AM',
+      statusHistory: [],
+      createdAt: now.toISOString()
+    };
+    if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+    CRM_STATE.queries.unshift(query);
+  }
 
   if (query) {
     query.status = newStatus;
@@ -4803,6 +4945,8 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
     if (callbackSchedule && callbackSchedule.date) {
       query.callback_date = callbackSchedule.date;
       query.callback_time = callbackSchedule.time || '11:00 AM';
+      query.callbackDate = callbackSchedule.date;
+      query.callbackTime = callbackSchedule.time || '11:00 AM';
     }
     query.statusHistory = query.statusHistory || [];
     const isReschedAction = (oldStatus === 'FOLLOW_UP' && newStatus === 'FOLLOW_UP');
@@ -4843,7 +4987,18 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         phone: customer ? customer.phone : null,
         whatsapp: customer ? customer.whatsapp : null,
         reason: notes || (customer ? customer.dndReason : 'Customer not interested in products (Requested DND)'),
-        dnd_timestamp: timeFormatted
+        dnd_timestamp: timeFormatted,
+        isPaymentPending: query.isPaymentPending,
+        paymentAmount: query.paymentAmount,
+        shippingAmount: query.shippingAmount,
+        paymentMode: query.paymentMode,
+        advancePayment: query.advancePayment,
+        paymentDueDate: query.paymentDueDate,
+        paymentNotes: query.paymentNotes,
+        quotedItems: query.quotedItems,
+        callbackDate: (callbackSchedule && callbackSchedule.date) || query.callback_date || query.callbackDate || '',
+        callbackTime: (callbackSchedule && callbackSchedule.time) || query.callback_time || query.callbackTime || '11:00 AM',
+        statusHistory: query.statusHistory
       })
     }).catch(() => {});
   }
@@ -4938,45 +5093,41 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
   if (newStatus === 'FOLLOW_UP' || newStatus === 'PENDING' || (callbackSchedule && callbackSchedule.date)) {
     if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
     let existingFu = CRM_STATE.followups.find(f => f && (f.customerId === customer?.id || (query && f.queryId === query.id)) && f.status === 'PENDING');
-    const fuReason = notes || query?.queryText || (newStatus === 'FOLLOW_UP' ? 'Customer callback requested' : 'Pending enquiry callback');
-    const isPayPending = Boolean(paymentData && paymentData.isPaymentPending);
-    const payAmt = parseFloat(paymentData?.paymentAmount || 0);
-    const shippingAmt = parseFloat(paymentData?.shippingAmount || 0);
-    const advanceAmt = parseFloat(paymentData?.advancePayment || 0);
-    const payMode = paymentData?.paymentMode || 'UPI';
-    const payDue = paymentData?.paymentDueDate || '';
-    const payNotes = paymentData?.paymentNotes || notes || '';
-    const payItems = paymentData?.quotedItems || '';
+    const fuReason = notes || query?.queryText || (newStatus === 'PENDING' ? 'Payment Pending follow-up' : (newStatus === 'FOLLOW_UP' ? 'Customer callback requested' : 'Customer enquiry callback'));
+    const isPayPending = (newStatus === 'PENDING') || Boolean(paymentData && paymentData.isPaymentPending);
+    const payAmt = isPayPending 
+      ? (parseFloat(paymentData?.paymentAmount || 0) || query?.paymentAmount || existingFu?.paymentAmount || 0) 
+      : 0;
+    const shippingAmt = isPayPending ? (parseFloat(paymentData?.shippingAmount || 0) || query?.shippingAmount || existingFu?.shippingAmount || 0) : 0;
+    const advanceAmt = isPayPending ? (parseFloat(paymentData?.advancePayment || 0) || query?.advancePayment || existingFu?.advancePayment || 0) : 0;
+    const payMode = paymentData?.paymentMode || query?.paymentMode || existingFu?.paymentMode || 'UPI';
+    const payDue = paymentData?.paymentDueDate || callbackSchedule?.date || existingFu?.paymentDueDate || query?.paymentDueDate || '';
+    const payNotes = paymentData?.paymentNotes || notes || existingFu?.paymentNotes || query?.paymentNotes || '';
+    const payItems = paymentData?.quotedItems || existingFu?.quotedItems || query?.quotedItems || '';
 
     if (query) {
-      if (isPayPending) {
-        query.isPaymentPending = true;
-        query.paymentAmount = payAmt;
-        query.shippingAmount = shippingAmt;
-        query.advancePayment = advanceAmt;
-        query.paymentMode = payMode;
-        query.paymentDueDate = payDue;
-        query.paymentNotes = payNotes;
-        query.quotedItems = payItems;
-      } else if (paymentData && paymentData.isPaymentPending === false) {
-        query.isPaymentPending = false;
-      }
+      query.isPaymentPending = isPayPending;
+      query.paymentAmount = payAmt;
+      query.shippingAmount = shippingAmt;
+      query.advancePayment = advanceAmt;
+      query.paymentMode = payMode;
+      query.paymentDueDate = payDue;
+      query.paymentNotes = payNotes;
+      query.quotedItems = payItems;
     }
 
     if (!existingFu) {
       const todayStr = now.toISOString().split('T')[0];
-      let nextH = (now.getHours() + 1) % 24;
-      const ampm = nextH >= 12 ? 'PM' : 'AM';
-      let h12 = nextH % 12 || 12;
-      const defaultTime = `${String(h12).padStart(2, '0')}:00 ${ampm}`;
       const newFu = {
-        id: `FU-2026-00${CRM_STATE.followups.length + 101}`,
+        id: `FU-${now.getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
         queryId: query ? query.id : 'Q-2026-0000',
         customerId: customer ? customer.id : (query ? query.customerId : 'cust_101'),
         customerName: customer ? customer.name : 'Customer',
         assignedTo: (query && query.assignedTo && query.assignedTo !== 'UNASSIGNED') ? query.assignedTo : (currentUser?.staffId || currentUser?.id || 'staff_01'),
         date: (callbackSchedule && callbackSchedule.date) ? callbackSchedule.date : (payDue || todayStr),
-        time: (callbackSchedule && callbackSchedule.time) ? callbackSchedule.time : defaultTime,
+        date_str: (callbackSchedule && callbackSchedule.date) ? callbackSchedule.date : (payDue || todayStr),
+        time: (callbackSchedule && callbackSchedule.time) ? callbackSchedule.time : '11:00 AM',
+        time_str: (callbackSchedule && callbackSchedule.time) ? callbackSchedule.time : '11:00 AM',
         reason: fuReason,
         status: 'PENDING',
         outcome: 'PENDING',
@@ -4984,13 +5135,21 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         channel: 'WHATSAPP',
         createdAt: now.toISOString(),
         isPaymentPending: isPayPending,
+        is_payment_pending: isPayPending ? 1 : 0,
         paymentAmount: payAmt,
+        payment_amount: payAmt,
         shippingAmount: shippingAmt,
+        shipping_amount: shippingAmt,
         advancePayment: advanceAmt,
+        advance_payment: advanceAmt,
         paymentMode: payMode,
+        payment_mode: payMode,
         paymentDueDate: payDue,
+        payment_due_date: payDue,
         paymentNotes: payNotes,
-        quotedItems: payItems
+        payment_notes: payNotes,
+        quotedItems: payItems,
+        quoted_items: payItems
       };
       CRM_STATE.followups.unshift(newFu);
       fetch('api.php?action=save_followup', {
@@ -5002,21 +5161,33 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
       if (notes) existingFu.reason = notes;
       if (callbackSchedule && callbackSchedule.date) {
         existingFu.date = callbackSchedule.date;
-        if (callbackSchedule.time) existingFu.time = callbackSchedule.time;
-      }
-      if (paymentData) {
-        if (paymentData.isPaymentPending) {
-          existingFu.isPaymentPending = true;
-          existingFu.paymentAmount = payAmt;
-          existingFu.shippingAmount = shippingAmt;
-          existingFu.advancePayment = advanceAmt;
-          existingFu.paymentMode = payMode;
-          if (payDue) existingFu.paymentDueDate = payDue;
-          if (payNotes) existingFu.paymentNotes = payNotes;
-          if (payItems) existingFu.quotedItems = payItems;
-        } else if (paymentData.isPaymentPending === false) {
-          existingFu.isPaymentPending = false;
+        existingFu.date_str = callbackSchedule.date;
+        if (callbackSchedule.time) {
+          existingFu.time = callbackSchedule.time;
+          existingFu.time_str = callbackSchedule.time;
         }
+      }
+      existingFu.isPaymentPending = isPayPending;
+      existingFu.is_payment_pending = isPayPending ? 1 : 0;
+      existingFu.paymentAmount = payAmt;
+      existingFu.payment_amount = payAmt;
+      existingFu.shippingAmount = shippingAmt;
+      existingFu.shipping_amount = shippingAmt;
+      existingFu.advancePayment = advanceAmt;
+      existingFu.advance_payment = advanceAmt;
+      existingFu.paymentMode = payMode;
+      existingFu.payment_mode = payMode;
+      if (payDue) {
+        existingFu.paymentDueDate = payDue;
+        existingFu.payment_due_date = payDue;
+      }
+      if (payNotes) {
+        existingFu.paymentNotes = payNotes;
+        existingFu.payment_notes = payNotes;
+      }
+      if (payItems) {
+        existingFu.quotedItems = payItems;
+        existingFu.quoted_items = payItems;
       }
       fetch('api.php?action=save_followup', {
         method: 'POST',
@@ -5042,7 +5213,10 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
   renderCustomer360Panel();
   if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
   if (typeof renderFollowupsCards === 'function') renderFollowupsCards();
+  if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+  if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
   if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+  if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
   if (typeof renderDndModule === 'function') renderDndModule();
   updateBadgeCounters();
 
@@ -5424,19 +5598,20 @@ function toggleQueryEditMode(queryId, enable) {
 window.toggleQueryEditMode = toggleQueryEditMode;
 
 function getStatusPrettyLabel(st) {
+  const t = window.t || ((k, f) => f || k);
   const map = {
-    'NEW': '🟢 New Lead',
-    'PENDING': '🟡 Pending Action',
-    'FOLLOW_UP': '🔵 Follow-up Scheduled',
-    'IN_PROGRESS': '🟣 In Progress',
-    'ASSIGNED': '🟣 Assigned',
-    'RESOLVED': '✅ Resolved / Closed',
-    'CONVERTED': '🏆 Converted to Sale',
-    'DND': '🚫 DND / Not Interested',
-    'LOST': '❌ Lead Lost',
+    'NEW': `🟢 ${t('status.new', 'New Lead')}`,
+    'PENDING': `🟡 ${t('status.pending', 'Payment Pending')}`,
+    'FOLLOW_UP': `🔵 ${t('status.follow_up', 'Follow-up Scheduled')}`,
+    'IN_PROGRESS': `🟣 ${t('status.in_progress', 'In Progress')}`,
+    'ASSIGNED': `🟣 ${t('status.assigned', 'Assigned')}`,
+    'RESOLVED': `✅ ${t('status.resolved', 'Resolved / Closed')}`,
+    'CONVERTED': `🏆 ${t('status.converted', 'Converted to Sale')}`,
+    'DND': `🚫 ${t('status.dnd', 'DND / Not Interested')}`,
+    'LOST': `❌ ${t('status.lost', 'Lead Lost')}`,
     'FOLLOWUP_RESCHEDULED': '🗓️ Follow-up Rescheduled'
   };
-  return map[st] || st || 'New';
+  return map[st] || st || t('status.new', 'New');
 }
 window.getStatusPrettyLabel = getStatusPrettyLabel;
 
@@ -5444,20 +5619,53 @@ function handleQueryStatusSelectChange(selectedStatus, queryId, customerId) {
   const container = document.getElementById('enquiry-dynamic-followup-container');
   const payContainer = document.getElementById('enquiry-payment-pending-wrapper');
   const cbEditRow = document.getElementById('query-callback-edit-row');
+  const payToggle = document.getElementById('query-pay-pending-toggle');
+
   if (selectedStatus === 'FOLLOW_UP') {
     if (container) container.classList.remove('hidden');
     if (payContainer) payContainer.classList.remove('hidden');
     if (cbEditRow) cbEditRow.classList.remove('hidden');
-  } else if (selectedStatus === 'PENDING' || selectedStatus === 'NEW' || selectedStatus === 'IN_PROGRESS') {
+  } else if (selectedStatus === 'PENDING') {
+    if (container) container.classList.remove('hidden');
+    if (payContainer) payContainer.classList.remove('hidden');
+    if (cbEditRow) cbEditRow.classList.remove('hidden');
+    // Automatically check Payment Pending option & reveal input fields
+    if (payToggle) {
+      payToggle.checked = true;
+      handlePayPendingToggle(true);
+    }
+  } else if (selectedStatus === 'NEW' || selectedStatus === 'IN_PROGRESS') {
     if (container) container.classList.add('hidden');
     if (payContainer) payContainer.classList.remove('hidden');
     if (cbEditRow) cbEditRow.classList.remove('hidden');
   } else {
     if (container) container.classList.add('hidden');
     if (payContainer) payContainer.classList.add('hidden');
-    if (cbEditRow) cbEditRow.classList.add('hidden');
+    if (cbEditRow) cbEditRow.classList.remove('hidden');
   }
 }
+function handlePayPendingToggle(checked) {
+  const fields = document.getElementById('query-pay-fields');
+  const badge = document.getElementById('query-pay-pending-badge');
+  if (fields) {
+    if (checked) {
+      fields.classList.remove('hidden');
+    } else {
+      fields.classList.add('hidden');
+    }
+  }
+  if (badge) {
+    if (checked) {
+      badge.innerHTML = `<span class="material-symbols-outlined text-[10px] text-amber-700">check_circle</span><span>ACTIVE</span>`;
+      badge.className = 'text-[8.5px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5';
+    } else {
+      badge.innerHTML = 'Optional';
+      badge.className = 'text-[8.5px] text-slate-400 font-medium';
+    }
+  }
+}
+window.handlePayPendingToggle = handlePayPendingToggle;
+
 function handlePayModeChange(val) {
   const advWrapper = document.getElementById('query-pay-advance-wrapper');
   if (advWrapper) {
@@ -5489,35 +5697,58 @@ function handleSaveQueryStatus(queryId) {
   const newStatus = select.value;
   const notes = document.getElementById('query-status-notes-input')?.value.trim() || '';
 
-  // Extract Callback Date if present (12-hour time removed per requirement)
-  const cbDate = document.getElementById('query-callback-date')?.value;
+  // Extract Callback Date if present
+  const cbDate = document.getElementById('query-callback-date')?.value || new Date().toISOString().split('T')[0];
   const cbTime = '11:00 AM';
-  const callbackSchedule = cbDate ? { date: cbDate, time: cbTime } : null;
+  const callbackSchedule = { date: cbDate, time: cbTime };
 
-  // Extract Payment Pending details from right panel if enabled
+  // Locate existing query & customer for smart fallbacks
+  let query = (CRM_STATE.queries || []).find(q => q && (q.id === queryId || q.customerId === queryId));
+  const customerId = query ? query.customerId : queryId;
+  const custFu = (CRM_STATE.followups || []).find(f => f && (f.customerId === customerId || (query && f.queryId === query.id)));
+
+  // Extract Payment Pending details from right panel
   const payToggle = document.getElementById('query-pay-pending-toggle');
+  const isPayActive = (newStatus === 'PENDING') || Boolean(payToggle && payToggle.checked);
+
   let paymentData = null;
-  if (payToggle) {
-    if (payToggle.checked) {
-      const totalAmt = parseFloat(document.getElementById('query-pay-amount-input')?.value || 0);
-      const shippingAmt = parseFloat(document.getElementById('query-pay-shipping-input')?.value || 0);
-      const mode = document.getElementById('query-pay-mode-select')?.value || 'UPI';
-      const advanceAmt = parseFloat(document.getElementById('query-pay-advance-input')?.value || 0);
-      paymentData = {
-        isPaymentPending: true,
-        paymentAmount: totalAmt,
-        shippingAmount: shippingAmt,
-        paymentMode: mode,
-        advancePayment: (mode === 'COD_ADVANCE') ? advanceAmt : 0,
-        paymentDueDate: document.getElementById('query-pay-due-input')?.value || '',
-        paymentNotes: document.getElementById('query-pay-notes-input')?.value?.trim() || '',
-        quotedItems: document.getElementById('query-pay-items-input')?.value?.trim() || ''
-      };
-    } else {
-      paymentData = {
-        isPaymentPending: false
-      };
-    }
+  if (isPayActive) {
+    const totalAmtVal = document.getElementById('query-pay-amount-input')?.value;
+    const shippingAmtVal = document.getElementById('query-pay-shipping-input')?.value;
+    const advanceAmtVal = document.getElementById('query-pay-advance-input')?.value;
+
+    const totalAmt = (totalAmtVal !== undefined && totalAmtVal !== '') 
+      ? (parseFloat(totalAmtVal) || 0) 
+      : (custFu?.paymentAmount || query?.paymentAmount || 0);
+
+    const shippingAmt = (shippingAmtVal !== undefined && shippingAmtVal !== '') 
+      ? (parseFloat(shippingAmtVal) || 0) 
+      : (custFu?.shippingAmount || query?.shippingAmount || 0);
+
+    const mode = document.getElementById('query-pay-mode-select')?.value || custFu?.paymentMode || query?.paymentMode || 'UPI';
+
+    const advanceAmt = (advanceAmtVal !== undefined && advanceAmtVal !== '') 
+      ? (parseFloat(advanceAmtVal) || 0) 
+      : (custFu?.advancePayment || query?.advancePayment || 0);
+
+    const payDueDate = document.getElementById('query-pay-due-input')?.value || cbDate || custFu?.paymentDueDate || query?.paymentDueDate || '';
+    const payNotes = document.getElementById('query-pay-notes-input')?.value?.trim() || custFu?.paymentNotes || query?.paymentNotes || notes || '';
+    const quotedItems = document.getElementById('query-pay-items-input')?.value?.trim() || custFu?.quotedItems || query?.quotedItems || '';
+
+    paymentData = {
+      isPaymentPending: true,
+      paymentAmount: totalAmt,
+      shippingAmount: shippingAmt,
+      paymentMode: mode,
+      advancePayment: (mode === 'COD_ADVANCE') ? advanceAmt : 0,
+      paymentDueDate: payDueDate,
+      paymentNotes: payNotes,
+      quotedItems: quotedItems
+    };
+  } else {
+    paymentData = {
+      isPaymentPending: false
+    };
   }
 
   updateCustomerQueryStatus(queryId, newStatus, notes, paymentData, callbackSchedule);
@@ -5536,6 +5767,12 @@ function handleSaveQueryStatus(queryId) {
     }
   }, 60);
 }
+
+function handleCancelQueryEdit(queryId) {
+  renderCustomer360Panel();
+  showToast('Reset', 'Status and remarks reset to saved values', 'undo', 'slate');
+}
+window.handleCancelQueryEdit = handleCancelQueryEdit;
 
 // Save Customer Details from Right-Side Panel Form
 function handleQuickCustomerSave(event, customerId) {
@@ -6564,7 +6801,7 @@ function renderCustomer360Panel() {
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
   const isEditing = CUSTOMER_EDIT_MODES.has(customer.id);
-  const isQueryEditing = query ? QUERY_EDIT_MODES.has(query.id) : false;
+  const isQueryEditing = true;
 
   // Preserve active uncommitted user typing if right panel re-renders during editing
   let draft = null;
@@ -6595,21 +6832,22 @@ function renderCustomer360Panel() {
 
   // Status Badge Formatting
   const qStatus = query ? (query.status || 'NEW') : (customer.isDND ? 'DND' : 'NONE');
+  const t = window.t || ((k, f) => f || k);
   let statusBadgeHtml = '';
   if (qStatus === 'DND' || customer.isDND) {
-    statusBadgeHtml = `<span class="bg-rose-100 text-rose-900 border border-rose-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span> 🚫 DND</span>`;
+    statusBadgeHtml = `<span class="bg-rose-100 text-rose-900 border border-rose-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span> 🚫 ${t('status.dnd', 'DND')}</span>`;
   } else if (qStatus === 'PENDING') {
-    statusBadgeHtml = `<span class="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> 🟡 PENDING</span>`;
+    statusBadgeHtml = `<span class="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> 🟡 ${t('status.pending', 'PAYMENT PENDING').toUpperCase()}</span>`;
   } else if (qStatus === 'FOLLOW_UP') {
-    statusBadgeHtml = `<span class="bg-blue-100 text-blue-900 border border-blue-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> 🔵 FOLLOW-UP</span>`;
+    statusBadgeHtml = `<span class="bg-blue-100 text-blue-900 border border-blue-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> 🔵 ${t('status.follow_up', 'FOLLOW-UP').toUpperCase()}</span>`;
   } else if (qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED') {
-    statusBadgeHtml = `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> 🟣 IN PROGRESS</span>`;
+    statusBadgeHtml = `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> 🟣 ${t('status.in_progress', 'IN PROGRESS').toUpperCase()}</span>`;
   } else if (qStatus === 'CONVERTED') {
-    statusBadgeHtml = `<span class="bg-purple-100 text-purple-900 border border-purple-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span> 🏆 CONVERTED</span>`;
+    statusBadgeHtml = `<span class="bg-purple-100 text-purple-900 border border-purple-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span> 🏆 ${t('status.converted', 'CONVERTED').toUpperCase()}</span>`;
   } else if (qStatus === 'RESOLVED') {
-    statusBadgeHtml = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> ✅ RESOLVED</span>`;
+    statusBadgeHtml = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> ✅ ${t('status.resolved', 'RESOLVED').toUpperCase()}</span>`;
   } else {
-    statusBadgeHtml = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 🟢 NEW</span>`;
+    statusBadgeHtml = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 🟢 ${t('status.new', 'NEW').toUpperCase()}</span>`;
   }
 
   panel.innerHTML = `
@@ -6617,10 +6855,10 @@ function renderCustomer360Panel() {
     <div class="px-4 py-2.5 bg-slate-100/90 border-b border-slate-200 flex items-center justify-between shrink-0 sticky top-0 z-10 backdrop-blur">
       <span class="text-[11px] font-extrabold uppercase text-slate-700 flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[16px] text-emerald-700">account_box</span>
-        <span>Customer 360 Details</span>
+        <span>${t('customer.title', 'Customer 360 Details')}</span>
       </span>
-      <button type="button" onclick="toggleRightPanel(false, true)" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-[10px] font-bold shadow-sm" title="Slide Hide Customer Profile Panel">
-        <span>Hide</span>
+      <button type="button" onclick="toggleRightPanel(false, true)" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-[10px] font-bold shadow-sm" title="${t('common.hide', 'Hide')}">
+        <span>${t('common.hide', 'Hide')}</span>
         <span class="material-symbols-outlined text-[16px]">chevron_right</span>
       </button>
     </div>
@@ -6639,7 +6877,7 @@ function renderCustomer360Panel() {
       <div class="mt-2 flex items-center justify-center">
         <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${staff || query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'} px-2.5 py-0.5 rounded-full">
           <span class="material-symbols-outlined text-[13px]">${staff || query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'badge' : 'person_alert'}</span>
-          <span>Handled by: <strong>${staff ? staff.name : (query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'Super Admin' : (query?.assignedTo && query.assignedTo !== 'UNASSIGNED' ? query.assignedTo : 'Unassigned'))}</strong></span>
+          <span>${t('customer.handled_by', 'Handled by:')} <strong>${staff ? staff.name : (query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'Super Admin' : (query?.assignedTo && query.assignedTo !== 'UNASSIGNED' ? query.assignedTo : t('customer.unassigned', 'Unassigned')))}</strong></span>
         </span>
       </div>
       
@@ -6651,13 +6889,13 @@ function renderCustomer360Panel() {
 
     <!-- BRAND-MASKED VOICE CALL ACTION -->
     <div class="p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200">
-      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-[0.99]" title="Customer receives call under official Brand Name: ${getBrandName()}">
+      <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-[0.99]" title="${t('customer.call_via', 'Call via')} ${getBrandName()}">
         <span class="material-symbols-outlined text-[18px] animate-pulse">call</span>
-        <span>Call via ${getBrandName()} (Masked Caller ID)</span>
+        <span>${t('customer.call_via', 'Call via')} ${getBrandName()} (${t('customer.masked_caller_id', 'Masked Caller ID')})</span>
       </button>
       <p class="text-[10px] text-center text-emerald-800 font-medium mt-1.5 flex items-center justify-center gap-1">
         <span class="material-symbols-outlined text-[13px] text-emerald-600">verified_user</span>
-        <span>Customer sees only <strong>${getBrandName()}</strong> &bull; Staff SIM hidden</span>
+        <span>${t('customer.call_subtext', 'Customer sees only')} <strong>${getBrandName()}</strong> &bull; ${t('customer.sim_hidden', 'Staff SIM hidden')}</span>
       </p>
     </div>
 
@@ -6666,15 +6904,15 @@ function renderCustomer360Panel() {
       <div class="flex items-center justify-between">
         <span class="text-[11px] font-bold uppercase text-slate-700 flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px] text-brand-wa">person_pin</span>
-          <span>Customer Profile Details</span>
+          <span>${t('customer.profile_details', 'Customer Profile Details')}</span>
         </span>
         ${isEditing ? `
           <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Editing Mode
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> ${t('customer.editing_mode', 'Editing Mode')}
           </span>
         ` : `
           <span class="text-[9px] bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-            <span class="material-symbols-outlined text-[12px] text-slate-500">lock</span> Saved &amp; Locked
+            <span class="material-symbols-outlined text-[12px] text-slate-500">lock</span> ${t('customer.saved_locked', 'Saved & Locked')}
           </span>
         `}
       </div>
@@ -6682,16 +6920,16 @@ function renderCustomer360Panel() {
       <form id="form-quick-customer-edit" onsubmit="handleQuickCustomerSave(event, '${customer.id}')" class="space-y-2.5 text-xs">
         <!-- Customer Name -->
         <div>
-          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Name *:</label>
-          <input type="text" id="cust-edit-name" value="${valName}" ${isEditing ? '' : 'disabled'} required placeholder="Full Name" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">${t('customer.name', 'Customer Name *:')}</label>
+          <input type="text" id="cust-edit-name" value="${valName}" ${isEditing ? '' : 'disabled'} required placeholder="${t('customer.full_name', 'Full Name')}" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
         </div>
 
         <!-- Phone Number (Auto-Fetched from WhatsApp Message) -->
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide">WhatsApp Phone *:</label>
+            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide">${t('customer.phone', 'WhatsApp Phone *:')}</label>
             <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Auto-Fetched
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ${t('customer.auto_fetched', 'Auto-Fetched')}
             </span>
           </div>
           <div class="relative">
@@ -6717,19 +6955,19 @@ function renderCustomer360Panel() {
 
         <!-- Gender -->
         <div>
-          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Gender:</label>
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">${t('customer.gender', 'Gender:')}</label>
           <select id="cust-edit-gender" ${isEditing ? '' : 'disabled'} class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
-            <option value="" ${!customer.gender ? 'selected' : ''}>-- Select --</option>
-            <option value="Female" ${customer.gender === 'Female' ? 'selected' : ''}>Female</option>
-            <option value="Male" ${customer.gender === 'Male' ? 'selected' : ''}>Male</option>
-            <option value="Other" ${customer.gender === 'Other' ? 'selected' : ''}>Other</option>
+            <option value="" ${!customer.gender ? 'selected' : ''}>${t('customer.select', '-- Select --')}</option>
+            <option value="Female" ${customer.gender === 'Female' ? 'selected' : ''}>${t('customer.female', 'Female')}</option>
+            <option value="Male" ${customer.gender === 'Male' ? 'selected' : ''}>${t('customer.male', 'Male')}</option>
+            <option value="Other" ${customer.gender === 'Other' ? 'selected' : ''}>${t('customer.other', 'Other')}</option>
           </select>
         </div>
 
         <!-- Delivery Address (Primary) -->
         <div>
-          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Delivery Address:</label>
-          <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Door No, Street, Landmark, City, Pincode" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${valAddress}</textarea>
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">${t('customer.address', 'Delivery Address:')}</label>
+          <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.address_placeholder', 'Door No, Street, Landmark, City, Pincode')}" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${valAddress}</textarea>
         </div>
 
         <!-- Alternative Delivery Address -->
@@ -6749,11 +6987,11 @@ function renderCustomer360Panel() {
           <div class="flex items-center justify-between mb-1">
             <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
               <span class="material-symbols-outlined text-[15px] text-amber-600">psychology</span>
-              <span>Customer Mindset &amp; Notes:</span>
+              <span>${t('customer.mindset_notes', 'Customer Mindset & Notes:')}</span>
             </label>
-            <span class="text-[9px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">Mindset Log</span>
+            <span class="text-[9px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">${t('customer.mindset_log', 'Mindset Log')}</span>
           </div>
-          <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions..." class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${valNotes}</textarea>
+          <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.notes_placeholder', 'Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions...')}" class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${valNotes}</textarea>
         </div>
 
         <!-- Action Buttons (Locked vs Editing) -->
@@ -6761,17 +6999,17 @@ function renderCustomer360Panel() {
           ${isEditing ? `
             <div class="flex gap-2">
               <button type="button" onclick="toggleCustomerEditMode('${customer.id}', false)" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center">
-                Cancel
+                ${t('common.cancel', 'Cancel')}
               </button>
               <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
                 <span class="material-symbols-outlined text-[16px]">save</span>
-                <span>Save Customer Details</span>
+                <span>${t('customer.save_details', 'Save Customer Details')}</span>
               </button>
             </div>
           ` : `
             <button type="button" onclick="toggleCustomerEditMode('${customer.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
               <span class="material-symbols-outlined text-[16px]">edit_note</span>
-              <span>Edit Customer Details &amp; Notes</span>
+              <span>${t('customer.edit_details', 'Edit Customer Details & Notes')}</span>
             </button>
           `}
         </div>
@@ -6783,96 +7021,73 @@ function renderCustomer360Panel() {
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px] text-brand-wa">assignment</span>
-          <span class="text-[11px] font-bold uppercase text-slate-700">Enquiry Status &amp; State</span>
+          <span class="text-[11px] font-bold uppercase text-slate-700">${t('customer.enquiry_status', 'Enquiry Status & State')}</span>
         </div>
         <div class="flex items-center gap-1.5">
           ${statusBadgeHtml}
-          ${(!isQueryEditing && query) ? `
-            <button type="button" onclick="toggleQueryEditMode('${query.id}', true)" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Edit Enquiry">
-              <span class="material-symbols-outlined text-[12px]">edit_note</span>
-              <span>Edit</span>
-            </button>
-          ` : ''}
         </div>
       </div>
 
       ${query ? `
         <!-- Status Dropdown Selector & Follow-up & Save Button Below -->
         <div class="space-y-3">
-          <!-- ROW 1: STATUS DROPDOWN SELECTOR -->
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide">Change Status:</label>
-              ${isQueryEditing ? `
-                <span class="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded animate-pulse">Editing Status</span>
-              ` : `
-                <span class="text-[9px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded">Locked</span>
-              `}
+          <!-- ROW 1: STATUS DROPDOWN & CALLBACK DATE IN A SINGLE ROW -->
+          <div class="grid grid-cols-2 gap-2.5 items-start">
+            <!-- COLUMN 1: STATUS DROPDOWN SELECTOR -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5 h-4">
+                <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide truncate">${t('customer.change_status', 'Change Status:')}</label>
+                <span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-1.5 py-0.2 rounded shrink-0">${t('customer.editable', 'Editable')}</span>
+              </div>
+              <div class="relative">
+                <select id="query-status-select" onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full h-[42px] bg-white border border-slate-300 hover:border-brand-wa ring-0 focus:ring-1 focus:ring-brand-wa text-slate-900 cursor-pointer shadow-2xs rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
+                  <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 ${t('status.new', 'New Lead')}</option>
+                  <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 ${t('status.pending', 'Payment Pending')}</option>
+                  <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 ${t('status.follow_up', 'Follow Up')}</option>
+                  <option value="IN_PROGRESS" ${qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED' ? 'selected' : ''}>🟣 ${t('status.in_progress', 'In Progress')}</option>
+                  <option value="RESOLVED" ${qStatus === 'RESOLVED' ? 'selected' : ''}>✅ ${t('status.resolved', 'Resolved / Closed')}</option>
+                  <option value="CONVERTED" ${qStatus === 'CONVERTED' ? 'selected' : ''}>🏆 ${t('status.converted', 'Converted to Sale')}</option>
+                  <option value="DND" ${qStatus === 'DND' ? 'selected' : ''}>🚫 ${t('status.dnd', 'DND / Not Interested')}</option>
+                </select>
+                <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+              </div>
             </div>
-            <div class="relative">
-              <select id="query-status-select" ${isQueryEditing ? '' : 'disabled'} onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full ${isQueryEditing ? 'bg-white border-brand-wa ring-1 ring-brand-wa text-slate-900 cursor-pointer shadow-xs' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none opacity-90'} border rounded-xl p-2.5 text-xs font-bold appearance-none pr-8 transition">
-                <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 New Lead</option>
-                <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 Pending Action</option>
-                <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 Follow Up</option>
-                <option value="IN_PROGRESS" ${qStatus === 'IN_PROGRESS' || qStatus === 'ASSIGNED' ? 'selected' : ''}>🟣 In Progress</option>
-                <option value="RESOLVED" ${qStatus === 'RESOLVED' ? 'selected' : ''}>✅ Resolved / Closed</option>
-                <option value="CONVERTED" ${qStatus === 'CONVERTED' ? 'selected' : ''}>🏆 Converted to Sale</option>
-                <option value="DND" ${qStatus === 'DND' ? 'selected' : ''}>🚫 DND / Not Interested</option>
-              </select>
-              <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
-            </div>
-          </div>
 
-          <!-- ROW 2: CALLBACK DATE (Callback Time 12-Hour removed as requested) -->
-          ${(() => {
-            const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
-            const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
+            <!-- COLUMN 2: CALLBACK DATE (ALL TIME EDITABLE WITH DATE PICKER & PRESETS) -->
+            ${(() => {
+              const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
+              const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
 
-            return isQueryEditing ? `
-              <!-- Editable Callback Date Row -->
-              <div id="query-callback-edit-row" class="${(qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS' || Boolean(customerFollowup)) ? '' : 'hidden'} bg-gradient-to-br from-blue-50/90 via-indigo-50/40 to-white border border-blue-200/90 p-3 rounded-2xl space-y-2 shadow-2xs transition-all">
-                <div>
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1">
-                      <span class="material-symbols-outlined text-[14px] text-blue-600">calendar_month</span>
-                      <span>Callback Date *</span>
+              return `
+                <div id="query-callback-edit-row">
+                  <div class="flex items-center justify-between mb-1.5 h-4">
+                    <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1 truncate">
+                      <span class="material-symbols-outlined text-[13px] text-blue-600 shrink-0">calendar_month</span>
+                      <span class="truncate">${t('customer.callback_date', 'Callback Date:')}</span>
                     </span>
-                    <div class="flex items-center gap-1">
-                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">Today</button>
-                      <button type="button" onclick="setQueryQuickDate(1)" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">Tomorrow</button>
-                      <button type="button" onclick="setQueryQuickDate(2)" class="px-1.5 py-0.5 text-[9px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2 Days</button>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">${t('common.today', 'Today')}</button>
+                      <button type="button" onclick="setQueryQuickDate(1)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+1D</button>
+                      <button type="button" onclick="setQueryQuickDate(2)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2D</button>
                     </div>
                   </div>
-                  <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full bg-white border border-blue-300 rounded-xl p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
+                  <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full h-[42px] bg-white border border-blue-300 rounded-xl px-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600 cursor-pointer">
                 </div>
-              </div>
-            ` : `
-              <!-- Locked Display for Active Callback Date -->
-              ${(qStatus === 'NEW' || qStatus === 'PENDING' || qStatus === 'FOLLOW_UP' || qStatus === 'IN_PROGRESS' || Boolean(customerFollowup)) ? `
-                <div class="p-2.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-200 flex items-center justify-between text-xs">
-                  <span class="text-blue-900 font-bold flex items-center gap-1.5 text-[11px]">
-                    <span class="material-symbols-outlined text-[16px] text-blue-600">calendar_month</span>
-                    <span>Callback Date:</span>
-                  </span>
-                  <span class="font-mono font-black text-blue-950 bg-white px-2.5 py-1 rounded-lg border border-blue-200 text-xs shadow-2xs">
-                    ${cbDateVal}
-                  </span>
-                </div>
-              ` : ''}
-            `;
-          })()}
+              `;
+            })()}
+          </div>
 
           <!-- ROW 3: STATUS CHANGE NOTES & REMARKS (With Quick Note Chips) -->
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px] text-amber-600">note_alt</span>
-                <span>Status Change Notes &amp; Remarks:</span>
+                <span>${t('customer.status_notes', 'Status Change Notes & Remarks:')}</span>
               </label>
               ${isQueryEditing ? `
-                <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 font-extrabold px-1.5 py-0.2 rounded">Add Note for State</span>
+                <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 font-extrabold px-1.5 py-0.2 rounded">${t('customer.add_note_state', 'Add Note for State')}</span>
               ` : `
-                <span class="text-[9px] bg-slate-100 text-slate-500 font-medium px-1.5 py-0.2 rounded">Notes Log</span>
+                <span class="text-[9px] bg-slate-100 text-slate-500 font-medium px-1.5 py-0.2 rounded">${t('customer.notes_log', 'Notes Log')}</span>
               `}
             </div>
 
@@ -6880,14 +7095,14 @@ function renderCustomer360Panel() {
             <div class="flex items-center gap-1 flex-wrap mb-1.5" id="enquiry-quick-notes-container">
               <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-0.5 shrink-0">
                 <span class="material-symbols-outlined text-[11px] text-amber-500">bolt</span>
-                <span>Quick:</span>
+                <span>${t('customer.quick', 'Quick:')}</span>
               </span>
               <div id="enquiry-quick-notes-list" class="flex items-center gap-1 flex-wrap">
                 <!-- Default Presets -->
-                <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Order Complete', 'CONVERTED')"` : `disabled`} class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}" title="${isQueryEditing ? 'Click to fill Order Complete' : 'Touch Edit Enquiry Status to use'}">
+                <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Order Complete', 'CONVERTED')"` : `disabled`} class="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}">
                   <span>📦 Order Complete</span>
                 </button>
-                <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Callback Promise - Customer requested call back', 'FOLLOW_UP')"` : `disabled`} class="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}" title="${isQueryEditing ? 'Click to set Callback Promise' : 'Touch Edit Enquiry Status to use'}">
+                <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Callback Promise - Customer requested call back', 'FOLLOW_UP')"` : `disabled`} class="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}">
                   <span>📞 Callback Promise</span>
                 </button>
                 <button type="button" ${isQueryEditing ? `onclick="setQuickStatusNote('Price Quoted / Catalog Shared', 'IN_PROGRESS')"` : `disabled`} class="px-2 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${isQueryEditing ? 'cursor-pointer active:scale-95 shadow-2xs' : 'opacity-60 cursor-not-allowed select-none'}">
@@ -6926,18 +7141,18 @@ function renderCustomer360Panel() {
 
               ${isQueryEditing ? `
                 <!-- Inline Add Quick Note Trigger (Visible ONLY in Admin Edit Mode) -->
-                <button type="button" id="btn-show-add-quick-note" onclick="showInlineAddQuickNote()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-900 border border-dashed border-slate-300 hover:border-amber-400 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-2xs" title="Add new quick note dynamically (inline without popup)">
+                <button type="button" id="btn-show-add-quick-note" onclick="showInlineAddQuickNote()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-900 border border-dashed border-slate-300 hover:border-amber-400 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-2xs" title="Add new quick note dynamically">
                   <span class="material-symbols-outlined text-[12px] text-amber-600">add</span>
-                  <span>Add Note</span>
+                  <span>${t('customer.add_note', 'Add Note')}</span>
                 </button>
 
                 <!-- Inline Add Input Box (Hidden by default, displayed inline with NO POPUP) -->
                 <div id="inline-add-quick-note-box" class="hidden items-center gap-1 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded-lg shadow-2xs">
-                  <input type="text" id="inline-quick-note-text" placeholder="Type new note..." onkeydown="if(event.key==='Enter'){event.preventDefault();saveCustomQuickNote();}" class="bg-white border border-amber-300 rounded px-1.5 py-0.5 text-[10px] text-slate-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500 w-36">
+                  <input type="text" id="inline-quick-note-text" placeholder="${t('customer.type_note', 'Type new note...')}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveCustomQuickNote();}" class="bg-white border border-amber-300 rounded px-1.5 py-0.5 text-[10px] text-slate-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500 w-36">
                   <button type="button" onclick="saveCustomQuickNote()" class="p-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded cursor-pointer transition flex items-center" title="Save quick note">
                     <span class="material-symbols-outlined text-[12px]">check</span>
                   </button>
-                  <button type="button" onclick="hideInlineAddQuickNote()" class="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer transition flex items-center" title="Cancel">
+                  <button type="button" onclick="hideInlineAddQuickNote()" class="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer transition flex items-center" title="${t('common.cancel', 'Cancel')}">
                     <span class="material-symbols-outlined text-[12px]">close</span>
                   </button>
                 </div>
@@ -6950,7 +7165,7 @@ function renderCustomer360Panel() {
           <!-- Query Meta Priority Details (Query ID and Schedule Action removed) -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
             <div class="flex justify-between items-center">
-              <span class="text-slate-500 font-medium">Priority:</span>
+              <span class="text-slate-500 font-medium">${t('common.priority', 'Priority:')}</span>
               <span class="font-bold ${query.priority === 'URGENT' ? 'text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200' : 'text-amber-700'}">${query.priority}</span>
             </div>
           </div>
@@ -6972,25 +7187,11 @@ function renderCustomer360Panel() {
             return `
               <div id="enquiry-payment-pending-wrapper" class="${(qStatus === 'FOLLOW_UP' || qStatus === 'PENDING' || customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-white border border-amber-300/80 p-2.5 rounded-xl space-y-2 shadow-2xs transition-all">
                 <div class="flex items-center justify-between">
-                  ${isQueryEditing ? `
-                    <label class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 cursor-pointer select-none">
-                      <input type="checkbox" id="query-pay-pending-toggle" ${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? 'checked' : ''} onchange="document.getElementById('query-pay-fields').classList.toggle('hidden', !this.checked)" class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300">
-                      <span>Payment Pending Option</span>
-                    </label>
-                  ` : `
-                    <div class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 select-none">
-                      <span class="material-symbols-outlined text-[14px] text-amber-700">payments</span>
-                      <span>Payment Pending Option</span>
-                    </div>
-                  `}
-                  ${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? `
-                    <span class="text-[8.5px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5">
-                      <span class="material-symbols-outlined text-[10px] text-amber-700">check_circle</span>
-                      <span>ACTIVE</span>
-                    </span>
-                  ` : `
-                    <span class="text-[8.5px] text-slate-400 font-medium">Optional</span>
-                  `}
+                  <label class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" id="query-pay-pending-toggle" onchange="handlePayPendingToggle(this.checked)" class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300 cursor-pointer">
+                    <span>${t('customer.pay_option', 'Payment Pending Option')}</span>
+                  </label>
+                  <span id="query-pay-pending-badge" class="text-[8.5px] text-slate-400 font-medium">${t('common.optional', 'Optional')}</span>
                 </div>
 
                 ${!isQueryEditing ? `
@@ -6998,17 +7199,17 @@ function renderCustomer360Panel() {
                   <div id="query-pay-fields" class="${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
                     <div class="grid grid-cols-2 gap-2">
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">Total Amount:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.total_amount', 'Total Amount:')}</span>
                         <span class="font-mono font-bold text-slate-900 text-xs">₹${totalNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                       </div>
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">Shipping:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.shipping', 'Shipping:')}</span>
                         <span class="font-mono font-bold text-slate-900 text-xs">₹${shipNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                       </div>
                     </div>
 
                     <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                      <span class="text-[9.5px] font-bold text-slate-500 uppercase">Mode:</span>
+                      <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.payment_mode', 'Mode:')}</span>
                       <span class="font-bold text-amber-950 text-xs">${(() => {
                         const mLabels = {
                           'ALL': '💳 All Payment Modes',
@@ -7025,11 +7226,11 @@ function renderCustomer360Panel() {
                     ${payMode === 'COD_ADVANCE' ? `
                       <div class="grid grid-cols-2 gap-2 bg-amber-100/60 p-2 rounded-lg border border-amber-300/80">
                         <div class="flex items-center justify-between">
-                          <span class="text-[9px] font-bold text-amber-900 uppercase">Advance:</span>
+                          <span class="text-[9px] font-bold text-amber-900 uppercase">${t('customer.advance', 'Advance:')}</span>
                           <span class="font-mono font-black text-amber-950 text-xs">₹${advNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                         </div>
                         <div class="flex items-center justify-between border-l border-amber-300/80 pl-2">
-                          <span class="text-[9px] font-bold text-amber-900 uppercase">Balance:</span>
+                          <span class="text-[9px] font-bold text-amber-900 uppercase">${t('customer.balance', 'Balance:')}</span>
                           <span class="font-mono font-black text-emerald-800 text-xs">₹${balanceNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                         </div>
                       </div>
@@ -7037,18 +7238,18 @@ function renderCustomer360Panel() {
 
                     <div class="grid grid-cols-2 gap-2">
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">Due Date:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.due_date', 'Payment Due Date:')}</span>
                         <span class="font-mono font-bold text-slate-800 text-xs">${payDue || '—'}</span>
                       </div>
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">Quoted Items:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.quoted_items', 'Quoted Items:')}</span>
                         <span class="font-bold text-slate-800 text-xs truncate ml-1">${payItems || '—'}</span>
                       </div>
                     </div>
 
                     ${payNotes ? `
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-start gap-1">
-                        <span class="text-[9.5px] font-bold text-slate-500 uppercase shrink-0">Notes:</span>
+                        <span class="text-[9.5px] font-bold text-slate-500 uppercase shrink-0">${t('common.notes', 'Notes')}:</span>
                         <span class="italic text-slate-800 text-xs truncate">"${payNotes}"</span>
                       </div>
                     ` : ''}
@@ -7056,22 +7257,22 @@ function renderCustomer360Panel() {
                     <!-- Quick Action: Share to WhatsApp Chat -->
                     <button type="button" onclick="sendWhatsAppPaymentRequest('${customer.id}', '${customerFollowup?.id || ''}')" class="w-full mt-0.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95">
                       <span class="material-symbols-outlined text-[14px]">send_to_mobile</span>
-                      <span>Share Payment Request to Chat</span>
+                      <span>${t('customer.share_payment', 'Share Payment Request to Chat')}</span>
                     </button>
                   </div>
                 ` : `
                   <!-- EDITABLE INPUT FORM WHEN EDITING STATUS IS ACTIVE -->
-                  <div id="query-pay-fields" class="${(customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
+                  <div id="query-pay-fields" class="hidden space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
                     <div class="grid grid-cols-2 gap-2">
                       <div>
-                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Total Amount (₹):</label>
+                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.total_amount', 'Total Amount:')}</label>
                         <div class="relative">
                           <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
                           <input type="text" inputmode="decimal" id="query-pay-amount-input" value="${payTotal}" oninput="handleDynamicPaymentCalc()" placeholder="0.00" class="w-full pl-6 pr-2 py-1 rounded-lg border border-amber-300 bg-white text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-amber-500">
                         </div>
                       </div>
                       <div>
-                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Shipping Amount (₹):</label>
+                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.shipping', 'Shipping:')}</label>
                         <div class="relative">
                           <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
                           <input type="text" inputmode="decimal" id="query-pay-shipping-input" value="${payShipping}" oninput="handleDynamicPaymentCalc()" placeholder="0.00" class="w-full pl-6 pr-2 py-1 rounded-lg border border-amber-300 bg-white text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-amber-500">
@@ -7080,7 +7281,7 @@ function renderCustomer360Panel() {
                     </div>
 
                     <div>
-                      <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Mode:</label>
+                      <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.payment_mode', 'Mode:')}</label>
                       <select id="query-pay-mode-select" onchange="handlePayModeChange(this.value)" class="w-full py-1 px-2 rounded-lg border border-amber-300 bg-white text-xs font-bold text-slate-800 focus:ring-1 focus:ring-amber-500">
                         <option value="ALL" ${payMode === 'ALL' ? 'selected' : ''}>💳 All Payment Modes</option>
                         <option value="UPI" ${payMode === 'UPI' ? 'selected' : ''}>📱 GPay / PhonePe / Paytm (UPI)</option>
@@ -7096,7 +7297,7 @@ function renderCustomer360Panel() {
                       <div class="flex items-center justify-between">
                         <label class="font-bold text-amber-950 text-[9.5px] uppercase tracking-wide flex items-center gap-1">
                           <span class="material-symbols-outlined text-[13px] text-amber-700">local_shipping</span>
-                          <span>Advance Payment (₹):</span>
+                          <span>${t('customer.advance_payment', 'Advance Payment (₹):')}</span>
                         </label>
                         <span class="text-[8.5px] bg-amber-200 text-amber-900 font-extrabold px-1.5 py-0.2 rounded border border-amber-300">COD Advance</span>
                       </div>
@@ -7106,7 +7307,7 @@ function renderCustomer360Panel() {
                           <input type="text" inputmode="decimal" id="query-pay-advance-input" value="${payAdvance}" oninput="handleDynamicPaymentCalc()" placeholder="0.00" class="w-full pl-6 pr-2 py-1 rounded-lg border border-amber-400 bg-white text-xs font-mono font-bold text-amber-950 focus:ring-1 focus:ring-amber-600">
                         </div>
                         <div class="text-[10px] text-amber-950 font-semibold bg-white/80 px-2 py-1 rounded-lg border border-amber-200 flex items-center justify-between">
-                          <span class="text-[8.5px] uppercase font-bold text-slate-500">Balance:</span>
+                          <span class="text-[8.5px] uppercase font-bold text-slate-500">${t('customer.balance', 'Balance:')}</span>
                           <span class="font-mono font-black text-emerald-800 text-xs" id="query-pay-balance-val">₹${balanceNum.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </div>
                       </div>
@@ -7115,24 +7316,24 @@ function renderCustomer360Panel() {
                     <!-- 2-Column Aligned Due Date & Quoted Items -->
                     <div class="grid grid-cols-2 gap-2">
                       <div>
-                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Payment Due Date:</label>
+                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.due_date', 'Payment Due Date:')}</label>
                         <input type="date" id="query-pay-due-input" value="${payDue}" class="w-full px-2 py-1 rounded-lg border border-amber-300 bg-white text-xs font-mono font-bold text-slate-800 focus:ring-1 focus:ring-amber-500">
                       </div>
                       <div>
-                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Quoted Items:</label>
+                        <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.quoted_items', 'Quoted Items:')}</label>
                         <input type="text" id="query-pay-items-input" value="${payItems}" placeholder="e.g. 13 pcs" class="w-full px-2 py-1 rounded-lg border border-amber-300 bg-white text-xs text-slate-900 font-medium">
                       </div>
                     </div>
 
                     <div>
-                      <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">Payment Promise Notes:</label>
+                      <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.promise_notes', 'Payment Promise Notes:')}</label>
                       <input type="text" id="query-pay-notes-input" value="${payNotes}" placeholder="e.g. Promised advance GPay after banking hours" class="w-full px-2.5 py-1 rounded-lg border border-amber-300 bg-white text-xs text-slate-900 font-medium">
                     </div>
 
                     <!-- Quick Action: Share to WhatsApp Chat -->
                     <button type="button" onclick="sendWhatsAppPaymentRequest('${customer.id}', '${customerFollowup?.id || ''}')" class="w-full mt-0.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95">
                       <span class="material-symbols-outlined text-[14px]">send_to_mobile</span>
-                      <span>Share Payment Request to Chat</span>
+                      <span>${t('customer.share_payment', 'Share Payment Request to Chat')}</span>
                     </button>
                   </div>
                 `}
@@ -7140,24 +7341,18 @@ function renderCustomer360Panel() {
             `;
           })()}
 
-          <!-- Action Buttons: Locked (Edit Button) vs Editing (Cancel & Save) - Placed Directly Below Enquiry Fields -->
+          <!-- Action Buttons: Cancel & Save Status (Always Directly Available) -->
           <div class="pt-1">
-            ${isQueryEditing ? `
-              <div class="flex gap-2">
-                <button type="button" onclick="toggleQueryEditMode('${query.id}', false)" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer">
-                  Cancel
-                </button>
-                <button type="button" onclick="handleSaveQueryStatus('${query.id}')" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer">
-                  <span class="material-symbols-outlined text-[16px]">save</span>
-                  <span>Save Status Change</span>
-                </button>
-              </div>
-            ` : `
-              <button type="button" onclick="toggleQueryEditMode('${query.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer">
-                <span class="material-symbols-outlined text-[16px]">edit_note</span>
-                <span>Edit Enquiry Status</span>
+            <div class="flex gap-2">
+              <button type="button" onclick="handleCancelQueryEdit('${query.id}')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-2xs">
+                <span class="material-symbols-outlined text-[15px]">close</span>
+                <span>${t('common.cancel', 'Cancel')}</span>
               </button>
-            `}
+              <button type="button" onclick="handleSaveQueryStatus('${query.id}')" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">save</span>
+                <span>${t('customer.save_status_log', 'Save Status & Log History')}</span>
+              </button>
+            </div>
           </div>
 
           <!-- Dynamic Status History Audit Engine (First 3 static, 4th and above auto-scroll) - Shown BELOW Enquiry Form & Actions -->
@@ -8643,7 +8838,7 @@ function openRuleEditor(ruleId = null) {
 
   handleRuleActionTypeChange();
   card.classList.remove('hidden');
-  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeRuleEditor() {
@@ -8653,18 +8848,22 @@ function closeRuleEditor() {
 
 function handleRuleActionTypeChange() {
   const actionSelect = document.getElementById('edit-rule-action');
+  const actionWrapper = document.getElementById('edit-rule-action-wrapper');
   const catBox = document.getElementById('edit-rule-category-container');
   const textBox = document.getElementById('edit-rule-text-container');
   if (!actionSelect) return;
 
   const mode = actionSelect.value;
   if (mode === 'category_reply') {
+    if (actionWrapper) actionWrapper.className = 'sm:col-span-1';
     if (catBox) catBox.classList.remove('hidden');
     if (textBox) textBox.classList.add('hidden');
   } else if (mode === 'custom_text') {
+    if (actionWrapper) actionWrapper.className = 'sm:col-span-2';
     if (catBox) catBox.classList.add('hidden');
     if (textBox) textBox.classList.remove('hidden');
   } else {
+    if (actionWrapper) actionWrapper.className = 'sm:col-span-1';
     if (catBox) catBox.classList.remove('hidden');
     if (textBox) textBox.classList.remove('hidden');
   }
@@ -13304,8 +13503,18 @@ function setFollowupTabFilter(tab) {
 }
 window.setFollowupTabFilter = setFollowupTabFilter;
 
+function isPayPendingRecord(f) {
+  if (!f) return false;
+  if (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1) return true;
+  if (f.paymentAmount && parseFloat(f.paymentAmount) > 0) return true;
+  const q = (CRM_STATE.queries || []).find(qry => qry && (qry.id === f.queryId || qry.customerId === f.customerId));
+  if (q && (q.status === 'PENDING' || q.isPaymentPending || (q.paymentAmount && parseFloat(q.paymentAmount) > 0))) return true;
+  return false;
+}
+window.isPayPendingRecord = isPayPendingRecord;
+
 function updateFollowupsKPICounters() {
-  const all = (CRM_STATE.followups || []).filter(f => f && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw')));
+  const all = (CRM_STATE.followups || []).filter(f => f && !(f.reason && f.reason.includes('ytfdw')));
   const currentUser = getCurrentUser();
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
 
@@ -13317,7 +13526,7 @@ function updateFollowupsKPICounters() {
   const todayDue = scopedList.filter(f => f.status === 'PENDING' && f.date === todayStr).length;
   const upcoming = scopedList.filter(f => f.status === 'PENDING' && f.date > todayStr).length;
   const overdue = scopedList.filter(f => isFollowupOverdue(f)).length;
-  const paymentPendingList = scopedList.filter(f => (f.status === 'PENDING' || !f.status || f.status === 'SCHEDULED') && (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1'));
+  const paymentPendingList = scopedList.filter(f => (f.status === 'PENDING' || !f.status || f.status === 'SCHEDULED') && isPayPendingRecord(f));
   const paymentPendingCount = paymentPendingList.length;
   const paymentPendingTotalAmt = paymentPendingList.reduce((sum, f) => sum + (parseFloat(f.paymentAmount) || 0), 0);
   const converted = scopedList.filter(f => f.status === 'COMPLETED' && f.outcome !== 'LOST').length;
@@ -13401,13 +13610,13 @@ function updateFollowupsKPICounters() {
 window.updateFollowupsKPICounters = updateFollowupsKPICounters;
 
 function updatePaymentPendingKPICounters() {
-  const all = (CRM_STATE.followups || []).filter(f => f && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw')));
+  const all = (CRM_STATE.followups || []).filter(f => f && !(f.reason && f.reason.includes('ytfdw')));
   const currentUser = getCurrentUser();
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
 
   // RBAC scope
   const scopedList = isAdmin ? all : all.filter(f => f.assignedTo === currentUser.id || f.assignedTo === currentUser.staffId);
-  const payRecords = scopedList.filter(f => f && (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1));
+  const payRecords = scopedList.filter(f => isPayPendingRecord(f));
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -13557,7 +13766,7 @@ function filterPaymentPendingCards() {
   const tabFilter = ACTIVE_PAYMENT_PENDING_TAB || 'ALL';
   const todayStr = new Date().toISOString().split('T')[0];
 
-  let list = (CRM_STATE.followups || []).filter(fu => fu && (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1));
+  let list = (CRM_STATE.followups || []).filter(fu => fu && isPayPendingRecord(fu) && !(fu.reason && fu.reason.includes('ytfdw')));
 
   // 1. RBAC Isolation
   if (!isAdmin) {
@@ -13820,7 +14029,7 @@ function filterFollowupsCards() {
   const todayStr = new Date().toISOString().split('T')[0];
 
   let list = (CRM_STATE.followups || []).filter(fu => 
-    fu && fu.id !== 'FU-2026-00108' && fu.id !== 'FU-2026-00107' && !(fu.reason && fu.reason.includes('ytfdw'))
+    fu && !(fu.reason && fu.reason.includes('ytfdw'))
   );
 
   // 1. RBAC Isolation
@@ -13838,7 +14047,7 @@ function filterFollowupsCards() {
   } else if (tabFilter === 'OVERDUE') {
     list = list.filter(fu => isFollowupOverdue(fu));
   } else if (tabFilter === 'PAYMENT_PENDING') {
-    list = list.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1'));
+    list = list.filter(fu => (fu.status === 'PENDING' || !fu.status || fu.status === 'SCHEDULED') && isPayPendingRecord(fu));
   } else if (tabFilter === 'COMPLETED') {
     list = list.filter(fu => fu.status === 'COMPLETED' && fu.outcome !== 'LOST');
   } else if (tabFilter === 'LOST') {
@@ -14545,13 +14754,19 @@ window.clearEnquirySearch = clearEnquirySearch;
 // 11. DASHBOARD, CATALOG, ORDERS, FOLLOWUPS & AUDIT RENDERING
 // =========================================================================
 function renderDashboard() {
-  document.getElementById('dash-total-queries').innerText = CRM_STATE.queries.length;
-  document.getElementById('dash-unassigned-queries').innerText = CRM_STATE.queries.filter(q => q.assignedTo === 'UNASSIGNED').length;
-  document.getElementById('dash-total-orders').innerText = CRM_STATE.orders.length;
-  document.getElementById('dash-total-followups').innerText = CRM_STATE.followups.length;
+  const t = window.t || ((k, f) => f || k);
+  const qEl = document.getElementById('dash-total-queries');
+  if (qEl) qEl.innerText = CRM_STATE.queries.length;
+  const uqEl = document.getElementById('dash-unassigned-queries');
+  if (uqEl) uqEl.innerText = CRM_STATE.queries.filter(q => q.assignedTo === 'UNASSIGNED').length;
+  const toEl = document.getElementById('dash-total-orders');
+  if (toEl) toEl.innerText = CRM_STATE.orders.length;
+  const tfEl = document.getElementById('dash-total-followups');
+  if (tfEl) tfEl.innerText = CRM_STATE.followups.length;
 
   const totalRev = CRM_STATE.orders.reduce((acc, o) => acc + o.grandTotal, 0);
-  document.getElementById('dash-total-revenue').innerText = '₹' + totalRev.toLocaleString('en-IN');
+  const revEl = document.getElementById('dash-total-revenue');
+  if (revEl) revEl.innerText = '₹' + totalRev.toLocaleString('en-IN');
 
   const recentList = document.getElementById('dash-recent-chats');
   if (recentList) {
@@ -14560,10 +14775,10 @@ function renderDashboard() {
       return `
         <div class="py-2.5 flex items-center justify-between">
           <div>
-            <p class="font-bold text-slate-800">${cust ? cust.name : 'Customer'} <span class="font-normal text-slate-400 text-[10px]">(${q.id})</span></p>
+            <p class="font-bold text-slate-800">${cust ? cust.name : t('common.customer', 'Customer')} <span class="font-normal text-slate-400 text-[10px]">(${q.id})</span></p>
             <p class="text-slate-500 text-[11px] truncate">${q.queryText}</p>
           </div>
-          <button onclick="selectCustomerChat('${q.customerId}'); switchView('inbox');" class="text-brand-wa font-bold text-xs hover:underline">Open &rarr;</button>
+          <button onclick="selectCustomerChat('${q.customerId}'); switchView('inbox');" class="text-brand-wa font-bold text-xs hover:underline flex items-center gap-1">${t('dash.open', 'Open')} &rarr;</button>
         </div>
       `;
     }).join('');
@@ -14578,8 +14793,8 @@ function renderDashboard() {
           <p class="text-[10px] text-slate-500">${s.role}</p>
         </div>
         <div class="text-right">
-          <p class="font-bold text-emerald-700">${s.converted} Orders Converted</p>
-          <p class="text-[10px] text-slate-400">${s.activeQueries} Active Leads</p>
+          <p class="font-bold text-emerald-700">${s.converted} ${t('dash.orders_converted', 'Orders Converted')}</p>
+          <p class="text-[10px] text-slate-400">${s.activeQueries} ${t('dash.active_leads', 'Active Leads')}</p>
         </div>
       </div>
     `).join('');
@@ -22178,7 +22393,40 @@ function renderFollowupsCards() {
   }
 }
 
-function renderCustomersGrid() {
+var CURRENT_CUSTOMER_SEARCH_QUERY = '';
+
+function handleCustomerSearchInput(query) {
+  CURRENT_CUSTOMER_SEARCH_QUERY = (query || '').trim();
+  const clearBtn = document.getElementById('customer-search-clear-btn');
+  if (clearBtn) {
+    if (CURRENT_CUSTOMER_SEARCH_QUERY) {
+      clearBtn.classList.remove('hidden');
+    } else {
+      clearBtn.classList.add('hidden');
+    }
+  }
+  renderCustomersGrid(CURRENT_CUSTOMER_SEARCH_QUERY);
+}
+window.handleCustomerSearchInput = handleCustomerSearchInput;
+
+function clearCustomerSearch() {
+  const input = document.getElementById('customer-search-input');
+  if (input) input.value = '';
+  CURRENT_CUSTOMER_SEARCH_QUERY = '';
+  const clearBtn = document.getElementById('customer-search-clear-btn');
+  if (clearBtn) clearBtn.classList.add('hidden');
+  renderCustomersGrid('');
+}
+window.clearCustomerSearch = clearCustomerSearch;
+
+function triggerCustomerSearch() {
+  const input = document.getElementById('customer-search-input');
+  const val = input ? input.value : '';
+  handleCustomerSearchInput(val);
+}
+window.triggerCustomerSearch = triggerCustomerSearch;
+
+function renderCustomersGrid(searchFilter = '') {
   const container = document.getElementById('customers-grid-container');
   if (!container) return;
 
@@ -22202,38 +22450,180 @@ function renderCustomersGrid() {
     }
   });
 
-  if (displayCustomers.length === 0) {
+  const query = (searchFilter !== undefined && searchFilter !== null && searchFilter !== '' ? searchFilter : CURRENT_CUSTOMER_SEARCH_QUERY || '').toLowerCase().trim();
+
+  const filteredCustomers = query ? displayCustomers.filter(c => {
+    const name = (c.name || '').toLowerCase();
+    const phone = (c.phone || '').toLowerCase();
+    const wa = (c.whatsapp || '').toLowerCase();
+    const email = (c.email || '').toLowerCase();
+    const code = (c.code || c.id || '').toLowerCase();
+    const address = (c.address || '').toLowerCase();
+    const notes = (c.notes || '').toLowerCase();
+    const tags = Array.isArray(c.tags) ? c.tags.join(' ').toLowerCase() : '';
+    const cleanDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+    const cleanQueryDigits = query.replace(/[^0-9]/g, '');
+
+    return name.includes(query) ||
+      phone.includes(query) ||
+      wa.includes(query) ||
+      (cleanQueryDigits.length >= 3 && cleanDigits.includes(cleanQueryDigits)) ||
+      email.includes(query) ||
+      code.includes(query) ||
+      address.includes(query) ||
+      notes.includes(query) ||
+      tags.includes(query);
+  }) : displayCustomers;
+
+  // Update dynamic count summary badge in header
+  const countBadge = document.getElementById('customer-count-badge');
+  if (countBadge) {
+    if (query) {
+      countBadge.innerText = `${filteredCustomers.length} of ${displayCustomers.length} Customers`;
+      countBadge.className = 'bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold px-2.5 py-0.5 rounded-full';
+    } else {
+      countBadge.innerText = `${displayCustomers.length} Customer${displayCustomers.length === 1 ? '' : 's'}`;
+      countBadge.className = 'bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-0.5 rounded-full';
+    }
+  }
+
+  if (filteredCustomers.length === 0) {
     container.innerHTML = `
       <div class="col-span-full p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
-        <span class="material-symbols-outlined text-4xl text-slate-300 mb-2">person_off</span>
-        <p class="text-slate-500 font-semibold text-sm">No customer profiles found yet.</p>
-        <p class="text-slate-400 text-xs mt-1">Inbound WhatsApp customer profiles will automatically appear here.</p>
+        <span class="material-symbols-outlined text-4xl text-slate-300 mb-2">${query ? 'person_search' : 'person_off'}</span>
+        <p class="text-slate-800 font-bold text-sm">${query ? `No customers found matching "${query}"` : 'No customer profiles found yet.'}</p>
+        <p class="text-slate-500 text-xs mt-1">${query ? 'Try searching with another name, phone number or tag keyword.' : 'Inbound WhatsApp customer profiles will automatically appear here.'}</p>
+        ${query ? `<button onclick="clearCustomerSearch()" class="mt-4 px-3.5 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-all cursor-pointer">Show All Customers</button>` : ''}
       </div>
     `;
     return;
   }
 
-  container.innerHTML = displayCustomers.map(c => `
+  container.innerHTML = filteredCustomers.map(c => `
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 hover:shadow-md transition-shadow">
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-base flex items-center justify-center shrink-0">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-base flex items-center justify-center shrink-0 shadow-sm">
           ${c.avatar || (c.name ? c.name.slice(0, 2).toUpperCase() : 'CU')}
         </div>
-        <div class="min-w-0">
-          <h4 class="font-bold text-slate-900 text-sm truncate">${c.name || 'Customer'}</h4>
-          <p class="text-xs text-slate-500 font-mono">${c.whatsapp || c.phone || 'No phone'}</p>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-1.5">
+            <h4 class="font-bold text-slate-900 text-sm truncate">${c.name || 'Customer'}</h4>
+            ${c.isDND ? '<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0">DND</span>' : ''}
+          </div>
+          <p class="text-xs text-slate-500 font-mono mt-0.5">${c.whatsapp || c.phone || 'No phone'}</p>
         </div>
       </div>
       <div class="flex items-center gap-1.5 flex-wrap">
         ${(c.tags || []).map(t => `<span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${t}</span>`).join('')}
       </div>
       <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-        <span class="text-slate-500">${c.totalOrders || 0} Orders &bull; ₹${(c.totalSpend || 0).toLocaleString('en-IN')} Spend</span>
-        <button onclick="selectCustomerChat('${c.id}'); switchView('inbox');" class="text-brand-wa font-bold hover:underline cursor-pointer">Chat</button>
+        <span class="text-slate-500 font-medium">${c.totalOrders || 0} Orders &bull; ₹${(c.totalSpend || 0).toLocaleString('en-IN')} Spend</span>
+        <button onclick="selectCustomerChat('${c.id}'); switchView('inbox');" class="text-brand-wa font-bold hover:underline cursor-pointer flex items-center gap-1">
+          <span>Chat</span>
+          <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+        </button>
       </div>
     </div>
   `).join('');
 }
+window.renderCustomersGrid = renderCustomersGrid;
+
+// EXPORT ALL CUSTOMER DETAILS TO SPREADSHEET (CSV)
+function exportAllCustomerDetails() {
+  const customers = (CRM_STATE.customers || []).filter(c => {
+    if (!c) return false;
+    if (c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || (c.name && c.name.startsWith('WhatsApp Linked'))) return false;
+    return true;
+  });
+
+  if (customers.length === 0) {
+    showToast('No Data', 'No customer records available to export.', 'info', 'amber');
+    return;
+  }
+
+  // Deduplicate by normalized 10-digit phone
+  const seenKeys = new Set();
+  const exportList = [];
+  customers.forEach(c => {
+    const digits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+    const key = digits.length >= 10 ? digits.slice(-10) : (digits || c.id);
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      exportList.push(c);
+    }
+  });
+
+  // Prepare CSV Columns
+  const headers = [
+    'Customer ID',
+    'Customer Code',
+    'Full Name',
+    'Phone Number',
+    'WhatsApp Number',
+    'Email Address',
+    'Gender',
+    'Age',
+    'Customer Type / Mindset',
+    'Shipping Address',
+    'Total Orders',
+    'Total Spend (INR)',
+    'DND Status',
+    'DND Reason',
+    'Customer Tags',
+    'Mindset & Profile Notes',
+    'Profile Created At'
+  ];
+
+  function escapeCSV(val) {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  }
+
+  const rows = exportList.map(c => [
+    escapeCSV(c.id),
+    escapeCSV(c.code || ''),
+    escapeCSV(c.name || 'Customer'),
+    escapeCSV(c.phone || ''),
+    escapeCSV(c.whatsapp || c.phone || ''),
+    escapeCSV(c.email || ''),
+    escapeCSV(c.gender || ''),
+    escapeCSV(c.age || ''),
+    escapeCSV(c.customerType || 'Live WhatsApp Lead'),
+    escapeCSV(c.address || ''),
+    escapeCSV(c.totalOrders || 0),
+    escapeCSV((c.totalSpend || 0).toFixed(2)),
+    escapeCSV(c.isDND ? 'YES (DND Opted-Out)' : 'NO (Active)'),
+    escapeCSV(c.dndReason || ''),
+    escapeCSV(Array.isArray(c.tags) ? c.tags.join('; ') : (c.tags || '')),
+    escapeCSV(c.notes || ''),
+    escapeCSV(c.createdAt || '')
+  ].join(','));
+
+  // UTF-8 BOM so Excel opens Tamil and unicode characters correctly
+  const csvContent = '\uFEFF' + headers.map(h => `"${h}"`).join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  const today = new Date().toISOString().split('T')[0];
+  link.setAttribute('href', url);
+  link.setAttribute('download', `grm_customers_export_${today}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  showToast(
+    'Customers Exported! 📊',
+    `Successfully exported all ${exportList.length} customer records to CSV.`,
+    'file_download_done',
+    'emerald'
+  );
+  if (typeof playChime === 'function') playChime('order');
+}
+window.exportAllCustomerDetails = exportAllCustomerDetails;
+
 
 function renderAuditTable() {
   const tbody = document.getElementById('audit-logs-table-body');
@@ -25516,10 +25906,6 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 // =========================================================================
 function setQuickStatusNote(noteText, suggestedStatus) {
   const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  if (query && !QUERY_EDIT_MODES.has(query.id)) {
-    showToast('Enquiry Locked', 'Touch "Edit Enquiry Status" below before applying quick notes', 'lock', 'amber');
-    return;
-  }
   setTimeout(() => {
     const input = document.getElementById('query-status-notes-input');
     if (input) {
@@ -25556,11 +25942,6 @@ function getCustomQuickNotes() {
 window.getCustomQuickNotes = getCustomQuickNotes;
 
 function showInlineAddQuickNote() {
-  const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  if (query && !QUERY_EDIT_MODES.has(query.id)) {
-    showToast('Edit Mode Required', 'Please touch "Edit Enquiry Status" below before adding quick notes', 'lock', 'amber');
-    return;
-  }
   const btn = document.getElementById('btn-show-add-quick-note');
   const box = document.getElementById('inline-add-quick-note-box');
   const input = document.getElementById('inline-quick-note-text');
@@ -25590,12 +25971,6 @@ function hideInlineAddQuickNote() {
 window.hideInlineAddQuickNote = hideInlineAddQuickNote;
 
 function saveCustomQuickNote() {
-  const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  if (query && !QUERY_EDIT_MODES.has(query.id)) {
-    showToast('Edit Mode Required', 'Please touch "Edit Enquiry Status" below before saving quick notes', 'lock', 'amber');
-    return;
-  }
-
   const input = document.getElementById('inline-quick-note-text');
   const text = (input?.value || '').trim();
   if (!text) {
@@ -25632,12 +26007,6 @@ function saveCustomQuickNote() {
 window.saveCustomQuickNote = saveCustomQuickNote;
 
 function deleteCustomQuickNote(noteId) {
-  const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  if (query && !QUERY_EDIT_MODES.has(query.id)) {
-    showToast('Edit Mode Required', 'Please touch "Edit Enquiry Status" below before deleting quick notes', 'lock', 'amber');
-    return;
-  }
-
   let list = getCustomQuickNotes();
   list = list.filter(n => {
     if (typeof n === 'string') return n !== noteId;
@@ -25654,7 +26023,7 @@ function renderQuickNotesList() {
   if (!container) return;
 
   const query = (CRM_STATE.queries || []).find(q => q.customerId === ACTIVE_CUSTOMER_ID || q.id === ACTIVE_CUSTOMER_ID);
-  const isQueryEditing = query ? QUERY_EDIT_MODES.has(query.id) : false;
+  const isQueryEditing = true;
 
   const defaults = [
     { text: 'Order Complete', status: 'CONVERTED', icon: '📦', color: 'emerald' },

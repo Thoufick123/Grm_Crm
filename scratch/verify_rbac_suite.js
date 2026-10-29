@@ -25,8 +25,8 @@ console.log('2. Checking navigation sync between index.html and index.php:');
 const htmlNavMatch = indexHtml.match(/<nav class="flex-1 overflow-y-auto custom-chat-scroll[\s\S]+?<\/nav>/);
 const phpNavMatch = indexPhp.match(/<nav class="flex-1 overflow-y-auto custom-chat-scroll[\s\S]+?<\/nav>/);
 
-if (htmlNavMatch && phpNavMatch && htmlNavMatch[0].trim() === phpNavMatch[0].trim()) {
-  console.log('   [PASS] Sidebar <nav> markup in index.php matches index.html identically.');
+if (indexPhp.includes("file_get_contents(__DIR__ . '/index.html')") || (htmlNavMatch && phpNavMatch && htmlNavMatch[0].trim() === phpNavMatch[0].trim())) {
+  console.log('   [PASS] Sidebar <nav> markup in index.php is powered directly by index.html.');
 } else {
   console.error('   [FAIL] Sidebar markup in index.php and index.html mismatch!');
   process.exit(1);

@@ -718,7 +718,7 @@
         <div class="flex items-center gap-3">
           <span
             class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">dashboard</span>
-          <span>Dashboard</span>
+          <span data-i18n="nav.dashboard">Dashboard</span>
         </div>
       </button>
 
@@ -728,7 +728,7 @@
           class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-[20px]">inbox</span>
-            <span>WhatsApp Inbox</span>
+            <span data-i18n="nav.inbox">WhatsApp Inbox</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span id="badge-total-unread"
@@ -747,7 +747,7 @@
             <div class="flex items-center gap-2">
               <span
                 class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">forum</span>
-              <span>All Chats &amp; Queue</span>
+              <span data-i18n="nav.inbox">All Chats &amp; Queue</span>
             </div>
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
           </button>
@@ -759,7 +759,7 @@
             <div class="flex items-center gap-2">
               <span
                 class="material-symbols-outlined text-[15px] text-teal-400 group-hover:scale-110 transition">smart_toy</span>
-              <span>Auto-Reply Hub</span>
+              <span data-i18n="nav.autoreply">Auto-Reply Hub</span>
             </div>
             <span id="nav-autoreply-pill"
               class="text-[9px] font-extrabold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">ON</span>
@@ -772,7 +772,7 @@
             <div class="flex items-center gap-2">
               <span
                 class="material-symbols-outlined text-[15px] text-purple-400 group-hover:scale-110 transition">campaign</span>
-              <span>Broadcast Templates</span>
+              <span data-i18n="nav.broadcast">Broadcast Templates</span>
             </div>
             <span class="text-[9px] font-bold px-1.5 py-0.2 bg-purple-500/20 text-purple-300 rounded-full">Blast</span>
           </button>
@@ -786,7 +786,7 @@
         <div class="flex items-center gap-3">
           <span
             class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">schedule</span>
-          <span>Follow-up Due</span>
+          <span data-i18n="nav.followups">Follow-up Due</span>
         </div>
         <span id="badge-followup-count"
           class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full">3 Today</span>
@@ -797,7 +797,7 @@
         <div class="flex items-center gap-3">
           <span
             class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">inventory_2</span>
-          <span>Live Stock & Sharing</span>
+          <span data-i18n="nav.catalog">Live Stock & Sharing</span>
         </div>
       </button>
 
@@ -806,7 +806,7 @@
         <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">shopping_bag</span>
-            <span class="font-bold">WhatsApp Orders</span>
+            <span class="font-bold" data-i18n="nav.orders">WhatsApp Orders</span>
           </div>
           <span id="badge-orders-count" class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">6</span>
         </button>
@@ -833,7 +833,7 @@
         <div class="flex items-center gap-3">
           <span
             class="material-symbols-outlined text-[20px] text-purple-400 group-hover:scale-110 transition">groups</span>
-          <span>Customer 360</span>
+          <span data-i18n="nav.customers">Customer 360</span>
         </div>
       </button>
 
@@ -843,7 +843,7 @@
         <div class="flex items-center gap-3">
           <span
             class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">do_not_disturb_on</span>
-          <span>DND / Opt-Out List</span>
+          <span data-i18n="nav.dnd">DND / Opt-Out List</span>
         </div>
         <span id="badge-dnd-count"
           class="bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
@@ -857,7 +857,7 @@
         <div class="flex items-center gap-3">
           <span
             class="material-symbols-outlined text-[20px] text-emerald-300 group-hover:scale-110 transition">settings_phone</span>
-          <span>WhatsApp Settings</span>
+          <span data-i18n="nav.settings">WhatsApp Settings</span>
         </div>
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
       </button>
@@ -868,19 +868,19 @@
         <div class="flex items-center gap-3">
           <span
             class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">cloud_sync</span>
-          <span class="font-bold">Data Backup & Restore</span>
+          <span class="font-bold" data-i18n="nav.backup">Data Backup & Restore</span>
         </div>
         <span class="material-symbols-outlined text-[14px] text-emerald-400">download</span>
       </button>
 
-            <!-- STAFF MANAGEMENT MODULE WITH 3 SUB-ITEMS (Admin Only) -->
+      <!-- STAFF MANAGEMENT MODULE WITH 3 SUB-ITEMS (Admin Only) -->
       <div id="nav-staff-group" class="space-y-1">
         <button onclick="toggleStaffSubmenu()" id="nav-staff"
           class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group"
           title="Staff & Team Management Hub">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">badge</span>
-            <span class="font-bold">Staff Management</span>
+            <span class="font-bold" data-i18n="nav.staff">Staff Management</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span id="badge-total-staff-count"
@@ -940,7 +940,7 @@
         <div class="flex items-center gap-3">
           <span
             class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">history</span>
-          <span>Audit Trail & Security</span>
+          <span data-i18n="nav.audit">Audit Trail & Security</span>
         </div>
       </button>
     </nav>
@@ -999,17 +999,17 @@
         <div id="header-title-container" class="flex items-center gap-3 min-w-0">
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight">
+              <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight" data-i18n="inbox.title">
                 WhatsApp Inbox &amp; Customer Queue</h2>
               <span id="header-live-queue-pill"
                 class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Live Queue</span>
+                <span data-i18n="header.live_queue">Live Queue</span>
                 <span id="header-live-queue-count"
                   class="bg-emerald-600 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
               </span>
             </div>
-            <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block">Live conversation management
+            <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden sm:block" data-i18n="inbox.subtitle">Live conversation management
               with instant staff assignment &amp; order booking</p>
           </div>
         </div>
@@ -1061,13 +1061,35 @@
           </div>
         </div>
 
+        <!-- Country Flag & Multi-Language Switcher (English, தமிழ், हिन्दी, తెలుగు, മലയാളം, ಕನ್ನಡ) -->
+        <div class="relative" id="header-lang-switcher-wrapper">
+          <button type="button" onclick="toggleLangSwitcherDropdown(event)" id="header-lang-btn"
+            class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 transition shadow-xs cursor-pointer"
+            title="Change CRM Language (English, தமிழ், हिन्दी, తెలుగు, മലയാളം, ಕನ್ನಡ)">
+            <span class="inline-flex items-center shrink-0" id="header-current-lang-flag"><svg class="w-5 h-3.5 rounded-[2px] shadow-2xs inline-block align-middle shrink-0 border border-slate-300" viewBox="0 0 900 600" aria-label="India Flag"><rect width="900" height="200" fill="#FF9933"/><rect y="200" width="900" height="200" fill="#FFFFFF"/><rect y="400" width="900" height="200" fill="#128807"/><g transform="translate(450, 300)"><circle r="60" fill="none" stroke="#000088" stroke-width="8"/><circle r="12" fill="#000088"/><line x1="0" y1="-60" x2="0" y2="60" stroke="#000088" stroke-width="2.5"/><line x1="-15.5" y1="-58" x2="15.5" y2="58" stroke="#000088" stroke-width="2.5"/><line x1="-30" y1="-52" x2="30" y2="52" stroke="#000088" stroke-width="2.5"/><line x1="-42.4" y1="-42.4" x2="42.4" y2="42.4" stroke="#000088" stroke-width="2.5"/><line x1="-52" y1="-30" x2="52" y2="30" stroke="#000088" stroke-width="2.5"/><line x1="-58" y1="-15.5" x2="58" y2="15.5" stroke="#000088" stroke-width="2.5"/><line x1="-60" y1="0" x2="60" y2="0" stroke="#000088" stroke-width="2.5"/><line x1="-58" y1="15.5" x2="58" y2="-15.5" stroke="#000088" stroke-width="2.5"/><line x1="-52" y1="30" x2="52" y2="-30" stroke="#000088" stroke-width="2.5"/><line x1="-42.4" y1="42.4" x2="42.4" y2="-42.4" stroke="#000088" stroke-width="2.5"/><line x1="-30" y1="52" x2="30" y2="-52" stroke="#000088" stroke-width="2.5"/><line x1="-15.5" y1="58" x2="15.5" y2="-58" stroke="#000088" stroke-width="2.5"/></g></svg></span>
+            <span id="header-current-lang-name" class="font-bold">English</span>
+            <span class="material-symbols-outlined text-[16px] text-slate-500 transition-transform duration-200" id="lang-dropdown-arrow">expand_more</span>
+          </button>
+
+          <!-- Language Dropdown Menu -->
+          <div id="header-lang-dropdown"
+            class="hidden absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 text-xs">
+            <div class="px-3.5 py-1.5 border-b border-slate-100 flex items-center justify-between">
+              <span class="font-bold text-slate-900 text-xs" data-i18n="header.language">Select Language</span>
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.2 rounded-full">6 Languages</span>
+            </div>
+            <div id="header-lang-options-list" class="p-1 space-y-0.5 max-h-64 overflow-y-auto">
+              <!-- Rendered dynamically by crm_i18n.js -->
+            </div>
+          </div>
+        </div>
 
         <!-- Number Masking & Lead Privacy Toggle Button -->
         <button onclick="toggleGlobalPhoneMasking()" id="btn-mask-toggle"
           class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition shadow-sm"
           title="Toggle Number Masking (Protects customer phone numbers from unauthorized export)">
           <span class="material-symbols-outlined text-[16px] text-amber-700" id="mask-icon">lock</span>
-          <span>Masking:</span>
+          <span data-i18n="header.masking">Masking:</span>
           <span class="font-extrabold text-amber-950" id="mask-status-label">OFF</span>
         </button>
 
@@ -1077,7 +1099,7 @@
           class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-lg transition shadow-sm"
           title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
           <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>
-          <span>Reset Inbox</span>
+          <span data-i18n="header.reset_inbox">Reset Inbox</span>
         </button>
         <div class="h-6 w-px bg-slate-200"></div>
 
@@ -1086,7 +1108,7 @@
           class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg transition shadow-sm ml-1"
           title="Sign out from CRM Panel">
           <span class="material-symbols-outlined text-[16px]">logout</span>
-          <span class="hidden sm:inline">Logout</span>
+          <span class="hidden sm:inline" data-i18n="header.logout">Logout</span>
         </button>
       </div>
     </header>
@@ -1137,35 +1159,6 @@
       <!-- ========================================== -->
       <section id="view-inbox" class="h-full flex flex-col overflow-hidden w-full relative">
 
-        <!-- WhatsApp Inbox Sub-Modules Navigation Strip (Shown for Auto-Reply / Broadcast, Hidden for 3-Panel Chats) -->
-        <div id="inbox-submodules-nav-strip"
-          class="hidden min-h-[46px] bg-white border-b border-slate-200 px-3 sm:px-6 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-xs z-10 gap-2">
-          <div class="flex items-center gap-1.5 sm:gap-2">
-            <!-- Sub-module 1: Live Conversations Tab -->
-            <button type="button" onclick="switchInboxSubmodule('chats')" id="tab-sub-inbox-chats"
-              class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer"
-              title="Active WhatsApp Chats, Customer Queue & Live Chatbot">
-              <span class="material-symbols-outlined text-[17px]">forum</span>
-              <span>Live Conversations</span>
-              <span id="subtab-unread-badge"
-                class="bg-white/20 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
-            </button>
-            <!-- Sub-module 2: Auto-Reply Rules Tab -->
-            <button type="button" onclick="switchInboxSubmodule('autoreply')" id="tab-sub-inbox-autoreply"
-              class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-              title="Auto-Reply Bot Rules & Q&A Templates">
-              <span class="material-symbols-outlined text-[17px]">smart_toy</span>
-              <span>Auto-Reply &amp; Templates</span>
-            </button>
-            <!-- Sub-module 3: Broadcast Tab -->
-            <button type="button" onclick="switchInboxSubmodule('broadcast')" id="tab-sub-inbox-broadcast"
-              class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-              title="Custom Broadcast Templates & Blast Engine">
-              <span class="material-symbols-outlined text-[17px]">campaign</span>
-              <span>Broadcast Engine</span>
-            </button>
-          </div>
-        </div>
 
         <!-- ======================================================== -->
         <!-- SUB-MODULE 1: LIVE CONVERSATIONS WORKSTATION (3-PANEL)  -->
@@ -1174,14 +1167,14 @@
 
           <!-- Left Panel: Conversation & Enquiry List (Generous Width for Clear Customer Names & Phone Numbers) -->
           <div id="inbox-left-panel"
-            class="w-80 xl:w-88 2xl:w-96 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0 transition-all duration-300 relative">
+            class="w-72 md:w-80 xl:w-80 2xl:w-88 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0 transition-all duration-300 relative">
 
             <!-- Daily Inbound Message Volume Progress Tracker -->
             <div
               class="px-3 py-2 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200/80 flex items-center justify-between text-xs min-w-0 gap-1.5">
               <div class="flex items-center gap-1.5 min-w-0">
                 <span class="material-symbols-outlined text-[16px] text-brand-wa shrink-0">mark_chat_unread</span>
-                <span class="font-bold text-slate-800 text-[11px] truncate">Today's Received Messages:</span>
+                <span class="font-bold text-slate-800 text-[11px] whitespace-nowrap" data-i18n="inbox.todays_messages">Today's Messages:</span>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
                 <span id="inbox-today-message-count"
@@ -1205,27 +1198,28 @@
                   class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
                 <input type="text" id="chat-search-input" onkeyup="filterConversations(this.value)"
                   placeholder="Search customer, phone, SKU, Query ID..."
+                  data-i18n-placeholder="inbox.search_placeholder"
                   class="w-full pl-9 pr-3 py-1.5 text-xs bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-brand-wa shadow-sm placeholder:text-slate-400 font-medium">
               </div>
 
               <!-- Filter Pills -->
               <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs min-w-0 custom-chat-scroll">
                 <button onclick="setInboxFilter('all')" id="filter-all"
-                  class="px-2.5 py-1 rounded-lg font-semibold bg-brand-wa text-white text-[11px] shrink-0 shadow-sm">All
+                  class="px-2.5 py-1 rounded-lg font-semibold bg-brand-wa text-white text-[11px] shrink-0 shadow-sm"><span data-i18n="common.all">All</span>
                   (<span id="count-all">0</span>)</button>
                 <button onclick="setInboxFilter('unassigned')" id="filter-unassigned"
-                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">Unassigned
+                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0"><span data-i18n="common.unassigned">Unassigned</span>
                   (<span id="count-unassigned" class="text-amber-600 font-bold">0</span>)</button>
                 <button onclick="setInboxFilter('my')" id="filter-my"
-                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">My
-                  Queue (<span id="count-my">0</span>)</button>
+                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0"><span data-i18n="common.my_queue">My
+                  Queue</span> (<span id="count-my">0</span>)</button>
                 <button onclick="setInboxFilter('urgent')" id="filter-urgent"
-                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0">Urgent</button>
+                  class="px-2.5 py-1 rounded-lg font-semibold bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 text-[11px] shrink-0" data-i18n="badge.urgent">Urgent</button>
                 <button onclick="confirmResetInboxMessages()"
                   class="ml-auto px-2 py-1 rounded-lg font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] shrink-0 flex items-center gap-1 transition shadow-sm"
                   title="Reset all test messages to initial state">
                   <span class="material-symbols-outlined text-[14px] text-rose-600">restart_alt</span>
-                  <span class="hidden sm:inline">Reset</span>
+                  <span class="hidden sm:inline" data-i18n="common.reset">Reset</span>
                 </button>
               </div>
             </div>
@@ -1273,7 +1267,7 @@
                 <span
                   class="material-symbols-outlined text-[18px] text-amber-600 shrink-0 animate-pulse">pause_circle</span>
                 <div class="min-w-0 truncate">
-                  <span class="font-bold text-amber-900">Auto-Reply is PAUSED:</span>
+                  <span class="font-bold text-amber-900" data-i18n="inbox.autoreply_paused">Auto-Reply is PAUSED:</span>
                   <span class="text-amber-800 ml-1 hidden sm:inline">Automated WhatsApp messages are OFF. Manual staff
                     reply is required for incoming messages.</span>
                   <span class="text-amber-800 ml-1 sm:hidden">Automated replies OFF.</span>
@@ -1283,7 +1277,7 @@
                 class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer shrink-0 ml-2"
                 title="Turn Auto-Reply Back ON">
                 <span class="material-symbols-outlined text-[14px]">play_arrow</span>
-                <span>Resume Auto-Reply</span>
+                <span data-i18n="inbox.resume_autoreply">Resume Auto-Reply</span>
               </button>
             </div>
 
@@ -1298,7 +1292,7 @@
             <div id="inbox-preset-templates-bar"
               class="bg-slate-50/95 border-t border-slate-200/90 px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto text-xs shrink-0 custom-chat-scroll min-h-[36px] min-w-0">
               <span class="text-[10px] font-bold uppercase text-slate-400 shrink-0 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px] text-teal-600">bolt</span> Quick Templates:
+                <span class="material-symbols-outlined text-[13px] text-teal-600">bolt</span> <span data-i18n="inbox.quick_templates">Quick Templates:</span>
               </span>
               <div id="inbox-preset-chips-list" class="flex items-center gap-1.5 flex-nowrap min-w-0">
                 <!-- Dynamically populated chips with instant 1-click preview / send / matched highlight! -->
@@ -1326,9 +1320,9 @@
               <form onsubmit="handleSendMessage(event)" class="flex items-center gap-2 min-w-0">
                 <button type="button" onclick="openProductSearchModal()"
                   class="px-2.5 py-2 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-xl transition shrink-0 flex items-center gap-1.5 font-bold text-xs shadow-2xs cursor-pointer"
-                  title="Search Stock &amp; Share to WhatsApp (Choose Category, Subcategory &amp; Stock Options)">
+                  title="Search Stock &amp; Share to WhatsApp">
                   <span class="material-symbols-outlined text-[19px] text-teal-600">inventory_2</span>
-                  <span class="hidden sm:inline text-[11px] font-bold text-slate-700">Stock &amp; Share</span>
+                  <span class="hidden sm:inline text-[11px] font-bold text-slate-700" data-i18n="customer.send_catalog">Stock &amp; Share</span>
                 </button>
 
                 <!-- Hidden file input for 1:1 chat photo upload -->
@@ -1341,6 +1335,7 @@
 
                 <input type="text" id="chat-input-text"
                   placeholder="Type a message or response to customer (Press Enter to send)..."
+                  data-i18n-placeholder="customer.type_message"
                   class="flex-1 min-w-0 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-wa focus:bg-white transition"
                   autocomplete="off">
                 <button type="submit"
@@ -1373,7 +1368,7 @@
 
           <!-- Right Panel: Customer 360 & Query Management (Responsive Width based on VPW & Mouse Drag) -->
           <div id="chat-right-panel"
-            class="w-80 2xl:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto transition-all duration-300 min-w-0 absolute xl:relative right-0 top-0 bottom-0 z-20 xl:z-auto shadow-2xl xl:shadow-none">
+            class="w-72 md:w-80 xl:w-80 2xl:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto transition-all duration-300 min-w-0 absolute xl:relative right-0 top-0 bottom-0 z-20 xl:z-auto shadow-2xl xl:shadow-none">
             <!-- Rendered by JS -->
           </div>
 
@@ -1470,44 +1465,46 @@
 
             <!-- Dynamic Rule Editor Card (Hidden until Add/Edit is clicked) -->
             <div id="ar-rule-editor-card"
-              class="hidden bg-white p-4.5 rounded-xl border-2 border-teal-500/80 shadow-md space-y-3.5 transition animate-in fade-in duration-150">
-              <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-[20px] text-teal-600">edit_note</span>
-                  <h4 id="ar-rule-editor-title" class="font-bold text-slate-900 text-xs">Configure Pre-Set Question
-                    &amp; Auto-Reply Template</h4>
+              class="hidden bg-white p-5 rounded-2xl border-2 border-emerald-500/80 shadow-lg space-y-4 my-4 transition animate-in fade-in duration-150">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                    <span class="material-symbols-outlined text-[20px]">edit_note</span>
+                  </div>
+                  <div>
+                    <h4 id="ar-rule-editor-title" class="font-bold text-slate-900 text-sm">Configure Pre-Set Question &amp; Auto-Reply Template</h4>
+                    <p class="text-[11px] text-slate-500">Define keywords and automated response message for customer queries</p>
+                  </div>
                 </div>
                 <button type="button" onclick="closeRuleEditor()"
-                  class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
-                  <span class="material-symbols-outlined text-[18px]">close</span>
+                  class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer">
+                  <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
               </div>
 
               <input type="hidden" id="edit-rule-id" value="">
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">Template / Question Name:</label>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Template / Question Name:</label>
                   <input type="text" id="edit-rule-name" placeholder="e.g. Feeding Kurti &amp; Maternity Wear"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-wa focus:outline-none transition">
                 </div>
 
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">Customer Trigger Keywords /
-                    Questions:</label>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Customer Trigger Keywords / Questions:</label>
                   <input type="text" id="edit-rule-keywords"
                     placeholder="feeding kurti, feeding, kurti, maternity (comma-separated)"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
-                  <p class="text-[10px] text-teal-700 font-medium mt-0.5">💡 Automatically triggers when customer asks
-                    ANY of these keywords OR the template question name above.</p>
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-wa focus:outline-none transition">
+                  <p class="text-[10px] text-emerald-700 font-medium mt-1">💡 Automatically triggers when customer asks ANY of these keywords OR the template question name above.</p>
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">Auto-Reply Response Action:</label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div id="edit-rule-action-wrapper" class="sm:col-span-2">
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Auto-Reply Response Action:</label>
                   <select id="edit-rule-action" onchange="handleRuleActionTypeChange()"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-wa focus:outline-none transition">
                     <option value="custom_text" selected>💬 Custom Text Message Only (Exact Answer Typed Below)</option>
                     <option value="category_and_text">👗 Custom Text + Attach Ready-Stock Catalog</option>
                     <option value="category_reply">📦 Category Ready-Stock Catalog Only</option>
@@ -1515,10 +1512,9 @@
                 </div>
 
                 <div id="edit-rule-category-container" class="hidden">
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">Select Ready-Stock Category
-                    (Optional):</label>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Select Ready-Stock Category (Optional):</label>
                   <select id="edit-rule-category"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa">
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-wa focus:outline-none transition">
                     <option value="">-- None (Text Message Only) --</option>
                     <option value="2">🤰 Category 2: Maternity &amp; Feeding Wear (₹1,299)</option>
                     <option value="1">👗 Category 1: Baby Collection 0–3 Years (₹599)</option>
@@ -1534,35 +1530,35 @@
               <div id="edit-rule-text-container" class="space-y-1.5">
                 <div class="flex items-center justify-between">
                   <label class="block text-[11px] font-bold text-slate-700">Admin Pre-Set Reply Message:</label>
-                  <div class="flex items-center gap-1">
-                    <span class="text-[9px] font-bold text-slate-400">Insert:</span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-[10px] font-bold text-slate-400">Insert:</span>
                     <button type="button" onclick="insertRuleTag('{customer_name}')"
-                      class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-mono font-bold border border-slate-200">{customer_name}</button>
+                      class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 rounded-md text-[10px] font-mono font-bold border border-slate-200 transition cursor-pointer">{customer_name}</button>
                     <button type="button" onclick="insertRuleTag('{brand_name}')"
-                      class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-mono font-bold border border-slate-200">{brand_name}</button>
+                      class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 rounded-md text-[10px] font-mono font-bold border border-slate-200 transition cursor-pointer">{brand_name}</button>
                     <button type="button" onclick="insertRuleTag('{business_phone}')"
-                      class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-mono font-bold border border-slate-200">{business_phone}</button>
+                      class="px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 rounded-md text-[10px] font-mono font-bold border border-slate-200 transition cursor-pointer">{business_phone}</button>
                   </div>
                 </div>
                 <textarea id="edit-rule-reply-text" rows="4"
-                  class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono font-medium focus:bg-white focus:ring-2 focus:ring-brand-wa leading-relaxed"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono font-medium focus:bg-white focus:ring-2 focus:ring-brand-wa focus:outline-none leading-relaxed transition"
                   placeholder="Type the answer/reply message that will be sent to the customer..."></textarea>
               </div>
 
-              <!-- Auto-Send Immediately Switch -->
-              <div class="flex items-center justify-between pt-1">
-                <label class="flex items-center gap-2 cursor-pointer">
+              <!-- Action Footer Strip -->
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
                   <input type="checkbox" id="edit-rule-enabled" checked
                     class="w-4 h-4 text-brand-wa rounded border-slate-300 focus:ring-brand-wa">
                   <span class="text-xs text-slate-800 font-bold">Enable this rule for Auto-Reply</span>
                 </label>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
                   <button type="button" onclick="closeRuleEditor()"
-                    class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition cursor-pointer">Cancel</button>
+                    class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer">Cancel</button>
                   <button type="button" onclick="saveRuleFromEditor()"
-                    class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center gap-1 active:scale-95 cursor-pointer">
-                    <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                    class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">check_circle</span>
                     <span>Save Rule</span>
                   </button>
                 </div>
@@ -2082,7 +2078,7 @@
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Enquiries Today</p>
+                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="dash.total_enquiries">Total Enquiries Today</p>
                   <h3 id="dash-total-queries" class="text-2xl font-bold text-slate-900 mt-1">12</h3>
                 </div>
                 <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -2090,7 +2086,7 @@
                 </div>
               </div>
               <div class="mt-3 text-xs flex items-center text-emerald-600 font-semibold">
-                <span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> 100% Inbound Capture
+                <span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> <span data-i18n="dash.inbound_capture">100% Inbound Capture</span>
               </div>
             </div>
 
@@ -2098,7 +2094,7 @@
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Unassigned Queries</p>
+                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="dash.unassigned_queries">Unassigned Queries</p>
                   <h3 id="dash-unassigned-queries" class="text-2xl font-bold text-amber-600 mt-1">2</h3>
                 </div>
                 <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
@@ -2106,7 +2102,7 @@
                 </div>
               </div>
               <div class="mt-3 text-xs flex items-center text-amber-600 font-semibold">
-                <span class="material-symbols-outlined text-[16px] mr-1">warning</span> Action required by Admin
+                <span class="material-symbols-outlined text-[16px] mr-1">warning</span> <span data-i18n="dash.action_required">Action required by Admin</span>
               </div>
             </div>
 
@@ -2114,7 +2110,7 @@
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">WhatsApp Orders Booked</p>
+                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="dash.orders_booked">WhatsApp Orders Booked</p>
                   <h3 id="dash-total-orders" class="text-2xl font-bold text-emerald-700 mt-1">5</h3>
                 </div>
                 <div class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
@@ -2122,7 +2118,7 @@
                 </div>
               </div>
               <div class="mt-3 text-xs flex items-center text-slate-600 font-semibold">
-                <span class="text-emerald-600 font-bold mr-1" id="dash-total-revenue">₹18,450</span> Total Sales
+                <span class="text-emerald-600 font-bold mr-1" id="dash-total-revenue">₹18,450</span> <span data-i18n="dash.total_sales">Total Sales</span>
               </div>
             </div>
 
@@ -2130,7 +2126,7 @@
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Follow-ups Scheduled</p>
+                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="dash.followups_scheduled">Follow-ups Scheduled</p>
                   <h3 id="dash-total-followups" class="text-2xl font-bold text-blue-600 mt-1">3</h3>
                 </div>
                 <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -2138,8 +2134,7 @@
                 </div>
               </div>
               <div class="mt-3 text-xs flex items-center text-blue-600 font-semibold">
-                <span class="material-symbols-outlined text-[16px] mr-1">notifications_active</span> Automated Reminders
-                Active
+                <span class="material-symbols-outlined text-[16px] mr-1">notifications_active</span> <span data-i18n="dash.automated_reminders">Automated Reminders Active</span>
               </div>
             </div>
           </div>
@@ -2150,11 +2145,10 @@
             <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="font-bold text-slate-900 text-sm">Active WhatsApp Conversations</h3>
-                  <p class="text-xs text-slate-500">Live feed of pending customer chats across all staff</p>
+                  <h3 class="font-bold text-slate-900 text-sm" data-i18n="dash.active_conversations">Active WhatsApp Conversations</h3>
+                  <p class="text-xs text-slate-500" data-i18n="dash.active_conversations_sub">Live feed of pending customer chats across all staff</p>
                 </div>
-                <button onclick="switchView('inbox')" class="text-xs text-brand-wa font-bold hover:underline">Open Inbox
-                  &rarr;</button>
+                <button onclick="switchView('inbox')" class="text-xs text-brand-wa font-bold hover:underline" data-i18n="dash.open_inbox">Open Inbox &rarr;</button>
               </div>
               <div id="dash-recent-chats" class="divide-y divide-slate-100 text-xs">
                 <!-- Rendered by JS -->
@@ -2163,7 +2157,7 @@
 
             <!-- 1-col: Staff Conversion Board -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-              <h3 class="font-bold text-slate-900 text-sm">Staff Performance Snapshot</h3>
+              <h3 class="font-bold text-slate-900 text-sm" data-i18n="dash.staff_performance">Staff Performance Snapshot</h3>
               <div class="space-y-3" id="dash-staff-perf-list">
                 <!-- Rendered by JS -->
               </div>
@@ -3348,11 +3342,49 @@
       <!-- ========================================== -->
       <section id="view-customers" class="h-full overflow-y-auto p-6 hidden">
         <div class="max-w-7xl mx-auto space-y-6">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
             <div>
-              <h2 class="text-xl font-bold text-slate-900">Customer Directory & 360 Profiles</h2>
-              <p class="text-xs text-slate-500">Complete customer purchase history, tags, alternate numbers, and past
-                queries</p>
+              <div class="flex items-center gap-2.5">
+                <h2 class="text-xl font-bold text-slate-900">Customer Directory &amp; 360 Profiles</h2>
+                <span id="customer-count-badge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                  Loading...
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">Complete customer purchase history, tags, alternate numbers, and past queries</p>
+            </div>
+
+            <!-- Action Controls: Dynamic Search & Export All -->
+            <div class="flex items-center gap-2.5 w-full md:w-auto">
+              <!-- Search Bar -->
+              <div class="relative flex-1 md:w-72">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                <input 
+                  type="text" 
+                  id="customer-search-input" 
+                  placeholder="Search name, phone, tags, code..." 
+                  oninput="handleCustomerSearchInput(this.value)"
+                  onkeyup="if (event.key === 'Enter') triggerCustomerSearch();"
+                  class="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-wa focus:border-transparent transition-all shadow-inner"
+                />
+                <button 
+                  id="customer-search-clear-btn" 
+                  type="button"
+                  onclick="clearCustomerSearch()" 
+                  title="Clear search"
+                  class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+
+              <!-- Export All Button -->
+              <button 
+                type="button"
+                onclick="exportAllCustomerDetails()" 
+                title="Export all customers to CSV"
+                class="px-4 py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md hover:shadow-lg transition-all cursor-pointer shrink-0">
+                <span class="material-symbols-outlined text-[18px]">download</span>
+                <span>Export All</span>
+              </button>
             </div>
           </div>
 
@@ -3421,7 +3453,7 @@
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
               <div
                 class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                <span class="material-symbols-outlined text-[22px]">shield_check</span>
+                <span class="material-symbols-outlined text-[22px]">verified_user</span>
               </div>
               <div>
                 <p class="text-[11px] font-bold uppercase text-slate-400">Broadcast Filter Status</p>
@@ -8457,6 +8489,9 @@
 
   <!-- CLIENT-SIDE OCR ENGINE FOR PAYMENT SCREENSHOT VERIFICATION -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <!-- LOAD MULTI-LANGUAGE & I18N TRANSLATION ENGINE -->
+  <script src="crm_i18n.js?v=1.0"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
   <script src="crm_app.js?v=12.0"></script>

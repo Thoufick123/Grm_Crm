@@ -523,6 +523,79 @@ function initializeDatabaseSchema($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
+    // 11. Auto-Reply Rules Table (For Auto-Reply Hub in WhatsApp Inbox)
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `auto_reply_rules` (
+            `id` VARCHAR(50) PRIMARY KEY,
+            `name` VARCHAR(150) NOT NULL,
+            `keywords` TEXT NOT NULL,
+            `action_type` VARCHAR(50) DEFAULT 'custom_text',
+            `category_id` VARCHAR(50) NULL,
+            `reply_text` TEXT NOT NULL,
+            `enabled` TINYINT(1) DEFAULT 1,
+            `auto_send` TINYINT(1) DEFAULT 1,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 12. Broadcast Templates Table (For Broadcast Templates in WhatsApp Inbox)
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `broadcast_templates` (
+            `id` VARCHAR(50) PRIMARY KEY,
+            `name` VARCHAR(150) NOT NULL,
+            `category` VARCHAR(50) DEFAULT 'MARKETING',
+            `body_text` TEXT NOT NULL,
+            `image_url` TEXT NULL,
+            `button_type` VARCHAR(50) NULL,
+            `button_text` VARCHAR(100) NULL,
+            `button_url` TEXT NULL,
+            `status` VARCHAR(30) DEFAULT 'ACTIVE',
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 13. Staff KPI Reports Table (For Staff KPI & Reports)
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `staff_kpis` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `staff_id` VARCHAR(50) NOT NULL,
+            `report_date` DATE NOT NULL,
+            `chats_handled` INT DEFAULT 0,
+            `orders_booked` INT DEFAULT 0,
+            `total_sales_value` DECIMAL(10,2) DEFAULT 0.00,
+            `followups_completed` INT DEFAULT 0,
+            `avg_response_time_minutes` DECIMAL(5,2) DEFAULT 0.00,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX(`staff_id`),
+            INDEX(`report_date`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // Dynamic Alter for Customers (Email, Gender, Age)
+    try {
+        $existingCustCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN);
+        $custExtraCols = [
+            'email'  => "ALTER TABLE `customers` ADD COLUMN `email` VARCHAR(100) NULL AFTER `whatsapp`",
+            'gender' => "ALTER TABLE `customers` ADD COLUMN `gender` VARCHAR(20) NULL AFTER `email`",
+            'age'    => "ALTER TABLE `customers` ADD COLUMN `age` VARCHAR(20) NULL AFTER `gender`"
+        ];
+        foreach ($custExtraCols as $cName => $sql) {
+            if (!in_array($cName, $existingCustCols)) {
+                $pdo->exec($sql);
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Customer extra columns migration note: " . $e->getMessage());
+    }
+
+    // Dynamic Alter for Audit Logs (IP Address)
+    try {
+        $existingAuditCols = $pdo->query("SHOW COLUMNS FROM `audit_logs`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('ip_address', $existingAuditCols)) {
+            $pdo->exec("ALTER TABLE `audit_logs` ADD COLUMN `ip_address` VARCHAR(50) NULL AFTER `timestamp_str`");
+        }
+    } catch (Exception $e) {}
+
     // Auto-sync existing DND entries into dnd_records if empty
     try {
         $pdo->exec("
@@ -548,7 +621,7 @@ function initializeDatabaseSchema($pdo) {
         error_log("DND records initial sync note: " . $e->getMessage());
     }
 
-    // 11. Populate Default Seeds If Empty
+    // 14. Populate Default Seeds If Empty
     seedDefaultDataIfEmpty($pdo);
 }
 
@@ -869,6 +942,62 @@ function seedDefaultDataIfEmpty($pdo) {
             $stmt->execute($ord);
         }
     }
+
+    // Check Auto-Reply Rules
+    $arCount = $pdo->query("SELECT COUNT(*) FROM `auto_reply_rules`")->fetchColumn();
+    if ($arCount == 0) {
+        $arStmt = $pdo->prepare("
+            INSERT INTO `auto_reply_rules` (`id`, `name`, `keywords`, `action_type`, `category_id`, `reply_text`, `enabled`, `auto_send`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $defaultRules = [
+            [
+                'rule_greet', 'Welcome Greeting', json_encode(['hi', 'hello', 'vanakkam', 'namaste']),
+                'custom_text', null, 'Hello! Welcome to GRM Garments & Blue Berry Kids. How can our sales team assist you today?', 1, 1
+            ],
+            [
+                'rule_catalog', 'Catalog Request', json_encode(['catalog', 'price list', 'frock collection', 'photos']),
+                'custom_text', 'baby_collection', 'Here is our latest pure cotton Baby & Maternity wear catalog with live stock availability!', 1, 1
+            ],
+            [
+                'rule_cod', 'COD & Delivery Terms', json_encode(['cod', 'cash on delivery', 'shipping charges', 'courier']),
+                'custom_text', null, 'Yes! We offer fast Doorstep Delivery with Cash on Delivery (COD) across India. Standard delivery takes 2–4 business days.', 1, 1
+            ]
+        ];
+        foreach ($defaultRules as $r) {
+            $arStmt->execute($r);
+        }
+    }
+
+    // Check Broadcast Templates
+    $btCount = $pdo->query("SELECT COUNT(*) FROM `broadcast_templates`")->fetchColumn();
+    if ($btCount == 0) {
+        $btStmt = $pdo->prepare("
+            INSERT INTO `broadcast_templates` (`id`, `name`, `category`, `body_text`, `image_url`, `button_type`, `button_text`, `button_url`, `status`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $defaultTemplates = [
+            [
+                'tmpl_festive_offer', 'Diwali & Festive Pure Silk Offer', 'FESTIVE_MARKETING',
+                "🎉 Exclusive Festive Offer!\nPure silk handcrafted pattu pavadai and baby frocks are now available at factory-direct prices.\nOrder today to get fast priority dispatch!",
+                'https://images.unsplash.com/photo-1596870230751-ebdfce98ec42?w=800', 'URL', 'View Festive Catalog', 'http://localhost:8000/#catalog', 'ACTIVE'
+            ],
+            [
+                'tmpl_maternity_arrival', 'New Maternity Feeding Gowns Restocked', 'PRODUCT_LAUNCH',
+                "✨ Feeding Gowns Restocked!\n100% breathable mulmul cotton with concealed dual invisible zips.\nAvailable in sizes M, L, XL, and XXL with COD support.",
+                'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=800', 'URL', 'Shop Maternity Wear', 'http://localhost:8000/#catalog', 'ACTIVE'
+            ],
+            [
+                'tmpl_order_confirm', 'Order Dispatch & Tracking Alert', 'UTILITY_TRACKING',
+                "📦 Your GRM Garments order has been dispatched via express courier!\nYour tracking number and parcel details will be updated here shortly.",
+                null, 'URL', 'Track Order', 'http://localhost:8000/#orders', 'ACTIVE'
+            ]
+        ];
+        foreach ($defaultTemplates as $t) {
+            $btStmt->execute($t);
+        }
+    }
 }
+
 
 

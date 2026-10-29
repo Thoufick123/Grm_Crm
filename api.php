@@ -22,6 +22,158 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
     exit;
 }
 
+// =========================================================================
+// ULTRA-FAST ON-DEMAND TRANSLATION (0ms overhead, runs before DB/Sessions)
+// =========================================================================
+if (isset($_GET['action']) && $_GET['action'] === 'translate_text') {
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true) ?? [];
+    $text = trim($input['text'] ?? $_GET['text'] ?? '');
+    $targetLang = trim($input['target_lang'] ?? $_GET['target_lang'] ?? 'ta');
+    $sourceLang = trim($input['source_lang'] ?? $_GET['source_lang'] ?? 'auto');
+
+    if (empty($text)) {
+        echo json_encode(['success' => false, 'error' => 'Text cannot be empty']);
+        exit;
+    }
+
+    $supportedLangs = [
+        'ta' => 'Tamil (தமிழ்)',
+        'en' => 'English',
+        'hi' => 'Hindi (हिंदी)',
+        'te' => 'Telugu (తెలుగు)',
+        'ml' => 'Malayalam (മലയാളം)',
+        'kn' => 'Kannada (ಕನ್ನಡ)'
+    ];
+
+    if (!isset($supportedLangs[$targetLang])) {
+        $targetLang = 'ta';
+    }
+
+    $encodedText = urlencode($text);
+    $url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl={$sourceLang}&tl={$targetLang}&dt=t&q={$encodedText}";
+
+    $translatedText = '';
+    $detectedSource = '';
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+        $response = curl_exec($ch);
+        curl_close($ch);
+    } else {
+        $ctx = stream_context_create(['http' => ['timeout' => 4, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
+        $response = @file_get_contents($url, false, $ctx);
+    }
+
+    if ($response) {
+        $data = json_decode($response, true);
+        if (is_array($data) && isset($data[0]) && is_array($data[0])) {
+            foreach ($data[0] as $segment) {
+                if (isset($segment[0])) {
+                    $translatedText .= $segment[0];
+                }
+            }
+            $detectedSource = $data[2] ?? '';
+        }
+    }
+
+    if (empty($translatedText)) {
+        echo json_encode(['success' => false, 'error' => 'Translation failed']);
+        exit;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'original' => $text,
+        'translated' => $translatedText,
+        'target_lang' => $targetLang,
+        'target_label' => $supportedLangs[$targetLang],
+        'detected_source' => $detectedSource
+    ]);
+    exit;
+}
+
+// =========================================================================
+// ULTRA-FAST ON-DEMAND TRANSLATION (0ms overhead, runs before DB/Sessions)
+// =========================================================================
+if (isset($_GET['action']) && $_GET['action'] === 'translate_text') {
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true) ?? [];
+    $text = trim($input['text'] ?? $_GET['text'] ?? '');
+    $targetLang = trim($input['target_lang'] ?? $_GET['target_lang'] ?? 'ta');
+    $sourceLang = trim($input['source_lang'] ?? $_GET['source_lang'] ?? 'auto');
+
+    if (empty($text)) {
+        echo json_encode(['success' => false, 'error' => 'Text cannot be empty']);
+        exit;
+    }
+
+    $supportedLangs = [
+        'ta' => 'Tamil (தமிழ்)',
+        'en' => 'English',
+        'hi' => 'Hindi (हिंदी)',
+        'te' => 'Telugu (తెలుగు)',
+        'ml' => 'Malayalam (മലയാളം)',
+        'kn' => 'Kannada (ಕನ್ನಡ)'
+    ];
+
+    if (!isset($supportedLangs[$targetLang])) {
+        $targetLang = 'ta';
+    }
+
+    $encodedText = urlencode($text);
+    $url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl={$sourceLang}&tl={$targetLang}&dt=t&q={$encodedText}";
+
+    $translatedText = '';
+    $detectedSource = '';
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+        $response = curl_exec($ch);
+        curl_close($ch);
+    } else {
+        $ctx = stream_context_create(['http' => ['timeout' => 4, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
+        $response = @file_get_contents($url, false, $ctx);
+    }
+
+    if ($response) {
+        $data = json_decode($response, true);
+        if (is_array($data) && isset($data[0]) && is_array($data[0])) {
+            foreach ($data[0] as $segment) {
+                if (isset($segment[0])) {
+                    $translatedText .= $segment[0];
+                }
+            }
+            $detectedSource = $data[2] ?? '';
+        }
+    }
+
+    if (empty($translatedText)) {
+        echo json_encode(['success' => false, 'error' => 'Translation failed']);
+        exit;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'original' => $text,
+        'translated' => $translatedText,
+        'target_lang' => $targetLang,
+        'target_label' => $supportedLangs[$targetLang],
+        'detected_source' => $detectedSource
+    ]);
+    exit;
+}
+
 require_once __DIR__ . '/config/db.php';
 
 if (!headers_sent() && session_status() === PHP_SESSION_NONE) {
@@ -50,6 +202,8 @@ function atomicWriteJson($filePath, $data) {
 }
 
 $action = $_GET['action'] ?? 'get_state';
+
+
 
 // =========================================================================
 // 1. GET FULL CRM STATE FROM MYSQL DATABASE
@@ -275,6 +429,23 @@ if ($action === 'get_state' || $action === 'get_all') {
             }
         } catch (Exception $e) {}
 
+        // Auto-reply rules
+        $arRules = [];
+        try {
+            $arRules = $pdo->query("SELECT * FROM `auto_reply_rules` ORDER BY `created_at` ASC")->fetchAll();
+            foreach ($arRules as &$r) {
+                if (!empty($r['keywords']) && is_string($r['keywords'])) {
+                    $r['keywords'] = json_decode($r['keywords'], true) ?: [$r['keywords']];
+                }
+            }
+        } catch (Exception $e) {}
+
+        // Broadcast templates
+        $bcTemplates = [];
+        try {
+            $bcTemplates = $pdo->query("SELECT * FROM `broadcast_templates` ORDER BY `created_at` ASC")->fetchAll();
+        } catch (Exception $e) {}
+
         echo json_encode([
             "status" => "success",
             "source" => "MYSQL_DATABASE",
@@ -291,6 +462,10 @@ if ($action === 'get_state' || $action === 'get_all') {
             "rolePermissions" => $rolePermissions,
             "dnd_records" => $dndRecords,
             "dndRecords" => $dndRecords,
+            "auto_reply_rules" => $arRules,
+            "autoReplyRules" => $arRules,
+            "broadcast_templates" => $bcTemplates,
+            "broadcastTemplates" => $bcTemplates,
             "data" => [
                 "whatsappAccount" => $primaryWA,
                 "whatsappAccounts" => $waAccounts,
@@ -307,7 +482,9 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "attributes" => $attributes,
                 "rolePermissions" => $rolePermissions,
                 "dndRecords" => $dndRecords,
-                "dnd_records" => $dndRecords
+                "dnd_records" => $dndRecords,
+                "autoReplyRules" => $arRules,
+                "broadcastTemplates" => $bcTemplates
             ]
         ]);
         exit;
@@ -646,11 +823,58 @@ if ($action === 'save_autoreply_rules' && $_SERVER['REQUEST_METHOD'] === 'POST')
     $postData = json_decode($input, true) ?: [];
     $rules = $postData['rules'] ?? [];
 
+    // 1. Persist to MySQL auto_reply_rules table
+    if ($pdo && is_array($rules)) {
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO `auto_reply_rules` (`id`, `name`, `keywords`, `action_type`, `category_id`, `reply_text`, `enabled`, `auto_send`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                    `name` = VALUES(`name`),
+                    `keywords` = VALUES(`keywords`),
+                    `action_type` = VALUES(`action_type`),
+                    `category_id` = VALUES(`category_id`),
+                    `reply_text` = VALUES(`reply_text`),
+                    `enabled` = VALUES(`enabled`),
+                    `auto_send` = VALUES(`auto_send`)
+            ");
+
+            $activeIds = [];
+            foreach ($rules as $r) {
+                if (empty($r['id'])) continue;
+                $activeIds[] = $r['id'];
+                $keywordsJson = is_array($r['keywords'] ?? null) 
+                    ? json_encode($r['keywords'], JSON_UNESCAPED_UNICODE) 
+                    : json_encode([$r['keywords'] ?? '']);
+                $stmt->execute([
+                    $r['id'],
+                    $r['name'] ?? 'Pre-set Rule',
+                    $keywordsJson,
+                    $r['actionType'] ?? ($r['action_type'] ?? 'custom_text'),
+                    $r['categoryId'] ?? ($r['category_id'] ?? null),
+                    $r['replyText'] ?? ($r['reply_text'] ?? ''),
+                    isset($r['enabled']) ? ($r['enabled'] ? 1 : 0) : 1,
+                    isset($r['autoSend']) ? ($r['autoSend'] ? 1 : 0) : 1
+                ]);
+            }
+
+            // Remove any rules from MySQL that were deleted in the UI
+            if (!empty($activeIds)) {
+                $inClause = implode(',', array_fill(0, count($activeIds), '?'));
+                $delStmt = $pdo->prepare("DELETE FROM `auto_reply_rules` WHERE `id` NOT IN ($inClause)");
+                $delStmt->execute($activeIds);
+            }
+        } catch (Exception $e) {
+            error_log("Error saving auto_reply_rules to MySQL: " . $e->getMessage());
+        }
+    }
+
+    // 2. Persist to config JSON file
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
     $currentConfig['autoReplyRules'] = $rules;
     atomicWriteJson($configFile, $currentConfig);
 
-    // Propagate to live Node Bridge
+    // 3. Propagate to live Node Bridge
     try {
         $ch = curl_init($bridgeUrl . '/api/autoreply/rules');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -664,7 +888,8 @@ if ($action === 'save_autoreply_rules' && $_SERVER['REQUEST_METHOD'] === 'POST')
 
     echo json_encode([
         "status" => "success",
-        "message" => "Auto-reply rules updated successfully",
+        "source" => "MYSQL_AND_CONFIG",
+        "message" => "Auto-reply rules updated successfully in MySQL and Bridge",
         "rules" => $rules
     ]);
     exit;
@@ -733,7 +958,7 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("
                 UPDATE `customers` 
-                SET `name` = ?, `phone` = ?, `whatsapp` = ?, `alt_phone` = ?, `address` = ?, `alt_address` = ?, `notes` = COALESCE(?, `notes`)
+                SET `name` = ?, `phone` = ?, `whatsapp` = ?, `alt_phone` = ?, `email` = ?, `gender` = ?, `age` = ?, `address` = ?, `alt_address` = ?, `notes` = COALESCE(?, `notes`)
                 WHERE `id` = ?
             ");
             $stmt->execute([
@@ -741,6 +966,9 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $data['phone'] ?? '',
                 $data['whatsapp'] ?? ($data['phone'] ?? ''),
                 $data['alt_phone'] ?? ($data['altPhone'] ?? ''),
+                $data['email'] ?? null,
+                $data['gender'] ?? null,
+                $data['age'] ?? null,
                 $data['address'] ?? '',
                 $data['alt_address'] ?? ($data['altAddress'] ?? ''),
                 $data['notes'] ?? null,
@@ -1788,7 +2016,7 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $items = $order['items'] ?? [];
         $grandTotal = (float)($order['grandTotal'] ?? ($order['grand_total'] ?? 0));
         $paymentMethod = $order['paymentMethod'] ?? ($order['payment_method'] ?? 'COD');
-        $paymentStatus = $order['paymentStatus'] ?? ($order['payment_status'] ?? 'PENDING');
+        $paymentStatus = $order['paymentStatus'] ?? ($order['payment_status'] ?? 'PAYMENT_PENDING');
         $orderStatus = $order['orderStatus'] ?? ($order['order_status'] ?? 'STOCK_RESERVED');
         $customerPhone = $order['customerPhone'] ?? ($order['customer_phone'] ?? '');
         $shippingAddress = $order['shippingAddress'] ?? ($order['shipping_address'] ?? '');
@@ -2185,7 +2413,13 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             if ($qId && $qId !== 'N/A') {
-                $pdo->prepare("UPDATE `queries` SET `status` = 'FOLLOW_UP' WHERE `id` = ?")->execute([$qId]);
+                $qCheck = $pdo->prepare("SELECT `status` FROM `queries` WHERE `id` = ?");
+                $qCheck->execute([$qId]);
+                $currQ = $qCheck->fetch(PDO::FETCH_ASSOC);
+                if ($currQ && $currQ['status'] !== 'PENDING' && $currQ['status'] !== 'FOLLOW_UP') {
+                    $newQStatus = $isPaymentPending ? 'PENDING' : 'FOLLOW_UP';
+                    $pdo->prepare("UPDATE `queries` SET `status` = ? WHERE `id` = ?")->execute([$newQStatus, $qId]);
+                }
             }
 
             // Record in audit log
@@ -2566,6 +2800,55 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // 4. Synchronize followups table in MySQL
+            if ($cid && ($status === 'FOLLOW_UP' || $status === 'PENDING' || !empty($cbDate) || $isPayPending)) {
+                $fuCheck = $pdo->prepare("SELECT `id` FROM `followups` WHERE (`customer_id` = ? OR `query_id` = ?) AND `status` = 'PENDING' LIMIT 1");
+                $fuCheck->execute([$cid, $queryId]);
+                $existingFu = $fuCheck->fetch(PDO::FETCH_ASSOC);
+
+                $fuDate = $cbDate ?: ($payDue ?: date('Y-m-d'));
+                $fuTime = $cbTime ?: '11:00 AM';
+                $fuReason = $notes ?: ($status === 'PENDING' ? 'Payment Pending follow-up' : 'Customer callback requested');
+                $fuIsPay = ($status === 'PENDING' || $isPayPending) ? 1 : 0;
+
+                if ($existingFu) {
+                    $pdo->prepare("
+                        UPDATE `followups`
+                        SET `date_str` = ?, `time_str` = ?, `reason` = ?, `assigned_to` = ?,
+                            `is_payment_pending` = ?, `payment_amount` = ?, `shipping_amount` = ?,
+                            `payment_mode` = ?, `advance_payment` = ?, `payment_due_date` = ?,
+                            `payment_notes` = ?, `quoted_items` = ?
+                        WHERE `id` = ?
+                    ")->execute([
+                        $fuDate, $fuTime, $fuReason, $assignedTo,
+                        $fuIsPay, $payAmt, $shipAmt,
+                        $payMode, $advAmt, $payDue ?: $fuDate,
+                        $payNotes ?: $notes, $quotedItems,
+                        $existingFu['id']
+                    ]);
+                } else {
+                    $newFuId = 'FU-' . date('Y') . '-' . rand(100000, 999999);
+                    $pdo->prepare("
+                        INSERT INTO `followups` (
+                            `id`, `query_id`, `customer_id`, `customer_name`, `assigned_to`,
+                            `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`,
+                            `contact_channel`, `is_payment_pending`, `payment_amount`, `shipping_amount`,
+                            `payment_mode`, `advance_payment`, `payment_due_date`, `payment_notes`, `quoted_items`
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', 'NORMAL', 'WHATSAPP', ?, ?, ?, ?, ?, ?, ?, ?)
+                    ")->execute([
+                        $newFuId, $queryId, $cid, $cData['name'] ?? ($customerName ?: 'Customer'), $assignedTo,
+                        $fuDate, $fuTime, $fuReason,
+                        $fuIsPay, $payAmt, $shipAmt,
+                        $payMode, $advAmt, $payDue ?: $fuDate,
+                        $payNotes ?: $notes, $quotedItems
+                    ]);
+                }
+            } else if ($cid && ($status === 'CONVERTED' || $status === 'RESOLVED')) {
+                $outcome = ($status === 'CONVERTED') ? 'ORDER_PLACED' : 'RESOLVED';
+                $pdo->prepare("UPDATE `followups` SET `status` = 'COMPLETED', `outcome` = ?, `outcome_notes` = ?, `completed_at` = NOW() WHERE (`customer_id` = ? OR `query_id` = ?) AND `status` = 'PENDING'")
+                    ->execute([$outcome, $notes, $cid, $queryId]);
+            }
+
             // Update user active queries counter
             if ($assignedTo !== 'UNASSIGNED') {
                 $pdo->prepare("
@@ -2870,6 +3153,69 @@ if ($action === 'health_check') {
 }
 
 // =========================================================================
+// 9.5. BROADCAST TEMPLATES MANAGEMENT (MYSQL DATABASE)
+// =========================================================================
+if ($action === 'save_broadcast_template' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $tpl = json_decode($input, true);
+    $id = $tpl['id'] ?? ($tpl['key'] ?? ('tpl_' . uniqid()));
+    $name = $tpl['name'] ?? ($tpl['label'] ?? 'Custom Template');
+    $category = $tpl['category'] ?? 'MARKETING';
+    $bodyText = $tpl['body_text'] ?? ($tpl['text'] ?? '');
+    $imageUrl = $tpl['image_url'] ?? ($tpl['media_url'] ?? null);
+    $buttonType = $tpl['button_type'] ?? null;
+    $buttonText = $tpl['button_text'] ?? null;
+    $buttonUrl = $tpl['button_url'] ?? null;
+    $status = $tpl['status'] ?? 'ACTIVE';
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO `broadcast_templates` (`id`, `name`, `category`, `body_text`, `image_url`, `button_type`, `button_text`, `button_url`, `status`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    `name` = VALUES(`name`),
+                    `category` = VALUES(`category`),
+                    `body_text` = VALUES(`body_text`),
+                    `image_url` = VALUES(`image_url`),
+                    `button_type` = VALUES(`button_type`),
+                    `button_text` = VALUES(`button_text`),
+                    `button_url` = VALUES(`button_url`),
+                    `status` = VALUES(`status`)
+            ");
+            $stmt->execute([$id, $name, $category, $bodyText, $imageUrl, $buttonType, $buttonText, $buttonUrl, $status]);
+            echo json_encode(["status" => "success", "message" => "Broadcast template saved in database", "id" => $id]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Template saved locally"]);
+    exit;
+}
+
+if ($action === 'delete_broadcast_template' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    $id = $data['id'] ?? ($data['key'] ?? null);
+    if ($id && $pdo) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM `broadcast_templates` WHERE `id` = ?");
+            $stmt->execute([$id]);
+            echo json_encode(["status" => "success", "message" => "Template deleted from database"]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Template deleted"]);
+    exit;
+}
+
 // =========================================================================
 // 10. DATABASE BACKUP & RESTORE ENGINE (MySQL Zero-Loss Snapshot & Restore)
 // =========================================================================
@@ -3086,8 +3432,22 @@ if ($action === 'restore_db') {
         echo json_encode(["status" => "error", "message" => "Database restore failed: " . $e->getMessage()]);
         exit;
     }
+if ($action === 'save_user_preference' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = json_decode(file_get_contents('php://input'), true) ?? [];
+    if (!empty($data['preferred_language'])) {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $_SESSION['preferred_language'] = $data['preferred_language'];
+        if (!empty($_SESSION['user']['id']) && $pdo) {
+            try {
+                $pdo->prepare("UPDATE `users` SET `preferred_language` = ? WHERE `id` = ?")->execute([$data['preferred_language'], $_SESSION['user']['id']]);
+            } catch (Exception $e) {}
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "Preference saved"]);
+    exit;
 }
 
 // Default fallback response
 echo json_encode(["status" => "success", "message" => "GRM CRM Backend API Active"]);
 exit;
+}

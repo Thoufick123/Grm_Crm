@@ -39,3 +39,4 @@ if (nCode.includes(nBroken)) {
 } else {
   console.log('Could not find broken pattern in crm_app.js');
 }
+
