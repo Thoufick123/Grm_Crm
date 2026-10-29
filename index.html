@@ -2523,50 +2523,58 @@
       <!-- VIEW: ORDERS (DASHBOARD & ORDER HISTORY)   -->
       <!-- ========================================== -->
       <section id="view-orders" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
-        <div class="max-w-7xl mx-auto space-y-6">
+        <div class="max-w-7xl mx-auto space-y-4 sm:space-y-5">
 
-          <!-- 1. TOP BAR: TITLE & SUBMODULE TABS SWITCHER (Order Dashboard vs Order History) -->
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/90 pb-4">
-            <div>
-              <div class="flex items-center gap-2.5">
-                <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-                  <span class="material-symbols-outlined text-[24px]">shopping_bag</span>
+          <!-- 1. TOP COMMAND BAR: TITLE, SUBMODULE SWITCHER & ACTIONS -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+            <!-- Left: Title & Live Badge -->
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                <span class="material-symbols-outlined text-[22px] sm:text-[24px]">shopping_bag</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">WhatsApp Sales &amp; Orders Hub</h2>
+                  <span id="badge-orders-total-count" class="bg-emerald-50 text-emerald-800 text-[11px] px-2.5 py-0.5 rounded-full font-bold font-mono border border-emerald-200/80">0 Orders</span>
                 </div>
-                <div>
-                  <h2 class="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    <span>WhatsApp Sales &amp; Orders Hub</span>
-                    <span id="badge-orders-total-count" class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-bold font-mono">0 Orders</span>
-                  </h2>
-                  <p class="text-xs text-slate-500">Real-time revenue analytics, staff sales tracking, and 4-stage order fulfillment</p>
-                </div>
+                <p class="text-xs text-slate-500">Real-time revenue analytics, staff sales tracking, and 4-stage fulfillment</p>
               </div>
             </div>
 
-            <!-- SUB-MODULE SWITCHER (Dashboard vs History) -->
-            <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 shadow-inner">
+            <!-- Center: Segmented Sub-Module Switcher -->
+            <div class="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200 shadow-inner self-start lg:self-center">
               <!-- Sub-module 1: Order Dashboard -->
               <button type="button" id="tab-orders-submodule-dashboard" onclick="switchOrdersSubmodule('dashboard')"
-                class="px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-700 cursor-pointer">
-                <span class="material-symbols-outlined text-[18px]">analytics</span>
-                <span>Order Dashboard</span>
+                class="px-4 py-2 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-800 border border-slate-200/80 cursor-pointer">
+                <span class="material-symbols-outlined text-[17px]">analytics</span>
+                <span>Dashboard Overview</span>
               </button>
 
               <!-- Sub-module 2: Order History -->
               <button type="button" id="tab-orders-submodule-history" onclick="switchOrdersSubmodule('history')"
-                class="px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-700 cursor-pointer">
-                <span class="material-symbols-outlined text-[18px]">history</span>
+                class="px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-800 hover:bg-white/60 cursor-pointer">
+                <span class="material-symbols-outlined text-[17px]">receipt_long</span>
                 <span>Order History</span>
                 <span id="orders-tab-history-badge" class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">0</span>
               </button>
             </div>
 
-            <!-- Global Action: Download & Refresh Options -->
-            <div class="flex items-center gap-2">
-              <button type="button" onclick="downloadOrdersDashboardReport()" class="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95" title="Download Excel/CSV Report">
-                <span class="material-symbols-outlined text-[17px]">download</span>
-                <span>Download Report</span>
+            <!-- Right: Action Buttons -->
+            <div class="flex items-center gap-2 self-start lg:self-center shrink-0">
+              <!-- Quick Book Order Button -->
+              <button type="button" onclick="openModal('modal-convert-order')" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold shadow-sm hover:shadow transition cursor-pointer active:scale-95" title="Book a new WhatsApp Order">
+                <span class="material-symbols-outlined text-[17px]">add_shopping_cart</span>
+                <span>Book Order</span>
               </button>
-              <button type="button" onclick="refreshOrdersFromDB()" class="p-2.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 transition shadow-2xs cursor-pointer" title="Refresh Live Orders from Database">
+
+              <!-- Download Report -->
+              <button type="button" onclick="downloadOrdersDashboardReport()" class="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95" title="Download Excel/CSV Report">
+                <span class="material-symbols-outlined text-[17px]">download</span>
+                <span class="hidden sm:inline">Export</span>
+              </button>
+
+              <!-- Refresh -->
+              <button type="button" onclick="refreshOrdersFromDB()" class="p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 transition shadow-2xs cursor-pointer" title="Refresh Live Orders from Database">
                 <span class="material-symbols-outlined text-[18px]">sync</span>
               </button>
             </div>
@@ -2575,147 +2583,174 @@
           <!-- ======================================================== -->
           <!-- SUB-MODULE 1: ORDER DASHBOARD                            -->
           <!-- ======================================================== -->
-          <div id="subview-orders-dashboard" class="space-y-6">
+          <div id="subview-orders-dashboard" class="space-y-4 sm:space-y-5">
             
             <!-- 1. Key Metrics Cards Grid: Overall Revenue, Weekly, Monthly, AOV -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               <!-- Card 1: Overall Revenue -->
-              <div class="bg-gradient-to-br from-emerald-900 via-emerald-800 to-slate-900 rounded-2xl p-5 text-white shadow-sm relative overflow-hidden">
-                <div class="absolute -right-4 -bottom-4 w-28 h-28 bg-emerald-500/10 rounded-full blur-xl pointer-events-none"></div>
+              <div class="bg-white rounded-2xl p-4 border border-emerald-200/90 shadow-2xs hover:shadow-md transition-all relative overflow-hidden group">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
                 <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-bold text-emerald-200 tracking-wider uppercase">Overall Revenue</span>
-                  <div class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-emerald-300">
+                  <span class="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">Overall Revenue</span>
+                  <div class="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600">
                     <span class="material-symbols-outlined text-[18px]">payments</span>
                   </div>
                 </div>
-                <p id="dash-ord-overall-revenue" class="text-3xl font-black font-mono mt-3 tracking-tight">₹0.00</p>
-                <div class="mt-3 pt-3 border-t border-emerald-700/50 flex items-center justify-between text-[11px] text-emerald-200">
-                  <span id="dash-ord-paid-online">₹0 Paid Online</span>
-                  <span>&bull;</span>
-                  <span id="dash-ord-cod-pending">₹0 COD Due</span>
+                <p id="dash-ord-overall-revenue" class="text-2xl sm:text-3xl font-black font-mono mt-2 text-slate-900 tracking-tight">₹0.00</p>
+                <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold">
+                  <span id="dash-ord-paid-online" class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">₹0 Paid Online</span>
+                  <span id="dash-ord-cod-pending" class="text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">₹0 COD Due</span>
                 </div>
               </div>
 
               <!-- Card 2: Weekly Order Total Count -->
-              <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative">
+              <div class="bg-white rounded-2xl p-4 border border-blue-200/90 shadow-2xs hover:shadow-md transition-all relative overflow-hidden group">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
                 <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-bold text-slate-500 tracking-wider uppercase">Weekly Orders</span>
-                  <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <span class="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">Weekly Orders</span>
+                  <div class="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600">
                     <span class="material-symbols-outlined text-[18px]">date_range</span>
                   </div>
                 </div>
-                <p id="dash-ord-weekly-count" class="text-3xl font-black font-mono mt-3 text-slate-900">0</p>
-                <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span class="text-slate-500">Weekly Revenue:</span>
+                <p id="dash-ord-weekly-count" class="text-2xl sm:text-3xl font-black font-mono mt-2 text-slate-900 tracking-tight">0</p>
+                <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-500 font-medium">Weekly Revenue:</span>
                   <strong id="dash-ord-weekly-revenue" class="text-blue-700 font-mono font-bold">₹0.00</strong>
                 </div>
               </div>
 
               <!-- Card 3: Monthly Total Order Count -->
-              <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative">
+              <div class="bg-white rounded-2xl p-4 border border-indigo-200/90 shadow-2xs hover:shadow-md transition-all relative overflow-hidden group">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
                 <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-bold text-slate-500 tracking-wider uppercase">Monthly Orders</span>
-                  <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <span class="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">Monthly Orders</span>
+                  <div class="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/60 flex items-center justify-center text-indigo-600">
                     <span class="material-symbols-outlined text-[18px]">calendar_month</span>
                   </div>
                 </div>
-                <p id="dash-ord-monthly-count" class="text-3xl font-black font-mono mt-3 text-slate-900">0</p>
-                <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span class="text-slate-500">Monthly Revenue:</span>
+                <p id="dash-ord-monthly-count" class="text-2xl sm:text-3xl font-black font-mono mt-2 text-slate-900 tracking-tight">0</p>
+                <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-500 font-medium">Monthly Revenue:</span>
                   <strong id="dash-ord-monthly-revenue" class="text-indigo-700 font-mono font-bold">₹0.00</strong>
                 </div>
               </div>
 
               <!-- Card 4: Average Order Value & Total Volume -->
-              <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative">
+              <div class="bg-white rounded-2xl p-4 border border-amber-200/90 shadow-2xs hover:shadow-md transition-all relative overflow-hidden group">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
                 <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-bold text-slate-500 tracking-wider uppercase">Avg. Order Value (AOV)</span>
-                  <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <span class="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">Avg. Order Value (AOV)</span>
+                  <div class="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
                     <span class="material-symbols-outlined text-[18px]">query_stats</span>
                   </div>
                 </div>
-                <p id="dash-ord-aov" class="text-3xl font-black font-mono mt-3 text-slate-900">₹0</p>
-                <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span class="text-slate-500">Total All-Time Orders:</span>
-                  <strong id="dash-ord-all-time-count" class="text-slate-900 font-bold font-mono">0</strong>
+                <p id="dash-ord-aov" class="text-2xl sm:text-3xl font-black font-mono mt-2 text-slate-900 tracking-tight">₹0</p>
+                <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-500 font-medium">All-Time Volume:</span>
+                  <strong id="dash-ord-all-time-count" class="text-slate-900 font-mono font-bold">0</strong>
                 </div>
               </div>
             </div>
 
-            <!-- 2. Order Lifecycle Funnel: Placed, Packed, Shipped, Delivered -->
-            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-              <div class="flex items-center justify-between">
+            <!-- 2. Fulfillment Pipeline Funnel: 4 Connected Interactive Stages -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
+              <div class="flex items-center justify-between mb-3.5">
                 <div>
-                  <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Fulfillment Pipeline Status</h3>
-                  <p class="text-xs text-slate-500">Live breakdown of orders across 4 stages. Click any card to view filtered order history.</p>
+                  <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                    <span class="material-symbols-outlined text-indigo-600 text-[19px]">alt_route</span>
+                    <span>Fulfillment Pipeline Status</span>
+                  </h3>
+                  <p class="text-xs text-slate-500 mt-0.5">Live progression across 4 stages &bull; Click any stage to instantly view and manage orders</p>
                 </div>
-                <span class="text-[11px] bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-full">4 Stages</span>
+                <span class="text-[11px] bg-slate-100 text-slate-700 font-extrabold px-3 py-1 rounded-full border border-slate-200">
+                  4 Active Stages
+                </span>
               </div>
 
               <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <!-- Placed -->
-                <div onclick="filterOrderHistoryByStatus('PLACED')" class="p-4 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 transition cursor-pointer flex items-center justify-between">
-                  <div class="space-y-1">
+                <!-- 1. Placed -->
+                <div onclick="filterOrderHistoryByStatus('PLACED')" class="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 hover:border-blue-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                  <div class="flex items-center justify-between">
                     <span class="text-xs font-black text-blue-900 flex items-center gap-1.5">
-                      <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                      <span class="w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-blue-300/50"></span>
                       1. Placed
                     </span>
-                    <p id="pipe-ord-placed-count" class="text-2xl font-black text-blue-700 font-mono">0</p>
-                    <span class="text-[10px] text-blue-600">Booked &amp; Reserved</span>
+                    <span class="material-symbols-outlined text-blue-500 group-hover:scale-110 transition-transform text-[22px]">receipt_long</span>
                   </div>
-                  <span class="material-symbols-outlined text-blue-400 text-[28px]">receipt</span>
+                  <div class="my-2">
+                    <p id="pipe-ord-placed-count" class="text-3xl font-black text-blue-700 font-mono tracking-tight">0</p>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-blue-200/60 text-[10px]">
+                    <span class="text-blue-700 font-semibold">Booked &amp; Reserved</span>
+                    <span class="text-blue-600 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
+                  </div>
                 </div>
 
-                <!-- Packed -->
-                <div onclick="filterOrderHistoryByStatus('PACKED')" class="p-4 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100/50 transition cursor-pointer flex items-center justify-between">
-                  <div class="space-y-1">
+                <!-- 2. Packed -->
+                <div onclick="filterOrderHistoryByStatus('PACKED')" class="p-3.5 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100/60 hover:border-purple-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                  <div class="flex items-center justify-between">
                     <span class="text-xs font-black text-purple-900 flex items-center gap-1.5">
-                      <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                      <span class="w-2.5 h-2.5 rounded-full bg-purple-600 ring-2 ring-purple-300/50"></span>
                       2. Packed
                     </span>
-                    <p id="pipe-ord-packed-count" class="text-2xl font-black text-purple-700 font-mono">0</p>
-                    <span class="text-[10px] text-purple-600">Ready for Dispatch</span>
+                    <span class="material-symbols-outlined text-purple-500 group-hover:scale-110 transition-transform text-[22px]">inventory_2</span>
                   </div>
-                  <span class="material-symbols-outlined text-purple-400 text-[28px]">inventory_2</span>
+                  <div class="my-2">
+                    <p id="pipe-ord-packed-count" class="text-3xl font-black text-purple-700 font-mono tracking-tight">0</p>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-purple-200/60 text-[10px]">
+                    <span class="text-purple-700 font-semibold">Ready for Dispatch</span>
+                    <span class="text-purple-600 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
+                  </div>
                 </div>
 
-                <!-- Shipped -->
-                <div onclick="filterOrderHistoryByStatus('SHIPPED')" class="p-4 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 transition cursor-pointer flex items-center justify-between">
-                  <div class="space-y-1">
+                <!-- 3. Shipped -->
+                <div onclick="filterOrderHistoryByStatus('SHIPPED')" class="p-3.5 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/60 hover:border-amber-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                  <div class="flex items-center justify-between">
                     <span class="text-xs font-black text-amber-900 flex items-center gap-1.5">
-                      <span class="w-2 h-2 rounded-full bg-amber-600"></span>
+                      <span class="w-2.5 h-2.5 rounded-full bg-amber-600 ring-2 ring-amber-300/50"></span>
                       3. Shipped
                     </span>
-                    <p id="pipe-ord-shipped-count" class="text-2xl font-black text-amber-700 font-mono">0</p>
-                    <span class="text-[10px] text-amber-600">In Transit with Courier</span>
+                    <span class="material-symbols-outlined text-amber-500 group-hover:scale-110 transition-transform text-[22px]">local_shipping</span>
                   </div>
-                  <span class="material-symbols-outlined text-amber-400 text-[28px]">local_shipping</span>
+                  <div class="my-2">
+                    <p id="pipe-ord-shipped-count" class="text-3xl font-black text-amber-700 font-mono tracking-tight">0</p>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-amber-200/60 text-[10px]">
+                    <span class="text-amber-800 font-semibold">In Transit / Courier</span>
+                    <span class="text-amber-700 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
+                  </div>
                 </div>
 
-                <!-- Delivered -->
-                <div onclick="filterOrderHistoryByStatus('DELIVERED')" class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/50 transition cursor-pointer flex items-center justify-between">
-                  <div class="space-y-1">
+                <!-- 4. Delivered -->
+                <div onclick="filterOrderHistoryByStatus('DELIVERED')" class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 hover:border-emerald-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                  <div class="flex items-center justify-between">
                     <span class="text-xs font-black text-emerald-900 flex items-center gap-1.5">
-                      <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                      <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 ring-2 ring-emerald-300/50"></span>
                       4. Delivered
                     </span>
-                    <p id="pipe-ord-delivered-count" class="text-2xl font-black text-emerald-700 font-mono">0</p>
-                    <span class="text-[10px] text-emerald-600">Handed to Customer</span>
+                    <span class="material-symbols-outlined text-emerald-500 group-hover:scale-110 transition-transform text-[22px]">verified</span>
                   </div>
-                  <span class="material-symbols-outlined text-emerald-400 text-[28px]">verified</span>
+                  <div class="my-2">
+                    <p id="pipe-ord-delivered-count" class="text-3xl font-black text-emerald-700 font-mono tracking-tight">0</p>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-emerald-200/60 text-[10px]">
+                    <span class="text-emerald-800 font-semibold">Handed to Customer</span>
+                    <span class="text-emerald-700 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- 3. Staff Name Wise Total Order Count & Revenue Breakdown -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+            <!-- 3. Staff Sales Performance & Order Volume Breakdown -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+              <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                    <span class="material-symbols-outlined text-emerald-600 text-[18px]">badge</span>
-                    <span>Staff Name Wise Total Order Count</span>
+                    <span class="material-symbols-outlined text-indigo-600 text-[19px]">badge</span>
+                    <span>Staff Sales Performance &amp; Order Volume</span>
                   </h3>
-                  <p class="text-xs text-slate-500">Sales performance and order volume booked by each team member</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Sales performance, fulfillment stage distribution, and revenue booked by team member</p>
                 </div>
                 <div class="flex items-center gap-2">
                   <button type="button" onclick="downloadStaffOrdersReport()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer">
@@ -2729,9 +2764,9 @@
                 <table class="w-full text-left text-xs text-slate-700">
                   <thead class="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-100">
                     <tr>
-                      <th class="py-3 px-5">Staff Member</th>
+                      <th class="py-3 px-4">Staff Member</th>
                       <th class="py-3 px-4">Role / Department</th>
-                      <th class="py-3 px-4 text-center">Total Orders Taken</th>
+                      <th class="py-3 px-4 text-center">Orders Booked</th>
                       <th class="py-3 px-4">Stage Distribution</th>
                       <th class="py-3 px-4">Total Revenue Generated</th>
                       <th class="py-3 px-4">Share of Orders</th>
@@ -2782,7 +2817,6 @@
               <div class="flex items-center gap-2">
                 <select id="order-history-staff-filter" onchange="filterOrdersHistoryTable()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none">
                   <option value="ALL">All Staff Members</option>
->>>>>>> 9767f60
                   <!-- Populated by JS -->
                 </select>
                 <button type="button" onclick="downloadOrdersHistoryCSV()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95" title="Download Order History as CSV">
@@ -4607,10 +4641,16 @@
 
           <!-- 3. Delivery / Shipping Address -->
           <div>
-            <label class="block font-bold text-slate-700 mb-1 flex items-center gap-1">
-              <span class="material-symbols-outlined text-[15px] text-slate-500">local_shipping</span>
-              <span>Delivery &amp; Shipping Address:</span>
-            </label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-bold text-slate-700 flex items-center gap-1 text-xs">
+                <span class="material-symbols-outlined text-[15px] text-slate-500">local_shipping</span>
+                <span>Delivery &amp; Shipping Address:</span>
+              </label>
+              <div id="order-address-switcher" class="hidden items-center gap-1">
+                <button type="button" onclick="selectOrderModalAddress('PRIMARY')" id="btn-addr-primary" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 cursor-pointer">Primary</button>
+                <button type="button" onclick="selectOrderModalAddress('ALT')" id="btn-addr-alt" class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300 hover:bg-blue-50 cursor-pointer">Alt Address</button>
+              </div>
+            </div>
             <input type="text" id="order-shipping-addr"
               placeholder="Enter complete door delivery address with pincode..." required
               class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
@@ -4667,6 +4707,7 @@
               </div>
 
               <!-- UPI Transaction ID / UTR -->
+              <!-- UPI Transaction ID / UTR -->
               <div>
                 <div class="flex items-center justify-between mb-1">
                   <label class="block font-bold text-slate-800 text-xs">
@@ -4677,8 +4718,10 @@
                     ⚡ Auto-Fill Sample UTR
                   </button>
                 </div>
-                <input type="text" id="order-online-upi-id" placeholder="e.g. 428910294821 or UPI-2026-..."
-                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 uppercase">
+                <input type="text" id="order-online-upi-id" placeholder="Enter 12-digit numeric UTR (e.g. 428910294821)" maxlength="22" autocomplete="off" spellcheck="false"
+                  oninput="handleUPIIdInput('ONLINE', this)"
+                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 uppercase transition">
+                <div id="online-upi-id-feedback" class="hidden mt-1 text-[11px] font-semibold"></div>
                 <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
                   <span class="text-[10px] text-slate-400 font-bold">App:</span>
                   <button type="button" onclick="setQuickPaymentApp('GPay', 'ONLINE')"
@@ -4739,6 +4782,66 @@
                     </button>
                   </div>
                 </div>
+
+                <!-- Verified Receipt Amount Validation Strip (Online Full Payment) -->
+                <div id="online-receipt-amount-container" class="mt-2.5 p-3 bg-white rounded-xl border border-slate-300 shadow-2xs space-y-2">
+                  <div class="flex items-center justify-between">
+                    <label class="block font-extrabold text-slate-800 text-xs flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[16px] text-emerald-600">receipt_long</span>
+                      <span>Payment Screenshot Paid Amount <span class="text-rose-600">*</span></span>
+                    </label>
+                    <span class="text-[10px] font-bold text-slate-400">OCR Auto-Detected / Verified</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 font-black text-slate-500 text-xs">₹</span>
+                      <input type="number" id="order-online-receipt-amount" placeholder="Amount shown on receipt (e.g. 1198)"
+                        oninput="handleReceiptAmountChange('ONLINE', this.value)"
+                        class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                    </div>
+                    <div id="online-amount-match-pill" class="px-3 py-2 rounded-xl text-[11px] font-black font-mono border flex items-center gap-1 shrink-0 bg-slate-100 text-slate-500 border-slate-200">
+                      <span>Pending Amount Check</span>
+                    </div>
+                  </div>
+                  <div id="online-amount-mismatch-alert" class="hidden p-2.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-950 text-xs font-bold space-y-1 shadow-2xs"></div>
+                </div>
+
+                <!-- Validation Status Alert -->
+                <div id="online-screenshot-validation-status" class="hidden mt-2 rounded-xl text-xs font-bold transition"></div>
+
+                <!-- Below-Image Receipt Preview Card -->
+                <div id="online-screenshot-detail-preview" class="hidden mt-3 bg-slate-900 text-white rounded-2xl p-3 border border-emerald-500/30 shadow-lg transition-all duration-300">
+                  <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span class="text-xs font-bold text-emerald-300 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[15px]">receipt_long</span> Payment Receipt Preview
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <button type="button" onclick="previewReceiptFullscreen('ONLINE')" class="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition flex items-center gap-1 cursor-pointer">
+                        <span class="material-symbols-outlined text-[12px]">fullscreen</span> View Full
+                      </button>
+                      <button type="button" onclick="removeScreenshot('ONLINE')" class="px-2 py-0.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer">
+                        <span class="material-symbols-outlined text-[12px]">delete</span> Remove
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Visual Image Preview -->
+                  <div class="relative rounded-xl overflow-hidden bg-black/60 border border-white/10 max-h-56 flex items-center justify-center p-1 group cursor-pointer" onclick="previewReceiptFullscreen('ONLINE')">
+                    <img id="online-screenshot-large-preview" src="" alt="Payment Receipt" class="max-h-52 w-auto object-contain rounded-lg shadow-md transition-transform duration-200 group-hover:scale-[1.02]">
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 pointer-events-none">
+                      <span class="material-symbols-outlined text-[18px]">zoom_in</span> Click to enlarge
+                    </div>
+                  </div>
+                  <!-- Metadata Bar -->
+                  <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-300">
+                    <span id="online-screenshot-meta-name" class="truncate max-w-[180px] font-mono">screenshot.jpg</span>
+                    <span id="online-screenshot-meta-badge" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-400/30 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">verified_user</span> Payment Proof Verified ✅
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -4788,8 +4891,10 @@
                     ⚡ Auto-Fill Sample UTR
                   </button>
                 </div>
-                <input type="text" id="order-cod-upi-id" placeholder="Enter ₹200 UPI UTR / Ref (e.g. 4289...)"
-                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 uppercase">
+                <input type="text" id="order-cod-upi-id" placeholder="Enter 12-digit numeric UTR (e.g. 428910294821)" maxlength="22" autocomplete="off" spellcheck="false"
+                  oninput="handleUPIIdInput('COD', this)"
+                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 uppercase transition">
+                <div id="cod-upi-id-feedback" class="hidden mt-1 text-[11px] font-semibold"></div>
                 <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
                   <span class="text-[10px] text-slate-400 font-bold">App:</span>
                   <button type="button" onclick="setQuickPaymentApp('GPay', 'COD')"
@@ -4845,6 +4950,66 @@
                       class="px-2.5 py-1 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold border border-rose-200 shrink-0 cursor-pointer">
                       Remove
                     </button>
+                  </div>
+                </div>
+
+                <!-- Verified Receipt Amount Validation Strip (COD Advance Payment) -->
+                <div id="cod-receipt-amount-container" class="mt-2.5 p-3 bg-white rounded-xl border border-slate-300 shadow-2xs space-y-2">
+                  <div class="flex items-center justify-between">
+                    <label class="block font-extrabold text-slate-800 text-xs flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[16px] text-amber-600">receipt_long</span>
+                      <span>COD Advance Amount Shown in Screenshot <span class="text-rose-600">*</span></span>
+                    </label>
+                    <span class="text-[10px] font-bold text-slate-400">Must be exactly ₹200</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 font-black text-slate-500 text-xs">₹</span>
+                      <input type="number" id="order-cod-receipt-amount" placeholder="200"
+                        oninput="handleReceiptAmountChange('COD', this.value)"
+                        class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                    </div>
+                    <div id="cod-amount-match-pill" class="px-3 py-2 rounded-xl text-[11px] font-black font-mono border flex items-center gap-1 shrink-0 bg-slate-100 text-slate-500 border-slate-200">
+                      <span>Must be ₹200</span>
+                    </div>
+                  </div>
+                  <div id="cod-amount-mismatch-alert" class="hidden p-2.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-950 text-xs font-bold space-y-1 shadow-2xs"></div>
+                </div>
+
+                <!-- Validation Status Alert -->
+                <div id="cod-screenshot-validation-status" class="hidden mt-2 rounded-xl text-xs font-bold transition"></div>
+
+                <!-- Below-Image Receipt Preview Card -->
+                <div id="cod-screenshot-detail-preview" class="hidden mt-3 bg-slate-900 text-white rounded-2xl p-3 border border-amber-500/30 shadow-lg transition-all duration-300">
+                  <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                      <span class="text-xs font-bold text-amber-300 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[15px]">receipt_long</span> ₹200 Advance Receipt Preview
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <button type="button" onclick="previewReceiptFullscreen('COD')" class="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition flex items-center gap-1 cursor-pointer">
+                        <span class="material-symbols-outlined text-[12px]">fullscreen</span> View Full
+                      </button>
+                      <button type="button" onclick="removeScreenshot('COD')" class="px-2 py-0.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer">
+                        <span class="material-symbols-outlined text-[12px]">delete</span> Remove
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Visual Image Preview -->
+                  <div class="relative rounded-xl overflow-hidden bg-black/60 border border-white/10 max-h-56 flex items-center justify-center p-1 group cursor-pointer" onclick="previewReceiptFullscreen('COD')">
+                    <img id="cod-screenshot-large-preview" src="" alt="Advance Receipt" class="max-h-52 w-auto object-contain rounded-lg shadow-md transition-transform duration-200 group-hover:scale-[1.02]">
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 pointer-events-none">
+                      <span class="material-symbols-outlined text-[18px]">zoom_in</span> Click to enlarge
+                    </div>
+                  </div>
+                  <!-- Metadata Bar -->
+                  <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-300">
+                    <span id="cod-screenshot-meta-name" class="truncate max-w-[180px] font-mono">advance_200.jpg</span>
+                    <span id="cod-screenshot-meta-badge" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-400/30 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">verified_user</span> Advance Proof Verified ✅
+                    </span>
                   </div>
                 </div>
               </div>
@@ -4904,6 +5069,314 @@
             <span>Print Invoice</span>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: ORDER SHIPPING & DISPATCH TRACKING (COURIER, AWB & TRACKING URL)    -->
+  <!-- ========================================================================= -->
+  <div id="modal-order-shipping-dispatch" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 text-white flex items-center justify-between shrink-0 border-b border-indigo-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-sm">
+            <span class="material-symbols-outlined text-[26px]">local_shipping</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-extrabold text-base tracking-tight">Order Dispatch &amp; Tracking Details</h3>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 uppercase">Shipping Stage</span>
+            </div>
+            <p class="text-xs text-indigo-200 mt-0.5">Attach shipping ID, tracking URL and courier partner for Order #<span id="ship-modal-order-id" class="font-mono font-bold text-white"></span></p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-order-shipping-dispatch')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs text-slate-700">
+        <!-- Customer & Order Summary Banner -->
+        <div class="p-3.5 bg-indigo-50/60 rounded-2xl border border-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="min-w-0">
+            <span class="text-[10px] uppercase font-extrabold text-indigo-800 tracking-wider block">Recipient Customer</span>
+            <p class="font-extrabold text-sm text-slate-900 truncate" id="ship-modal-customer-name">Customer</p>
+            <p class="text-[11px] text-slate-500 font-mono" id="ship-modal-customer-phone">+91 00000 00000</p>
+          </div>
+          <div class="text-left sm:text-right shrink-0">
+            <span class="text-[10px] uppercase font-extrabold text-indigo-800 tracking-wider block">Order Total</span>
+            <p class="font-mono font-black text-sm text-emerald-800" id="ship-modal-items-total">₹0</p>
+          </div>
+        </div>
+
+        <!-- Destination Address -->
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-left">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Destination Address:</span>
+          <p id="ship-modal-address" class="text-xs font-semibold text-slate-700 leading-relaxed">Delivery Address</p>
+        </div>
+
+        <!-- 1. Courier Name / Partner Selection -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="block font-bold text-slate-800 text-xs">
+              Courier Partner / Name <span class="text-rose-600">*</span>
+            </label>
+            <span class="text-[10px] text-slate-400 font-semibold">Select quick partner or type below</span>
+          </div>
+
+          <!-- Quick Partner Chips -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button type="button" onclick="setCourierQuickOption('ST Courier')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">ST Courier</button>
+            <button type="button" onclick="setCourierQuickOption('Professional Couriers')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">Professional</button>
+            <button type="button" onclick="setCourierQuickOption('DTDC')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">DTDC</button>
+            <button type="button" onclick="setCourierQuickOption('Delhivery')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">Delhivery</button>
+            <button type="button" onclick="setCourierQuickOption('Blue Dart')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">Blue Dart</button>
+            <button type="button" onclick="setCourierQuickOption('India Post (Speed Post)')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">India Post</button>
+          </div>
+
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">local_shipping</span>
+            <input type="text" id="ship-courier-name" placeholder="e.g. DTDC, ST Courier, Delhivery, Blue Dart..."
+              oninput="onShippingIdChange()"
+              class="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+          </div>
+        </div>
+
+        <!-- 2. Shipping ID / Tracking Number (AWB) -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="block font-bold text-slate-800 text-xs">
+              Shipping ID &amp; AWB Tracking Number <span class="text-rose-600">*</span>
+            </label>
+            <span class="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px] text-amber-500">info</span>
+              Provided by courier partner
+            </span>
+          </div>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">barcode</span>
+            <input type="text" id="ship-tracking-id" placeholder="Enter AWB / Consignment No. from courier slip"
+              value=""
+              oninput="onShippingIdChange()"
+              class="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-mono font-bold text-slate-800 uppercase focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+          </div>
+        </div>
+
+        <!-- 3. Shipping / Tracking URL -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="block font-bold text-slate-800 text-xs">
+              Live Shipping / Tracking URL <span class="text-slate-400 font-normal">(Auto-Generated or Custom)</span>
+            </label>
+            <span class="text-[10px] text-emerald-700 font-bold flex items-center gap-0.5">
+              <span class="material-symbols-outlined text-[13px]">link</span> Clickable via WhatsApp
+            </span>
+          </div>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">link</span>
+            <input type="url" id="ship-tracking-url" placeholder="https://stcourier.com/track/search?awb=..."
+              oninput="updateShippingWhatsAppPreview()"
+              class="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-mono text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+          </div>
+          <p class="text-[10px] text-slate-400">The customer can directly click this live link on their WhatsApp to view real-time parcel transit.</p>
+        </div>
+
+        <!-- 4. WhatsApp Dispatch Message Notification Preview -->
+        <div class="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-2">
+          <label class="flex items-center gap-2 cursor-pointer font-bold text-xs text-emerald-950">
+            <input type="checkbox" id="ship-send-whatsapp" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-emerald-300">
+            <span>Send dispatch notification &amp; live tracking URL to customer on WhatsApp</span>
+          </label>
+          <div class="bg-white p-2.5 rounded-xl border border-emerald-200 text-[11px] font-mono text-slate-700 whitespace-pre-line leading-relaxed" id="ship-wa-preview-text">
+            🚚 *DISPATCH &amp; TRACKING UPDATE*
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
+        <button type="button" onclick="closeModal('modal-order-shipping-dispatch')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition cursor-pointer">
+          Cancel
+        </button>
+        <button type="button" onclick="confirmShippingDispatch()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 transition hover:shadow-lg cursor-pointer">
+          <span class="material-symbols-outlined text-[19px]">local_shipping</span>
+          <span>Confirm Dispatch &amp; Mark as Shipped</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDIT WHATSAPP ORDER (NEW) -->
+  <div id="modal-edit-order" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 p-5 text-white flex items-center justify-between shrink-0 border-b border-blue-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shadow-sm">
+            <span class="material-symbols-outlined text-[26px]">edit_note</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-extrabold text-base tracking-tight">Edit WhatsApp Order &amp; Details</h3>
+              <span id="edit-order-modal-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-500/30 text-blue-300 border border-blue-400/40 uppercase">PLACED</span>
+            </div>
+            <p class="text-xs text-blue-200 mt-0.5">Modify items, shipping address, status, or tracking for Order <span id="edit-order-modal-id-title" class="font-mono font-bold text-white">#WA-2026-0000</span></p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-edit-order')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Scrollable Form Body -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs text-slate-700">
+        <!-- 1. Customer & Staff Section -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <div>
+            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Name *</label>
+            <input type="text" id="edit-order-cust-name" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Phone *</label>
+            <input type="text" id="edit-order-cust-phone" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Order Credited Staff (Booking Specialist)</label>
+            <select id="edit-order-staff-select" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+        </div>
+
+        <!-- 2. Delivery Address -->
+        <div>
+          <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-slate-500">local_shipping</span>
+            <span>Delivery &amp; Shipping Address:</span>
+          </label>
+          <textarea id="edit-order-shipping-address" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed"></textarea>
+        </div>
+
+        <!-- 3. Ordered Garments & Items List with Add/Edit/Quantity -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="font-extrabold text-slate-800 flex items-center gap-1.5 text-xs">
+              <span class="material-symbols-outlined text-[16px] text-blue-600">inventory_2</span>
+              <span>Ordered Products &amp; Quantities:</span>
+            </label>
+            <button type="button" onclick="toggleEditOrderCatalogPicker()" class="text-[11px] font-bold text-blue-700 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[14px]">add_circle</span>
+              <span>Add Product</span>
+            </button>
+          </div>
+
+          <!-- Optional Catalog Adder -->
+          <div id="edit-order-catalog-row" class="hidden mb-2.5 p-2.5 bg-slate-100 border border-slate-200 rounded-xl space-y-2">
+            <div class="flex items-center gap-2">
+              <select id="edit-order-product-select" class="flex-1 bg-white border border-slate-300 text-slate-800 font-bold rounded-lg px-2.5 py-1.5 text-xs">
+                <!-- Dynamically populated from products -->
+              </select>
+              <button type="button" onclick="addSelectedProductToEditOrder()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs">
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div id="edit-order-items-list" class="space-y-2 max-h-48 overflow-y-auto p-1 bg-slate-50/50 rounded-xl border border-slate-200">
+            <!-- Dynamic Items Rows -->
+          </div>
+
+          <!-- Total Summary Bar -->
+          <div class="mt-2.5 p-3 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
+            <span class="font-bold text-slate-800 text-xs">Updated Order Total:</span>
+            <div class="text-right">
+              <span id="edit-order-grand-total" class="font-mono font-black text-lg text-blue-900">₹0</span>
+              <span id="edit-order-items-count" class="text-[10px] text-blue-700 font-semibold block">0 items</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Payment Details & Status -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div>
+            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Payment Method</label>
+            <select id="edit-order-payment-method" onchange="onEditOrderPaymentMethodChange()" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800">
+              <option value="ONLINE_UPI">ONLINE_UPI (Full Paid)</option>
+              <option value="COD">COD (₹200 Advance)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Payment Status</label>
+            <select id="edit-order-payment-status" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800">
+              <option value="PAID">PAID ✅</option>
+              <option value="PARTIAL_PAID (₹200 ADVANCE)">PARTIAL_PAID (₹200 ADVANCE)</option>
+              <option value="PENDING">PENDING</option>
+              <option value="REFUNDED">REFUNDED</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">UPI Ref / UTR</label>
+            <input type="text" id="edit-order-upi-id" placeholder="UTR Number" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono font-bold text-slate-800 uppercase">
+          </div>
+          <div id="edit-order-cod-fields" class="sm:col-span-3 grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
+            <div>
+              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">COD Advance (₹)</label>
+              <input type="number" id="edit-order-cod-advance" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">COD Balance Due (₹)</label>
+              <input type="number" id="edit-order-cod-balance" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono font-bold text-slate-800">
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Order Fulfillment Status & Courier Tracking -->
+        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-800 text-xs flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px] text-indigo-600">local_shipping</span>
+              <span>Fulfillment &amp; Courier Tracking:</span>
+            </label>
+            <div class="w-40">
+              <select id="edit-order-status" class="w-full bg-white border border-indigo-300 rounded-xl p-2 text-xs font-extrabold text-indigo-950 focus:ring-2 focus:ring-indigo-500/20">
+                <option value="PLACED">1. PLACED</option>
+                <option value="PACKED">2. PACKED</option>
+                <option value="SHIPPED">3. SHIPPED</option>
+                <option value="DELIVERED">4. DELIVERED</option>
+                <option value="CANCELLED">CANCELLED</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Courier Partner</label>
+              <input type="text" id="edit-order-courier-name" placeholder="ST Courier, Professional, DTDC, Delhivery..." class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Tracking ID / Consignment No.</label>
+              <input type="text" id="edit-order-tracking-number" placeholder="e.g. STC9823412" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono font-bold text-slate-800 uppercase">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Shipping / Live Tracking URL</label>
+              <input type="url" id="edit-order-shipping-url" placeholder="https://..." class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono text-slate-800">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
+        <button type="button" onclick="closeModal('modal-edit-order')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition cursor-pointer">
+          Cancel
+        </button>
+        <button type="button" onclick="saveEditedOrder()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 transition hover:shadow-lg cursor-pointer">
+          <span class="material-symbols-outlined text-[19px]">save</span>
+          <span>Save Order Changes</span>
+        </button>
       </div>
     </div>
   </div>
@@ -7981,6 +8454,9 @@
 
   <!-- LOAD WEBSOCKET (SOCKET.IO) CLIENT -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+  <!-- CLIENT-SIDE OCR ENGINE FOR PAYMENT SCREENSHOT VERIFICATION -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
   <script src="crm_app.js?v=12.0"></script>
