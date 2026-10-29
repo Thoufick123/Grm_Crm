@@ -293,52 +293,67 @@ if ($pdo) {
 
     <!-- Scrollable Navigation Links -->
     <nav class="flex-1 overflow-y-auto custom-chat-scroll p-3 space-y-1 text-xs font-medium min-h-0">
-      <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Command Center</div>
-      
-      <button onclick="switchView('dashboard')" id="nav-dashboard" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+      <div id="nav-section-command-center" class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Command Center</div>
+
+      <button onclick="switchView('dashboard')" id="nav-dashboard"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">dashboard</span>
+          <span
+            class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">dashboard</span>
           <span>Dashboard</span>
         </div>
       </button>
 
       <!-- WhatsApp Inbox Module with Sub-Modules -->
       <div class="space-y-1">
-        <button onclick="toggleWhatsAppDropdown()" id="nav-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm">
+        <button onclick="switchView('inbox', 'chats');" id="nav-inbox"
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-[20px]">inbox</span>
             <span>WhatsApp Inbox</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span id="badge-total-unread" class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">3</span>
-            <span class="material-symbols-outlined text-[16px] text-white/70 transition-transform duration-200" id="inbox-subnav-arrow">expand_more</span>
+            <span id="badge-total-unread"
+              class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">3</span>
+            <span class="material-symbols-outlined text-[16px] text-white/70 transition-transform duration-200"
+              id="inbox-subnav-arrow">expand_more</span>
           </div>
         </button>
 
         <!-- WhatsApp Inbox Sub-Modules -->
         <div id="inbox-submodules-menu" class="pl-3 pr-1 py-1 space-y-1 ml-3 border-l-2 border-emerald-600/40">
           <!-- Sub-module 1: All Chats & Queue -->
-          <button onclick="switchView('inbox', 'chats')" id="nav-inbox-sub-chats" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group" title="Active WhatsApp Chats & Customer Queue">
+          <button onclick="switchView('inbox', 'chats')" id="nav-inbox-sub-chats"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group"
+            title="Active WhatsApp Chats & Customer Queue">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">forum</span>
+              <span
+                class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">forum</span>
               <span>All Chats &amp; Queue</span>
             </div>
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
           </button>
 
           <!-- Sub-module 2: Auto-Reply Hub -->
-          <button onclick="switchView('inbox', 'autoreply')" id="nav-inbox-sub-autoreply" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-[11px] font-medium transition group" title="Auto-Reply Bot Rules & Q&A Templates">
+          <button onclick="switchView('inbox', 'autoreply')" id="nav-inbox-sub-autoreply"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-[11px] font-medium transition group"
+            title="Auto-Reply Bot Rules & Q&A Templates">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[15px] text-teal-400 group-hover:scale-110 transition">smart_toy</span>
+              <span
+                class="material-symbols-outlined text-[15px] text-teal-400 group-hover:scale-110 transition">smart_toy</span>
               <span>Auto-Reply Hub</span>
             </div>
-            <span id="nav-autoreply-pill" class="text-[9px] font-extrabold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">ON</span>
+            <span id="nav-autoreply-pill"
+              class="text-[9px] font-extrabold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">ON</span>
           </button>
 
           <!-- Sub-module 3: Broadcast Templates -->
-          <button onclick="switchView('inbox', 'broadcast')" id="nav-inbox-sub-broadcast" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-[11px] font-medium transition group" title="Custom Broadcast Templates & Blast Engine">
+          <button onclick="switchView('inbox', 'broadcast')" id="nav-inbox-sub-broadcast"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-[11px] font-medium transition group"
+            title="Custom Broadcast Templates & Blast Engine">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[15px] text-purple-400 group-hover:scale-110 transition">campaign</span>
+              <span
+                class="material-symbols-outlined text-[15px] text-purple-400 group-hover:scale-110 transition">campaign</span>
               <span>Broadcast Templates</span>
             </div>
             <span class="text-[9px] font-bold px-1.5 py-0.2 bg-purple-500/20 text-purple-300 rounded-full">Blast</span>
@@ -346,89 +361,170 @@ if ($pdo) {
         </div>
       </div>
 
-      <div class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Sales & Operations</div>
+      <div id="nav-section-sales-operations" class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Sales & Operations</div>
 
-      <button onclick="switchView('followups')" id="nav-followups" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+      <button onclick="switchView('followups')" id="nav-followups"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">schedule</span>
+          <span
+            class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">schedule</span>
           <span>Follow-up Due</span>
         </div>
-        <span id="badge-followup-count" class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full">3 Today</span>
+        <span id="badge-followup-count"
+          class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full">3 Today</span>
       </button>
 
-      <button onclick="switchView('catalog')" id="nav-catalog" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+      <button onclick="switchView('catalog')" id="nav-catalog"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">inventory_2</span>
+          <span
+            class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">inventory_2</span>
           <span>Live Stock & Sharing</span>
         </div>
       </button>
 
-      <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-        <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">shopping_bag</span>
-          <span>WhatsApp Orders</span>
+      <!-- WHATSAPP ORDERS MODULE WITH SUBMODULES -->
+      <div id="nav-orders-group" class="space-y-1">
+        <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">shopping_bag</span>
+            <span class="font-bold">WhatsApp Orders</span>
+          </div>
+          <span id="badge-orders-count" class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">6</span>
+        </button>
+        <!-- Sub-modules in Sidebar -->
+        <div id="nav-orders-submodules" class="pl-7 pr-1 space-y-1">
+          <button type="button" onclick="switchOrdersSubmodule('dashboard')" id="nav-sub-orders-dashboard" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-emerald-400">analytics</span>
+              <span>1. Order Dashboard</span>
+            </div>
+          </button>
+          <button type="button" onclick="switchOrdersSubmodule('history')" id="nav-sub-orders-history" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-teal-400">history</span>
+              <span>2. Order History</span>
+            </div>
+            <span id="nav-sub-orders-history-badge" class="text-[9px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded-full font-bold">6</span>
+          </button>
         </div>
-        <span id="badge-orders-count" class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">5</span>
-      </button>
+      </div>
 
-      <button onclick="switchView('customers')" id="nav-customers" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+      <button onclick="switchView('customers')" id="nav-customers"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-[20px] text-purple-400 group-hover:scale-110 transition">groups</span>
+          <span
+            class="material-symbols-outlined text-[20px] text-purple-400 group-hover:scale-110 transition">groups</span>
           <span>Customer 360</span>
         </div>
       </button>
 
       <!-- DND / OPT-OUT CUSTOMERS MODULE -->
-      <button onclick="switchView('dnd')" id="nav-dnd" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+      <button onclick="switchView('dnd')" id="nav-dnd"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">do_not_disturb_on</span>
+          <span
+            class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">do_not_disturb_on</span>
           <span>DND / Opt-Out List</span>
         </div>
-        <span id="badge-dnd-count" class="bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+        <span id="badge-dnd-count"
+          class="bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
       </button>
 
-      <!-- Admin-Only Navigation Modules -->
-      <div class="admin-only-nav <?php echo $isAdmin ? '' : 'hidden'; ?>">
-        <div class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Settings & Admin</div>
+      <div id="nav-section-settings-admin" class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Settings & Admin</div>
 
-        <button onclick="switchView('settings')" id="nav-settings" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-[20px] text-emerald-300 group-hover:scale-110 transition">settings_phone</span>
-            <span>WhatsApp Settings</span>
-          </div>
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        </button>
+      <!-- PROMINENT WHATSAPP SETTINGS BUTTON -->
+      <button onclick="switchView('settings')" id="nav-settings"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <div class="flex items-center gap-3">
+          <span
+            class="material-symbols-outlined text-[20px] text-emerald-300 group-hover:scale-110 transition">settings_phone</span>
+          <span>WhatsApp Settings</span>
+        </div>
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      </button>
 
-        <button onclick="switchView('backup')" id="nav-backup" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-200 hover:text-white group">
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">cloud_sync</span>
-            <span class="font-bold">Data Backup & Restore</span>
-          </div>
-          <span class="material-symbols-outlined text-[14px] text-emerald-400">download</span>
-        </button>
+      <!-- DATA BACKUP & RESTORE MODULE -->
+      <button onclick="switchView('backup')" id="nav-backup"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-200 hover:text-white group">
+        <div class="flex items-center gap-3">
+          <span
+            class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">cloud_sync</span>
+          <span class="font-bold">Data Backup & Restore</span>
+        </div>
+        <span class="material-symbols-outlined text-[14px] text-emerald-400">download</span>
+      </button>
 
-        <button onclick="switchView('staff')" id="nav-staff" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+            <!-- STAFF MANAGEMENT MODULE WITH 3 SUB-ITEMS (Admin Only) -->
+      <div id="nav-staff-group" class="space-y-1">
+        <button onclick="toggleStaffSubmenu()" id="nav-staff"
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group"
+          title="Staff & Team Management Hub">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">badge</span>
-            <span>Staff Management</span>
+            <span class="font-bold">Staff Management</span>
           </div>
-          <span id="badge-total-staff-count" class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full">3</span>
-        </button>
-
-        <button onclick="switchView('analytics')" id="nav-analytics" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-[20px] text-indigo-400 group-hover:scale-110 transition">monitoring</span>
-            <span>Staff KPI & Reports</span>
+          <div class="flex items-center gap-1.5">
+            <span id="badge-total-staff-count"
+              class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full">3</span>
+            <span id="staff-subnav-arrow" class="material-symbols-outlined text-[16px] text-slate-400 transition-transform duration-200">expand_more</span>
           </div>
         </button>
 
-        <button onclick="switchView('audit')" id="nav-audit" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">history</span>
-            <span>Audit Trail & Security</span>
-          </div>
-        </button>
+        <!-- Sub-items in Sidebar -->
+        <div id="staff-submodules-menu" class="pl-7 pr-1 space-y-1">
+          <!-- Sub-item 1: All Staff -->
+          <button type="button" onclick="switchStaffSubmodule('list')" id="nav-sub-staff-list"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-300 bg-blue-950/40 border border-blue-500/20 transition cursor-pointer"
+            title="All Staff Directory & Table">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[15px] text-blue-400">groups</span>
+              <span>1. All Staff</span>
+            </div>
+            <span id="nav-sub-staff-count" class="text-[9px] font-mono bg-blue-500/20 text-blue-300 px-1.5 py-0.2 rounded-full font-bold">3</span>
+          </button>
+
+          <!-- Sub-item 2: Add Staff -->
+          <button type="button" onclick="switchStaffSubmodule('create')" id="nav-sub-staff-create"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer"
+            title="Onboard & Add New Staff Member">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[15px] text-emerald-400">person_add</span>
+              <span>2. Add Staff</span>
+            </div>
+            <span class="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full">+New</span>
+          </button>
+
+          <!-- Sub-item 3: Role Base -->
+          <button type="button" onclick="switchStaffSubmodule('roles')" id="nav-sub-staff-roles"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer"
+            title="Role Base Access Control Matrix (View, Create, Edit, Delete for All Modules)">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[15px] text-purple-400">admin_panel_settings</span>
+              <span>3. Role Base</span>
+            </div>
+            <span class="text-[9px] font-bold px-1.5 py-0.2 bg-purple-500/20 text-purple-300 rounded-full">RBAC</span>
+          </button>
+        </div>
       </div>
+
+      <button onclick="switchView('analytics')" id="nav-analytics"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
+        <div class="flex items-center gap-3">
+          <span
+            class="material-symbols-outlined text-[20px] text-indigo-400 group-hover:scale-110 transition">monitoring</span>
+          <span>Staff KPI & Reports</span>
+        </div>
+      </button>
+
+      <button onclick="switchView('audit')" id="nav-audit"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
+        <div class="flex items-center gap-3">
+          <span
+            class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">history</span>
+          <span>Audit Trail & Security</span>
+        </div>
+      </button>
     </nav>
 
     <!-- Bottom User Info & Logout Button -->

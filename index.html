@@ -711,7 +711,7 @@
 
     <!-- Scrollable Navigation Links -->
     <nav class="flex-1 overflow-y-auto custom-chat-scroll p-3 space-y-1 text-xs font-medium min-h-0">
-      <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Command Center</div>
+      <div id="nav-section-command-center" class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Command Center</div>
 
       <button onclick="switchView('dashboard')" id="nav-dashboard"
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
@@ -779,8 +779,7 @@
         </div>
       </div>
 
-      <div class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Sales & Operations
-      </div>
+      <div id="nav-section-sales-operations" class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Sales & Operations</div>
 
       <button onclick="switchView('followups')" id="nav-followups"
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
@@ -850,8 +849,7 @@
           class="bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
       </button>
 
-      <div class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Settings & Admin
-      </div>
+      <div id="nav-section-settings-admin" class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Settings & Admin</div>
 
       <!-- PROMINENT WHATSAPP SETTINGS BUTTON -->
       <button onclick="switchView('settings')" id="nav-settings"
@@ -875,17 +873,58 @@
         <span class="material-symbols-outlined text-[14px] text-emerald-400">download</span>
       </button>
 
-      <!-- STAFF MANAGEMENT MODULE (Admin Only) -->
-      <button onclick="switchView('staff')" id="nav-staff"
-        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
-        <div class="flex items-center gap-3">
-          <span
-            class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">badge</span>
-          <span>Staff Management</span>
+            <!-- STAFF MANAGEMENT MODULE WITH 3 SUB-ITEMS (Admin Only) -->
+      <div id="nav-staff-group" class="space-y-1">
+        <button onclick="toggleStaffSubmenu()" id="nav-staff"
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group"
+          title="Staff & Team Management Hub">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">badge</span>
+            <span class="font-bold">Staff Management</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span id="badge-total-staff-count"
+              class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full">3</span>
+            <span id="staff-subnav-arrow" class="material-symbols-outlined text-[16px] text-slate-400 transition-transform duration-200">expand_more</span>
+          </div>
+        </button>
+
+        <!-- Sub-items in Sidebar -->
+        <div id="staff-submodules-menu" class="pl-7 pr-1 space-y-1">
+          <!-- Sub-item 1: All Staff -->
+          <button type="button" onclick="switchStaffSubmodule('list')" id="nav-sub-staff-list"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-300 bg-blue-950/40 border border-blue-500/20 transition cursor-pointer"
+            title="All Staff Directory & Table">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[15px] text-blue-400">groups</span>
+              <span>1. All Staff</span>
+            </div>
+            <span id="nav-sub-staff-count" class="text-[9px] font-mono bg-blue-500/20 text-blue-300 px-1.5 py-0.2 rounded-full font-bold">3</span>
+          </button>
+
+          <!-- Sub-item 2: Add Staff -->
+          <button type="button" onclick="switchStaffSubmodule('create')" id="nav-sub-staff-create"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer"
+            title="Onboard & Add New Staff Member">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[15px] text-emerald-400">person_add</span>
+              <span>2. Add Staff</span>
+            </div>
+            <span class="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full">+New</span>
+          </button>
+
+          <!-- Sub-item 3: Role Base -->
+          <button type="button" onclick="switchStaffSubmodule('roles')" id="nav-sub-staff-roles"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer"
+            title="Role Base Access Control Matrix (View, Create, Edit, Delete for All Modules)">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[15px] text-purple-400">admin_panel_settings</span>
+              <span>3. Role Base</span>
+            </div>
+            <span class="text-[9px] font-bold px-1.5 py-0.2 bg-purple-500/20 text-purple-300 rounded-full">RBAC</span>
+          </button>
         </div>
-        <span id="badge-total-staff-count"
-          class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full">3</span>
-      </button>
+      </div>
 
       <button onclick="switchView('analytics')" id="nav-analytics"
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
@@ -1266,8 +1305,24 @@
               </div>
             </div>
 
-            <!-- Message Input Bar -->
+            <!-- Message Input Bar with Photo Upload Support -->
             <div class="p-2.5 sm:p-3 bg-white border-t border-slate-200 shrink-0 min-w-0">
+              <!-- Attached Image Preview Strip in 1:1 Chat -->
+              <div id="chat-attached-image-preview" class="hidden mb-2 p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-10 h-10 rounded-lg overflow-hidden bg-slate-200 shrink-0 border border-emerald-300 shadow-2xs">
+                    <img id="chat-attached-thumb" src="" alt="Attached Image" class="w-full h-full object-cover">
+                  </div>
+                  <div class="min-w-0">
+                    <p id="chat-attached-filename" class="text-xs font-bold text-slate-800 truncate">photo.jpg</p>
+                    <p class="text-[10px] text-emerald-700 font-medium">Ready to send with message</p>
+                  </div>
+                </div>
+                <button type="button" onclick="clearChatAttachedImage()" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Remove attachment">
+                  <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
+
               <form onsubmit="handleSendMessage(event)" class="flex items-center gap-2 min-w-0">
                 <button type="button" onclick="openProductSearchModal()"
                   class="px-2.5 py-2 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-xl transition shrink-0 flex items-center gap-1.5 font-bold text-xs shadow-2xs cursor-pointer"
@@ -1275,6 +1330,15 @@
                   <span class="material-symbols-outlined text-[19px] text-teal-600">inventory_2</span>
                   <span class="hidden sm:inline text-[11px] font-bold text-slate-700">Stock &amp; Share</span>
                 </button>
+
+                <!-- Hidden file input for 1:1 chat photo upload -->
+                <input type="file" id="chat-image-file-input" accept="image/*" class="hidden" onchange="handleChatImageFileSelected(event)">
+                <button type="button" onclick="document.getElementById('chat-image-file-input').click()"
+                  class="p-2 bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-xl transition shrink-0 flex items-center justify-center shadow-2xs cursor-pointer"
+                  title="Upload &amp; Send Photo">
+                  <span class="material-symbols-outlined text-[19px]">add_photo_alternate</span>
+                </button>
+
                 <input type="text" id="chat-input-text"
                   placeholder="Type a message or response to customer (Press Enter to send)..."
                   class="flex-1 min-w-0 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-wa focus:bg-white transition"
@@ -1727,16 +1791,70 @@
                   </div>
                 </div>
 
-                <!-- 5. Optional Image Attachment & Rate Limiting -->
+                <!-- 5. Upload Image & Sending Rate Control (Images Uploaded Wise) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1">
-                    <label class="block font-bold text-slate-800 text-xs flex items-center gap-1">
-                      <span class="material-symbols-outlined text-[15px] text-emerald-600">image</span>
-                      <span>Attach Photo URL (Optional):</span>
-                    </label>
-                    <input type="url" id="bcast-image-url" oninput="updateBroadcastPreview()"
-                      placeholder="https://.../offer-banner.jpg"
-                      class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs text-slate-800 focus:bg-white focus:ring-1 focus:ring-emerald-500">
+                  <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2">
+                    <div class="flex items-center justify-between">
+                      <label class="block font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px] text-emerald-600">add_photo_alternate</span>
+                        <span>Upload Photo / Banner (Optional):</span>
+                      </label>
+                      <span id="bcast-upload-status-badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[12px] text-emerald-700">check_circle</span>
+                        <span>Attached</span>
+                      </span>
+                    </div>
+
+                    <!-- Hidden Real File Input & Data Holders -->
+                    <input type="file" id="bcast-image-file" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden" onchange="handleBroadcastImageFileUpload(event)">
+                    <input type="hidden" id="bcast-image-url" value="">
+
+                    <!-- State 1: Dropzone for Browse / Drag & Drop -->
+                    <div id="bcast-upload-dropzone" onclick="document.getElementById('bcast-image-file').click()"
+                      ondragover="handleBroadcastDragOver(event)" ondragleave="handleBroadcastDragLeave(event)" ondrop="handleBroadcastFileDrop(event)"
+                      class="border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/40 rounded-xl p-3 text-center cursor-pointer transition flex flex-col items-center justify-center gap-1 bg-slate-50/60 group">
+                      <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition shadow-2xs">
+                        <span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+                      </div>
+                      <p class="text-xs font-bold text-slate-700 group-hover:text-emerald-700">Click to upload image or drag & drop</p>
+                      <p class="text-[10px] text-slate-400">JPG, PNG, WebP up to 10MB • Auto-sent to WhatsApp</p>
+                    </div>
+
+                    <!-- State 2: Uploaded Image Card (Shown after selection) -->
+                    <div id="bcast-upload-preview-card" class="hidden p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 shadow-2xs">
+                      <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-12 h-12 rounded-lg overflow-hidden bg-slate-200 shrink-0 border border-slate-300 shadow-2xs">
+                          <img id="bcast-upload-thumb" src="" alt="Uploaded photo preview" class="w-full h-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                          <p id="bcast-upload-filename" class="text-xs font-bold text-slate-800 truncate max-w-[140px]">image.jpg</p>
+                          <p id="bcast-upload-filesize" class="text-[10px] text-slate-500 font-mono">0 KB</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" onclick="document.getElementById('bcast-image-file').click()"
+                          class="px-2 py-1 text-[11px] font-bold text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg border border-slate-200 transition cursor-pointer"
+                          title="Change image">Change</button>
+                        <button type="button" onclick="removeBroadcastUploadedImage()"
+                          class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                          title="Remove image">
+                          <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Optional URL toggle for external links if needed -->
+                    <div class="pt-0.5 flex items-center justify-between text-[10px]">
+                      <button type="button" onclick="toggleBroadcastUrlFallback()" class="text-slate-400 hover:text-emerald-700 flex items-center gap-0.5 cursor-pointer">
+                        <span class="material-symbols-outlined text-[12px]">link</span>
+                        <span id="bcast-url-toggle-text">Or paste image URL instead</span>
+                      </button>
+                    </div>
+                    <div id="bcast-url-fallback-row" class="hidden pt-1">
+                      <input type="url" id="bcast-image-url-manual" placeholder="https://.../offer-banner.jpg"
+                        oninput="handleBroadcastManualUrlInput(this.value)"
+                        class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5 text-xs text-slate-800 focus:bg-white focus:ring-1 focus:ring-emerald-500">
+                    </div>
                   </div>
 
                   <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1">
@@ -1922,9 +2040,7 @@
                   class="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium">
                   <option value="ALL">All Staff Members</option>
                   <option value="UNASSIGNED">Unassigned Only</option>
-                  <option value="staff_01">Staff 01 (Priya)</option>
-                  <option value="staff_02">Staff 02 (Rahul)</option>
-                  <option value="staff_03">Staff 03 (Sneha)</option>
+
                 </select>
               </div>
             </div>
@@ -2890,9 +3006,7 @@
                     <select id="followup-filter-staff" onchange="filterFollowupsCards()"
                       class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                       <option value="ALL">👥 All Staff Members</option>
-                      <option value="staff_01">Priya Sharma (Baby Collection)</option>
-                      <option value="staff_02">Rahul Verma (Maternity &amp; Kids)</option>
-                      <option value="staff_03">Sneha Patel (Order Support)</option>
+
                       <option value="admin">Super Admin</option>
                     </select>
                   </div>
@@ -3110,9 +3224,7 @@
                     <select id="pay-pending-filter-staff" onchange="filterPaymentPendingCards()"
                       class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
                       <option value="ALL">👥 All Staff Members</option>
-                      <option value="staff_01">Priya Sharma</option>
-                      <option value="staff_02">Rahul Verma</option>
-                      <option value="staff_03">Sneha Patel</option>
+
                       <option value="admin">Super Admin</option>
                     </select>
                   </div>
@@ -3400,25 +3512,21 @@
             <div
               class="flex items-center gap-1.5 bg-black/30 p-1.5 rounded-xl border border-white/10 shrink-0 flex-wrap">
               <button type="button" onclick="switchStaffTab('list')" id="tab-btn-staff-list"
-                class="px-3 py-1.5 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+                class="px-3.5 py-2 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition cursor-pointer">
                 <span class="material-symbols-outlined text-[16px]">groups</span>
-                <span>1. Staff Directory</span>
-              </button>
-              <button type="button" onclick="switchStaffTab('quota')" id="tab-btn-staff-quota"
-                class="px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-[16px]">pie_chart</span>
-                <span>2. Daily Message Quota (200 Target)</span>
+                <span>1. All Staff</span>
               </button>
               <button type="button" onclick="switchStaffTab('create')" id="tab-btn-staff-create"
-                class="px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
+                class="px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer">
                 <span class="material-symbols-outlined text-[16px]">person_add</span>
-                <span>3. Create Staff</span>
+                <span>2. Add Staff</span>
               </button>
               <button type="button" onclick="switchStaffTab('roles')" id="tab-btn-staff-roles"
-                class="px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
+                class="px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer">
                 <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                <span>4. Assign the Role</span>
+                <span>3. Role Base</span>
               </button>
+              
             </div>
           </div>
 
@@ -3478,7 +3586,7 @@
                       placeholder="Search staff name or role..."
                       class="pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-wa focus:bg-white w-56 transition">
                   </div>
-                  <button type="button" onclick="switchStaffTab('create')"
+                  <button type="button" onclick="switchStaffTab('create')" id="btn-add-staff-table"
                     class="px-3.5 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1 transition">
                     <span class="material-symbols-outlined text-[16px]">add</span> + Add Staff
                   </button>
@@ -3493,7 +3601,7 @@
                     <tr>
                       <th class="py-3.5 px-4">Staff Member</th>
                       <th class="py-3.5 px-4">Role & Specialization</th>
-                      <th class="py-3.5 px-4 text-center">Daily Quota</th>
+
                       <th class="py-3.5 px-4">Today Handled</th>
                       <th class="py-3.5 px-4">Active Leads</th>
                       <th class="py-3.5 px-4">Converted Orders</th>
@@ -3513,118 +3621,6 @@
           <!-- ======================================================= -->
           <!-- SUB-DIVISION 2: DAILY MESSAGE ALLOCATION & QUOTA (200 TARGET) -->
           <!-- ======================================================= -->
-          <div id="subview-staff-quota" class="space-y-6 hidden">
-
-            <!-- Quota Management Banner -->
-            <div
-              class="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div class="space-y-1">
-                <div class="flex items-center gap-2">
-                  <span
-                    class="px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 text-[10px] font-extrabold flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    ADMIN LEAD &amp; MESSAGE ALLOCATION ENGINE
-                  </span>
-                </div>
-                <h3 class="text-xl font-bold">Daily Inbound Message Allocation Control</h3>
-                <p class="text-xs text-emerald-100/80 max-w-2xl">
-                  Configure the daily expected WhatsApp inbound volume (e.g. 200 messages/day) and distribute capacity
-                  quotas across staff members. Once assigned, each staff member's workstation panel updates
-                  automatically in real-time.
-                </p>
-              </div>
-
-              <!-- 1-Click Auto-Balance Action -->
-              <div class="flex items-center gap-2 shrink-0">
-                <button type="button" onclick="handleAutoBalanceQuota()"
-                  class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-brand-wa hover:from-emerald-600 hover:to-brand-waDark text-white rounded-xl text-xs font-bold shadow-glow flex items-center gap-2 transition hover:scale-105">
-                  <span class="material-symbols-outlined text-[18px]">balance</span>
-                  <span>Auto-Distribute 200 Quota Equally</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- 3 Quota KPI Summary Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <!-- Expected Daily Target Card -->
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] uppercase font-bold text-slate-400">Expected Daily Target</span>
-                  <button type="button" onclick="openEditExpectedDailyTargetPrompt()"
-                    class="text-[11px] text-brand-wa hover:underline font-bold flex items-center gap-0.5">
-                    <span class="material-symbols-outlined text-[14px]">edit</span> Edit
-                  </button>
-                </div>
-                <p id="kpi-quota-expected" class="text-2xl font-black text-slate-900 mt-1.5 font-mono">200 msgs / day
-                </p>
-                <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[14px] text-emerald-600">tune</span> Base expected
-                  WhatsApp inbound
-                </p>
-              </div>
-
-              <!-- Total Allocated Across Team Card -->
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Total Allocated Across Staff</span>
-                <p id="kpi-quota-allocated" class="text-2xl font-black text-emerald-700 mt-1.5 font-mono">200 / 200 msgs
-                </p>
-                <p id="kpi-quota-balance-label"
-                  class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[14px]">check_circle</span> 100% Team Capacity Distributed
-                </p>
-              </div>
-
-              <!-- Today's Inbound Progress Card -->
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Today's Inbound Messages</span>
-                <p id="kpi-quota-today-received" class="text-2xl font-black text-blue-700 mt-1.5 font-mono">0 / 200 msgs
-                  (0%)</p>
-                <div class="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden border border-slate-200">
-                  <div id="kpi-quota-progress-bar" class="h-full bg-blue-600 rounded-full transition-all duration-500"
-                    style="width: 0%"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Interactive Staff Quota Distribution Form & Table -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-5">
-              <div
-                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                <div>
-                  <h4 class="font-bold text-sm text-slate-900">Staff Daily Message Capacity Allocation</h4>
-                  <p class="text-xs text-slate-500">Set individual message volume handling quotas per staff member</p>
-                </div>
-                <button type="button" onclick="handleSaveDailyAllocations()"
-                  class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition hover:scale-105">
-                  <span class="material-symbols-outlined text-[18px]">save</span>
-                  <span>Save Quota Allocations</span>
-                </button>
-              </div>
-
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-700">
-                  <thead
-                    class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                    <tr>
-                      <th class="py-3.5 px-4">Staff Member</th>
-                      <th class="py-3.5 px-4">Role / Department</th>
-                      <th class="py-3.5 px-4">Daily Message Quota (Target)</th>
-                      <th class="py-3.5 px-4">Today Handled</th>
-                      <th class="py-3.5 px-4">Utilization %</th>
-                      <th class="py-3.5 px-4 text-right">Quick Set</th>
-                    </tr>
-                  </thead>
-                  <tbody id="staff-quota-table-body" class="divide-y divide-slate-100 font-medium">
-                    <!-- Populated dynamically by JS -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- ======================================================= -->
-          <!-- SUB-DIVISION 3: CREATE NEW STAFF -->
           <!-- ======================================================= -->
           <div id="subview-staff-create" class="space-y-6 hidden">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-3xl mx-auto space-y-6">
@@ -3714,6 +3710,36 @@
                   </div>
                 </div>
 
+                <!-- Password Row -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block font-bold text-slate-800 mb-1">Login Password <span
+                        class="text-rose-500">*</span>:</label>
+                    <div class="relative">
+                      <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">lock</span>
+                      <input type="password" id="staff-new-password" required placeholder="Enter login password (e.g. staff123)"
+                        class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                      <button type="button" onclick="togglePasswordVisibility('staff-new-password', this)"
+                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                        title="Show / hide password">
+                        <span class="material-symbols-outlined text-[18px]">visibility</span>
+                      </button>
+                    </div>
+                    <span class="text-[10px] text-slate-400 mt-1 block">Staff member will use this password to sign in at login screen (min. 6 chars).</span>
+                  </div>
+
+                  <div class="flex items-center">
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-[11px] leading-relaxed w-full">
+                      <div class="font-bold text-slate-700 flex items-center gap-1.5 mb-0.5">
+                        <span class="material-symbols-outlined text-[15px] text-emerald-600">security</span>
+                        <span>Staff Login Credentials</span>
+                      </div>
+                      The staff member will use their generated Staff ID or Username and this password to access their dedicated workstation dashboard.
+                    </div>
+                  </div>
+                </div>
+
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
                   <button type="button" onclick="switchStaffTab('list')"
                     class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
@@ -3733,136 +3759,182 @@
           <!-- ======================================================= -->
           <div id="subview-staff-roles" class="space-y-6 hidden">
 
-            <!-- Role Reassignment Card -->
+            <!-- Granular Role-Based Access Control Card -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-              <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+              
+              <!-- Header -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center shadow-md">
+                  <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-600 text-white flex items-center justify-center shadow-md">
                     <span class="material-symbols-outlined text-[24px]">admin_panel_settings</span>
                   </div>
                   <div>
-                    <h3 class="font-bold text-sm text-slate-900">Role & Permission Assignment Engine</h3>
-                    <p class="text-xs text-slate-500">Assign roles to team members and configure granular operational
-                      permissions</p>
+                    <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
+                      <span>Role-Based Access Control &amp; Module Permissions</span>
+                      <span class="text-[10px] bg-purple-100 text-purple-800 font-mono font-bold px-2 py-0.5 rounded-full border border-purple-200">RBAC Engine</span>
+                    </h3>
+                    <p class="text-xs text-slate-500">Configure granular <strong>View</strong>, <strong>Create</strong>, <strong>Edit</strong>, and <strong>Delete</strong> actions for each role across all CRM modules.</p>
                   </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="handleCreateNewRolePrompt()" class="px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                    <span>+ Create New Role</span>
+                  </button>
+                  <button type="button" onclick="handleDeleteCurrentRole()" id="btn-delete-role" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition hidden flex items-center gap-1 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">delete</span>
+                    <span>Delete Role</span>
+                  </button>
                 </div>
               </div>
 
-              <!-- Quick Role Assignment Tool -->
-              <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
-                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <span class="material-symbols-outlined text-[16px] text-purple-600">switch_account</span>
-                  Quick Role Reassignment Tool
-                </h4>
+              <!-- Quick Role Assignment to Staff Bar -->
+              <div class="bg-purple-50/60 p-4 rounded-xl border border-purple-200/80 space-y-3">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-bold text-xs text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px] text-purple-600">switch_account</span>
+                    <span>Assign Role to Staff Member</span>
+                  </h4>
+                  <span class="text-[10px] text-purple-700 font-medium">Instantly updates active staff capabilities</span>
+                </div>
 
-                <form onsubmit="handleQuickRoleReassign(event)"
-                  class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs items-end">
+                <form onsubmit="handleQuickRoleReassign(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs items-end">
                   <div>
                     <label class="block font-bold text-slate-700 mb-1">Select Staff Member:</label>
                     <select id="role-assign-staff-select" required
-                      class="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa">
+                      class="w-full p-2 bg-white border border-purple-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer shadow-2xs">
                       <!-- Populated dynamically by JS -->
                     </select>
                   </div>
 
                   <div>
-                    <label class="block font-bold text-slate-700 mb-1">New Role to Assign:</label>
+                    <label class="block font-bold text-slate-700 mb-1">Role to Assign:</label>
                     <select id="role-assign-new-role" required
-                      class="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa">
-                      <option value="Sales Specialist (Baby Collection)">Sales Specialist (Baby Collection)</option>
-                      <option value="Enquiry Specialist (Maternity & Kids)">Enquiry Specialist (Maternity & Kids)
-                      </option>
-                      <option value="Order Fulfillment & Support">Order Fulfillment & Support</option>
-                      <option value="Senior Sales Executive">Senior Sales Executive</option>
-                      <option value="Customer Care Representative">Customer Care Representative</option>
-                      <option value="Admin Manager">Admin Manager (Full Access)</option>
+                      class="w-full p-2 bg-white border border-purple-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer shadow-2xs">
+                      <!-- Populated dynamically by JS -->
                     </select>
                   </div>
 
                   <div>
                     <button type="submit"
-                      class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition">
-                      <span class="material-symbols-outlined text-[18px]">verified</span> Assign Role Now
+                      class="w-full py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
+                      <span class="material-symbols-outlined text-[16px]">verified</span>
+                      <span>Assign Role Now</span>
                     </button>
                   </div>
                 </form>
               </div>
 
-              <!-- Role Permission Matrix Table -->
-              <div class="space-y-3">
-                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wider">Role Permission Matrix</h4>
+              <!-- Role Selector Bar & Presets Toolbar -->
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div class="flex items-center gap-3">
+                  <label class="text-xs font-bold text-slate-800 shrink-0 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px] text-indigo-600">shield</span>
+                    <span>Editing Permissions For Role:</span>
+                  </label>
+                  <select id="role-matrix-role-select" onchange="handleRoleSelectChange(this.value)"
+                    class="bg-white border-2 border-indigo-500 text-indigo-950 font-black text-xs rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer shadow-sm">
+                    <!-- Populated dynamically -->
+                  </select>
+                  <span id="role-staff-count-badge" class="text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-200">
+                    0 Staff
+                  </span>
+                </div>
 
-                <div class="overflow-x-auto rounded-xl border border-slate-200">
-                  <table class="w-full text-left text-xs text-slate-700">
-                    <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
-                      <tr>
-                        <th class="py-3 px-4">Role Title</th>
-                        <th class="py-3 px-4 text-center">Chat & Reply</th>
-                        <th class="py-3 px-4 text-center">Share Catalog</th>
-                        <th class="py-3 px-4 text-center">Confirm Orders</th>
-                        <th class="py-3 px-4 text-center">Reassign Leads</th>
-                        <th class="py-3 px-4 text-center">Unmask Phone #</th>
-                        <th class="py-3 px-4 text-center">Backup & Export</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-xs">
-                      <tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 font-bold text-purple-900 flex items-center gap-1.5">
-                          <span class="material-symbols-outlined text-[16px] text-purple-600">shield_person</span> Admin
-                          Manager
-                        </td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Full</td>
-                      </tr>
-                      <tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 font-bold text-blue-900 flex items-center gap-1.5">
-                          <span class="material-symbols-outlined text-[16px] text-blue-600">point_of_sale</span> Sales
-                          Specialist
-                        </td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Assigned</td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Yes</td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Yes</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ Masked</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
-                      </tr>
-                      <tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 font-bold text-amber-900 flex items-center gap-1.5">
-                          <span class="material-symbols-outlined text-[16px] text-amber-600">support_agent</span>
-                          Enquiry Specialist
-                        </td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Assigned</td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Yes</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ Masked</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
-                      </tr>
-                      <tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 font-bold text-teal-900 flex items-center gap-1.5">
-                          <span class="material-symbols-outlined text-[16px] text-teal-600">local_shipping</span> Order
-                          Fulfillment
-                        </td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Dispatches</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
-                        <td class="py-3 px-4 text-center text-emerald-600 font-bold">✔ Yes</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ Masked</td>
-                        <td class="py-3 px-4 text-center text-slate-400">✖ No</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <!-- Quick Action Presets -->
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-[10px] font-bold text-slate-500 uppercase mr-1">Presets:</span>
+                  <button type="button" onclick="applyRolePreset('all')" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer" title="Grant all actions across all modules">
+                    <span class="material-symbols-outlined text-[12px] text-emerald-600">check_circle</span> All
+                  </button>
+                  <button type="button" onclick="applyRolePreset('view_only')" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer" title="Read-only access (View only)">
+                    <span class="material-symbols-outlined text-[12px] text-sky-600">visibility</span> View Only
+                  </button>
+                  <button type="button" onclick="applyRolePreset('sales')" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer" title="Standard Sales Specialist permissions">
+                    <span class="material-symbols-outlined text-[12px] text-purple-600">point_of_sale</span> Sales
+                  </button>
+                  <button type="button" onclick="applyRolePreset('reset')" class="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer" title="Clear all checkboxes">
+                    <span class="material-symbols-outlined text-[12px] text-rose-600">clear_all</span> Clear
+                  </button>
                 </div>
               </div>
+
+              <!-- GRANULAR MODULE PERMISSIONS MATRIX TABLE -->
+              <div class="overflow-hidden rounded-2xl border border-slate-200 shadow-xs">
+                <table class="w-full text-left text-xs text-slate-700">
+                  <thead class="bg-gradient-to-r from-slate-900 to-slate-800 text-white font-bold text-[11px] uppercase tracking-wider">
+                    <tr>
+                      <th class="py-3.5 px-4 w-2/5">
+                        <div class="flex items-center gap-2">
+                          <span class="material-symbols-outlined text-[16px] text-indigo-400">tune</span>
+                          <span>CRM Module / Operational Section</span>
+                        </div>
+                      </th>
+                      <th class="py-3.5 px-3 text-center w-1/8">
+                        <label class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-sky-300 transition select-none" title="Select / Deselect View for all 12 modules">
+                          <input type="checkbox" id="role-header-view" onchange="handleToggleActionForAllModules('view', this.checked)"
+                            class="w-4 h-4 text-sky-500 rounded border-slate-600 bg-slate-800 focus:ring-sky-400 cursor-pointer">
+                          <span class="material-symbols-outlined text-[14px] text-sky-400">visibility</span>
+                          <span>View</span>
+                        </label>
+                      </th>
+                      <th class="py-3.5 px-3 text-center w-1/8">
+                        <label class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-emerald-300 transition select-none" title="Select / Deselect Create for all 12 modules">
+                          <input type="checkbox" id="role-header-create" onchange="handleToggleActionForAllModules('create', this.checked)"
+                            class="w-4 h-4 text-emerald-500 rounded border-slate-600 bg-slate-800 focus:ring-emerald-400 cursor-pointer">
+                          <span class="material-symbols-outlined text-[14px] text-emerald-400">add_circle</span>
+                          <span>Create</span>
+                        </label>
+                      </th>
+                      <th class="py-3.5 px-3 text-center w-1/8">
+                        <label class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-amber-300 transition select-none" title="Select / Deselect Edit for all 12 modules">
+                          <input type="checkbox" id="role-header-edit" onchange="handleToggleActionForAllModules('edit', this.checked)"
+                            class="w-4 h-4 text-amber-500 rounded border-slate-600 bg-slate-800 focus:ring-amber-400 cursor-pointer">
+                          <span class="material-symbols-outlined text-[14px] text-amber-400">edit</span>
+                          <span>Edit</span>
+                        </label>
+                      </th>
+                      <th class="py-3.5 px-3 text-center w-1/8">
+                        <label class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-rose-300 transition select-none" title="Select / Deselect Delete for all 12 modules">
+                          <input type="checkbox" id="role-header-delete" onchange="handleToggleActionForAllModules('delete', this.checked)"
+                            class="w-4 h-4 text-rose-500 rounded border-slate-600 bg-slate-800 focus:ring-rose-400 cursor-pointer">
+                          <span class="material-symbols-outlined text-[14px] text-rose-400">delete</span>
+                          <span>Delete</span>
+                        </label>
+                      </th>
+                      <th class="py-3.5 px-4 text-center w-1/8">
+                        <label class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-teal-300 transition select-none" title="Select / Deselect All Actions across all 12 modules">
+                          <input type="checkbox" id="role-header-all" onchange="handleToggleActionForAllModules('all', this.checked)"
+                            class="w-4 h-4 text-teal-500 rounded border-slate-600 bg-slate-800 focus:ring-teal-400 cursor-pointer">
+                          <span class="material-symbols-outlined text-[14px] text-teal-400">select_all</span>
+                          <span>All Actions</span>
+                        </label>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody id="role-matrix-table-body" class="divide-y divide-slate-100 font-medium">
+                    <!-- Populated dynamically by JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Save Permissions Action Bar -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <div class="text-[11px] text-slate-500 flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[15px] text-emerald-600">verified_user</span>
+                  <span>Permissions are saved atomically to MySQL database and apply live to all assigned staff members.</span>
+                </div>
+                <button type="button" onclick="handleSaveRolePermissions()"
+                  class="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:scale-105 active:scale-95 cursor-pointer">
+                  <span class="material-symbols-outlined text-[18px]">save</span>
+                  <span>Save Role Permissions to Database</span>
+                </button>
+              </div>
+
             </div>
 
           </div>
-
-        </div>
       </section>
       <section id="view-settings" class="h-full overflow-y-auto p-6 hidden">
         <div class="max-w-4xl mx-auto space-y-6">
@@ -4218,7 +4290,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             <!-- 1. Export Backup Card -->
-            <div
+            <div id="card-backup-export"
               class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between space-y-4">
               <div class="space-y-2">
                 <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
@@ -4238,7 +4310,7 @@
             </div>
 
             <!-- 2. Restore Backup Card -->
-            <div
+            <div id="card-backup-restore"
               class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between space-y-4">
               <div class="space-y-2">
                 <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
@@ -4264,7 +4336,7 @@
           </div>
 
           <!-- Reset / Factory Defaults Note -->
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center justify-between text-xs">
+          <div id="card-backup-reset" class="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center justify-between text-xs">
             <div>
               <h4 class="font-bold text-slate-800">Reset System to Initial Demo State</h4>
               <p class="text-slate-500 mt-0.5">Cleans temporary test chats and reloads the default garment catalog with
@@ -4272,7 +4344,7 @@
             </div>
             <button
               onclick="if(confirm('Are you sure you want to reset demo data?')) { localStorage.removeItem('GRM_CRM_STATE_V2_5'); location.reload(); }"
-              class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold transition">
+              id="btn-backup-reset" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold transition">
               Reset Demo Data
             </button>
           </div>
@@ -4353,9 +4425,7 @@
             <select id="sim-assign"
               class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium">
               <option value="UNASSIGNED" selected>⚡ Unassigned (Goes to Admin Queue)</option>
-              <option value="staff_01">Assign Direct to Staff 01 (Priya)</option>
-              <option value="staff_02">Assign Direct to Staff 02 (Rahul)</option>
-              <option value="staff_03">Assign Direct to Staff 03 (Sneha)</option>
+
             </select>
           </div>
         </div>
@@ -4896,9 +4966,7 @@
               </label>
               <select id="followup-staff-select"
                 class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600">
-                <option value="staff_01">Priya Sharma (Baby Collection)</option>
-                <option value="staff_02">Rahul Verma (Maternity &amp; Kids)</option>
-                <option value="staff_03">Sneha Patel (Order Support)</option>
+
                 <option value="admin">Super Admin</option>
               </select>
             </div>
@@ -5493,9 +5561,7 @@
               <select id="export-staff-filter" onchange="updateFollowupExportPreview()"
                 class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 <option value="ALL">👥 All Staff Members</option>
-                <option value="staff_01">Priya Sharma</option>
-                <option value="staff_02">Rahul Verma</option>
-                <option value="staff_03">Sneha Patel</option>
+
                 <option value="admin">Super Admin</option>
               </select>
             </div>
@@ -7917,7 +7983,7 @@
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=10.3"></script>
+  <script src="crm_app.js?v=12.0"></script>
 </body>
 
 </html>

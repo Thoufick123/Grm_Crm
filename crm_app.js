@@ -491,6 +491,295 @@ var DEFAULT_ACCOUNTS = window.DEFAULT_ACCOUNTS || {
 };
 window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
 
+
+// =========================================================================
+// ROLE-BASED ACCESS CONTROL (RBAC) & PERMISSION DEFINITIONS
+// =========================================================================
+const CRM_MODULE_DEFINITIONS = [
+  { key: 'inbox', name: 'WhatsApp Inbox & Live Chat', desc: 'Realtime chats, inbound stream, templates & photo sending', icon: 'chat' },
+  { key: 'enquiries', name: 'Customer Enquiries & Leads Hub', desc: 'Lead triage, allocation & customer conversation status', icon: 'support_agent' },
+  { key: 'followups', name: 'Customer Follow-up Scheduler', desc: 'Callback calendar, payment promises & reminders', icon: 'schedule' },
+  { key: 'catalog', name: 'Live Stock & Garment Catalog', desc: 'Inventory stock, pricing, image library & 1-click sharing', icon: 'inventory_2' },
+  { key: 'orders', name: 'WhatsApp Sales Orders', desc: 'Order booking, stock reservations & COD / UPI billing', icon: 'shopping_bag' },
+  { key: 'customers', name: 'Customer 360 & Profiles Directory', desc: 'Customer history, WhatsApp accounts, and tag directory', icon: 'groups' },
+  { key: 'dnd', name: 'DND & Opt-Out Customer Hub', desc: 'Blacklist, opt-out compliance & marketing revocation', icon: 'block' },
+  { key: 'staff', name: 'Staff & Team Management', desc: 'Team member directory, staff onboarding & role assignment', icon: 'badge' },
+  { key: 'analytics', name: 'Staff Performance Analytics & KPIs', desc: 'Team conversions, response latency & volume reports', icon: 'monitoring' },
+  { key: 'audit', name: 'System Audit Trail & Security Logs', desc: 'Tamper-proof event logs, security & staff actions', icon: 'history' },
+  { key: 'settings', name: 'WhatsApp Business Settings', desc: 'Business phone slots, Webhook routing & Softphone config', icon: 'settings' },
+  { key: 'backup', name: 'Data Backup & Recovery Hub', desc: 'Full MySQL database snapshot export and zero-loss restore', icon: 'backup' }
+];
+window.CRM_MODULE_DEFINITIONS = CRM_MODULE_DEFINITIONS;
+
+const DEFAULT_ROLE_PERMISSIONS = {
+  'Super Admin': {
+    inbox: { view: true, create: true, edit: true, delete: true },
+    enquiries: { view: true, create: true, edit: true, delete: true },
+    followups: { view: true, create: true, edit: true, delete: true },
+    catalog: { view: true, create: true, edit: true, delete: true },
+    orders: { view: true, create: true, edit: true, delete: true },
+    customers: { view: true, create: true, edit: true, delete: true },
+    dnd: { view: true, create: true, edit: true, delete: true },
+    staff: { view: true, create: true, edit: true, delete: true },
+    analytics: { view: true, create: true, edit: true, delete: true },
+    audit: { view: true, create: true, edit: true, delete: true },
+    settings: { view: true, create: true, edit: true, delete: true },
+    backup: { view: true, create: true, edit: true, delete: true }
+  },
+  'Admin Manager': {
+    inbox: { view: true, create: true, edit: true, delete: true },
+    enquiries: { view: true, create: true, edit: true, delete: true },
+    followups: { view: true, create: true, edit: true, delete: true },
+    catalog: { view: true, create: true, edit: true, delete: true },
+    orders: { view: true, create: true, edit: true, delete: true },
+    customers: { view: true, create: true, edit: true, delete: true },
+    dnd: { view: true, create: true, edit: true, delete: true },
+    staff: { view: true, create: true, edit: true, delete: false },
+    analytics: { view: true, create: true, edit: true, delete: false },
+    audit: { view: true, create: false, edit: false, delete: false },
+    settings: { view: true, create: true, edit: true, delete: false },
+    backup: { view: true, create: true, edit: false, delete: false }
+  },
+  'Sales Specialist (Baby Collection)': {
+    inbox: { view: true, create: true, edit: true, delete: false },
+    enquiries: { view: true, create: true, edit: true, delete: false },
+    followups: { view: true, create: true, edit: true, delete: false },
+    catalog: { view: true, create: false, edit: false, delete: false },
+    orders: { view: true, create: true, edit: true, delete: false },
+    customers: { view: true, create: true, edit: true, delete: false },
+    dnd: { view: true, create: true, edit: false, delete: false },
+    staff: { view: false, create: false, edit: false, delete: false },
+    analytics: { view: false, create: false, edit: false, delete: false },
+    audit: { view: false, create: false, edit: false, delete: false },
+    settings: { view: false, create: false, edit: false, delete: false },
+    backup: { view: false, create: false, edit: false, delete: false }
+  },
+  'Enquiry Specialist (Maternity & Kids)': {
+    inbox: { view: true, create: true, edit: true, delete: false },
+    enquiries: { view: true, create: true, edit: true, delete: false },
+    followups: { view: true, create: true, edit: true, delete: false },
+    catalog: { view: true, create: false, edit: false, delete: false },
+    orders: { view: false, create: false, edit: false, delete: false },
+    customers: { view: true, create: true, edit: true, delete: false },
+    dnd: { view: true, create: true, edit: false, delete: false },
+    staff: { view: false, create: false, edit: false, delete: false },
+    analytics: { view: false, create: false, edit: false, delete: false },
+    audit: { view: false, create: false, edit: false, delete: false },
+    settings: { view: false, create: false, edit: false, delete: false },
+    backup: { view: false, create: false, edit: false, delete: false }
+  },
+  'Order Fulfillment & Support': {
+    inbox: { view: true, create: true, edit: false, delete: false },
+    enquiries: { view: false, create: false, edit: false, delete: false },
+    followups: { view: true, create: false, edit: false, delete: false },
+    catalog: { view: true, create: false, edit: false, delete: false },
+    orders: { view: true, create: true, edit: true, delete: false },
+    customers: { view: true, create: false, edit: false, delete: false },
+    dnd: { view: false, create: false, edit: false, delete: false },
+    staff: { view: false, create: false, edit: false, delete: false },
+    analytics: { view: false, create: false, edit: false, delete: false },
+    audit: { view: false, create: false, edit: false, delete: false },
+    settings: { view: false, create: false, edit: false, delete: false },
+    backup: { view: false, create: false, edit: false, delete: false }
+  },
+  'Customer Care Representative': {
+    inbox: { view: true, create: true, edit: false, delete: false },
+    enquiries: { view: true, create: false, edit: true, delete: false },
+    followups: { view: true, create: true, edit: false, delete: false },
+    catalog: { view: true, create: false, edit: false, delete: false },
+    orders: { view: true, create: false, edit: false, delete: false },
+    customers: { view: true, create: true, edit: false, delete: false },
+    dnd: { view: true, create: true, edit: false, delete: false },
+    staff: { view: false, create: false, edit: false, delete: false },
+    analytics: { view: false, create: false, edit: false, delete: false },
+    audit: { view: false, create: false, edit: false, delete: false },
+    settings: { view: false, create: false, edit: false, delete: false },
+    backup: { view: false, create: false, edit: false, delete: false }
+  }
+};
+window.DEFAULT_ROLE_PERMISSIONS = DEFAULT_ROLE_PERMISSIONS;
+
+function initRolePermissionsState() {
+  if (typeof CRM_STATE === 'undefined' || !CRM_STATE) return;
+  if (!CRM_STATE.rolePermissions) {
+    try {
+      const stored = localStorage.getItem('CRM_ROLE_PERMISSIONS');
+      if (stored) {
+        CRM_STATE.rolePermissions = Object.assign({}, DEFAULT_ROLE_PERMISSIONS, JSON.parse(stored));
+      } else {
+        CRM_STATE.rolePermissions = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
+      }
+    } catch(e) {
+      CRM_STATE.rolePermissions = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
+    }
+  }
+}
+window.initRolePermissionsState = initRolePermissionsState;
+
+function getUserAssignedRoleName(user) {
+  if (!user) user = (typeof CURRENT_USER !== 'undefined' ? CURRENT_USER : null);
+  if (!user) return 'Super Admin';
+
+  if (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || (user.title && user.title.includes('Admin Manager'))) {
+    return 'Super Admin';
+  }
+
+  initRolePermissionsState();
+
+  if (user.role && CRM_STATE?.rolePermissions && CRM_STATE.rolePermissions[user.role]) {
+    return user.role;
+  }
+  if (user.title && CRM_STATE?.rolePermissions && CRM_STATE.rolePermissions[user.title]) {
+    return user.title;
+  }
+  if (user.role_name && CRM_STATE?.rolePermissions && CRM_STATE.rolePermissions[user.role_name]) {
+    return user.role_name;
+  }
+  const staffId = user.staff_id || user.staffId || user.id || user.role;
+  const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === staffId || s.username === user.username);
+  if (staffObj && staffObj.role && CRM_STATE?.rolePermissions && CRM_STATE.rolePermissions[staffObj.role]) {
+    return staffObj.role;
+  }
+  if (staffObj && staffObj.role) {
+    return staffObj.role;
+  }
+
+  return user.title || user.role || 'Sales Specialist (Baby Collection)';
+}
+window.getUserAssignedRoleName = getUserAssignedRoleName;
+
+function canUserPerformAction(moduleName, action) {
+  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
+  if (!user) return true;
+
+  if (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || (user.title && user.title.includes('Admin Manager (Full Control)'))) {
+    return true;
+  }
+
+  initRolePermissionsState();
+  const roleName = getUserAssignedRoleName(user);
+
+  if (roleName === 'Admin Manager' || roleName === 'admin') {
+    const adminPerms = (CRM_STATE?.rolePermissions && CRM_STATE.rolePermissions['Admin Manager']) || DEFAULT_ROLE_PERMISSIONS['Admin Manager'];
+    if (adminPerms && adminPerms[moduleName] && adminPerms[moduleName][action] !== undefined) {
+      return Boolean(adminPerms[moduleName][action]);
+    }
+    return true;
+  }
+
+  const rolePerms = (CRM_STATE?.rolePermissions && CRM_STATE.rolePermissions[roleName]) || DEFAULT_ROLE_PERMISSIONS[roleName];
+  if (!rolePerms || !rolePerms[moduleName]) {
+    const sensitive = ['settings', 'backup', 'staff', 'audit', 'analytics'];
+    if (action === 'view') {
+      return !sensitive.includes(moduleName);
+    }
+    return false;
+  }
+
+  return Boolean(rolePerms[moduleName][action]);
+}
+window.canUserPerformAction = canUserPerformAction;
+
+function enforceGranularActionPermissions() {
+  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
+
+  // 1. Staff Module Actions
+  const canStaffView = isSuperAdmin || canUserPerformAction('staff', 'view');
+  const canStaffCreate = isSuperAdmin || canUserPerformAction('staff', 'create');
+  const canStaffEdit = isSuperAdmin || canUserPerformAction('staff', 'edit');
+  const canStaffDelete = isSuperAdmin || canUserPerformAction('staff', 'delete');
+
+  const navSubStaffCreate = document.getElementById('nav-sub-staff-create');
+  if (navSubStaffCreate) navSubStaffCreate.style.display = canStaffCreate ? '' : 'none';
+  const navSubStaffRoles = document.getElementById('nav-sub-staff-roles');
+  if (navSubStaffRoles) navSubStaffRoles.style.display = canStaffEdit ? '' : 'none';
+
+  const tabBtnStaffCreate = document.getElementById('tab-btn-staff-create');
+  if (tabBtnStaffCreate) tabBtnStaffCreate.style.display = canStaffCreate ? '' : 'none';
+  const tabBtnStaffRoles = document.getElementById('tab-btn-staff-roles');
+  if (tabBtnStaffRoles) tabBtnStaffRoles.style.display = canStaffEdit ? '' : 'none';
+
+  const btnAddStaffTable = document.getElementById('btn-add-staff-table');
+  if (btnAddStaffTable) btnAddStaffTable.style.display = canStaffCreate ? '' : 'none';
+
+  if (typeof ACTIVE_STAFF_TAB !== 'undefined') {
+    if (ACTIVE_STAFF_TAB === 'create' && !canStaffCreate) {
+      if (typeof switchStaffTab === 'function') switchStaffTab('list');
+    }
+    if (ACTIVE_STAFF_TAB === 'roles' && !canStaffEdit) {
+      if (typeof switchStaffTab === 'function') switchStaffTab('list');
+    }
+  }
+
+  // 2. Orders Module Actions
+  const canOrderCreate = isSuperAdmin || canUserPerformAction('orders', 'create');
+  document.querySelectorAll('.btn-move-to-order, [data-action="move-to-order"]').forEach(el => {
+    el.style.display = canOrderCreate ? '' : 'none';
+  });
+  const chosenProductsBulkBar = document.getElementById('chosen-products-bulk-bar');
+  if (chosenProductsBulkBar && !canOrderCreate) chosenProductsBulkBar.style.display = 'none';
+
+  // 3. Backup Hub Actions
+  const canBackupCreate = isSuperAdmin || canUserPerformAction('backup', 'create');
+  const canBackupEdit = isSuperAdmin || canUserPerformAction('backup', 'edit');
+  const canBackupDelete = isSuperAdmin || canUserPerformAction('backup', 'delete');
+
+  const cardExport = document.getElementById('card-backup-export');
+  if (cardExport) cardExport.style.display = canBackupCreate ? '' : 'none';
+  const cardRestore = document.getElementById('card-backup-restore');
+  if (cardRestore) cardRestore.style.display = canBackupEdit ? '' : 'none';
+  const cardReset = document.getElementById('card-backup-reset');
+  if (cardReset) cardReset.style.display = canBackupDelete ? '' : 'none';
+
+  // 4. Catalog Actions
+  const canCatCreate = isSuperAdmin || canUserPerformAction('catalog', 'create');
+  const canCatDelete = isSuperAdmin || canUserPerformAction('catalog', 'delete');
+  document.querySelectorAll('#btn-add-product, #btn-open-add-product-modal, [onclick*="openAddProductModal"], [onclick*="openCategoryModal"]').forEach(el => {
+    el.style.display = canCatCreate ? '' : 'none';
+  });
+  document.querySelectorAll('[onclick*="deleteProduct"]').forEach(el => {
+    el.style.display = canCatDelete ? '' : 'none';
+  });
+
+  // 5. Customers Actions
+  const canCustCreate = isSuperAdmin || canUserPerformAction('customers', 'create');
+  const canCustDelete = isSuperAdmin || canUserPerformAction('customers', 'delete');
+  document.querySelectorAll('#btn-add-customer, [onclick*="openNewCustomerModal"]').forEach(el => {
+    el.style.display = canCustCreate ? '' : 'none';
+  });
+  document.querySelectorAll('[onclick*="deleteCustomer"]').forEach(el => {
+    el.style.display = canCustDelete ? '' : 'none';
+  });
+
+  // 6. Follow-ups Actions
+  const canFuCreate = isSuperAdmin || canUserPerformAction('followups', 'create');
+  const canFuDelete = isSuperAdmin || canUserPerformAction('followups', 'delete');
+  document.querySelectorAll('#btn-schedule-followup, [onclick*="openScheduleFollowup"]').forEach(el => {
+    el.style.display = canFuCreate ? '' : 'none';
+  });
+  document.querySelectorAll('[onclick*="deleteFollowup"]').forEach(el => {
+    el.style.display = canFuDelete ? '' : 'none';
+  });
+
+  // 7. DND Actions
+  const canDndCreate = isSuperAdmin || canUserPerformAction('dnd', 'create');
+  const canDndDelete = isSuperAdmin || canUserPerformAction('dnd', 'delete');
+  document.querySelectorAll('#btn-add-dnd, [onclick*="openAddToDnd"]').forEach(el => {
+    el.style.display = canDndCreate ? '' : 'none';
+  });
+  document.querySelectorAll('[onclick*="revokeDnd"]').forEach(el => {
+    el.style.display = canDndDelete ? '' : 'none';
+  });
+
+  // 8. Inbox / Enquiries Edit (Handling Staff Change)
+  const canInboxEdit = isSuperAdmin || canUserPerformAction('inbox', 'edit') || canUserPerformAction('enquiries', 'edit');
+  document.querySelectorAll('[onclick*="openStaffAssignModal"], [onclick*="quickReassignQueryStaff"]').forEach(el => {
+    el.style.display = canInboxEdit ? '' : 'none';
+  });
+}
+window.enforceGranularActionPermissions = enforceGranularActionPermissions;
+
 // Global App State (Safely Initialized Immediately)
 var CRM_STATE = window.CRM_STATE || JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
 window.CRM_STATE = CRM_STATE;
@@ -1734,6 +2023,13 @@ function initCRMState() {
         c && c.id !== 'cust_89660115_account_1' && c.id !== 'cust_101' && c.id !== 'cust_102' && c.id !== 'cust_103' && c.name !== 'Pooja Venkatesh'
       );
       cleanupAndDeduplicateCRMState();
+      if (Array.isArray(CRM_STATE.staffList)) {
+        CRM_STATE.staffList.forEach(s => {
+          if (s.name && s.name.toLowerCase() === 'mekha' && s.id === 'staff_01') {
+            s.id = 'staff_04';
+          }
+        });
+      }
       if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
       CRM_STATE.queries = CRM_STATE.queries.filter(q =>
         q && q.customerId !== 'cust_89660115_account_1' && q.customerId !== 'cust_101' && q.customerId !== 'cust_102' && q.customerId !== 'cust_103' && !(q.queryText && q.queryText.includes('ytfdw'))
@@ -2454,11 +2750,11 @@ function switchView(viewName, subName) {
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
   }
 
-  // Enforce Role-Based Access Control: Admin-only modules
-  const adminOnlyViews = ['settings', 'backup', 'staff', 'audit', 'analytics'];
-  if (ACTIVE_ROLE !== 'admin' && adminOnlyViews.includes(viewName)) {
-    showToast('Access Restricted', 'Super Admin privileges are required to access this module.', 'lock', 'rose');
-    viewName = 'inbox';
+    // Enforce Role-Based Access Control
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction(viewName, 'view')) {
+    showToast('Access Restricted', 'Your assigned role does not have permission to view this module.', 'lock', 'rose');
+    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view'));
+    viewName = firstAllowed ? firstAllowed.key : 'inbox';
   }
 
   ACTIVE_VIEW = viewName;
@@ -2470,6 +2766,9 @@ function switchView(viewName, subName) {
   } catch (e) {}
   const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
 
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
+  }
   views.forEach(v => {
     const el = document.getElementById(`view-${v}`);
     const navBtn = document.getElementById(`nav-${v}`);
@@ -2745,12 +3044,13 @@ function handleLogout() {
 // Apply granular Role-Based Access Control and update UI
 function applyRoleBasedAccessControl(user) {
   if (!user) return;
-  CRM_AUTH_SESSION = user;
+  CURRENT_USER = user;
   window.CRM_AUTH_SESSION = user;
   window.CURRENT_USER = user;
+  CRM_AUTH_SESSION = user;
   ACTIVE_ROLE = user.role || 'admin';
 
-  const isAdmin = user.role === 'admin';
+  const isAdmin = (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || (user.title && user.title.includes('Admin Manager')));
 
   const roleBadge = document.getElementById('current-role-badge');
   const avatarInitials = document.getElementById('user-avatar-initials');
@@ -2796,41 +3096,46 @@ function applyRoleBasedAccessControl(user) {
       staffBanner.classList.remove('hidden');
       if (staffBannerName) staffBannerName.innerText = user.name;
       if (staffBannerRole) staffBannerRole.innerText = user.title || user.role;
-      if (staffBannerId) staffBannerId.innerText = user.staffId || user.role;
+      if (staffBannerId) staffBannerId.innerText = user.staffId || user.staff_id || user.id || user.role;
 
-      // Update Live Daily Message Allocation Quota Indicator on Staff Banner
       const staffBannerQuota = document.getElementById('staff-banner-quota');
-      const staffBannerProgressBar = document.getElementById('staff-banner-progress-bar');
-      const staffMember = (CRM_STATE.staffList || []).find(s => s.id === (user.staffId || user.id || user.role));
-      const quota = staffMember ? (staffMember.dailyQuota || 70) : 70;
+      const staffMember = (CRM_STATE?.staffList || []).find(s => s.id === (user.staffId || user.staff_id || user.id || user.role));
       const handled = staffMember ? (staffMember.todayHandled || 0) : 0;
-      const pct = quota > 0 ? Math.min(100, Math.round((handled / quota) * 100)) : 0;
-
       if (staffBannerQuota) {
-        staffBannerQuota.innerText = `${handled} / ${quota} msgs (${pct}%)`;
-      }
-      if (staffBannerProgressBar) {
-        staffBannerProgressBar.style.width = `${pct}%`;
-        if (pct >= 100) {
-          staffBannerProgressBar.className = 'h-full bg-rose-500 rounded-full transition-all duration-500';
-        } else if (pct >= 80) {
-          staffBannerProgressBar.className = 'h-full bg-amber-400 rounded-full transition-all duration-500';
-        } else {
-          staffBannerProgressBar.className = 'h-full bg-emerald-400 rounded-full transition-all duration-500';
-        }
+        staffBannerQuota.innerText = `${handled} msgs`;
       }
     }
   }
 
-  // 3. Role-Based Navigation Filtering
-  // Hide Admin-only modules from staff sidebar: Settings, Backup, Staff Hub, Analytics, Audit
-  document.querySelectorAll('.admin-only-nav').forEach(el => {
-    if (isAdmin) {
-      el.classList.remove('hidden');
-    } else {
-      el.classList.add('hidden');
+  // 3. Role-Based Navigation & Granular Module Visibility Filtering
+  CRM_MODULE_DEFINITIONS.forEach(mod => {
+    const canView = canUserPerformAction(mod.key, 'view');
+    const navGroupEl = document.getElementById('nav-' + mod.key + '-group');
+    const navEl = document.getElementById('nav-' + mod.key);
+
+    if (navGroupEl) {
+      if (canView) navGroupEl.classList.remove('hidden');
+      else navGroupEl.classList.add('hidden');
+    } else if (navEl) {
+      if (canView) navEl.classList.remove('hidden');
+      else navEl.classList.add('hidden');
     }
   });
+
+  // Dynamic Section Headers
+  const adminSection = document.getElementById('nav-section-settings-admin');
+  if (adminSection) {
+    const hasAnyAdmin = ['settings', 'backup', 'staff', 'analytics', 'audit'].some(k => canUserPerformAction(k, 'view'));
+    if (hasAnyAdmin) adminSection.classList.remove('hidden');
+    else adminSection.classList.add('hidden');
+  }
+
+  const salesSection = document.getElementById('nav-section-sales-operations');
+  if (salesSection) {
+    const hasAnySales = ['followups', 'catalog', 'orders', 'customers', 'dnd'].some(k => canUserPerformAction(k, 'view'));
+    if (hasAnySales) salesSection.classList.remove('hidden');
+    else salesSection.classList.add('hidden');
+  }
 
   // Hide Admin-only header controls: Masking toggle, phone settings button, inbound simulator
   document.querySelectorAll('.admin-only-ui').forEach(el => {
@@ -2841,6 +3146,9 @@ function applyRoleBasedAccessControl(user) {
     }
   });
 
+  // Enforce granular actions in views
+  enforceGranularActionPermissions();
+
   // 4. In Staff Mode, default filter Inbox to 'my' assigned queue
   if (!isAdmin) {
     setInboxFilter('my');
@@ -2848,10 +3156,10 @@ function applyRoleBasedAccessControl(user) {
     setInboxFilter('all');
   }
 
-  // 5. If currently on a restricted view, redirect to inbox
-  const adminOnlyViews = ['settings', 'backup', 'staff', 'audit', 'analytics'];
-  if (!isAdmin && adminOnlyViews.includes(ACTIVE_VIEW)) {
-    ACTIVE_VIEW = 'inbox';
+  // 5. If currently on a view without view permission, redirect to first allowed view
+  if (!canUserPerformAction(ACTIVE_VIEW, 'view')) {
+    const firstAllowed = CRM_MODULE_DEFINITIONS.find(m => canUserPerformAction(m.key, 'view'));
+    ACTIVE_VIEW = firstAllowed ? firstAllowed.key : 'inbox';
   }
 
   switchView(ACTIVE_VIEW);
@@ -3642,6 +3950,96 @@ function renderChatMessages() {
     return;
   }
 
+  // Active Live Stream Filter Inspection (Category, Subcategory, Sub-Sub Category)
+  const customer = (CRM_STATE.customers || []).find(c => c && (c.id === ACTIVE_CUSTOMER_ID || String(c.id) === String(ACTIVE_CUSTOMER_ID)));
+  const filter = (typeof CHOSEN_PRODUCTS_FILTER !== 'undefined') ? CHOSEN_PRODUCTS_FILTER : { category: 'ALL', subcategory: 'ALL', subsub: 'ALL', search: '' };
+  const selCat = filter.category || 'ALL';
+  const selSub = filter.subcategory || 'ALL';
+  const selSubsub = filter.subsub || 'ALL';
+  const selSearch = (filter.search || '').trim().toLowerCase();
+
+  const hasActiveFilter = (selCat !== 'ALL' || selSub !== 'ALL' || selSubsub !== 'ALL' || selSearch.length > 0);
+
+  const matchingMsgIds = new Set();
+  const matchingSkus = new Set();
+  const matchingKeywords = new Set();
+  let matchingProductCount = 0;
+  let filterSummaryText = '';
+
+  if (hasActiveFilter && customer) {
+    const parts = [];
+    if (selCat !== 'ALL') parts.push(selCat);
+    if (selSub !== 'ALL') parts.push(selSub);
+    if (selSubsub !== 'ALL') parts.push(selSubsub);
+    if (selSearch) parts.push(`"${selSearch}"`);
+    filterSummaryText = parts.join(' › ');
+
+    const rawActions = Array.isArray(customer.automationHistory) ? customer.automationHistory : [];
+    const sentProds = rawActions.filter(item => {
+      if (!item) return false;
+      if (item.type === 'CATEGORY_VIEWED' || (item.sku && String(item.sku).startsWith('CAT-'))) return false;
+      return (item.type === 'PRODUCT_VIEWED' || (item.price && String(item.price).trim().length > 0) || (item.sku && String(item.sku).trim().length > 0));
+    }).map(item => {
+      const meta = (typeof getItemCategoryHierarchy === 'function') ? getItemCategoryHierarchy(item) : { category: 'General', subcategory: 'General', subsub: 'Standard' };
+      return {
+        ...item,
+        category: item.category || meta.category,
+        subcategory: item.subcategory || meta.subcategory,
+        subsub: item.subsub || meta.subsub || item.size || 'Standard'
+      };
+    }).filter(item => {
+      if (selCat !== 'ALL') {
+        const c = (item.category || '').toLowerCase();
+        if (!c.includes(selCat.toLowerCase()) && !selCat.toLowerCase().includes(c)) return false;
+      }
+      if (selSub !== 'ALL') {
+        const s = (item.subcategory || '').toLowerCase();
+        if (!s.includes(selSub.toLowerCase()) && !selSub.toLowerCase().includes(s)) return false;
+      }
+      if (selSubsub !== 'ALL') {
+        const sz = (item.subsub || item.size || '').toLowerCase();
+        if (!sz.includes(selSubsub.toLowerCase()) && !selSubsub.toLowerCase().includes(sz)) return false;
+      }
+      if (selSearch) {
+        const text = ((item.title || '') + ' ' + (item.sku || '') + ' ' + (item.price || '')).toLowerCase();
+        if (!text.includes(selSearch)) return false;
+      }
+      return true;
+    });
+
+    matchingProductCount = sentProds.length;
+
+    sentProds.forEach(p => {
+      if (p.msgId) matchingMsgIds.add(String(p.msgId));
+      if (p.sku) matchingSkus.add(String(p.sku).toLowerCase());
+      if (p.title) matchingKeywords.add(String(p.title).toLowerCase());
+      if (p.image) matchingKeywords.add(String(p.image));
+    });
+  }
+
+  // Live Stream Filter Notification Banner (Sticky at top of Live Chat Stream)
+  const filterBannerHtml = hasActiveFilter ? `
+    <div class="sticky top-0 z-20 mb-3 p-2.5 bg-gradient-to-r from-emerald-800 via-teal-800 to-sky-900 text-white rounded-xl shadow-md flex items-center justify-between text-xs backdrop-blur-md animate-in fade-in">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px] text-emerald-300 animate-pulse">filter_alt</span>
+        <div>
+          <span class="font-extrabold block leading-tight">Live Stream Product Filter</span>
+          <span class="text-[10px] text-emerald-200">Showing products in chat for: <strong>${filterSummaryText}</strong> (${matchingProductCount} matching)</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button type="button" onclick="scrollChatToFirstFilteredProduct()" class="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[12px]">keyboard_arrow_down</span>
+          <span>Jump to Product</span>
+        </button>
+        <button type="button" onclick="resetChosenProductsFilters()" class="px-2 py-1 bg-white hover:bg-rose-50 text-rose-700 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[12px]">close</span>
+          <span>Show All</span>
+        </button>
+      </div>
+    </div>
+  ` : '';
+
   const messagesContent = `
     <!-- Encryption & Source of truth Notice -->
     <div class="flex justify-center my-2">
@@ -3650,12 +4048,22 @@ function renderChatMessages() {
         <span>Connected to Business Number: <strong>${CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115'}</strong> &bull; GRM Central Record</span>
       </div>
     </div>
+    ${filterBannerHtml}
   ` + messages.map((msg, idx) => {
     const msgId = msg.id || ('msg-' + idx + '-' + (msg.timestamp || Date.now()));
     const isOut = msg.sender === 'staff';
     const isAudio = msg.type === 'audio' || (msg.media_url && (msg.media_url.includes('audio') || msg.media_url.startsWith('data:audio') || msg.media_url.includes('.ogg') || msg.media_url.includes('.mp3') || msg.media_url.includes('.m4a'))) || (msg.text && (msg.text.includes('Voice Message') || msg.text.includes('Audio Message')));
     const isImage = msg.type === 'image' || (msg.media_url && (msg.media_url.startsWith('data:image') || msg.media_url.includes('http') || msg.media_url.includes('.png') || msg.media_url.includes('.jpg') || msg.media_url.includes('blob:')));
     const duration = msg.duration || 12;
+
+    // Check if this message bubble is a matching product in the live stream
+    const msgTextLower = (msg.text || '').toLowerCase();
+    const isMatchingProductInMsg = hasActiveFilter && (
+      matchingMsgIds.has(String(msgId)) ||
+      (msg.media_url && Array.from(matchingKeywords).some(k => k.length > 5 && msg.media_url.includes(k))) ||
+      Array.from(matchingSkus).some(sku => sku && msgTextLower.includes(sku)) ||
+      Array.from(matchingKeywords).some(kw => kw && kw.length > 4 && msgTextLower.includes(kw))
+    );
 
     let contentHtml = '';
 
@@ -3664,12 +4072,9 @@ function renderChatMessages() {
       contentHtml = `
         <div class="space-y-2 py-1">
           <div class="flex items-center gap-3">
-            <!-- Play/Pause Button -->
             <button onclick="toggleAudioPlay('${msgId}')" id="btn-play-${msgId}" class="w-11 h-11 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white flex items-center justify-center shadow-md transition shrink-0">
               <span class="material-symbols-outlined text-[24px]" id="icon-${msgId}">play_arrow</span>
             </button>
-
-            <!-- Waveform & Slider -->
             <div class="flex-1 min-w-[190px]">
               <div class="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1">
                 <span class="flex items-center gap-1 text-emerald-700">
@@ -3677,20 +4082,15 @@ function renderChatMessages() {
                 </span>
                 <span id="time-${msgId}" class="font-mono text-[11px] text-slate-500">${typeof formatAudioTime === 'function' ? formatAudioTime(duration) : '0:12'}</span>
               </div>
-
-              <!-- Interactive Progress Slider -->
               <input type="range" id="seek-${msgId}" min="0" max="${duration}" value="0" step="0.1" 
                 class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600 focus:outline-none" 
                 oninput="seekAudio('${msgId}', this.value)">
-
               <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1">
                 <span class="flex items-center gap-0.5">
                   <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Voice Note
                 </span>
                 <button onclick="toggleAudioSpeed('${msgId}')" id="speed-${msgId}" class="font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[10px] transition">1.0x</button>
               </div>
-
-              <!-- Audio Player Tag -->
               <audio id="audio-${msgId}" src="${audioSrc}" preload="metadata" 
                 ontimeupdate="updateAudioProgress('${msgId}')" 
                 onended="onAudioEnded('${msgId}')"
@@ -3744,27 +4144,27 @@ function renderChatMessages() {
             </div>
             
             <div class="grid grid-cols-2 gap-1.5 pt-0.5">
-              <button type="button" onclick="triggerCategorySelection('1', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+              <button type="button" onclick="triggerCategorySelection('1', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
                 <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">1</span>
                 <span class="truncate">Baby Collection</span>
               </button>
-              <button type="button" onclick="triggerCategorySelection('2', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+              <button type="button" onclick="triggerCategorySelection('2', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
                 <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">2</span>
                 <span class="truncate">Maternity Wear</span>
               </button>
-              <button type="button" onclick="triggerCategorySelection('3', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+              <button type="button" onclick="triggerCategorySelection('3', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
                 <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">3</span>
                 <span class="truncate">Newborn Gift Sets</span>
               </button>
-              <button type="button" onclick="triggerCategorySelection('4', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+              <button type="button" onclick="triggerCategorySelection('4', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
                 <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">4</span>
                 <span class="truncate">Kids Everyday</span>
               </button>
-              <button type="button" onclick="triggerCategorySelection('5', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+              <button type="button" onclick="triggerCategorySelection('5', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
                 <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">5</span>
                 <span class="truncate">Wholesale Bundles</span>
               </button>
-              <button type="button" onclick="triggerCategorySelection('6', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group">
+              <button type="button" onclick="triggerCategorySelection('6', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
                 <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">6</span>
                 <span class="truncate">Festive Silk Sets</span>
               </button>
@@ -3782,8 +4182,17 @@ function renderChatMessages() {
     }
 
     return `
-      <div class="flex ${isOut ? 'justify-end' : 'justify-start'}">
-        <div class="max-w-md ${isOut ? 'bg-brand-50 border border-emerald-200 text-slate-800 chat-bubble-out shadow-sm' : 'bg-white border border-slate-200 text-slate-800 chat-bubble-in shadow-sm'} p-3.5 space-y-1">
+      <div id="chat-bubble-${msgId}" data-msg-id="${msgId}" data-product-matched="${isMatchingProductInMsg ? 'true' : 'false'}" class="chat-message-row flex ${isOut ? 'justify-end' : 'justify-start'} transition-all duration-300">
+        <div class="max-w-md ${isOut ? 'bg-brand-50 border border-emerald-200 text-slate-800 chat-bubble-out shadow-sm' : 'bg-white border border-slate-200 text-slate-800 chat-bubble-in shadow-sm'} ${isMatchingProductInMsg ? 'ring-3 ring-emerald-400 bg-emerald-50/70 border-emerald-400 shadow-md' : ''} p-3.5 space-y-1 rounded-2xl">
+          ${isMatchingProductInMsg ? `
+            <div class="flex items-center justify-between text-[10px] font-bold text-emerald-900 bg-emerald-100/90 px-2 py-0.5 rounded-md mb-1.5 border border-emerald-300 shadow-2xs">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px] text-emerald-700">stars</span>
+                <span>Product in Live Stream: <strong>${filterSummaryText}</strong></span>
+              </span>
+              <span class="text-[9px] uppercase tracking-wider text-emerald-800 bg-white/90 px-1 py-0.2 rounded font-mono font-bold">Filtered</span>
+            </div>
+          ` : ''}
           ${(msg.isBot || msg.source === 'AUTOREPLY_BOT' || msg.rule_name) ? `
             <div class="flex items-center justify-between text-[10px] font-bold text-teal-800 bg-teal-100/90 px-2 py-0.5 rounded-md mb-1.5 border border-teal-200">
               <span class="flex items-center gap-1">
@@ -3807,8 +4216,10 @@ function renderChatMessages() {
 
   stream.innerHTML = `<div class="max-w-3xl xl:max-w-4xl mx-auto w-full space-y-3 min-w-0">${messagesContent}</div>`;
 
-  // Auto-scroll to bottom
-  stream.scrollTop = stream.scrollHeight;
+  // Auto-scroll to bottom only if no active product filter is focused
+  if (!hasActiveFilter) {
+    stream.scrollTop = stream.scrollHeight;
+  }
 }
 
 window.renderChatStream = renderChatMessages;
@@ -5247,6 +5658,607 @@ function syncCustomerAutomationHistory(customer) {
 window.GRM_BOT_CATALOG = GRM_BOT_CATALOG;
 window.syncCustomerAutomationHistory = syncCustomerAutomationHistory;
 
+// =========================================================================
+// BOT AUTOMATION & CHOSEN PRODUCTS HIERARCHICAL FILTER ENGINE
+// (Category ➔ Subcategory ➔ Sub-Sub Category / Size / Attribute)
+// =========================================================================
+// BOT AUTOMATION & CHOSEN PRODUCTS HIERARCHICAL FILTER ENGINE
+// (Category ➔ Sub-Category ➔ Sub-Sub Category / Sizes / Variants)
+// =========================================================================
+
+
+// Live Stream Navigation & Message Highlight Helpers
+window.jumpToLiveStreamMessage = function(msgId) {
+  if (!msgId) return;
+  const stream = document.getElementById('chat-messages-stream');
+  if (!stream) return;
+  const target = document.getElementById('chat-bubble-' + msgId) || stream.querySelector(`[data-msg-id="${msgId}"]`);
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('ring-4', 'ring-emerald-500', 'bg-emerald-100/90', 'scale-[1.02]');
+    setTimeout(() => {
+      target.classList.remove('ring-4', 'ring-emerald-500', 'bg-emerald-100/90', 'scale-[1.02]');
+    }, 2500);
+  } else {
+    window.scrollChatToFirstFilteredProduct();
+  }
+};
+
+window.scrollChatToFirstFilteredProduct = function() {
+  const stream = document.getElementById('chat-messages-stream');
+  if (!stream) return;
+  const highlighted = stream.querySelector('[data-product-matched="true"]');
+  if (highlighted) {
+    highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    highlighted.classList.add('ring-4', 'ring-emerald-500', 'scale-[1.02]');
+    setTimeout(() => {
+      highlighted.classList.remove('ring-4', 'ring-emerald-500', 'scale-[1.02]');
+    }, 2500);
+  } else {
+    stream.scrollTop = stream.scrollHeight;
+  }
+};
+
+var CHOSEN_PRODUCTS_FILTER = window.CHOSEN_PRODUCTS_FILTER || {
+  category: 'ALL',
+  subcategory: 'ALL',
+  subsub: 'ALL',
+  search: '',
+  viewMode: 'chosen' // 'chosen' (Customer WhatsApp Interactions) or 'catalog' (All Store Products)
+};
+window.CHOSEN_PRODUCTS_FILTER = CHOSEN_PRODUCTS_FILTER;
+
+// Helper to determine 3-tier Category Hierarchy for any item
+function getItemCategoryHierarchy(item) {
+  if (!item) return { category: 'Baby Collection (0–3 Years)', subcategory: 'General Garments', subsub: 'Standard' };
+
+  // 1. Try matching with full products in CRM_STATE.products
+  if (CRM_STATE && Array.isArray(CRM_STATE.products)) {
+    const prod = CRM_STATE.products.find(p => 
+      (item.sku && p.sku && p.sku.toLowerCase() === item.sku.toLowerCase()) ||
+      (item.title && p.name && (p.name.toLowerCase().includes(item.title.toLowerCase()) || item.title.toLowerCase().includes(p.name.toLowerCase())))
+    );
+    if (prod) {
+      return {
+        category: prod.category || 'Baby Collection (0–3 Years)',
+        subcategory: prod.subcategory || 'Baby Frocks (Embroidered Cotton)',
+        subsub: prod.size || item.size || 'Standard Size'
+      };
+    }
+  }
+
+  // 2. Try matching with GRM_BOT_CATALOG
+  if (typeof GRM_BOT_CATALOG !== 'undefined') {
+    for (const [catKey, catData] of Object.entries(GRM_BOT_CATALOG)) {
+      if (item.sku === `CAT-${catKey}` || (item.title && item.title.includes(catData.categoryName))) {
+        return {
+          category: catData.categoryName,
+          subcategory: 'Category Menu',
+          subsub: 'All Sizes'
+        };
+      }
+      for (const [pKey, pData] of Object.entries(catData.items || {})) {
+        if (pData.sku === item.sku || pData.name === item.title) {
+          let sub = 'Standard Collection';
+          if (catKey === '1') sub = 'Baby Frocks (Embroidered Cotton)';
+          else if (catKey === '2') sub = 'Maternity Maxi Feeding Gowns';
+          else if (catKey === '3') sub = '5-Piece Organic Romper Gift Sets';
+          else if (catKey === '4') sub = 'Cotton T-Shirt Packs (Pack of 3)';
+          else if (catKey === '5') sub = '50-Pc Rompers Bulk Box';
+          else if (catKey === '6') sub = 'Festive Silk Lehenga Choli';
+
+          return {
+            category: catData.categoryName,
+            subcategory: sub,
+            subsub: pData.size || item.size || 'Standard'
+          };
+        }
+      }
+    }
+  }
+
+  // 3. Infer from SKU prefix or title keywords
+  const sku = (item.sku || '').toUpperCase();
+  const title = (item.title || '').toLowerCase();
+  const size = item.size || '';
+
+  if (sku.startsWith('BF-') || title.includes('baby frock') || title.includes('frock')) {
+    return {
+      category: 'Baby Collection (0–3 Years)',
+      subcategory: 'Baby Frocks (Embroidered Cotton)',
+      subsub: size || '2–3 Years'
+    };
+  }
+  if (sku.startsWith('BR-') || title.includes('romper')) {
+    return {
+      category: 'Baby Collection (0–3 Years)',
+      subcategory: 'Cotton Newborn Rompers',
+      subsub: size || '0–6 Months'
+    };
+  }
+  if (sku.startsWith('MD-') || sku.startsWith('FK-') || title.includes('maternity') || title.includes('feeding')) {
+    return {
+      category: 'Maternity & Feeding Wear',
+      subcategory: sku.startsWith('FK-') ? 'Feeding Kurtis & Anarkalis' : 'Maternity Maxi Feeding Gowns',
+      subsub: size || 'L / XL'
+    };
+  }
+  if (sku.startsWith('BB-') || sku.startsWith('SW-') || title.includes('newborn') || title.includes('gift set')) {
+    return {
+      category: 'Newborn Gift Sets (0–6 Months)',
+      subcategory: '5-Piece Organic Romper Gift Sets',
+      subsub: size || '0–6 Months'
+    };
+  }
+  if (sku.startsWith('KD-') || sku.startsWith('DG-') || title.includes('t-shirt') || title.includes('dungaree')) {
+    return {
+      category: 'Kids Everyday Wear (4–5 Years)',
+      subcategory: 'Cotton T-Shirt Packs (Pack of 3)',
+      subsub: size || '4–5 Years'
+    };
+  }
+  if (sku.startsWith('WS-') || title.includes('wholesale') || title.includes('bulk')) {
+    return {
+      category: 'Wholesale & Bulk Bundles',
+      subcategory: 'Wholesale Garment Bundles',
+      subsub: size || 'Bulk Lots'
+    };
+  }
+  if (sku.startsWith('GL-') || sku.startsWith('VIP-') || title.includes('silk') || title.includes('lehenga') || title.includes('pattu')) {
+    return {
+      category: 'Festive & VIP Silk Collection',
+      subcategory: sku.startsWith('VIP-') ? 'Handcrafted Silk Pattu Pavadai' : 'Festive Silk Lehenga Choli',
+      subsub: size || '3–4 Years'
+    };
+  }
+
+  return {
+    category: 'Baby Collection (0–3 Years)',
+    subcategory: 'General Garments',
+    subsub: size || 'Standard'
+  };
+}
+
+// Filter Event Handlers
+function handleChosenCategoryChange(val) {
+  CHOSEN_PRODUCTS_FILTER.category = val;
+  CHOSEN_PRODUCTS_FILTER.subcategory = 'ALL';
+  CHOSEN_PRODUCTS_FILTER.subsub = 'ALL';
+  renderCustomer360Panel();
+  renderChatMessages();
+  setTimeout(scrollChatToFirstFilteredProduct, 250);
+}
+
+function handleChosenSubcategoryChange(val) {
+  CHOSEN_PRODUCTS_FILTER.subcategory = val;
+  CHOSEN_PRODUCTS_FILTER.subsub = 'ALL';
+  renderCustomer360Panel();
+  renderChatMessages();
+  setTimeout(scrollChatToFirstFilteredProduct, 250);
+}
+
+function handleChosenSubsubChange(val) {
+  CHOSEN_PRODUCTS_FILTER.subsub = val;
+  renderCustomer360Panel();
+  renderChatMessages();
+  setTimeout(scrollChatToFirstFilteredProduct, 250);
+}
+
+function handleChosenProductsSearchInput(val) {
+  CHOSEN_PRODUCTS_FILTER.search = val;
+  renderCustomer360Panel();
+  renderChatMessages();
+}
+
+function clearChosenProductsSearch() {
+  CHOSEN_PRODUCTS_FILTER.search = '';
+  renderCustomer360Panel();
+  renderChatMessages();
+}
+
+function resetChosenProductsFilters() {
+  CHOSEN_PRODUCTS_FILTER.category = 'ALL';
+  CHOSEN_PRODUCTS_FILTER.subcategory = 'ALL';
+  CHOSEN_PRODUCTS_FILTER.subsub = 'ALL';
+  CHOSEN_PRODUCTS_FILTER.search = '';
+  renderCustomer360Panel();
+  renderChatMessages();
+}
+
+// Direct share to WhatsApp chat from chosen products card
+function shareChosenProductDirectly(sku, name, price, img, size) {
+  if (!ACTIVE_CUSTOMER_ID) {
+    showToast('Select Customer', 'Please open a customer chat first.', 'warning', 'amber');
+    return;
+  }
+  const customer = (CRM_STATE.customers || []).find(c => c.id === ACTIVE_CUSTOMER_ID);
+  const brand = (typeof getBrandName === 'function') ? getBrandName() : 'Blue Berry 💙';
+  const priceVal = price || '₹599';
+  const sizeVal = size || 'Standard';
+
+  const shareText = `✨ *${brand}* ✨\n👗 *${name}*\n📦 *SKU:* \`${sku}\`\n📏 *Size:* ${sizeVal}\n💰 *Price:* ${priceVal} (Ready Stock)\n\n💬 Would you like us to reserve this piece for you?`;
+
+  const newMsg = {
+    id: Date.now(),
+    sender: 'staff',
+    text: shareText,
+    type: img ? 'image' : 'text',
+    media_url: img || null,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    status: 'SENDING'
+  };
+
+  if (!CRM_STATE.conversations[ACTIVE_CUSTOMER_ID]) {
+    CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] = [];
+  }
+  CRM_STATE.conversations[ACTIVE_CUSTOMER_ID].push(newMsg);
+
+  renderChatMessages();
+  if (typeof playChime === 'function') playChime('order');
+  showToast('Product Shared', `Sent ${sku} card to customer on WhatsApp!`, 'send', 'emerald');
+
+  if (customer && typeof dispatchWhatsAppOutbound === 'function') {
+    dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, shareText, newMsg, customer.jid, customer.accountId, false, img);
+  }
+}
+
+// Function to render the Bot Automation & Chosen Products Card with full Category, Sub-Category, Sub-Sub Category filters
+function renderBotAutomationAndChosenProductsCard(customer) {
+  if (!customer) return '';
+
+  // 1. Gather ONLY PRODUCTS that were sent / interacted with in THIS Customer's Chat
+  const allCustomerActions = Array.isArray(customer.automationHistory) ? [...customer.automationHistory] : [];
+  
+  // Filter out category menus (CAT-1) or non-product actions; keep ONLY actual products
+  const customerProductsOnly = allCustomerActions.filter(item => {
+    if (!item) return false;
+    if (item.type === 'CATEGORY_VIEWED' || (item.sku && String(item.sku).startsWith('CAT-'))) return false;
+    const hasSku = item.sku && String(item.sku).trim().length > 0;
+    const hasPrice = item.price && String(item.price).trim().length > 0;
+    const hasImg = item.image && String(item.image).trim().length > 0;
+    return (item.type === 'PRODUCT_VIEWED' || hasSku || hasPrice || hasImg);
+  });
+
+  // Enrich products with 3-tier Category Hierarchy
+  const enrichedProducts = customerProductsOnly.map(item => {
+    const meta = getItemCategoryHierarchy(item);
+    return {
+      ...item,
+      category: item.category || meta.category,
+      subcategory: item.subcategory || meta.subcategory,
+      subsub: item.subsub || meta.subsub || item.size || 'Standard Size'
+    };
+  });
+
+  // 2. Collect Available Category Options STRICTLY from products sent in THIS customer chat
+  const categoryMap = new Map();
+  enrichedProducts.forEach(item => {
+    const c = item.category || 'General Garments';
+    categoryMap.set(c, (categoryMap.get(c) || 0) + 1);
+  });
+
+  const selectedCat = CHOSEN_PRODUCTS_FILTER.category;
+
+  // 3. Collect Available Subcategories STRICTLY from products sent in THIS customer chat
+  const subcategoryMap = new Map();
+  enrichedProducts.forEach(item => {
+    if (selectedCat === 'ALL' || item.category === selectedCat || item.category.toLowerCase().includes(selectedCat.toLowerCase())) {
+      const s = item.subcategory || 'General';
+      subcategoryMap.set(s, (subcategoryMap.get(s) || 0) + 1);
+    }
+  });
+
+  const selectedSub = CHOSEN_PRODUCTS_FILTER.subcategory;
+
+  // 4. Collect Available Sub-Sub Categories / Sizes STRICTLY from products sent in THIS customer chat
+  const subsubMap = new Map();
+  enrichedProducts.forEach(item => {
+    const matchesCat = (selectedCat === 'ALL' || item.category === selectedCat || item.category.toLowerCase().includes(selectedCat.toLowerCase()));
+    const matchesSub = (selectedSub === 'ALL' || item.subcategory === selectedSub || item.subcategory.toLowerCase().includes(selectedSub.toLowerCase()));
+    if (matchesCat && matchesSub) {
+      const sz = item.subsub || item.size || 'Standard';
+      subsubMap.set(sz, (subsubMap.get(sz) || 0) + 1);
+    }
+  });
+
+  const selectedSubsub = CHOSEN_PRODUCTS_FILTER.subsub;
+  const searchQuery = (CHOSEN_PRODUCTS_FILTER.search || '').trim().toLowerCase();
+
+  // 5. Apply Hierarchical Filters to Products List
+  const filteredProducts = enrichedProducts.filter(item => {
+    // A. Category filter (Level 1)
+    if (selectedCat !== 'ALL') {
+      const c = (item.category || '').toLowerCase();
+      const targetC = selectedCat.toLowerCase();
+      if (!c.includes(targetC) && !targetC.includes(c)) return false;
+    }
+
+    // B. Subcategory filter (Level 2)
+    if (selectedSub !== 'ALL') {
+      const s = (item.subcategory || '').toLowerCase();
+      const targetS = selectedSub.toLowerCase();
+      if (!s.includes(targetS) && !targetS.includes(s)) return false;
+    }
+
+    // C. Sub-sub category / Size filter (Level 3)
+    if (selectedSubsub !== 'ALL') {
+      const sz = (item.subsub || item.size || '').toLowerCase();
+      const targetSz = selectedSubsub.toLowerCase();
+      if (!sz.includes(targetSz) && !targetSz.includes(sz)) return false;
+    }
+
+    // D. Keyword Search filter
+    if (searchQuery) {
+      const combined = (
+        (item.title || '') + ' ' +
+        (item.sku || '') + ' ' +
+        (item.price || '') + ' ' +
+        (item.size || '') + ' ' +
+        (item.category || '') + ' ' +
+        (item.subcategory || '')
+      ).toLowerCase();
+      if (!combined.includes(searchQuery)) return false;
+    }
+
+    return true;
+  });
+
+  const hasActiveFilters = (selectedCat !== 'ALL' || selectedSub !== 'ALL' || selectedSubsub !== 'ALL' || searchQuery.length > 0);
+  const totalCount = customerProductsOnly.length;
+  const filteredCount = filteredProducts.length;
+
+  return `
+    <div id="chosen-products-tracker-card" class="p-3.5 border-b border-slate-200 bg-sky-50/50 space-y-2.5">
+      
+      <!-- Top Title & Quick Actions Bar -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[17px] text-sky-600">smart_toy</span>
+          <span class="text-[11px] font-extrabold uppercase tracking-wide text-sky-950">Bot Automation &amp; Products Sent</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button type="button" onclick="openProductSearchModal()" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Search Stock &amp; Share to WhatsApp">
+            <span class="material-symbols-outlined text-[12px]">share</span>
+            <span class="hidden sm:inline">Share</span>
+          </button>
+          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-200" title="Products sent in this customer chat">
+            ${totalCount} In Chat
+          </span>
+          <button type="button" onclick="syncCustomerAutomationHistory(CRM_STATE.customers.find(c => c.id === '${customer.id}')); renderCustomer360Panel(); renderChatMessages();" class="p-1 hover:bg-sky-200/60 rounded text-sky-700 transition cursor-pointer" title="Re-sync chat products">
+            <span class="material-symbols-outlined text-[13px]">sync</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- HIERARCHICAL FILTER TOOLBAR (Category ➔ Sub-Category ➔ Sub-Sub Category) -->
+      <div class="bg-white p-2.5 rounded-xl border border-sky-200 shadow-2xs space-y-2">
+        <div class="flex items-center justify-between text-[10px] font-bold text-slate-700 pb-1 border-b border-slate-100">
+          <span class="flex items-center gap-1 text-sky-800 font-extrabold">
+            <span class="material-symbols-outlined text-[14px] text-sky-600">filter_alt</span>
+            <span>Filter Products in Chat:</span>
+          </span>
+          <span class="font-mono text-[9px] text-slate-500">
+            ${hasActiveFilters ? `<strong class="text-emerald-700">${filteredCount}</strong> of ${totalCount} items` : `${totalCount} items`}
+          </span>
+        </div>
+
+        <!-- Quick Keyword Search -->
+        <div class="relative">
+          <span class="material-symbols-outlined text-[14px] text-slate-400 absolute left-2 top-1/2 -translate-y-1/2">search</span>
+          <input type="text" id="chosen-filter-search" value="${(CHOSEN_PRODUCTS_FILTER.search || '').replace(/"/g, '&quot;')}"
+            oninput="handleChosenProductsSearchInput(this.value)"
+            placeholder="Search by product name, SKU, price, color..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-7 pr-6 py-1 text-[11px] text-slate-800 focus:bg-white focus:outline-none focus:border-sky-500 transition">
+          ${CHOSEN_PRODUCTS_FILTER.search ? `
+            <button type="button" onclick="clearChosenProductsSearch()" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-[13px] material-symbols-outlined cursor-pointer">close</button>
+          ` : ''}
+        </div>
+
+        <!-- 3-Tier Cascading Filter Selectors: Category ➔ Subcategory ➔ Sub-Sub Category -->
+        <div class="space-y-1.5">
+          <!-- Tier 1: Category Filter -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-bold text-slate-600 w-16 shrink-0 flex items-center gap-0.5" title="Category Filter">
+              <span class="material-symbols-outlined text-[13px] text-sky-600">category</span> Cat:
+            </span>
+            <select id="chosen-filter-category" onchange="handleChosenCategoryChange(this.value)"
+              class="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-800 focus:bg-white focus:outline-none focus:border-sky-500 transition truncate cursor-pointer">
+              <option value="ALL" ${selectedCat === 'ALL' ? 'selected' : ''}>📁 All Categories (${totalCount})</option>
+              ${Array.from(categoryMap.entries()).map(([cName, count]) => `
+                <option value="${cName}" ${selectedCat === cName ? 'selected' : ''}>${cName} ${count > 0 ? `(${count})` : ''}</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <!-- Tier 2: Sub-Category Filter (Cascades from Category) -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-bold text-slate-600 w-16 shrink-0 flex items-center gap-0.5" title="Sub-Category Filter">
+              <span class="material-symbols-outlined text-[13px] text-teal-600">subdirectory_arrow_right</span> Sub:
+            </span>
+            <select id="chosen-filter-subcategory" onchange="handleChosenSubcategoryChange(this.value)"
+              class="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-800 focus:bg-white focus:outline-none focus:border-teal-500 transition truncate cursor-pointer">
+              <option value="ALL" ${selectedSub === 'ALL' ? 'selected' : ''}>📂 All Subcategories</option>
+              ${Array.from(subcategoryMap.entries()).map(([sName, count]) => `
+                <option value="${sName}" ${selectedSub === sName ? 'selected' : ''}>${sName} ${count > 0 ? `(${count})` : ''}</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <!-- Tier 3: Sub-Sub Category Filter (Size / Age / Attribute Cascades) -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-bold text-slate-600 w-16 shrink-0 flex items-center gap-0.5" title="Sub-Sub Category (Size / Variant) Filter">
+              <span class="material-symbols-outlined text-[13px] text-indigo-600">straighten</span> Sub-Sub:
+            </span>
+            <select id="chosen-filter-subsub" onchange="handleChosenSubsubChange(this.value)"
+              class="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500 transition truncate cursor-pointer">
+              <option value="ALL" ${selectedSubsub === 'ALL' ? 'selected' : ''}>📏 All Sub-sub / Sizes</option>
+              ${Array.from(subsubMap.entries()).map(([szName, count]) => `
+                <option value="${szName}" ${selectedSubsub === szName ? 'selected' : ''}>${szName} ${count > 0 ? `(${count})` : ''}</option>
+              `).join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- Active Filter Pills & Reset Button -->
+        ${hasActiveFilters ? `
+          <div class="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1 flex-wrap text-[9px]">
+            <div class="flex items-center gap-1 flex-wrap">
+              ${selectedCat !== 'ALL' ? `
+                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-bold border border-sky-200">
+                  <span>Cat: ${selectedCat.slice(0, 15)}</span>
+                  <button type="button" onclick="handleChosenCategoryChange('ALL')" class="hover:text-rose-600 text-[10px] cursor-pointer">✕</button>
+                </span>
+              ` : ''}
+              ${selectedSub !== 'ALL' ? `
+                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 font-bold border border-teal-200">
+                  <span>Sub: ${selectedSub.slice(0, 15)}</span>
+                  <button type="button" onclick="handleChosenSubcategoryChange('ALL')" class="hover:text-rose-600 text-[10px] cursor-pointer">✕</button>
+                </span>
+              ` : ''}
+              ${selectedSubsub !== 'ALL' ? `
+                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold border border-indigo-200">
+                  <span>Size: ${selectedSubsub}</span>
+                  <button type="button" onclick="handleChosenSubsubChange('ALL')" class="hover:text-rose-600 text-[10px] cursor-pointer">✕</button>
+                </span>
+              ` : ''}
+              ${searchQuery ? `
+                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-200">
+                  <span>"${searchQuery}"</span>
+                  <button type="button" onclick="clearChosenProductsSearch()" class="hover:text-rose-600 text-[10px] cursor-pointer">✕</button>
+                </span>
+              ` : ''}
+            </div>
+            <button type="button" onclick="resetChosenProductsFilters()"
+              class="text-rose-600 hover:text-rose-800 font-bold flex items-center gap-0.5 hover:underline transition cursor-pointer ml-auto">
+              <span class="material-symbols-outlined text-[12px]">restart_alt</span> Reset
+            </button>
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- Bulk Move to Orders Bar -->
+      <div id="chosen-products-bulk-bar" class="${canUserPerformAction('orders', 'create') ? 'hidden' : '!hidden'} p-2.5 bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl shadow-md flex items-center justify-between transition animate-in fade-in">
+        <div class="min-w-0 pr-1">
+          <span class="text-xs font-bold block truncate" id="chosen-products-selected-text">0 Selected</span>
+          <span class="text-[10px] text-emerald-200 font-mono font-bold block" id="chosen-products-selected-total">Total: ₹0</span>
+        </div>
+        <button type="button" onclick="openOrderFromSelectedChosenProducts('${customer.id}')" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-950 rounded-lg text-xs font-extrabold flex items-center gap-1 shadow-sm transition shrink-0 cursor-pointer">
+          <span class="material-symbols-outlined text-[14px]">shopping_cart_checkout</span>
+          <span>Move to Orders</span>
+        </button>
+      </div>
+
+      <!-- Products Listing Container -->
+      <div class="space-y-2">
+        ${filteredCount === 0 ? `
+          <div class="bg-white p-4 rounded-xl border border-sky-200 text-center text-xs text-slate-400 space-y-1.5">
+            <span class="material-symbols-outlined text-[24px] text-sky-400 block mx-auto">filter_list_off</span>
+            <p class="font-semibold text-slate-600">No products match your filter criteria.</p>
+            <p class="text-[10px] text-slate-400">Try changing Category, Sub-Category or Size filters.</p>
+            ${hasActiveFilters ? `
+              <button type="button" onclick="resetChosenProductsFilters()" class="mt-1 px-3 py-1 bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold text-xs rounded-lg transition inline-flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[13px]">restart_alt</span> Clear Filters
+              </button>
+            ` : ''}
+          </div>
+        ` : `
+          <!-- Sub-header with Select All option -->
+          <div class="flex items-center justify-between px-1 text-[10px] text-slate-500 font-semibold">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" id="chosen-products-select-all" onchange="toggleSelectAllChosenProducts('${customer.id}', this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer w-3.5 h-3.5">
+              <span>Select All (${filteredCount})</span>
+            </label>
+            <span class="text-[9px] text-slate-400">Select to move to order</span>
+          </div>
+
+          <!-- Scrollable Product Cards List -->
+          <div class="space-y-2 max-h-80 overflow-y-auto pr-1 custom-chat-scroll">
+            ${filteredProducts.map(item => {
+              const safeTitle = (item.title || '').replace(/[\r\n]+/g, ' ').replace(/'/g, "\\'");
+              const safeSku = (item.sku || '').replace(/'/g, "\\'");
+              const safePrice = (item.price || '').replace(/'/g, "\\'");
+              const safeSize = (item.size || item.subsub || '').replace(/'/g, "\\'");
+              const safeImg = (item.image || '').replace(/'/g, "\\'");
+              const isProduct = true;
+              const isChecked = typeof CHOSEN_PRODUCTS_SELECTION !== 'undefined' && CHOSEN_PRODUCTS_SELECTION.has(String(item.id));
+              const safeMsgId = (item.msgId || item.id || '').replace(/'/g, "\\'");
+
+              return `
+              <div class="bg-white p-2.5 rounded-xl border ${isChecked ? 'border-emerald-400 bg-emerald-50/20 shadow-xs' : 'border-sky-200'} shadow-2xs flex items-start gap-2 transition hover:border-sky-300 hover:shadow-xs">
+                <div class="pt-1 shrink-0">
+                  <input type="checkbox" class="chosen-product-cb rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4" 
+                    data-item-id="${item.id}" 
+                    data-item-sku="${safeSku}" 
+                    data-item-name="${safeTitle}" 
+                    data-item-price="${safePrice}" 
+                    data-item-size="${safeSize}" 
+                    data-item-image="${safeImg}" 
+                    onchange="handleChosenProductCheckChange('${customer.id}')" 
+                    ${isChecked ? 'checked' : ''}>
+                </div>
+
+                ${item.image ? `
+                  <div class="relative shrink-0 group">
+                    <img src="${item.image}" alt="${item.title}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 cursor-pointer transition group-hover:opacity-90 shadow-2xs" onclick="openImageLightbox('${item.image}', '${safeTitle}')">
+                    <span class="material-symbols-outlined absolute bottom-0.5 right-0.5 text-[11px] bg-black/60 text-white rounded p-0.5 pointer-events-none">zoom_in</span>
+                  </div>
+                ` : `
+                  <div class="w-10 h-10 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[18px]">checkroom</span>
+                  </div>
+                `}
+
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-1">
+                    <h5 class="text-xs font-bold text-slate-900 truncate" title="${item.title}">${item.title}</h5>
+                    <span class="text-[9px] text-slate-400 font-mono shrink-0">${item.time || ''}</span>
+                  </div>
+
+                  <!-- 3-Tier Category Breadcrumb Badges (Cat › Sub › Sub-Sub) -->
+                  <div class="text-[9px] font-semibold text-slate-400 truncate flex items-center gap-1 mt-0.5 flex-wrap">
+                    <span class="text-sky-800 bg-sky-50 border border-sky-200 px-1 rounded font-bold">${item.category || 'Garments'}</span>
+                    <span>›</span>
+                    <span class="text-teal-800 bg-teal-50 border border-teal-200 px-1 rounded font-medium">${item.subcategory || 'Standard'}</span>
+                    <span>›</span>
+                    <span class="text-indigo-800 bg-indigo-50 border border-indigo-200 px-1 rounded font-mono font-bold">${item.subsub || item.size || 'Universal'}</span>
+                  </div>
+
+                  <!-- Attributes & Price Row -->
+                  <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    ${item.price ? `<span class="text-[11px] font-black text-emerald-700">${item.price}</span>` : ''}
+                    ${item.sku ? `<span class="text-[9px] font-mono bg-slate-100 text-slate-700 px-1 rounded font-bold">${item.sku}</span>` : ''}
+                    <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full font-bold ml-auto">${item.badge || 'Sent in Chat'}</span>
+                  </div>
+
+                  <div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1">
+                    <!-- Jump / View in Live Stream button -->
+                    <button type="button" onclick="jumpToLiveStreamMessage('${safeMsgId}')" class="px-2 py-0.5 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-md text-[10px] font-bold border border-sky-200 transition flex items-center gap-0.5 cursor-pointer" title="Jump to this product in the live chat stream">
+                      <span class="material-symbols-outlined text-[13px] text-sky-600">visibility</span>
+                      <span>In Live Stream</span>
+                    </button>
+                    
+                    <div class="flex items-center gap-1">
+                      <button type="button" onclick="shareChosenProductDirectly('${safeSku}', '${safeTitle}', '${safePrice}', '${safeImg}', '${safeSize}')" class="p-1 hover:bg-slate-100 text-slate-500 hover:text-emerald-700 rounded transition cursor-pointer" title="Share to WhatsApp">
+                        <span class="material-symbols-outlined text-[14px]">send</span>
+                      </button>
+                      ${canUserPerformAction('orders', 'create') ? `
+                      <button type="button" onclick="openOrderFromSingleChosenProduct('${customer.id}', '${item.id}')" class="btn-move-to-order px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" title="Move this product to Order">
+                        <span class="material-symbols-outlined text-[12px]">shopping_cart_checkout</span>
+                        <span>Move to Order</span>
+                      </button>` : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+            }).join('')}
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
 function renderCustomer360Panel() {
   const panel = document.getElementById('chat-right-panel');
   if (!panel) return;
@@ -6162,122 +7174,7 @@ function renderCustomer360Panel() {
       ` : '<p class="text-xs text-slate-400">No active query recorded for this customer</p>'}
     </div>
 
-    <!-- 3. DYNAMIC BOT AUTOMATION & CHOSEN PRODUCTS TRACKER CARD (With Select Options & Move to Order) -->
-    <div id="chosen-products-tracker-card" class="p-4 border-b border-slate-200 bg-sky-50/40 space-y-2.5">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-1.5">
-          <span class="material-symbols-outlined text-[16px] text-sky-600">smart_toy</span>
-          <span class="text-[11px] font-extrabold uppercase text-sky-950">Bot Automation &amp; Chosen Products</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <button type="button" onclick="openProductSearchModal()" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Search Stock &amp; Share to WhatsApp">
-            <span class="material-symbols-outlined text-[12px]">share</span>
-            <span class="hidden sm:inline">Share</span>
-          </button>
-          <span class="text-[9px] bg-sky-100 text-sky-800 font-mono font-bold px-2 py-0.5 rounded-full border border-sky-200">
-            ${(customer.automationHistory || []).length} Actions
-          </span>
-          <button type="button" onclick="syncCustomerAutomationHistory(CRM_STATE.customers.find(c => c.id === '${customer.id}')); renderCustomer360Panel();" class="p-1 hover:bg-sky-200/60 rounded text-sky-700 transition cursor-pointer" title="Re-sync chat actions">
-            <span class="material-symbols-outlined text-[13px]">sync</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Bulk Move to Orders Bar -->
-      <div id="chosen-products-bulk-bar" class="hidden p-2.5 bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl shadow-md flex items-center justify-between transition animate-in fade-in">
-        <div class="min-w-0 pr-1">
-          <span class="text-xs font-bold block truncate" id="chosen-products-selected-text">0 Selected</span>
-          <span class="text-[10px] text-emerald-200 font-mono font-bold block" id="chosen-products-selected-total">Total: ₹0</span>
-        </div>
-        <button type="button" onclick="openOrderFromSelectedChosenProducts('${customer.id}')" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-950 rounded-lg text-xs font-extrabold flex items-center gap-1 shadow-sm transition shrink-0 cursor-pointer">
-          <span class="material-symbols-outlined text-[14px]">shopping_cart_checkout</span>
-          <span>Move to Orders</span>
-        </button>
-      </div>
-
-      <div class="space-y-2">
-        ${(!customer.automationHistory || customer.automationHistory.length === 0) ? `
-          <div class="bg-white p-3 rounded-xl border border-sky-200 text-center text-xs text-slate-400 space-y-1">
-            <span class="material-symbols-outlined text-[20px] text-sky-400 block mx-auto">track_changes</span>
-            <p>No automation activity yet. As customer chooses categories or products on WhatsApp, they will appear here automatically.</p>
-          </div>
-        ` : `
-          <!-- Sub-header with Select All option -->
-          <div class="flex items-center justify-between px-1 text-[10px] text-slate-500 font-semibold">
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" id="chosen-products-select-all" onchange="toggleSelectAllChosenProducts('${customer.id}', this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer w-3.5 h-3.5">
-              <span>Select All Products</span>
-            </label>
-            <span class="text-[9px] text-slate-400">Select to move to order</span>
-          </div>
-
-          <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
-            ${customer.automationHistory.map(item => {
-              const safeTitle = (item.title || '').replace(/[\r\n]+/g, ' ').replace(/'/g, "\\'");
-              const safeSku = (item.sku || '').replace(/'/g, "\\'");
-              const safePrice = (item.price || '').replace(/'/g, "\\'");
-              const safeSize = (item.size || '').replace(/'/g, "\\'");
-              const safeImg = (item.image || '').replace(/'/g, "\\'");
-              const isProduct = item.type === 'PRODUCT_VIEWED' || (item.price && item.price.length > 0) || (item.sku && !item.sku.startsWith('CAT-'));
-              const isChecked = typeof CHOSEN_PRODUCTS_SELECTION !== 'undefined' && CHOSEN_PRODUCTS_SELECTION.has(String(item.id));
-
-              return `
-              <div class="bg-white p-2.5 rounded-xl border ${isChecked ? 'border-emerald-400 bg-emerald-50/20 shadow-xs' : 'border-sky-200'} shadow-2xs flex items-start gap-2 transition hover:border-sky-300 hover:shadow-xs">
-                ${isProduct ? `
-                  <div class="pt-1 shrink-0">
-                    <input type="checkbox" class="chosen-product-cb rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4" 
-                      data-item-id="${item.id}" 
-                      data-item-sku="${safeSku}" 
-                      data-item-name="${safeTitle}" 
-                      data-item-price="${safePrice}" 
-                      data-item-size="${safeSize}" 
-                      data-item-image="${safeImg}" 
-                      onchange="handleChosenProductCheckChange('${customer.id}')" 
-                      ${isChecked ? 'checked' : ''}>
-                  </div>
-                ` : ''}
-
-                ${item.image ? `
-                  <div class="relative shrink-0 group">
-                    <img src="${item.image}" alt="${item.title}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 cursor-pointer transition group-hover:opacity-90" onclick="openImageLightbox('${item.image}', '${safeTitle}')">
-                    <span class="material-symbols-outlined absolute bottom-0.5 right-0.5 text-[11px] bg-black/60 text-white rounded p-0.5 pointer-events-none">zoom_in</span>
-                  </div>
-                ` : `
-                  <div class="w-10 h-10 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
-                    <span class="material-symbols-outlined text-[18px]">${item.type === 'PRODUCT_VIEWED' ? 'checkroom' : 'category'}</span>
-                  </div>
-                `}
-
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center justify-between gap-1">
-                    <h5 class="text-xs font-bold text-slate-900 truncate" title="${item.title}">${item.title}</h5>
-                    <span class="text-[9px] text-slate-400 font-mono shrink-0">${item.time}</span>
-                  </div>
-                  <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                    ${item.price ? `<span class="text-[11px] font-extrabold text-emerald-700">${item.price}</span>` : ''}
-                    ${item.sku ? `<span class="text-[9px] font-mono bg-slate-100 text-slate-700 px-1 rounded font-bold">${item.sku}</span>` : ''}
-                    ${item.size ? `<span class="text-[9px] text-slate-500 font-medium">${item.size}</span>` : ''}
-                    <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded-full font-bold ml-auto">${item.badge || 'Browsed'}</span>
-                  </div>
-
-                  ${isProduct ? `
-                    <div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
-                      <span class="text-[9px] text-slate-400 font-medium">Ready to order</span>
-                      <button type="button" onclick="openOrderFromSingleChosenProduct('${customer.id}', '${item.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" title="Move this product to Order">
-                        <span class="material-symbols-outlined text-[12px]">shopping_cart_checkout</span>
-                        <span>Move to Order</span>
-                      </button>
-                    </div>
-                  ` : ''}
-                </div>
-              </div>
-            `;
-            }).join('')}
-          </div>
-        `}
-      </div>
-    </div>
-
+    ${renderBotAutomationAndChosenProductsCard(customer)}
 
     <!-- 3. PROMINENT HANDLING STAFF SECTION -->
     <div class="p-4 border-b border-slate-200 space-y-2.5 bg-slate-50/50">
@@ -6835,11 +7732,75 @@ function formatOutboundBrandMessage(text) {
   return `🛍️ *${brandName}* • Order Desk\n━━━━━━━━━━━━━━━━━━━━\n${text}`;
 }
 
+// 1:1 Live Chat Photo Attachment Controller
+let CHAT_ATTACHED_IMAGE_DATA = null;
+
+function handleChatImageFileSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    alert('Please select an image file (JPG, PNG, WebP).');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    CHAT_ATTACHED_IMAGE_DATA = {
+      dataUrl: dataUrl,
+      serverUrl: null,
+      name: file.name,
+      file: file
+    };
+
+    const strip = document.getElementById('chat-attached-image-preview');
+    const thumb = document.getElementById('chat-attached-thumb');
+    const nameEl = document.getElementById('chat-attached-filename');
+    if (strip && thumb && nameEl) {
+      thumb.src = dataUrl;
+      nameEl.innerText = file.name;
+      strip.classList.remove('hidden');
+    }
+    const input = document.getElementById('chat-input-text');
+    if (input) input.focus();
+
+    // Upload to server asynchronously for persistent storage & small payload
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      fetch('api.php?action=upload_media', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (json && json.status === 'success' && json.url && CHAT_ATTACHED_IMAGE_DATA) {
+          CHAT_ATTACHED_IMAGE_DATA.serverUrl = json.url;
+        }
+      })
+      .catch(err => console.warn('[Chat Image Upload Note]:', err));
+    } catch (e) {}
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearChatAttachedImage() {
+  CHAT_ATTACHED_IMAGE_DATA = null;
+  const fileInput = document.getElementById('chat-image-file-input');
+  if (fileInput) fileInput.value = '';
+
+  const strip = document.getElementById('chat-attached-image-preview');
+  if (strip) strip.classList.add('hidden');
+}
+
 function handleSendMessage(event) {
   event.preventDefault();
   const input = document.getElementById('chat-input-text');
   const rawText = input.value.trim();
-  if (!rawText) return;
+  
+  // Allow sending if there is text OR an attached image
+  if (!rawText && !CHAT_ATTACHED_IMAGE_DATA) return;
 
   const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
   if (!customer) return;
@@ -6848,15 +7809,19 @@ function handleSendMessage(event) {
     CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] = [];
   }
 
+  const attachedMedia = CHAT_ATTACHED_IMAGE_DATA ? (CHAT_ATTACHED_IMAGE_DATA.serverUrl || CHAT_ATTACHED_IMAGE_DATA.dataUrl) : null;
+
   // Format outbound text with company Brand Name header
-  const formattedText = formatOutboundBrandMessage(rawText);
+  const formattedText = rawText ? formatOutboundBrandMessage(rawText) : `[Photo from ${getBrandName()}]`;
 
   const newMsg = {
     id: Date.now(),
     sender: 'staff',
     text: formattedText,
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    status: 'SENDING'
+    status: 'SENDING',
+    media_type: attachedMedia ? 'image' : null,
+    media_url: attachedMedia
   };
 
   CRM_STATE.conversations[ACTIVE_CUSTOMER_ID].push(newMsg);
@@ -6864,7 +7829,7 @@ function handleSendMessage(event) {
   // Update query last message & status to REPLIED
   const query = CRM_STATE.queries.find(q => q.customerId === ACTIVE_CUSTOMER_ID);
   if (query) {
-    query.lastMessage = `Staff: "${rawText.substring(0, 40)}..."`;
+    query.lastMessage = attachedMedia ? `Staff: [Photo] "${rawText.substring(0, 30)}"` : `Staff: "${rawText.substring(0, 40)}..."`;
     if (query.status === 'NEW' || query.status === 'ASSIGNED') {
       query.status = 'REPLIED';
     }
@@ -6875,12 +7840,13 @@ function handleSendMessage(event) {
 
   saveCRMState();
   input.value = '';
+  clearChatAttachedImage();
   renderChatMessages();
   renderInboxConversationList();
   playChime('order');
 
   // Transmit live WhatsApp message across WebSocket bridge to customer's WhatsApp!
-  dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, formattedText, newMsg, customer.jid, customer.accountId || ACTIVE_SEND_ACCOUNT_ID);
+  dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, formattedText, newMsg, customer.jid, customer.accountId || ACTIVE_SEND_ACCOUNT_ID, false, attachedMedia, customer.id);
 }
 
 function insertQuickReply(type) {
@@ -9976,7 +10942,19 @@ function toggleSelectAllChosenProducts(customerId, isChecked) {
 function openOrderFromSingleChosenProduct(customerId, itemId) {
   const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
   if (!customer) return;
-  const item = (customer.automationHistory || []).find(a => String(a.id) === String(itemId));
+  let item = (customer.automationHistory || []).find(a => String(a.id) === String(itemId));
+  if (!item && CRM_STATE && Array.isArray(CRM_STATE.products)) {
+    const prod = CRM_STATE.products.find(p => String(p.id) === String(itemId) || p.sku === itemId || ('cat_prod_' + p.id) === String(itemId) || ('cat_prod_' + p.sku) === String(itemId));
+    if (prod) {
+      item = {
+        sku: prod.sku,
+        title: prod.name,
+        price: '₹' + prod.price,
+        size: prod.size,
+        image: prod.image
+      };
+    }
+  }
   if (!item) return;
 
   const priceNum = parseFloat((item.price || '0').replace(/[^0-9.]/g, '')) || 999;
@@ -19592,6 +20570,7 @@ function renderOrdersHistoryTable() {
               </div>
             </div>
           </div>
+          ${canUserPerformAction('orders', 'edit') ? `
           <!-- Inline Quick Staff Reassignment Dropdown -->
           <div class="mt-1.5 flex items-center gap-1.5">
             <span class="text-[9px] text-slate-400 font-extrabold uppercase">Credit:</span>
@@ -19603,7 +20582,7 @@ function renderOrdersHistoryTable() {
                 return sList.map(s => `<option value="${s.id}" ${s.id === curId || s.name === staffDisplayName ? 'selected' : ''}>${s.name}</option>`).join('');
               })()}
             </select>
-          </div>
+          </div>` : ''}
         </td>
 
         <!-- 4. Ordered Items (Product Thumbnail, Name, Qty Stepper, Size & Price) -->
@@ -19655,6 +20634,7 @@ function renderOrdersHistoryTable() {
               <span>${normStatus}</span>
             </span>
 
+            ${canUserPerformAction('orders', 'edit') ? `
             <!-- Quick Status Transition Selector -->
             <div>
               <select onchange="updateOrderStatus('${ord.id}', this.value)" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded px-1.5 py-0.5 outline-none cursor-pointer">
@@ -19663,7 +20643,7 @@ function renderOrdersHistoryTable() {
                 <option value="SHIPPED" ${normStatus === 'SHIPPED' ? 'selected' : ''}>3. Shipped</option>
                 <option value="DELIVERED" ${normStatus === 'DELIVERED' ? 'selected' : ''}>4. Delivered</option>
               </select>
-            </div>
+            </div>` : ''}
           </div>
         </td>
 
@@ -20728,79 +21708,238 @@ function renderBackupView() {
   if (lastTimeEl) lastTimeEl.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function handleExportBackupJSON() {
-  const backupPayload = {
-    version: '2.5.0',
-    exported_at: new Date().toISOString(),
-    system: 'GRM Garments CRM — WhatsApp Communication Hub',
-    data: CRM_STATE
-  };
+async function handleExportBackupJSON() {
+  showToast('Generating Backup...', 'Creating snapshot of MySQL database and CRM records...', 'cloud_download', 'sky');
 
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPayload, null, 2));
-  const downloadAnchor = document.createElement('a');
-  const now = new Date();
-  const filename = `grm_crm_backup_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.json`;
+  try {
+    let backupBlob = null;
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    let filename = `grm_crm_backup_${dateStr}.json`;
 
-  downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", filename);
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
+    // 1. Fetch complete backup from backend MySQL database engine
+    try {
+      const resp = await fetch('api.php?action=backup_db');
+      if (resp.ok) {
+        const dbData = await resp.json();
+        // Enrich with current in-memory CRM_STATE as well for a 100% complete hybrid backup
+        dbData.crm_state = CRM_STATE;
+        backupBlob = new Blob([JSON.stringify(dbData, null, 2)], { type: 'application/json' });
+      }
+    } catch (apiErr) {
+      console.warn('Backend MySQL backup request error, falling back to local snapshot:', apiErr);
+    }
 
-  logAudit('DATABASE_BACKUP_EXPORTED', 'BACKUP', `Exported full database snapshot backup file: ${filename}`);
-  saveCRMState();
-  showToast('Database Backup Exported!', `Saved complete CRM database snapshot (${filename})`, 'cloud_download', 'emerald');
+    // 2. Fallback: Client-side CRM_STATE snapshot if backend was unreachable
+    if (!backupBlob) {
+      const backupPayload = {
+        version: '2.5.0',
+        exported_at: now.toISOString(),
+        system: 'GRM Garments CRM — WhatsApp Communication Hub',
+        database: 'grm_crm_db',
+        data: CRM_STATE
+      };
+      backupBlob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+    }
+
+    // 3. Safe download using Blob ObjectURL (handles unlimited file size safely in all browsers)
+    const downloadUrl = URL.createObjectURL(backupBlob);
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.style.display = 'none';
+    downloadAnchor.href = downloadUrl;
+    downloadAnchor.download = filename;
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+
+    setTimeout(() => {
+      document.body.removeChild(downloadAnchor);
+      URL.revokeObjectURL(downloadUrl);
+    }, 1500);
+
+    // Update UI counters on the backup view
+    const lastTimeEl = document.getElementById('backup-last-time');
+    if (lastTimeEl) lastTimeEl.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    logAudit('DATABASE_BACKUP_EXPORTED', 'BACKUP', `Exported full database backup file: ${filename}`);
+    saveCRMState();
+    showToast('Database Backup Downloaded!', `Successfully exported ${filename} to your device.`, 'cloud_download', 'emerald');
+  } catch (err) {
+    console.error('[Backup Export Error]:', err);
+    alert('Error exporting database backup: ' + err.message);
+  }
 }
 
-function handleImportBackupJSON(event) {
-  const file = event.target.files[0];
+async function handleImportBackupJSON(event) {
+  const inputEl = event.target;
+  const file = inputEl.files && inputEl.files[0];
   if (!file) return;
 
+  showToast('Restoring Database...', `Reading ${file.name}...`, 'sync', 'sky');
+
   const reader = new FileReader();
-  reader.onload = function (e) {
+  reader.onload = async function (e) {
     try {
-      const parsed = JSON.parse(e.target.result);
-      if (parsed.data && parsed.data.customers && parsed.data.queries) {
-        CRM_STATE = parsed.data;
-        saveCRMState();
-        showToast('Database Restored Successfully!', 'All customers, chats, and orders recovered.', 'cloud_done', 'emerald');
-        logAudit('DATABASE_RESTORED', 'BACKUP', `Restored database from uploaded backup file: ${file.name}`);
-        renderInbox();
-        updateBadgeCounters();
-        renderCustomer360Panel();
-        updateConfiguredPhoneDisplays();
-      } else {
-        alert('Invalid CRM backup file format. Please upload a valid JSON backup file.');
+      const rawText = e.target.result;
+      const parsed = JSON.parse(rawText);
+
+      // Validate format: must have tables or data/crm_state
+      const hasTables = parsed.tables && typeof parsed.tables === 'object';
+      const hasData = parsed.data || parsed.crm_state;
+
+      if (!hasTables && !hasData) {
+        alert('Invalid CRM backup file format. Expected a valid JSON backup with database tables or CRM state.');
+        inputEl.value = '';
+        return;
       }
+
+      let backendSuccess = false;
+      let restoredTableList = [];
+
+      // 1. Send backup payload to MySQL backend restore endpoint
+      try {
+        const resp = await fetch('api.php?action=restore_db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: rawText
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+          backendSuccess = true;
+          restoredTableList = res.restored_tables || [];
+          console.log('MySQL Database Restored successfully:', res);
+        } else {
+          console.warn('Backend restore returned non-success:', res);
+        }
+      } catch (backendErr) {
+        console.warn('Backend restore request failed, continuing with local state recovery:', backendErr);
+      }
+
+      // 2. Restore in-memory CRM_STATE
+      if (parsed.crm_state) {
+        CRM_STATE = parsed.crm_state;
+      } else if (parsed.data) {
+        CRM_STATE = parsed.data;
+      }
+
+      saveCRMState();
+      logAudit('DATABASE_RESTORED', 'BACKUP', `Restored database from ${file.name} (MySQL: ${backendSuccess ? 'YES' : 'LOCAL'})`);
+
+      // 3. Re-sync from MySQL database to guarantee 100% database alignment
+      try {
+        const allResp = await fetch('api.php?action=get_all');
+        if (allResp.ok) {
+          const allData = await allResp.json();
+          const d = allData.data || allData;
+          if (d.products && Array.isArray(d.products)) CRM_STATE.products = d.products;
+          if (d.customers && Array.isArray(d.customers)) CRM_STATE.customers = d.customers;
+          if (d.queries && Array.isArray(d.queries)) CRM_STATE.queries = d.queries;
+          if (d.followups && Array.isArray(d.followups)) CRM_STATE.followups = d.followups;
+          if (d.orders && Array.isArray(d.orders)) CRM_STATE.orders = d.orders;
+          saveCRMState();
+        }
+      } catch (syncErr) {
+        console.warn('Sync after restore error:', syncErr);
+      }
+
+      // 4. Update UI across CRM
+      if (typeof renderInbox === 'function') renderInbox();
+      if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+      if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+      if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
+      if (typeof renderCurrentView === 'function') renderCurrentView();
+
+      const lastTimeEl = document.getElementById('backup-last-time');
+      if (lastTimeEl) lastTimeEl.innerText = 'Restored ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      showToast('Database Restored Successfully!', `All records and MySQL tables restored from ${file.name}!`, 'cloud_done', 'emerald');
+      alert(`Database Restored Successfully!\n\nAll customer profiles, WhatsApp chats, queries, and orders have been restored into MySQL database (${backendSuccess ? 'grm_crm_db' : 'local storage'}).`);
     } catch (err) {
-      alert('Error parsing backup file: ' + err.message);
+      console.error('Error parsing backup file:', err);
+      alert('Error parsing or restoring backup file: ' + err.message);
+    } finally {
+      inputEl.value = ''; // Always clear so the same file can be uploaded again if needed
     }
   };
   reader.readAsText(file);
 }
 
-// =========================================================================
-// 13.5. STAFF MANAGEMENT MODULE (Create Staff, Assign Role, Quota Allocations, Total Staff List)
-// =========================================================================
-let ACTIVE_STAFF_TAB = 'list'; // 'list', 'quota', 'create', 'roles'
+// Bind explicitly to window scope for HTML onclick access
+window.handleExportBackupJSON = handleExportBackupJSON;
+window.handleImportBackupJSON = handleImportBackupJSON;
 
+// =========================================================================
+// 13.5. STAFF MANAGEMENT & GRANULAR ROLE-BASED ACCESS CONTROL (RBAC) ENGINE
+// Sub-Items: 1. All Staff Directory | 2. Add Staff | 3. Role Base Permissions Matrix
+// =========================================================================
+
+let ACTIVE_STAFF_TAB = 'list'; // 'list' (All Staff), 'create' (Add Staff), 'roles' (Role Base), 'quota'
+let ACTIVE_MATRIX_ROLE = 'Sales Specialist (Baby Collection)';
+
+// 1. Toggle Sidebar Staff Submenu (Accordion)
+window.toggleStaffSubmenu = function() {
+  const menu = document.getElementById('staff-submodules-menu');
+  const arrow = document.getElementById('staff-subnav-arrow');
+  if (!menu) return;
+
+  const isHidden = menu.classList.contains('hidden');
+  if (isHidden) {
+    menu.classList.remove('hidden');
+    if (arrow) arrow.style.transform = 'rotate(180deg)';
+  } else {
+    menu.classList.add('hidden');
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
+  }
+  switchView('staff');
+};
+
+// 2. Switch Staff Submodule from Sidebar (All Staff, Add Staff, Role Base)
+window.switchStaffSubmodule = function(submodule) {
+  // Ensure staff view is active
+  switchView('staff');
+  switchStaffTab(submodule);
+
+  // Update sidebar sub-item active classes
+  ['list', 'create', 'roles'].forEach(tab => {
+    const el = document.getElementById('nav-sub-staff-' + tab);
+    if (el) {
+      if (tab === submodule) {
+        el.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-300 bg-blue-950/60 border border-blue-400/30 shadow-xs transition cursor-pointer";
+      } else {
+        el.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
+      }
+    }
+  });
+
+  // Ensure sidebar submenu is open
+  const menu = document.getElementById('staff-submodules-menu');
+  const arrow = document.getElementById('staff-subnav-arrow');
+  if (menu) menu.classList.remove('hidden');
+  if (arrow) arrow.style.transform = 'rotate(180deg)';
+};
+
+// 3. Main Staff View Renderer
 function renderStaffView() {
+  initRolePermissionsState();
   switchStaffTab(ACTIVE_STAFF_TAB || 'list');
   renderStaffTable();
-  renderStaffQuotaView();
+  populateAllStaffDropdowns();
   updateStaffRoleSelectDropdowns();
+  renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
 }
 
+// 4. Switch Sub-View Tabs inside #view-staff
 function switchStaffTab(tab) {
   ACTIVE_STAFF_TAB = tab;
-  ['list', 'quota', 'create', 'roles'].forEach(t => {
+
+  // Toggle Header tab buttons
+  ['list', 'create', 'roles'].forEach(t => {
     const btn = document.getElementById(`tab-btn-staff-${t}`);
     const subview = document.getElementById(`subview-staff-${t}`);
     if (btn) {
       if (t === tab) {
-        btn.className = "px-3.5 py-2 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition";
+        btn.className = "px-3.5 py-2 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition cursor-pointer";
       } else {
-        btn.className = "px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5";
+        btn.className = "px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer";
       }
     }
     if (subview) {
@@ -20809,11 +21948,20 @@ function switchStaffTab(tab) {
     }
   });
 
-  if (tab === 'list') renderStaffTable();
-  if (tab === 'quota') renderStaffQuotaView();
-  if (tab === 'roles') updateStaffRoleSelectDropdowns();
+  // Execute tab-specific initializers
+  if (tab === 'list') {
+    renderStaffTable();
+  } else if (tab === 'create') {
+    updateStaffRoleSelectDropdowns();
+    const nameInput = document.getElementById('staff-new-name');
+    if (nameInput) nameInput.focus();
+  } else if (tab === 'roles') {
+    updateStaffRoleSelectDropdowns();
+    renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+  }
 }
 
+// 5. Render All Staff Directory Table (Sub-item 1)
 function renderStaffTable() {
   const tbody = document.getElementById('staff-list-table-body');
   if (!tbody) return;
@@ -20824,7 +21972,7 @@ function renderStaffTable() {
   // Update KPI counters
   const totalStaff = staffList.length;
   const activeStaff = staffList.filter(s => (s.status || 'ACTIVE') === 'ACTIVE').length;
-  const totalLeadsHandled = (CRM_STATE.queries || []).filter(q => q.assignedTo !== 'UNASSIGNED').length;
+  const totalLeadsHandled = (CRM_STATE.queries || []).filter(q => q.assignedTo && q.assignedTo !== 'UNASSIGNED').length;
   const totalOrders = (CRM_STATE.orders || []).length;
 
   const totalEl = document.getElementById('kpi-staff-total');
@@ -20832,20 +21980,22 @@ function renderStaffTable() {
   const leadsEl = document.getElementById('kpi-staff-leads');
   const ordersEl = document.getElementById('kpi-staff-orders');
   const badgeTotalStaff = document.getElementById('badge-total-staff-count');
+  const navSubStaffCount = document.getElementById('nav-sub-staff-count');
 
   if (totalEl) totalEl.innerText = `${totalStaff} Members`;
   if (activeEl) activeEl.innerText = `${activeStaff} Active`;
   if (leadsEl) leadsEl.innerText = `${totalLeadsHandled} Leads`;
   if (ordersEl) ordersEl.innerText = `${totalOrders} Orders`;
   if (badgeTotalStaff) badgeTotalStaff.innerText = totalStaff;
+  if (navSubStaffCount) navSubStaffCount.innerText = totalStaff;
 
   // Filter staff list
   let filtered = staffList;
   if (searchQuery) {
-    filtered = filtered.filter(s =>
-      s.name.toLowerCase().includes(searchQuery) ||
-      (s.role && s.role.toLowerCase().includes(searchQuery)) ||
+    filtered = staffList.filter(s =>
+      (s.name && s.name.toLowerCase().includes(searchQuery)) ||
       (s.email && s.email.toLowerCase().includes(searchQuery)) ||
+      (s.role && s.role.toLowerCase().includes(searchQuery)) ||
       (s.phone && s.phone.includes(searchQuery))
     );
   }
@@ -20853,8 +22003,9 @@ function renderStaffTable() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" class="py-8 text-center text-slate-400 text-xs font-normal">
-          No staff members found matching your search.
+        <td colspan="7" class="py-8 text-center text-slate-400 text-xs">
+          <span class="material-symbols-outlined text-[32px] text-slate-300 block mb-1">person_search</span>
+          No staff members found matching "${searchQuery}".
         </td>
       </tr>
     `;
@@ -20862,93 +22013,95 @@ function renderStaffTable() {
   }
 
   tbody.innerHTML = filtered.map(staff => {
-    const activeQueries = (CRM_STATE.queries || []).filter(q => q.assignedTo === staff.id).length;
-    const status = staff.status || 'ACTIVE';
-    const isActive = status === 'ACTIVE';
+    const isActive = (staff.status || 'ACTIVE') === 'ACTIVE';
     const quota = staff.dailyQuota || 70;
     const handled = staff.todayHandled || 0;
-    const quotaPct = quota > 0 ? Math.min(100, Math.round((handled / quota) * 100)) : 0;
+    const handledPct = quota > 0 ? Math.min(100, Math.round((handled / quota) * 100)) : 0;
+    const activeLeads = (CRM_STATE.queries || []).filter(q => 
+      (q.assignedTo === staff.id || (q.staff && q.staff.id === staff.id)) &&
+      (!q.assignedStaffName || q.assignedStaffName.toLowerCase() === staff.name.toLowerCase()) &&
+      q.status !== 'RESOLVED' && q.status !== 'CLOSED'
+    ).length;
+    const convertedOrders = (CRM_STATE.orders || []).filter(o => 
+      o.staffId === staff.id &&
+      (!o.staffName || o.staffName.toLowerCase() === staff.name.toLowerCase())
+    ).length;
 
     return `
       <tr class="hover:bg-slate-50/80 transition">
-        <!-- 1. Staff Member & Avatar -->
-        <td class="py-3.5 px-4">
+        <!-- Staff Info -->
+        <td class="py-3 px-4">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
-              ${staff.avatar || staff.name.substring(0, 2).toUpperCase()}
+            <div class="w-9 h-9 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+              ${staff.avatar || staff.name.slice(0, 2).toUpperCase()}
             </div>
             <div>
-              <div class="flex items-center gap-1.5">
-                <h4 class="font-bold text-slate-900 text-xs">${staff.name}</h4>
-                <span class="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">${staff.id}</span>
+              <div class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                <span>${staff.name}</span>
+                <span class="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-normal">${staff.id}</span>
               </div>
-              <p class="text-[11px] text-slate-500 mt-0.5">${staff.email || `${staff.id}@grmgarments.com`}</p>
+              <div class="text-[11px] text-slate-500 font-normal">${staff.email || 'No email registered'}</div>
             </div>
           </div>
         </td>
 
-        <!-- 2. Role & Specialization -->
-        <td class="py-3.5 px-4">
-          <div class="space-y-1">
-            <span class="inline-block bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-              ${staff.role || 'Sales Specialist'}
+        <!-- Role & Specialization -->
+        <td class="py-3 px-4">
+          <div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${getRoleBadgeClass(staff.role)}">
+              ${staff.role}
             </span>
-            <p class="text-[11px] text-slate-500 font-medium">Dept: <span class="text-slate-700">${staff.specialization || 'General Apparel'}</span></p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Dept: ${staff.specialization || 'General'}</p>
           </div>
         </td>
 
-        <!-- 3. Daily Quota -->
-        <td class="py-3.5 px-4 text-center">
-          <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono font-bold text-xs inline-block shadow-sm">
-            ${quota} msgs/day
+        <!-- Today Handled -->
+        <td class="py-3 px-4">
+          <span class="font-bold text-slate-900 text-xs font-mono bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 inline-block">
+            ${handled} msgs
           </span>
         </td>
 
-        <!-- 4. Today Handled Progress -->
-        <td class="py-3.5 px-4">
-          <div class="space-y-1 min-w-[100px]">
-            <div class="flex items-center justify-between text-xs font-mono font-bold text-slate-800">
-              <span>${handled} msgs</span>
-              <span class="text-[10px] text-slate-400 font-normal">(${quotaPct}%)</span>
-            </div>
-            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
-              <div class="h-full ${quotaPct >= 100 ? 'bg-rose-500' : (quotaPct >= 80 ? 'bg-amber-400' : 'bg-emerald-500')} rounded-full transition-all duration-300" style="width: ${quotaPct}%"></div>
-            </div>
-          </div>
-        </td>
-
-        <!-- 5. Active Leads Handled -->
-        <td class="py-3.5 px-4">
-          <span class="px-2.5 py-1 rounded-full text-xs font-bold ${activeQueries > 0 ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-600'}">
-            ${activeQueries} Active Leads
+        <!-- Active Leads -->
+        <td class="py-3 px-4">
+          <span class="text-xs font-bold ${activeLeads > 0 ? 'text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200' : 'text-slate-400'}">
+            ${activeLeads} Active Leads
           </span>
         </td>
 
-        <!-- 6. Converted Orders -->
-        <td class="py-3.5 px-4 font-mono font-bold text-emerald-700 text-xs">
-          ${staff.converted || 0} Orders
+        <!-- Converted Orders -->
+        <td class="py-3 px-4">
+          <span class="text-xs font-bold text-emerald-700 font-mono">
+            ${convertedOrders} Orders
+          </span>
         </td>
 
-        <!-- 7. Status -->
-        <td class="py-3.5 px-4">
-          <button type="button" onclick="toggleStaffStatus('${staff.id}')" class="px-2.5 py-1 rounded-full text-[10px] font-bold transition flex items-center gap-1 ${isActive ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}" title="Click to toggle Active / On-Leave status">
-            <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}"></span>
+        <!-- Status Toggle -->
+        <td class="py-3 px-4">
+          <button type="button" onclick="handleToggleStaffStatus('${staff.id}')"
+            class="px-2.5 py-1 rounded-full text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer ${isActive ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}">
+            <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
             <span>${isActive ? 'Active (On-Duty)' : 'On Leave'}</span>
           </button>
         </td>
 
-        <!-- 8. Actions -->
-        <td class="py-3.5 px-4 text-right">
-          <div class="flex items-center justify-end gap-1.5">
-            <button type="button" onclick="switchStaffTab('quota')" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Adjust Daily Quota">
-              <span class="material-symbols-outlined text-[16px]">pie_chart</span>
-            </button>
-            <button type="button" onclick="quickAssignRoleForStaff('${staff.id}')" class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition" title="Assign / Edit Role">
+        <!-- Actions -->
+        <td class="py-3 px-4 text-right">
+          <div class="flex items-center justify-end gap-1">
+            ${canUserPerformAction('staff', 'edit') ? `
+            <button type="button" onclick="quickAssignRoleForStaff('${staff.id}')"
+              class="p-1 hover:bg-purple-100 text-purple-700 rounded transition cursor-pointer" title="Reassign Role & Permissions">
               <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
             </button>
-            <button type="button" onclick="deleteStaffMember('${staff.id}')" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="Remove Staff Member">
+            <button type="button" onclick="handleEditStaffPrompt('${staff.id}')"
+              class="p-1 hover:bg-slate-100 text-slate-500 hover:text-slate-900 rounded transition cursor-pointer" title="Edit Staff Details">
+              <span class="material-symbols-outlined text-[16px]">edit</span>
+            </button>` : ''}
+            ${canUserPerformAction('staff', 'delete') ? `
+            <button type="button" onclick="handleDeleteStaff('${staff.id}')"
+              class="p-1 hover:bg-rose-100 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer" title="Remove Staff Member">
               <span class="material-symbols-outlined text-[16px]">delete</span>
-            </button>
+            </button>` : ''}
           </div>
         </td>
       </tr>
@@ -20956,188 +22109,752 @@ function renderStaffTable() {
   }).join('');
 }
 
-// =========================================================================
-// 13.6. DAILY MESSAGE QUOTA MANAGEMENT (200 Inbound Target Allocation)
-// =========================================================================
+// Helper: Badge styling for roles
+function getRoleBadgeClass(role) {
+  const r = (role || '').toLowerCase();
+  if (r.includes('admin') || r.includes('super')) return 'bg-purple-100 text-purple-800 border border-purple-300';
+  if (r.includes('sales')) return 'bg-blue-100 text-blue-800 border border-blue-300';
+  if (r.includes('enquiry')) return 'bg-amber-100 text-amber-800 border border-amber-300';
+  if (r.includes('order') || r.includes('fulfillment')) return 'bg-teal-100 text-teal-800 border border-teal-300';
+  return 'bg-slate-100 text-slate-800 border border-slate-300';
+}
+
+// 6. Handle Staff Onboarding (Sub-item 2: Add Staff)
+function handleCreateNewStaff(event) {
+  event.preventDefault();
+  if (!canUserPerformAction('staff', 'create')) {
+    showToast('Permission Denied', 'Your assigned role does not have permission to create staff.', 'lock', 'rose');
+    return;
+  }
+  const name = document.getElementById('staff-new-name').value.trim();
+  const email = document.getElementById('staff-new-email').value.trim();
+  const phone = document.getElementById('staff-new-phone').value.trim();
+  const role = document.getElementById('staff-new-role').value;
+  const specialization = document.getElementById('staff-new-specialization').value;
+  const status = document.getElementById('staff-new-status').value;
+  const passwordInput = document.getElementById('staff-new-password');
+  const password = passwordInput ? passwordInput.value.trim() : 'staff123';
+
+  if (!name || !phone) {
+    alert('Please enter staff name and phone number.');
+    return;
+  }
+
+  if (!password) {
+    alert('Please enter a login password for the staff member.');
+    return;
+  }
+
+  // Collect all staff IDs ever used across staffList, orders, queries, and reserved IDs
+  const usedIds = new Set(['staff_01', 'staff_02', 'staff_03']);
+  (CRM_STATE.staffList || []).forEach(s => { if (s && s.id) usedIds.add(s.id); });
+  (CRM_STATE.orders || []).forEach(o => { if (o && o.staffId) usedIds.add(o.staffId); });
+  (CRM_STATE.queries || []).forEach(q => {
+    if (q && q.assignedTo && q.assignedTo !== 'UNASSIGNED') usedIds.add(q.assignedTo);
+    if (q && q.staffId && q.staffId !== 'UNASSIGNED') usedIds.add(q.staffId);
+  });
+
+  let nextNum = 1;
+  let newStaffId = `staff_${String(nextNum).padStart(2, '0')}`;
+  while (usedIds.has(newStaffId)) {
+    nextNum++;
+    newStaffId = `staff_${String(nextNum).padStart(2, '0')}`;
+  }
+  const avatarInitials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+  const newStaff = {
+    id: newStaffId,
+    name: name,
+    email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@grmgarments.com`,
+    phone: phone,
+    role: role,
+    specialization: specialization,
+    password: password,
+    avatar: avatarInitials,
+    dailyQuota: 70,
+    todayHandled: 0,
+    status: status || 'ACTIVE',
+    createdAt: new Date().toISOString()
+  };
+
+  CRM_STATE.staffList.push(newStaff);
+  saveCRMState();
+
+  // Persist to MySQL database via api.php
+  fetch('api.php?action=create_staff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: newStaffId,
+      name: name,
+      email: newStaff.email,
+      phone: phone,
+      password: password,
+      role: role,
+      specialization: specialization,
+      avatar: avatarInitials,
+      status: status
+    })
+  }).catch(() => {});
+
+  logAudit('STAFF_ONBOARDED', 'STAFF_MODULE', `Super Admin onboarded new staff member: ${name} (${newStaffId}, Role: ${role})`);
+
+  event.target.reset();
+  switchStaffSubmodule('list');
+  playChime('order');
+  showToast('Staff Member Onboarded!', `${name} successfully added to team roster.`, 'person_add', 'emerald');
+}
+
+// 7. GRANULAR ROLE-BASED ACCESS CONTROL MATRIX ENGINE (Sub-item 3: Role Base)
+
+// Render Permissions Matrix for selected Role
+function renderRolePermissionsMatrix(roleName) {
+  initRolePermissionsState();
+  const targetRole = roleName || ACTIVE_MATRIX_ROLE || 'Sales Specialist (Baby Collection)';
+  ACTIVE_MATRIX_ROLE = targetRole;
+
+  // 1. Populate Role Selector
+  const roleSelect = document.getElementById('role-matrix-role-select');
+  if (roleSelect) {
+    const definedRoles = Object.keys(CRM_STATE.rolePermissions);
+    roleSelect.innerHTML = definedRoles.map(r => `
+      <option value="${r}" ${r === targetRole ? 'selected' : ''}>${r}</option>
+    `).join('');
+  }
+
+  // 2. Count staff assigned to this role
+  const assignedStaffCount = (CRM_STATE.staffList || []).filter(s => s.role === targetRole).length;
+  const countBadge = document.getElementById('role-staff-count-badge');
+  if (countBadge) {
+    countBadge.innerText = `${assignedStaffCount} Staff Assigned`;
+  }
+
+  // 3. Delete role button visibility (hide for system roles)
+  const btnDeleteRole = document.getElementById('btn-delete-role');
+  if (btnDeleteRole) {
+    const isSystemRole = ['Super Admin', 'Admin Manager'].includes(targetRole);
+    if (!isSystemRole) btnDeleteRole.classList.remove('hidden');
+    else btnDeleteRole.classList.add('hidden');
+  }
+
+  // 4. Ensure role has permission entry
+  if (!CRM_STATE.rolePermissions[targetRole]) {
+    CRM_STATE.rolePermissions[targetRole] = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS['Sales Specialist (Baby Collection)']));
+  }
+  const perms = CRM_STATE.rolePermissions[targetRole];
+
+  // 5. Populate Table Body with all 12 Modules
+  const tbody = document.getElementById('role-matrix-table-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = CRM_MODULE_DEFINITIONS.map((mod, idx) => {
+    const modPerm = perms[mod.key] || { view: false, create: false, edit: false, delete: false };
+    const allChecked = modPerm.view && modPerm.create && modPerm.edit && modPerm.delete;
+    const isSuperAdmin = targetRole === 'Super Admin';
+
+    return `
+      <tr class="hover:bg-slate-50/70 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}">
+        <!-- Module Info -->
+        <td class="py-3 px-4">
+          <div class="flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[17px]">${mod.icon}</span>
+            </span>
+            <div class="min-w-0">
+              <span class="font-bold text-slate-900 text-xs block truncate">${mod.name}</span>
+              <span class="text-[10px] text-slate-400 block truncate">${mod.desc}</span>
+            </div>
+          </div>
+        </td>
+
+        <!-- View Action Checkbox -->
+        <td class="py-3 px-3 text-center">
+          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-sky-50 cursor-pointer">
+            <input type="checkbox" id="role-mod-view-${mod.key}" ${modPerm.view ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+              onchange="handleToggleModuleAction('${mod.key}', 'view', this.checked)"
+              class="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer">
+          </label>
+        </td>
+
+        <!-- Create Action Checkbox -->
+        <td class="py-3 px-3 text-center">
+          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-emerald-50 cursor-pointer">
+            <input type="checkbox" id="role-mod-create-${mod.key}" ${modPerm.create ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+              onchange="handleToggleModuleAction('${mod.key}', 'create', this.checked)"
+              class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+          </label>
+        </td>
+
+        <!-- Edit Action Checkbox -->
+        <td class="py-3 px-3 text-center">
+          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-amber-50 cursor-pointer">
+            <input type="checkbox" id="role-mod-edit-${mod.key}" ${modPerm.edit ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+              onchange="handleToggleModuleAction('${mod.key}', 'edit', this.checked)"
+              class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer">
+          </label>
+        </td>
+
+        <!-- Delete Action Checkbox -->
+        <td class="py-3 px-3 text-center">
+          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-rose-50 cursor-pointer">
+            <input type="checkbox" id="role-mod-delete-${mod.key}" ${modPerm.delete ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+              onchange="handleToggleModuleAction('${mod.key}', 'delete', this.checked)"
+              class="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer">
+          </label>
+        </td>
+
+        <!-- All Actions (Row Master Toggle) -->
+        <td class="py-3 px-4 text-center">
+          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-purple-50 cursor-pointer">
+            <input type="checkbox" id="role-mod-all-${mod.key}" ${allChecked ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+              onchange="handleToggleModuleAll('${mod.key}', this.checked)"
+              class="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer">
+          </label>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Update column master header checkboxes
+  updateRoleMatrixHeaderCheckboxes();
+}
+
+// 8. Event Handlers for Role Permissions Matrix
+window.handleRoleSelectChange = function(newRole) {
+  ACTIVE_MATRIX_ROLE = newRole;
+  renderRolePermissionsMatrix(newRole);
+};
+
+// Update header checkboxes based on the current role's permission matrix
+window.updateRoleMatrixHeaderCheckboxes = function() {
+  const rolePerms = (CRM_STATE.rolePermissions && CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE]) || {};
+  const isSuperAdmin = ACTIVE_MATRIX_ROLE === 'Super Admin';
+  const totalMods = (CRM_MODULE_DEFINITIONS || []).length;
+
+  ['view', 'create', 'edit', 'delete'].forEach(action => {
+    const el = document.getElementById(`role-header-${action}`);
+    if (!el) return;
+
+    if (isSuperAdmin) {
+      el.checked = true;
+      el.disabled = true;
+      el.indeterminate = false;
+      return;
+    }
+    el.disabled = false;
+
+    let count = 0;
+    CRM_MODULE_DEFINITIONS.forEach(mod => {
+      if (rolePerms[mod.key] && rolePerms[mod.key][action]) {
+        count++;
+      }
+    });
+
+    if (count === totalMods && totalMods > 0) {
+      el.checked = true;
+      el.indeterminate = false;
+    } else if (count > 0) {
+      el.checked = false;
+      el.indeterminate = true;
+    } else {
+      el.checked = false;
+      el.indeterminate = false;
+    }
+  });
+
+  const allHeaderEl = document.getElementById('role-header-all');
+  if (allHeaderEl) {
+    if (isSuperAdmin) {
+      allHeaderEl.checked = true;
+      allHeaderEl.disabled = true;
+      allHeaderEl.indeterminate = false;
+      return;
+    }
+    allHeaderEl.disabled = false;
+
+    const totalCells = totalMods * 4;
+    let checkedCells = 0;
+    CRM_MODULE_DEFINITIONS.forEach(mod => {
+      const p = rolePerms[mod.key] || {};
+      if (p.view) checkedCells++;
+      if (p.create) checkedCells++;
+      if (p.edit) checkedCells++;
+      if (p.delete) checkedCells++;
+    });
+
+    if (checkedCells === totalCells && totalCells > 0) {
+      allHeaderEl.checked = true;
+      allHeaderEl.indeterminate = false;
+    } else if (checkedCells > 0) {
+      allHeaderEl.checked = false;
+      allHeaderEl.indeterminate = true;
+    } else {
+      allHeaderEl.checked = false;
+      allHeaderEl.indeterminate = false;
+    }
+  }
+};
+
+// Toggle an action (view, create, edit, delete, or all) across ALL 12 modules
+window.handleToggleActionForAllModules = function(action, isChecked) {
+  initRolePermissionsState();
+  if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
+    showToast('Super Admin Locked', 'Super Admin always retains full system access.', 'info', 'purple');
+    renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+    return;
+  }
+
+  if (!CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE]) {
+    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE] = {};
+  }
+
+  const rolePerms = CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE];
+
+  CRM_MODULE_DEFINITIONS.forEach(mod => {
+    if (!rolePerms[mod.key]) {
+      rolePerms[mod.key] = { view: false, create: false, edit: false, delete: false };
+    }
+
+    if (action === 'all') {
+      rolePerms[mod.key].view = isChecked;
+      rolePerms[mod.key].create = isChecked;
+      rolePerms[mod.key].edit = isChecked;
+      rolePerms[mod.key].delete = isChecked;
+    } else {
+      rolePerms[mod.key][action] = isChecked;
+      // If enabling create, edit, or delete, auto-enable view
+      if (isChecked && action !== 'view') {
+        rolePerms[mod.key].view = true;
+      }
+    }
+  });
+
+  saveCRMState();
+  renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+  playChime('order');
+  showToast(
+    'Bulk Action Updated',
+    `${isChecked ? 'Granted' : 'Revoked'} ${action.toUpperCase()} across all modules for "${ACTIVE_MATRIX_ROLE}".`,
+    'tune',
+    'purple'
+  );
+};
+
+window.handleToggleModuleAction = function(moduleKey, action, isChecked) {
+  initRolePermissionsState();
+  if (ACTIVE_MATRIX_ROLE === 'Super Admin') return;
+
+  if (!CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE]) {
+    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE] = {};
+  }
+  if (!CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey]) {
+    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey] = { view: false, create: false, edit: false, delete: false };
+  }
+
+  CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey][action] = isChecked;
+
+  // Auto-check view if create, edit, or delete was enabled
+  if (isChecked && action !== 'view') {
+    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey].view = true;
+    const viewEl = document.getElementById(`role-mod-view-${moduleKey}`);
+    if (viewEl) viewEl.checked = true;
+  }
+
+  // Update master all checkbox for this module
+  const p = CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey];
+  const allEl = document.getElementById(`role-mod-all-${moduleKey}`);
+  if (allEl) allEl.checked = (p.view && p.create && p.edit && p.delete);
+
+  // Keep column master header checkboxes in sync
+  updateRoleMatrixHeaderCheckboxes();
+};
+
+window.handleToggleModuleAll = function(moduleKey, isChecked) {
+  initRolePermissionsState();
+  if (ACTIVE_MATRIX_ROLE === 'Super Admin') return;
+
+  if (!CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE]) {
+    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE] = {};
+  }
+  CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey] = {
+    view: isChecked,
+    create: isChecked,
+    edit: isChecked,
+    delete: isChecked
+  };
+  renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+};
+
+window.applyRolePreset = function(presetType) {
+  initRolePermissionsState();
+  if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
+    showToast('Super Admin Locked', 'Super Admin always retains 100% full system access.', 'info', 'purple');
+    return;
+  }
+
+  const rolePerms = {};
+
+  CRM_MODULE_DEFINITIONS.forEach(mod => {
+    if (presetType === 'all') {
+      rolePerms[mod.key] = { view: true, create: true, edit: true, delete: true };
+    } else if (presetType === 'view_only') {
+      rolePerms[mod.key] = { view: true, create: false, edit: false, delete: false };
+    } else if (presetType === 'sales') {
+      const salesAllowed = ['inbox', 'enquiries', 'followups', 'catalog', 'orders', 'customers'];
+      const isSalesMod = salesAllowed.includes(mod.key);
+      rolePerms[mod.key] = {
+        view: isSalesMod,
+        create: isSalesMod,
+        edit: isSalesMod,
+        delete: false
+      };
+    } else if (presetType === 'reset') {
+      rolePerms[mod.key] = { view: false, create: false, edit: false, delete: false };
+    }
+  });
+
+  CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE] = rolePerms;
+  renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+  showToast('Preset Applied', `Applied ${presetType.toUpperCase()} permissions preset to ${ACTIVE_MATRIX_ROLE}.`, 'tune', 'blue');
+};
+
+window.handleSaveRolePermissions = function() {
+  if (!canUserPerformAction('staff', 'edit')) {
+    showToast('Permission Denied', 'Your assigned role does not have permission to edit roles & permissions.', 'lock', 'rose');
+    return;
+  }
+  initRolePermissionsState();
+  saveCRMState();
+
+  const currentRole = ACTIVE_MATRIX_ROLE;
+  const currentPerms = CRM_STATE.rolePermissions[currentRole];
+
+  // Persist to MySQL database
+  fetch('api.php?action=save_role_permissions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      role: currentRole,
+      permissions: currentPerms
+    })
+  }).then(r => r.json()).then(res => {
+    console.log('Role permissions saved to DB:', res);
+  }).catch(() => {});
+
+  logAudit('ROLE_PERMISSIONS_SAVED', 'ROLES', `Updated module action permissions matrix for role: "${currentRole}"`);
+
+  // Re-apply live access control to current active user
+  if (CURRENT_USER) {
+    applyRoleBasedAccessControl(CURRENT_USER);
+  }
+
+  playChime('order');
+  showToast(
+    'Role Permissions Saved!',
+    `Updated View, Create, Edit, and Delete actions for role "${currentRole}".`,
+    'verified_user',
+    'emerald'
+  );
+  alert(`Role Permissions Successfully Saved!\n\nGranular module actions (View, Create, Edit, Delete) for role "${currentRole}" have been saved to MySQL and applied live.`);
+};
+
+window.handleCreateNewRolePrompt = function() {
+  const roleName = prompt('Enter a name for the new Role (e.g. Quality Auditor, Telecaller, Accounts):');
+  if (!roleName || !roleName.trim()) return;
+
+  const cleanName = roleName.trim();
+  initRolePermissionsState();
+
+  if (CRM_STATE.rolePermissions[cleanName]) {
+    alert('A role with this name already exists.');
+    ACTIVE_MATRIX_ROLE = cleanName;
+    renderRolePermissionsMatrix(cleanName);
+    return;
+  }
+
+  // Create new role with default view-only permissions
+  const newPerms = {};
+  CRM_MODULE_DEFINITIONS.forEach(mod => {
+    newPerms[mod.key] = { view: true, create: false, edit: false, delete: false };
+  });
+
+  CRM_STATE.rolePermissions[cleanName] = newPerms;
+  ACTIVE_MATRIX_ROLE = cleanName;
+  saveCRMState();
+
+  updateStaffRoleSelectDropdowns();
+  renderRolePermissionsMatrix(cleanName);
+
+  showToast('Role Created!', `New role "${cleanName}" created. Configure its module permissions below.`, 'add_circle', 'purple');
+};
+
+window.handleDeleteCurrentRole = function() {
+  if (['Super Admin', 'Admin Manager'].includes(ACTIVE_MATRIX_ROLE)) {
+    alert('System default roles cannot be deleted.');
+    return;
+  }
+
+  const assignedStaff = (CRM_STATE.staffList || []).filter(s => s.role === ACTIVE_MATRIX_ROLE);
+  if (assignedStaff.length > 0) {
+    alert(`Cannot delete role "${ACTIVE_MATRIX_ROLE}" because ${assignedStaff.length} staff member(s) are currently assigned to it. Please reassign them first.`);
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to permanently delete role "${ACTIVE_MATRIX_ROLE}"?`)) {
+    return;
+  }
+
+  delete CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE];
+  ACTIVE_MATRIX_ROLE = 'Sales Specialist (Baby Collection)';
+  saveCRMState();
+
+  updateStaffRoleSelectDropdowns();
+  renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+
+  showToast('Role Removed', 'Role was successfully deleted.', 'delete', 'amber');
+};
+
+// 9. Synchronize Role Select Dropdowns across CRM (Add Staff, Role Matrix, Reassign)
+function updateStaffRoleSelectDropdowns() {
+  initRolePermissionsState();
+  const roles = Object.keys(CRM_STATE.rolePermissions);
+
+  const roleAssignSelect = document.getElementById('role-assign-new-role');
+  const staffNewRoleSelect = document.getElementById('staff-new-role');
+  const roleMatrixSelect = document.getElementById('role-matrix-role-select');
+  const staffSelect = document.getElementById('role-assign-staff-select');
+
+  if (roleAssignSelect) {
+    roleAssignSelect.innerHTML = roles.map(r => `<option value="${r}">${r}</option>`).join('');
+  }
+  if (staffNewRoleSelect) {
+    staffNewRoleSelect.innerHTML = roles.map(r => `<option value="${r}">${r}</option>`).join('');
+  }
+  if (roleMatrixSelect && !roleMatrixSelect.value) {
+    roleMatrixSelect.innerHTML = roles.map(r => `<option value="${r}">${r}</option>`).join('');
+  }
+
+  if (staffSelect) {
+    const staffList = CRM_STATE.staffList || [];
+    staffSelect.innerHTML = staffList.map(s => `
+      <option value="${s.id}">${s.name} (${s.id}) &bull; Current: ${s.role}</option>
+    `).join('');
+  }
+
+  populateAllStaffDropdowns();
+}
+
+function populateAllStaffDropdowns() {
+  const staffList = CRM_STATE.staffList || [];
+
+  // 1. enquiry-filter-staff
+  const enquiryFilter = document.getElementById('enquiry-filter-staff');
+  if (enquiryFilter) {
+    const cur = enquiryFilter.value;
+    enquiryFilter.innerHTML = '<option value="ALL">All Staff Members</option><option value="UNASSIGNED">Unassigned Only</option>' +
+      staffList.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+    if (cur) enquiryFilter.value = cur;
+  }
+
+  // 2. followup-filter-staff
+  const followupFilter = document.getElementById('followup-filter-staff');
+  if (followupFilter) {
+    const cur = followupFilter.value;
+    followupFilter.innerHTML = '<option value="ALL">👥 All Staff Members</option>' +
+      staffList.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('') +
+      '<option value="admin">Super Admin</option>';
+    if (cur) followupFilter.value = cur;
+  }
+
+  // 3. pay-pending-filter-staff
+  const payFilter = document.getElementById('pay-pending-filter-staff');
+  if (payFilter) {
+    const cur = payFilter.value;
+    payFilter.innerHTML = '<option value="ALL">👥 All Staff Members</option>' +
+      staffList.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('') +
+      '<option value="admin">Super Admin</option>';
+    if (cur) payFilter.value = cur;
+  }
+
+  // 4. sim-assign
+  const simAssign = document.getElementById('sim-assign');
+  if (simAssign) {
+    const cur = simAssign.value;
+    simAssign.innerHTML = '<option value="UNASSIGNED" selected>⚡ Unassigned (Goes to Admin Queue)</option>' +
+      staffList.map(s => `<option value="${s.id}">Assign to ${s.name} (${s.id})</option>`).join('');
+    if (cur) simAssign.value = cur;
+  }
+
+  // 5. followup-staff-select
+  const fuSelect = document.getElementById('followup-staff-select');
+  if (fuSelect) {
+    const cur = fuSelect.value;
+    fuSelect.innerHTML = staffList.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('') +
+      '<option value="admin">Super Admin</option>';
+    if (cur) fuSelect.value = cur;
+  }
+
+  // 6. export-staff-filter
+  const exportFilter = document.getElementById('export-staff-filter');
+  if (exportFilter) {
+    const cur = exportFilter.value;
+    exportFilter.innerHTML = '<option value="ALL">👥 All Staff Members</option>' +
+      staffList.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('') +
+      '<option value="admin">Super Admin</option>';
+    if (cur) exportFilter.value = cur;
+  }
+}
+
+// 11. Quick Role Reassign Action
+function handleQuickRoleReassign(event) {
+  event.preventDefault();
+  const staffId = document.getElementById('role-assign-staff-select').value;
+  const newRole = document.getElementById('role-assign-new-role').value;
+
+  const staff = (CRM_STATE.staffList || []).find(s => s.id === staffId);
+  if (!staff) return;
+
+  const oldRole = staff.role;
+  staff.role = newRole;
+
+  // Persist role update to MySQL
+  fetch('api.php?action=update_staff_role', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ staff_id: staffId, role: newRole })
+  }).catch(() => {});
+
+  logAudit('STAFF_ROLE_REASSIGNED', 'STAFF_MODULE', `Reassigned role of ${staff.name} from "${oldRole}" to "${newRole}"`);
+
+  saveCRMState();
+  updateStaffRoleSelectDropdowns();
+  renderStaffTable();
+  renderRolePermissionsMatrix(newRole);
+
+  playChime('order');
+  showToast('Role Updated!', `${staff.name} is now assigned role: "${newRole}".`, 'admin_panel_settings', 'purple');
+}
+
+function quickAssignRoleForStaff(staffId) {
+  switchStaffSubmodule('roles');
+  const staffSelect = document.getElementById('role-assign-staff-select');
+  if (staffSelect) {
+    staffSelect.value = staffId;
+  }
+  const staff = (CRM_STATE.staffList || []).find(s => s.id === staffId);
+  if (staff && staff.role) {
+    ACTIVE_MATRIX_ROLE = staff.role;
+    renderRolePermissionsMatrix(staff.role);
+  }
+}
+
+function handleToggleStaffStatus(staffId) {
+  const staff = (CRM_STATE.staffList || []).find(s => s.id === staffId);
+  if (!staff) return;
+
+  const newStatus = (staff.status || 'ACTIVE') === 'ACTIVE' ? 'ON_LEAVE' : 'ACTIVE';
+  staff.status = newStatus;
+
+  saveCRMState();
+  renderStaffTable();
+
+  // Sync to MySQL
+  fetch('api.php?action=create_staff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(staff)
+  }).catch(() => {});
+
+  showToast('Status Updated', `${staff.name} is now ${newStatus === 'ACTIVE' ? 'Active on-duty' : 'On Leave'}.`, 'badge', 'sky');
+}
+
+function handleDeleteStaff(staffId) {
+  if (!canUserPerformAction('staff', 'delete')) {
+    showToast('Permission Denied', 'Your assigned role does not have permission to delete staff.', 'lock', 'rose');
+    return;
+  }
+  const staff = (CRM_STATE.staffList || []).find(s => s.id === staffId);
+  if (!staff) return;
+
+  if (!confirm(`Are you sure you want to remove ${staff.name} (${staffId}) from the staff directory?`)) {
+    return;
+  }
+
+  CRM_STATE.staffList = (CRM_STATE.staffList || []).filter(s => s.id !== staffId);
+  (CRM_STATE.queries || []).forEach(q => {
+    if (q.assignedTo === staffId || q.staffId === staffId) {
+      q.assignedTo = 'UNASSIGNED';
+      q.staffId = 'UNASSIGNED';
+      q.assignedStaffName = 'Unassigned';
+    }
+  });
+
+  // Sync delete to MySQL
+  fetch('api.php?action=delete_staff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ staff_id: staffId })
+  }).catch(() => {});
+
+  logAudit('STAFF_REMOVED', 'STAFF_MODULE', `Removed staff member ${staff.name} (${staffId})`);
+  saveCRMState();
+  renderStaffTable();
+  updateStaffRoleSelectDropdowns();
+
+  showToast('Staff Removed', `${staff.name} was removed from the team roster.`, 'delete', 'amber');
+}
+
+function handleEditStaffPrompt(staffId) {
+  const staff = (CRM_STATE.staffList || []).find(s => s.id === staffId);
+  if (!staff) return;
+
+  const newPhone = prompt(`Edit Phone / WhatsApp for ${staff.name}:`, staff.phone || '');
+  if (newPhone !== null && newPhone.trim()) {
+    staff.phone = newPhone.trim();
+    saveCRMState();
+    renderStaffTable();
+    showToast('Staff Updated', `Updated phone for ${staff.name}.`, 'edit', 'blue');
+  }
+}
+
+// 12. Quota View Handlers
 function renderStaffQuotaView() {
   const tbody = document.getElementById('staff-quota-table-body');
   if (!tbody) return;
 
   const staffList = CRM_STATE.staffList || [];
   const target = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
+  const allocated = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.allocatedPerDay) || 200;
 
-  if (staffList.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="py-8 text-center text-slate-400 text-xs font-normal">
-          No staff members onboarded yet. Add staff members first.
-        </td>
-      </tr>
-    `;
-    return;
-  }
+  const expEl = document.getElementById('kpi-quota-expected');
+  const allocEl = document.getElementById('kpi-quota-allocated');
+  if (expEl) expEl.innerText = `${target} msgs / day`;
+  if (allocEl) allocEl.innerText = `${allocated} / ${target} msgs`;
 
-  tbody.innerHTML = staffList.map(staff => {
-    const quota = staff.dailyQuota || 0;
-    const handled = staff.todayHandled || 0;
-    const pct = quota > 0 ? Math.min(100, Math.round((handled / quota) * 100)) : 0;
-    const isOver = handled >= quota && quota > 0;
-    const remaining = Math.max(0, quota - handled);
+  tbody.innerHTML = staffList.map(s => {
+    const q = s.dailyQuota || 70;
+    const h = s.todayHandled || 0;
+    const pct = q > 0 ? Math.min(100, Math.round((h / q) * 100)) : 0;
 
     return `
-      <tr class="hover:bg-slate-50/80 transition">
-        <!-- Staff Member & Avatar -->
-        <td class="py-3.5 px-4">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
-              ${staff.avatar || staff.name.substring(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <div class="flex items-center gap-1.5">
-                <h4 class="font-bold text-slate-900 text-xs">${staff.name}</h4>
-                <span class="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">${staff.id}</span>
-              </div>
-              <p class="text-[11px] text-slate-500 mt-0.5">${staff.email || `${staff.id}@grmgarments.com`}</p>
-            </div>
-          </div>
+      <tr class="hover:bg-slate-50">
+        <td class="py-3 px-4 font-bold text-slate-900">${s.name} (${s.id})</td>
+        <td class="py-3 px-4 text-slate-600">${s.role}</td>
+        <td class="py-3 px-4">
+          <input type="number" id="quota-input-${s.id}" value="${q}" min="0" max="1000"
+            class="w-24 p-1.5 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-xs">
         </td>
-
-        <!-- Role / Department -->
-        <td class="py-3.5 px-4">
-          <span class="inline-block bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-            ${staff.role || 'Sales Specialist'}
-          </span>
-        </td>
-
-        <!-- Daily Message Quota (Target) Input -->
-        <td class="py-3.5 px-4">
-          <div class="flex items-center gap-2">
-            <input type="number" id="quota-input-${staff.id}" min="0" max="500" value="${quota}" oninput="updateQuotaLiveSummary()" class="w-24 px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-wa text-center">
-            <span class="text-[11px] text-slate-500 font-medium">msgs/day</span>
-          </div>
-        </td>
-
-        <!-- Today Handled -->
-        <td class="py-3.5 px-4 font-mono font-bold text-xs ${isOver ? 'text-rose-600' : 'text-slate-800'}">
-          ${handled} msgs
-        </td>
-
-        <!-- Utilization Progress Bar -->
-        <td class="py-3.5 px-4">
-          <div class="w-36 space-y-1">
-            <div class="flex items-center justify-between text-[10px] font-bold">
-              <span class="${isOver ? 'text-rose-600' : 'text-slate-600'}">${pct}% filled</span>
-              <span class="text-slate-400 font-mono">${remaining} left</span>
-            </div>
-            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
-              <div class="h-full ${pct >= 100 ? 'bg-rose-500' : (pct >= 80 ? 'bg-amber-400' : 'bg-emerald-500')} rounded-full transition-all duration-300" style="width: ${pct}%"></div>
-            </div>
-          </div>
-        </td>
-
-        <!-- Quick Set Actions -->
-        <td class="py-3.5 px-4 text-right">
-          <div class="flex items-center justify-end gap-1.5">
-            <button type="button" onclick="setQuickStaffQuota('${staff.id}', 50)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold font-mono transition">50</button>
-            <button type="button" onclick="setQuickStaffQuota('${staff.id}', 70)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold font-mono transition">70</button>
-            <button type="button" onclick="setQuickStaffQuota('${staff.id}', 100)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold font-mono transition">100</button>
-          </div>
+        <td class="py-3 px-4 font-mono font-bold text-slate-700">${h} msgs</td>
+        <td class="py-3 px-4 font-bold ${pct >= 100 ? 'text-rose-600' : 'text-emerald-600'}">${pct}%</td>
+        <td class="py-3 px-4 text-right">
+          <button type="button" onclick="document.getElementById('quota-input-${s.id}').value = 70"
+            class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold">70</button>
+          <button type="button" onclick="document.getElementById('quota-input-${s.id}').value = 100"
+            class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold ml-1">100</button>
         </td>
       </tr>
     `;
   }).join('');
-
-  updateQuotaLiveSummary();
-}
-
-function setQuickStaffQuota(staffId, amount) {
-  const input = document.getElementById(`quota-input-${staffId}`);
-  if (input) {
-    input.value = amount;
-    updateQuotaLiveSummary();
-  }
-}
-
-function updateQuotaLiveSummary() {
-  const staffList = CRM_STATE.staffList || [];
-  const target = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
-  let totalAllocated = 0;
-
-  staffList.forEach(staff => {
-    const input = document.getElementById(`quota-input-${staff.id}`);
-    if (input) {
-      totalAllocated += parseInt(input.value, 10) || 0;
-    } else {
-      totalAllocated += (Number(staff.dailyQuota) || 0);
-    }
-  });
-
-  const kpiExpected = document.getElementById('kpi-quota-expected');
-  const kpiAllocated = document.getElementById('kpi-quota-allocated');
-  const kpiBalanceLabel = document.getElementById('kpi-quota-balance-label');
-
-  if (kpiExpected) kpiExpected.innerText = `${target} msgs / day`;
-  if (kpiAllocated) kpiAllocated.innerText = `${totalAllocated} / ${target} msgs`;
-
-  if (kpiBalanceLabel) {
-    if (totalAllocated === target) {
-      kpiBalanceLabel.innerHTML = `<span class="material-symbols-outlined text-[14px]">check_circle</span> 100% Team Capacity Distributed (${totalAllocated}/${target})`;
-      kpiBalanceLabel.className = "text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1";
-    } else if (totalAllocated < target) {
-      const rem = target - totalAllocated;
-      kpiBalanceLabel.innerHTML = `<span class="material-symbols-outlined text-[14px]">warning</span> ${rem} msgs remaining to allocate`;
-      kpiBalanceLabel.className = "text-[11px] text-amber-600 font-semibold mt-1 flex items-center gap-1";
-    } else {
-      const over = totalAllocated - target;
-      kpiBalanceLabel.innerHTML = `<span class="material-symbols-outlined text-[14px]">info</span> Over-allocated by ${over} msgs`;
-      kpiBalanceLabel.className = "text-[11px] text-blue-600 font-semibold mt-1 flex items-center gap-1";
-    }
-  }
-}
-
-function handleAutoBalanceQuota() {
-  const activeStaff = (CRM_STATE.staffList || []).filter(s => (s.status || 'ACTIVE') === 'ACTIVE');
-  if (activeStaff.length === 0) {
-    alert('No active staff members available to allocate quota.');
-    return;
-  }
-
-  const target = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
-  const baseCount = Math.floor(target / activeStaff.length);
-  let remainder = target % activeStaff.length;
-
-  activeStaff.forEach((staff, idx) => {
-    let quota = baseCount;
-    if (remainder > 0) {
-      quota += 1;
-      remainder -= 1;
-    }
-    staff.dailyQuota = quota;
-    const input = document.getElementById(`quota-input-${staff.id}`);
-    if (input) input.value = quota;
-  });
-
-  // Set inactive staff to 0
-  (CRM_STATE.staffList || []).forEach(staff => {
-    if ((staff.status || 'ACTIVE') !== 'ACTIVE') {
-      staff.dailyQuota = 0;
-      const input = document.getElementById(`quota-input-${staff.id}`);
-      if (input) input.value = 0;
-    }
-  });
-
-  CRM_STATE.dailyMessageTarget.allocatedPerDay = target;
-  saveCRMState();
-  renderStaffQuotaView();
-  renderStaffTable();
-  if (CURRENT_USER) applyRoleBasedAccessControl(CURRENT_USER);
-  playChime('order');
-  showToast(
-    '200 Quota Distributed Equally!',
-    `Target ${target} msgs successfully balanced across ${activeStaff.length} active staff members.`,
-    'balance',
-    'emerald'
-  );
 }
 
 function handleSaveDailyAllocations() {
@@ -21158,179 +22875,14 @@ function handleSaveDailyAllocations() {
     CRM_STATE.dailyMessageTarget.allocatedPerDay = totalAllocated;
   }
 
-  logAudit('QUOTA_ALLOCATED', 'STAFF_MODULE', `Admin updated daily message quota distribution across ${staffList.length} staff (Total: ${totalAllocated} msgs)`);
-
   saveCRMState();
   renderStaffQuotaView();
   renderStaffTable();
-  if (CURRENT_USER) applyRoleBasedAccessControl(CURRENT_USER);
   playChime('order');
-  showToast(
-    'Quota Allocations Saved!',
-    `Allocated ${totalAllocated} daily message capacity across staff members.`,
-    'check_circle',
-    'emerald'
-  );
+  showToast('Quota Allocations Saved!', `Allocated ${totalAllocated} daily message capacity.`, 'check_circle', 'emerald');
 }
 
-function openEditExpectedDailyTargetPrompt() {
-  const current = (CRM_STATE.dailyMessageTarget && CRM_STATE.dailyMessageTarget.expectedPerDay) || 200;
-  const newVal = prompt('Enter expected daily WhatsApp inbound message volume target:', current);
-  if (newVal !== null) {
-    const num = parseInt(newVal, 10);
-    if (!isNaN(num) && num > 0) {
-      if (!CRM_STATE.dailyMessageTarget) CRM_STATE.dailyMessageTarget = {};
-      CRM_STATE.dailyMessageTarget.expectedPerDay = num;
-      saveCRMState();
-      renderStaffQuotaView();
-      renderStaffTable();
-      updateBadgeCounters();
-      showToast('Daily Target Updated', `Expected daily inbound target is now ${num} messages.`, 'tune', 'blue');
-    } else {
-      alert('Please enter a valid positive number.');
-    }
-  }
-}
 
-function handleCreateNewStaff(event) {
-  event.preventDefault();
-  const name = document.getElementById('staff-new-name').value.trim();
-  const email = document.getElementById('staff-new-email').value.trim();
-  const phone = document.getElementById('staff-new-phone').value.trim();
-  const role = document.getElementById('staff-new-role').value;
-  const specialization = document.getElementById('staff-new-specialization').value;
-  const status = document.getElementById('staff-new-status').value;
-
-  if (!name || !phone) {
-    alert('Please enter staff name and phone number.');
-    return;
-  }
-
-  const nextIdx = (CRM_STATE.staffList.length + 1);
-  const newStaffId = `staff_0${nextIdx}`;
-  const avatarInitials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-
-  const newStaff = {
-    id: newStaffId,
-    name: name,
-    email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@grmgarments.com`,
-    phone: phone,
-    role: role,
-    specialization: specialization,
-    avatar: avatarInitials,
-    status: status,
-    activeQueries: 0,
-    converted: 0,
-    dailyQuota: 50,
-    todayHandled: 0,
-    joinedAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-  };
-
-  CRM_STATE.staffList.push(newStaff);
-
-  // Update role dropdown switcher in sidebar
-  const roleSelect = document.getElementById('user-role-select');
-  if (roleSelect) {
-    const opt = document.createElement('option');
-    opt.value = newStaffId;
-    opt.innerText = `👤 ${newStaff.name} (${role.split(' ')[0]})`;
-    roleSelect.appendChild(opt);
-  }
-
-  logAudit('STAFF_CREATED', 'STAFF_MODULE', `Created new staff member ${name} (${newStaffId}) with role "${role}"`);
-
-  saveCRMState();
-  playChime('order');
-  showToast('Staff Created Successfully!', `${name} is onboarded and ready for lead assignments.`, 'person_add', 'emerald');
-
-  // Reset form & switch to list tab
-  event.target.reset();
-  switchStaffTab('list');
-}
-
-function updateStaffRoleSelectDropdowns() {
-  const staffSelect = document.getElementById('role-assign-staff-select');
-  if (!staffSelect) return;
-
-  staffSelect.innerHTML = CRM_STATE.staffList.map(s => `
-    <option value="${s.id}">${s.name} (${s.id}) — Current: ${s.role}</option>
-  `).join('');
-}
-
-function handleQuickRoleReassign(event) {
-  event.preventDefault();
-  const staffId = document.getElementById('role-assign-staff-select').value;
-  const newRole = document.getElementById('role-assign-new-role').value;
-
-  const staff = CRM_STATE.staffList.find(s => s.id === staffId);
-  if (!staff) return;
-
-  const oldRole = staff.role;
-  staff.role = newRole;
-
-  logAudit('STAFF_ROLE_REASSIGNED', 'STAFF_MODULE', `Reassigned role of ${staff.name} from "${oldRole}" to "${newRole}"`);
-
-  saveCRMState();
-  updateStaffRoleSelectDropdowns();
-  playChime('order');
-  showToast('Role Updated!', `${staff.name} is now assigned as "${newRole}".`, 'admin_panel_settings', 'purple');
-}
-
-function quickAssignRoleForStaff(staffId) {
-  switchStaffTab('roles');
-  const staffSelect = document.getElementById('role-assign-staff-select');
-  if (staffSelect) {
-    staffSelect.value = staffId;
-  }
-}
-
-function toggleStaffStatus(staffId) {
-  const staff = CRM_STATE.staffList.find(s => s.id === staffId);
-  if (!staff) return;
-
-  staff.status = (staff.status === 'ACTIVE') ? 'ON_LEAVE' : 'ACTIVE';
-  saveCRMState();
-  renderStaffTable();
-  renderStaffQuotaView();
-  showToast(
-    'Status Updated',
-    `${staff.name} is now marked as ${staff.status === 'ACTIVE' ? 'Active (Ready for Leads)' : 'On Leave (Paused)'}`,
-    staff.status === 'ACTIVE' ? 'check_circle' : 'pause_circle',
-    staff.status === 'ACTIVE' ? 'emerald' : 'amber'
-  );
-}
-
-function deleteStaffMember(staffId) {
-  const staff = CRM_STATE.staffList.find(s => s.id === staffId);
-  if (!staff) return;
-
-  if (confirm(`Remove staff member ${staff.name} (${staff.id})? Any active queries assigned to this staff will be safely moved to UNASSIGNED queue.`)) {
-    // Reassign active queries to UNASSIGNED
-    CRM_STATE.queries.forEach(q => {
-      if (q.assignedTo === staffId) {
-        q.assignedTo = 'UNASSIGNED';
-        q.status = 'NEW';
-      }
-    });
-
-    CRM_STATE.staffList = CRM_STATE.staffList.filter(s => s.id !== staffId);
-
-    // Remove from sidebar role select dropdown
-    const roleSelect = document.getElementById('user-role-select');
-    if (roleSelect) {
-      const opt = roleSelect.querySelector(`option[value="${staffId}"]`);
-      if (opt) opt.remove();
-    }
-
-    logAudit('STAFF_DELETED', 'STAFF_MODULE', `Removed staff member ${staff.name} (${staffId})`);
-
-    saveCRMState();
-    renderStaffTable();
-    renderStaffQuotaView();
-    updateStaffRoleSelectDropdowns();
-    showToast('Staff Member Removed', `${staff.name} removed. Active leads moved to Unassigned queue.`, 'delete', 'blue');
-  }
-}
 
 // =========================================================================
 // 14. UTILITY & MODAL CONTROLLERS (DYNAMIC Z-INDEX STACKING)
@@ -21483,7 +23035,10 @@ function updateBadgeCounters() {
   // Dynamically synchronize each staff member's todayHandled with active assigned queries (remove hardcoded static numbers)
   if (Array.isArray(CRM_STATE.staffList)) {
     CRM_STATE.staffList.forEach(staff => {
-      const assignedToThisStaff = activeQueries.filter(q => q.assignedTo === staff.id || (q.staff && q.staff.id === staff.id));
+      const assignedToThisStaff = activeQueries.filter(q => 
+        (q.assignedTo === staff.id || (q.staff && q.staff.id === staff.id)) &&
+        (!q.assignedStaffName || q.assignedStaffName.toLowerCase() === staff.name.toLowerCase())
+      );
       staff.todayHandled = assignedToThisStaff.length;
     });
   }
@@ -22151,12 +23706,235 @@ function extractCurrentActiveNumbers(targetVal = 'ALL') {
   return numbers;
 }
 
+// =========================================================================
+// WHATSAPP INBOX: BROADCAST IMAGE UPLOAD ENGINE ("Images Uploaded Wise")
+// =========================================================================
+
+let BROADCAST_ATTACHED_IMAGE_DATA = null;
+
+function handleBroadcastImageFileUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    alert('Please select a valid image file (JPG, PNG, WebP).');
+    return;
+  }
+
+  // 10MB limit
+  if (file.size > 10 * 1024 * 1024) {
+    alert('Image file size is too large (maximum 10MB).');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    applyBroadcastUploadedImage(dataUrl, file.name, file.size);
+
+    // Also persist image to server via API in background
+    uploadBroadcastImageToServer(file, dataUrl);
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleBroadcastDragOver(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const dropzone = document.getElementById('bcast-upload-dropzone');
+  if (dropzone) {
+    dropzone.classList.add('border-emerald-500', 'bg-emerald-50');
+  }
+}
+
+function handleBroadcastDragLeave(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const dropzone = document.getElementById('bcast-upload-dropzone');
+  if (dropzone) {
+    dropzone.classList.remove('border-emerald-500', 'bg-emerald-50');
+  }
+}
+
+function handleBroadcastFileDrop(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const dropzone = document.getElementById('bcast-upload-dropzone');
+  if (dropzone) {
+    dropzone.classList.remove('border-emerald-500', 'bg-emerald-50');
+  }
+
+  if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+    const file = event.dataTransfer.files[0];
+    if (!file.type.startsWith('image/')) {
+      alert('Please drop an image file (JPG, PNG, WebP).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      applyBroadcastUploadedImage(e.target.result, file.name, file.size);
+      uploadBroadcastImageToServer(file, e.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function applyBroadcastUploadedImage(imgSrc, fileName = 'uploaded_image.jpg', fileSize = 0) {
+  BROADCAST_ATTACHED_IMAGE_DATA = { src: imgSrc, name: fileName, size: fileSize };
+
+  const hiddenUrl = document.getElementById('bcast-image-url');
+  if (hiddenUrl) hiddenUrl.value = imgSrc;
+
+  const dropzone = document.getElementById('bcast-upload-dropzone');
+  if (dropzone) dropzone.classList.add('hidden');
+
+  const previewCard = document.getElementById('bcast-upload-preview-card');
+  if (previewCard) previewCard.classList.remove('hidden');
+
+  const badge = document.getElementById('bcast-upload-status-badge');
+  if (badge) badge.classList.remove('hidden');
+
+  const thumb = document.getElementById('bcast-upload-thumb');
+  if (thumb) thumb.src = imgSrc;
+
+  const nameEl = document.getElementById('bcast-upload-filename');
+  if (nameEl) nameEl.innerText = fileName;
+
+  const sizeEl = document.getElementById('bcast-upload-filesize');
+  if (sizeEl) {
+    const kb = (fileSize / 1024).toFixed(1);
+    sizeEl.innerText = `${kb} KB • Ready for WhatsApp`;
+  }
+
+  // Update Smartphone Live Mockup
+  const phoneImgContainer = document.getElementById('bcast-preview-image-container');
+  const phoneImg = document.getElementById('bcast-preview-image');
+  if (phoneImgContainer && phoneImg) {
+    phoneImg.src = imgSrc;
+    phoneImgContainer.classList.remove('hidden');
+  }
+
+  if (typeof showToast === 'function') {
+    showToast('Photo Attached', `Image "${fileName}" attached to broadcast!`, 'photo_camera', 'emerald');
+  }
+}
+
+async function uploadBroadcastImageToServer(file, dataUrl) {
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    const resp = await fetch('api.php?action=upload_broadcast_image', {
+      method: 'POST',
+      body: formData
+    });
+    const result = await resp.json();
+    if (result && result.status === 'success' && result.url) {
+      const hiddenUrl = document.getElementById('bcast-image-url');
+      if (hiddenUrl) {
+        hiddenUrl.value = result.url;
+      }
+      if (BROADCAST_ATTACHED_IMAGE_DATA) {
+        BROADCAST_ATTACHED_IMAGE_DATA.serverUrl = result.url;
+      }
+    }
+  } catch (e) {
+    console.warn('[Broadcast Image Upload Note]: Keeping local Base64/Data URI', e);
+  }
+}
+
+function removeBroadcastUploadedImage() {
+  BROADCAST_ATTACHED_IMAGE_DATA = null;
+
+  const fileInput = document.getElementById('bcast-image-file');
+  if (fileInput) fileInput.value = '';
+
+  const hiddenUrl = document.getElementById('bcast-image-url');
+  if (hiddenUrl) hiddenUrl.value = '';
+
+  const manualUrl = document.getElementById('bcast-image-url-manual');
+  if (manualUrl) manualUrl.value = '';
+
+  const dropzone = document.getElementById('bcast-upload-dropzone');
+  if (dropzone) dropzone.classList.remove('hidden');
+
+  const previewCard = document.getElementById('bcast-upload-preview-card');
+  if (previewCard) previewCard.classList.add('hidden');
+
+  const badge = document.getElementById('bcast-upload-status-badge');
+  if (badge) badge.classList.add('hidden');
+
+  // Hide from Smartphone Live Mockup
+  const phoneImgContainer = document.getElementById('bcast-preview-image-container');
+  const phoneImg = document.getElementById('bcast-preview-image');
+  if (phoneImgContainer && phoneImg) {
+    phoneImg.src = '';
+    phoneImgContainer.classList.add('hidden');
+  }
+
+  if (typeof showToast === 'function') {
+    showToast('Image Removed', 'Broadcast photo attachment removed.', 'delete', 'amber');
+  }
+}
+
+function toggleBroadcastUrlFallback() {
+  const row = document.getElementById('bcast-url-fallback-row');
+  const toggleText = document.getElementById('bcast-url-toggle-text');
+  if (!row) return;
+  const isHidden = row.classList.contains('hidden');
+  if (isHidden) {
+    row.classList.remove('hidden');
+    if (toggleText) toggleText.innerText = 'Hide manual URL input';
+    const input = document.getElementById('bcast-image-url-manual');
+    if (input) input.focus();
+  } else {
+    row.classList.add('hidden');
+    if (toggleText) toggleText.innerText = 'Or paste image URL instead';
+  }
+}
+
+function handleBroadcastManualUrlInput(val) {
+  const cleanVal = (val || '').trim();
+  const hiddenUrl = document.getElementById('bcast-image-url');
+  if (hiddenUrl) hiddenUrl.value = cleanVal;
+
+  const phoneImgContainer = document.getElementById('bcast-preview-image-container');
+  const phoneImg = document.getElementById('bcast-preview-image');
+  if (phoneImgContainer && phoneImg) {
+    if (cleanVal) {
+      phoneImg.src = cleanVal;
+      phoneImgContainer.classList.remove('hidden');
+    } else {
+      phoneImg.src = '';
+      phoneImgContainer.classList.add('hidden');
+    }
+  }
+}
+
+function toggleBroadcastNumbersCollapse() {
+  const container = document.getElementById('bcast-numbers-editor-collapse');
+  const icon = document.getElementById('bcast-numbers-toggle-icon');
+  const text = document.getElementById('bcast-numbers-toggle-text');
+  if (!container) return;
+  const isHidden = container.classList.contains('hidden');
+  if (isHidden) {
+    container.classList.remove('hidden');
+    if (icon) icon.innerText = 'expand_less';
+    if (text) text.innerText = 'Hide Custom Numbers Editor';
+    const ta = document.getElementById('bcast-custom-numbers-input') || document.getElementById('bcast-target-numbers');
+    if (ta) ta.focus();
+  } else {
+    container.classList.add('hidden');
+    if (icon) icon.innerText = 'expand_more';
+    if (text) text.innerText = 'View / Paste Custom Numbers';
+  }
+}
+
 function refreshBroadcastAutoFetchedNumbers() {
   const audienceSelect = document.getElementById('bcast-target-audience');
   const targetVal = audienceSelect ? audienceSelect.value : 'ALL';
   const numbers = extractCurrentActiveNumbers(targetVal);
 
-  const textarea = document.getElementById('bcast-target-numbers');
+  const textarea = document.getElementById('bcast-custom-numbers-input') || document.getElementById('bcast-target-numbers');
   if (textarea) {
     textarea.value = numbers.join(', ');
   }
@@ -22165,22 +23943,30 @@ function refreshBroadcastAutoFetchedNumbers() {
 }
 
 function updateBroadcastCustomNumbersCount() {
-  const textarea = document.getElementById('bcast-target-numbers');
+  const textarea = document.getElementById('bcast-custom-numbers-input') || document.getElementById('bcast-target-numbers');
+  const autoTargetCount = document.getElementById('bcast-auto-target-count');
   const countBadge = document.getElementById('bcast-fetched-count');
   const countEl = document.getElementById('bcast-recipients-count');
+  const summaryCount = document.getElementById('bcast-summary-count');
   
   let numCount = 0;
   if (textarea && textarea.value.trim()) {
-    const splitNums = textarea.value.split(/[,\n;]+/).map(s => s.trim()).filter(s => s.replace(/[^0-9]/g, '').length >= 7);
+    const splitNums = textarea.value.split(new RegExp('[,\\r\\n;]+')).map(s => s.trim()).filter(s => s.replace(/[^0-9]/g, '').length >= 7);
+
     numCount = splitNums.length;
   }
 
+  if (autoTargetCount) {
+    autoTargetCount.innerText = `${numCount} Customer${numCount === 1 ? '' : 's'}`;
+  }
   if (countBadge) {
     countBadge.innerText = `Auto-Fetched ${numCount} Number${numCount === 1 ? '' : 's'}`;
   }
-
   if (countEl) {
     countEl.innerText = `${numCount} Recipient${numCount === 1 ? '' : 's'}`;
+  }
+  if (summaryCount) {
+    summaryCount.innerText = `${numCount} Recipient${numCount === 1 ? '' : 's'}`;
   }
 
   const startBtnText = document.getElementById('btn-bcast-start-text');
@@ -22198,13 +23984,13 @@ function updateBroadcastTargetCount() {
 
 function updateBroadcastPreview() {
   const msgInput = document.getElementById('bcast-message-text');
-  const previewBox = document.getElementById('bcast-live-preview-box');
+  const previewBox = document.getElementById('bcast-phone-preview-text') || document.getElementById('bcast-live-preview-box');
   const previewCustLabel = document.getElementById('bcast-preview-customer-label');
   const previewCustName = document.getElementById('bcast-preview-customer-name');
+  const previewBusinessName = document.getElementById('bcast-preview-business-name');
   const previewAvatar = document.getElementById('bcast-preview-avatar');
   const previewCharCount = document.getElementById('bcast-preview-char-count');
   const msgCharCount = document.getElementById('bcast-message-char-count');
-  if (!previewBox) return;
 
   const rawTemplate = (msgInput && msgInput.value.trim()) || "Hello {{customer_name}}, welcome to {{business_name}}! Reach us on {{line_phone}}.";
   
@@ -22221,7 +24007,9 @@ function updateBroadcastPreview() {
   const account = (CRM_STATE.whatsappAccounts && CRM_STATE.whatsappAccounts.find(a => a.id === sampleCustomer.accountId)) || CRM_STATE.whatsappAccount;
 
   const rendered = renderTemplateMessagePersonalized(rawTemplate, sampleCustomer, account, BROADCAST_CUSTOM_TAGS);
-  previewBox.innerText = rendered;
+  if (previewBox) {
+    previewBox.innerText = rendered;
+  }
 
   const custName = sampleCustomer.name || 'Recipient';
   const custPhone = sampleCustomer.whatsapp || sampleCustomer.phone || '+91 86680 07593';
@@ -22230,11 +24018,28 @@ function updateBroadcastPreview() {
     previewCustLabel.innerText = `Sample Recipient: ${custName} (${custPhone})`;
   }
   if (previewCustName) {
-    previewCustName.innerText = `${custName} (${custPhone})`;
+    previewCustName.innerText = `${custName}`;
+  }
+  if (previewBusinessName && account) {
+    previewBusinessName.innerText = account.brandName || account.businessName || 'GRM Garments';
   }
   if (previewAvatar) {
     const initials = custName.split(/\s+/).map(p => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'SM';
     previewAvatar.innerText = initials;
+  }
+
+  // Sync Phone Mockup Image if attached
+  const attachedImgUrl = document.getElementById('bcast-image-url')?.value?.trim();
+  const phoneImgContainer = document.getElementById('bcast-preview-image-container');
+  const phoneImg = document.getElementById('bcast-preview-image');
+  if (phoneImgContainer && phoneImg) {
+    if (attachedImgUrl) {
+      phoneImg.src = attachedImgUrl;
+      phoneImgContainer.classList.remove('hidden');
+    } else {
+      phoneImg.src = '';
+      phoneImgContainer.classList.add('hidden');
+    }
   }
 
   if (previewCharCount) {
@@ -22301,8 +24106,18 @@ async function startAutomatedBroadcast() {
     return;
   }
 
+  const delaySelect = document.getElementById('bcast-delay-select');
   const delayInput = document.getElementById('bcast-delay-range');
-  const delaySec = delayInput ? parseFloat(delayInput.value) || 1.5 : 1.5;
+  let delaySec = 1.5;
+  if (delaySelect && delaySelect.value) {
+    const ms = parseFloat(delaySelect.value) || 1500;
+    delaySec = ms > 50 ? ms / 1000 : ms;
+  } else if (delayInput) {
+    delaySec = parseFloat(delayInput.value) || 1.5;
+  }
+
+  // Get attached photo from upload / URL
+  const attachedBroadcastImage = document.getElementById('bcast-image-url')?.value?.trim() || (BROADCAST_ATTACHED_IMAGE_DATA ? BROADCAST_ATTACHED_IMAGE_DATA.src : null);
 
   if (!confirm(`📢 Confirm Automated WhatsApp Broadcast:\n\n• Target Audience: ${audienceSelect ? audienceSelect.options[audienceSelect.selectedIndex].text : 'Selected Recipients'}\n• Total Target Numbers: ${recipients.length}\n• Safe Anti-Spam Throttle: ${delaySec} sec/message\n\nProceed to start dispatch loop?`)) {
     return;
@@ -22367,7 +24182,9 @@ async function startAutomatedBroadcast() {
         time: timeStr,
         timestamp: Date.now(),
         status: 'DELIVERED',
-        isBroadcast: true
+        isBroadcast: true,
+        media_type: attachedBroadcastImage ? 'image' : null,
+        media_url: attachedBroadcastImage || null
       };
 
       CRM_STATE.conversations[customer.id].push(newMsg);
@@ -22375,7 +24192,9 @@ async function startAutomatedBroadcast() {
       // Update query summary in list
       const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
       if (query) {
-        query.lastMessage = `Staff (Broadcast): "${personalizedText.length > 40 ? personalizedText.substring(0, 37) + '...' : personalizedText}"`;
+        query.lastMessage = attachedBroadcastImage 
+          ? `Staff (Broadcast): [Photo] "${personalizedText.length > 30 ? personalizedText.substring(0, 27) + '...' : personalizedText}"`
+          : `Staff (Broadcast): "${personalizedText.length > 40 ? personalizedText.substring(0, 37) + '...' : personalizedText}"`;
         query.lastMessageTime = 'Just now';
       }
 
@@ -22385,7 +24204,7 @@ async function startAutomatedBroadcast() {
       const targetAccId = customer.accountId || (account && account.id) || 'account_1';
       
       try {
-        await dispatchWhatsAppOutbound(targetPhone, personalizedText, newMsg, targetJid, targetAccId, true);
+        await dispatchWhatsAppOutbound(targetPhone, personalizedText, newMsg, targetJid, targetAccId, true, attachedBroadcastImage, customer.id);
       } catch (sendErr) {
         console.warn('[Broadcast Send Error for ' + (customer.name || targetPhone) + ']:', sendErr);
       }

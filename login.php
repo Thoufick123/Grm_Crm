@@ -26,14 +26,17 @@ $successMessage = '';
 
 // Pre-defined built-in accounts fallback
 $defaultAccounts = [
-    'admin' => ['id' => 'admin', 'username' => 'admin', 'password' => 'admin123', 'name' => 'Super Admin', 'role' => 'admin', 'title' => 'Admin Manager (Full Control)', 'avatar' => 'SA', 'staff_id' => 'admin'],
-    'priya' => ['id' => 'staff_01', 'username' => 'priya', 'password' => 'staff123', 'name' => 'Priya Sharma', 'role' => 'staff_01', 'title' => 'Sales Specialist (Baby Collection)', 'avatar' => 'PS', 'staff_id' => 'staff_01'],
-    'staff_01' => ['id' => 'staff_01', 'username' => 'staff_01', 'password' => 'staff123', 'name' => 'Priya Sharma', 'role' => 'staff_01', 'title' => 'Sales Specialist (Baby Collection)', 'avatar' => 'PS', 'staff_id' => 'staff_01'],
-    'rahul' => ['id' => 'staff_02', 'username' => 'rahul', 'password' => 'staff123', 'name' => 'Rahul Verma', 'role' => 'staff_02', 'title' => 'Enquiry Specialist (Maternity & Kids)', 'avatar' => 'RV', 'staff_id' => 'staff_02'],
-    'staff_02' => ['id' => 'staff_02', 'username' => 'staff_02', 'password' => 'staff123', 'name' => 'Rahul Verma', 'role' => 'staff_02', 'title' => 'Enquiry Specialist (Maternity & Kids)', 'avatar' => 'RV', 'staff_id' => 'staff_02'],
-    'sneha' => ['id' => 'staff_03', 'username' => 'sneha', 'password' => 'staff123', 'name' => 'Sneha Patel', 'role' => 'staff_03', 'title' => 'Order Fulfillment & Support', 'avatar' => 'SP', 'staff_id' => 'staff_03'],
-    'staff_03' => ['id' => 'staff_03', 'username' => 'staff_03', 'password' => 'staff123', 'name' => 'Sneha Patel', 'role' => 'staff_03', 'title' => 'Order Fulfillment & Support', 'avatar' => 'SP', 'staff_id' => 'staff_03']
+    'admin' => ['id' => 'admin', 'username' => 'admin', 'password' => 'admin123', 'name' => 'Super Admin', 'role' => 'admin', 'title' => 'Admin Manager (Full Control)', 'avatar' => 'SA', 'staff_id' => 'admin']
 ];
+
+$pdo = getDBConnection();
+$dbStaffList = [];
+if ($pdo) {
+    try {
+        $st = $pdo->query("SELECT id, username, name, role, avatar FROM users WHERE id != 'admin' ORDER BY created_at ASC");
+        $dbStaffList = $st->fetchAll();
+    } catch (Exception $e) {}
+}
 
 // Handle Server-Side Form Submission (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -232,11 +235,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
               <span>Username or Staff ID</span>
-              <span class="text-[10px] text-slate-400">e.g. admin, priya, staff_01</span>
+              <span class="text-[10px] text-slate-400">e.g. admin or staff ID</span>
             </label>
             <div class="relative">
               <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">account_circle</span>
-              <input type="text" name="username" id="username" required value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" placeholder="Enter username (e.g. admin or priya)" autocomplete="username" class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-wa transition">
+              <input type="text" name="username" id="username" required value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" placeholder="Enter username or staff ID (e.g. admin)" autocomplete="username" class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-wa transition">
             </div>
           </div>
 
@@ -277,40 +280,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </p>
           <div class="grid grid-cols-2 gap-2">
             <!-- Super Admin -->
-            <button type="button" onclick="quickFillAndSubmit('admin', 'admin123')" class="p-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-left transition flex items-center gap-2 group">
+            <button type="button" onclick="quickFillAndSubmit('admin', 'admin123')" class="p-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-left transition flex items-center gap-2 group <?php echo empty($dbStaffList) ? 'col-span-2' : ''; ?>">
               <span class="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0">👑</span>
               <div class="overflow-hidden">
                 <div class="text-[11px] font-bold text-purple-900 leading-tight">Super Admin</div>
-                <div class="text-[9px] text-purple-600 truncate">Full Control Panel</div>
+                <div class="text-[9px] text-purple-600 truncate">Full System Access</div>
               </div>
             </button>
 
-            <!-- Staff 01 Priya -->
-            <button type="button" onclick="quickFillAndSubmit('priya', 'staff123')" class="p-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-left transition flex items-center gap-2 group">
-              <span class="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0">PS</span>
-              <div class="overflow-hidden">
-                <div class="text-[11px] font-bold text-blue-900 leading-tight">Priya (Staff 01)</div>
-                <div class="text-[9px] text-blue-600 truncate">Sales Specialist</div>
-              </div>
-            </button>
-
-            <!-- Staff 02 Rahul -->
-            <button type="button" onclick="quickFillAndSubmit('rahul', 'staff123')" class="p-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl text-left transition flex items-center gap-2 group">
-              <span class="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center text-xs font-bold shrink-0">RV</span>
-              <div class="overflow-hidden">
-                <div class="text-[11px] font-bold text-amber-900 leading-tight">Rahul (Staff 02)</div>
-                <div class="text-[9px] text-amber-600 truncate">Enquiry Specialist</div>
-              </div>
-            </button>
-
-            <!-- Staff 03 Sneha -->
-            <button type="button" onclick="quickFillAndSubmit('sneha', 'staff123')" class="p-2.5 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl text-left transition flex items-center gap-2 group">
-              <span class="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs font-bold shrink-0">SP</span>
-              <div class="overflow-hidden">
-                <div class="text-[11px] font-bold text-teal-900 leading-tight">Sneha (Staff 03)</div>
-                <div class="text-[9px] text-teal-600 truncate">Order Fulfillment</div>
-              </div>
-            </button>
+            <?php if (!empty($dbStaffList)): ?>
+              <?php foreach ($dbStaffList as $st): ?>
+                <button type="button" onclick="quickFillAndSubmit('<?php echo htmlspecialchars($st['username'] ?? $st['id']); ?>', '')" class="p-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-left transition flex items-center gap-2 group cursor-pointer shadow-2xs">
+                  <span class="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0"><?php echo htmlspecialchars($st['avatar'] ?? strtoupper(substr($st['name'], 0, 2))); ?></span>
+                  <div class="overflow-hidden">
+                    <div class="text-[11px] font-bold text-blue-900 leading-tight truncate"><?php echo htmlspecialchars($st['name'] . ' (' . $st['id'] . ')'); ?></div>
+                    <div class="text-[9px] text-blue-600 truncate"><?php echo htmlspecialchars($st['role'] ?? 'Staff Member'); ?></div>
+                  </div>
+                </button>
+              <?php endforeach; ?>
+            <?php endif; ?>
           </div>
         </div>
 
@@ -346,6 +334,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         passInput.type = 'password';
         icon.innerText = 'visibility';
       }
+    }
+
+    function quickFillStaff(username) {
+      document.getElementById('username').value = username;
+      const pass = document.getElementById('password');
+      pass.value = '';
+      pass.focus();
     }
 
     function quickFillAndSubmit(user, pass) {

@@ -39,36 +39,6 @@ $defaultUsers = [
         'title' => 'Admin Manager (Full Control)',
         'avatar' => 'SA',
         'staff_id' => 'admin'
-    ],
-    'priya' => [
-        'id' => 'staff_01',
-        'username' => 'priya',
-        'password' => 'staff123',
-        'name' => 'Priya Sharma',
-        'role' => 'staff_01',
-        'title' => 'Sales Specialist (Baby Collection)',
-        'avatar' => 'PS',
-        'staff_id' => 'staff_01'
-    ],
-    'rahul' => [
-        'id' => 'staff_02',
-        'username' => 'rahul',
-        'password' => 'staff123',
-        'name' => 'Rahul Verma',
-        'role' => 'staff_02',
-        'title' => 'Enquiry Specialist (Maternity & Kids)',
-        'avatar' => 'RV',
-        'staff_id' => 'staff_02'
-    ],
-    'sneha' => [
-        'id' => 'staff_03',
-        'username' => 'sneha',
-        'password' => 'staff123',
-        'name' => 'Sneha Patel',
-        'role' => 'staff_03',
-        'title' => 'Order Fulfillment & Support',
-        'avatar' => 'SP',
-        'staff_id' => 'staff_03'
     ]
 ];
 

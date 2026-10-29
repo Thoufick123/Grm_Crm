@@ -144,11 +144,11 @@
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
               <span>Username or Staff ID</span>
-              <span class="text-[10px] text-slate-400">e.g. admin, priya, staff_01</span>
+              <span class="text-[10px] text-slate-400">e.g. admin, staff ID or username</span>
             </label>
             <div class="relative">
               <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">account_circle</span>
-              <input type="text" id="username" required placeholder="Enter username (e.g. admin or priya)" autocomplete="username" class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-wa transition">
+              <input type="text" id="username" required placeholder="Enter username or staff ID (e.g. admin)" autocomplete="username" class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-wa transition">
             </div>
           </div>
 
@@ -187,42 +187,18 @@
           <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center mb-2.5">
             ⚡ Quick 1-Click Fast Login
           </p>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-2 gap-2" id="quick-login-grid">
             <!-- Super Admin -->
-            <button type="button" onclick="quickLogin('admin', 'admin123')" class="p-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-left transition flex items-center gap-2 group">
+            <button type="button" onclick="quickLogin('admin', 'admin123')" id="btn-quick-admin" class="p-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-left transition flex items-center gap-2 group col-span-2 cursor-pointer shadow-2xs">
               <span class="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0">👑</span>
               <div class="overflow-hidden">
                 <div class="text-[11px] font-bold text-purple-900 leading-tight">Super Admin</div>
-                <div class="text-[9px] text-purple-600 truncate">Full Control Panel</div>
+                <div class="text-[9px] text-purple-600 truncate">Full System Access (1-Click Login)</div>
               </div>
             </button>
 
-            <!-- Staff 01 Priya -->
-            <button type="button" onclick="quickLogin('priya', 'staff123')" class="p-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-left transition flex items-center gap-2 group">
-              <span class="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0">PS</span>
-              <div class="overflow-hidden">
-                <div class="text-[11px] font-bold text-blue-900 leading-tight">Priya (Staff 01)</div>
-                <div class="text-[9px] text-blue-600 truncate">Sales Specialist</div>
-              </div>
-            </button>
-
-            <!-- Staff 02 Rahul -->
-            <button type="button" onclick="quickLogin('rahul', 'staff123')" class="p-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl text-left transition flex items-center gap-2 group">
-              <span class="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center text-xs font-bold shrink-0">RV</span>
-              <div class="overflow-hidden">
-                <div class="text-[11px] font-bold text-amber-900 leading-tight">Rahul (Staff 02)</div>
-                <div class="text-[9px] text-amber-600 truncate">Enquiry Specialist</div>
-              </div>
-            </button>
-
-            <!-- Staff 03 Sneha -->
-            <button type="button" onclick="quickLogin('sneha', 'staff123')" class="p-2.5 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl text-left transition flex items-center gap-2 group">
-              <span class="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs font-bold shrink-0">SP</span>
-              <div class="overflow-hidden">
-                <div class="text-[11px] font-bold text-teal-900 leading-tight">Sneha (Staff 03)</div>
-                <div class="text-[9px] text-teal-600 truncate">Order Fulfillment</div>
-              </div>
-            </button>
+            <!-- Dynamic Staff Container (Loaded from Database) -->
+            <div id="dynamic-staff-quick-login" class="contents"></div>
           </div>
         </div>
 
@@ -358,14 +334,21 @@
       const successMsg = document.getElementById('login-success-msg');
 
       const accounts = {
-        'admin': { username: 'admin', password: 'admin123', role: 'admin', name: 'Super Admin', title: 'Admin Manager (Full Control)', avatar: 'SA', staffId: 'admin' },
-        'priya': { username: 'priya', password: 'staff123', role: 'staff_01', staffId: 'staff_01', name: 'Priya Sharma', title: 'Sales Specialist', avatar: 'PS' },
-        'staff_01': { username: 'staff_01', password: 'staff123', role: 'staff_01', staffId: 'staff_01', name: 'Priya Sharma', title: 'Sales Specialist', avatar: 'PS' },
-        'rahul': { username: 'rahul', password: 'staff123', role: 'staff_02', staffId: 'staff_02', name: 'Rahul Verma', title: 'Enquiry Specialist', avatar: 'RV' },
-        'staff_02': { username: 'staff_02', password: 'staff123', role: 'staff_02', staffId: 'staff_02', name: 'Rahul Verma', title: 'Enquiry Specialist', avatar: 'RV' },
-        'sneha': { username: 'sneha', password: 'staff123', role: 'staff_03', staffId: 'staff_03', name: 'Sneha Patel', title: 'Order Fulfillment', avatar: 'SP' },
-        'staff_03': { username: 'staff_03', password: 'staff123', role: 'staff_03', staffId: 'staff_03', name: 'Sneha Patel', title: 'Order Fulfillment', avatar: 'SP' }
+        'admin': { username: 'admin', password: 'admin123', role: 'admin', name: 'Super Admin', title: 'Admin Manager (Full Control)', avatar: 'SA', staffId: 'admin' }
       };
+      // Merge dynamic staff accounts from localStorage
+      try {
+        const saved = localStorage.getItem('GRM_CRM_STATE_V2_5');
+        if (saved) {
+          const st = JSON.parse(saved);
+          (st.staffList || []).forEach(s => {
+            accounts[s.id.toLowerCase()] = { username: s.username || s.id, password: s.password || 'staff123', role: s.role, staffId: s.id, name: s.name, title: s.role, avatar: s.avatar || 'ST' };
+            if (s.username) {
+              accounts[s.username.toLowerCase()] = accounts[s.id.toLowerCase()];
+            }
+          });
+        }
+      } catch (e) {}
 
       if (accounts[u] && accounts[u].password === password) {
         // Save session to both localStorage and sessionStorage

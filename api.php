@@ -225,7 +225,12 @@ if ($action === 'get_state' || $action === 'get_all') {
                 if ($type === 'size') $attributes['sizes'][] = $ra['value'];
                 else if ($type === 'color') $attributes['colors'][] = $ra['value'];
                 else if ($type === 'fabric') $attributes['fabrics'][] = $ra['value'];
-                else if ($type === 'specification') {
+                else if ($type === 'role_permissions') {
+                    $decoded = json_decode($ra['value'], true);
+                    if ($decoded) {
+                        $rolePermissions[$ra['name']] = $decoded;
+                    }
+                } else if ($type === 'specification') {
                     $extraStr = $ra['extra'] ?? '';
                     if (strpos($extraStr, ',') !== false) {
                         $parts = array_filter(array_map('trim', explode(',', $extraStr)));
@@ -283,6 +288,7 @@ if ($action === 'get_state' || $action === 'get_all') {
             "categories" => $categories,
             "subcategories" => $subcategories,
             "attributes" => $attributes,
+            "rolePermissions" => $rolePermissions,
             "dnd_records" => $dndRecords,
             "dndRecords" => $dndRecords,
             "data" => [
@@ -299,6 +305,7 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "categories" => $categories,
                 "subcategories" => $subcategories,
                 "attributes" => $attributes,
+                "rolePermissions" => $rolePermissions,
                 "dndRecords" => $dndRecords,
                 "dnd_records" => $dndRecords
             ]
@@ -344,7 +351,7 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("
             INSERT INTO `users` (`id`, `username`, `password`, `name`, `role`, `email`, `phone`, `specialization`, `avatar`, `status`)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `role`=VALUES(`role`), `phone`=VALUES(`phone`), `status`=VALUES(`status`)
+            ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password`=VALUES(`password`), `role`=VALUES(`role`), `phone`=VALUES(`phone`), `status`=VALUES(`status`)
         ");
 
         $stmt->execute([
@@ -361,6 +368,61 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         echo json_encode(["status" => "success", "message" => "Staff member created in MySQL", "staff_id" => $staffId]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'save_role_permissions' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    $roleName = trim($data['role'] ?? '');
+    $permissionsJson = isset($data['permissions']) ? json_encode($data['permissions']) : '';
+
+    if (empty($roleName) || empty($permissionsJson)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Role name and permissions matrix are required."]);
+        exit;
+    }
+
+    try {
+        // Save into attributes table under type 'role_permissions'
+        $stmt = $pdo->prepare("
+            INSERT INTO `attributes` (`type`, `name`, `value`) 
+            VALUES ('role_permissions', ?, ?) 
+            ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)
+        ");
+        $stmt->execute([$roleName, $permissionsJson]);
+
+        // Audit log
+        try {
+            $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('ROLE_PERMISSIONS_UPDATED', 'ROLES', 'Super Admin', ?, NOW())")
+                ->execute(["Updated granular module action permissions for role: $roleName"]);
+        } catch (Exception $ae) {}
+
+        echo json_encode(["status" => "success", "message" => "Role permissions saved in MySQL database.", "role" => $roleName]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'get_role_permissions') {
+    try {
+        $stmt = $pdo->query("SELECT `name`, `value` FROM `attributes` WHERE `type` = 'role_permissions'");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $roleMap = [];
+        foreach ($rows as $r) {
+            $roleMap[$r['name']] = json_decode($r['value'], true);
+        }
+
+        echo json_encode(["status" => "success", "roles" => $roleMap]);
         exit;
     } catch (Exception $e) {
         http_response_code(500);
@@ -408,6 +470,7 @@ if ($action === 'delete_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Delete user
         $pdo->prepare("DELETE FROM `users` WHERE `id` = ?")->execute([$data['staff_id']]);
+        $pdo->prepare("UPDATE `queries` SET `assigned_to` = 'UNASSIGNED' WHERE `assigned_to` = ?")->execute([$data['staff_id']]);
 
         echo json_encode(["status" => "success", "message" => "Staff member removed and leads unassigned."]);
         exit;
@@ -1628,8 +1691,9 @@ if ($action === 'delete_attribute' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-if ($action === 'upload_product_image' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $uploadDir = __DIR__ . '/uploads/products/';
+if (($action === 'upload_product_image' || $action === 'upload_media' || $action === 'upload_broadcast_image') && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $folderName = ($action === 'upload_broadcast_image') ? 'broadcast' : (($action === 'upload_media') ? 'media' : 'products');
+    $uploadDir = __DIR__ . '/uploads/' . $folderName . '/';
     if (!is_dir($uploadDir)) {
         @mkdir($uploadDir, 0777, true);
     }
@@ -1641,12 +1705,21 @@ if ($action === 'upload_product_image' && $_SERVER['REQUEST_METHOD'] === 'POST')
         if (!in_array($ext, $allowed)) {
             $ext = 'jpg';
         }
-        $fileName = 'prod_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+        $fileName = 'img_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
         $targetPath = $uploadDir . $fileName;
 
         if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-            $url = 'uploads/products/' . $fileName;
-            echo json_encode(["status" => "success", "url" => $url, "message" => "Image uploaded successfully"]);
+            $url = 'uploads/' . $folderName . '/' . $fileName;
+            $appUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : 'http://localhost:8080';
+            $absoluteUrl = $appUrl . '/' . $url;
+            echo json_encode([
+                "status" => "success", 
+                "url" => $url, 
+                "absolute_url" => $absoluteUrl,
+                "file_name" => $file['name'],
+                "size" => $file['size'],
+                "message" => "Image uploaded successfully"
+            ]);
             exit;
         }
     }
@@ -1662,10 +1735,18 @@ if ($action === 'upload_product_image' && $_SERVER['REQUEST_METHOD'] === 'POST')
             if ($ext === 'jpeg') $ext = 'jpg';
             $data = base64_decode($data);
             if ($data !== false) {
-                $fileName = 'prod_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+                $fileName = 'img_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
                 file_put_contents($uploadDir . $fileName, $data);
-                $url = 'uploads/products/' . $fileName;
-                echo json_encode(["status" => "success", "url" => $url, "message" => "Image saved successfully"]);
+                $url = 'uploads/' . $folderName . '/' . $fileName;
+                $appUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : 'http://localhost:8080';
+                $absoluteUrl = $appUrl . '/' . $url;
+                echo json_encode([
+                    "status" => "success", 
+                    "url" => $url, 
+                    "absolute_url" => $absoluteUrl,
+                    "file_name" => $p['file_name'] ?? $fileName,
+                    "message" => "Image saved successfully"
+                ]);
                 exit;
             }
         }
@@ -2759,32 +2840,220 @@ if ($action === 'health_check') {
 }
 
 // =========================================================================
-// 10. DATABASE BACKUP & RESTORE
+// =========================================================================
+// 10. DATABASE BACKUP & RESTORE ENGINE (MySQL Zero-Loss Snapshot & Restore)
 // =========================================================================
 if ($action === 'backup_db') {
     try {
         $stateResponse = [];
-        $tables = ['users', 'whatsapp_accounts', 'customers', 'queries', 'messages', 'products', 'orders', 'followups', 'audit_logs'];
+        $tables = [
+            'users', 'whatsapp_accounts', 'customers', 'queries', 
+            'messages', 'products', 'orders', 'followups', 
+            'categories', 'subcategories', 'attributes', 'dnd_records', 'audit_logs'
+        ];
         
+        $totalRecordCount = 0;
         foreach ($tables as $t) {
-            $stmt = $pdo->query("SELECT * FROM `$t`");
-            $stateResponse[$t] = $stmt->fetchAll();
+            $check = $pdo->query("SHOW TABLES LIKE " . $pdo->quote($t))->fetch();
+            if ($check) {
+                $stmt = $pdo->query("SELECT * FROM `$t`");
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $stateResponse[$t] = $rows;
+                $totalRecordCount += count($rows);
+            }
         }
 
         $backupData = [
-            "version" => "2.5",
+            "version" => "2.5.0",
             "backup_date" => date("Y-m-d H:i:s"),
             "generator" => "GRM_CRM_MYSQL_BACKUP_ENGINE",
-            "database" => "grm_crm_db",
+            "database" => DB_NAME,
+            "total_records" => $totalRecordCount,
             "tables" => $stateResponse
         ];
 
+        // Audit log the backup event
+        try {
+            $audit = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('DATABASE_BACKUP_EXPORTED', 'BACKUP', 'Super Admin', ?, NOW())");
+            $audit->execute(["Downloaded complete MySQL database snapshot ($totalRecordCount records)"]);
+        } catch (Exception $ae) {}
+
+        header('Content-Type: application/json; charset=utf-8');
         header('Content-Disposition: attachment; filename="grm_crm_backup_' . date("Ymd_His") . '.json"');
-        echo json_encode($backupData, JSON_PRETTY_PRINT);
+        echo json_encode($backupData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        header('Content-Type: application/json');
+        echo json_encode(["status" => "error", "message" => "Database backup failed: " . $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'restore_db') {
+    header('Content-Type: application/json');
+    
+    // Read raw JSON body or uploaded file
+    $rawInput = file_get_contents('php://input');
+    $payload = json_decode($rawInput, true);
+
+    if (!$payload && isset($_FILES['backup_file']['tmp_name'])) {
+        $fileContent = file_get_contents($_FILES['backup_file']['tmp_name']);
+        $payload = json_decode($fileContent, true);
+    }
+
+    if (!$payload) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Invalid or unreadable backup JSON payload."]);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+
+        $restoredTables = [];
+        $totalRestoredRows = 0;
+
+        // Path A: MySQL Table Dump Format
+        if (isset($payload['tables']) && is_array($payload['tables'])) {
+            foreach ($payload['tables'] as $tableName => $rows) {
+                if (!is_array($rows)) continue;
+
+                $check = $pdo->query("SHOW TABLES LIKE " . $pdo->quote($tableName))->fetch();
+                if (!$check) continue;
+
+                // Truncate table cleanly
+                $pdo->exec("DELETE FROM `$tableName`;");
+
+                if (!empty($rows)) {
+                    $cols = array_keys($rows[0]);
+                    $colList = implode("`, `", array_map(function($c) { return str_replace('`', '', $c); }, $cols));
+                    $placeholders = implode(", ", array_fill(0, count($cols), "?"));
+
+                    $insertStmt = $pdo->prepare("INSERT INTO `$tableName` (`$colList`) VALUES ($placeholders)");
+
+                    foreach ($rows as $row) {
+                        $values = [];
+                        foreach ($cols as $col) {
+                            $values[] = $row[$col] ?? null;
+                        }
+                        $insertStmt->execute($values);
+                        $totalRestoredRows++;
+                    }
+                }
+                $restoredTables[] = $tableName;
+            }
+        }
+        // Path B: Client CRM_STATE Format
+        elseif (isset($payload['data']) && is_array($payload['data'])) {
+            $data = $payload['data'];
+
+            // 1. Customers
+            if (isset($data['customers']) && is_array($data['customers'])) {
+                $pdo->exec("DELETE FROM `customers`;");
+                $cStmt = $pdo->prepare("INSERT INTO `customers` (`id`, `name`, `whatsapp`, `phone`, `email`, `address`, `tags_json`, `is_dnd`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                foreach ($data['customers'] as $c) {
+                    $tags = isset($c['tags']) ? json_encode($c['tags']) : '[]';
+                    $cStmt->execute([
+                        $c['id'] ?? ('cust_' . time()),
+                        $c['name'] ?? 'Customer',
+                        $c['whatsapp'] ?? ($c['phone'] ?? ''),
+                        $c['phone'] ?? ($c['whatsapp'] ?? ''),
+                        $c['email'] ?? null,
+                        $c['address'] ?? null,
+                        $tags,
+                        !empty($c['isDND']) ? 1 : 0,
+                        $c['createdAt'] ?? date('Y-m-d H:i:s')
+                    ]);
+                    $totalRestoredRows++;
+                }
+                $restoredTables[] = 'customers';
+            }
+
+            // 2. Orders
+            if (isset($data['orders']) && is_array($data['orders'])) {
+                $pdo->exec("DELETE FROM `orders`;");
+                $oStmt = $pdo->prepare("INSERT INTO `orders` (`id`, `query_id`, `customer_id`, `customer_name`, `customer_phone`, `shipping_address`, `items_json`, `grand_total`, `cod_advance`, `cod_balance_due`, `payment_method`, `payment_status`, `upi_transaction_id`, `order_status`, `staff_id`, `staff_name`, `created_by`, `tracking_number`, `courier_name`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                foreach ($data['orders'] as $o) {
+                    $itemsJson = isset($o['items']) ? json_encode($o['items']) : (isset($o['items_json']) ? $o['items_json'] : '[]');
+                    $oStmt->execute([
+                        $o['id'] ?? ('WA-' . date('Y') . '-' . rand(100000, 999999)),
+                        $o['queryId'] ?? ($o['query_id'] ?? 'N/A'),
+                        $o['customerId'] ?? ($o['customer_id'] ?? ''),
+                        $o['customerName'] ?? ($o['customer_name'] ?? 'Customer'),
+                        $o['customerPhone'] ?? ($o['customer_phone'] ?? ''),
+                        $o['shippingAddress'] ?? ($o['shipping_address'] ?? ''),
+                        $itemsJson,
+                        floatval($o['grandTotal'] ?? ($o['grand_total'] ?? 0)),
+                        floatval($o['codAdvance'] ?? ($o['cod_advance'] ?? 0)),
+                        floatval($o['codBalanceDue'] ?? ($o['cod_balance_due'] ?? 0)),
+                        $o['paymentMethod'] ?? ($o['payment_method'] ?? 'COD'),
+                        $o['paymentStatus'] ?? ($o['payment_status'] ?? 'PENDING'),
+                        $o['upiTransactionId'] ?? ($o['upi_transaction_id'] ?? null),
+                        $o['orderStatus'] ?? ($o['order_status'] ?? 'PLACED'),
+                        $o['staffId'] ?? ($o['staff_id'] ?? 'staff_01'),
+                        $o['staffName'] ?? ($o['staff_name'] ?? 'Priya Sharma'),
+                        $o['createdBy'] ?? ($o['created_by'] ?? 'Staff'),
+                        $o['trackingNumber'] ?? ($o['tracking_number'] ?? null),
+                        $o['courierName'] ?? ($o['courier_name'] ?? null),
+                        $o['createdAt'] ?? ($o['created_at'] ?? date('Y-m-d H:i:s'))
+                    ]);
+                    $totalRestoredRows++;
+                }
+                $restoredTables[] = 'orders';
+            }
+
+            // 3. Messages / Conversations
+            if (isset($data['conversations']) && is_array($data['conversations'])) {
+                $pdo->exec("DELETE FROM `messages`;");
+                $mStmt = $pdo->prepare("INSERT INTO `messages` (`customer_id`, `sender`, `message_text`, `media_url`, `media_type`, `direction`, `status`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                foreach ($data['conversations'] as $custId => $convMsgs) {
+                    if (!is_array($convMsgs)) continue;
+                    foreach ($convMsgs as $m) {
+                        $direction = ($m['sender'] === 'staff' || !empty($m['isBot'])) ? 'outbound' : 'inbound';
+                        $mStmt->execute([
+                            $custId,
+                            $m['sender'] ?? 'customer',
+                            $m['text'] ?? '',
+                            $m['media_url'] ?? null,
+                            $m['type'] ?? 'text',
+                            $direction,
+                            $m['status'] ?? 'DELIVERED',
+                            isset($m['timestamp']) ? date('Y-m-d H:i:s', is_numeric($m['timestamp']) ? (int)($m['timestamp']/1000) : time()) : date('Y-m-d H:i:s')
+                        ]);
+                        $totalRestoredRows++;
+                    }
+                }
+                $restoredTables[] = 'messages';
+            }
+        }
+
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+
+        // Log restore event in audit_logs
+        try {
+            $auditStmt = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('DATABASE_RESTORED', 'BACKUP', 'Super Admin', ?, NOW())");
+            $auditStmt->execute(["Restored database snapshot into " . DB_NAME . " (" . count($restoredTables) . " tables, $totalRestoredRows rows). Tables: " . implode(', ', $restoredTables)]);
+        } catch (Exception $ae) {}
+
+        $pdo->commit();
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Database successfully restored into MySQL (" . DB_NAME . ")!",
+            "database" => DB_NAME,
+            "restored_tables" => $restoredTables,
+            "total_rows" => $totalRestoredRows
+        ]);
+        exit;
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database restore failed: " . $e->getMessage()]);
         exit;
     }
 }
