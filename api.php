@@ -520,7 +520,7 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $staffId = $staff['id'] ?? ('staff_' . str_pad(rand(1, 99), 2, '0', STR_PAD_LEFT));
-        $username = $staff['username'] ?? strtolower(explode(' ', $staff['name'])[0]);
+        $username = !empty($staff['username']) ? $staff['username'] : (!empty($staff['id']) ? $staff['id'] : strtolower(explode(' ', $staff['name'])[0]));
         $password = $staff['password'] ?? 'staff123';
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $avatar = $staff['avatar'] ?? strtoupper(substr($staff['name'], 0, 2));
@@ -528,7 +528,7 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("
             INSERT INTO `users` (`id`, `username`, `password`, `name`, `role`, `email`, `phone`, `specialization`, `avatar`, `status`)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password`=VALUES(`password`), `role`=VALUES(`role`), `phone`=VALUES(`phone`), `status`=VALUES(`status`)
+            ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password`=VALUES(`password`), `role`=VALUES(`role`), `phone`=VALUES(`phone`), `status`=VALUES(`status`), `email`=VALUES(`email`), `specialization`=VALUES(`specialization`), `avatar`=VALUES(`avatar`)
         ");
 
         $stmt->execute([

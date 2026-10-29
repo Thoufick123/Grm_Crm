@@ -287,6 +287,7 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
   conversations: {},
   orders: [],
   followups: [],
+  auditLogs: [],
   categories: [
     { id: 1, name: 'Baby Collection', slug: 'baby_collection', icon: 'child_care', description: 'Pure cotton frocks, rompers & soft babywear (0–3 Years)' },
     { id: 2, name: 'Maternity & Feeding', slug: 'maternity_wear', icon: 'pregnant_woman', description: 'Feeding kurtis, maxi gowns & maternity comfort dresses' },
@@ -2261,9 +2262,7 @@ function initCRMState() {
       }
 
       // 12. Audit Logs
-      if (data.auditLogs && Array.isArray(data.auditLogs) && data.auditLogs.length > 0) {
-        CRM_STATE.auditLogs = data.auditLogs;
-      }
+      CRM_STATE.auditLogs = (data.auditLogs && Array.isArray(data.auditLogs)) ? data.auditLogs : (CRM_STATE.auditLogs || []);
 
       // Update UI components dynamically to reflect live database state
       if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
@@ -22629,7 +22628,7 @@ function renderAuditTable() {
   const tbody = document.getElementById('audit-logs-table-body');
   if (!tbody) return;
 
-  tbody.innerHTML = CRM_STATE.auditLogs.map(log => `
+  tbody.innerHTML = (CRM_STATE.auditLogs || []).map(log => `
     <tr class="hover:bg-slate-50">
       <td class="py-2.5 px-4 text-slate-500">${log.timestamp}</td>
       <td class="py-2.5 px-4 font-bold text-slate-800">${log.user}</td>
@@ -23494,7 +23493,8 @@ let ACTIVE_STAFF_TAB = 'list'; // 'list' (All Staff), 'create' (Add Staff), 'rol
 let ACTIVE_MATRIX_ROLE = 'Sales Specialist (Baby Collection)';
 
 // 1. Toggle Sidebar Staff Submenu (Accordion)
-window.toggleStaffSubmenu = function() {
+function toggleStaffSubmenu() {
+  window.toggleStaffSubmenu = toggleStaffSubmenu;
   const menu = document.getElementById('staff-submodules-menu');
   const arrow = document.getElementById('staff-subnav-arrow');
   if (!menu) return;
@@ -23511,7 +23511,8 @@ window.toggleStaffSubmenu = function() {
 };
 
 // 2. Switch Staff Submodule from Sidebar (All Staff, Add Staff, Role Base)
-window.switchStaffSubmodule = function(submodule) {
+function switchStaffSubmodule(submodule) {
+  window.switchStaffSubmodule = switchStaffSubmodule;
   // Ensure staff view is active
   switchView('staff');
   switchStaffTab(submodule);
@@ -23738,29 +23739,41 @@ function getRoleBadgeClass(role) {
 }
 
 // 6. Handle Staff Onboarding (Sub-item 2: Add Staff)
+window.handleCreateNewStaff = handleCreateNewStaff;
 function handleCreateNewStaff(event) {
   event.preventDefault();
   if (!canUserPerformAction('staff', 'create')) {
     showToast('Permission Denied', 'Your assigned role does not have permission to create staff.', 'lock', 'rose');
     return;
   }
-  const name = document.getElementById('staff-new-name').value.trim();
-  const email = document.getElementById('staff-new-email').value.trim();
-  const phone = document.getElementById('staff-new-phone').value.trim();
-  const role = document.getElementById('staff-new-role').value;
-  const specialization = document.getElementById('staff-new-specialization').value;
-  const status = document.getElementById('staff-new-status').value;
+  const nameEl = document.getElementById('staff-new-name');
+  const emailEl = document.getElementById('staff-new-email');
+  const phoneEl = document.getElementById('staff-new-phone');
+  const roleEl = document.getElementById('staff-new-role');
+  const specEl = document.getElementById('staff-new-specialization');
+  const statusEl = document.getElementById('staff-new-status');
   const passwordInput = document.getElementById('staff-new-password');
-  const password = passwordInput ? passwordInput.value.trim() : 'staff123';
+
+  const name = nameEl ? nameEl.value.trim() : '';
+  const email = emailEl ? emailEl.value.trim() : '';
+  const phone = phoneEl ? phoneEl.value.trim() : '';
+  const role = roleEl ? roleEl.value : 'Sales Specialist';
+  const specialization = specEl ? specEl.value : 'General';
+  const status = statusEl ? statusEl.value : 'ACTIVE';
+  const password = passwordInput && passwordInput.value.trim() ? passwordInput.value.trim() : 'staff123';
 
   if (!name || !phone) {
-    alert('Please enter staff name and phone number.');
+    showToast('Missing Fields', 'Please enter staff name and phone number.', 'warning', 'amber');
     return;
   }
 
   if (!password) {
-    alert('Please enter a login password for the staff member.');
+    showToast('Password Required', 'Please enter a login password for the staff member.', 'warning', 'amber');
     return;
+  }
+
+  if (!Array.isArray(CRM_STATE.staffList)) {
+    CRM_STATE.staffList = [];
   }
 
   // Collect all staff IDs ever used across staffList, orders, queries, and reserved IDs
@@ -23778,12 +23791,12 @@ function handleCreateNewStaff(event) {
     nextNum++;
     newStaffId = `staff_${String(nextNum).padStart(2, '0')}`;
   }
-  const avatarInitials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  const avatarInitials = name.split(' ').map(n => n[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || 'ST';
 
   const newStaff = {
     id: newStaffId,
     name: name,
-    email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@grmgarments.com`,
+    email: email || `${name.toLowerCase().replace(/[^a-z0-9]/g, '.')}@grmgarments.com`,
     phone: phone,
     role: role,
     specialization: specialization,
@@ -23804,6 +23817,7 @@ function handleCreateNewStaff(event) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       id: newStaffId,
+      username: newStaffId,
       name: name,
       email: newStaff.email,
       phone: phone,
@@ -23813,14 +23827,31 @@ function handleCreateNewStaff(event) {
       avatar: avatarInitials,
       status: status
     })
-  }).catch(() => {});
+  }).then(r => r.json()).then(res => {
+    console.log('[create_staff] Server response:', res);
+  }).catch(err => {
+    console.warn('[create_staff] Background server sync error:', err);
+  });
 
   logAudit('STAFF_ONBOARDED', 'STAFF_MODULE', `Super Admin onboarded new staff member: ${name} (${newStaffId}, Role: ${role})`);
 
-  event.target.reset();
-  switchStaffSubmodule('list');
-  playChime('order');
-  showToast('Staff Member Onboarded!', `${name} successfully added to team roster.`, 'person_add', 'emerald');
+  if (event.target && typeof event.target.reset === 'function') {
+    event.target.reset();
+  }
+
+  // Update counters and dropdowns
+  const staffCountBadge = document.getElementById('badge-total-staff-count');
+  if (staffCountBadge) staffCountBadge.innerText = CRM_STATE.staffList.length;
+  const navSubCount = document.getElementById('nav-sub-staff-count');
+  if (navSubCount) navSubCount.innerText = CRM_STATE.staffList.length;
+
+  populateAllStaffDropdowns();
+  updateStaffRoleSelectDropdowns();
+  renderStaffTable();
+
+  if (typeof window.switchStaffSubmodule === 'function') window.switchStaffSubmodule('list'); else if (typeof switchStaffSubmodule === 'function') switchStaffSubmodule('list'); else if (typeof switchStaffTab === 'function') switchStaffTab('list');
+  if (typeof playChime === 'function') playChime('order');
+  showToast('Staff Member Onboarded!', `${name} successfully added to team roster (${newStaffId}).`, 'person_add', 'emerald');
 }
 
 // 7. GRANULAR ROLE-BASED ACCESS CONTROL MATRIX ENGINE (Sub-item 3: Role Base)
@@ -23934,7 +23965,11 @@ function renderRolePermissionsMatrix(roleName) {
   }).join('');
 
   // Update column master header checkboxes
-  updateRoleMatrixHeaderCheckboxes();
+  if (typeof updateRoleMatrixHeaderCheckboxes === "function") {
+    updateRoleMatrixHeaderCheckboxes();
+  } else if (typeof window.updateRoleMatrixHeaderCheckboxes === "function") {
+    window.updateRoleMatrixHeaderCheckboxes();
+  }
 }
 
 // 8. Event Handlers for Role Permissions Matrix
@@ -23944,7 +23979,8 @@ window.handleRoleSelectChange = function(newRole) {
 };
 
 // Update header checkboxes based on the current role's permission matrix
-window.updateRoleMatrixHeaderCheckboxes = function() {
+function updateRoleMatrixHeaderCheckboxes() {
+  window.updateRoleMatrixHeaderCheckboxes = updateRoleMatrixHeaderCheckboxes;
   const rolePerms = (CRM_STATE.rolePermissions && CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE]) || {};
   const isSuperAdmin = ACTIVE_MATRIX_ROLE === 'Super Admin';
   const totalMods = (CRM_MODULE_DEFINITIONS || []).length;
@@ -24084,7 +24120,11 @@ window.handleToggleModuleAction = function(moduleKey, action, isChecked) {
   if (allEl) allEl.checked = (p.view && p.create && p.edit && p.delete);
 
   // Keep column master header checkboxes in sync
-  updateRoleMatrixHeaderCheckboxes();
+  if (typeof updateRoleMatrixHeaderCheckboxes === "function") {
+    updateRoleMatrixHeaderCheckboxes();
+  } else if (typeof window.updateRoleMatrixHeaderCheckboxes === "function") {
+    window.updateRoleMatrixHeaderCheckboxes();
+  }
 };
 
 window.handleToggleModuleAll = function(moduleKey, isChecked) {
@@ -24559,17 +24599,30 @@ function closeModal(id) {
 window.openModal = openModal;
 window.closeModal = closeModal;
 
+window.logAudit = logAudit;
 function logAudit(action, module, details) {
-  const user = ACTIVE_ROLE === 'admin' ? 'Super Admin' : (CRM_STATE.staffList.find(s => s.id === ACTIVE_ROLE)?.name || 'Staff');
-  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  CRM_STATE.auditLogs.unshift({ timestamp, user, action, module, details });
+  try {
+    const user = (typeof ACTIVE_ROLE !== 'undefined' && ACTIVE_ROLE === 'admin') 
+      ? 'Super Admin' 
+      : (((typeof CRM_STATE !== 'undefined' && CRM_STATE && Array.isArray(CRM_STATE.staffList)) ? CRM_STATE.staffList : []).find(s => s && s.id === (typeof ACTIVE_ROLE !== 'undefined' ? ACTIVE_ROLE : ''))?.name || 'Staff');
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    if (typeof CRM_STATE !== 'undefined' && CRM_STATE) {
+      if (!Array.isArray(CRM_STATE.auditLogs)) {
+        CRM_STATE.auditLogs = [];
+      }
+      CRM_STATE.auditLogs.unshift({ timestamp, user, action, module, details });
+    }
 
-  // Asynchronously persist audit log to MySQL Database
-  fetch('api.php?action=save_audit_log', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user, action, module, details, timestamp })
-  }).catch(() => {});
+    // Asynchronously persist audit log to MySQL Database
+    fetch('api.php?action=save_audit_log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user, action, module, details, timestamp })
+    }).catch(() => {});
+  } catch (err) {
+    console.warn('[logAudit] Non-fatal logging error:', err);
+  }
 }
 
 function updateBadgeCounters() {
