@@ -423,5 +423,39 @@
         "source": "REAL_WHATSAPP_LIVE",
         "timestamp_epoch": 1793099967,
         "received_at": "04:49 pm"
+    },
+    {
+        "id": "msg_6ae2c5fc94250",
+        "sender_name": "papa😍",
+        "sender_phone": "+91 63825 47067",
+        "sender_jid": "204706865483837@lid",
+        "message_text": "Hii",
+        "type": "text",
+        "media_url": null,
+        "duration": 0,
+        "account_id": "account_1",
+        "received_on_number": "+919943557998",
+        "priority": "HIGH",
+        "assigned_to": "UNASSIGNED",
+        "source": "REAL_WHATSAPP_LIVE",
+        "timestamp_epoch": 1793246634,
+        "received_at": "09:33 AM"
+    },
+    {
+        "id": "msg_6ae2c60928c7d",
+        "sender_name": "Bot (Auto-Reply)",
+        "sender_phone": "+91 63825 47067",
+        "sender_jid": "204706865483837@lid",
+        "message_text": "✨ *TESTING* ✨\nHello *papa😍*! 👋 Welcome to our store.\n\n👗 *Ready-Stock Collections:*\n1️⃣ Baby Collection (0–3Y) — *₹599*\n2️⃣ Maternity & Feeding — *₹1,299*\n3️⃣ Newborn Gift Sets (0–6M) — *₹799*\n4️⃣ Kids Daily Wear (4–5Y) — *₹450*\n5️⃣ Wholesale Bundles — *₹7,200*\n6️⃣ Festive Silk Sets — *₹899*\n\n💬 *Reply with 1 to 6* to see photos & sizes!",
+        "type": "text",
+        "media_url": null,
+        "duration": null,
+        "account_id": "account_1",
+        "received_on_number": "+91 97896 60115",
+        "priority": "HIGH",
+        "assigned_to": "UNASSIGNED",
+        "source": "REAL_WHATSAPP_LIVE",
+        "timestamp_epoch": 1793246635,
+        "received_at": "09:33 AM"
     }
 ]

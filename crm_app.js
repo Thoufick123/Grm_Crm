@@ -2886,7 +2886,8 @@ function renderInboxConversationList() {
       lastText = (lastMsgObj.sender === 'staff' ? t('chat.staff_prefix', 'Staff: ') : t('chat.customer_prefix', 'Customer: ')) + `"${lastMsgObj.text.substring(0, 38)}..."`;
       timeDisplay = lastMsgObj.time || timeDisplay;
     } else if (query) {
-      lastText = query.lastMessage || query.queryText;
+      const qText = query.lastMessage || query.queryText || '';
+      lastText = t('chat.customer_prefix', 'Customer: ') + `"${qText.substring(0, 38)}..."`;
     }
 
     const custAccountId = cust.accountId || (query ? query.accountId : null) || 'account_1';
@@ -3503,12 +3504,14 @@ function renderChatMessages() {
 
   const messages = CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] || [];
 
+  const t = window.t || ((k, f) => f || k);
+
   if (messages.length === 0) {
     stream.innerHTML = `
       <div class="h-full flex items-center justify-center text-center text-slate-400">
         <div>
           <span class="material-symbols-outlined text-[40px] text-slate-300">chat</span>
-          <p class="text-xs mt-2">No messages recorded in this chat yet</p>
+          <p class="text-xs mt-2">${t('inbox.no_messages', 'No messages recorded in this chat yet')}</p>
         </div>
       </div>
     `;
@@ -3520,7 +3523,7 @@ function renderChatMessages() {
     <div class="flex justify-center my-2">
       <div class="bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-medium px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
         <span class="material-symbols-outlined text-[14px]">lock</span>
-        <span>Connected to Business Number: <strong>${CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115'}</strong> &bull; GRM Central Record</span>
+        <span>${t('inbox.connected_business', 'Connected to Business Number:')} <strong>${CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115'}</strong> &bull; ${t('inbox.central_record', 'GRM Central Record')}</span>
       </div>
     </div>
   ` + messages.map((msg, idx) => {
@@ -3529,6 +3532,12 @@ function renderChatMessages() {
     const isAudio = msg.type === 'audio' || (msg.media_url && (msg.media_url.includes('audio') || msg.media_url.startsWith('data:audio') || msg.media_url.includes('.ogg') || msg.media_url.includes('.mp3') || msg.media_url.includes('.m4a'))) || (msg.text && (msg.text.includes('Voice Message') || msg.text.includes('Audio Message')));
     const isImage = msg.type === 'image' || (msg.media_url && (msg.media_url.startsWith('data:image') || msg.media_url.includes('http') || msg.media_url.includes('.png') || msg.media_url.includes('.jpg') || msg.media_url.includes('blob:')));
     const duration = msg.duration || 12;
+
+    window.ACTIVE_CHAT_MESSAGES_MAP = window.ACTIVE_CHAT_MESSAGES_MAP || {};
+    if (msg.text) {
+      window.ACTIVE_CHAT_MESSAGES_MAP[msgId] = msg.text;
+    }
+    const hasText = !!(msg.text && msg.text.trim().length > 0 && msg.text !== '[Photo Attachment]' && !msg.text.includes('Voice Message'));
 
     let contentHtml = '';
 
@@ -3667,11 +3676,28 @@ function renderChatMessages() {
             </div>
           ` : ''}
           ${contentHtml}
-          <div class="flex items-center justify-end gap-1 text-[10px] text-slate-400 pt-0.5">
-            <span>${msg.time}</span>
-            ${isOut ? `
-              <span class="material-symbols-outlined text-[14px] text-brand-wa font-bold">done_all</span>
-            ` : ''}
+          <!-- On-Demand Translation Container -->
+          <div id="trans-box-${msgId}" class="empty:hidden"></div>
+
+          <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400 pt-1 border-t border-slate-100/70 mt-1">
+            <!-- 1-Click On-Demand Translate Button -->
+            ${hasText ? `
+              <button type="button" 
+                      id="btn-trans-${msgId}" 
+                      onclick="toggleTranslateMessage('${msgId}', event)" 
+                      class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 active:scale-95 border border-emerald-200/90 px-1.5 py-0.5 rounded-md transition shadow-2xs cursor-pointer select-none"
+                      title="Translate (மொழிபெயர் 🌐)">
+                <span class="material-symbols-outlined text-[12px] text-emerald-600">translate</span>
+                <span id="btn-trans-text-${msgId}">${getTranslateBtnText()}</span>
+              </button>
+            ` : '<span></span>'}
+
+            <div class="flex items-center gap-1">
+              <span>${msg.time}</span>
+              ${isOut ? `
+                <span class="material-symbols-outlined text-[14px] text-brand-wa font-bold">done_all</span>
+              ` : ''}
+            </div>
           </div>
         </div>
       </div>
@@ -3680,9 +3706,222 @@ function renderChatMessages() {
 
   stream.innerHTML = `<div class="max-w-3xl xl:max-w-4xl mx-auto w-full space-y-3 min-w-0">${messagesContent}</div>`;
 
+  // Auto-restore any currently open translations across re-renders
+  if (window.ACTIVE_MESSAGE_TRANSLATIONS) {
+    Object.keys(window.ACTIVE_MESSAGE_TRANSLATIONS).forEach(mId => {
+      const tLang = window.ACTIVE_MESSAGE_TRANSLATIONS[mId];
+      const raw = window.ACTIVE_CHAT_MESSAGES_MAP ? window.ACTIVE_CHAT_MESSAGES_MAP[mId] : null;
+      const cached = window.MESSAGE_TRANSLATIONS_CACHE ? window.MESSAGE_TRANSLATIONS_CACHE[`${mId}_${tLang}`] : null;
+      if (cached && raw) {
+        setTimeout(() => {
+          renderTranslationBox(mId, raw, cached, tLang);
+        }, 10);
+      }
+    });
+  }
+
   // Auto-scroll to bottom
   stream.scrollTop = stream.scrollHeight;
 }
+
+// =========================================================================
+// ON-DEMAND MULTI-LANGUAGE MESSAGE TRANSLATION ENGINE (TAMIL, ENGLISH, HINDI, TELUGU, MALAYALAM, KANNADA)
+// =========================================================================
+window.MESSAGE_TRANSLATIONS_CACHE = window.MESSAGE_TRANSLATIONS_CACHE || {};
+window.ACTIVE_MESSAGE_TRANSLATIONS = window.ACTIVE_MESSAGE_TRANSLATIONS || {};
+window.ACTIVE_CHAT_MESSAGES_MAP = window.ACTIVE_CHAT_MESSAGES_MAP || {};
+
+const TRANSLATION_LANGUAGES = [
+  { code: 'ta', label: 'Tamil', native: 'தமிழ்' },
+  { code: 'en', label: 'English', native: 'English' },
+  { code: 'hi', label: 'Hindi', native: 'हिंदी' },
+  { code: 'te', label: 'Telugu', native: 'తెలుగు' },
+  { code: 'ml', label: 'Malayalam', native: 'മലയാളം' },
+  { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ' }
+];
+
+function getTranslateBtnText() {
+  const currentLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage()) 
+    ? getCurrentLanguage().code 
+    : (localStorage.getItem('GRM_APP_LANG') || 'ta');
+    
+  switch (currentLang) {
+    case 'ta': return 'மொழிபெயர் 🌐';
+    case 'hi': return 'अनुवाद 🌐';
+    case 'te': return 'అనువదించు 🌐';
+    case 'ml': return 'വിവർത്തനം 🌐';
+    case 'kn': return 'ಅನುವಾದ 🌐';
+    case 'en': 
+    default:
+      return 'Translate 🌐';
+  }
+}
+
+function getLangNativeName(code) {
+  const found = TRANSLATION_LANGUAGES.find(l => l.code === code);
+  return found ? `${found.native} (${found.label})` : code.toUpperCase();
+}
+
+async function toggleTranslateMessage(msgId, ev) {
+  if (ev) ev.stopPropagation();
+  const box = document.getElementById(`trans-box-${msgId}`);
+  if (!box) return;
+
+  // If already open and visible, clicking again collapses/hides it
+  if (!box.classList.contains('hidden') && box.innerHTML.trim().length > 0 && window.ACTIVE_MESSAGE_TRANSLATIONS[msgId]) {
+    hideMessageTranslation(msgId);
+    return;
+  }
+
+  // Determine target language: default to current CRM language (fallback 'ta')
+  let targetLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage()) 
+    ? getCurrentLanguage().code 
+    : (localStorage.getItem('GRM_APP_LANG') || 'ta');
+
+  await translateMessageToLang(msgId, targetLang);
+}
+
+async function translateMessageToLang(msgId, targetLang) {
+  const box = document.getElementById(`trans-box-${msgId}`);
+  const btn = document.getElementById(`btn-trans-${msgId}`);
+  const rawText = window.ACTIVE_CHAT_MESSAGES_MAP[msgId];
+
+  if (!box || !rawText) return;
+
+  targetLang = targetLang || 'ta';
+  const cacheKey = `${msgId}_${targetLang}`;
+
+  // Check in-memory cache first for instant 0ms rendering
+  if (window.MESSAGE_TRANSLATIONS_CACHE[cacheKey]) {
+    renderTranslationBox(msgId, rawText, window.MESSAGE_TRANSLATIONS_CACHE[cacheKey], targetLang);
+    return;
+  }
+
+  // Show loading indicator
+  box.classList.remove('hidden');
+  box.innerHTML = `
+    <div class="mt-1.5 p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center gap-2 text-slate-500 animate-pulse">
+      <span class="material-symbols-outlined text-[16px] animate-spin text-emerald-600">sync</span>
+      <span class="text-[11px] font-medium">Translating into ${getLangNativeName(targetLang)}...</span>
+    </div>
+  `;
+
+  try {
+    let translatedText = '';
+    
+    // 1. Direct Ultra-Fast Google Translate Client Call (100 - 300ms, zero server delay)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(rawText)}`;
+      const gResp = await fetch(gUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (gResp.ok) {
+        const gData = await gResp.json();
+        if (Array.isArray(gData) && Array.isArray(gData[0])) {
+          translatedText = gData[0].map(s => s[0] || '').join('');
+        }
+      }
+    } catch (gErr) {
+      console.warn('[Translate] Direct fetch bypassed, using backend fallback:', gErr);
+    }
+
+    // 2. High-Speed Backend Fallback if direct fetch is blocked by network
+    if (!translatedText) {
+      try {
+        const resp = await fetch('api.php?action=translate_text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: rawText, target_lang: targetLang })
+        });
+        const data = await resp.json();
+        if (data && data.success && data.translated) {
+          translatedText = data.translated;
+        }
+      } catch (e) {
+        console.warn('[Translate] Backend endpoint error:', e);
+      }
+    }
+
+    if (!translatedText) {
+      throw new Error('Unable to translate message');
+    }
+
+    // Cache the result
+    window.MESSAGE_TRANSLATIONS_CACHE[cacheKey] = translatedText;
+    renderTranslationBox(msgId, rawText, translatedText, targetLang);
+
+  } catch (err) {
+    console.error('[Translate Error]', err);
+    box.innerHTML = `
+      <div class="mt-1.5 p-2 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between">
+        <span class="text-[11px]">Translation failed. Check network connection.</span>
+        <button type="button" onclick="translateMessageToLang('${msgId}', '${targetLang}')" class="text-[10px] font-bold text-rose-800 underline ml-2 cursor-pointer">Retry</button>
+      </div>
+    `;
+  }
+}
+
+function renderTranslationBox(msgId, originalText, translatedText, targetLang) {
+  const box = document.getElementById(`trans-box-${msgId}`);
+  if (!box) return;
+
+  window.ACTIVE_MESSAGE_TRANSLATIONS[msgId] = targetLang;
+  box.classList.remove('hidden');
+
+  const langButtonsHtml = TRANSLATION_LANGUAGES.map(lang => {
+    const isCur = (lang.code === targetLang);
+    const activeClass = isCur 
+      ? 'bg-emerald-700 text-white shadow-2xs font-bold ring-1 ring-emerald-600' 
+      : 'bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 font-medium';
+    return `
+      <button type="button" 
+              onclick="translateMessageToLang('${msgId}', '${lang.code}')" 
+              class="px-1.5 py-0.5 rounded text-[10px] transition cursor-pointer ${activeClass}" 
+              title="Translate to ${lang.label}">
+        ${lang.native}
+      </button>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="mt-1.5 p-2.5 rounded-xl bg-gradient-to-br from-emerald-50/95 via-teal-50/90 to-slate-50 border border-emerald-300/80 shadow-xs space-y-1.5 text-xs text-left">
+      <div class="flex items-center justify-between gap-1 flex-wrap text-[10px]">
+        <div class="flex items-center gap-1 font-bold text-emerald-950">
+          <span class="material-symbols-outlined text-[13px] text-emerald-700">g_translate</span>
+          <span>${getLangNativeName(targetLang)}:</span>
+        </div>
+        
+        <div class="flex items-center gap-1 flex-wrap">
+          ${langButtonsHtml}
+          <button type="button" onclick="hideMessageTranslation('${msgId}')" class="text-slate-400 hover:text-slate-800 ml-1 p-0.5 font-bold hover:scale-110 transition cursor-pointer" title="Close Translation">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-800 font-medium leading-relaxed bg-white/95 p-2 rounded-lg border border-emerald-200/70 shadow-2xs select-text">
+        ${translatedText.replace(/\n/g, '<br>')}
+      </div>
+    </div>
+  `;
+}
+
+function hideMessageTranslation(msgId) {
+  const box = document.getElementById(`trans-box-${msgId}`);
+  if (box) {
+    box.innerHTML = '';
+    box.classList.add('hidden');
+  }
+  delete window.ACTIVE_MESSAGE_TRANSLATIONS[msgId];
+}
+
+// Global Exports
+window.toggleTranslateMessage = toggleTranslateMessage;
+window.translateMessageToLang = translateMessageToLang;
+window.renderTranslationBox = renderTranslationBox;
+window.hideMessageTranslation = hideMessageTranslation;
+window.getTranslateBtnText = getTranslateBtnText;
 
 window.renderChatStream = renderChatMessages;
 

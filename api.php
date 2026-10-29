@@ -22,6 +22,158 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
     exit;
 }
 
+// =========================================================================
+// ULTRA-FAST ON-DEMAND TRANSLATION (0ms overhead, runs before DB/Sessions)
+// =========================================================================
+if (isset($_GET['action']) && $_GET['action'] === 'translate_text') {
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true) ?? [];
+    $text = trim($input['text'] ?? $_GET['text'] ?? '');
+    $targetLang = trim($input['target_lang'] ?? $_GET['target_lang'] ?? 'ta');
+    $sourceLang = trim($input['source_lang'] ?? $_GET['source_lang'] ?? 'auto');
+
+    if (empty($text)) {
+        echo json_encode(['success' => false, 'error' => 'Text cannot be empty']);
+        exit;
+    }
+
+    $supportedLangs = [
+        'ta' => 'Tamil (தமிழ்)',
+        'en' => 'English',
+        'hi' => 'Hindi (हिंदी)',
+        'te' => 'Telugu (తెలుగు)',
+        'ml' => 'Malayalam (മലയാളം)',
+        'kn' => 'Kannada (ಕನ್ನಡ)'
+    ];
+
+    if (!isset($supportedLangs[$targetLang])) {
+        $targetLang = 'ta';
+    }
+
+    $encodedText = urlencode($text);
+    $url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl={$sourceLang}&tl={$targetLang}&dt=t&q={$encodedText}";
+
+    $translatedText = '';
+    $detectedSource = '';
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+        $response = curl_exec($ch);
+        curl_close($ch);
+    } else {
+        $ctx = stream_context_create(['http' => ['timeout' => 4, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
+        $response = @file_get_contents($url, false, $ctx);
+    }
+
+    if ($response) {
+        $data = json_decode($response, true);
+        if (is_array($data) && isset($data[0]) && is_array($data[0])) {
+            foreach ($data[0] as $segment) {
+                if (isset($segment[0])) {
+                    $translatedText .= $segment[0];
+                }
+            }
+            $detectedSource = $data[2] ?? '';
+        }
+    }
+
+    if (empty($translatedText)) {
+        echo json_encode(['success' => false, 'error' => 'Translation failed']);
+        exit;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'original' => $text,
+        'translated' => $translatedText,
+        'target_lang' => $targetLang,
+        'target_label' => $supportedLangs[$targetLang],
+        'detected_source' => $detectedSource
+    ]);
+    exit;
+}
+
+// =========================================================================
+// ULTRA-FAST ON-DEMAND TRANSLATION (0ms overhead, runs before DB/Sessions)
+// =========================================================================
+if (isset($_GET['action']) && $_GET['action'] === 'translate_text') {
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true) ?? [];
+    $text = trim($input['text'] ?? $_GET['text'] ?? '');
+    $targetLang = trim($input['target_lang'] ?? $_GET['target_lang'] ?? 'ta');
+    $sourceLang = trim($input['source_lang'] ?? $_GET['source_lang'] ?? 'auto');
+
+    if (empty($text)) {
+        echo json_encode(['success' => false, 'error' => 'Text cannot be empty']);
+        exit;
+    }
+
+    $supportedLangs = [
+        'ta' => 'Tamil (தமிழ்)',
+        'en' => 'English',
+        'hi' => 'Hindi (हिंदी)',
+        'te' => 'Telugu (తెలుగు)',
+        'ml' => 'Malayalam (മലയാളം)',
+        'kn' => 'Kannada (ಕನ್ನಡ)'
+    ];
+
+    if (!isset($supportedLangs[$targetLang])) {
+        $targetLang = 'ta';
+    }
+
+    $encodedText = urlencode($text);
+    $url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl={$sourceLang}&tl={$targetLang}&dt=t&q={$encodedText}";
+
+    $translatedText = '';
+    $detectedSource = '';
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+        $response = curl_exec($ch);
+        curl_close($ch);
+    } else {
+        $ctx = stream_context_create(['http' => ['timeout' => 4, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
+        $response = @file_get_contents($url, false, $ctx);
+    }
+
+    if ($response) {
+        $data = json_decode($response, true);
+        if (is_array($data) && isset($data[0]) && is_array($data[0])) {
+            foreach ($data[0] as $segment) {
+                if (isset($segment[0])) {
+                    $translatedText .= $segment[0];
+                }
+            }
+            $detectedSource = $data[2] ?? '';
+        }
+    }
+
+    if (empty($translatedText)) {
+        echo json_encode(['success' => false, 'error' => 'Translation failed']);
+        exit;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'original' => $text,
+        'translated' => $translatedText,
+        'target_lang' => $targetLang,
+        'target_label' => $supportedLangs[$targetLang],
+        'detected_source' => $detectedSource
+    ]);
+    exit;
+}
+
 require_once __DIR__ . '/config/db.php';
 
 if (!headers_sent() && session_status() === PHP_SESSION_NONE) {
@@ -50,6 +202,8 @@ function atomicWriteJson($filePath, $data) {
 }
 
 $action = $_GET['action'] ?? 'get_state';
+
+
 
 // =========================================================================
 // 1. GET FULL CRM STATE FROM MYSQL DATABASE

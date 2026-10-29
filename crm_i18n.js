@@ -1,7 +1,3 @@
-/**
- * GRM WHATSAPP CRM — MULTI-LANGUAGE & I18N TRANSLATION ENGINE
- * Supports: English (en), Tamil (ta), Hindi (hi), Telugu (te), Malayalam (ml), Kannada (kn)
- */
 
 (function () {
   'use strict';
@@ -201,6 +197,8 @@
       'inbox.reassign': 'Reassign',
       'inbox.staff_label': 'Staff',
       'inbox.customer': 'Customer',
+      'inbox.connected_business': 'Connected to Business Number:',
+      'inbox.central_record': 'GRM Central Record',
 
       // Auto-Reply Hub
       'ar.title': 'WhatsApp Pre-Set Templates & Auto-Reply Hub',
@@ -441,6 +439,8 @@
       'inbox.reassign': 'மீண்டும் ஒதுக்கு',
       'inbox.staff_label': 'பணியாளர்',
       'inbox.customer': 'வாடிக்கையாளர்',
+      'inbox.connected_business': 'இணைக்கப்பட்ட வணிக எண்:',
+      'inbox.central_record': 'GRM மையப் பதிவு',
 
       // Auto-Reply Hub
       'ar.title': 'முன்செட் மாதிரிகள் & தானியங்கி பதில் மையம்',
@@ -681,6 +681,8 @@
       'inbox.reassign': 'पुनः सौंपें',
       'inbox.staff_label': 'कर्मचारी',
       'inbox.customer': 'ग्राहक',
+      'inbox.connected_business': 'व्यवसाय नंबर से जुड़ा:',
+      'inbox.central_record': 'GRM केंद्रीय रिकॉर्ड',
 
       // Auto-Reply Hub
       'ar.title': 'प्री-सेट टेम्पलेट और ऑटो-रिप्लाई हब',
@@ -921,6 +923,8 @@
       'inbox.reassign': 'తిరిగి కేటాయించండి',
       'inbox.staff_label': 'సిబ్బంది',
       'inbox.customer': 'కస్టమర్',
+      'inbox.connected_business': 'కనెక్ట్ చేయబడిన వ్యాపార సంఖ్య:',
+      'inbox.central_record': 'GRM సెంట్రల్ రికార్డ్',
 
       // Auto-Reply Hub
       'ar.title': 'ప్రీ-సెట్ టెంప్లేట్‌లు & ఆటో-రిప్లై హబ్',
@@ -1161,6 +1165,8 @@
       'inbox.reassign': 'വീണ്ടും ചുമതലപ്പെടുത്തുക',
       'inbox.staff_label': 'ജീവനക്കാരൻ',
       'inbox.customer': 'ഉപഭോക്താവ്',
+      'inbox.connected_business': 'കണക്റ്റ് ചെയ്ത ബിസിനസ്സ് നമ്പർ:',
+      'inbox.central_record': 'GRM കേന്ദ്ര റെക്കോർഡ്',
 
       // Auto-Reply Hub
       'ar.title': 'പ്രീ-സെറ്റ് ടെംപ്ലേറ്റുകളും ഓട്ടോ-റിപ്ലൈ ഹബ്ബും',
@@ -1401,6 +1407,8 @@
       'inbox.reassign': 'ಮರುನಿಯೋಜಿಸಿ',
       'inbox.staff_label': 'ಸಿಬ್ಬಂದಿ',
       'inbox.customer': 'ಗ್ರಾಹಕ',
+      'inbox.connected_business': 'ಸಂಪರ್ಕಿಸಲಾದ ವ್ಯಾಪಾರ ಸಂಖ್ಯೆ:',
+      'inbox.central_record': 'GRM ಕೇಂದ್ರ ದಾಖಲೆ',
 
       // Auto-Reply Hub
       'ar.title': 'ಪೂರ್ವನಿಗದಿ ಟೆಂಪ್ಲೇಟ್‌ಗಳು & ಆಟೋ-ರಿಪ್ಲೈ ಹಬ್',
@@ -1622,6 +1630,9 @@
     }
     if (typeof window.renderChatHeader === 'function') {
       try { window.renderChatHeader(); } catch (e) {}
+    }
+    if (typeof window.renderChatMessages === 'function') {
+      try { window.renderChatMessages(); } catch (e) {}
     }
     if (window.ACTIVE_VIEW === 'dashboard' && typeof window.renderDashboard === 'function') {
       try { window.renderDashboard(); } catch (e) {}
