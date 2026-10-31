@@ -180,8 +180,8 @@ function extractPaymentAmountFromOCR(rawText) {
     if (numMatch) {
       const val = parseFloat(numMatch[1]);
       const hasPaymentContext = prev.includes('to') || prev.includes('paid') || prev.includes('+91') ||
-                                next.includes('completed') || next.includes('successful') || next.includes('pay again') ||
-                                next.includes('bank') || next.includes('uco') || next.includes('sbi');
+        next.includes('completed') || next.includes('successful') || next.includes('pay again') ||
+        next.includes('bank') || next.includes('uco') || next.includes('sbi');
       if (hasPaymentContext && val !== 2024 && val !== 2025 && val !== 2026 && val !== 2027) {
         return val;
       }
@@ -406,15 +406,14 @@ window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
 // =========================================================================
 const CRM_MODULE_DEFINITIONS = [
   { key: 'inbox', name: 'WhatsApp Inbox & Live Chat', desc: 'Realtime chats, inbound stream, templates & photo sending', icon: 'chat' },
-  { key: 'enquiries', name: 'Customer Enquiries & Leads Hub', desc: 'Lead triage, allocation & customer conversation status', icon: 'support_agent' },
   { key: 'followups', name: 'Customer Follow-up Scheduler', desc: 'Callback calendar, payment promises & reminders', icon: 'schedule' },
   { key: 'catalog', name: 'Live Stock & Garment Catalog', desc: 'Inventory stock, pricing, image library & 1-click sharing', icon: 'inventory_2' },
   { key: 'orders', name: 'WhatsApp Sales Orders', desc: 'Order booking, stock reservations & COD / UPI billing', icon: 'shopping_bag' },
-  { key: 'customers', name: 'Customer 360 & Profiles Directory', desc: 'Customer history, WhatsApp accounts, and tag directory', icon: 'groups' },
+  { key: 'customers', name: 'Customer 360 & Profiles Directory', desc: 'Customer history, WhatsApp accounts, and tag directory', icon: 'groups', viewOnly: true },
   { key: 'dnd', name: 'DND & Opt-Out Customer Hub', desc: 'Blacklist, opt-out compliance & marketing revocation', icon: 'block' },
   { key: 'staff', name: 'Staff & Team Management', desc: 'Team member directory, staff onboarding & role assignment', icon: 'badge' },
   { key: 'analytics', name: 'Staff Performance Analytics & KPIs', desc: 'Team conversions, response latency & volume reports', icon: 'monitoring' },
-  { key: 'audit', name: 'System Audit Trail & Security Logs', desc: 'Tamper-proof event logs, security & staff actions', icon: 'history' },
+  { key: 'audit', name: 'System Audit Trail & Security Logs', desc: 'Tamper-proof event logs, security & staff actions', icon: 'history', viewOnly: true },
   { key: 'settings', name: 'WhatsApp Business Settings', desc: 'Business phone slots, Webhook routing & Softphone config', icon: 'settings' },
   { key: 'backup', name: 'Data Backup & Recovery Hub', desc: 'Full MySQL database snapshot export and zero-loss restore', icon: 'backup' }
 ];
@@ -427,11 +426,11 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: true, delete: true },
     catalog: { view: true, create: true, edit: true, delete: true },
     orders: { view: true, create: true, edit: true, delete: true },
-    customers: { view: true, create: true, edit: true, delete: true },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: true, delete: true },
     staff: { view: true, create: true, edit: true, delete: true },
     analytics: { view: true, create: true, edit: true, delete: true },
-    audit: { view: true, create: true, edit: true, delete: true },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: true, create: true, edit: true, delete: true },
     backup: { view: true, create: true, edit: true, delete: true }
   },
@@ -441,7 +440,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: true, delete: true },
     catalog: { view: true, create: true, edit: true, delete: true },
     orders: { view: true, create: true, edit: true, delete: true },
-    customers: { view: true, create: true, edit: true, delete: true },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: true, delete: true },
     staff: { view: true, create: true, edit: true, delete: false },
     analytics: { view: true, create: true, edit: true, delete: false },
@@ -455,11 +454,11 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: true, delete: false },
     catalog: { view: true, create: false, edit: false, delete: false },
     orders: { view: true, create: true, edit: true, delete: false },
-    customers: { view: true, create: true, edit: true, delete: false },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: false, delete: false },
     staff: { view: false, create: false, edit: false, delete: false },
     analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: false, create: false, edit: false, delete: false },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: false, create: false, edit: false, delete: false },
     backup: { view: false, create: false, edit: false, delete: false }
   },
@@ -469,11 +468,11 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: true, delete: false },
     catalog: { view: true, create: false, edit: false, delete: false },
     orders: { view: false, create: false, edit: false, delete: false },
-    customers: { view: true, create: true, edit: true, delete: false },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: false, delete: false },
     staff: { view: false, create: false, edit: false, delete: false },
     analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: false, create: false, edit: false, delete: false },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: false, create: false, edit: false, delete: false },
     backup: { view: false, create: false, edit: false, delete: false }
   },
@@ -487,7 +486,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     dnd: { view: false, create: false, edit: false, delete: false },
     staff: { view: false, create: false, edit: false, delete: false },
     analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: false, create: false, edit: false, delete: false },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: false, create: false, edit: false, delete: false },
     backup: { view: false, create: false, edit: false, delete: false }
   },
@@ -497,11 +496,11 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: false, delete: false },
     catalog: { view: true, create: false, edit: false, delete: false },
     orders: { view: true, create: false, edit: false, delete: false },
-    customers: { view: true, create: true, edit: false, delete: false },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: false, delete: false },
     staff: { view: false, create: false, edit: false, delete: false },
     analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: false, create: false, edit: false, delete: false },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: false, create: false, edit: false, delete: false },
     backup: { view: false, create: false, edit: false, delete: false }
   }
@@ -518,15 +517,30 @@ function initRolePermissionsState() {
       } else {
         CRM_STATE.rolePermissions = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
       }
-    } catch(e) {
+    } catch (e) {
       CRM_STATE.rolePermissions = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
     }
+  }
+  // Sanitize Customer 360 & System Audit Logs to strictly view-only across all roles
+  if (CRM_STATE && CRM_STATE.rolePermissions) {
+    Object.keys(CRM_STATE.rolePermissions).forEach(r => {
+      if (CRM_STATE.rolePermissions[r]?.customers) {
+        CRM_STATE.rolePermissions[r].customers.create = false;
+        CRM_STATE.rolePermissions[r].customers.edit = false;
+        CRM_STATE.rolePermissions[r].customers.delete = false;
+      }
+      if (CRM_STATE.rolePermissions[r]?.audit) {
+        CRM_STATE.rolePermissions[r].audit.create = false;
+        CRM_STATE.rolePermissions[r].audit.edit = false;
+        CRM_STATE.rolePermissions[r].audit.delete = false;
+      }
+    });
   }
 }
 window.initRolePermissionsState = initRolePermissionsState;
 
 function getUserAssignedRoleName(user) {
-  if (!user) user = (typeof CURRENT_USER !== 'undefined' ? CURRENT_USER : null);
+  if (!user) user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof window !== 'undefined' && window.CURRENT_USER ? window.CURRENT_USER : null);
   if (!user) return 'Super Admin';
 
   if (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || (user.title && user.title.includes('Admin Manager'))) {
@@ -558,8 +572,13 @@ function getUserAssignedRoleName(user) {
 window.getUserAssignedRoleName = getUserAssignedRoleName;
 
 function canUserPerformAction(moduleName, action) {
-  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
+  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof window !== 'undefined' && window.CURRENT_USER) ? window.CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null));
   if (!user) return true;
+
+  // Audit Logs and Customer 360 are strictly view-only modules across all roles (no manual create, edit, or delete actions)
+  if ((moduleName === 'audit' || moduleName === 'customers') && action !== 'view') {
+    return false;
+  }
 
   if (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || (user.title && user.title.includes('Admin Manager (Full Control)'))) {
     return true;
@@ -577,12 +596,41 @@ function canUserPerformAction(moduleName, action) {
   }
 
   const rolePerms = (CRM_STATE?.rolePermissions && CRM_STATE.rolePermissions[roleName]) || DEFAULT_ROLE_PERMISSIONS[roleName];
+
+  // For enquiries, autoreply & broadcast: WhatsApp Inbox sub-modules — strictly inherit from inbox permissions
+  if (moduleName === 'autoreply' || moduleName === 'broadcast' || moduleName === 'enquiries') {
+    const inboxPerm = (rolePerms && rolePerms.inbox) ? rolePerms.inbox[action] : undefined;
+    if (inboxPerm !== undefined) {
+      return Boolean(inboxPerm);
+    }
+    if (rolePerms && rolePerms[moduleName] && rolePerms[moduleName][action] !== undefined) {
+      return Boolean(rolePerms[moduleName][action]);
+    }
+    return canUserPerformAction('inbox', action);
+  }
+
   if (!rolePerms || !rolePerms[moduleName]) {
     const sensitive = ['settings', 'backup', 'staff', 'audit', 'analytics'];
     if (action === 'view') {
       return !sensitive.includes(moduleName);
     }
     return false;
+  }
+
+  // For customers (Customer 360): strictly view-only directory & profile hub
+  if (moduleName === 'customers') {
+    if (action === 'view') {
+      return Boolean(rolePerms.customers ? rolePerms.customers.view : true);
+    }
+    return false; // Customer 360 has no create, edit, or delete actions
+  }
+
+  // For audit (System Audit Trail & Security Logs): strictly view-only tamper-proof log
+  if (moduleName === 'audit') {
+    if (action === 'view') {
+      return Boolean(rolePerms.audit ? rolePerms.audit.view : false);
+    }
+    return false; // Audit logs have no manual create, edit, or delete actions
   }
 
   return Boolean(rolePerms[moduleName][action]);
@@ -612,22 +660,49 @@ function enforceGranularActionPermissions() {
   const btnAddStaffTable = document.getElementById('btn-add-staff-table');
   if (btnAddStaffTable) btnAddStaffTable.style.display = canStaffCreate ? '' : 'none';
 
-  if (typeof ACTIVE_STAFF_TAB !== 'undefined') {
-    if (ACTIVE_STAFF_TAB === 'create' && !canStaffCreate) {
-      if (typeof switchStaffTab === 'function') switchStaffTab('list');
-    }
-    if (ACTIVE_STAFF_TAB === 'roles' && !canStaffEdit) {
-      if (typeof switchStaffTab === 'function') switchStaffTab('list');
-    }
+  const currentStaffTab = (typeof window !== 'undefined' && window.ACTIVE_STAFF_TAB) ? window.ACTIVE_STAFF_TAB : (typeof ACTIVE_STAFF_TAB !== 'undefined' ? ACTIVE_STAFF_TAB : 'list');
+  if (currentStaffTab === 'create' && !canStaffCreate) {
+    if (typeof switchStaffTab === 'function') switchStaffTab('list');
+  }
+  if (currentStaffTab === 'roles' && !canStaffEdit) {
+    if (typeof switchStaffTab === 'function') switchStaffTab('list');
   }
 
   // 2. Orders Module Actions
+  const canOrderView = isSuperAdmin || canUserPerformAction('orders', 'view');
   const canOrderCreate = isSuperAdmin || canUserPerformAction('orders', 'create');
-  document.querySelectorAll('.btn-move-to-order, [data-action="move-to-order"]').forEach(el => {
+  const canOrderEdit = isSuperAdmin || canUserPerformAction('orders', 'edit');
+  const canOrderDelete = isSuperAdmin || canUserPerformAction('orders', 'delete');
+
+  const navOrdersGroup = document.getElementById('nav-orders-group');
+  if (navOrdersGroup) navOrdersGroup.style.display = canOrderView ? '' : 'none';
+  const navOrders = document.getElementById('nav-orders');
+  if (navOrders) navOrders.style.display = canOrderView ? '' : 'none';
+  const navOrdersSub = document.getElementById('nav-orders-submodules');
+  if (navOrdersSub && !canOrderView) navOrdersSub.style.display = 'none';
+
+  // Create controls (New standalone order booking)
+  const btnHeaderBookOrder = document.getElementById('btn-header-book-order');
+  if (btnHeaderBookOrder) btnHeaderBookOrder.style.display = canOrderCreate ? '' : 'none';
+  document.querySelectorAll('[onclick*="openOrderModal"]:not(.btn-move-to-order)').forEach(el => {
     el.style.display = canOrderCreate ? '' : 'none';
   });
+
+  // Edit controls for Move to Order (strictly requires Edit access)
+  const canMoveToOrderPerm = isSuperAdmin || canUserPerformAction('orders', 'edit') || canUserPerformAction('inbox', 'edit');
+  document.querySelectorAll('.btn-move-to-order, [data-action="move-to-order"], [onclick*="modal-convert-order"], [onclick*="openConvertOrderModal"], [onclick*="openOrderFromSingleChosenProduct"], [onclick*="openOrderFromSelectedChosenProducts"]').forEach(el => {
+    el.style.display = canMoveToOrderPerm ? '' : 'none';
+  });
   const chosenProductsBulkBar = document.getElementById('chosen-products-bulk-bar');
-  if (chosenProductsBulkBar && !canOrderCreate) chosenProductsBulkBar.style.display = 'none';
+  if (chosenProductsBulkBar && !canMoveToOrderPerm) chosenProductsBulkBar.style.display = 'none';
+
+  // Edit controls in modal
+  const btnSaveEditOrder = document.getElementById('btn-save-edit-order');
+  if (btnSaveEditOrder) btnSaveEditOrder.style.display = canOrderEdit ? '' : 'none';
+
+  // Delete controls in modal
+  const btnDeleteOrderModal = document.getElementById('btn-delete-order-modal');
+  if (btnDeleteOrderModal) btnDeleteOrderModal.style.display = canOrderDelete ? '' : 'none';
 
   // 3. Backup Hub Actions
   const canBackupCreate = isSuperAdmin || canUserPerformAction('backup', 'create');
@@ -642,42 +717,110 @@ function enforceGranularActionPermissions() {
   if (cardReset) cardReset.style.display = canBackupDelete ? '' : 'none';
 
   // 4. Catalog Actions
+  const canCatView = isSuperAdmin || canUserPerformAction('catalog', 'view');
   const canCatCreate = isSuperAdmin || canUserPerformAction('catalog', 'create');
+  const canCatEdit = isSuperAdmin || canUserPerformAction('catalog', 'edit');
   const canCatDelete = isSuperAdmin || canUserPerformAction('catalog', 'delete');
+
+  const navCatalog = document.getElementById('nav-catalog');
+  if (navCatalog) navCatalog.style.display = canCatView ? '' : 'none';
+
+  // Create controls (+ Add Product buttons, Add Category / Subcategory forms)
   document.querySelectorAll('#btn-add-product, #btn-open-add-product-modal, [onclick*="openAddProductModal"], [onclick*="openCategoryModal"]').forEach(el => {
     el.style.display = canCatCreate ? '' : 'none';
   });
-  document.querySelectorAll('[onclick*="deleteProduct"]').forEach(el => {
+  const formAddCat = document.getElementById('form-add-category');
+  if (formAddCat) formAddCat.style.display = canCatCreate ? '' : 'none';
+  const formAddSubcat = document.getElementById('form-add-subcategory');
+  if (formAddSubcat) formAddSubcat.style.display = canCatCreate ? '' : 'none';
+
+  // Edit controls (Price edit, Stock edit, Full Product edit, Bulk Price, WA Sync, Card photo hover)
+  document.querySelectorAll('#btn-toggle-bulk-price, #btn-open-bulk-modal, [onclick*="openSinglePriceModal"], [onclick*="openQuickStockModal"], [onclick*="openEditProductModal"], [onclick*="openBulkPriceModal"], [onclick*="triggerCardPhotoUpload"]').forEach(el => {
+    el.style.display = canCatEdit ? '' : 'none';
+  });
+  const btnSyncWaCat = document.getElementById('btn-sync-wa-catalog');
+  if (btnSyncWaCat) btnSyncWaCat.style.display = (canCatCreate || canCatEdit) ? '' : 'none';
+
+  // Delete controls (Product delete, Family delete, Variant delete, Category delete, Subcategory delete)
+  document.querySelectorAll('#prod-delete-btn, [onclick*="confirmDeleteProduct"], [onclick*="deleteProduct"], [onclick*="handleDeleteProduct"], [onclick*="deleteCategory"], [onclick*="deleteSubcategory"]').forEach(el => {
     el.style.display = canCatDelete ? '' : 'none';
   });
 
-  // 5. Customers Actions
+  // 5. Customers Actions (Customer 360 & Tag Directory)
+  const canCustView = isSuperAdmin || canUserPerformAction('customers', 'view');
   const canCustCreate = isSuperAdmin || canUserPerformAction('customers', 'create');
+  const canCustEdit = isSuperAdmin || canUserPerformAction('customers', 'edit');
   const canCustDelete = isSuperAdmin || canUserPerformAction('customers', 'delete');
-  document.querySelectorAll('#btn-add-customer, [onclick*="openNewCustomerModal"]').forEach(el => {
+
+  const navCustomers = document.getElementById('nav-customers');
+  if (navCustomers) navCustomers.style.display = canCustView ? '' : 'none';
+
+  // Create controls
+  document.querySelectorAll('#btn-add-customer, [onclick*="openNewCustomerModal"], [onclick*="openAddCustomerModal"]').forEach(el => {
     el.style.display = canCustCreate ? '' : 'none';
   });
+
+  // Edit controls (Customer Profile Edit & Save buttons)
+  document.querySelectorAll('[onclick*="toggleCustomerEditMode"], #form-quick-customer-edit button[type="submit"], #btn-edit-customer-profile').forEach(el => {
+    el.style.display = canCustEdit ? '' : 'none';
+  });
+
+  // Delete controls
   document.querySelectorAll('[onclick*="deleteCustomer"]').forEach(el => {
     el.style.display = canCustDelete ? '' : 'none';
   });
 
   // 6. Follow-ups Actions
+  const canFuView = isSuperAdmin || canUserPerformAction('followups', 'view');
   const canFuCreate = isSuperAdmin || canUserPerformAction('followups', 'create');
+  const canFuEdit = isSuperAdmin || canUserPerformAction('followups', 'edit');
   const canFuDelete = isSuperAdmin || canUserPerformAction('followups', 'delete');
-  document.querySelectorAll('#btn-schedule-followup, [onclick*="openScheduleFollowup"]').forEach(el => {
+
+  const navFollowups = document.getElementById('nav-followups');
+  if (navFollowups) navFollowups.style.display = canFuView ? '' : 'none';
+
+  // Create controls: + Schedule Follow-up buttons and reminder triggers
+  document.querySelectorAll('#btn-schedule-followup, #btn-schedule-new-followup, [onclick*="openScheduleFollowup"], [onclick*="openFollowUpModal"], [onclick*="openFollowupModal"]').forEach(el => {
     el.style.display = canFuCreate ? '' : 'none';
   });
-  document.querySelectorAll('[onclick*="deleteFollowup"]').forEach(el => {
+
+  // Edit controls: Outcome logging, notes, mark paid, staff reassignments
+  document.querySelectorAll('[onclick*="openEditFollowupModal"], [onclick*="handleReassignFollowup"], [onclick*="openRescheduleModal"], [onclick*="openFollowupOutcomeModal"], [onclick*="markPaymentReceivedAndConvert"]').forEach(el => {
+    el.style.display = canFuEdit ? '' : 'none';
+  });
+
+  // Delete controls: Card deletions
+  document.querySelectorAll('[onclick*="deleteFollowupCard"], [onclick*="deleteFollowup"], [onclick*="handleDeleteFollowup"]').forEach(el => {
     el.style.display = canFuDelete ? '' : 'none';
   });
 
-  // 7. DND Actions
+  // 7. DND & Opt-Out Module Actions — full RBAC (view/create/edit/delete)
+  const canDndView_s7 = isSuperAdmin || canUserPerformAction('dnd', 'view');
   const canDndCreate = isSuperAdmin || canUserPerformAction('dnd', 'create');
+  const canDndEdit_s7 = isSuperAdmin || canUserPerformAction('dnd', 'edit');
   const canDndDelete = isSuperAdmin || canUserPerformAction('dnd', 'delete');
+
+  // View: sidebar nav item visibility
+  const navDndItem = document.getElementById('nav-dnd') || document.querySelector('[href="#dnd"], [data-view="dnd"]');
+  if (navDndItem) navDndItem.style.display = canDndView_s7 ? '' : 'none';
+
+  // If user has no view access and is currently on the DND page, redirect to dashboard
+  if (!canDndView_s7 && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'dnd') {
+    if (typeof switchView === 'function') switchView('dashboard');
+  }
+
+  // Create: mark-as-DND buttons
   document.querySelectorAll('#btn-add-dnd, [onclick*="openAddToDnd"]').forEach(el => {
     el.style.display = canDndCreate ? '' : 'none';
   });
-  document.querySelectorAll('[onclick*="revokeDnd"]').forEach(el => {
+
+  // Edit: Assign-to-staff buttons in DND list
+  document.querySelectorAll('[onclick*="openStaffAssignForDndCustomer"]').forEach(el => {
+    el.style.display = canDndEdit_s7 ? '' : 'none';
+  });
+
+  // Delete: Re-activate (revoke DND) buttons
+  document.querySelectorAll('[onclick*="reactivateCustomerFromDND"], [onclick*="revokeDnd"]').forEach(el => {
     el.style.display = canDndDelete ? '' : 'none';
   });
 
@@ -686,6 +829,440 @@ function enforceGranularActionPermissions() {
   document.querySelectorAll('[onclick*="openStaffAssignModal"], [onclick*="quickReassignQueryStaff"]').forEach(el => {
     el.style.display = canInboxEdit ? '' : 'none';
   });
+  document.querySelectorAll('select[onchange*="quickReassignQueryStaff"]').forEach(sel => {
+    const parentContainer = sel.closest('.border-t') || sel.parentElement;
+    if (parentContainer) parentContainer.style.display = canInboxEdit ? '' : 'none';
+  });
+
+  // 9. Auto-Reply Hub Pre-Set Rules Actions
+  const canArView = isSuperAdmin || canUserPerformAction('autoreply', 'view');
+  const canArCreate = isSuperAdmin || canUserPerformAction('autoreply', 'create');
+  const canArEdit = isSuperAdmin || canUserPerformAction('autoreply', 'edit');
+  const canArDelete = isSuperAdmin || canUserPerformAction('autoreply', 'delete');
+
+  const navSubAr = document.getElementById('nav-inbox-sub-autoreply');
+  if (navSubAr) navSubAr.style.display = canArView ? '' : 'none';
+  const tabSubAr = document.getElementById('tab-sub-inbox-autoreply');
+  if (tabSubAr) tabSubAr.style.display = canArView ? '' : 'none';
+
+  if (!canArView && typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' && ACTIVE_INBOX_SUBMODULE === 'autoreply') {
+    if (typeof switchInboxSubmodule === 'function') switchInboxSubmodule('chats');
+  }
+
+  // Create controls (+ Add Pre-Set Question & Reply)
+  const btnAddArRule = document.getElementById('btn-add-autoreply-rule');
+  if (btnAddArRule) btnAddArRule.style.display = canArCreate ? '' : 'none';
+  document.querySelectorAll('[onclick*="openRuleEditor(null)"]').forEach(el => {
+    el.style.display = canArCreate ? '' : 'none';
+  });
+
+  // Edit controls (Edit Rule buttons, Master Bot toggle, Rule toggles)
+  document.querySelectorAll('[onclick*="editRule"]').forEach(el => {
+    el.style.display = canArEdit ? '' : 'none';
+  });
+  // Master Auto-Reply Bot toggle: Enable ONLY in edit options (disabled in view actions)
+  const botMasterToggle = document.getElementById('autoreply-master-toggle') || document.getElementById('ar-bot-master-toggle') || document.querySelector('[onchange*="toggleAutoReplyMaster"]');
+  if (botMasterToggle) {
+    botMasterToggle.disabled = !canArEdit;
+    const masterLabel = document.getElementById('autoreply-master-label') || botMasterToggle.closest('label');
+    if (masterLabel) {
+      if (!canArEdit) {
+        masterLabel.classList.remove('cursor-pointer');
+        masterLabel.classList.add('cursor-not-allowed', 'opacity-50');
+        masterLabel.style.pointerEvents = 'none';
+        masterLabel.title = 'View Access Only: Modifying auto-reply bot is restricted';
+      } else {
+        masterLabel.classList.add('cursor-pointer');
+        masterLabel.classList.remove('cursor-not-allowed', 'opacity-50');
+        masterLabel.style.pointerEvents = '';
+        masterLabel.title = 'Toggle Auto-Reply Engine Globally';
+      }
+    }
+  }
+
+  // Resume Auto-Reply button in paused banner
+  document.querySelectorAll('[onclick*="toggleAutoReplyMaster"]').forEach(el => {
+    if (el.tagName === 'BUTTON') {
+      el.disabled = !canArEdit;
+      if (!canArEdit) {
+        el.classList.add('opacity-50', 'cursor-not-allowed');
+        el.style.pointerEvents = 'none';
+        el.title = 'View Access Only: Resuming auto-reply bot is restricted';
+      } else {
+        el.classList.remove('opacity-50', 'cursor-not-allowed');
+        el.style.pointerEvents = '';
+        el.title = 'Turn Auto-Reply Back ON';
+      }
+    }
+  });
+
+  // Individual Rule Toggle switches on cards: Enable ONLY in edit options (disabled in view actions)
+  document.querySelectorAll('input[onchange*="toggleRuleEnabled"]').forEach(el => {
+    el.disabled = !canArEdit;
+    const label = el.closest('label') || el.parentElement;
+    if (label) {
+      if (!canArEdit) {
+        label.classList.remove('cursor-pointer');
+        label.classList.add('cursor-not-allowed', 'opacity-50');
+        label.style.pointerEvents = 'none';
+        label.title = 'View Access Only: Modifying auto-reply rules is restricted';
+      } else {
+        label.classList.add('cursor-pointer');
+        label.classList.remove('cursor-not-allowed', 'opacity-50');
+        label.style.pointerEvents = '';
+        label.title = 'Toggle Auto-Reply for this rule';
+      }
+    }
+    const indicatorDiv = el.nextElementSibling || (label ? label.querySelector('div') : null);
+    if (indicatorDiv) {
+      if (!canArEdit) {
+        indicatorDiv.classList.remove('peer-checked:bg-emerald-600');
+        indicatorDiv.classList.add('peer-checked:bg-emerald-600/40', 'peer-disabled:cursor-not-allowed');
+      } else {
+        indicatorDiv.classList.remove('peer-checked:bg-emerald-600/40', 'peer-disabled:cursor-not-allowed');
+        indicatorDiv.classList.add('peer-checked:bg-emerald-600');
+      }
+    }
+  });
+
+  // Delete controls (Delete Rule trash buttons)
+  document.querySelectorAll('[onclick*="deleteRule"]').forEach(el => {
+    el.style.display = canArDelete ? '' : 'none';
+  });
+
+  // 10. WhatsApp Inbox — Automated Broadcast Engine Actions
+  const canBcastView = isSuperAdmin || canUserPerformAction('broadcast', 'view');
+  const canBcastCreate = isSuperAdmin || canUserPerformAction('broadcast', 'create');
+  const canBcastEdit = isSuperAdmin || canUserPerformAction('broadcast', 'edit');
+  const canBcastDelete = isSuperAdmin || canUserPerformAction('broadcast', 'delete');
+
+  // Navigation tabs for Broadcast
+  const navSubBcast = document.getElementById('nav-inbox-sub-broadcast');
+  if (navSubBcast) navSubBcast.style.display = canBcastView ? '' : 'none';
+  const tabSubBcast = document.getElementById('tab-sub-inbox-broadcast');
+  if (tabSubBcast) tabSubBcast.style.display = canBcastView ? '' : 'none';
+
+  if (!canBcastView && typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' && ACTIVE_INBOX_SUBMODULE === 'broadcast') {
+    if (typeof switchInboxSubmodule === 'function') switchInboxSubmodule('chats');
+  }
+
+  // Dispatch / Start controls
+  const btnBcastStart = document.getElementById('btn-bcast-start');
+  if (btnBcastStart) {
+    if (canBcastCreate) {
+      btnBcastStart.style.display = '';
+      const viewOnlyBadge = document.getElementById('bcast-view-only-badge');
+      if (viewOnlyBadge) viewOnlyBadge.remove();
+    } else {
+      btnBcastStart.style.display = 'none';
+      if (!document.getElementById('bcast-view-only-badge') && btnBcastStart.parentElement) {
+        const badge = document.createElement('div');
+        badge.id = 'bcast-view-only-badge';
+        badge.className = 'w-full py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-center text-slate-500 font-bold text-xs flex items-center justify-center gap-1.5 select-none shadow-2xs';
+        badge.innerHTML = '<span class="material-symbols-outlined text-[15px] text-slate-400">lock</span><span>View-Only Mode: Broadcast dispatch restricted</span>';
+        btnBcastStart.parentElement.appendChild(badge);
+      }
+    }
+  }
+
+  // Template Creation & Saving controls
+  const btnBcastSaveNew = document.getElementById('btn-bcast-save-new');
+  if (btnBcastSaveNew) btnBcastSaveNew.style.display = canBcastCreate ? '' : 'none';
+
+  // Template Editing controls
+  const btnBcastSaveChanges = document.getElementById('btn-bcast-save-changes');
+  if (btnBcastSaveChanges) btnBcastSaveChanges.style.display = canBcastEdit ? '' : 'none';
+  const btnBcastRename = document.getElementById('btn-bcast-rename');
+  if (btnBcastRename) btnBcastRename.style.display = canBcastEdit ? '' : 'none';
+  const btnBcastAddVar = document.getElementById('btn-bcast-add-var');
+  if (btnBcastAddVar) btnBcastAddVar.style.display = canBcastEdit ? '' : 'none';
+
+  // Quick Insert buttons
+  document.querySelectorAll('[onclick*="insertBroadcastVariable"]').forEach(el => {
+    el.style.display = canBcastEdit ? '' : 'none';
+  });
+
+  // Dropzone & Image Upload controls
+  const dropzone = document.getElementById('bcast-upload-dropzone');
+  if (dropzone) {
+    if (canBcastEdit) {
+      dropzone.style.pointerEvents = '';
+      dropzone.style.opacity = '';
+    } else {
+      dropzone.style.pointerEvents = 'none';
+      dropzone.style.opacity = '0.6';
+    }
+  }
+  const bcastImgUrl = document.getElementById('bcast-image-url');
+  if (bcastImgUrl) {
+    bcastImgUrl.readOnly = !canBcastEdit;
+    bcastImgUrl.disabled = !canBcastEdit;
+  }
+  const bcastImgUrlManual = document.getElementById('bcast-image-url-manual');
+  if (bcastImgUrlManual) {
+    bcastImgUrlManual.readOnly = !canBcastEdit;
+    bcastImgUrlManual.disabled = !canBcastEdit;
+  }
+  document.querySelectorAll('[onclick*="removeBroadcastUploadedImage"]').forEach(el => {
+    el.style.display = canBcastEdit ? '' : 'none';
+  });
+
+  // Composer textarea
+  const bcastMsgText = document.getElementById('bcast-message-text');
+  if (bcastMsgText) {
+    bcastMsgText.readOnly = !canBcastEdit;
+    if (!canBcastEdit) bcastMsgText.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastMsgText.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+
+  // Dynamic tags container inputs & buttons
+  document.querySelectorAll('#bcast-dynamic-fields-container input').forEach(inp => {
+    inp.readOnly = !canBcastEdit;
+    if (!canBcastEdit) inp.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else inp.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  });
+  document.querySelectorAll('#bcast-dynamic-fields-container button').forEach(btn => {
+    btn.style.display = canBcastEdit ? '' : 'none';
+  });
+
+  // Target numbers textarea
+  const bcastTargetNumbers = document.getElementById('bcast-target-numbers');
+  if (bcastTargetNumbers) {
+    bcastTargetNumbers.readOnly = !canBcastEdit;
+    if (!canBcastEdit) bcastTargetNumbers.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastTargetNumbers.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+  const bcastCustomNumbersInput = document.getElementById('bcast-custom-numbers-input');
+  if (bcastCustomNumbersInput) {
+    bcastCustomNumbersInput.readOnly = !canBcastEdit;
+    if (!canBcastEdit) bcastCustomNumbersInput.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastCustomNumbersInput.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+
+  // Target audience selector
+  const bcastAudience = document.getElementById('bcast-target-audience');
+  if (bcastAudience) {
+    bcastAudience.disabled = !canBcastCreate;
+    if (!canBcastCreate) bcastAudience.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastAudience.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+
+  // Sending delay selector
+  const bcastDelay = document.getElementById('bcast-delay-select');
+  if (bcastDelay) {
+    bcastDelay.disabled = !canBcastCreate;
+    if (!canBcastCreate) bcastDelay.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastDelay.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+
+  // Template Deletion controls
+  const btnBcastDelete = document.getElementById('btn-bcast-delete');
+  if (btnBcastDelete) btnBcastDelete.style.display = canBcastDelete ? '' : 'none';
+
+  // ── SECTION 8: LIVE CHAT COMPOSER & INBOX CONTROLS ──────────────────────
+  if (ACTIVE_VIEW === 'inbox') {
+    const canSendMsg = isSuperAdmin || canUserPerformAction('inbox', 'create');
+
+    // Chat Input Textarea
+    const chatInput = document.getElementById('chat-input-text');
+    if (chatInput) {
+      chatInput.readOnly = !canSendMsg;
+      chatInput.disabled = !canSendMsg;
+      chatInput.placeholder = canSendMsg
+        ? 'Type a message or response to customer (Press Enter to send)'
+        : '🔒 View-Only: Sending messages is not permitted';
+      if (!canSendMsg) {
+        chatInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'select-none');
+      } else {
+        chatInput.classList.remove('bg-slate-100', 'cursor-not-allowed', 'select-none');
+      }
+    }
+
+    // Send Button
+    const sendBtn = document.getElementById('btn-send-message');
+    if (sendBtn) {
+      sendBtn.style.display = canSendMsg ? '' : 'none';
+    }
+
+    // Stock & Share Button
+    const stockShareBtn = document.getElementById('btn-stock-share');
+    if (stockShareBtn) {
+      stockShareBtn.style.display = canSendMsg ? '' : 'none';
+    }
+
+    // Photo Upload Button
+    const photoUploadBtn = document.getElementById('btn-chat-photo-upload');
+    if (photoUploadBtn) {
+      photoUploadBtn.style.display = canSendMsg ? '' : 'none';
+    }
+    const photoUploadInput = document.getElementById('chat-image-file-input');
+    if (photoUploadInput) {
+      photoUploadInput.disabled = !canSendMsg;
+    }
+
+    // Quick Template chips — hide/disable if view-only
+    document.querySelectorAll('[onclick*="applyQuickTemplate"], [onclick*="sendPresetTemplate"]').forEach(el => {
+      el.style.pointerEvents = canSendMsg ? '' : 'none';
+      el.style.opacity = canSendMsg ? '' : '0.4';
+    });
+  }
+
+  // ── SECTION 11: SETTINGS MODULE ACTIONS (VIEW, CREATE, EDIT, DELETE) ────
+  const canSetView = isSuperAdmin || canUserPerformAction('settings', 'view');
+  const canSetCreate = isSuperAdmin || canUserPerformAction('settings', 'create');
+  const canSetEdit = isSuperAdmin || canUserPerformAction('settings', 'edit');
+  const canSetDelete = isSuperAdmin || canUserPerformAction('settings', 'delete');
+
+  const navSettingsEl = document.getElementById('nav-settings');
+  if (navSettingsEl) {
+    navSettingsEl.style.display = canSetView ? '' : 'none';
+  }
+
+  // If user is currently on settings view without view permission, redirect to dashboard
+  if (!canSetView && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'settings') {
+    if (typeof switchView === 'function') switchView('dashboard');
+  }
+
+  if (ACTIVE_VIEW === 'settings') {
+    // Top Add Phone Button (Create)
+    document.querySelectorAll('[onclick*="addNewWhatsAppAccountSlot"]').forEach(el => {
+      el.style.display = canSetCreate ? '' : 'none';
+    });
+
+    // Manual Settings Form Inputs (Edit)
+    const setInputs = ['cfg-phone-number', 'cfg-display-name', 'cfg-provider', 'cfg-verify-token', 'cfg-brand-name', 'cfg-brand-tagline', 'cfg-brand-website'];
+    setInputs.forEach(id => {
+      const inp = document.getElementById(id);
+      if (inp) {
+        inp.disabled = !canSetEdit;
+        inp.readOnly = !canSetEdit;
+        if (!canSetEdit) inp.classList.add('bg-slate-100', 'cursor-not-allowed');
+        else inp.classList.remove('bg-slate-100', 'cursor-not-allowed');
+      }
+    });
+
+    // Brand Header Toggle: Enable ONLY in edit options (disabled in view actions)
+    const brandToggle = document.getElementById('cfg-brand-header-toggle');
+    if (brandToggle) {
+      brandToggle.disabled = !canSetEdit;
+      const toggleLabel = brandToggle.closest('label');
+      if (toggleLabel) {
+        if (!canSetEdit) {
+          toggleLabel.classList.remove('cursor-pointer');
+          toggleLabel.classList.add('cursor-not-allowed', 'opacity-60');
+          toggleLabel.style.pointerEvents = 'none';
+          toggleLabel.title = 'View-Only Mode: Toggling brand header is restricted';
+        } else {
+          toggleLabel.classList.add('cursor-pointer');
+          toggleLabel.classList.remove('cursor-not-allowed', 'opacity-60');
+          toggleLabel.style.pointerEvents = '';
+          toggleLabel.title = '';
+        }
+      }
+    }
+
+    // Save Brand Identity Button: Disable in view actions, enable only in edit options
+    const btnSaveBrand = document.getElementById('btn-save-brand-settings') || document.querySelector('[onclick*="saveBrandSettings"]');
+    if (btnSaveBrand) {
+      btnSaveBrand.disabled = !canSetEdit;
+      if (!canSetEdit) {
+        btnSaveBrand.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btnSaveBrand.classList.remove('hover:scale-105', 'hover:bg-indigo-700', 'cursor-pointer');
+        btnSaveBrand.title = 'View-Only Mode: Modifying brand identity is restricted';
+      } else {
+        btnSaveBrand.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btnSaveBrand.classList.add('hover:scale-105', 'hover:bg-indigo-700', 'cursor-pointer');
+        btnSaveBrand.title = '';
+      }
+    }
+
+    // Save & Connect Submit Button: Disable in view actions, enable only in edit options
+    const btnSavePhone = document.querySelector('#settings-tab-manual button[type="submit"]');
+    if (btnSavePhone) {
+      btnSavePhone.disabled = !canSetEdit;
+      if (!canSetEdit) {
+        btnSavePhone.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btnSavePhone.classList.remove('hover:scale-105', 'hover:bg-brand-waDark', 'cursor-pointer');
+        btnSavePhone.title = 'View-Only Mode: Saving WhatsApp configuration is restricted';
+      } else {
+        btnSavePhone.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btnSavePhone.classList.add('hover:scale-105', 'hover:bg-brand-waDark', 'cursor-pointer');
+        btnSavePhone.title = '';
+      }
+    }
+
+    // Test Inbound Button
+    document.querySelectorAll('[onclick*="handleSendQuickTestToNumber"]').forEach(el => {
+      el.style.display = canSetEdit ? '' : 'none';
+    });
+  }
+
+  // ── SECTION 12: DATA BACKUP & RECOVERY ACTIONS (VIEW, CREATE, EDIT, DELETE) ─
+  const canBakView = isSuperAdmin || canUserPerformAction('backup', 'view');
+  const canBakCreate = isSuperAdmin || canUserPerformAction('backup', 'create');
+  const canBakEdit = isSuperAdmin || canUserPerformAction('backup', 'edit');
+  const canBakDelete = isSuperAdmin || canUserPerformAction('backup', 'delete');
+
+  const navBackupEl = document.getElementById('nav-backup');
+  if (navBackupEl) {
+    navBackupEl.style.display = canBakView ? '' : 'none';
+  }
+
+  // If user is currently on backup view without view permission, redirect to dashboard
+  if (!canBakView && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'backup') {
+    if (typeof switchView === 'function') switchView('dashboard');
+  }
+
+  if (ACTIVE_VIEW === 'backup') {
+    // 1. Export Backup Card (Create)
+    const btnBakExport = document.querySelector('[onclick*="handleExportBackupJSON"]');
+    if (btnBakExport) {
+      if (canBakCreate) {
+        btnBakExport.style.display = '';
+        const badge = document.getElementById('bak-export-view-badge');
+        if (badge) badge.remove();
+      } else {
+        btnBakExport.style.display = 'none';
+        if (!document.getElementById('bak-export-view-badge') && btnBakExport.parentElement) {
+          const badge = document.createElement('div');
+          badge.id = 'bak-export-view-badge';
+          badge.className = 'w-full py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-center text-slate-500 font-bold text-xs flex items-center justify-center gap-1.5 select-none shadow-2xs';
+          badge.innerHTML = '<span class="material-symbols-outlined text-[15px] text-slate-400">lock</span><span>View-Only Mode: Export restricted</span>';
+          btnBakExport.parentElement.appendChild(badge);
+        }
+      }
+    }
+
+    // 2. Restore Backup Card (Edit)
+    const btnBakRestore = document.querySelector('[onclick*="backup-file-input"]');
+    const inputBakFile = document.getElementById('backup-file-input');
+    if (inputBakFile) inputBakFile.disabled = !canBakEdit;
+    if (btnBakRestore) {
+      if (canBakEdit) {
+        btnBakRestore.style.display = '';
+        const badge = document.getElementById('bak-restore-view-badge');
+        if (badge) badge.remove();
+      } else {
+        btnBakRestore.style.display = 'none';
+        if (!document.getElementById('bak-restore-view-badge') && btnBakRestore.parentElement) {
+          const badge = document.createElement('div');
+          badge.id = 'bak-restore-view-badge';
+          badge.className = 'w-full py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-center text-slate-500 font-bold text-xs flex items-center justify-center gap-1.5 select-none shadow-2xs';
+          badge.innerHTML = '<span class="material-symbols-outlined text-[15px] text-slate-400">lock</span><span>View-Only Mode: Restore restricted</span>';
+          btnBakRestore.parentElement.appendChild(badge);
+        }
+      }
+    }
+
+    // 3. Reset Demo Data Card / Button (Delete)
+    const cardBakReset = document.getElementById('card-backup-reset');
+    const btnBakReset = document.getElementById('btn-backup-reset') || document.querySelector('[onclick*="reset demo data"]');
+    if (cardBakReset) {
+      cardBakReset.style.display = canBakDelete ? '' : 'none';
+    } else if (btnBakReset) {
+      btnBakReset.style.display = canBakDelete ? '' : 'none';
+    }
+  }
 }
 window.enforceGranularActionPermissions = enforceGranularActionPermissions;
 
@@ -713,7 +1290,7 @@ function getCurrentUser() {
         user = JSON.parse(sessionStr);
         CURRENT_USER = user;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (!user) {
@@ -770,7 +1347,7 @@ function getCurrentUser() {
 function formatDisplayPhone(rawPhone, customerId = null, forceUnmask = false) {
   if (!rawPhone) return '';
   const pretty = formatPhoneNumberPretty(rawPhone);
-  
+
   const isGlobalMasked = CRM_STATE?.settings?.maskCustomerNumbers ?? false;
   const isRevealed = customerId && REVEALED_CUSTOMERS.has(customerId);
   const isStaffRole = (ACTIVE_ROLE !== 'admin' && CURRENT_USER?.role !== 'admin');
@@ -831,7 +1408,7 @@ async function startInBrowserWebRTCCall(phone = null) {
   try {
     // 1. Request microphone access from browser
     WEBRTC_AUDIO_STREAM = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    
+
     // 2. Setup Web Audio API & Visualizer Analyser
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     WEBRTC_AUDIO_CTX = new AudioCtx();
@@ -929,7 +1506,7 @@ function playSoftphoneRingTone() {
     gain.connect(WEBRTC_AUDIO_CTX.destination);
     osc.start();
     WEBRTC_RING_OSC = { osc, gain };
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function stopSoftphoneRingTone() {
@@ -938,7 +1515,7 @@ function stopSoftphoneRingTone() {
       WEBRTC_RING_OSC.osc.stop();
       WEBRTC_RING_OSC = null;
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function toggleCallHold() {
@@ -953,7 +1530,7 @@ function toggleCallHold() {
   if (statusLabel) statusLabel.innerText = CALL_IS_ON_HOLD ? 'On Hold' : 'Connected (Live In-CRM)';
 
   if (btn) {
-    btn.className = CALL_IS_ON_HOLD 
+    btn.className = CALL_IS_ON_HOLD
       ? 'w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex flex-col items-center justify-center gap-0.5 transition shadow-sm border border-amber-300'
       : 'w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex flex-col items-center justify-center gap-0.5 transition shadow-sm';
   }
@@ -1059,7 +1636,7 @@ function initiateBrandMaskedCall(customerId) {
       staffName,
       accountId: customer.accountId || ACTIVE_SEND_ACCOUNT_ID
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('BRAND_MASKED_CALL_INITIATED', 'CALLING', `Staff (${staffName}) initiated In-CRM WebRTC voice call to ${customer.name}. Recipient receives caller ID: "${brandName}". Staff SIM masked.`);
 }
@@ -1082,7 +1659,7 @@ function updateCallMuteUI() {
   if (icon) icon.innerText = CALL_IS_MUTED ? 'mic_off' : 'mic';
   if (label) label.innerText = CALL_IS_MUTED ? 'Unmute' : 'Mute';
   if (btn) {
-    btn.className = CALL_IS_MUTED 
+    btn.className = CALL_IS_MUTED
       ? 'w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex flex-col items-center justify-center gap-0.5 transition shadow-sm border border-amber-300'
       : 'w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex flex-col items-center justify-center gap-0.5 transition shadow-sm';
   }
@@ -1148,7 +1725,7 @@ function endBrandMaskedCall(saveOutcome = false) {
     WEBRTC_AUDIO_STREAM = null;
   }
   if (WEBRTC_AUDIO_CTX && WEBRTC_AUDIO_CTX.state !== 'closed') {
-    WEBRTC_AUDIO_CTX.close().catch(() => {});
+    WEBRTC_AUDIO_CTX.close().catch(() => { });
     WEBRTC_AUDIO_CTX = null;
   }
 
@@ -1269,7 +1846,7 @@ function initSocketIO() {
     SOCKET_IO.on('connect', () => {
       console.log('⚡ Socket.IO Connected to Bridge (ID: ' + SOCKET_IO.id + ')');
       showToast('WebSocket Connected', 'Live WhatsApp synchronization active', 'bolt', 'emerald');
-      
+
       // 1. Fetch latest rules
       fetch('http://localhost:3000/api/autoreply/rules')
         .then(r => r.json())
@@ -1281,7 +1858,7 @@ function initSocketIO() {
             if (typeof renderInboxPresetTemplatesBar === 'function') renderInboxPresetTemplatesBar();
             if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
           }
-        }).catch(() => {});
+        }).catch(() => { });
 
       // 2. Fetch live Auto-Reply master status from Bridge
       fetch('http://localhost:3000/api/autoreply/status')
@@ -1294,7 +1871,7 @@ function initSocketIO() {
             updateAutoReplyUI();
             console.log('⚡ [Auto-Reply Sync] Live Status from Bridge on connect:', data.enabled ? 'ON' : 'OFF');
           }
-        }).catch(() => {});
+        }).catch(() => { });
     });
 
     // Real-time Inbound Message from WhatsApp (Pushed instantly)
@@ -1421,8 +1998,8 @@ function ingestInboundMessage(payload, suppressChime = false) {
   let customer = CRM_STATE.customers.find(c => {
     const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
     const phoneMatch = (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
-           (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10)) ||
-           (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0] === payload.sender_jid.split('@')[0])));
+      (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10)) ||
+      (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0] === payload.sender_jid.split('@')[0])));
     return phoneMatch;
   });
 
@@ -1432,7 +2009,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
     const existingOther = CRM_STATE.customers.find(c => {
       const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
       return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
-             (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10));
+        (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10));
     });
     const finalName = (senderName && !senderName.startsWith('WhatsApp Customer'))
       ? senderName
@@ -1480,14 +2057,14 @@ function ingestInboundMessage(payload, suppressChime = false) {
   if (!CRM_STATE.conversations[customer.id]) {
     CRM_STATE.conversations[customer.id] = [];
   }
-  
+
   const isOutboundMsg = Boolean(payload.is_outbound || payload.source === 'AUTOREPLY_BOT' || payload.source === 'STAFF_OUTBOUND');
   const isBotMsg = payload.source === 'AUTOREPLY_BOT';
   const msgSender = isOutboundMsg ? 'staff' : 'customer';
 
   // Deduplicate against existing messages
   const existingMsgs = CRM_STATE.conversations[customer.id];
-  const isDuplicate = existingMsgs.some(m => 
+  const isDuplicate = existingMsgs.some(m =>
     (payload.id && m.id === payload.id) ||
     (m.sender === msgSender && m.text === messageText && Math.abs(msgTimestamp - (m.timestamp || 0)) < 3000)
   );
@@ -1520,6 +2097,14 @@ function ingestInboundMessage(payload, suppressChime = false) {
 
   // 4. Match or Create Lead / Query Card
   let query = CRM_STATE.queries.find(q => q.customerId === customer.id);
+  if (!query && customer.phone) {
+    const custDigits = customer.phone.replace(/[^0-9]/g, '');
+    query = CRM_STATE.queries.find(q => {
+      const qCust = CRM_STATE.customers.find(c => c.id === q.customerId);
+      const qDigits = (qCust?.phone || qCust?.whatsapp || '').replace(/[^0-9]/g, '');
+      return (custDigits.length >= 10 && qDigits.length >= 10 && custDigits.slice(-10) === qDigits.slice(-10));
+    });
+  }
   if (query) {
     if (!query.accountId) query.accountId = payloadAccountId;
     if (!query.businessNumber) query.businessNumber = payloadBusinessNum;
@@ -1532,7 +2117,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
     }
     query.createdAt = timeStr;
     query.lastTimeEpoch = msgTimestamp;
-    
+
     // Move query to top of queries array
     CRM_STATE.queries = [query, ...CRM_STATE.queries.filter(q => q.id !== query.id)];
   } else {
@@ -1616,7 +2201,7 @@ function syncInboundMessagesNow(isInitial = false) {
         }
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 }
 
 function startRealtimeMessageSync() {
@@ -1668,7 +2253,7 @@ function handleInboundSimulationSubmit(event) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(simulatedPayload)
-  }).catch(() => {});
+  }).catch(() => { });
 
   closeModal('modal-inbound-simulator');
 }
@@ -1724,7 +2309,7 @@ function cleanupAndDeduplicateCRMState() {
 
       // Prefer a real name over generic "Customer ..." or "WhatsApp Customer ..."
       if ((!existing.name || existing.name.startsWith('Customer') || existing.name.startsWith('WhatsApp Customer')) &&
-          (cust.name && !cust.name.startsWith('Customer') && !cust.name.startsWith('WhatsApp Customer'))) {
+        (cust.name && !cust.name.startsWith('Customer') && !cust.name.startsWith('WhatsApp Customer'))) {
         existing.name = cust.name;
         existing.avatar = cust.avatar || existing.avatar;
       }
@@ -1855,13 +2440,13 @@ function mergeCatalogProductsWithDB(dbRawProducts) {
   }));
 
   const localProducts = Array.isArray(CRM_STATE.products) ? [...CRM_STATE.products] : [];
-  
+
   // Merge DB products: if a matching local product exists, merge non-empty fields/specs
   const merged = mappedDb.map(dbP => {
     const localMatch = localProducts.find(lp => lp && (lp.sku === dbP.sku || (lp.id && String(lp.id) === String(dbP.id))));
     if (localMatch) {
       const bestImg = (dbP.image && !dbP.image.includes('photo-1583846783977-d2b0993d4265') && !dbP.image.includes('photo-1518831959646-742c3a14ebf7'))
-        ? dbP.image 
+        ? dbP.image
         : (localMatch.image || getSmartProductImage(dbP));
       return {
         ...localMatch,
@@ -1898,17 +2483,17 @@ function mergeCatalogProductsWithDB(dbRawProducts) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ variants: unsyncedLocals })
     })
-    .then(r => r.json())
-    .then(resp => {
-      if (resp && resp.products && Array.isArray(resp.products)) {
-        resp.products.forEach(sp => {
-          const matched = CRM_STATE.products.find(p => p.sku === sp.sku);
-          if (matched && sp.id) matched.id = sp.id;
-        });
-        saveCRMState();
-      }
-    })
-    .catch(e => console.warn('Background sync of local products failed:', e));
+      .then(r => r.json())
+      .then(resp => {
+        if (resp && resp.products && Array.isArray(resp.products)) {
+          resp.products.forEach(sp => {
+            const matched = CRM_STATE.products.find(p => p.sku === sp.sku);
+            if (matched && sp.id) matched.id = sp.id;
+          });
+          saveCRMState();
+        }
+      })
+      .catch(e => console.warn('Background sync of local products failed:', e));
   }
 }
 
@@ -1928,7 +2513,7 @@ function initCRMState() {
       }
       if (!Array.isArray(CRM_STATE.customers)) CRM_STATE.customers = [];
       // Clean up any stale dummy mock customers from state
-      CRM_STATE.customers = CRM_STATE.customers.filter(c => 
+      CRM_STATE.customers = CRM_STATE.customers.filter(c =>
         c && c.id !== 'cust_89660115_account_1' && c.id !== 'cust_101' && c.id !== 'cust_102' && c.id !== 'cust_103' && c.name !== 'Pooja Venkatesh'
       );
       cleanupAndDeduplicateCRMState();
@@ -1953,7 +2538,7 @@ function initCRMState() {
       if (!Array.isArray(CRM_STATE.followups) || CRM_STATE.followups.length === 0) {
         CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
       } else {
-        CRM_STATE.followups = CRM_STATE.followups.filter(f => 
+        CRM_STATE.followups = CRM_STATE.followups.filter(f =>
           f && f.id && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw'))
         );
         if (!CRM_STATE.followups.some(f => f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1)) {
@@ -2035,7 +2620,7 @@ function initCRMState() {
         if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 
   // Set active customer ID to first existing customer who actually has messages/conversations
   const activeChatCusts = (CRM_STATE.customers || []).filter(c => {
@@ -2253,7 +2838,7 @@ function initCRMState() {
         data.broadcastTemplates.forEach(bt => {
           let varObj = {};
           if (bt.variables_json) {
-            try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) {}
+            try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) { }
           }
           if (typeof BROADCAST_PRESETS_DATA !== 'undefined') {
             BROADCAST_PRESETS_DATA[bt.id] = {
@@ -2268,6 +2853,21 @@ function initCRMState() {
 
       // 12. Audit Logs
       CRM_STATE.auditLogs = (data.auditLogs && Array.isArray(data.auditLogs)) ? data.auditLogs : (CRM_STATE.auditLogs || []);
+
+      // 13. Role Permissions (Dynamic database sync)
+      if (data.rolePermissions && typeof data.rolePermissions === 'object') {
+        CRM_STATE.rolePermissions = Object.assign({}, DEFAULT_ROLE_PERMISSIONS, data.rolePermissions);
+        try {
+          localStorage.setItem('CRM_ROLE_PERMISSIONS', JSON.stringify(CRM_STATE.rolePermissions));
+        } catch (e) { }
+        if (typeof enforceGranularActionPermissions === 'function') {
+          enforceGranularActionPermissions();
+        }
+        if (ACTIVE_VIEW === 'inbox' && (typeof ACTIVE_INBOX_SUBMODULE === 'undefined' || ACTIVE_INBOX_SUBMODULE === 'autoreply')) {
+          if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
+          if (typeof updateAutoReplyUI === 'function') updateAutoReplyUI();
+        }
+      }
 
       // Update UI components dynamically to reflect live database state
       if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
@@ -2293,7 +2893,7 @@ function initCRMState() {
     })
     .catch(() => { });
 
-    cleanupAndDeduplicateCRMState();
+  cleanupAndDeduplicateCRMState();
   if (typeof populateCatalogCategoryFilters === 'function') {
     populateCatalogCategoryFilters();
   }
@@ -2441,7 +3041,7 @@ function renderPhoneSwitcherDropdown() {
 
   const accounts = getAvailableWhatsAppAccounts();
   const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593').replace(/\s+/g, '');
-  
+
   if (countBadge) {
     countBadge.innerText = `${accounts.length} Active Line${accounts.length > 1 ? 's' : ''}`;
   }
@@ -2487,7 +3087,7 @@ function renderPhoneSwitcherDropdown() {
     }).length;
 
     return `
-      <div onclick="switchActiveWhatsAppLine('${acc.id}', '${displayPhone}', '${acc.label || 'Line ' + (index+1)}')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${isCurrent ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
+      <div onclick="switchActiveWhatsAppLine('${acc.id}', '${displayPhone}', '${acc.label || 'Line ' + (index + 1)}')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${isCurrent ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
         <div class="flex items-center gap-2.5 min-w-0">
           <div class="w-8 h-8 rounded-lg ${isCurrent ? 'bg-brand-wa text-white shadow-sm' : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700'} flex items-center justify-center font-bold text-xs shrink-0">
             <span class="material-symbols-outlined text-[18px]">${isCurrent ? 'check_circle' : 'phone_android'}</span>
@@ -2687,6 +3287,8 @@ function switchInboxSubmodule(submodule) {
 
     if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
     if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
+    if (typeof updateAutoReplyUI === 'function') updateAutoReplyUI();
+    if (typeof enforceGranularActionPermissions === 'function') enforceGranularActionPermissions();
   } else if (submodule === 'broadcast') {
     if (bcastSub) bcastSub.classList.remove('hidden');
     if (tabBcast) tabBcast.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white cursor-pointer";
@@ -2699,6 +3301,10 @@ function switchInboxSubmodule(submodule) {
     if (typeof refreshBroadcastAutoFetchedNumbers === 'function') refreshBroadcastAutoFetchedNumbers();
     if (typeof renderDynamicTemplateFields === 'function') renderDynamicTemplateFields();
     if (typeof updateBroadcastPreview === 'function') updateBroadcastPreview();
+  }
+
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
   }
 }
 
@@ -2745,7 +3351,7 @@ function toggleSidebar(forceState) {
       toggleBtn.setAttribute('aria-expanded', 'true');
       toggleBtn.title = 'Close Navigation Sidebar';
     }
-    try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'true'); } catch (e) {}
+    try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'true'); } catch (e) { }
   } else {
     sidebar.classList.remove('sidebar-visible');
     sidebar.classList.add('sidebar-hidden');
@@ -2858,7 +3464,7 @@ function switchView(viewName, subName) {
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
   }
 
-    // Enforce Role-Based Access Control
+  // Enforce Role-Based Access Control
   if (typeof canUserPerformAction === 'function' && !canUserPerformAction(viewName, 'view')) {
     showToast('Access Restricted', 'Your assigned role does not have permission to view this module.', 'lock', 'rose');
     const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view'));
@@ -2869,9 +3475,10 @@ function switchView(viewName, subName) {
   try {
     localStorage.setItem('GRM_CRM_ACTIVE_VIEW', viewName);
     if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
-      window.history.replaceState(null, '', '#' + viewName);
+      const targetHash = subName ? ('#' + viewName + '/' + subName) : ('#' + viewName);
+      window.history.replaceState(null, '', targetHash);
     }
-  } catch (e) {}
+  } catch (e) { }
   const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
 
   if (typeof enforceGranularActionPermissions === 'function') {
@@ -2888,10 +3495,12 @@ function switchView(viewName, subName) {
       }
     }
     if (navBtn) {
+      const canViewModule = (typeof canUserPerformAction === 'function') ? canUserPerformAction(v, 'view') : true;
+      navBtn.style.display = canViewModule ? '' : 'none';
       if (v === viewName) {
-        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm";
+        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm" + (canViewModule ? '' : ' hidden');
       } else {
-        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group";
+        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group" + (canViewModule ? '' : ' hidden');
       }
     }
   });
@@ -2946,13 +3555,29 @@ function switchView(viewName, subName) {
   if (viewName === 'audit') renderAuditTable();
   if (viewName === 'analytics') renderAnalyticsView();
   if (viewName === 'settings') renderWhatsAppSettings();
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
+  }
 }
 
 window.addEventListener('hashchange', () => {
-  const hash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+  const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+  const hashParts = rawHash.split('/');
+  const mainHash = hashParts[0];
+  const subHash = hashParts[1];
   const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
-  if (hash && validViews.includes(hash) && hash !== ACTIVE_VIEW) {
-    switchView(hash);
+  if (mainHash && validViews.includes(mainHash)) {
+    let needsSwitch = false;
+    if (mainHash !== ACTIVE_VIEW) {
+      needsSwitch = true;
+    } else if (mainHash === 'orders' && subHash && subHash !== (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' ? ACTIVE_ORDERS_SUBMODULE : 'dashboard')) {
+      needsSwitch = true;
+    } else if (mainHash === 'inbox' && subHash && subHash !== (typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' ? ACTIVE_INBOX_SUBMODULE : 'chats')) {
+      needsSwitch = true;
+    }
+    if (needsSwitch) {
+      switchView(mainHash, subHash);
+    }
   }
 });
 
@@ -2978,7 +3603,7 @@ function initAuthSystem() {
         localStorage.setItem('GRM_CRM_SESSION', JSON.stringify(CURRENT_USER));
         sessionStorage.setItem('GRM_CRM_SESSION', JSON.stringify(CURRENT_USER));
         localStorage.setItem('GRM_REMEMBER_FLAG', 'true');
-      } catch (e) {}
+      } catch (e) { }
 
       // Apply RBAC UI safely — any rendering error must NEVER boot user to login page
       try {
@@ -3108,7 +3733,7 @@ function handleLogout() {
   localStorage.removeItem('GRM_REMEMBER_FLAG');
 
   // Notify backend auth API to clear PHP session
-  fetch('auth.php?action=logout').catch(() => {});
+  fetch('auth.php?action=logout').catch(() => { });
 
   // Redirect cleanly to dedicated standalone login page
   window.location.href = 'login.html';
@@ -3206,6 +3831,9 @@ function applyRoleBasedAccessControl(user) {
   const salesSection = document.getElementById('nav-section-sales-operations');
   if (salesSection) {
     const hasAnySales = ['followups', 'catalog', 'orders', 'customers', 'dnd'].some(k => canUserPerformAction(k, 'view'));
+    // DND nav item hidden if no view access
+    const _navDndEl = document.getElementById('nav-dnd');
+    if (_navDndEl) _navDndEl.style.display = canUserPerformAction('dnd', 'view') || isSuperAdmin ? '' : 'none';
     if (hasAnySales) salesSection.classList.remove('hidden');
     else salesSection.classList.add('hidden');
   }
@@ -3255,6 +3883,7 @@ function setInboxFilter(filter) {
   });
   renderInboxConversationList();
 }
+window.setInboxFilter = setInboxFilter;
 
 function renderInbox() {
   if (!CRM_STATE) return;
@@ -3281,10 +3910,10 @@ function renderQuickLineSwitcher() {
   const availableAccountIds = accounts.map(a => a.id);
 
   // Filter to display: connected lines, plus account_1 and account_2, or lines with chats
-  const displayAccounts = accounts.filter(acc => 
-    acc.id === 'account_1' || 
-    acc.id === 'account_2' || 
-    acc.status === 'CONNECTED' || 
+  const displayAccounts = accounts.filter(acc =>
+    acc.id === 'account_1' ||
+    acc.id === 'account_2' ||
+    acc.status === 'CONNECTED' ||
     (CRM_STATE?.customers || []).some(c => (c.accountId || 'account_1') === acc.id)
   );
 
@@ -3328,7 +3957,7 @@ function renderQuickLineSwitcher() {
     const isCurrent = (ACTIVE_SEND_ACCOUNT_ID === acc.id);
     const isConnected = (acc.status === 'CONNECTED');
     const custCount = getActiveCustomerCountForAccount(acc.id);
-    
+
     let displayPhone = acc.connected_number && acc.connected_number !== 'Awaiting Link' && acc.connected_number !== 'Scan QR Code'
       ? formatPhoneNumberPretty(acc.connected_number)
       : (idx === 0 ? '+91 97896 60115' : 'Line ' + (idx + 1));
@@ -3338,10 +3967,10 @@ function renderQuickLineSwitcher() {
     // Distinct styling per line
     let activeClass = '';
     if (isCurrent) {
-      activeClass = (idx === 0) 
-        ? 'bg-brand-wa text-white ring-2 ring-emerald-300 shadow-sm' 
-        : (idx === 1 
-          ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-sm' 
+      activeClass = (idx === 0)
+        ? 'bg-brand-wa text-white ring-2 ring-emerald-300 shadow-sm'
+        : (idx === 1
+          ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-sm'
           : 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-sm');
     } else {
       activeClass = 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300';
@@ -3366,6 +3995,7 @@ function renderInboxConversationList() {
   const container = document.getElementById('conversation-list-container');
   if (!container || !CRM_STATE || !CRM_STATE.customers) return;
 
+  const t = window.t || ((k, f) => f || k);
   const searchQuery = (document.getElementById('chat-search-input')?.value || '').toLowerCase();
 
   // Deduplication Engine: Exactly 1 item per customer!
@@ -3385,9 +4015,9 @@ function renderInboxConversationList() {
     }
 
     // Dynamic DND Removal: Customers marked as DND are excluded from the active WhatsApp inbox queue
-    const isCustomerDND = (cust.isDND === true) || 
-                          (query && query.status === 'DND') || 
-                          (Array.isArray(cust.tags) && cust.tags.includes('DND / Opt-Out'));
+    const isCustomerDND = (cust.isDND === true) ||
+      (query && query.status === 'DND') ||
+      (Array.isArray(cust.tags) && cust.tags.includes('DND / Opt-Out'));
     if (isCustomerDND) {
       // Only keep in active view if user specifically clicked to review conversation history from DND hub
       if (!ACTIVE_CUSTOMER_ID || String(cust.id) !== String(ACTIVE_CUSTOMER_ID)) {
@@ -3448,7 +4078,22 @@ function renderInboxConversationList() {
     customerCards = customerCards.filter(c => c.assignedTo === 'UNASSIGNED');
   } else if (INBOX_FILTER === 'my') {
     if (ACTIVE_ROLE !== 'admin') {
-      customerCards = customerCards.filter(c => c.assignedTo === ACTIVE_ROLE);
+      const u = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
+      const myIds = [
+        ACTIVE_ROLE,
+        u?.id,
+        u?.staff_id,
+        u?.staffId,
+        u?.username,
+        u?.name
+      ].filter(Boolean).map(s => String(s).toLowerCase());
+
+      customerCards = customerCards.filter(c => {
+        const assigned = String(c.assignedTo || '').toLowerCase();
+        const staffId = String(c.staff?.id || '').toLowerCase();
+        const staffName = String(c.staff?.name || '').toLowerCase();
+        return myIds.includes(assigned) || myIds.includes(staffId) || myIds.includes(staffName);
+      });
     }
   } else if (INBOX_FILTER === 'urgent') {
     customerCards = customerCards.filter(c => c.priority === 'URGENT');
@@ -3566,6 +4211,7 @@ function renderInboxConversationList() {
     `;
   }).join('');
 }
+window.renderInboxConversationList = renderInboxConversationList;
 
 function selectCustomerChat(customerId) {
   if (!customerId) return;
@@ -3584,6 +4230,14 @@ function selectCustomerChat(customerId) {
     renderChatHeader();
   } catch (e) {
     console.error('Error rendering Chat Header on selectCustomerChat:', e);
+  }
+  // Enforce RBAC permissions on chat controls after rendering
+  try {
+    if (typeof enforceGranularActionPermissions === 'function') {
+      enforceGranularActionPermissions();
+    }
+  } catch (e) {
+    console.error('Error enforcing granular permissions on selectCustomerChat:', e);
   }
 }
 
@@ -3639,7 +4293,7 @@ function toggleLeftPanel(forceState = null) {
       }
     }
   }
-  try { localStorage.setItem('GRM_INBOX_LEFT_OPEN', IS_LEFT_PANEL_OPEN ? 'true' : 'false'); } catch (e) {}
+  try { localStorage.setItem('GRM_INBOX_LEFT_OPEN', IS_LEFT_PANEL_OPEN ? 'true' : 'false'); } catch (e) { }
 }
 window.toggleLeftPanel = toggleLeftPanel;
 
@@ -3704,7 +4358,7 @@ function toggleRightPanel(forceState = null, isUserAction = false) {
     resizerIcon.innerText = IS_RIGHT_PANEL_OPEN ? 'chevron_right' : 'chevron_left';
   }
 
-  try { localStorage.setItem('GRM_INBOX_RIGHT_OPEN', IS_RIGHT_PANEL_OPEN ? 'true' : 'false'); } catch (e) {}
+  try { localStorage.setItem('GRM_INBOX_RIGHT_OPEN', IS_RIGHT_PANEL_OPEN ? 'true' : 'false'); } catch (e) { }
 }
 window.toggleRightPanel = toggleRightPanel;
 
@@ -3744,7 +4398,7 @@ function initPanelResizers() {
     if (savedRightOpen === 'false') {
       toggleRightPanel(false, false);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // 1. LEFT PANEL RESIZER
   if (resizerLeft && leftPanel && !resizerLeft._bound) {
@@ -3780,7 +4434,7 @@ function initPanelResizers() {
       document.removeEventListener('mousemove', onMouseMoveLeft);
       document.removeEventListener('mouseup', onMouseUpLeft);
       if (leftPanel.style.width) {
-        try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', parseInt(leftPanel.style.width)); } catch (e) {}
+        try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', parseInt(leftPanel.style.width)); } catch (e) { }
       }
     };
 
@@ -3801,7 +4455,7 @@ function initPanelResizers() {
     resizerLeft.addEventListener('dblclick', () => {
       leftPanel.style.width = '320px';
       leftPanel.style.minWidth = '320px';
-      try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', '320'); } catch (e) {}
+      try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', '320'); } catch (e) { }
     });
   }
 
@@ -3839,7 +4493,7 @@ function initPanelResizers() {
       document.removeEventListener('mousemove', onMouseMoveRight);
       document.removeEventListener('mouseup', onMouseUpRight);
       if (rightPanel.style.width) {
-        try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', parseInt(rightPanel.style.width)); } catch (e) {}
+        try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', parseInt(rightPanel.style.width)); } catch (e) { }
       }
     };
 
@@ -3860,7 +4514,7 @@ function initPanelResizers() {
     resizerRight.addEventListener('dblclick', () => {
       rightPanel.style.width = '350px';
       rightPanel.style.minWidth = '350px';
-      try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', '350'); } catch (e) {}
+      try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', '350'); } catch (e) { }
     });
   }
 
@@ -3891,7 +4545,7 @@ function initPanelResizers() {
       document.removeEventListener('mousemove', onMouseMoveSide);
       document.removeEventListener('mouseup', onMouseUpSide);
       if (appSidebar.style.width) {
-        try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', parseInt(appSidebar.style.width)); } catch (e) {}
+        try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', parseInt(appSidebar.style.width)); } catch (e) { }
       }
     };
 
@@ -4216,9 +4870,9 @@ function renderChatMessages() {
       const isStockMenu = msg.text && (
         msg.text.includes('Ready-Stock Collections:') ||
         msg.text.includes('Reply with 1 to 6') ||
-        msg.text.includes('Live Stock') || 
-        msg.text.includes('Category Number') || 
-        msg.text.includes('Baby Collection (0-3 Years)') || 
+        msg.text.includes('Live Stock') ||
+        msg.text.includes('Category Number') ||
+        msg.text.includes('Baby Collection (0-3 Years)') ||
         msg.text.includes('Click any category button') ||
         msg.text.includes('How to Order / Inquire:')
       );
@@ -4362,17 +5016,17 @@ const TRANSLATION_LANGUAGES = [
 ];
 
 function getTranslateBtnText() {
-  const currentLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage()) 
-    ? getCurrentLanguage().code 
+  const currentLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage())
+    ? getCurrentLanguage().code
     : (localStorage.getItem('GRM_APP_LANG') || 'ta');
-    
+
   switch (currentLang) {
     case 'ta': return 'மொழிபெயர் 🌐';
     case 'hi': return 'अनुवाद 🌐';
     case 'te': return 'అనువదించు 🌐';
     case 'ml': return 'വിവർത്തനം 🌐';
     case 'kn': return 'ಅನುವಾದ 🌐';
-    case 'en': 
+    case 'en':
     default:
       return 'Translate 🌐';
   }
@@ -4395,8 +5049,8 @@ async function toggleTranslateMessage(msgId, ev) {
   }
 
   // Determine target language: default to current CRM language (fallback 'ta')
-  let targetLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage()) 
-    ? getCurrentLanguage().code 
+  let targetLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage())
+    ? getCurrentLanguage().code
     : (localStorage.getItem('GRM_APP_LANG') || 'ta');
 
   await translateMessageToLang(msgId, targetLang);
@@ -4429,7 +5083,7 @@ async function translateMessageToLang(msgId, targetLang) {
 
   try {
     let translatedText = '';
-    
+
     // 1. Direct Ultra-Fast Google Translate Client Call (100 - 300ms, zero server delay)
     try {
       const controller = new AbortController();
@@ -4492,8 +5146,8 @@ function renderTranslationBox(msgId, originalText, translatedText, targetLang) {
 
   const langButtonsHtml = TRANSLATION_LANGUAGES.map(lang => {
     const isCur = (lang.code === targetLang);
-    const activeClass = isCur 
-      ? 'bg-emerald-700 text-white shadow-2xs font-bold ring-1 ring-emerald-600' 
+    const activeClass = isCur
+      ? 'bg-emerald-700 text-white shadow-2xs font-bold ring-1 ring-emerald-600'
       : 'bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 font-medium';
     return `
       <button type="button" 
@@ -4547,7 +5201,7 @@ window.getTranslateBtnText = getTranslateBtnText;
 window.renderChatStream = renderChatMessages;
 
 // Interactive 1-Click Category Selection Action Handler
-window.triggerCategorySelection = function(categoryNum, customerId) {
+window.triggerCategorySelection = function (categoryNum, customerId) {
   const targetCustId = customerId || ACTIVE_CUSTOMER_ID;
   const customer = CRM_STATE.customers.find(c => c.id === targetCustId);
   if (!customer) return;
@@ -4609,7 +5263,7 @@ window.triggerCategorySelection = function(categoryNum, customerId) {
 let CURRENT_LIGHTBOX_ZOOM = 1.0;
 let CURRENT_LIGHTBOX_SRC = '';
 
-window.openImageLightbox = function(msgIdOrSrc, customTitle) {
+window.openImageLightbox = function (msgIdOrSrc, customTitle) {
   let imgSrc = '';
   let title = customTitle || 'Customer WhatsApp Photo Attachment';
 
@@ -4662,13 +5316,13 @@ window.openImageLightbox = function(msgIdOrSrc, customTitle) {
   }
 };
 
-window.closeImageLightbox = function() {
+window.closeImageLightbox = function () {
   closeModal('modal-image-lightbox');
   document.body.style.overflow = '';
   CURRENT_LIGHTBOX_ZOOM = 1.0;
 };
 
-window.zoomLightboxImage = function(delta) {
+window.zoomLightboxImage = function (delta) {
   CURRENT_LIGHTBOX_ZOOM = Math.max(0.5, Math.min(3.5, CURRENT_LIGHTBOX_ZOOM + delta));
   const imgEl = document.getElementById('lightbox-img');
   const zoomPctEl = document.getElementById('lightbox-zoom-pct');
@@ -4680,7 +5334,7 @@ window.zoomLightboxImage = function(delta) {
   }
 };
 
-window.resetLightboxZoom = function() {
+window.resetLightboxZoom = function () {
   CURRENT_LIGHTBOX_ZOOM = 1.0;
   const imgEl = document.getElementById('lightbox-img');
   const zoomPctEl = document.getElementById('lightbox-zoom-pct');
@@ -4692,7 +5346,7 @@ window.resetLightboxZoom = function() {
   }
 };
 
-window.downloadLightboxImage = function() {
+window.downloadLightboxImage = function () {
   if (!CURRENT_LIGHTBOX_SRC) return;
   try {
     const a = document.createElement('a');
@@ -4711,7 +5365,7 @@ window.downloadLightboxImage = function() {
   }
 };
 
-window.openLightboxImageInNewTab = function() {
+window.openLightboxImageInNewTab = function () {
   if (!CURRENT_LIGHTBOX_SRC) return;
   if (CURRENT_LIGHTBOX_SRC.startsWith('data:')) {
     const imgWindow = window.open('');
@@ -4739,7 +5393,7 @@ window.openLightboxImageInNewTab = function() {
 };
 
 // Keyboard listener for Escape key to close topmost modal or lightbox
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
     if (typeof ACTIVE_MODAL_STACK !== 'undefined' && ACTIVE_MODAL_STACK.length > 0) {
       const topModalId = ACTIVE_MODAL_STACK[ACTIVE_MODAL_STACK.length - 1];
@@ -5004,7 +5658,7 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         callbackTime: (callbackSchedule && callbackSchedule.time) || query.callback_time || query.callbackTime || '11:00 AM',
         statusHistory: query.statusHistory
       })
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   if (customer) {
@@ -5059,7 +5713,7 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
           status: 'ACTIVE',
           dnd_timestamp: timeFormatted
         })
-      }).catch(() => {});
+      }).catch(() => { });
 
       // Dynamically remove from active inbox view by switching active selection if current customer was marked DND
       if (ACTIVE_CUSTOMER_ID === customer.id || String(ACTIVE_CUSTOMER_ID) === String(customer.id)) {
@@ -5090,7 +5744,7 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
       }
     }
   }
-  
+
   logAudit('STATUS_CHANGE', 'INBOX_PANEL', `Query ${query ? query.id : customer?.id} status changed from ${oldStatus} to ${newStatus} by ${staffName}${notes ? ' (Note: ' + notes + ')' : ''}`);
 
   // Automatically ensure active follow-up record in CRM_STATE.followups
@@ -5099,8 +5753,8 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
     let existingFu = CRM_STATE.followups.find(f => f && (f.customerId === customer?.id || (query && f.queryId === query.id)) && f.status === 'PENDING');
     const fuReason = notes || query?.queryText || (newStatus === 'PENDING' ? 'Payment Pending follow-up' : (newStatus === 'FOLLOW_UP' ? 'Customer callback requested' : 'Customer enquiry callback'));
     const isPayPending = (newStatus === 'PENDING') || Boolean(paymentData && paymentData.isPaymentPending);
-    const payAmt = isPayPending 
-      ? (parseFloat(paymentData?.paymentAmount || 0) || query?.paymentAmount || existingFu?.paymentAmount || 0) 
+    const payAmt = isPayPending
+      ? (parseFloat(paymentData?.paymentAmount || 0) || query?.paymentAmount || existingFu?.paymentAmount || 0)
       : 0;
     const shippingAmt = isPayPending ? (parseFloat(paymentData?.shippingAmount || 0) || query?.shippingAmount || existingFu?.shippingAmount || 0) : 0;
     const advanceAmt = isPayPending ? (parseFloat(paymentData?.advancePayment || 0) || query?.advancePayment || existingFu?.advancePayment || 0) : 0;
@@ -5160,7 +5814,7 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newFu)
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       if (notes) existingFu.reason = notes;
       if (callbackSchedule && callbackSchedule.date) {
@@ -5197,7 +5851,7 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(existingFu)
-      }).catch(() => {});
+      }).catch(() => { });
     }
   } else if (newStatus === 'CONVERTED' || newStatus === 'RESOLVED') {
     if (Array.isArray(CRM_STATE.followups)) {
@@ -5235,6 +5889,15 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
 }
 
 function reactivateCustomerFromDND(customerId) {
+  // RBAC Guard: requires dnd.delete permission
+  const _raIsSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_raIsSuperAdmin && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('dnd', 'delete')) {
+      if (typeof showToast === 'function') showToast('🔒 Access Denied: You do not have permission to re-activate DND customers.', 'warning');
+      return;
+    }
+  }
   const customer = CRM_STATE.customers.find(c => c.id === customerId);
   if (!customer) return;
 
@@ -5266,7 +5929,7 @@ function reactivateCustomerFromDND(customerId) {
       query_id: query ? query.id : null,
       user: CURRENT_USER?.name || 'Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('DND_REACTIVATED', 'DND_MODULE', `Reactivated customer ${customer.name} (${customer.phone}) from DND list.`);
   saveCRMState();
@@ -5280,6 +5943,15 @@ function reactivateCustomerFromDND(customerId) {
 }
 
 function openStaffAssignForDndCustomer(customerId) {
+  // RBAC Guard: requires dnd.edit permission
+  const _daIsSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_daIsSuperAdmin && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('dnd', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 Access Denied: You do not have permission to assign staff to DND customers.', 'warning');
+      return;
+    }
+  }
   let query = (CRM_STATE?.queries || []).find(q => q.customerId === customerId);
   const customer = (CRM_STATE?.customers || []).find(c => c.id === customerId);
   if (!customer) return;
@@ -5315,6 +5987,31 @@ function viewDndCustomerChat(customerId) {
 window.viewDndCustomerChat = viewDndCustomerChat;
 
 function renderDndModule() {
+  // ── RBAC: Check view permission ───────────────────────────────────────────
+  const _dndIsSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canDndView = _dndIsSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('dnd', 'view') : true);
+  const canDndCreate = _dndIsSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('dnd', 'create') : true);
+  const canDndEdit = _dndIsSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('dnd', 'edit') : true);
+  const canDndDelete = _dndIsSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('dnd', 'delete') : true);
+
+  // Gate: no view access → render locked panel and exit
+  if (!canDndView) {
+    const dndContainer = document.getElementById('dnd-module-container') || document.getElementById('dnd-table-body');
+    if (dndContainer) {
+      dndContainer.innerHTML = `
+        <tr><td colspan="7" class="p-10 text-center">
+          <div class="inline-flex flex-col items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-10 py-8 shadow-xs max-w-md mx-auto">
+            <span class="material-symbols-outlined text-[48px] text-slate-400">lock</span>
+            <p class="text-sm font-bold text-slate-700">Access Restricted</p>
+            <p class="text-xs text-slate-500 text-center">You do not have permission to view the DND &amp; Opt-Out Customer Hub.<br>Contact your admin to request access.</p>
+          </div>
+        </td></tr>
+      `;
+    }
+    return;
+  }
+
   const tableBody = document.getElementById('dnd-table-body');
   const countSummary = document.getElementById('dnd-count-summary');
   const kpiTotal = document.getElementById('kpi-dnd-total');
@@ -5372,7 +6069,7 @@ function renderDndModule() {
     const lastMsg = conv.length > 0 ? conv[conv.length - 1].text : (q ? q.lastMessage : 'No recent messages');
     const dndTime = (dndRec && dndRec.dnd_timestamp) || c.dndTimestamp || (q ? q.statusLastEditedAt || q.createdAt : 'Recent');
     const markedBy = (dndRec && dndRec.marked_by) || c.dndMarkedBy || (q ? q.statusLastEditedBy : 'Super Admin') || 'Super Admin';
-    
+
     // Notes fetched from dedicated dnd_records table or WhatsApp Inbox why the user was set to DND
     const inboxNotes = (dndRec && dndRec.notes) || c.dndNotes || (q ? q.statusNotes : '') || (q?.statusHistory?.find(h => h.to === 'DND')?.notes) || (c.dndReason && !c.dndReason.includes('(Requested DND)') ? c.dndReason : '');
     const mainReason = (dndRec && dndRec.reason) || c.dndReason || (inboxNotes ? inboxNotes : 'Customer not interested in products (Requested DND)');
@@ -5451,20 +6148,25 @@ function renderDndModule() {
           ${dndTime}
         </td>
 
-        <!-- 7. Actions: Assign, Re-activate, View Chat -->
+        <!-- 7. Actions: Assign (edit), Re-activate (delete), View Chat (view) -->
         <td class="py-3.5 px-4 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1.5 flex-wrap">
+            ${canDndEdit ? `
             <button onclick="openStaffAssignForDndCustomer('${c.id}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95" title="Assign this customer to staff member to communicate">
               <span class="material-symbols-outlined text-[14px]">how_to_reg</span>
               <span>Assign</span>
             </button>
+            ` : ''}
+            ${canDndDelete ? `
             <button onclick="reactivateCustomerFromDND('${c.id}')" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95" title="Reactivate customer to allow messages and orders in WhatsApp Inbox">
               <span class="material-symbols-outlined text-[14px]">check_circle</span>
               <span>Re-activate</span>
             </button>
+            ` : ''}
             <button onclick="viewDndCustomerChat('${c.id}')" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="View conversation history">
               <span class="material-symbols-outlined text-[14px]">chat</span>
             </button>
+            ${(!canDndEdit && !canDndDelete) ? '<span class="text-[9px] text-slate-400 font-semibold flex items-center gap-0.5"><span class=\"material-symbols-outlined text-[11px]\">lock</span>View Only</span>' : ''}
           </div>
         </td>
       </tr>
@@ -5540,6 +6242,11 @@ function updateBadgeCounters() {
 
 // Quick Reassign Handling Staff
 function quickReassignQueryStaff(queryId, newStaffId) {
+  const isSuperAdminAssign = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdminAssign && typeof canUserPerformAction === 'function' && !canUserPerformAction('inbox', 'edit') && !canUserPerformAction('enquiries', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Reassigning staff requires Edit permission.', 'lock', 'rose');
+    return;
+  }
   const query = CRM_STATE.queries.find(q => q.id === queryId || q.customerId === queryId);
   if (!query) return;
 
@@ -5550,18 +6257,21 @@ function quickReassignQueryStaff(queryId, newStaffId) {
   }
 
   logAudit('STAFF_ASSIGNMENT', 'INBOX_PANEL', `Query ${query.id} assigned to ${staff ? staff.name : 'Unassigned'}`);
-  
+
+  const qCust = CRM_STATE.customers.find(c => c.id === query.customerId);
   // Asynchronously sync query assignment to MySQL Database
   fetch('api.php?action=assign_query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       id: query.id,
+      customer_id: query.customerId,
+      phone: qCust ? (qCust.whatsapp || qCust.phone) : '',
       assigned_to: newStaffId,
       status: query.status,
       user: CURRENT_USER?.name || 'Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   saveCRMState();
   renderInbox();
@@ -5581,6 +6291,11 @@ function quickReassignQueryStaff(queryId, newStaffId) {
 const CUSTOMER_EDIT_MODES = new Set();
 
 function toggleCustomerEditMode(customerId, enableEdit = true) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (enableEdit && !isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for customer profiles.', 'lock', 'rose');
+    return;
+  }
   if (enableEdit) {
     CUSTOMER_EDIT_MODES.add(customerId);
   } else {
@@ -5690,12 +6405,22 @@ function handleDynamicPaymentCalc() {
   const balance = Math.max(0, (total + shipping) - advance);
   const balEl = document.getElementById('query-pay-balance-val') || document.getElementById('query-pay-balance-text');
   if (balEl) {
-    balEl.innerText = `₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    balEl.innerText = `₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 }
 window.handleDynamicPaymentCalc = handleDynamicPaymentCalc;
 
 function handleSaveQueryStatus(queryId) {
+  // RBAC Guard: Only users with inbox.edit or enquiries.edit permission can save
+  const _isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdmin && typeof canUserPerformAction === 'function') {
+    const canEdit = canUserPerformAction('inbox', 'edit') || canUserPerformAction('enquiries', 'edit');
+    if (!canEdit) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Access: You cannot change enquiry status.', 'warning');
+      return;
+    }
+  }
   const select = document.getElementById('query-status-select');
   if (!select) return;
   const newStatus = select.value;
@@ -5721,18 +6446,18 @@ function handleSaveQueryStatus(queryId) {
     const shippingAmtVal = document.getElementById('query-pay-shipping-input')?.value;
     const advanceAmtVal = document.getElementById('query-pay-advance-input')?.value;
 
-    const totalAmt = (totalAmtVal !== undefined && totalAmtVal !== '') 
-      ? (parseFloat(totalAmtVal) || 0) 
+    const totalAmt = (totalAmtVal !== undefined && totalAmtVal !== '')
+      ? (parseFloat(totalAmtVal) || 0)
       : (custFu?.paymentAmount || query?.paymentAmount || 0);
 
-    const shippingAmt = (shippingAmtVal !== undefined && shippingAmtVal !== '') 
-      ? (parseFloat(shippingAmtVal) || 0) 
+    const shippingAmt = (shippingAmtVal !== undefined && shippingAmtVal !== '')
+      ? (parseFloat(shippingAmtVal) || 0)
       : (custFu?.shippingAmount || query?.shippingAmount || 0);
 
     const mode = document.getElementById('query-pay-mode-select')?.value || custFu?.paymentMode || query?.paymentMode || 'UPI';
 
-    const advanceAmt = (advanceAmtVal !== undefined && advanceAmtVal !== '') 
-      ? (parseFloat(advanceAmtVal) || 0) 
+    const advanceAmt = (advanceAmtVal !== undefined && advanceAmtVal !== '')
+      ? (parseFloat(advanceAmtVal) || 0)
       : (custFu?.advancePayment || query?.advancePayment || 0);
 
     const payDueDate = document.getElementById('query-pay-due-input')?.value || cbDate || custFu?.paymentDueDate || query?.paymentDueDate || '';
@@ -5781,6 +6506,11 @@ window.handleCancelQueryEdit = handleCancelQueryEdit;
 // Save Customer Details from Right-Side Panel Form
 function handleQuickCustomerSave(event, customerId) {
   if (event) event.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for customer profiles.', 'lock', 'rose');
+    return;
+  }
 
   const customer = CRM_STATE.customers.find(c => c.id === customerId);
   if (!customer) return;
@@ -5846,7 +6576,7 @@ function handleQuickCustomerSave(event, customerId) {
       altAddress: customer.alt_address,
       notes: customer.notes
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('CUSTOMER_UPDATED', 'CUSTOMER_360', `Updated profile details and notes for customer ${customer.name} (${customer.id})`);
 
@@ -5862,6 +6592,11 @@ function handleQuickCustomerSave(event, customerId) {
 
 // Quick 1-Click Customer Mindset Notes Modal / Prompt
 function openCustomerQuickNotesModal(customerId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for customer records.', 'lock', 'rose');
+    return;
+  }
   const customer = CRM_STATE.customers.find(c => c.id === customerId);
   if (!customer) return;
 
@@ -5881,7 +6616,7 @@ function openCustomerQuickNotesModal(customerId) {
         phone: customer.phone,
         notes: customer.notes
       })
-    }).catch(() => {});
+    }).catch(() => { });
 
     logAudit('CUSTOMER_NOTES', 'CUSTOMER_360', `Updated mindset notes for ${customer.name}: "${customer.notes.substring(0, 30)}..."`);
     renderCustomer360Panel();
@@ -5892,6 +6627,11 @@ function openCustomerQuickNotesModal(customerId) {
 
 // Quick Append Mindset Tag to Customer Record
 function appendCustomerMindsetTag(customerId, tagText) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for customer records.', 'lock', 'rose');
+    return;
+  }
   const customer = CRM_STATE.customers.find(c => c.id === customerId);
   if (!customer) return;
 
@@ -6139,8 +6879,8 @@ function syncCustomerAutomationHistory(customer) {
 
     // Determine if this message represents a shared product
     const hasProductIndicator = !!(
-      skuCodeMatch || 
-      catalogMatch || 
+      skuCodeMatch ||
+      catalogMatch ||
       (msg.media_url && (detectedTitle || priceValMatch)) ||
       (detectedTitle && priceValMatch)
     );
@@ -6149,7 +6889,7 @@ function syncCustomerAutomationHistory(customer) {
       const skuVal = skuCodeMatch ? skuCodeMatch[1].trim() : '';
       const priceVal = priceValMatch ? `₹${priceValMatch[1].trim()}` : '';
       const sizeVal = sizeMatch ? sizeMatch[1].replace(/[*_]/g, '').trim() : 'Standard';
-      
+
       let catVal = 'General Garments';
       let subcatVal = 'General';
       if (catalogMatch) {
@@ -6213,7 +6953,7 @@ window.syncCustomerAutomationHistory = syncCustomerAutomationHistory;
 
 
 // Live Stream Navigation & Message Highlight Helpers
-window.jumpToLiveStreamMessage = function(msgId) {
+window.jumpToLiveStreamMessage = function (msgId) {
   if (!msgId) return;
   const stream = document.getElementById('chat-messages-stream');
   if (!stream) return;
@@ -6229,7 +6969,7 @@ window.jumpToLiveStreamMessage = function(msgId) {
   }
 };
 
-window.scrollChatToFirstFilteredProduct = function() {
+window.scrollChatToFirstFilteredProduct = function () {
   const stream = document.getElementById('chat-messages-stream');
   if (!stream) return;
   const highlighted = stream.querySelector('[data-product-matched="true"]');
@@ -6267,7 +7007,7 @@ function getItemCategoryHierarchy(item) {
 
   // 1. Try matching with full products in CRM_STATE.products
   if (CRM_STATE && Array.isArray(CRM_STATE.products)) {
-    const prod = CRM_STATE.products.find(p => 
+    const prod = CRM_STATE.products.find(p =>
       (item.sku && p.sku && p.sku.toLowerCase() === item.sku.toLowerCase()) ||
       (item.title && p.name && (p.name.toLowerCase().includes(item.title.toLowerCase()) || item.title.toLowerCase().includes(p.name.toLowerCase())))
     );
@@ -6464,10 +7204,14 @@ function shareChosenProductDirectly(sku, name, price, img, size) {
 // Function to render the Bot Automation & Chosen Products Card with full Category, Sub-Category, Sub-Sub Category filters
 function renderBotAutomationAndChosenProductsCard(customer) {
   if (!customer) return '';
+  const _isSuperAdminCust = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canShareCatalogPerm = _isSuperAdminCust || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true);
+  // Move to Order strictly requires Edit permission (orders.edit or inbox.edit)
+  const canMoveToOrder = _isSuperAdminCust || (typeof canUserPerformAction === 'function' ? (canUserPerformAction('orders', 'edit') || canUserPerformAction('inbox', 'edit')) : true);
 
   // 1. Gather ONLY PRODUCTS that were sent / interacted with in THIS Customer's Chat
   const allCustomerActions = Array.isArray(customer.automationHistory) ? [...customer.automationHistory] : [];
-  
+
   // Filter out category menus (CAT-1) or non-product actions; keep ONLY actual products
   const customerProductsOnly = allCustomerActions.filter(item => {
     if (!item) return false;
@@ -6576,10 +7320,10 @@ function renderBotAutomationAndChosenProductsCard(customer) {
           <span class="text-[11px] font-extrabold uppercase tracking-wide text-sky-950">Bot Automation &amp; Products Sent</span>
         </div>
         <div class="flex items-center gap-1">
-          <button type="button" onclick="openProductSearchModal()" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Search Stock &amp; Share to WhatsApp">
+          ${canShareCatalogPerm ? `<button type="button" onclick="openProductSearchModal()" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Search Stock &amp; Share to WhatsApp">
             <span class="material-symbols-outlined text-[12px]">share</span>
             <span class="hidden sm:inline">Share</span>
-          </button>
+          </button>` : '<span class="text-[9px] text-slate-400 font-medium px-1">🔒 View Only</span>'}
           <span class="text-[9px] bg-emerald-100 text-emerald-800 font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-200" title="Products sent in this customer chat">
             ${totalCount} In Chat
           </span>
@@ -6695,8 +7439,9 @@ function renderBotAutomationAndChosenProductsCard(customer) {
         ` : ''}
       </div>
 
+      ${canMoveToOrder ? `
       <!-- Bulk Move to Orders Bar -->
-      <div id="chosen-products-bulk-bar" class="${canUserPerformAction('orders', 'create') ? 'hidden' : '!hidden'} p-2.5 bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl shadow-md flex items-center justify-between transition animate-in fade-in">
+      <div id="chosen-products-bulk-bar" class="hidden p-2.5 bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl shadow-md flex items-center justify-between transition animate-in fade-in">
         <div class="min-w-0 pr-1">
           <span class="text-xs font-bold block truncate" id="chosen-products-selected-text">0 Selected</span>
           <span class="text-[10px] text-emerald-200 font-mono font-bold block" id="chosen-products-selected-total">Total: ₹0</span>
@@ -6706,6 +7451,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
           <span>Move to Orders</span>
         </button>
       </div>
+      ` : ''}
 
       <!-- Products Listing Container -->
       <div class="space-y-2">
@@ -6721,6 +7467,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
             ` : ''}
           </div>
         ` : `
+          ${canMoveToOrder ? `
           <!-- Sub-header with Select All option -->
           <div class="flex items-center justify-between px-1 text-[10px] text-slate-500 font-semibold">
             <label class="flex items-center gap-1.5 cursor-pointer">
@@ -6729,21 +7476,23 @@ function renderBotAutomationAndChosenProductsCard(customer) {
             </label>
             <span class="text-[9px] text-slate-400">Select to move to order</span>
           </div>
+          ` : ''}
 
           <!-- Scrollable Product Cards List -->
           <div class="space-y-2 max-h-80 overflow-y-auto pr-1 custom-chat-scroll">
             ${filteredProducts.map(item => {
-              const safeTitle = (item.title || '').replace(/[\r\n]+/g, ' ').replace(/'/g, "\\'");
-              const safeSku = (item.sku || '').replace(/'/g, "\\'");
-              const safePrice = (item.price || '').replace(/'/g, "\\'");
-              const safeSize = (item.size || item.subsub || '').replace(/'/g, "\\'");
-              const safeImg = (item.image || '').replace(/'/g, "\\'");
-              const isProduct = true;
-              const isChecked = typeof CHOSEN_PRODUCTS_SELECTION !== 'undefined' && CHOSEN_PRODUCTS_SELECTION.has(String(item.id));
-              const safeMsgId = (item.msgId || item.id || '').replace(/'/g, "\\'");
+    const safeTitle = (item.title || '').replace(/[\r\n]+/g, ' ').replace(/'/g, "\\'");
+    const safeSku = (item.sku || '').replace(/'/g, "\\'");
+    const safePrice = (item.price || '').replace(/'/g, "\\'");
+    const safeSize = (item.size || item.subsub || '').replace(/'/g, "\\'");
+    const safeImg = (item.image || '').replace(/'/g, "\\'");
+    const isProduct = true;
+    const isChecked = typeof CHOSEN_PRODUCTS_SELECTION !== 'undefined' && CHOSEN_PRODUCTS_SELECTION.has(String(item.id));
+    const safeMsgId = (item.msgId || item.id || '').replace(/'/g, "\\'");
 
-              return `
+    return `
               <div class="bg-white p-2.5 rounded-xl border ${isChecked ? 'border-emerald-400 bg-emerald-50/20 shadow-xs' : 'border-sky-200'} shadow-2xs flex items-start gap-2 transition hover:border-sky-300 hover:shadow-xs">
+                ${canMoveToOrder ? `
                 <div class="pt-1 shrink-0">
                   <input type="checkbox" class="chosen-product-cb rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4" 
                     data-item-id="${item.id}" 
@@ -6755,6 +7504,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
                     onchange="handleChosenProductCheckChange('${customer.id}')" 
                     ${isChecked ? 'checked' : ''}>
                 </div>
+                ` : ''}
 
                 ${item.image ? `
                   <div class="relative shrink-0 group">
@@ -6800,7 +7550,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
                       <button type="button" onclick="shareChosenProductDirectly('${safeSku}', '${safeTitle}', '${safePrice}', '${safeImg}', '${safeSize}')" class="p-1 hover:bg-slate-100 text-slate-500 hover:text-emerald-700 rounded transition cursor-pointer" title="Share to WhatsApp">
                         <span class="material-symbols-outlined text-[14px]">send</span>
                       </button>
-                      ${canUserPerformAction('orders', 'create') ? `
+                      ${canMoveToOrder ? `
                       <button type="button" onclick="openOrderFromSingleChosenProduct('${customer.id}', '${item.id}')" class="btn-move-to-order px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" title="Move this product to Order">
                         <span class="material-symbols-outlined text-[12px]">shopping_cart_checkout</span>
                         <span>Move to Order</span>
@@ -6810,7 +7560,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
                 </div>
               </div>
             `;
-            }).join('')}
+  }).join('')}
           </div>
         `}
       </div>
@@ -6884,8 +7634,8 @@ function renderCustomer360Panel() {
   const staffMember = customerFollowup ? (CRM_STATE.staffList || []).find(s => s && (s.id === customerFollowup.assignedTo || s.name === customerFollowup.assignedTo)) : null;
   const fuStaff = customerFollowup ? (
     staffMember ? staffMember.name :
-    (customerFollowup.assignedTo === 'admin' || customerFollowup.assignedTo === 'Super Admin' ? 'Super Admin' :
-    (customerFollowup.assignedTo || 'Super Admin'))
+      (customerFollowup.assignedTo === 'admin' || customerFollowup.assignedTo === 'Super Admin' ? 'Super Admin' :
+        (customerFollowup.assignedTo || 'Super Admin'))
   ) : '';
   const fuCreatedBy = customerFollowup ? (customerFollowup.createdBy || query?.statusLastEditedBy || '') : '';
   const isOverdue = customerFollowup ? (typeof isFollowupOverdue === 'function' ? isFollowupOverdue(customerFollowup) : false) : false;
@@ -6904,8 +7654,20 @@ function renderCustomer360Panel() {
 
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
-  const isEditing = CUSTOMER_EDIT_MODES.has(customer.id);
+  const isSuperAdminCust = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canEditCustPerm = isSuperAdminCust || (typeof canUserPerformAction === 'function' ? canUserPerformAction('customers', 'edit') : true);
+  const isEditing = canEditCustPerm && CUSTOMER_EDIT_MODES.has(customer.id);
   const isQueryEditing = true;
+  // RBAC: Enquiry status editing requires inbox.edit or enquiries.edit permission
+  const canEditEnqPerm = isSuperAdminCust ||
+    (typeof canUserPerformAction === 'function'
+      ? (canUserPerformAction('inbox', 'edit') || canUserPerformAction('enquiries', 'edit'))
+      : true);
+  // RBAC: Sharing catalog requires inbox.create permission
+  const canShareCatalogPerm = isSuperAdminCust ||
+    (typeof canUserPerformAction === 'function'
+      ? canUserPerformAction('inbox', 'create')
+      : true);
 
   // Preserve active uncommitted user typing if right panel re-renders during editing
   let draft = null;
@@ -7098,24 +7860,40 @@ function renderCustomer360Panel() {
           <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.notes_placeholder', 'Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions...')}" class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${valNotes}</textarea>
         </div>
 
-        <!-- Action Buttons (Locked vs Editing) -->
+        <!-- Action Buttons (Locked vs Editing vs View-Only RBAC) -->
         <div class="pt-1">
-          ${isEditing ? `
-            <div class="flex gap-2">
-              <button type="button" onclick="toggleCustomerEditMode('${customer.id}', false)" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center">
-                ${t('common.cancel', 'Cancel')}
-              </button>
-              <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
-                <span class="material-symbols-outlined text-[16px]">save</span>
-                <span>${t('customer.save_details', 'Save Customer Details')}</span>
-              </button>
-            </div>
-          ` : `
-            <button type="button" onclick="toggleCustomerEditMode('${customer.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
-              <span class="material-symbols-outlined text-[16px]">edit_note</span>
-              <span>${t('customer.edit_details', 'Edit Customer Details & Notes')}</span>
-            </button>
-          `}
+          ${(() => {
+      const isSuper = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+      const canEdit = isSuper || (typeof canUserPerformAction === 'function' ? canUserPerformAction('customers', 'edit') : true);
+      if (!canEdit) {
+        return `
+                <div class="w-full py-2.5 bg-slate-100/90 border border-slate-200/90 rounded-xl text-center text-slate-500 font-bold text-xs flex items-center justify-center gap-1.5 select-none shadow-2xs" title="View Access Only: Editing customer profiles is restricted for your assigned role">
+                  <span class="material-symbols-outlined text-[15px] text-slate-400">lock</span>
+                  <span>${t('customer.view_only_profile', 'View-Only Customer Profile')}</span>
+                </div>
+              `;
+      }
+      if (isEditing) {
+        return `
+                <div class="flex gap-2">
+                  <button type="button" onclick="toggleCustomerEditMode('${customer.id}', false)" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center">
+                    ${t('common.cancel', 'Cancel')}
+                  </button>
+                  <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                    <span class="material-symbols-outlined text-[16px]">save</span>
+                    <span>${t('customer.save_details', 'Save Customer Details')}</span>
+                  </button>
+                </div>
+              `;
+      } else {
+        return `
+                <button type="button" onclick="toggleCustomerEditMode('${customer.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                  <span class="material-symbols-outlined text-[16px]">edit_note</span>
+                  <span>${t('customer.edit_details', 'Edit Customer Details & Notes')}</span>
+                </button>
+              `;
+      }
+    })()}
         </div>
       </form>
     </div>
@@ -7141,10 +7919,12 @@ function renderCustomer360Panel() {
             <div>
               <div class="flex items-center justify-between mb-1.5 h-4">
                 <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide truncate">${t('customer.change_status', 'Change Status:')}</label>
-                <span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-1.5 py-0.2 rounded shrink-0">${t('customer.editable', 'Editable')}</span>
+                ${canEditEnqPerm
+        ? '<span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-1.5 py-0.2 rounded shrink-0">' + t('customer.editable', 'Editable') + '</span>'
+        : '<span class="text-[9px] bg-slate-100 text-slate-500 border border-slate-300 font-extrabold px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"><span class=\"material-symbols-outlined text-[9px]\">lock</span>View Only</span>'}
               </div>
               <div class="relative">
-                <select id="query-status-select" onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full h-[42px] bg-white border border-slate-300 hover:border-brand-wa ring-0 focus:ring-1 focus:ring-brand-wa text-slate-900 cursor-pointer shadow-2xs rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
+                <select id="query-status-select" ${canEditEnqPerm ? `onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')"` : 'disabled'} class="w-full h-[42px] ${canEditEnqPerm ? 'bg-white border-slate-300 hover:border-brand-wa cursor-pointer' : 'bg-slate-100 border-slate-200 cursor-not-allowed'} border ring-0 focus:ring-1 focus:ring-brand-wa text-slate-900 shadow-2xs rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
                   <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 ${t('status.new', 'New Lead')}</option>
                   <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 ${t('status.pending', 'Payment Pending')}</option>
                   <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 ${t('status.follow_up', 'Follow Up')}</option>
@@ -7159,10 +7939,10 @@ function renderCustomer360Panel() {
 
             <!-- COLUMN 2: CALLBACK DATE (ALL TIME EDITABLE WITH DATE PICKER & PRESETS) -->
             ${(() => {
-              const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
-              const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
+        const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
+        const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
 
-              return `
+        return `
                 <div id="query-callback-edit-row">
                   <div class="flex items-center justify-between mb-1.5 h-4">
                     <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1 truncate">
@@ -7178,7 +7958,7 @@ function renderCustomer360Panel() {
                   <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full h-[42px] bg-white border border-blue-300 rounded-xl px-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600 cursor-pointer">
                 </div>
               `;
-            })()}
+      })()}
           </div>
 
           <!-- ROW 3: STATUS CHANGE NOTES & REMARKS (With Quick Note Chips) -->
@@ -7220,13 +8000,13 @@ function renderCustomer360Panel() {
                 </button>
                 <!-- Custom Quick Notes from localStorage -->
                 ${(() => {
-                  try {
-                    const customList = JSON.parse(localStorage.getItem('GRM_CUSTOM_QUICK_NOTES') || '[]');
-                    return customList.map(n => {
-                      const noteText = typeof n === 'string' ? n : (n.text || '');
-                      const noteId = typeof n === 'string' ? n : (n.id || noteText);
-                      if (!noteText) return '';
-                      return `
+        try {
+          const customList = JSON.parse(localStorage.getItem('GRM_CUSTOM_QUICK_NOTES') || '[]');
+          return customList.map(n => {
+            const noteText = typeof n === 'string' ? n : (n.text || '');
+            const noteId = typeof n === 'string' ? n : (n.id || noteText);
+            if (!noteText) return '';
+            return `
                         <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50/90 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition shadow-2xs group ${isQueryEditing ? 'hover:bg-amber-100 cursor-pointer active:scale-95' : 'opacity-60 cursor-not-allowed select-none'}" ${isQueryEditing ? `onclick="setQuickStatusNote('${noteText.replace(/'/g, "\\'")}')"` : ''} title="${isQueryEditing ? `Click to insert '${noteText}'` : 'Touch Edit Enquiry Status to use'}">
                           <span>📌 ${noteText}</span>
                           ${isQueryEditing ? `
@@ -7236,11 +8016,11 @@ function renderCustomer360Panel() {
                           ` : ''}
                         </div>
                       `;
-                    }).join('');
-                  } catch(e) {
-                    return '';
-                  }
-                })()}
+          }).join('');
+        } catch (e) {
+          return '';
+        }
+      })()}
               </div>
 
               ${isQueryEditing ? `
@@ -7263,7 +8043,7 @@ function renderCustomer360Panel() {
               ` : ''}
             </div>
 
-            <textarea id="query-status-notes-input" rows="2" ${isQueryEditing ? '' : 'disabled'} placeholder="Add customer remarks, discussion summary, reason for status change, or callback promise..." class="w-full ${isQueryEditing ? 'bg-amber-50/40 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa font-medium' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs transition">${query.statusNotes || ''}</textarea>
+            <textarea id="query-status-notes-input" rows="2" ${(canEditEnqPerm && isQueryEditing) ? '' : 'disabled'} placeholder="Add customer remarks, discussion summary, reason for status change, or callback promise..." class="w-full ${(canEditEnqPerm && isQueryEditing) ? 'bg-amber-50/40 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa font-medium' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs transition">${query.statusNotes || ''}</textarea>
           </div>
 
           <!-- Query Meta Priority Details (Query ID and Schedule Action removed) -->
@@ -7276,19 +8056,19 @@ function renderCustomer360Panel() {
 
           <!-- DYNAMIC PAYMENT PENDING MODULE (Appears when Pending / Follow-up is selected) -->
           ${(() => {
-            const payTotal = customerFollowup?.paymentAmount || query?.paymentAmount || '';
-            const payShipping = customerFollowup?.shippingAmount || query?.shippingAmount || '';
-            const payMode = customerFollowup?.paymentMode || query?.paymentMode || 'UPI';
-            const payAdvance = customerFollowup?.advancePayment || query?.advancePayment || '';
-            const payDue = customerFollowup?.paymentDueDate || query?.paymentDueDate || '';
-            const payItems = customerFollowup?.quotedItems || query?.quotedItems || '';
-            const payNotes = customerFollowup?.paymentNotes || query?.paymentNotes || '';
-            const totalNum = parseFloat(payTotal || 0) || 0;
-            const shipNum = parseFloat(payShipping || 0) || 0;
-            const advNum = parseFloat(payAdvance || 0) || 0;
-            const balanceNum = Math.max(0, (totalNum + shipNum) - advNum);
+        const payTotal = customerFollowup?.paymentAmount || query?.paymentAmount || '';
+        const payShipping = customerFollowup?.shippingAmount || query?.shippingAmount || '';
+        const payMode = customerFollowup?.paymentMode || query?.paymentMode || 'UPI';
+        const payAdvance = customerFollowup?.advancePayment || query?.advancePayment || '';
+        const payDue = customerFollowup?.paymentDueDate || query?.paymentDueDate || '';
+        const payItems = customerFollowup?.quotedItems || query?.quotedItems || '';
+        const payNotes = customerFollowup?.paymentNotes || query?.paymentNotes || '';
+        const totalNum = parseFloat(payTotal || 0) || 0;
+        const shipNum = parseFloat(payShipping || 0) || 0;
+        const advNum = parseFloat(payAdvance || 0) || 0;
+        const balanceNum = Math.max(0, (totalNum + shipNum) - advNum);
 
-            return `
+        return `
               <div id="enquiry-payment-pending-wrapper" class="${(qStatus === 'FOLLOW_UP' || qStatus === 'PENDING' || customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-white border border-amber-300/80 p-2.5 rounded-xl space-y-2 shadow-2xs transition-all">
                 <div class="flex items-center justify-between">
                   <label class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 cursor-pointer select-none">
@@ -7304,38 +8084,38 @@ function renderCustomer360Panel() {
                     <div class="grid grid-cols-2 gap-2">
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
                         <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.total_amount', 'Total Amount:')}</span>
-                        <span class="font-mono font-bold text-slate-900 text-xs">₹${totalNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        <span class="font-mono font-bold text-slate-900 text-xs">₹${totalNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
                         <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.shipping', 'Shipping:')}</span>
-                        <span class="font-mono font-bold text-slate-900 text-xs">₹${shipNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        <span class="font-mono font-bold text-slate-900 text-xs">₹${shipNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
                     </div>
 
                     <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
                       <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.payment_mode', 'Mode:')}</span>
                       <span class="font-bold text-amber-950 text-xs">${(() => {
-                        const mLabels = {
-                          'ALL': '💳 All Payment Modes',
-                          'UPI': '📱 UPI (GPay/PhonePe)',
-                          'BANK_TRANSFER': '🏛️ Bank Transfer (NEFT/IMPS)',
-                          'COD_ADVANCE': '📦 COD Advance',
-                          'PAYMENT_LINK': '🔗 Payment Link / QR',
-                          'CASH': '💵 Cash / Store Counter'
-                        };
-                        return mLabels[payMode] || payMode;
-                      })()}</span>
+              const mLabels = {
+                'ALL': '💳 All Payment Modes',
+                'UPI': '📱 UPI (GPay/PhonePe)',
+                'BANK_TRANSFER': '🏛️ Bank Transfer (NEFT/IMPS)',
+                'COD_ADVANCE': '📦 COD Advance',
+                'PAYMENT_LINK': '🔗 Payment Link / QR',
+                'CASH': '💵 Cash / Store Counter'
+              };
+              return mLabels[payMode] || payMode;
+            })()}</span>
                     </div>
 
                     ${payMode === 'COD_ADVANCE' ? `
                       <div class="grid grid-cols-2 gap-2 bg-amber-100/60 p-2 rounded-lg border border-amber-300/80">
                         <div class="flex items-center justify-between">
                           <span class="text-[9px] font-bold text-amber-900 uppercase">${t('customer.advance', 'Advance:')}</span>
-                          <span class="font-mono font-black text-amber-950 text-xs">₹${advNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          <span class="font-mono font-black text-amber-950 text-xs">₹${advNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div class="flex items-center justify-between border-l border-amber-300/80 pl-2">
                           <span class="text-[9px] font-bold text-amber-900 uppercase">${t('customer.balance', 'Balance:')}</span>
-                          <span class="font-mono font-black text-emerald-800 text-xs">₹${balanceNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          <span class="font-mono font-black text-emerald-800 text-xs">₹${balanceNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                       </div>
                     ` : ''}
@@ -7412,7 +8192,7 @@ function renderCustomer360Panel() {
                         </div>
                         <div class="text-[10px] text-amber-950 font-semibold bg-white/80 px-2 py-1 rounded-lg border border-amber-200 flex items-center justify-between">
                           <span class="text-[8.5px] uppercase font-bold text-slate-500">${t('customer.balance', 'Balance:')}</span>
-                          <span class="font-mono font-black text-emerald-800 text-xs" id="query-pay-balance-val">₹${balanceNum.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span class="font-mono font-black text-emerald-800 text-xs" id="query-pay-balance-val">₹${balanceNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                       </div>
                     </div>
@@ -7443,10 +8223,11 @@ function renderCustomer360Panel() {
                 `}
               </div>
             `;
-          })()}
+      })()}
 
           <!-- Action Buttons: Cancel & Save Status (Always Directly Available) -->
           <div class="pt-1">
+            ${canEditEnqPerm ? `
             <div class="flex gap-2">
               <button type="button" onclick="handleCancelQueryEdit('${query.id}')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-2xs">
                 <span class="material-symbols-outlined text-[15px]">close</span>
@@ -7457,27 +8238,33 @@ function renderCustomer360Panel() {
                 <span>${t('customer.save_status_log', 'Save Status & Log History')}</span>
               </button>
             </div>
+            ` : `
+            <div class="flex items-center justify-center gap-1.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[13px]">lock</span>
+              <span>View-Only Access — Status changes not permitted</span>
+            </div>
+            `}
           </div>
 
           <!-- Dynamic Status History Audit Engine (First 3 static, 4th and above auto-scroll) - Shown BELOW Enquiry Form & Actions -->
           
           ${(() => {
-            let historyList = (Array.isArray(query.statusHistory) && query.statusHistory.length > 0)
-              ? query.statusHistory
-              : (query.statusLastEditedBy ? [{
-                  from: query.statusPrevious || 'NEW',
-                  to: query.status || 'NEW',
-                  by: query.statusLastEditedBy,
-                  at: query.statusLastEditedAt || '',
-                  notes: query.statusNotes || '',
-                  followupDate: customerFollowup ? customerFollowup.date : null,
-                  followupTime: customerFollowup ? customerFollowup.time : null,
-                  assignedTo: customerFollowup ? customerFollowup.assignedTo : query.assignedTo,
-                  timestamp: new Date().toISOString()
-                }] : []);
+        let historyList = (Array.isArray(query.statusHistory) && query.statusHistory.length > 0)
+          ? query.statusHistory
+          : (query.statusLastEditedBy ? [{
+            from: query.statusPrevious || 'NEW',
+            to: query.status || 'NEW',
+            by: query.statusLastEditedBy,
+            at: query.statusLastEditedAt || '',
+            notes: query.statusNotes || '',
+            followupDate: customerFollowup ? customerFollowup.date : null,
+            followupTime: customerFollowup ? customerFollowup.time : null,
+            assignedTo: customerFollowup ? customerFollowup.assignedTo : query.assignedTo,
+            timestamp: new Date().toISOString()
+          }] : []);
 
-            if (historyList.length === 0) {
-              return `
+        if (historyList.length === 0) {
+          return `
                 <div class="bg-slate-50/80 border border-slate-200/70 p-2.5 rounded-xl text-[11px] text-slate-500 space-y-1">
                   <div class="flex items-center justify-between">
                     <span class="flex items-center gap-1">
@@ -7494,11 +8281,11 @@ function renderCustomer360Panel() {
                   ` : ''}
                 </div>
               `;
-            }
+        }
 
-            const isScrollable = (historyList.length >= 4);
+        const isScrollable = (historyList.length >= 4);
 
-            return `
+        return `
               <div id="status-history-wrapper" class="space-y-1.5">
                 <div class="flex items-center justify-between text-[11px] px-0.5">
                   <span class="font-extrabold text-slate-800 flex items-center gap-1">
@@ -7518,91 +8305,91 @@ function renderCustomer360Panel() {
 
                 <div id="status-history-scroll-container" class="${isScrollable ? 'max-h-[340px] overflow-y-auto pr-1 space-y-2.5 custom-scrollbar' : 'space-y-2.5'}">
                   ${historyList.map((item, idx) => {
-                    const isRescheduled = item.action === 'FOLLOWUP_RESCHEDULED' ||
-                      item.action === 'RESCHEDULED' ||
-                      Boolean(item.previousFollowupDate && item.followupDate) ||
-                      (item.from === 'FOLLOW_UP' && item.to === 'FOLLOW_UP') ||
-                      (typeof item.notes === 'string' && item.notes.toLowerCase().includes('rescheduled'));
+          const isRescheduled = item.action === 'FOLLOWUP_RESCHEDULED' ||
+            item.action === 'RESCHEDULED' ||
+            Boolean(item.previousFollowupDate && item.followupDate) ||
+            (item.from === 'FOLLOW_UP' && item.to === 'FOLLOW_UP') ||
+            (typeof item.notes === 'string' && item.notes.toLowerCase().includes('rescheduled'));
 
-                    const isScheduled = !isRescheduled && (
-                      item.action === 'FOLLOWUP_SCHEDULED' ||
-                      item.to === 'FOLLOW_UP' ||
-                      Boolean(item.followupDate)
-                    );
+          const isScheduled = !isRescheduled && (
+            item.action === 'FOLLOWUP_SCHEDULED' ||
+            item.to === 'FOLLOW_UP' ||
+            Boolean(item.followupDate)
+          );
 
-                    let effectiveDate = item.followupDate || '';
-                    let effectiveTime = item.followupTime || '';
-                    let prevDate = item.previousFollowupDate || '';
-                    let prevTime = item.previousFollowupTime || '';
+          let effectiveDate = item.followupDate || '';
+          let effectiveTime = item.followupTime || '';
+          let prevDate = item.previousFollowupDate || '';
+          let prevTime = item.previousFollowupTime || '';
 
-                    // 1. Check notes for regex date time
-                    if (!effectiveDate && item.notes) {
-                      const m = item.notes.match(/(\d{4}-\d{2}-\d{2})\s*(?:at\s*)?(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)/i);
-                      if (m) {
-                        effectiveDate = m[1];
-                        effectiveTime = m[2];
-                      }
-                    }
+          // 1. Check notes for regex date time
+          if (!effectiveDate && item.notes) {
+            const m = item.notes.match(/(\d{4}-\d{2}-\d{2})\s*(?:at\s*)?(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)/i);
+            if (m) {
+              effectiveDate = m[1];
+              effectiveTime = m[2];
+            }
+          }
 
-                    // 2. Comprehensive fallback for follow-up date and time
-                    if (!effectiveDate && (isRescheduled || isScheduled || item.to === 'FOLLOW_UP')) {
-                      const allCustFu = (CRM_STATE.followups || []).filter(f => f && (f.customerId === customer?.id || String(f.customerId) === String(customer?.id) || (query && f.queryId === query.id)));
-                      if (allCustFu.length > 0) {
-                        if (isRescheduled) {
-                          effectiveDate = allCustFu[0].date;
-                          effectiveTime = allCustFu[0].time;
-                          if (allCustFu.length > 1) {
-                            prevDate = allCustFu[1].date;
-                            prevTime = allCustFu[1].time;
-                          }
-                        } else {
-                          const prevResched = historyList.find(h => h.previousFollowupDate);
-                          if (prevResched) {
-                            effectiveDate = prevResched.previousFollowupDate;
-                            effectiveTime = prevResched.previousFollowupTime;
-                          } else {
-                            const olderFu = allCustFu.find(f => f.id === customerFollowup?.rescheduledFromId) || allCustFu[allCustFu.length - 1];
-                            effectiveDate = olderFu ? olderFu.date : allCustFu[0].date;
-                            effectiveTime = olderFu ? olderFu.time : allCustFu[0].time;
-                          }
-                        }
-                      } else if (customerFollowup) {
-                        effectiveDate = customerFollowup.date;
-                        effectiveTime = customerFollowup.time;
-                      }
-                    }
+          // 2. Comprehensive fallback for follow-up date and time
+          if (!effectiveDate && (isRescheduled || isScheduled || item.to === 'FOLLOW_UP')) {
+            const allCustFu = (CRM_STATE.followups || []).filter(f => f && (f.customerId === customer?.id || String(f.customerId) === String(customer?.id) || (query && f.queryId === query.id)));
+            if (allCustFu.length > 0) {
+              if (isRescheduled) {
+                effectiveDate = allCustFu[0].date;
+                effectiveTime = allCustFu[0].time;
+                if (allCustFu.length > 1) {
+                  prevDate = allCustFu[1].date;
+                  prevTime = allCustFu[1].time;
+                }
+              } else {
+                const prevResched = historyList.find(h => h.previousFollowupDate);
+                if (prevResched) {
+                  effectiveDate = prevResched.previousFollowupDate;
+                  effectiveTime = prevResched.previousFollowupTime;
+                } else {
+                  const olderFu = allCustFu.find(f => f.id === customerFollowup?.rescheduledFromId) || allCustFu[allCustFu.length - 1];
+                  effectiveDate = olderFu ? olderFu.date : allCustFu[0].date;
+                  effectiveTime = olderFu ? olderFu.time : allCustFu[0].time;
+                }
+              }
+            } else if (customerFollowup) {
+              effectiveDate = customerFollowup.date;
+              effectiveTime = customerFollowup.time;
+            }
+          }
 
-                    if (!effectiveDate && (query.callback_date || customerFollowup?.date)) {
-                      effectiveDate = query.callback_date || customerFollowup?.date || '';
-                    }
+          if (!effectiveDate && (query.callback_date || customerFollowup?.date)) {
+            effectiveDate = query.callback_date || customerFollowup?.date || '';
+          }
 
-                    // Payment details detection
-                    const hasPayment = Boolean(
-                      item.isPaymentPending ||
-                      (item.paymentAmount && Number(item.paymentAmount) > 0) ||
-                      (idx === 0 && query.isPaymentPending)
-                    );
+          // Payment details detection
+          const hasPayment = Boolean(
+            item.isPaymentPending ||
+            (item.paymentAmount && Number(item.paymentAmount) > 0) ||
+            (idx === 0 && query.isPaymentPending)
+          );
 
-                    const payTotal = Number(item.paymentAmount !== undefined && item.paymentAmount !== null ? item.paymentAmount : (query.paymentAmount || 0));
-                    const payShipping = Number(item.shippingAmount !== undefined && item.shippingAmount !== null ? item.shippingAmount : (query.shippingAmount || 0));
-                    const payMode = item.paymentMode || query.paymentMode || 'UPI';
-                    const payAdvance = Number(item.advancePayment !== undefined && item.advancePayment !== null ? item.advancePayment : (query.advancePayment || 0));
-                    const payBalance = Math.max(0, (payTotal + payShipping) - payAdvance);
-                    const payDueDate = item.paymentDueDate || query.paymentDueDate || '';
-                    const payItems = item.quotedItems || query.quotedItems || '';
-                    const payNotes = item.paymentNotes || query.paymentNotes || '';
+          const payTotal = Number(item.paymentAmount !== undefined && item.paymentAmount !== null ? item.paymentAmount : (query.paymentAmount || 0));
+          const payShipping = Number(item.shippingAmount !== undefined && item.shippingAmount !== null ? item.shippingAmount : (query.shippingAmount || 0));
+          const payMode = item.paymentMode || query.paymentMode || 'UPI';
+          const payAdvance = Number(item.advancePayment !== undefined && item.advancePayment !== null ? item.advancePayment : (query.advancePayment || 0));
+          const payBalance = Math.max(0, (payTotal + payShipping) - payAdvance);
+          const payDueDate = item.paymentDueDate || query.paymentDueDate || '';
+          const payItems = item.quotedItems || query.quotedItems || '';
+          const payNotes = item.paymentNotes || query.paymentNotes || '';
 
-                    const modeLabels = {
-                      'ALL': '🌐 All Modes',
-                      'UPI': '📱 UPI Transfer',
-                      'BANK_TRANSFER': '🏦 Bank Transfer / NEFT',
-                      'COD_ADVANCE': '📦 COD Advance',
-                      'PAYMENT_LINK': '🔗 Payment Link',
-                      'CASH': '💵 Cash'
-                    };
-                    const modeDisplay = modeLabels[payMode] || payMode;
+          const modeLabels = {
+            'ALL': '🌐 All Modes',
+            'UPI': '📱 UPI Transfer',
+            'BANK_TRANSFER': '🏦 Bank Transfer / NEFT',
+            'COD_ADVANCE': '📦 COD Advance',
+            'PAYMENT_LINK': '🔗 Payment Link',
+            'CASH': '💵 Cash'
+          };
+          const modeDisplay = modeLabels[payMode] || payMode;
 
-                    return `
+          return `
                       <div class="bg-white border border-slate-200/90 p-2.5 rounded-xl text-xs space-y-1.5 shadow-2xs transition ${idx === 0 ? 'ring-1.5 ring-blue-400/80 bg-gradient-to-br from-blue-50/20 via-white to-slate-50/40' : 'hover:border-slate-300'}">
                         
                         <!-- ROW 1: CURRENT STATUS AND CALLBACK DATE -->
@@ -7661,11 +8448,11 @@ function renderCustomer360Panel() {
                               <div class="grid grid-cols-2 gap-1.5">
                                 <div class="bg-white/90 px-2 py-1 rounded-lg border border-amber-200/60 flex items-center justify-between">
                                   <span class="text-[8.5px] font-bold text-slate-500 uppercase">Total:</span>
-                                  <span class="text-[10.5px] font-black text-slate-900 font-mono">₹${payTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                  <span class="text-[10.5px] font-black text-slate-900 font-mono">₹${payTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 <div class="bg-white/90 px-2 py-1 rounded-lg border border-amber-200/60 flex items-center justify-between">
                                   <span class="text-[8.5px] font-bold text-slate-500 uppercase">Shipping:</span>
-                                  <span class="text-[10.5px] font-black text-slate-900 font-mono">₹${payShipping.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                  <span class="text-[10.5px] font-black text-slate-900 font-mono">₹${payShipping.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                               </div>
 
@@ -7680,11 +8467,11 @@ function renderCustomer360Panel() {
                                 <div class="grid grid-cols-2 gap-1.5 bg-amber-100/60 p-1.5 rounded-lg border border-amber-300/70 text-[10px]">
                                   <div class="flex items-center justify-between">
                                     <span class="text-[8.5px] font-bold text-amber-900 uppercase">Advance:</span>
-                                    <span class="font-black text-amber-950 font-mono text-[10px]">₹${payAdvance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                    <span class="font-black text-amber-950 font-mono text-[10px]">₹${payAdvance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                   </div>
                                   <div class="flex items-center justify-between border-l border-amber-300/80 pl-1.5">
                                     <span class="text-[8.5px] font-bold text-amber-900 uppercase">Balance:</span>
-                                    <span class="font-black text-emerald-700 font-mono text-[10.5px]">₹${payBalance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                    <span class="font-black text-emerald-700 font-mono text-[10.5px]">₹${payBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                   </div>
                                 </div>
                               ` : ''}
@@ -7735,11 +8522,11 @@ function renderCustomer360Panel() {
 
                       </div>
                     `;
-                  }).join('')}
+        }).join('')}
                 </div>
               </div>
             `;
-          })()}
+      })()}
 
         </div>
       ` : '<p class="text-xs text-slate-400">No active query recorded for this customer</p>'}
@@ -7754,9 +8541,11 @@ function renderCustomer360Panel() {
           <span class="material-symbols-outlined text-[15px] text-emerald-700">support_agent</span>
           <span>Handling Staff Member</span>
         </span>
+        ${canEditEnqPerm ? `
         <button type="button" onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="text-brand-wa hover:text-brand-waDark font-bold text-xs flex items-center gap-0.5">
           <span class="material-symbols-outlined text-[14px]">edit</span> Change
         </button>
+        ` : ''}
       </div>
 
       <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2.5">
@@ -7774,6 +8563,7 @@ function renderCustomer360Panel() {
           </div>
         </div>
 
+        ${canEditEnqPerm ? `
         <!-- Quick Staff Reassign Selector -->
         <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
           <label class="text-[10px] text-slate-500 font-bold shrink-0">Quick Assign:</label>
@@ -7784,6 +8574,7 @@ function renderCustomer360Panel() {
             `).join('')}
           </select>
         </div>
+        ` : ''}
       </div>
     </div>
 
@@ -7834,14 +8625,14 @@ function renderCustomer360Panel() {
     if (el) {
       el.focus();
       if (typeof draft.selStart === 'number' && typeof draft.selEnd === 'number' && el.setSelectionRange) {
-        try { el.setSelectionRange(draft.selStart, draft.selEnd); } catch (e) {}
+        try { el.setSelectionRange(draft.selStart, draft.selEnd); } catch (e) { }
       }
     }
   }
 }
 
 // Dedicated Admin & Staff Internal Notes Controllers
-window.addAdminInternalNote = function(customerId) {
+window.addAdminInternalNote = function (customerId) {
   const custId = customerId || ACTIVE_CUSTOMER_ID;
   const customer = CRM_STATE.customers.find(c => c.id === custId);
   if (!customer) return;
@@ -7885,7 +8676,7 @@ window.addAdminInternalNote = function(customerId) {
   if (typeof playChime === 'function') playChime('order');
 };
 
-window.deleteAdminInternalNote = function(customerId, noteId) {
+window.deleteAdminInternalNote = function (customerId, noteId) {
   const custId = customerId || ACTIVE_CUSTOMER_ID;
   const customer = CRM_STATE.customers.find(c => c.id === custId);
   if (!customer || !Array.isArray(customer.adminNotes)) return;
@@ -8009,7 +8800,7 @@ function saveDynamicCustomerFollowup(customerId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(targetFu)
-  }).catch(() => {});
+  }).catch(() => { });
 
   if (qry) {
     const oldSt = qry.status || 'NEW';
@@ -8048,7 +8839,7 @@ function saveDynamicCustomerFollowup(customerId) {
         notes: qry.statusNotes,
         user: authorName
       })
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   saveCRMState();
@@ -8138,7 +8929,7 @@ function saveInlineRescheduledFollowup(customerId, followupId) {
           notes: auditNote,
           user: authorName
         })
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     // Persist updated follow-up with MySQL
@@ -8146,7 +8937,7 @@ function saveInlineRescheduledFollowup(customerId, followupId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(fu)
-    }).catch(() => {});
+    }).catch(() => { });
 
     if (typeof logAudit === 'function') {
       logAudit('FOLLOWUP_RESCHEDULED', 'CUSTOMER_PANEL', `Follow-up for ${cust.name || 'Customer'} rescheduled from ${oldDate} at ${oldTime} to ${dateVal} at ${timeVal} by ${authorName}`);
@@ -8172,7 +8963,7 @@ function saveInlineRescheduledFollowup(customerId, followupId) {
 }
 window.saveInlineRescheduledFollowup = saveInlineRescheduledFollowup;
 
-window.insertAdminNoteTag = function(tagText) {
+window.insertAdminNoteTag = function (tagText) {
   const noteInput = document.getElementById('quick-admin-note-input');
   if (!noteInput) return;
   if (noteInput.value) {
@@ -8212,10 +9003,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       }, 4000);
 
       try {
-        SOCKET_IO.emit('whatsapp:send', { 
-          phone: cleanPhone, 
-          text, 
-          jid, 
+        SOCKET_IO.emit('whatsapp:send', {
+          phone: cleanPhone,
+          text,
+          jid,
           accountId: targetAccId,
           mediaUrl: targetMedia,
           customerId
@@ -8250,10 +9041,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     let resp = await fetch('http://localhost:3000/api/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        phone: cleanPhone, 
-        text, 
-        jid, 
+      body: JSON.stringify({
+        phone: cleanPhone,
+        text,
+        jid,
         accountId: targetAccId,
         mediaUrl: targetMedia,
         customerId
@@ -8277,10 +9068,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     let fResp = await fetch('api.php?action=send_message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        phone: cleanPhone, 
-        text, 
-        jid, 
+      body: JSON.stringify({
+        phone: cleanPhone,
+        text,
+        jid,
         accountId: targetAccId,
         media_url: targetMedia,
         customer_id: customerId
@@ -8318,6 +9109,15 @@ function formatOutboundBrandMessage(text) {
 let CHAT_ATTACHED_IMAGE_DATA = null;
 
 function handleChatImageFileSelected(event) {
+  // RBAC Guard: Only users with inbox.create permission can upload images
+  const _isSuperAdminImg = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminImg && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('inbox', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Access: You cannot send images.', 'warning');
+      return;
+    }
+  }
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
@@ -8327,7 +9127,7 @@ function handleChatImageFileSelected(event) {
   }
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const dataUrl = e.target.result;
     CHAT_ATTACHED_IMAGE_DATA = {
       dataUrl: dataUrl,
@@ -8355,14 +9155,14 @@ function handleChatImageFileSelected(event) {
         method: 'POST',
         body: formData
       })
-      .then(res => res.json())
-      .then(json => {
-        if (json && json.status === 'success' && json.url && CHAT_ATTACHED_IMAGE_DATA) {
-          CHAT_ATTACHED_IMAGE_DATA.serverUrl = json.url;
-        }
-      })
-      .catch(err => console.warn('[Chat Image Upload Note]:', err));
-    } catch (e) {}
+        .then(res => res.json())
+        .then(json => {
+          if (json && json.status === 'success' && json.url && CHAT_ATTACHED_IMAGE_DATA) {
+            CHAT_ATTACHED_IMAGE_DATA.serverUrl = json.url;
+          }
+        })
+        .catch(err => console.warn('[Chat Image Upload Note]:', err));
+    } catch (e) { }
   };
   reader.readAsDataURL(file);
 }
@@ -8378,9 +9178,18 @@ function clearChatAttachedImage() {
 
 function handleSendMessage(event) {
   event.preventDefault();
+  // RBAC Guard: Only users with inbox.create permission can send messages
+  const _isSuperAdminSend = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminSend && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('inbox', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Access: You cannot send messages.', 'warning');
+      return;
+    }
+  }
   const input = document.getElementById('chat-input-text');
   const rawText = input.value.trim();
-  
+
   // Allow sending if there is text OR an attached image
   if (!rawText && !CHAT_ATTACHED_IMAGE_DATA) return;
 
@@ -8835,6 +9644,11 @@ function renderAutoReplyRulesList() {
     '6': '🥻 Festive & VIP Silk Sets'
   };
 
+  const isSuperAdminAr = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canArCreate = isSuperAdminAr || (typeof canUserPerformAction === 'function' ? canUserPerformAction('autoreply', 'create') : true);
+  const canArEdit = isSuperAdminAr || (typeof canUserPerformAction === 'function' ? canUserPerformAction('autoreply', 'edit') : true);
+  const canArDelete = isSuperAdminAr || (typeof canUserPerformAction === 'function' ? canUserPerformAction('autoreply', 'delete') : true);
+
   container.innerHTML = list.map(rule => {
     const isEnabled = rule.enabled !== false;
     const keywords = Array.isArray(rule.keywords) ? rule.keywords : (rule.keywords || '').split(',');
@@ -8870,9 +9684,9 @@ function renderAutoReplyRulesList() {
           </div>
 
           <!-- Master Toggle for Rule -->
-          <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5" title="Toggle Auto-Reply for this rule">
-            <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleRuleEnabled('${rule.id}', this.checked)" class="sr-only peer">
-            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+          <label class="relative inline-flex items-center ${canArEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'} shrink-0 mt-0.5" ${canArEdit ? '' : 'style="pointer-events: none;"'} title="${canArEdit ? 'Toggle Auto-Reply for this rule' : 'View Access Only: Rule toggling is disabled'}">
+            <input type="checkbox" ${isEnabled ? 'checked' : ''} ${canArEdit ? '' : 'disabled'} onchange="toggleRuleEnabled('${rule.id}', this.checked)" class="sr-only peer">
+            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all ${canArEdit ? 'peer-checked:bg-emerald-600' : 'peer-checked:bg-emerald-600/40 peer-disabled:cursor-not-allowed'}"></div>
           </label>
         </div>
 
@@ -8886,19 +9700,23 @@ function renderAutoReplyRulesList() {
         <!-- Actions -->
         <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
           <div class="flex items-center gap-2">
-            <button type="button" onclick="editRule('${rule.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg flex items-center gap-1 transition">
+            ${canArEdit ? `
+            <button type="button" onclick="editRule('${rule.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg flex items-center gap-1 transition cursor-pointer">
               <span class="material-symbols-outlined text-[14px] text-slate-600">edit</span>
               <span>Edit Question &amp; Answer</span>
             </button>
-            <button type="button" onclick="applyRuleToActiveChat('${rule.id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg flex items-center gap-1 transition border border-emerald-200" title="Insert or Send to active customer chat">
+            ` : ''}
+            <button type="button" onclick="applyRuleToActiveChat('${rule.id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg flex items-center gap-1 transition border border-emerald-200 cursor-pointer" title="Insert or Send to active customer chat">
               <span class="material-symbols-outlined text-[14px]">send</span>
               <span>Send to Chat</span>
             </button>
           </div>
 
-          <button type="button" onclick="deleteRule('${rule.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition" title="Delete Rule">
+          ${canArDelete ? `
+          <button type="button" onclick="deleteRule('${rule.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer" title="Delete Rule">
             <span class="material-symbols-outlined text-[16px]">delete</span>
           </button>
+          ` : ''}
         </div>
       </div>
     `;
@@ -8906,6 +9724,12 @@ function renderAutoReplyRulesList() {
 }
 
 function openRuleEditor(ruleId = null) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const requiredAction = ruleId ? 'edit' : 'create';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', requiredAction)) {
+    if (typeof showToast === 'function') showToast('Permission Denied', `Your assigned role does not have permission to ${requiredAction} auto-reply templates.`, 'lock', 'rose');
+    return;
+  }
   const card = document.getElementById('ar-rule-editor-card');
   const titleEl = document.getElementById('ar-rule-editor-title');
   const idInput = document.getElementById('edit-rule-id');
@@ -8986,6 +9810,12 @@ function insertRuleTag(tag) {
 
 function saveRuleFromEditor() {
   const idInput = document.getElementById('edit-rule-id');
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const requiredAction = (idInput && idInput.value) ? 'edit' : 'create';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', requiredAction)) {
+    if (typeof showToast === 'function') showToast('Permission Denied', `Your assigned role does not have permission to ${requiredAction} auto-reply templates.`, 'lock', 'rose');
+    return;
+  }
   const nameInput = document.getElementById('edit-rule-name');
   const kwsInput = document.getElementById('edit-rule-keywords');
   const actionSelect = document.getElementById('edit-rule-action');
@@ -9069,21 +9899,31 @@ function syncAutoReplyRulesToBackend() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rules: rules })
-  }).catch(() => {});
+  }).catch(() => { });
 
   // 3. Fallback PHP REST API
   fetch('api.php?action=save_autoreply_rules', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rules: rules })
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 function editRule(ruleId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for auto-reply rules.', 'lock', 'rose');
+    return;
+  }
   openRuleEditor(ruleId);
 }
 
 function deleteRule(ruleId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete auto-reply rules.', 'lock', 'rose');
+    return;
+  }
   if (!confirm('Are you sure you want to delete this auto-reply rule?')) return;
   if (!Array.isArray(CRM_STATE.autoReplyRules)) return;
   CRM_STATE.autoReplyRules = CRM_STATE.autoReplyRules.filter(r => r.id !== ruleId);
@@ -9098,6 +9938,12 @@ function deleteRule(ruleId) {
 }
 
 function toggleRuleEnabled(ruleId, enabled) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for auto-reply rules.', 'lock', 'rose');
+    renderAutoReplyRulesList();
+    return;
+  }
   if (!Array.isArray(CRM_STATE.autoReplyRules)) return;
   const rule = CRM_STATE.autoReplyRules.find(r => r.id === ruleId);
   if (rule) {
@@ -9158,11 +10004,10 @@ function renderInboxPresetTemplatesBar() {
 
     return `
       <button type="button" onclick="applyPresetTemplateToComposer('${rule.id}')" 
-        class="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition flex items-center gap-1.5 shadow-2xs border ${
-          isMatched 
-            ? 'bg-emerald-100 text-emerald-950 border-emerald-500 ring-2 ring-emerald-400/80 animate-pulse font-extrabold' 
-            : (isEnabled ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300' : 'bg-slate-100 text-slate-400 border-slate-200 line-through')
-        }"
+        class="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition flex items-center gap-1.5 shadow-2xs border ${isMatched
+        ? 'bg-emerald-100 text-emerald-950 border-emerald-500 ring-2 ring-emerald-400/80 animate-pulse font-extrabold'
+        : (isEnabled ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300' : 'bg-slate-100 text-slate-400 border-slate-200 line-through')
+      }"
         title="1-Click Insert into message bar (Double click to send directly to customer)">
         <span>${icon}</span>
         <span class="truncate max-w-[130px] sm:max-w-[160px]">${rule.name}</span>
@@ -9506,6 +10351,12 @@ function regenerateLiveStockMenuTemplate() {
 }
 
 function toggleAutoReplyMaster(enabled) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only. Modifying the auto-reply bot is restricted.', 'lock', 'rose');
+    updateAutoReplyUI();
+    return;
+  }
   const boolState = Boolean(enabled);
   if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
   CRM_STATE.autoReplySettings.enabled = boolState;
@@ -9537,7 +10388,7 @@ function toggleAutoReplyMaster(enabled) {
     body: JSON.stringify({
       enabled: boolState
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   showToast(
     boolState ? 'Auto-Reply Active' : 'Auto-Reply Paused',
@@ -9553,6 +10404,11 @@ function toggleAutoReplyFromInbox(event) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
+  }
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only. Modifying the auto-reply bot is restricted.', 'lock', 'rose');
+    return;
   }
   const current = CRM_STATE?.autoReplySettings?.enabled !== false;
   const next = !current;
@@ -9581,7 +10437,7 @@ function saveAutoReplySettings() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enabled: isEnabled })
-  }).catch(() => {});
+  }).catch(() => { });
 
   // 3. Sync to PHP API
   fetch('api.php?action=toggle_autoreply', {
@@ -9590,7 +10446,7 @@ function saveAutoReplySettings() {
     body: JSON.stringify({
       enabled: isEnabled
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   if (Array.isArray(CRM_STATE.autoReplyRules)) {
     syncAutoReplyRulesToBackend();
@@ -9660,33 +10516,33 @@ function updateAutoReplyUI() {
     }
   }
 
-    if (headerBtn) {
-      if (isEnabled) {
-        headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
-        headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span><span>Auto-Reply: ON</span>';
-      } else {
-        headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-lg transition shadow-sm border border-amber-500 ring-2 ring-amber-400/50";
-        headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-amber-200 animate-pulse">pause_circle</span><span>Auto-Reply: PAUSED</span>';
-      }
+  if (headerBtn) {
+    if (isEnabled) {
+      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
+      headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span><span>Auto-Reply: ON</span>';
+    } else {
+      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-lg transition shadow-sm border border-amber-500 ring-2 ring-amber-400/50";
+      headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-amber-200 animate-pulse">pause_circle</span><span>Auto-Reply: PAUSED</span>';
     }
+  }
 
-    // 4. Sub-Module Header Tab Pill in WhatsApp Inbox
-    const subtabStatus = document.getElementById('subtab-autoreply-status');
-    if (subtabStatus) {
-      subtabStatus.innerText = isEnabled ? 'ON' : 'PAUSED';
-      subtabStatus.className = isEnabled 
-        ? 'bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-emerald-300'
-        : 'bg-amber-100 text-amber-900 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-amber-300 animate-pulse';
-    }
+  // 4. Sub-Module Header Tab Pill in WhatsApp Inbox
+  const subtabStatus = document.getElementById('subtab-autoreply-status');
+  if (subtabStatus) {
+    subtabStatus.innerText = isEnabled ? 'ON' : 'PAUSED';
+    subtabStatus.className = isEnabled
+      ? 'bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-emerald-300'
+      : 'bg-amber-100 text-amber-900 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-amber-300 animate-pulse';
+  }
 
-    // 5. Sidebar Navigation Sub-Module Pill
-    const navPill = document.getElementById('nav-autoreply-pill');
-    if (navPill) {
-      navPill.innerText = isEnabled ? 'ON' : 'PAUSED';
-      navPill.className = isEnabled 
-        ? 'text-[9px] font-extrabold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30'
-        : 'text-[9px] font-extrabold px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/40 animate-pulse';
-    }
+  // 5. Sidebar Navigation Sub-Module Pill
+  const navPill = document.getElementById('nav-autoreply-pill');
+  if (navPill) {
+    navPill.innerText = isEnabled ? 'ON' : 'PAUSED';
+    navPill.className = isEnabled
+      ? 'text-[9px] font-extrabold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30'
+      : 'text-[9px] font-extrabold px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/40 animate-pulse';
+  }
 }
 
 function testSendStockAutoReplyToCurrentChat() {
@@ -9745,6 +10601,13 @@ function updateBrandPreview() {
 }
 
 function saveBrandSettings() {
+  const _isSuperAdminBrand = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminBrand && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Modifying brand settings is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const brandName = (document.getElementById('cfg-brand-name')?.value || 'GRM Garments').trim();
   const brandTagline = (document.getElementById('cfg-brand-tagline')?.value || 'Premium Kids & Maternity Wear').trim();
   const brandWebsite = (document.getElementById('cfg-brand-website')?.value || 'www.grmgarments.com').trim();
@@ -9779,6 +10642,11 @@ function saveBrandSettings() {
 // 5. ADMIN STAFF ASSIGNMENT ENGINE
 // =========================================================================
 function openStaffAssignModal(queryId) {
+  const isSuperAdminAssign = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdminAssign && typeof canUserPerformAction === 'function' && !canUserPerformAction('inbox', 'edit') && !canUserPerformAction('enquiries', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Reassigning staff requires Edit permission.', 'lock', 'rose');
+    return;
+  }
   const query = CRM_STATE.queries.find(q => q.id === queryId);
   if (!query) return;
 
@@ -9837,7 +10705,7 @@ function handleConfirmAssignment(event) {
   if (query && staff) {
     const oldStaff = query.assignedTo;
     query.assignedTo = staffId;
-    
+
     if (shouldReactivateFromDnd) {
       if (customer) {
         customer.isDND = false;
@@ -9865,7 +10733,7 @@ function handleConfirmAssignment(event) {
       }
       logAudit('STAFF_ASSIGNMENT', 'STAFF_ASSIGN', `Assigned query ${query.id} to ${staff.name} by Admin. Note: ${note || 'None'}`);
     }
-    
+
     staff.activeQueries += 1;
 
     // Asynchronously sync query assignment to MySQL Database
@@ -9874,17 +10742,19 @@ function handleConfirmAssignment(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: query.id,
+        customer_id: query.customerId,
+        phone: customer ? (customer.whatsapp || customer.phone) : '',
         assigned_to: staffId,
         status: query.status,
         notes: note || query.statusNotes || '',
         user: CURRENT_USER?.name || 'Admin'
       })
-    }).catch(() => {});
+    }).catch(() => { });
 
     saveCRMState();
     closeModal('modal-staff-assign');
-    
-    const msg = shouldReactivateFromDnd 
+
+    const msg = shouldReactivateFromDnd
       ? `Query ${query.id} assigned to ${staff.name} and restored to active WhatsApp Inbox!`
       : `Query ${query.id} successfully assigned to ${staff.name}!`;
     showToast('Staff Assigned', msg, 'how_to_reg', 'emerald');
@@ -9902,6 +10772,13 @@ function handleConfirmAssignment(event) {
 // 6. INBOUND WHATSAPP SIMULATOR & DEV TESTING ACTIONS
 // =========================================================================
 function confirmResetInboxMessages() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('inbox', 'delete')) {
+    if (typeof showToast === 'function') {
+      showToast('Access Restricted', 'Your assigned role does not have permission to delete or reset WhatsApp Inbox messages.', 'lock', 'rose');
+    }
+    return;
+  }
   const modal = document.getElementById('modal-reset-inbox-confirm');
   if (modal && typeof openModal === 'function') {
     openModal('modal-reset-inbox-confirm');
@@ -9931,7 +10808,7 @@ function resetInboxMessages(skipAlert) {
     }
 
     // 2. Call backend API to clear messages and live message queue
-    fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => {});
+    fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => { });
 
     // 3. Persist clean state to local storage
     saveCRMState();
@@ -10049,6 +10926,15 @@ function onModalShareOptionChange() {
 }
 
 function openProductSearchModal() {
+  // RBAC Guard: Only users with inbox.create permission can share catalog
+  const _isSuperAdminProd = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminProd && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('inbox', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Access: You cannot share products.', 'warning');
+      return;
+    }
+  }
   // 1. Contextualize active customer target
   const targetBadge = document.getElementById('modal-share-active-target');
   const customer = (CRM_STATE.customers || []).find(c => c.id === ACTIVE_CUSTOMER_ID);
@@ -10223,12 +11109,12 @@ function getCurrentlyFilteredModalProducts() {
 
   return (CRM_STATE.products || []).filter(p => {
     const matchQuery = !q || (p.sku && p.sku.toLowerCase().includes(q)) ||
-                             (p.name && p.name.toLowerCase().includes(q)) ||
-                             (p.color && p.color.toLowerCase().includes(q)) ||
-                             (p.size && p.size.toLowerCase().includes(q)) ||
-                             (p.fabric && p.fabric.toLowerCase().includes(q)) ||
-                             (p.category && p.category.toLowerCase().includes(q)) ||
-                             (p.subcategory && p.subcategory.toLowerCase().includes(q));
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.color && p.color.toLowerCase().includes(q)) ||
+      (p.size && p.size.toLowerCase().includes(q)) ||
+      (p.fabric && p.fabric.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
+      (p.subcategory && p.subcategory.toLowerCase().includes(q));
 
     const pCatLower = (p.category || '').toString().trim().toLowerCase();
     const matchCat = selectedCat === 'ALL' || pCatLower === catLower;
@@ -10390,8 +11276,8 @@ function buildConfiguredProductShareText(p, opts) {
 
   let specsLine = '';
   if (options.includeSpecs) {
-    const catLine = p.subcategory 
-      ? `📁 *Catalog:* ${p.category || 'Garments'} › ${p.subcategory}\n` 
+    const catLine = p.subcategory
+      ? `📁 *Catalog:* ${p.category || 'Garments'} › ${p.subcategory}\n`
       : (p.category ? `📁 *Category:* ${p.category}\n` : '');
     const sizeLine = `📏 *Size / Age:* ${p.size || 'Standard'}\n`;
     const colorLine = `🎨 *Color:* ${p.color || 'Default'}\n`;
@@ -10442,12 +11328,12 @@ function renderModalProductList(query) {
   const list = (CRM_STATE.products || []).filter(p => {
     // 1. Text Search Filter
     const matchQuery = !q || (p.sku && p.sku.toLowerCase().includes(q)) ||
-                             (p.name && p.name.toLowerCase().includes(q)) ||
-                             (p.color && p.color.toLowerCase().includes(q)) ||
-                             (p.size && p.size.toLowerCase().includes(q)) ||
-                             (p.fabric && p.fabric.toLowerCase().includes(q)) ||
-                             (p.category && p.category.toLowerCase().includes(q)) ||
-                             (p.subcategory && p.subcategory.toLowerCase().includes(q));
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.color && p.color.toLowerCase().includes(q)) ||
+      (p.size && p.size.toLowerCase().includes(q)) ||
+      (p.fabric && p.fabric.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
+      (p.subcategory && p.subcategory.toLowerCase().includes(q));
 
     // 2. Category Filter
     const pCatLower = (p.category || '').toString().trim().toLowerCase();
@@ -10527,7 +11413,7 @@ function renderModalProductList(query) {
       ? p.image
       : DEFAULT_GARMENT_PLACEHOLDER;
 
-    const catBreadcrumb = p.subcategory 
+    const catBreadcrumb = p.subcategory
       ? `${p.category || 'Garments'} &rsaquo; ${p.subcategory}`
       : (p.category || 'Garments');
 
@@ -10756,12 +11642,12 @@ function shareSelectedProductsToChat() {
   closeModal('modal-product-search');
   renderChatMessages();
   if (typeof playChime === 'function') playChime('order');
-    if (customer) {
+  if (customer) {
     if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
     if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
     if (typeof saveCRMState === 'function') saveCRMState();
   }
-showToast(
+  showToast(
     'Dispatched to WhatsApp',
     `Sent ${selectedProducts.length} selected garments to ${customer.name}.`,
     'send',
@@ -11248,12 +12134,12 @@ function dispatchPreviewedCatalogFormat() {
 
   showToast(toastTitle, `Sent customized message to ${customer.name} on WhatsApp.`, 'send', 'emerald');
 
-    if (customer) {
+  if (customer) {
     if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
     if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
     if (typeof saveCRMState === 'function') saveCRMState();
   }
-if (typeof dispatchWhatsAppOutbound === 'function') {
+  if (typeof dispatchWhatsAppOutbound === 'function') {
     dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, finalMessageText, newMsg, customer.jid, customer.accountId, false, validImg);
   }
 }
@@ -11541,6 +12427,11 @@ function toggleSelectAllChosenProducts(customerId, isChecked) {
 }
 
 function openOrderFromSingleChosenProduct(customerId, itemId) {
+  const isSuperAdminMove = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdminMove && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit') && !canUserPerformAction('inbox', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Moving items to an order requires Edit access.', 'lock', 'rose');
+    return;
+  }
   const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
   if (!customer) return;
   let item = (customer.automationHistory || []).find(a => String(a.id) === String(itemId));
@@ -11572,6 +12463,11 @@ function openOrderFromSingleChosenProduct(customerId, itemId) {
 }
 
 function openOrderFromSelectedChosenProducts(customerId) {
+  const isSuperAdminMove = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdminMove && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit') && !canUserPerformAction('inbox', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Moving items to an order requires Edit access.', 'lock', 'rose');
+    return;
+  }
   const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
   if (!customer) return;
 
@@ -11621,6 +12517,11 @@ function updateOrderProductDropdown() {
 }
 
 function initOrderModal(customer, items) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'create')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to book or convert orders.', 'lock', 'rose');
+    return;
+  }
   const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
   ORDER_MODAL_STATE = {
     customerId: customer.id,
@@ -11766,6 +12667,11 @@ function initOrderModal(customer, items) {
 }
 
 function openOrderModal() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'create')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to book or create orders.', 'lock', 'rose');
+    return;
+  }
   const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) || CRM_STATE.customers[0];
   if (!customer) {
     showToast('Select Customer', 'Please select a customer first.', 'warning', 'amber');
@@ -12157,7 +13063,7 @@ async function handleScreenshotUpload(event, mode) {
   setScreenshotValidatingState(mode, true, 'Verifying payment screenshot...');
 
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = async function (e) {
     const dataUrl = e.target.result;
 
     try {
@@ -12218,12 +13124,12 @@ async function verifyPaymentScreenshotContent(dataUrl) {
   if (typeof Tesseract !== 'undefined' && Tesseract.recognize) {
     try {
       // Set a 20-second timeout so larger receipts on mobile connections don't drop
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('OCR_TIMEOUT')), 20000)
       );
 
       const ocrPromise = Tesseract.recognize(dataUrl, 'eng', {
-        logger: () => {}
+        logger: () => { }
       }).then(res => res.data?.text || '');
 
       const text = (await Promise.race([ocrPromise, timeoutPromise])).toLowerCase();
@@ -12243,7 +13149,7 @@ async function verifyPaymentScreenshotContent(dataUrl) {
       if (found.length > 0) {
         const utrMatch = text.match(/\b\d{12}\b/);
         const detectedAmt = extractPaymentAmountFromOCR(text);
-        
+
         // Calculate expected amount based on mode and cart items
         let expectedAmt = 0;
         if (typeof ORDER_MODAL_STATE !== 'undefined' && ORDER_MODAL_STATE) {
@@ -12327,7 +13233,7 @@ function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
   const thumb = document.getElementById(`${prefix}-screenshot-thumb`);
   const nameEl = document.getElementById(`${prefix}-screenshot-filename`);
   const validationStatus = document.getElementById(`${prefix}-screenshot-validation-status`);
-  
+
   // Below-image large preview card elements
   const detailPreview = document.getElementById(`${prefix}-screenshot-detail-preview`);
   const largePreview = document.getElementById(`${prefix}-screenshot-large-preview`);
@@ -12459,7 +13365,7 @@ function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
 function rejectScreenshot(mode, reason) {
   const isOnline = mode === 'ONLINE';
   const prefix = isOnline ? 'online' : 'cod';
-  
+
   removeScreenshot(mode);
 
   const validationStatus = document.getElementById(`${prefix}-screenshot-validation-status`);
@@ -12653,6 +13559,11 @@ window.openOrderReceiptLightbox = openOrderReceiptLightbox;
 
 function handleCreateOrder(event) {
   event.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'create')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to book or create orders.', 'lock', 'rose');
+    return;
+  }
 
   if (!ORDER_MODAL_STATE.items || ORDER_MODAL_STATE.items.length === 0) {
     showToast('No Products', 'Please add at least one product to create an order.', 'warning', 'amber');
@@ -12676,7 +13587,7 @@ function handleCreateOrder(event) {
   if (paymentMode === 'ONLINE') {
     upiId = (document.getElementById('order-online-upi-id')?.value || '').trim();
     screenshot = ORDER_MODAL_STATE.onlineScreenshot;
-    
+
     // Strict UPI ID Validation
     const upiCheck = validateUPIId(upiId);
     if (!upiCheck.valid) {
@@ -12817,7 +13728,7 @@ function handleCreateOrder(event) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(newOrder)
-  }).catch(() => {});
+  }).catch(() => { });
 
   // Update customer spend & total orders
   if (customer) {
@@ -12833,7 +13744,7 @@ function handleCreateOrder(event) {
 
   // Generate WhatsApp chat confirmation message
   const itemsText = ORDER_MODAL_STATE.items.map(i => `• ${i.name} (SKU: ${i.sku}, Size: ${i.size || 'Free Size'}) x${i.qty} — ₹${(i.price * i.qty).toLocaleString('en-IN')}`).join('\n');
-  
+
   let confirmMsg = '';
   if (paymentMode === 'ONLINE') {
     confirmMsg = `🎉 *WHATSAPP ORDER BOOKED & PAID!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n💰 *Total Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Online UPI (PAID ✅)\n🔢 *UPI Ref / UTR:* ${upiId}\n📸 *Payment Receipt:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour order is confirmed and stock reserved for packing. Tracking will be shared once dispatched! 🚚✨`;
@@ -12910,7 +13821,7 @@ function isFollowupOverdue(fu) {
   try {
     const [y, m, d] = fu.date.split('-').map(Number);
     if (!y || !m || !d) return false;
-    
+
     let hours = 11;
     let minutes = 0;
     const timeStr = fu.time || '11:00 AM';
@@ -12922,7 +13833,7 @@ function isFollowupOverdue(fu) {
       if (ampm === 'PM' && hours < 12) hours += 12;
       if (ampm === 'AM' && hours === 12) hours = 0;
     }
-    
+
     const scheduled = new Date(y, m - 1, d, hours, minutes);
     return scheduled < new Date();
   } catch (e) {
@@ -12942,7 +13853,123 @@ function getFollowupDueStatus(fu) {
   return 'OVERDUE';
 }
 
+
+function openEditFollowupModal(fuId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to edit follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
+  const fu = (CRM_STATE.followups || []).find(f => f && f.id === fuId);
+  if (!fu) {
+    if (typeof showToast === 'function') showToast('Error', 'Follow-up not found.', 'error', 'rose');
+    return;
+  }
+
+  const editIdInput = document.getElementById('followup-edit-id');
+  if (editIdInput) editIdInput.value = fu.id;
+
+  const titleEl = document.getElementById('modal-followup-title');
+  if (titleEl) titleEl.innerText = 'Edit Customer Follow-up';
+  const descEl = document.getElementById('modal-followup-desc');
+  if (descEl) descEl.innerText = 'Update callback date, 12-hr reminder time, notes, priority & assignment';
+
+  const submitText = document.getElementById('modal-followup-submit-text');
+  if (submitText) submitText.innerText = 'Save Follow-up Changes';
+  const submitIcon = document.getElementById('modal-followup-submit-icon');
+  if (submitIcon) submitIcon.innerText = 'save';
+
+  // Customer display
+  const custDisplay = document.getElementById('followup-customer-display');
+  if (custDisplay) {
+    custDisplay.innerHTML = '<span class="text-slate-900 font-bold">' + (fu.customerName || 'Customer') + '</span><input type="hidden" id="followup-chosen-customer-id" value="' + (fu.customerId || '') + '">';
+  }
+
+  // Date
+  const dateInput = document.getElementById('followup-date');
+  if (dateInput) {
+    dateInput.value = fu.date || new Date().toISOString().split('T')[0];
+  }
+
+  // Parse 12-hour time
+  let hourStr = '11';
+  let minStr = '00';
+  let ampmStr = 'AM';
+  if (fu.time) {
+    const tMatch = fu.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (tMatch) {
+      hourStr = String(parseInt(tMatch[1], 10)).padStart(2, '0');
+      minStr = tMatch[2];
+      if (tMatch[3]) {
+        ampmStr = tMatch[3].toUpperCase();
+      } else {
+        const h = parseInt(tMatch[1], 10);
+        ampmStr = h >= 12 ? 'PM' : 'AM';
+        hourStr = String(h % 12 || 12).padStart(2, '0');
+      }
+    }
+  }
+  const hourEl = document.getElementById('followup-hour');
+  const minEl = document.getElementById('followup-minute');
+  const ampmEl = document.getElementById('followup-ampm');
+  if (hourEl) hourEl.value = hourStr;
+  if (minEl) minEl.value = minStr;
+  if (ampmEl) ampmEl.value = ampmStr;
+
+  // Priority & Channel
+  const prioEl = document.getElementById('followup-priority');
+  if (prioEl) prioEl.value = fu.priority || 'NORMAL';
+  const chanEl = document.getElementById('followup-channel');
+  if (chanEl) chanEl.value = fu.channel || 'WHATSAPP';
+
+  // Notes / Reason
+  const notesEl = document.getElementById('followup-notes');
+  if (notesEl) notesEl.value = fu.reason || '';
+
+  // Staff Assignment Select
+  const staffSelect = document.getElementById('followup-staff-select');
+  if (staffSelect) {
+    staffSelect.value = fu.assignedTo || 'staff_01';
+    staffSelect.disabled = false;
+    staffSelect.classList.remove('opacity-75', 'cursor-not-allowed');
+  }
+
+  // Payment pending fields
+  const payToggle = document.getElementById('modal-followup-pay-pending-toggle');
+  const payFields = document.getElementById('modal-followup-pay-fields');
+  const isPay = Boolean(fu.isPaymentPending);
+  if (payToggle) payToggle.checked = isPay;
+  if (payFields) payFields.classList.toggle('hidden', !isPay);
+
+  const payAmt = document.getElementById('modal-followup-pay-amount');
+  if (payAmt) payAmt.value = fu.paymentAmount || '';
+  const payShipping = document.getElementById('modal-followup-pay-shipping');
+  if (payShipping) payShipping.value = fu.shippingAmount || '';
+  const payMode = document.getElementById('modal-followup-pay-mode');
+  if (payMode) payMode.value = fu.paymentMode || 'UPI';
+  const payAdv = document.getElementById('modal-followup-pay-advance');
+  if (payAdv) payAdv.value = fu.advancePayment || '';
+  const quoted = document.getElementById('modal-followup-quoted-items');
+  if (quoted) quoted.value = fu.quotedItems || '';
+
+  const dupWarn = document.getElementById('followup-duplicate-warning');
+  if (dupWarn) dupWarn.classList.add('hidden');
+
+  if (typeof updateFollowUpTimePreview === 'function') updateFollowUpTimePreview();
+  if (typeof openModal === 'function') openModal('modal-followup');
+}
+window.openEditFollowupModal = openEditFollowupModal;
+
 function openFollowUpModal(prefillCustomerId = null) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to schedule follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
   const currentUser = getCurrentUser();
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
 
@@ -12972,8 +13999,8 @@ function openFollowUpModal(prefillCustomerId = null) {
   // Pre-fill Assigned Staff Dropdown
   const staffSelect = document.getElementById('followup-staff-select');
   if (staffSelect) {
-    const currentStaffId = !isAdmin 
-      ? (currentUser.staffId || currentUser.id) 
+    const currentStaffId = !isAdmin
+      ? (currentUser.staffId || currentUser.id)
       : (query ? query.assignedTo : 'staff_01');
     staffSelect.value = currentStaffId || 'staff_01';
 
@@ -12996,7 +14023,7 @@ function openFollowUpModal(prefillCustomerId = null) {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   const dateStr = `${year}-${month}-${day}`;
-  
+
   const dateInput = document.getElementById('followup-date');
   if (dateInput) {
     dateInput.value = dateStr;
@@ -13080,7 +14107,7 @@ function handleModalPayCalc() {
   const balance = Math.max(0, (total + shipping) - advance);
   const balEl = document.getElementById('modal-pay-balance-val');
   if (balEl) {
-    balEl.innerText = `₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    balEl.innerText = `₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 }
 window.handleModalPayCalc = handleModalPayCalc;
@@ -13196,6 +14223,13 @@ window.checkDuplicateFollowup = checkDuplicateFollowup;
 
 function handleCreateFollowup(event) {
   event.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to schedule follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
   const currentUser = getCurrentUser();
   const chosenCustId = document.getElementById('followup-chosen-customer-id')?.value || ACTIVE_CUSTOMER_ID;
   const date = document.getElementById('followup-date')?.value || new Date().toISOString().split('T')[0];
@@ -13215,6 +14249,66 @@ function handleCreateFollowup(event) {
   const payMode = document.getElementById('modal-followup-pay-mode')?.value || 'UPI';
   const payAdvance = parseFloat(document.getElementById('modal-followup-pay-advance')?.value || 0);
   const quotedItems = document.getElementById('modal-followup-quoted-items')?.value?.trim() || '';
+
+  const editId = document.getElementById('followup-edit-id')?.value;
+  if (editId) {
+    if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+      if (typeof showToast === 'function') {
+        showToast('Permission Denied', 'Your assigned role does not have permission to edit follow-ups.', 'lock', 'rose');
+      }
+      return;
+    }
+    const fu = (CRM_STATE.followups || []).find(f => f && f.id === editId);
+    if (fu) {
+      fu.date = date;
+      fu.time = formattedTime;
+      fu.reason = notes;
+      fu.priority = priority;
+      fu.channel = channel;
+      fu.assignedTo = assignedStaff;
+      fu.isPaymentPending = isPayPending;
+      fu.paymentAmount = payAmt;
+      fu.shippingAmount = payShipping;
+      fu.paymentMode = payMode;
+      fu.advancePayment = (payMode === 'COD_ADVANCE') ? payAdvance : 0;
+      fu.paymentDueDate = isPayPending ? date : (fu.paymentDueDate || '');
+      fu.paymentNotes = isPayPending ? notes : (fu.paymentNotes || '');
+      fu.quotedItems = quotedItems;
+
+      const query = (CRM_STATE.queries || []).find(q => q.customerId === fu.customerId || q.id === fu.queryId);
+      if (query) {
+        query.callbackDate = date;
+        query.callbackTime = formattedTime;
+        query.statusNotes = notes;
+        if (isPayPending) {
+          query.isPaymentPending = true;
+          query.paymentAmount = payAmt;
+          query.shippingAmount = payShipping;
+          query.paymentMode = payMode;
+          query.advancePayment = (payMode === 'COD_ADVANCE') ? payAdvance : 0;
+          query.paymentDueDate = date;
+          query.paymentNotes = notes;
+          query.quotedItems = quotedItems;
+        }
+      }
+
+      fetch('api.php?action=save_followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fu)
+      }).catch(() => { });
+
+      saveCRMState();
+      closeModal('modal-followup');
+      showToast('Follow-up Updated', 'Saved changes for ' + (fu.customerName || 'customer'), 'task_alt', 'emerald');
+      updateFollowupsKPICounters();
+      filterFollowupsCards();
+      if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+      if (typeof renderInbox === 'function') renderInbox();
+      return;
+    }
+  }
+
 
   const customer = (CRM_STATE.customers || []).find(c => c.id === chosenCustId) || (CRM_STATE.customers && CRM_STATE.customers[0]) || { id: chosenCustId || 'cust_101', name: 'Customer' };
   const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
@@ -13286,7 +14380,7 @@ function handleCreateFollowup(event) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(newFollowup)
-  }).catch(() => {});
+  }).catch(() => { });
 
   saveCRMState();
   closeModal('modal-followup');
@@ -13295,13 +14389,20 @@ function handleCreateFollowup(event) {
   } else {
     showToast('Follow-up Scheduled', `Reminder set for ${date} at ${formattedTime} (${assignedStaff})`, 'event', 'blue');
   }
-  
+
   updateFollowupsKPICounters();
   filterFollowupsCards();
   renderInbox();
 }
 
 function openFollowupOutcomeModal(fuId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to edit follow-up outcomes.', 'lock', 'rose');
+    }
+    return;
+  }
   const fu = (CRM_STATE.followups || []).find(f => f.id === fuId);
   if (!fu) return;
 
@@ -13347,6 +14448,13 @@ function toggleOutcomeNextScheduler(val) {
 
 function handleSaveFollowupOutcome(event) {
   event.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to edit follow-up outcomes.', 'lock', 'rose');
+    }
+    return;
+  }
   const fuId = document.getElementById('outcome-followup-id')?.value;
   const radios = document.getElementsByName('followup_outcome');
   let chosenOutcome = 'INTERESTED';
@@ -13433,7 +14541,7 @@ function handleSaveFollowupOutcome(event) {
       user: currentUser.name || 'Staff',
       next_followup: nextFuPayload
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   saveCRMState();
   closeModal('modal-followup-outcome');
@@ -13454,6 +14562,13 @@ function handleSaveFollowupOutcome(event) {
 }
 
 function handleReassignFollowup(fuId, newStaffId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to reassign follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
   const fu = (CRM_STATE.followups || []).find(f => f.id === fuId);
   if (!fu) return;
 
@@ -13471,7 +14586,7 @@ function handleReassignFollowup(fuId, newStaffId) {
       assigned_to: newStaffId,
       user: currentUser.name || 'Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   saveCRMState();
   showToast('Follow-up Reassigned', `Assigned to ${newStaffId}`, 'published_with_changes', 'blue');
@@ -13535,7 +14650,7 @@ function handleQuickFollowupStatusChange(fuId, newStatusVal) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(fu)
-  }).catch(() => {});
+  }).catch(() => { });
 
   updateFollowupsKPICounters();
   filterFollowupsCards();
@@ -13666,7 +14781,7 @@ function updateFollowupsKPICounters() {
   if (elUpcoming) elUpcoming.innerText = upcoming;
   if (elOverdue) elOverdue.innerText = overdue;
   if (elPaymentPending) elPaymentPending.innerText = paymentPendingCount;
-  if (elPaymentAmount) elPaymentAmount.innerText = `₹${paymentPendingTotalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Total`;
+  if (elPaymentAmount) elPaymentAmount.innerText = `₹${paymentPendingTotalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Total`;
   if (elConverted) elConverted.innerText = converted;
   if (elLost) elLost.innerText = lost;
 
@@ -13703,7 +14818,7 @@ function updateFollowupsKPICounters() {
 
   if (roleBadge) {
     roleBadge.innerText = isAdmin ? '👑 Admin Overview (All Staff)' : `👩‍💼 Staff Workstation (${currentUser.name || currentUser.id})`;
-    roleBadge.className = isAdmin 
+    roleBadge.className = isAdmin
       ? 'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200'
       : 'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200';
   }
@@ -13766,7 +14881,7 @@ function updatePaymentPendingKPICounters() {
   const lostCount = lostList.length;
   const lostAmount = sumAmt(lostList);
 
-  const fmt = (amt) => `₹${amt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const fmt = (amt) => `₹${amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const setInner = (id, val) => {
     const el = document.getElementById(id);
@@ -13959,12 +15074,18 @@ function filterPaymentPendingCards() {
 
   if (emptyState) emptyState.classList.add('hidden');
 
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canFuCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'create') : true);
+  const canFuEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'edit') : true);
+  const canFuDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'delete') : true);
+  const canCall = canFuCreate || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true);
+
   container.innerHTML = list.map(fu => {
     const isOverdue = isFollowupOverdue(fu);
     const isCompleted = fu.status === 'COMPLETED';
     const isLost = fu.outcome === 'LOST';
     const amt = parseFloat(fu.paymentAmount || 0);
-    const formattedAmt = amt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const formattedAmt = amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const mode = fu.paymentMode || 'UPI';
     const dueDate = fu.paymentDueDate || fu.date || todayStr;
     const isToday = (dueDate === todayStr);
@@ -14092,38 +15213,65 @@ function filterPaymentPendingCards() {
 
         <!-- Action Toolbar (Fixed height & bottom-anchored) -->
         <div class="mt-auto pt-3 border-t border-slate-100 space-y-1.5 shrink-0">
-          <!-- 1-Click WhatsApp Payment Reminder -->
-          <button type="button" onclick="sendWhatsAppPaymentRequest('${fu.customerId}', '${fu.id}')" class="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]" title="Load formatted UPI payment reminder in WhatsApp chat composer">
-            <span class="material-symbols-outlined text-[16px]">send_to_mobile</span>
-            <span>Send Reminder</span>
-          </button>
-
-          <div class="grid grid-cols-3 gap-1.5 w-full">
-            <!-- Direct Call -->
-            <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Call customer to confirm transfer">
-              <span class="material-symbols-outlined text-[15px]">call</span>
-              <span>Call</span>
+          ${canFuCreate ? `
+            <!-- 1-Click WhatsApp Payment Reminder (Create) -->
+            <button type="button" onclick="sendWhatsAppPaymentRequest('${fu.customerId}', '${fu.id}')" class="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]" title="Load formatted UPI payment reminder in WhatsApp chat composer">
+              <span class="material-symbols-outlined text-[16px]">send_to_mobile</span>
+              <span>Send Reminder</span>
             </button>
+          ` : ''}
 
-            ${!isCompleted ? `
-              <!-- 1-Click Mark Paid & Convert -->
-              <button type="button" onclick="markPaymentReceivedAndConvert('${fu.id}', '${fu.customerId}')" class="py-1.5 px-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-0.5 cursor-pointer whitespace-nowrap active:scale-95" title="Mark payment received and convert to order">
-                <span class="material-symbols-outlined text-[15px]">verified</span>
-                <span>Mark Paid</span>
+          <div class="flex items-center justify-between gap-1.5 w-full">
+            <div class="flex items-center gap-1.5 flex-wrap flex-1">
+              <!-- Chat (View) -->
+              <button type="button" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="py-1.5 px-2 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer" title="View customer WhatsApp chat">
+                <span class="material-symbols-outlined text-[14px]">chat</span>
+                <span>Chat</span>
               </button>
 
-              <!-- Log Outcome / Remarks -->
-              <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Log Follow-up Outcome or Reschedule">
-                <span class="material-symbols-outlined text-[15px]">edit_note</span>
-                <span>Notes</span>
+              ${canCall ? `
+                <!-- Direct Call (Create) -->
+                <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Call customer to confirm transfer">
+                  <span class="material-symbols-outlined text-[14px]">call</span>
+                  <span>Call</span>
+                </button>
+              ` : ''}
+
+              ${canFuEdit ? `
+                <!-- ✏️ Edit Payment Follow-up (Edit) -->
+                <button type="button" onclick="openEditFollowupModal('${fu.id}')" class="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-amber-200 cursor-pointer shadow-2xs" title="Edit Payment Promise Details">
+                  <span class="material-symbols-outlined text-[14px]">edit</span>
+                  <span>Edit</span>
+                </button>
+              ` : ''}
+
+              ${!isCompleted && canFuEdit ? `
+                <!-- 1-Click Mark Paid & Convert (Edit) -->
+                <button type="button" onclick="markPaymentReceivedAndConvert('${fu.id}', '${fu.customerId}')" class="py-1.5 px-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-0.5 cursor-pointer whitespace-nowrap active:scale-95" title="Mark payment received and convert to order">
+                  <span class="material-symbols-outlined text-[14px]">verified</span>
+                  <span>Mark Paid</span>
+                </button>
+
+                <!-- Log Outcome / Remarks (Edit) -->
+                <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Log Follow-up Outcome or Reschedule">
+                  <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                  <span>Notes</span>
+                </button>
+              ` : (isCompleted && canFuCreate ? `
+                <!-- Completed / Repeat Follow-up (Create) -->
+                <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer">
+                  <span class="material-symbols-outlined text-[14px]">repeat</span>
+                  <span>Follow-up</span>
+                </button>
+              ` : '')}
+            </div>
+
+            ${canFuDelete ? `
+              <!-- Delete Action Button (Delete) -->
+              <button type="button" onclick="deleteFollowupCard('${fu.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer shrink-0" title="Delete Follow-up Record">
+                <span class="material-symbols-outlined text-[17px]">delete</span>
               </button>
-            ` : `
-              <!-- Completed / Repeat Follow-up -->
-              <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="col-span-2 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer">
-                <span class="material-symbols-outlined text-[15px]">repeat</span>
-                <span>Follow-up</span>
-              </button>
-            `}
+            ` : ''}
           </div>
         </div>
       </div>
@@ -14147,7 +15295,7 @@ function filterFollowupsCards() {
   const tabFilter = ACTIVE_FOLLOWUP_TAB || 'ALL';
   const todayStr = new Date().toISOString().split('T')[0];
 
-  let list = (CRM_STATE.followups || []).filter(fu => 
+  let list = (CRM_STATE.followups || []).filter(fu =>
     fu && !(fu.reason && fu.reason.includes('ytfdw'))
   );
 
@@ -14229,6 +15377,12 @@ function filterFollowupsCards() {
 
   if (emptyState) emptyState.classList.add('hidden');
 
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canFuCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'create') : true);
+  const canFuEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'edit') : true);
+  const canFuDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'delete') : true);
+  const canCall = canFuCreate || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true);
+
   container.innerHTML = list.map(fu => {
     const isOverdue = isFollowupOverdue(fu);
     const isCompleted = fu.status === 'COMPLETED';
@@ -14290,20 +15444,21 @@ function filterFollowupsCards() {
     } else if (isPayPendingActive) {
       statusPill = `<span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shadow-2xs">
         <span class="material-symbols-outlined text-[13px] text-amber-700">payments</span>
-        <span>₹${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})} Pending</span>
+        <span>₹${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} Pending</span>
       </span>`;
     } else {
       statusPill = '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Pending</span>';
     }
 
-    // Staff Reassign Control (Admin gets interactive select, Staff gets static tag)
+    // Staff Reassign Control (Admin or Edit permission gets interactive select, Staff View-Only gets static tag)
     let staffPill = '';
-    if (isAdmin && !isCompleted) {
+    if ((isAdmin || canFuEdit) && !isCompleted) {
       staffPill = `
         <select onchange="handleReassignFollowup('${fu.id}', this.value)" class="text-[11px] font-bold bg-white border border-indigo-200 text-indigo-950 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none cursor-pointer shadow-2xs">
           <option value="staff_01" ${fu.assignedTo === 'staff_01' ? 'selected' : ''}>Priya</option>
           <option value="staff_02" ${fu.assignedTo === 'staff_02' ? 'selected' : ''}>Rahul</option>
           <option value="staff_03" ${fu.assignedTo === 'staff_03' ? 'selected' : ''}>Sneha</option>
+          <option value="staff_04" ${fu.assignedTo === 'staff_04' ? 'selected' : ''}>Mekha</option>
           <option value="admin" ${fu.assignedTo === 'admin' ? 'selected' : ''}>Admin</option>
         </select>
       `;
@@ -14321,7 +15476,7 @@ function filterFollowupsCards() {
               ${isPayPendingActive && !isCompleted && (isToday || isUpcoming || isOverdue) ? `
                 <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shadow-2xs">
                   <span class="material-symbols-outlined text-[12px] text-amber-700">payments</span>
-                  <span>₹${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                  <span>₹${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </span>
               ` : ''}
             </div>
@@ -14368,7 +15523,7 @@ function filterFollowupsCards() {
               <div class="flex items-center justify-between font-black text-amber-950">
                 <span class="flex items-center gap-1 font-bold text-xs text-amber-900">
                   <span class="material-symbols-outlined text-[16px] text-amber-700">currency_rupee</span>
-                  <span class="text-sm font-mono">${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                  <span class="text-sm font-mono">${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </span>
                 <span class="text-[10px] bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-full font-bold uppercase border border-amber-300/60 font-mono">
                   ${fu.paymentMode || 'UPI'}
@@ -14413,45 +15568,67 @@ function filterFollowupsCards() {
         <!-- Action Footer -->
         <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-1.5 flex-wrap">
           <div class="flex items-center gap-1.5 flex-wrap">
-            <!-- WhatsApp Chat -->
-            <button type="button" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+            <!-- WhatsApp Chat (View) -->
+            <button type="button" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1" title="View in WhatsApp Chat">
               <span class="material-symbols-outlined text-[15px]">chat</span>
               <span>Chat</span>
             </button>
 
-            <!-- Direct Phone Call Trigger -->
-            <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center gap-1" title="Call Customer">
-              <span class="material-symbols-outlined text-[15px]">call</span>
-              <span>Call</span>
-            </button>
+            <!-- Direct Phone Call Trigger (Create) -->
+            ${canCall ? `
+              <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center gap-1" title="Call Customer">
+                <span class="material-symbols-outlined text-[15px]">call</span>
+                <span>Call</span>
+              </button>
+            ` : ''}
 
-            ${isPayPendingActive ? `
-              <!-- WhatsApp Payment Reminder -->
+            ${isPayPendingActive && canFuCreate ? `
+              <!-- WhatsApp Payment Reminder (Create) -->
               <button type="button" onclick="sendWhatsAppPaymentRequest('${fu.customerId}', '${fu.id}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1" title="Send WhatsApp Payment Link / Reminder">
                 <span class="material-symbols-outlined text-[15px]">send_to_mobile</span>
                 <span>Reminder</span>
               </button>
+            ` : ''}
 
-              <!-- 1-Click Mark Paid & Convert -->
+            ${isPayPendingActive && canFuEdit ? `
+              <!-- 1-Click Mark Paid & Convert (Edit) -->
               <button type="button" onclick="markPaymentReceivedAndConvert('${fu.id}', '${fu.customerId}')" class="px-2.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1" title="1-Click Mark Payment Received &amp; Order Converted">
                 <span class="material-symbols-outlined text-[15px]">verified</span>
                 <span>Mark Paid</span>
               </button>
             ` : ''}
 
-            <!-- Log Outcome Button (Only if pending) -->
-            ${!isCompleted ? `
-              <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+            <!-- Explicit ✏️ Edit Follow-up Button (Edit) -->
+            ${canFuEdit ? `
+              <button type="button" onclick="openEditFollowupModal('${fu.id}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl transition flex items-center gap-1 border border-amber-200 cursor-pointer shadow-2xs" title="Edit Follow-up Date, Time, Reason &amp; Details">
+                <span class="material-symbols-outlined text-[15px]">edit</span>
+                <span>Edit</span>
+              </button>
+            ` : ''}
+
+            <!-- Log Outcome Button (Edit - Only if pending) -->
+            ${!isCompleted && canFuEdit ? `
+              <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition flex items-center gap-1 border border-slate-200 cursor-pointer shadow-2xs" title="Record Enquiry Outcome &amp; Notes">
                 <span class="material-symbols-outlined text-[15px]">check_circle</span>
                 <span>Outcome</span>
               </button>
-            ` : `
-              <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1">
+            ` : ''}
+
+            <!-- Follow-up Again Button (Create - if completed) -->
+            ${isCompleted && canFuCreate ? `
+              <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1" title="Schedule Another Follow-up">
                 <span class="material-symbols-outlined text-[15px]">repeat</span>
                 <span>Follow-up Again</span>
               </button>
-            `}
+            ` : ''}
           </div>
+
+          <!-- Delete Action (Requires Delete Permission) -->
+          ${canFuDelete ? `
+            <button type="button" onclick="deleteFollowupCard('${fu.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer" title="Delete Follow-up Record">
+              <span class="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+          ` : ''}
         </div>
       </div>
     `;
@@ -14459,6 +15636,13 @@ function filterFollowupsCards() {
 }
 
 function deleteFollowupCard(id) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'delete')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to delete follow-up records.', 'lock', 'rose');
+    }
+    return;
+  }
   if (!confirm('Are you sure you want to delete this follow-up record?')) return;
   CRM_STATE.followups = (CRM_STATE.followups || []).filter(f => f && f.id !== id);
   saveCRMState();
@@ -14487,11 +15671,18 @@ function handleFollowupCallCustomer(customerId) {
 
 // 1-Click Send WhatsApp Payment Request Link with Store UPI
 function sendWhatsAppPaymentRequest(customerId, followupId = null) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'create') && !canUserPerformAction('inbox', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to send payment reminders.', 'lock', 'rose');
+    }
+    return;
+  }
   const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
-  const fu = followupId 
-    ? (CRM_STATE.followups || []).find(f => f.id === followupId) 
+  const fu = followupId
+    ? (CRM_STATE.followups || []).find(f => f.id === followupId)
     : (CRM_STATE.followups || []).find(f => (f.customerId === customerId || String(f.customerId) === String(customerId)) && f.isPaymentPending && f.status === 'PENDING');
-  
+
   const query = (CRM_STATE.queries || []).find(q => q.customerId === customerId || q.id === fu?.queryId);
 
   // Dynamic values from either fu, query, or live input fields
@@ -14549,6 +15740,13 @@ window.sendWhatsAppPaymentRequest = sendWhatsAppPaymentRequest;
 
 // 1-Click Mark Payment Received & Convert to Order
 function markPaymentReceivedAndConvert(followupId, customerId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to confirm payment and convert follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
   const fu = (CRM_STATE.followups || []).find(f => f.id === followupId);
   const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
   if (!fu) return;
@@ -14573,7 +15771,7 @@ function markPaymentReceivedAndConvert(followupId, customerId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(fu)
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('PAYMENT_RECEIVED', 'FOLLOWUP', `Marked payment of ₹${amt} received for ${customer?.name || fu.customerName || 'Customer'} (${fu.id}). Converted to Order.`);
 
@@ -14661,7 +15859,7 @@ function refreshFollowupsState() {
         }
       });
 
-      CRM_STATE.followups = (CRM_STATE.followups || []).filter(f => 
+      CRM_STATE.followups = (CRM_STATE.followups || []).filter(f =>
         f && f.id && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw'))
       );
 
@@ -14692,7 +15890,7 @@ function startFollowupReminderTicker() {
           NOTIFIED_FOLLOWUP_IDS.add(fu.id);
           try {
             if (typeof playChime === 'function') playChime('message');
-          } catch (e) {}
+          } catch (e) { }
           showToast('⏰ Follow-up Due!', `Callback due for ${fu.customerName} (${fu.time}). Context: ${fu.reason}`, 'alarm', 'rose');
           updateFollowupsKPICounters();
         }
@@ -14781,15 +15979,15 @@ function renderEnquiriesTable() {
       const quotedItems = (q.quotedItems || '').toLowerCase();
 
       return qId.includes(searchTerm) ||
-             custName.includes(searchTerm) ||
-             custPhone.includes(searchTerm) ||
-             (searchDigits.length >= 3 && rawDigits.includes(searchDigits)) ||
-             qText.includes(searchTerm) ||
-             staffName.includes(searchTerm) ||
-             status.includes(searchTerm) ||
-             priority.includes(searchTerm) ||
-             notes.includes(searchTerm) ||
-             quotedItems.includes(searchTerm);
+        custName.includes(searchTerm) ||
+        custPhone.includes(searchTerm) ||
+        (searchDigits.length >= 3 && rawDigits.includes(searchDigits)) ||
+        qText.includes(searchTerm) ||
+        staffName.includes(searchTerm) ||
+        status.includes(searchTerm) ||
+        priority.includes(searchTerm) ||
+        notes.includes(searchTerm) ||
+        quotedItems.includes(searchTerm);
     });
   }
 
@@ -14928,7 +16126,7 @@ let CATALOG_STOCK_STATUS_FILTER = 'ALL';
 
 function setStockStatusFilter(filter) {
   CATALOG_STOCK_STATUS_FILTER = filter;
-  
+
   const buttons = {
     'ALL': document.getElementById('filter-stock-all'),
     'IN_STOCK': document.getElementById('filter-stock-in'),
@@ -14982,7 +16180,7 @@ let CURRENT_CATALOG_FILTERED_LIST = [];
 
 function setCatalogViewMode(mode) {
   CATALOG_VIEW_MODE = mode;
-  
+
   const btnGrid = document.getElementById('btn-catalog-view-grid');
   const btnTable = document.getElementById('btn-catalog-view-table');
   const gridContainer = document.getElementById('catalog-grid-container');
@@ -15041,6 +16239,11 @@ function updateCatalogMetrics() {
 
 // Sync Products from Linked WhatsApp Business Account Catalog (100% Free Local Sync)
 async function syncWhatsAppBusinessCatalog() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'create') && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to sync WhatsApp catalog.', 'lock', 'rose');
+    return;
+  }
   const btn = document.getElementById('btn-sync-wa-catalog');
   if (btn) {
     btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> <span>Syncing Catalog...</span>`;
@@ -15052,7 +16255,7 @@ async function syncWhatsAppBusinessCatalog() {
   try {
     // 1. Check if Node.js bridge is active to pull native catalog
     const bridgeResp = await fetch('http://localhost:3000/api/catalog/sync', { method: 'POST' }).then(r => r.json()).catch(() => null);
-    
+
     if (bridgeResp && bridgeResp.products && bridgeResp.products.length > 0) {
       CRM_STATE.products = bridgeResp.products;
     } else {
@@ -15089,7 +16292,7 @@ function populateCatalogCategoryFilters() {
   if (!catSelect) return;
 
   const currentVal = catSelect.value || 'ALL';
-  
+
   // Combine categories from CRM_STATE, INITIAL_CRM_DATA and any existing in products
   const baseCategories = (CRM_STATE.categories && Array.isArray(CRM_STATE.categories) && CRM_STATE.categories.length > 0)
     ? CRM_STATE.categories
@@ -15131,7 +16334,7 @@ function onCatalogCategoryFilterChange() {
 
   const currentSubVal = subcatSelect.value || 'ALL';
   const selectedCat = catSelect ? catSelect.value : 'ALL';
-  
+
   // Combine subcategories from CRM_STATE, INITIAL_CRM_DATA and any existing in products
   const baseSubcategories = (CRM_STATE.subcategories && Array.isArray(CRM_STATE.subcategories) && CRM_STATE.subcategories.length > 0)
     ? CRM_STATE.subcategories
@@ -15203,20 +16406,20 @@ function filterCatalogGrid() {
   const subcategoryLower = subcategory.trim().toLowerCase();
 
   let list = (CRM_STATE.products || []).filter(p => {
-    const matchQuery = !q || (p.name && p.name.toLowerCase().includes(q)) || 
-                             (p.sku && p.sku.toLowerCase().includes(q)) || 
-                             (p.color && p.color.toLowerCase().includes(q)) || 
-                             (p.size && p.size.toLowerCase().includes(q)) || 
-                             (p.fabric && p.fabric.toLowerCase().includes(q)) || 
-                             (p.category && p.category.toLowerCase().includes(q)) || 
-                             (p.subcategory && p.subcategory.toLowerCase().includes(q));
+    const matchQuery = !q || (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.sku && p.sku.toLowerCase().includes(q)) ||
+      (p.color && p.color.toLowerCase().includes(q)) ||
+      (p.size && p.size.toLowerCase().includes(q)) ||
+      (p.fabric && p.fabric.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
+      (p.subcategory && p.subcategory.toLowerCase().includes(q));
 
     const pCatLower = (p.category || '').toString().trim().toLowerCase();
     const matchCategory = category === 'ALL' || pCatLower === categoryLower;
 
     const pSubLower = (p.subcategory || '').toString().trim().toLowerCase();
     const matchSubcategory = subcategory === 'ALL' || pSubLower === subcategoryLower;
-    
+
     const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
     let matchStock = true;
     if (CATALOG_STOCK_STATUS_FILTER === 'IN_STOCK') matchStock = available > 5;
@@ -15249,6 +16452,9 @@ function filterCatalogGrid() {
     renderCatalogGridFromList(list);
   }
   updateCatalogMetrics();
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
+  }
 }
 
 function renderCatalogGrid(search) {
@@ -15381,6 +16587,11 @@ function renderCatalogGridFromList(list) {
   const container = document.getElementById('catalog-grid-container');
   if (!container) return;
 
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canCatCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'create') : true);
+  const canCatEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'edit') : true);
+  const canCatDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'delete') : true);
+
   if (!list || list.length === 0) {
     container.innerHTML = `
       <div class="col-span-full py-16 text-center bg-white rounded-3xl border border-dashed border-slate-300 p-8 shadow-sm">
@@ -15420,7 +16631,7 @@ function renderCatalogGridFromList(list) {
 
     const imgUrl = getSmartProductImage(p);
 
-    const catBreadcrumb = p.subcategory 
+    const catBreadcrumb = p.subcategory
       ? `${p.category || 'Garments'} &rsaquo; ${p.subcategory}`
       : (p.category || 'Garments');
 
@@ -15482,10 +16693,12 @@ function renderCatalogGridFromList(list) {
         <div class="relative h-44 bg-slate-100 overflow-hidden group/img">
           <img src="${imgUrl}" alt="${p.name}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
           
+          ${canCatEdit ? `
           <!-- Direct Quick Photo Upload Overlay on Card Hover -->
           <button type="button" onclick="event.stopPropagation(); triggerCardPhotoUpload('${p.id}', '${p.sku}')" class="absolute bottom-2 right-2.5 z-10 opacity-0 group-hover/img:opacity-100 transition-all bg-slate-900/85 hover:bg-emerald-700 text-white text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm shadow flex items-center gap-1 cursor-pointer" title="Upload or change garment photo">
             <span class="material-symbols-outlined text-[13px]">add_a_photo</span> Photo
           </button>
+          ` : ''}
           
           ${IS_BULK_PRICE_MODE ? `
             <div class="absolute top-2.5 left-2.5 z-10 flex items-center">
@@ -15555,37 +16768,55 @@ function renderCatalogGridFromList(list) {
                   <span class="material-symbols-outlined text-[16px]">visibility</span> View All ${p.variantCount} Variants
                 </button>
 
-                <div class="grid grid-cols-2 gap-1.5">
+                <div class="grid ${canCatDelete ? 'grid-cols-2' : 'grid-cols-1'} gap-1.5">
                   <button onclick="openDirectShareModal('${p.groupKey}', true)" class="px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer" title="Direct WhatsApp share: share all ${p.variantCount} variants">
                     <span class="material-symbols-outlined text-[14px]">send</span> Share All Variants
                   </button>
-                  <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer group/del" title="Delete product family and all its variants">
-                    <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
-                  </button>
+                  ${canCatDelete ? `
+                    <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer group/del" title="Delete product family and all its variants">
+                      <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
+                    </button>
+                  ` : ''}
                 </div>
-              ` : `
-                <button onclick="openDirectShareModal('${p.id}', false)" class="w-full px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer" title="Send direct to any WhatsApp phone number">
-                  <span class="material-symbols-outlined text-[15px]">send</span> Direct WA
-                </button>
+              ` : (() => {
+        const actionBtns = [];
+        if (canCatEdit) {
+          actionBtns.push(`
+                    <button onclick="openSinglePriceModal('${p.id}')" class="px-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Edit individual product price">
+                      <span class="material-symbols-outlined text-[13px]">payments</span> Price
+                    </button>
+                  `);
+          actionBtns.push(`
+                    <button onclick="openQuickStockModal('${p.id}')" class="px-1 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Quick restock &amp; reason notes">
+                      <span class="material-symbols-outlined text-[13px]">warehouse</span> Stock
+                    </button>
+                  `);
+          actionBtns.push(`
+                    <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-1 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Overall Edit: Full Product Master">
+                      <span class="material-symbols-outlined text-[13px] text-amber-700">edit_note</span> Edit
+                    </button>
+                  `);
+        }
+        if (canCatDelete) {
+          actionBtns.push(`
+                    <button onclick="confirmDeleteProduct('${p.id}', false)" class="px-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer group/del" title="Delete product permanently from database">
+                      <span class="material-symbols-outlined text-[13px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
+                    </button>
+                  `);
+        }
 
-                <div class="grid grid-cols-4 gap-1.5">
-                  <button onclick="openSinglePriceModal('${p.id}')" class="px-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Edit individual product price">
-                    <span class="material-symbols-outlined text-[13px]">payments</span> Price
+        return `
+                  <button onclick="openDirectShareModal('${p.id}', false)" class="w-full px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer" title="Send direct to any WhatsApp phone number">
+                    <span class="material-symbols-outlined text-[15px]">send</span> Direct WA
                   </button>
 
-                  <button onclick="openQuickStockModal('${p.id}')" class="px-1 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Quick restock & reason notes">
-                    <span class="material-symbols-outlined text-[13px]">warehouse</span> Stock
-                  </button>
-
-                  <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-1 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Overall Edit: Full Product Master">
-                    <span class="material-symbols-outlined text-[13px] text-amber-700">edit_note</span> Edit
-                  </button>
-
-                  <button onclick="confirmDeleteProduct('${p.id}', false)" class="px-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer group/del" title="Delete product permanently from database">
-                    <span class="material-symbols-outlined text-[13px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
-                  </button>
-                </div>
-              `}
+                  ${actionBtns.length > 0 ? `
+                    <div class="grid grid-cols-${actionBtns.length} gap-1.5">
+                      ${actionBtns.join('')}
+                    </div>
+                  ` : ''}
+                `;
+      })()}
             </div>
           </div>
         </div>
@@ -15596,6 +16827,11 @@ function renderCatalogGridFromList(list) {
 
 // Instant 1-click photo upload directly from catalog card
 function triggerCardPhotoUpload(productId, sku) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product photos.', 'lock', 'rose');
+    return;
+  }
   let fileInput = document.getElementById('catalog-quick-photo-input');
   if (!fileInput) {
     fileInput = document.createElement('input');
@@ -15606,7 +16842,7 @@ function triggerCardPhotoUpload(productId, sku) {
     document.body.appendChild(fileInput);
   }
 
-  fileInput.onchange = async function(e) {
+  fileInput.onchange = async function (e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
@@ -15667,6 +16903,9 @@ window.triggerCardPhotoUpload = triggerCardPhotoUpload;
 // Open modal to view and manage all individual variants of a product family
 var CURRENT_OPEN_VARIANTS_GROUP_KEY = null;
 function openProductVariantsModal(groupKey) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canCatEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'edit') : true);
+  const canCatDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'delete') : true);
   CURRENT_OPEN_VARIANTS_GROUP_KEY = groupKey;
   window.CURRENT_OPEN_VARIANTS_GROUP_KEY = groupKey;
   const grouped = groupCatalogProducts(CRM_STATE.products || []);
@@ -15755,17 +16994,21 @@ function openProductVariantsModal(groupKey) {
                 <span class="material-symbols-outlined text-[14px]">send</span>
                 <span>WA</span>
               </button>
-              <button onclick="openQuickStockModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-semibold cursor-pointer" title="Quick restock this specific variant">
-                <span class="material-symbols-outlined text-[14px]">warehouse</span>
-                <span>Stock</span>
-              </button>
-              <button onclick="openEditProductModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Edit full details of this variant">
-                <span class="material-symbols-outlined text-[14px] text-amber-700">edit_note</span>
-                <span>Edit</span>
-              </button>
-              <button onclick="confirmDeleteProduct('${v.id || v.sku}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete this variant">
-                <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
-              </button>
+              ${canCatEdit ? `
+                <button onclick="openQuickStockModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-semibold cursor-pointer" title="Quick restock this specific variant">
+                  <span class="material-symbols-outlined text-[14px]">warehouse</span>
+                  <span>Stock</span>
+                </button>
+                <button onclick="openEditProductModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Edit full details of this variant">
+                  <span class="material-symbols-outlined text-[14px] text-amber-700">edit_note</span>
+                  <span>Edit</span>
+                </button>
+              ` : ''}
+              ${canCatDelete ? `
+                <button onclick="confirmDeleteProduct('${v.id || v.sku}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete this variant">
+                  <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+                </button>
+              ` : ''}
             </div>
           </div>
         </div>
@@ -15795,6 +17038,11 @@ window.refreshVariantsModalIfOpen = refreshVariantsModalIfOpen;
 function renderCatalogTableFromList(list) {
   const tbody = document.getElementById('catalog-table-tbody');
   if (!tbody) return;
+
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canCatCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'create') : true);
+  const canCatEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'edit') : true);
+  const canCatDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'delete') : true);
 
   const thCol = document.getElementById('th-bulk-checkbox-col');
   if (thCol) {
@@ -15909,7 +17157,7 @@ function renderCatalogTableFromList(list) {
           <div class="flex items-center gap-3">
             <img src="${imgUrl}" alt="${p.name}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm">
             <div class="min-w-0">
-              <div class="font-bold text-slate-900 text-xs hover:text-emerald-700 cursor-pointer transition line-clamp-1" onclick="${p.isGroup ? `openProductVariantsModal('${p.groupKey}')` : `openEditProductModal('${p.id || p.sku}')`}" title="${p.name}">${p.name}</div>
+              <div class="font-bold text-slate-900 text-xs hover:text-emerald-700 cursor-pointer transition line-clamp-1" onclick="${p.isGroup ? `openProductVariantsModal('${p.groupKey}')` : (canCatEdit ? `openEditProductModal('${p.id || p.sku}')` : '')}" title="${p.name}">${p.name}</div>
               <div class="flex items-center gap-1.5 mt-1">
                 <span class="bg-slate-900 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">${p.sku}</span>
                 ${p.isGroup ? `<span class="bg-indigo-100 text-indigo-900 font-extrabold text-[9px] px-1.5 py-0.2 rounded-full border border-indigo-200">🗂️ ${p.variantCount} vars</span>` : ''}
@@ -15965,26 +17213,34 @@ function renderCatalogTableFromList(list) {
               <button onclick="openDirectShareModal('${p.groupKey}', true)" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Share all ${p.variantCount} variants on WhatsApp">
                 <span class="material-symbols-outlined text-[15px]">send</span>
               </button>
-              <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete product family and all variants">
-                <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
-              </button>
+              ${canCatDelete ? `
+                <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete product family and all variants">
+                  <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+                </button>
+              ` : ''}
             ` : `
-              <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 font-bold text-xs cursor-pointer group/editbtn" title="Overall Edit: Edit all garment details">
-                <span class="material-symbols-outlined text-[15px] text-amber-700 group-hover/editbtn:scale-110 transition-transform">edit_note</span>
-                <span>Overall Edit</span>
-              </button>
-              <button onclick="openSinglePriceModal('${p.id}')" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick Price Edit">
-                <span class="material-symbols-outlined text-[15px]">currency_rupee</span>
-              </button>
+              ${canCatEdit ? `
+                <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 font-bold text-xs cursor-pointer group/editbtn" title="Overall Edit: Edit all garment details">
+                  <span class="material-symbols-outlined text-[15px] text-amber-700 group-hover/editbtn:scale-110 transition-transform">edit_note</span>
+                  <span>Overall Edit</span>
+                </button>
+                <button onclick="openSinglePriceModal('${p.id}')" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick Price Edit">
+                  <span class="material-symbols-outlined text-[15px]">currency_rupee</span>
+                </button>
+              ` : ''}
               <button onclick="openDirectShareModal('${p.id}', false)" class="p-1.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Send direct to any WhatsApp phone number">
                 <span class="material-symbols-outlined text-[15px]">send</span>
               </button>
-              <button onclick="openQuickStockModal('${p.id}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick restock & reason notes">
-                <span class="material-symbols-outlined text-[15px]">warehouse</span>
-              </button>
-              <button onclick="confirmDeleteProduct('${p.id}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Permanently delete product from database">
-                <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
-              </button>
+              ${canCatEdit ? `
+                <button onclick="openQuickStockModal('${p.id}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick restock &amp; reason notes">
+                  <span class="material-symbols-outlined text-[15px]">warehouse</span>
+                </button>
+              ` : ''}
+              ${canCatDelete ? `
+                <button onclick="confirmDeleteProduct('${p.id}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Permanently delete product from database">
+                  <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+                </button>
+              ` : ''}
             `}
           </div>
         </td>
@@ -15997,6 +17253,11 @@ function renderCatalogTableFromList(list) {
 // LIVE QUICK STOCK ADJUSTMENT (+ / - STEPPER)
 // -------------------------------------------------------------------------
 async function quickAdjustStock(productId, delta) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to adjust stock.', 'lock', 'rose');
+    return;
+  }
   const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId));
   if (!p) return;
 
@@ -16049,6 +17310,11 @@ function handleToolbarSelectAllChange(isChecked) {
 window.handleToolbarSelectAllChange = handleToolbarSelectAllChange;
 
 function toggleBulkPriceEditMode(forceState) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit prices.', 'lock', 'rose');
+    return;
+  }
   if (typeof forceState === 'boolean') {
     IS_BULK_PRICE_MODE = forceState;
   } else {
@@ -16345,9 +17611,14 @@ function calculatePriceByStrategy(basePrice, strategy, rawValue) {
 // -------------------------------------------------------------------------
 
 function openSinglePriceModal(productId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product prices.', 'lock', 'rose');
+    return;
+  }
   if (!productId) return;
   const cleanId = String(productId).trim();
-  const p = (CRM_STATE.products || []).find(prod => 
+  const p = (CRM_STATE.products || []).find(prod =>
     (prod.id !== undefined && prod.id !== null && String(prod.id) === cleanId) ||
     (prod.sku && String(prod.sku).toUpperCase() === cleanId.toUpperCase())
   );
@@ -16473,6 +17744,11 @@ async function handleSinglePriceSave(event) {
     event.preventDefault();
     event.stopPropagation();
   }
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product prices.', 'lock', 'rose');
+    return;
+  }
 
   const idInput = document.getElementById('single-price-product-id');
   const pId = idInput ? idInput.value : null;
@@ -16547,6 +17823,11 @@ async function handleSinglePriceSave(event) {
 // -------------------------------------------------------------------------
 
 function openBulkPriceModal() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to bulk edit prices.', 'lock', 'rose');
+    return;
+  }
   if (BULK_SELECTED_PRODUCT_IDS.size === 0) {
     showToast('Select Products First', 'Please check at least 1 garment using the checkboxes to bulk edit prices.', 'warning', 'amber');
     return;
@@ -16665,6 +17946,11 @@ async function handleBulkPriceSave(event) {
     event.preventDefault();
     event.stopPropagation();
   }
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to bulk edit prices.', 'lock', 'rose');
+    return;
+  }
 
   if (BULK_SELECTED_PRODUCT_IDS.size === 0) {
     showToast('No Selection', 'Please select garments to update.', 'warning', 'amber');
@@ -16774,7 +18060,7 @@ function handleProductImageFileSelect(event) {
   const previewStatus = document.getElementById('prod-preview-status');
 
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = async function (e) {
     const dataUrl = e.target.result;
     CURRENT_PRODUCT_IMAGE_DATA = dataUrl;
     if (previewImg) previewImg.src = dataUrl;
@@ -17043,7 +18329,7 @@ function toggleProductFormCustomAttr(attrName, val) {
   const lower = trimmed.toLowerCase();
   if (!Array.isArray(SELECTED_CUSTOM_ATTRIBUTES[attrName])) {
     const existing = SELECTED_CUSTOM_ATTRIBUTES[attrName];
-    SELECTED_CUSTOM_ATTRIBUTES[attrName] = existing 
+    SELECTED_CUSTOM_ATTRIBUTES[attrName] = existing
       ? (Array.isArray(existing) ? existing : (typeof existing === 'string' ? existing.split(',').map(s => s.trim()).filter(Boolean) : [String(existing)]))
       : [];
   }
@@ -17079,8 +18365,8 @@ function toggleProductFormSpec(lbl, cnt) {
     const sLbl = (typeof s === 'object' ? s.label : s) || '';
     const sCnt = (typeof s === 'object' ? s.content : '') || '';
     const sDisplay = (sLbl && sLbl !== 'Specification') ? `${sLbl}: ${sCnt}` : (sCnt || sLbl);
-    return sDisplay.toLowerCase() === targetLower || 
-           (sLbl.toLowerCase() === targetLbl.toLowerCase() && sCnt.toLowerCase() === targetCnt.toLowerCase());
+    return sDisplay.toLowerCase() === targetLower ||
+      (sLbl.toLowerCase() === targetLbl.toLowerCase() && sCnt.toLowerCase() === targetCnt.toLowerCase());
   });
 
   if (idx >= 0) {
@@ -17208,24 +18494,24 @@ function renderProductFormAttributeChips(selectedSizesArg, selectedColorsArg, se
       customCont.innerHTML = customNames.map(attrName => {
         const vals = customAttrs[attrName] || [];
         const rawSelected = SELECTED_CUSTOM_ATTRIBUTES[attrName] || [];
-        const selectedVals = Array.isArray(rawSelected) 
-          ? rawSelected 
+        const selectedVals = Array.isArray(rawSelected)
+          ? rawSelected
           : (typeof rawSelected === 'string' ? rawSelected.split(',').map(s => s.trim()).filter(Boolean) : [String(rawSelected)]);
         const selectedLower = selectedVals.map(v => typeof v === 'string' ? v.toLowerCase() : String(v).toLowerCase());
         const escapedAttrName = attrName.replace(/'/g, "\\'");
 
-        const chipsHtml = vals.length === 0 
+        const chipsHtml = vals.length === 0
           ? `<span class="text-slate-400 italic text-[10px]">No values yet. Click "Manage ${attrName}" to add values.</span>`
           : vals.map(v => {
-              const isSel = selectedLower.includes(v.toLowerCase());
-              const escapedV = v.replace(/'/g, "\\'");
-              return `
+            const isSel = selectedLower.includes(v.toLowerCase());
+            const escapedV = v.replace(/'/g, "\\'");
+            return `
                 <button type="button" onclick="toggleProductFormCustomAttr('${escapedAttrName}', '${escapedV}')" class="chip-custom px-2.5 py-1 rounded-lg text-[11px] font-bold border transition flex items-center gap-1 cursor-pointer ${isSel ? 'bg-purple-700 text-white border-purple-800 shadow-sm ring-1 ring-purple-500' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'}">
                   ${isSel ? '<span class="text-purple-200 text-[11px] font-extrabold">✓</span>' : ''}
                   <span>${v}</span>
                 </button>
               `;
-            }).join('');
+          }).join('');
 
         return `
           <div class="pt-3 border-t border-slate-200/80">
@@ -17267,8 +18553,8 @@ function renderProductFormAttributeChips(selectedSizesArg, selectedColorsArg, se
           const asLbl = (typeof as === 'object' ? as.label : as) || '';
           const asCnt = (typeof as === 'object' ? as.content : '') || '';
           const asDisplay = (asLbl && asLbl !== 'Specification') ? `${asLbl}: ${asCnt}` : (asCnt || asLbl);
-          return asDisplay.toLowerCase() === targetStr || 
-                 (asLbl.toLowerCase() === lbl.toLowerCase() && asCnt.toLowerCase() === cnt.toLowerCase());
+          return asDisplay.toLowerCase() === targetStr ||
+            (asLbl.toLowerCase() === lbl.toLowerCase() && asCnt.toLowerCase() === cnt.toLowerCase());
         });
 
         const escapedLbl = lbl.replace(/'/g, "\\'");
@@ -17304,8 +18590,8 @@ function calculateProductVariantMatrix() {
   }
   Object.keys(SELECTED_CUSTOM_ATTRIBUTES || {}).forEach(attrName => {
     const rawVals = SELECTED_CUSTOM_ATTRIBUTES[attrName] || [];
-    const vals = (Array.isArray(rawVals) 
-      ? rawVals 
+    const vals = (Array.isArray(rawVals)
+      ? rawVals
       : (typeof rawVals === 'string' ? rawVals.split(',').map(s => s.trim()).filter(Boolean) : [String(rawVals)])
     ).filter(Boolean);
     if (vals.length > 0) {
@@ -17642,7 +18928,7 @@ function handleMatrixVariantImageUpload(index, fileInput) {
   }
 
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = async function (e) {
     const dataUrl = e.target.result;
     if (PRODUCT_VARIANTS_MATRIX[index]) {
       PRODUCT_VARIANTS_MATRIX[index].image = dataUrl;
@@ -18351,7 +19637,7 @@ function updateProductFormPreview() {
       }
 
       if (physical !== null && physical > 0) {
-        const stockNote = available > 5 
+        const stockNote = available > 5
           ? `✅ *In Stock* (${available} units ready for immediate dispatch)`
           : (available > 0 ? `⚡ *Limited Stock* (Only ${available} units remaining!)` : `⚠️ *Made to Order* (Available on booking)`);
         lines.push(`📦 *Stock:* ${stockNote}`);
@@ -18371,6 +19657,11 @@ function updateProductFormPreview() {
 // OPEN ADD / EDIT PRODUCT MODALS
 // -------------------------------------------------------------------------
 function openAddProductModal() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'create')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to add new products.', 'lock', 'rose');
+    return;
+  }
   const title = document.getElementById('modal-product-title');
   if (title) title.innerText = 'Add New Garment Product (Catalog Flow)';
 
@@ -18425,12 +19716,17 @@ function openAddProductModal() {
 }
 
 function openEditProductModal(productId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit products.', 'lock', 'rose');
+    return;
+  }
   if (!productId || productId === 'undefined' || productId === 'null') {
     showToast('Invalid Product', 'Product identifier is missing.', 'error', 'rose');
     return;
   }
   const cleanId = String(productId).trim();
-  const p = (CRM_STATE.products || []).find(prod => 
+  const p = (CRM_STATE.products || []).find(prod =>
     (prod.id !== undefined && prod.id !== null && String(prod.id) === cleanId) ||
     (prod.sku && String(prod.sku).toUpperCase() === cleanId.toUpperCase())
   );
@@ -18496,11 +19792,11 @@ function openEditProductModal(productId) {
   setProductSpecificationsInForm(p.specifications || []);
 
   // Multi-select attributes & matrix init
-  SELECTED_PRODUCT_SIZES = p.size 
-    ? (Array.isArray(p.size) ? p.size : String(p.size).split(',')).map(s => String(s).trim()).filter(Boolean) 
+  SELECTED_PRODUCT_SIZES = p.size
+    ? (Array.isArray(p.size) ? p.size : String(p.size).split(',')).map(s => String(s).trim()).filter(Boolean)
     : [];
-  SELECTED_PRODUCT_COLORS = p.color 
-    ? (Array.isArray(p.color) ? p.color : String(p.color).split(',')).map(c => String(c).trim()).filter(Boolean) 
+  SELECTED_PRODUCT_COLORS = p.color
+    ? (Array.isArray(p.color) ? p.color : String(p.color).split(',')).map(c => String(c).trim()).filter(Boolean)
     : [];
 
   // Custom attributes extraction & normalization to Array of strings
@@ -18561,6 +19857,13 @@ window.openEditProductModal = openEditProductModal;
 // -------------------------------------------------------------------------
 async function handleProductFormSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
+  const idVal = document.getElementById('prod-form-id')?.value;
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const reqAction = idVal ? 'edit' : 'create';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', reqAction)) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to ' + reqAction + ' products.', 'lock', 'rose');
+    return;
+  }
 
   try {
     const idVal = document.getElementById('prod-form-id')?.value || '';
@@ -18675,8 +19978,8 @@ async function handleProductFormSubmit(e) {
         if (existingIdx >= 0) {
           CRM_STATE.products[existingIdx] = { ...CRM_STATE.products[existingIdx], ...vp };
         } else {
-          const nextId = CRM_STATE.products.length > 0 
-            ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1 
+          const nextId = CRM_STATE.products.length > 0
+            ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1
             : 1;
           CRM_STATE.products.push({ id: nextId, ...vp });
         }
@@ -18772,8 +20075,8 @@ async function handleProductFormSubmit(e) {
       existing.accountId = accountId;
       existing.image = image;
     } else {
-      const newId = CRM_STATE.products.length > 0 
-        ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1 
+      const newId = CRM_STATE.products.length > 0
+        ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1
         : 1;
 
       existing = {
@@ -18842,6 +20145,11 @@ async function handleProductFormSubmit(e) {
 window.handleProductFormSubmit = handleProductFormSubmit;
 
 async function handleDeleteProduct() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete products.', 'lock', 'rose');
+    return;
+  }
   const idVal = document.getElementById('prod-form-id').value;
   if (!idVal) return;
 
@@ -18874,6 +20182,11 @@ window.handleDeleteProduct = handleDeleteProduct;
 
 // Delete product directly from product card or catalog table with confirmation dialog
 async function confirmDeleteProduct(productId, isFamilyGroup = false, groupKey = null) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete products.', 'lock', 'rose');
+    return;
+  }
   let delTargets = [];
   let confirmMsg = '';
 
@@ -18960,6 +20273,9 @@ function openManageCategoriesModal() {
 }
 
 function renderCategoriesManager() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canCatCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'create') : true);
+  const canCatDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'delete') : true);
   const categories = CRM_STATE.categories || INITIAL_CRM_DATA.categories || [];
   const subcategories = CRM_STATE.subcategories || INITIAL_CRM_DATA.subcategories || [];
 
@@ -18990,9 +20306,11 @@ function renderCategoriesManager() {
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-teal-200/80 text-teal-900' : 'bg-slate-100 text-slate-600'}">
               ${subCount}
             </span>
+            ${canCatDelete ? `
             <button type="button" onclick="event.stopPropagation(); deleteCategory(${c.id}, '${c.name}')" class="p-1 text-slate-300 hover:text-rose-600 transition" title="Delete Category">
               <span class="material-symbols-outlined text-[16px]">delete</span>
             </button>
+            ` : ''}
           </div>
         </div>
       `;
@@ -19025,9 +20343,11 @@ function renderCategoriesManager() {
               </span>
               <span class="font-bold text-slate-800 text-xs truncate">${s.name}</span>
             </div>
+            ${canCatDelete ? `
             <button type="button" onclick="deleteSubcategory(${s.id}, '${s.name}')" class="p-1 text-slate-300 hover:text-rose-600 transition" title="Delete Subcategory">
               <span class="material-symbols-outlined text-[16px]">delete</span>
             </button>
+            ` : ''}
           </div>
         `;
       }).join('');
@@ -19114,7 +20434,7 @@ function generateSubcategorySuggestions(name, categoryName) {
   const clean = (name || '').trim();
   if (!clean) return [];
 
-  const existing = new Set((CRM_STATE.subcategories || []).filter(s => 
+  const existing = new Set((CRM_STATE.subcategories || []).filter(s =>
     (s.category_name || s.category || '').toLowerCase() === (categoryName || '').toLowerCase()
   ).map(s => (s.name || '').trim().toLowerCase()));
 
@@ -19264,8 +20584,8 @@ function handleSubcategoryNameInput(val) {
     }
   }
 
-  const existingSub = (CRM_STATE.subcategories || []).find(s => 
-    (s.category_name === catName || s.category === catName) && 
+  const existingSub = (CRM_STATE.subcategories || []).find(s =>
+    (s.category_name === catName || s.category === catName) &&
     (s.name || '').trim().toLowerCase() === clean.toLowerCase()
   );
 
@@ -19326,11 +20646,11 @@ function handleSubcategoryPrefixInput(val) {
   const catName = ACTIVE_MANAGER_CATEGORY || document.getElementById('subcat-parent-label')?.innerText || '';
 
   // Check if prefix already exists
-  const existingSub = (CRM_STATE.subcategories || []).find(s => 
+  const existingSub = (CRM_STATE.subcategories || []).find(s =>
     (s.sku_prefix || '').toUpperCase().trim() === prefix
   );
 
-  const existingProd = (CRM_STATE.products || []).find(p => 
+  const existingProd = (CRM_STATE.products || []).find(p =>
     (p.sku || '').toUpperCase().startsWith(prefix + '-') || (p.sku || '').toUpperCase() === prefix
   );
 
@@ -19338,7 +20658,7 @@ function handleSubcategoryPrefixInput(val) {
     input.classList.remove('border-emerald-500', 'ring-emerald-300');
     input.classList.add('border-rose-500', 'ring-2', 'ring-rose-400', 'bg-rose-50/20');
 
-    const ownerName = existingSub 
+    const ownerName = existingSub
       ? `Subcategory "<b>${existingSub.name}</b>" (under ${existingSub.category_name || existingSub.category || 'Category'})`
       : `Product "<b>${existingProd.sku}</b>" (${existingProd.name || 'Garment'})`;
 
@@ -19429,7 +20749,7 @@ async function saveCategorySubmit(e) {
   if (!CRM_STATE.categories || !Array.isArray(CRM_STATE.categories) || CRM_STATE.categories.length === 0) {
     CRM_STATE.categories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.categories || []));
   }
-  
+
   const existIdx = CRM_STATE.categories.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
   if (existIdx >= 0) {
     handleCategoryNameInput(name);
@@ -19476,6 +20796,11 @@ async function saveCategorySubmit(e) {
 }
 
 async function deleteCategory(catId, catName) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete categories.', 'lock', 'rose');
+    return;
+  }
   if (!confirm(`Delete category "${catName}" and all associated catalog groupings?`)) return;
 
   CRM_STATE.categories = (CRM_STATE.categories || []).filter(c => c.name !== catName && c.id != catId);
@@ -19515,10 +20840,10 @@ async function saveSubcategorySubmit(e) {
   if (!CRM_STATE.subcategories || !Array.isArray(CRM_STATE.subcategories) || CRM_STATE.subcategories.length === 0) {
     CRM_STATE.subcategories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.subcategories || []));
   }
-  
+
   // 1. Check if subcategory already exists under this category
-  const existSubIdx = CRM_STATE.subcategories.findIndex(s => 
-    s.name.toLowerCase() === name.toLowerCase() && 
+  const existSubIdx = CRM_STATE.subcategories.findIndex(s =>
+    s.name.toLowerCase() === name.toLowerCase() &&
     (s.category_name === ACTIVE_MANAGER_CATEGORY || s.category === ACTIVE_MANAGER_CATEGORY)
   );
   if (existSubIdx >= 0) {
@@ -19529,10 +20854,10 @@ async function saveSubcategorySubmit(e) {
   }
 
   // 2. Check if SKU prefix is taken or empty
-  const prefixTakenSub = (CRM_STATE.subcategories || []).find(s => 
+  const prefixTakenSub = (CRM_STATE.subcategories || []).find(s =>
     (s.sku_prefix || '').toUpperCase().trim() === prefix
   );
-  const prefixTakenProd = (CRM_STATE.products || []).find(p => 
+  const prefixTakenProd = (CRM_STATE.products || []).find(p =>
     (p.sku || '').toUpperCase().startsWith(prefix + '-') || (p.sku || '').toUpperCase() === prefix
   );
 
@@ -19595,6 +20920,11 @@ async function saveSubcategorySubmit(e) {
 }
 
 async function deleteSubcategory(subId, subName) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete subcategories.', 'lock', 'rose');
+    return;
+  }
   if (!confirm(`Delete subcategory "${subName}"?`)) return;
 
   CRM_STATE.subcategories = (CRM_STATE.subcategories || []).filter(s => s.name !== subName && s.id != subId);
@@ -20179,6 +21509,11 @@ async function deleteAttribute(type, val, id, extra) {
 // QUICK RESTOCK MODAL
 // -------------------------------------------------------------------------
 function openQuickStockModal(productId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product stock.', 'lock', 'rose');
+    return;
+  }
   const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId) || String(prod.sku) === String(productId));
   if (!p) {
     if (typeof showToast === 'function') {
@@ -20214,6 +21549,11 @@ window.openQuickStockModal = openQuickStockModal;
 
 async function handleQuickStockSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product stock.', 'lock', 'rose');
+    return;
+  }
   const idVal = document.getElementById('quick-stock-product-id').value;
   const newPhysical = parseInt(document.getElementById('quick-stock-physical-input').value) || 0;
   const reason = document.getElementById('quick-stock-reason')?.value || 'Factory Batch Restock';
@@ -20269,9 +21609,9 @@ let DIRECT_SHARE_SEARCH_QUERY = '';
 // Generate WhatsApp text for a single variant/product
 function generateProductWhatsAppText(p) {
   const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
-  const stockText = available > 5 
+  const stockText = available > 5
     ? `✅ *In Stock* (${available} units ready for immediate dispatch)`
-    : available > 0 
+    : available > 0
       ? `⚡ *Limited Stock Alert* (Only ${available} units remaining!)`
       : `⚠️ *Made to Order* (Available on booking)`;
 
@@ -20283,8 +21623,8 @@ function generateProductWhatsAppText(p) {
     priceLine = `💰 *Offer Price:* ₹${priceNum} ~₹${mrpNum}~ (*${discount}% OFF*)`;
   }
 
-  const catLine = p.subcategory 
-    ? `📁 *Catalog:* ${p.category || 'Garments'} › ${p.subcategory}\n` 
+  const catLine = p.subcategory
+    ? `📁 *Catalog:* ${p.category || 'Garments'} › ${p.subcategory}\n`
     : (p.category ? `📁 *Category:* ${p.category}\n` : '');
 
   const fabricLine = p.fabric ? `🧵 *Fabric:* ${p.fabric}\n` : '';
@@ -20307,8 +21647,8 @@ function generateProductWhatsAppText(p) {
 
 // Generate WhatsApp text representing ALL variants in a product family
 function generateFamilyProductWhatsAppText(group) {
-  const catLine = group.subcategory 
-    ? `📁 *Catalog:* ${group.category || 'Garments'} › ${group.subcategory}\n` 
+  const catLine = group.subcategory
+    ? `📁 *Catalog:* ${group.category || 'Garments'} › ${group.subcategory}\n`
     : (group.category ? `📁 *Category:* ${group.category}\n` : '');
 
   const priceRange = (group.minPrice && group.maxPrice && group.minPrice !== group.maxPrice)
@@ -20499,8 +21839,8 @@ function openDirectShareModal(targetId, isFamily = false) {
   if (preview) {
     const imgSrc = getSmartProductImage(p);
     if (isGroupTarget && group) {
-      const priceText = (group.minPrice && group.maxPrice && group.minPrice !== group.maxPrice) 
-        ? `₹${group.minPrice} – ₹${group.maxPrice}` 
+      const priceText = (group.minPrice && group.maxPrice && group.minPrice !== group.maxPrice)
+        ? `₹${group.minPrice} – ₹${group.maxPrice}`
         : `₹${group.minPrice || group.price || 0}`;
       preview.innerHTML = `
         <img src="${imgSrc}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-12 h-12 object-cover rounded-xl border border-slate-200 shadow-xs shrink-0">
@@ -20654,7 +21994,7 @@ async function saveDirectShareCustomCaption(silent = false) {
         }
       });
       saveCRMState();
-    } catch (e) {}
+    } catch (e) { }
 
     updateDirectShareCaptionBadge(true);
     if (!silent) {
@@ -20683,11 +22023,11 @@ async function saveDirectShareCustomCaption(silent = false) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: v.id, custom_caption: text })
-          }).catch(() => {});
+          }).catch(() => { });
         });
       }
       saveCRMState();
-    } catch (e) {}
+    } catch (e) { }
 
     updateDirectShareCaptionBadge(true);
     if (!silent) {
@@ -20715,7 +22055,7 @@ async function saveDirectShareCustomCaption(silent = false) {
     if (p && p.id) {
       localStorage.setItem('CRM_PRODUCT_CAPTION_' + p.id, text);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   if (p && p.id) {
     try {
@@ -20724,7 +22064,7 @@ async function saveDirectShareCustomCaption(silent = false) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: p.id, custom_caption: text })
       }).catch(err => console.warn('[Caption Save API Warning]:', err));
-    } catch (e) {}
+    } catch (e) { }
   }
 
   saveCRMState();
@@ -20748,7 +22088,7 @@ async function resetDirectShareCaptionToDefault() {
     if (!confirm('Reset batch message caption back to auto-generated details?')) return;
     try {
       localStorage.removeItem('CRM_BATCH_SHARE_CAPTION');
-    } catch (e) {}
+    } catch (e) { }
     const rawIds = productId.split(',').map(s => s.trim()).filter(Boolean);
     const selectedProds = (CRM_STATE.products || []).filter(prod => rawIds.includes(String(prod.id)));
     if (typeof generateBatchWhatsAppText === 'function') {
@@ -20772,7 +22112,7 @@ async function resetDirectShareCaptionToDefault() {
       localStorage.removeItem('CRM_PRODUCT_FAMILY_CAPTION_' + saveKey);
       if (groupKey) localStorage.removeItem('CRM_PRODUCT_FAMILY_CAPTION_' + groupKey);
       if (productId) localStorage.removeItem('CRM_PRODUCT_FAMILY_CAPTION_' + productId);
-    } catch (e) {}
+    } catch (e) { }
 
     document.getElementById('direct-share-message-text').value = generateFamilyProductWhatsAppText(group);
     updateDirectShareCaptionBadge(false);
@@ -20796,8 +22136,8 @@ async function resetDirectShareCaptionToDefault() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: p.id, custom_caption: '' })
-    }).catch(e => {});
-  } catch (e) {}
+    }).catch(e => { });
+  } catch (e) { }
 
   document.getElementById('direct-share-message-text').value = generateProductWhatsAppText(p);
   updateDirectShareCaptionBadge(false);
@@ -20905,9 +22245,9 @@ function renderDirectShareContactsList() {
           </div>
         </div>
         <div>
-          ${isChecked 
-            ? '<span class="text-emerald-700 font-bold text-[10px] px-1.5 py-0.5 bg-emerald-100 rounded-md">Selected</span>' 
-            : ''}
+          ${isChecked
+        ? '<span class="text-emerald-700 font-bold text-[10px] px-1.5 py-0.5 bg-emerald-100 rounded-md">Selected</span>'
+        : ''}
         </div>
       </div>
     `;
@@ -21125,13 +22465,13 @@ async function handleDirectShareSubmit(e) {
 
     try {
       const delivered = await dispatchWhatsAppOutbound(
-        rawPhone, 
-        messageText, 
-        newMsg, 
-        cust.jid || null, 
-        cust.accountId || null, 
+        rawPhone,
+        messageText,
+        newMsg,
+        cust.jid || null,
+        cust.accountId || null,
         true, // silent individual toasts
-        validImg, 
+        validImg,
         cust.id
       );
       if (delivered) {
@@ -21168,13 +22508,13 @@ async function handleDirectShareSubmit(e) {
 
     try {
       const delivered = await dispatchWhatsAppOutbound(
-        phone, 
-        messageText, 
-        customMsg, 
-        null, 
-        ACTIVE_SEND_ACCOUNT_ID || 'account_1', 
-        true, 
-        validImg, 
+        phone,
+        messageText,
+        customMsg,
+        null,
+        ACTIVE_SEND_ACCOUNT_ID || 'account_1',
+        true,
+        validImg,
         null
       );
       if (delivered) {
@@ -21207,8 +22547,8 @@ async function handleDirectShareSubmit(e) {
   }
 
   // 6. Comprehensive Result Toast
-  const productSkuOrName = isBatchShare 
-    ? `${batchProducts.length} garments` 
+  const productSkuOrName = isBatchShare
+    ? `${batchProducts.length} garments`
     : (p.sku || p.name || 'Product');
   if (failCount === 0) {
     showToast('Product Dispatched! 🚀', `Successfully sent ${productSkuOrName} to ${successCount} recipient(s)!`, 'done_all', 'emerald');
@@ -21283,7 +22623,7 @@ function openDirectWhatsAppWeb(productId) {
   let cleanPhone = (targetPhone || '').replace(/[^0-9]/g, '');
   if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
 
-  const waUrl = cleanPhone 
+  const waUrl = cleanPhone
     ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`
     : `https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`;
 
@@ -21356,6 +22696,11 @@ function normalizeOrderStatus(status) {
 }
 
 function switchOrdersSubmodule(submodule) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'view')) {
+    if (typeof showToast === 'function') showToast('Access Restricted', 'Your assigned role does not have permission to view sales orders.', 'lock', 'rose');
+    return;
+  }
   ACTIVE_ORDERS_SUBMODULE = submodule || 'dashboard';
   const tabDash = document.getElementById('tab-orders-submodule-dashboard');
   const tabHist = document.getElementById('tab-orders-submodule-history');
@@ -21372,7 +22717,7 @@ function switchOrdersSubmodule(submodule) {
     if (tabHist) tabHist.className = "px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-800 hover:bg-white/60 cursor-pointer";
     if (navDash) navDash.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer";
     if (navHist) navHist.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
-    try { window.location.hash = '#orders/dashboard'; } catch(e) {}
+    try { if (window.history && window.history.replaceState) window.history.replaceState(null, '', '#orders/dashboard'); } catch (e) { }
     renderOrdersDashboard();
   } else {
     if (viewDash) viewDash.classList.add('hidden');
@@ -21381,13 +22726,18 @@ function switchOrdersSubmodule(submodule) {
     if (tabHist) tabHist.className = "px-4 py-2 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-800 border border-slate-200/80 cursor-pointer";
     if (navDash) navDash.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
     if (navHist) navHist.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer";
-    try { window.location.hash = '#orders/history'; } catch(e) {}
+    try { if (window.history && window.history.replaceState) window.history.replaceState(null, '', '#orders/history'); } catch (e) { }
     renderOrdersHistoryTable();
   }
 }
 window.switchOrdersSubmodule = switchOrdersSubmodule;
 
 function reassignOrderStaff(orderId, newStaffId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to reassign order staff.', 'lock', 'rose');
+    return;
+  }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) return;
   const staffList = [...(CRM_STATE?.staffList || [])];
@@ -21415,7 +22765,7 @@ function reassignOrderStaff(orderId, newStaffId) {
       staff_name: staffObj.name,
       user: CURRENT_USER?.name || 'Super Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('ORDER_REASSIGNED', 'ORDERS', `Order ${orderId} reassigned from ${oldStaff} to ${staffObj.name}`);
   saveCRMState();
@@ -21444,7 +22794,7 @@ window.renderOrdersTable = renderOrdersModule;
 
 function renderOrdersDashboard() {
   const orders = CRM_STATE?.orders || [];
-  
+
   // 1. Overall Revenue
   let overallRevenue = 0;
   let paidOnline = 0;
@@ -21552,9 +22902,9 @@ function renderOrdersStaffBreakdown() {
     const staffOrders = orders.filter(o => {
       const matchId = o.staffId && (o.staffId === staff.id || o.staff_id === staff.id);
       const matchName = (o.staffName && o.staffName.toLowerCase().includes(staff.name.toLowerCase())) ||
-                        (o.staff_name && o.staff_name.toLowerCase().includes(staff.name.toLowerCase())) ||
-                        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase())) ||
-                        (o.created_by && o.created_by.toLowerCase().includes(staff.name.toLowerCase()));
+        (o.staff_name && o.staff_name.toLowerCase().includes(staff.name.toLowerCase())) ||
+        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase())) ||
+        (o.created_by && o.created_by.toLowerCase().includes(staff.name.toLowerCase()));
       return matchId || matchName;
     });
 
@@ -21728,9 +23078,9 @@ function renderOrdersHistoryTable() {
 
     if (staffVal !== 'ALL') {
       const matchStaff = (ord.staffName && ord.staffName.toLowerCase().includes(staffVal.toLowerCase())) ||
-                         (ord.staff_name && ord.staff_name.toLowerCase().includes(staffVal.toLowerCase())) ||
-                         (ord.createdBy && ord.createdBy.toLowerCase().includes(staffVal.toLowerCase())) ||
-                         (ord.created_by && ord.created_by.toLowerCase().includes(staffVal.toLowerCase()));
+        (ord.staff_name && ord.staff_name.toLowerCase().includes(staffVal.toLowerCase())) ||
+        (ord.createdBy && ord.createdBy.toLowerCase().includes(staffVal.toLowerCase())) ||
+        (ord.created_by && ord.created_by.toLowerCase().includes(staffVal.toLowerCase()));
       if (!matchStaff) return false;
     }
 
@@ -21882,11 +23232,11 @@ function renderOrdersHistoryTable() {
             <span class="text-[9px] text-slate-400 font-extrabold uppercase">Credit:</span>
             <select onchange="reassignOrderStaff('${ord.id}', this.value)" class="text-[10px] font-bold bg-indigo-50/80 hover:bg-indigo-100 text-indigo-950 border border-indigo-200/90 rounded-md px-1.5 py-0.5 outline-none cursor-pointer" title="Reassign order credit to another staff specialist">
               ${(() => {
-                const sList = [...(CRM_STATE?.staffList || [])];
-                if (!sList.some(s => s.id === 'admin')) sList.push({ id: 'admin', name: 'Super Admin' });
-                const curId = ord.staffId || ord.staff_id || (staffDisplayName.includes('Admin') ? 'admin' : '');
-                return sList.map(s => `<option value="${s.id}" ${s.id === curId || s.name === staffDisplayName ? 'selected' : ''}>${s.name}</option>`).join('');
-              })()}
+          const sList = [...(CRM_STATE?.staffList || [])];
+          if (!sList.some(s => s.id === 'admin')) sList.push({ id: 'admin', name: 'Super Admin' });
+          const curId = ord.staffId || ord.staff_id || (staffDisplayName.includes('Admin') ? 'admin' : '');
+          return sList.map(s => `<option value="${s.id}" ${s.id === curId || s.name === staffDisplayName ? 'selected' : ''}>${s.name}</option>`).join('');
+        })()}
             </select>
           </div>` : ''}
         </td>
@@ -21895,16 +23245,16 @@ function renderOrdersHistoryTable() {
         <td class="py-3 px-4 text-slate-700 text-xs min-w-[240px] max-w-md">
           <div class="space-y-1.5">
             ${(ord.items || []).map(i => {
-              const matchedProd = (CRM_STATE?.products || []).find(p => p.sku === i.sku || p.name === i.name);
-              const fallbackImg = 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=120&auto=format&fit=crop&q=60';
-              const imgUrl = i.image || matchedProd?.image || matchedProd?.imageUrl || (matchedProd?.images && matchedProd.images[0]) || fallbackImg;
-              const safeImg = (imgUrl || '').replace(/'/g, "\\'");
-              const safeName = (i.name || 'Garment Item').replace(/"/g, '&quot;');
-              const unitPrice = parseFloat(i.price || matchedProd?.price || 0);
-              const qty = parseInt(i.qty || 1);
-              const lineTotal = unitPrice * qty;
+          const matchedProd = (CRM_STATE?.products || []).find(p => p.sku === i.sku || p.name === i.name);
+          const fallbackImg = 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=120&auto=format&fit=crop&q=60';
+          const imgUrl = i.image || matchedProd?.image || matchedProd?.imageUrl || (matchedProd?.images && matchedProd.images[0]) || fallbackImg;
+          const safeImg = (imgUrl || '').replace(/'/g, "\\'");
+          const safeName = (i.name || 'Garment Item').replace(/"/g, '&quot;');
+          const unitPrice = parseFloat(i.price || matchedProd?.price || 0);
+          const qty = parseInt(i.qty || 1);
+          const lineTotal = unitPrice * qty;
 
-              return `
+          return `
                 <div class="flex items-center gap-2.5 p-1.5 bg-slate-50/90 hover:bg-slate-100/90 rounded-xl border border-slate-200/80 transition">
                   <!-- Product Image Thumbnail -->
                   <div class="relative shrink-0">
@@ -21922,7 +23272,7 @@ function renderOrdersHistoryTable() {
                   </div>
                 </div>
               `;
-            }).join('')}
+        }).join('')}
           </div>
         </td>
 
@@ -21962,22 +23312,34 @@ function renderOrdersHistoryTable() {
                     Track <span class="material-symbols-outlined text-[10px]">open_in_new</span>
                   </a>
                 ` : ''}
+                ${canUserPerformAction('orders', 'edit') ? `
                 <button type="button" onclick="openShippingDispatchModal('${ord.id}')" class="text-[9px] text-slate-500 hover:text-slate-800 p-0.5 rounded hover:bg-slate-200 cursor-pointer" title="Edit Tracking Details">
                   <span class="material-symbols-outlined text-[12px]">edit</span>
                 </button>
+                ` : ''}
               </div>
             ` : ''}
           </div>
         </td>
 
-        <!-- 7. Actions -->
-        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+        <!-- 7. Actions (Sticky right column so Edit & Delete are always visible on any screen width) -->
+        <td class="py-3.5 px-4 text-right whitespace-nowrap sticky right-0 bg-white/95 backdrop-blur-xs z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)]">
           <div class="flex items-center justify-end gap-1.5">
-            <!-- Edit Order (Image 2 Request) -->
+            <!-- Edit Order -->
+            ${canUserPerformAction('orders', 'edit') ? `
             <button type="button" onclick="openEditOrderModal('${ord.id}')" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-blue-300" title="Edit Order Details">
               <span class="material-symbols-outlined text-[14px]">edit</span>
               <span class="text-[11px]">Edit</span>
             </button>
+            ` : ''}
+
+            <!-- Delete Order -->
+            ${canUserPerformAction('orders', 'delete') ? `
+            <button type="button" onclick="confirmDeleteOrder('${ord.id}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-rose-300" title="Permanently Delete Order">
+              <span class="material-symbols-outlined text-[14px]">delete</span>
+              <span class="text-[11px]">Delete</span>
+            </button>
+            ` : ''}
 
             <!-- View Invoice -->
             <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-300" title="View Tax Invoice &amp; Packing Slip">
@@ -21999,6 +23361,11 @@ function renderOrdersHistoryTable() {
 window.renderOrdersHistoryTable = renderOrdersHistoryTable;
 
 function updateOrderStatus(orderId, newStatus) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to update order status.', 'lock', 'rose');
+    return;
+  }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) return;
 
@@ -22017,7 +23384,7 @@ function updateOrderStatus(orderId, newStatus) {
       status: newStatus,
       user: CURRENT_USER?.name || 'Super Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('ORDER_STATUS_UPDATED', 'ORDERS', `Order ${orderId} status changed from ${oldStatus} to ${newStatus}`);
   saveCRMState();
@@ -22036,6 +23403,12 @@ let ACTIVE_SHIPPING_DISPATCH_ORDER = null;
  * If user selected 'SHIPPED', opens dispatch popup instead of directly saving!
  */
 function handleOrderStatusChange(orderId, newStatus, selectEl) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to change order status.', 'lock', 'rose');
+    if (selectEl) selectEl.value = selectEl.getAttribute('data-prev') || selectEl.value;
+    return;
+  }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) return;
 
@@ -22055,6 +23428,11 @@ window.handleOrderStatusChange = handleOrderStatusChange;
  * Opens Shipping Dispatch popup with Courier Name, Tracking ID, and Tracking URL
  */
 function openShippingDispatchModal(orderId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit shipping or tracking details.', 'lock', 'rose');
+    return;
+  }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) {
     showToast('Order Not Found', `Cannot find order #${orderId}`, 'error', 'rose');
@@ -22193,6 +23571,11 @@ window.updateShippingWhatsAppPreview = updateShippingWhatsAppPreview;
  * syncs to MySQL, sends WhatsApp notification, and re-renders table!
  */
 function confirmShippingDispatch() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to confirm shipping dispatch.', 'lock', 'rose');
+    return;
+  }
   const ord = ACTIVE_SHIPPING_DISPATCH_ORDER;
   if (!ord) return;
 
@@ -22238,7 +23621,7 @@ function confirmShippingDispatch() {
       shipping_url: trackingUrl,
       user: CURRENT_USER?.name || 'Super Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   // Send WhatsApp dispatch notification if checked
   if (sendWhatsApp) {
@@ -22308,7 +23691,7 @@ function downloadOrdersDashboardReport() {
     const sOrders = orders.filter(o => {
       const matchId = o.staffId && (o.staffId === staff.id || o.staff_id === staff.id);
       const matchName = (o.staffName && o.staffName.toLowerCase().includes(staff.name.toLowerCase())) ||
-                        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase()));
+        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase()));
       return matchId || matchName;
     });
     const count = sOrders.length;
@@ -22951,6 +24334,17 @@ function renderMultiAccountsHub() {
   const countBadge = document.getElementById('badge-multi-accounts-count');
   if (!container) return;
 
+  const _isSuperAdminHub = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canSettingsCreate = _isSuperAdminHub || (typeof canUserPerformAction === 'function' ? canUserPerformAction('settings', 'create') : true);
+  const canSettingsEdit = _isSuperAdminHub || (typeof canUserPerformAction === 'function' ? canUserPerformAction('settings', 'edit') : true);
+  const canSettingsDelete = _isSuperAdminHub || (typeof canUserPerformAction === 'function' ? canUserPerformAction('settings', 'delete') : true);
+
+  // Top header button "+ Link Another Phone (Add QR)"
+  const btnAddPhone = document.querySelector('[onclick*="addNewWhatsAppAccountSlot"]');
+  if (btnAddPhone) {
+    btnAddPhone.style.display = canSettingsCreate ? '' : 'none';
+  }
+
   const accounts = getAvailableWhatsAppAccounts();
 
   const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
@@ -23013,9 +24407,11 @@ function renderMultiAccountsHub() {
             </div>
 
             <div class="flex items-center gap-2 pt-1">
+              ${canSettingsCreate ? `
               <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition shadow-sm">
                 <span class="material-symbols-outlined text-[15px]">refresh</span> Refresh QR Code
               </button>
+              ` : '<span class="text-[10px] text-amber-800 font-semibold px-2 py-1 bg-amber-100 rounded-lg">🔒 View-Only: QR refresh restricted</span>'}
             </div>
           </div>
         ` : ''}
@@ -23046,30 +24442,47 @@ function renderMultiAccountsHub() {
         ${(!isConnected && !isScanning) ? `
           <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center space-y-2.5">
             <p class="text-xs font-bold text-slate-700">${isConnecting ? 'Connecting to WhatsApp Socket...' : 'Device not linked. Click below to generate scan QR code.'}</p>
+            ${canSettingsCreate ? `
             <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-4 py-2 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow flex items-center gap-2 transition">
               <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
               <span>Generate QR Code to Link Phone</span>
             </button>
+            ` : `
+            <div class="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-semibold flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">lock</span>
+              <span>View-Only Mode (Device Linking Restricted)</span>
+            </div>
+            `}
           </div>
         ` : ''}
 
         <!-- Actions Strip -->
         <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-2">
-            ${isConnected ? `
-              <button type="button" onclick="disconnectWhatsAppAccount('${acc.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Log out device session">
-                <span class="material-symbols-outlined text-[14px]">link_off</span> Disconnect
-              </button>
-            ` : `
-              <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-3 py-1.5 bg-brand-wa/10 hover:bg-brand-wa/20 text-brand-waDark border border-brand-wa/30 rounded-lg font-bold text-xs flex items-center gap-1 transition">
-                <span class="material-symbols-outlined text-[14px]">qr_code</span> New QR Code
-              </button>
-            `}
+            ${isConnected ? (
+        canSettingsEdit ? `
+                <button type="button" onclick="disconnectWhatsAppAccount('${acc.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Log out device session">
+                  <span class="material-symbols-outlined text-[14px]">link_off</span> Disconnect
+                </button>
+              ` : ''
+      ) : (
+        canSettingsCreate ? `
+                <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-3 py-1.5 bg-brand-wa/10 hover:bg-brand-wa/20 text-brand-waDark border border-brand-wa/30 rounded-lg font-bold text-xs flex items-center gap-1 transition">
+                  <span class="material-symbols-outlined text-[14px]">qr_code</span> New QR Code
+                </button>
+              ` : ''
+      )}
 
-            ${acc.id !== 'account_1' ? `
+            ${(acc.id !== 'account_1' && canSettingsDelete) ? `
               <button type="button" onclick="deleteWhatsAppAccountSlot('${acc.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Delete account slot">
                 <span class="material-symbols-outlined text-[14px]">delete</span> Delete Slot
               </button>
+            ` : ''}
+
+            ${(!canSettingsEdit && !canSettingsCreate && !canSettingsDelete) ? `
+              <span class="text-[10px] text-slate-400 font-semibold flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[12px]">lock</span> View Only
+              </span>
             ` : ''}
           </div>
           
@@ -23089,7 +24502,7 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
 
   // Format clean phone number
   const raw = (connectedNumber && connectedNumber !== 'Awaiting Link')
-    ? connectedNumber 
+    ? connectedNumber
     : (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115');
   const cleanPhone = formatPhoneNumberPretty(raw);
 
@@ -23108,7 +24521,7 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
       business_name: CRM_STATE?.whatsappAccount?.businessName || 'GRM Garments Business Hub',
       display_name: label || 'GRM Garments Official'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   // Immediately pull all queued messages from backend
   syncInboundMessagesNow(true).then(() => {
@@ -23136,6 +24549,13 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
 
 // Generate a brand new QR Code for account
 function generateFreshAccountQR(accountId) {
+  const _isSuperAdminQr = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminQr && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Generating new QR codes is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const targetId = accountId || 'account_1';
   showToast('Generating QR Code...', 'Initializing fresh WhatsApp session for scanning.', 'qr_code_scanner', 'emerald');
 
@@ -23167,6 +24587,13 @@ function generateFreshAccountQR(accountId) {
 
 // Add New WhatsApp Phone Number / Slot
 function addNewWhatsAppAccountSlot() {
+  const _isSuperAdminAdd = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminAdd && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Adding new WhatsApp phone slots is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const currentAccounts = getAvailableWhatsAppAccounts();
   const nextNum = currentAccounts.length + 1;
   const slotId = `account_${Date.now()}`;
@@ -23195,7 +24622,7 @@ function addNewWhatsAppAccountSlot() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ label, accountId: slotId })
-  }).catch(() => {});
+  }).catch(() => { });
 
   renderMultiAccountsHub();
   renderQuickLineSwitcher();
@@ -23206,6 +24633,13 @@ function addNewWhatsAppAccountSlot() {
 
 // Delete WhatsApp account slot
 function deleteWhatsAppAccountSlot(accountId) {
+  const _isSuperAdminDel = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminDel && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'delete')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Deleting WhatsApp account slots is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   if (accountId === 'account_1') {
     showToast('Cannot Delete Primary Line', 'Line 1 is the primary business number and cannot be deleted.', 'warning', 'rose');
     return;
@@ -23245,13 +24679,13 @@ function deleteWhatsAppAccountSlot(accountId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId })
-    }).catch(() => {});
+    }).catch(() => { });
 
     fetch('api.php?action=delete_account_slot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId })
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 6. Re-render UI components immediately
     renderMultiAccountsHub();
@@ -23267,6 +24701,13 @@ function deleteWhatsAppAccountSlot(accountId) {
 
 // Disconnect specific WhatsApp account session
 function disconnectWhatsAppAccount(accountId) {
+  const _isSuperAdminDisc = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminDisc && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Disconnecting WhatsApp sessions is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const targetId = accountId || 'account_1';
   if (confirm(`Disconnect and unbind WhatsApp session for ${targetId}? Your CRM chats, customers & orders are 100% safe.`)) {
     // 1. Immediately update CRM_STATE.whatsappAccount
@@ -23325,7 +24766,7 @@ function disconnectWhatsAppAccount(accountId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId: targetId })
-    }).catch(() => {});
+    }).catch(() => { });
   }
 }
 
@@ -23373,10 +24814,20 @@ function _populateBrandSettingsFields() {
   if (headerToggle) headerToggle.checked = includeHeader;
 
   updateBrandPreview();
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
+  }
 }
 
 function handleSaveWhatsAppConfig(event) {
   event.preventDefault();
+  const _isSuperAdminSave = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminSave && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Modifying WhatsApp configuration is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const phone = document.getElementById('cfg-phone-number').value.trim();
   const displayName = document.getElementById('cfg-display-name').value.trim();
   const provider = document.getElementById('cfg-provider').value;
@@ -23414,6 +24865,13 @@ function handleSaveWhatsAppConfig(event) {
 }
 
 function handleSendQuickTestToNumber() {
+  const _isSuperAdminTest = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminTest && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'edit') && !canUserPerformAction('settings', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Sending test messages is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const phoneInput = document.getElementById('cfg-phone-number');
   let rawPhone = phoneInput ? phoneInput.value.trim() : CRM_STATE.whatsappAccount.phoneNumber;
   if (!rawPhone) rawPhone = '9789660115';
@@ -23468,6 +24926,13 @@ function renderBackupView() {
 }
 
 async function handleExportBackupJSON() {
+  const _isSuperAdminExp = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminExp && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('backup', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Exporting database backups is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   showToast('Generating Backup...', 'Creating snapshot of MySQL database and CRM records...', 'cloud_download', 'sky');
 
   try {
@@ -23532,6 +24997,15 @@ async function handleImportBackupJSON(event) {
   const inputEl = event.target;
   const file = inputEl.files && inputEl.files[0];
   if (!file) return;
+
+  const _isSuperAdminImp = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminImp && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('backup', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Restoring database backups is restricted.', 'warning', 'rose');
+      inputEl.value = '';
+      return;
+    }
+  }
 
   showToast('Restoring Database...', `Reading ${file.name}...`, 'sync', 'sky');
 
@@ -23631,8 +25105,10 @@ window.handleImportBackupJSON = handleImportBackupJSON;
 // Sub-Items: 1. All Staff Directory | 2. Add Staff | 3. Role Base Permissions Matrix
 // =========================================================================
 
-let ACTIVE_STAFF_TAB = 'list'; // 'list' (All Staff), 'create' (Add Staff), 'roles' (Role Base), 'quota'
-let ACTIVE_MATRIX_ROLE = 'Sales Specialist (Baby Collection)';
+var ACTIVE_STAFF_TAB = window.ACTIVE_STAFF_TAB || 'list'; // 'list' (All Staff), 'create' (Add Staff), 'roles' (Role Base), 'quota'
+window.ACTIVE_STAFF_TAB = ACTIVE_STAFF_TAB;
+var ACTIVE_MATRIX_ROLE = window.ACTIVE_MATRIX_ROLE || 'Sales Specialist (Baby Collection)';
+window.ACTIVE_MATRIX_ROLE = ACTIVE_MATRIX_ROLE;
 
 // 1. Toggle Sidebar Staff Submenu (Accordion)
 function toggleStaffSubmenu() {
@@ -23778,12 +25254,12 @@ function renderStaffTable() {
     const quota = staff.dailyQuota || 70;
     const handled = staff.todayHandled || 0;
     const handledPct = quota > 0 ? Math.min(100, Math.round((handled / quota) * 100)) : 0;
-    const activeLeads = (CRM_STATE.queries || []).filter(q => 
+    const activeLeads = (CRM_STATE.queries || []).filter(q =>
       (q.assignedTo === staff.id || (q.staff && q.staff.id === staff.id)) &&
       (!q.assignedStaffName || q.assignedStaffName.toLowerCase() === staff.name.toLowerCase()) &&
       q.status !== 'RESOLVED' && q.status !== 'CLOSED'
     ).length;
-    const convertedOrders = (CRM_STATE.orders || []).filter(o => 
+    const convertedOrders = (CRM_STATE.orders || []).filter(o =>
       o.staffId === staff.id &&
       (!o.staffName || o.staffName.toLowerCase() === staff.name.toLowerCase())
     ).length;
@@ -24034,13 +25510,14 @@ function renderRolePermissionsMatrix(roleName) {
   }
   const perms = CRM_STATE.rolePermissions[targetRole];
 
-  // 5. Populate Table Body with all 12 Modules
+  // 5. Populate Table Body with all Active Modules
   const tbody = document.getElementById('role-matrix-table-body');
   if (!tbody) return;
 
   tbody.innerHTML = CRM_MODULE_DEFINITIONS.map((mod, idx) => {
     const modPerm = perms[mod.key] || { view: false, create: false, edit: false, delete: false };
-    const allChecked = modPerm.view && modPerm.create && modPerm.edit && modPerm.delete;
+    const isViewOnlyMod = mod.key === 'customers' || mod.key === 'audit' || Boolean(mod.viewOnly);
+    const allChecked = isViewOnlyMod ? Boolean(modPerm.view) : (modPerm.view && modPerm.create && modPerm.edit && modPerm.delete);
     const isSuperAdmin = targetRole === 'Super Admin';
 
     return `
@@ -24067,31 +25544,43 @@ function renderRolePermissionsMatrix(roleName) {
           </label>
         </td>
 
-        <!-- Create Action Checkbox -->
+        <!-- Create Action Checkbox (Removed for Customer 360) -->
         <td class="py-3 px-3 text-center">
-          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-emerald-50 cursor-pointer">
-            <input type="checkbox" id="role-mod-create-${mod.key}" ${modPerm.create ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
-              onchange="handleToggleModuleAction('${mod.key}', 'create', this.checked)"
-              class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
-          </label>
+          ${isViewOnlyMod ? `
+            <span class="text-xs text-slate-300 font-bold select-none" title="Create action not applicable for this module">—</span>
+          ` : `
+            <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-emerald-50 cursor-pointer">
+              <input type="checkbox" id="role-mod-create-${mod.key}" ${modPerm.create ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+                onchange="handleToggleModuleAction('${mod.key}', 'create', this.checked)"
+                class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+            </label>
+          `}
         </td>
 
-        <!-- Edit Action Checkbox -->
+        <!-- Edit Action Checkbox (Removed for Customer 360) -->
         <td class="py-3 px-3 text-center">
-          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-amber-50 cursor-pointer">
-            <input type="checkbox" id="role-mod-edit-${mod.key}" ${modPerm.edit ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
-              onchange="handleToggleModuleAction('${mod.key}', 'edit', this.checked)"
-              class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer">
-          </label>
+          ${isViewOnlyMod ? `
+            <span class="text-xs text-slate-300 font-bold select-none" title="Edit action not applicable for this module">—</span>
+          ` : `
+            <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-amber-50 cursor-pointer">
+              <input type="checkbox" id="role-mod-edit-${mod.key}" ${modPerm.edit ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+                onchange="handleToggleModuleAction('${mod.key}', 'edit', this.checked)"
+                class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer">
+            </label>
+          `}
         </td>
 
-        <!-- Delete Action Checkbox -->
+        <!-- Delete Action Checkbox (Removed for Customer 360) -->
         <td class="py-3 px-3 text-center">
-          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-rose-50 cursor-pointer">
-            <input type="checkbox" id="role-mod-delete-${mod.key}" ${modPerm.delete ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
-              onchange="handleToggleModuleAction('${mod.key}', 'delete', this.checked)"
-              class="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer">
-          </label>
+          ${isViewOnlyMod ? `
+            <span class="text-xs text-slate-300 font-bold select-none" title="Delete action not applicable for this module">—</span>
+          ` : `
+            <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-rose-50 cursor-pointer">
+              <input type="checkbox" id="role-mod-delete-${mod.key}" ${modPerm.delete ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+                onchange="handleToggleModuleAction('${mod.key}', 'delete', this.checked)"
+                class="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer">
+            </label>
+          `}
         </td>
 
         <!-- All Actions (Row Master Toggle) -->
@@ -24113,9 +25602,10 @@ function renderRolePermissionsMatrix(roleName) {
     window.updateRoleMatrixHeaderCheckboxes();
   }
 }
+window.renderRolePermissionsMatrix = renderRolePermissionsMatrix;
 
 // 8. Event Handlers for Role Permissions Matrix
-window.handleRoleSelectChange = function(newRole) {
+window.handleRoleSelectChange = function (newRole) {
   ACTIVE_MATRIX_ROLE = newRole;
   renderRolePermissionsMatrix(newRole);
 };
@@ -24140,13 +25630,16 @@ function updateRoleMatrixHeaderCheckboxes() {
     el.disabled = false;
 
     let count = 0;
+    let totalEligible = 0;
     CRM_MODULE_DEFINITIONS.forEach(mod => {
+      if ((mod.key === 'customers' || mod.viewOnly) && action !== 'view') return;
+      totalEligible++;
       if (rolePerms[mod.key] && rolePerms[mod.key][action]) {
         count++;
       }
     });
 
-    if (count === totalMods && totalMods > 0) {
+    if (count === totalEligible && totalEligible > 0) {
       el.checked = true;
       el.indeterminate = false;
     } else if (count > 0) {
@@ -24168,14 +25661,18 @@ function updateRoleMatrixHeaderCheckboxes() {
     }
     allHeaderEl.disabled = false;
 
-    const totalCells = totalMods * 4;
+    let totalCells = 0;
     let checkedCells = 0;
     CRM_MODULE_DEFINITIONS.forEach(mod => {
       const p = rolePerms[mod.key] || {};
+      totalCells += 1;
       if (p.view) checkedCells++;
-      if (p.create) checkedCells++;
-      if (p.edit) checkedCells++;
-      if (p.delete) checkedCells++;
+      if (mod.key !== 'customers' && !mod.viewOnly) {
+        totalCells += 3;
+        if (p.create) checkedCells++;
+        if (p.edit) checkedCells++;
+        if (p.delete) checkedCells++;
+      }
     });
 
     if (checkedCells === totalCells && totalCells > 0) {
@@ -24192,7 +25689,7 @@ function updateRoleMatrixHeaderCheckboxes() {
 };
 
 // Toggle an action (view, create, edit, delete, or all) across ALL 12 modules
-window.handleToggleActionForAllModules = function(action, isChecked) {
+window.handleToggleActionForAllModules = function (action, isChecked) {
   initRolePermissionsState();
   if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
     showToast('Super Admin Locked', 'Super Admin always retains full system access.', 'info', 'purple');
@@ -24209,6 +25706,16 @@ window.handleToggleActionForAllModules = function(action, isChecked) {
   CRM_MODULE_DEFINITIONS.forEach(mod => {
     if (!rolePerms[mod.key]) {
       rolePerms[mod.key] = { view: false, create: false, edit: false, delete: false };
+    }
+
+    if (mod.key === 'customers' || mod.viewOnly) {
+      if (action === 'all' || action === 'view') {
+        rolePerms[mod.key].view = isChecked;
+      }
+      rolePerms[mod.key].create = false;
+      rolePerms[mod.key].edit = false;
+      rolePerms[mod.key].delete = false;
+      return;
     }
 
     if (action === 'all') {
@@ -24236,7 +25743,7 @@ window.handleToggleActionForAllModules = function(action, isChecked) {
   );
 };
 
-window.handleToggleModuleAction = function(moduleKey, action, isChecked) {
+window.handleToggleModuleAction = function (moduleKey, action, isChecked) {
   initRolePermissionsState();
   if (ACTIVE_MATRIX_ROLE === 'Super Admin') return;
 
@@ -24256,6 +25763,19 @@ window.handleToggleModuleAction = function(moduleKey, action, isChecked) {
     if (viewEl) viewEl.checked = true;
   }
 
+  // Keep sub-modules of inbox (autoreply, broadcast, enquiries) in sync with inbox permissions
+  if (moduleKey === 'inbox') {
+    ['autoreply', 'broadcast', 'enquiries'].forEach(subKey => {
+      if (!CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey]) {
+        CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey] = { view: false, create: false, edit: false, delete: false };
+      }
+      CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey][action] = isChecked;
+      if (isChecked && action !== 'view') {
+        CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey].view = true;
+      }
+    });
+  }
+
   // Update master all checkbox for this module
   const p = CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey];
   const allEl = document.getElementById(`role-mod-all-${moduleKey}`);
@@ -24267,25 +25787,64 @@ window.handleToggleModuleAction = function(moduleKey, action, isChecked) {
   } else if (typeof window.updateRoleMatrixHeaderCheckboxes === "function") {
     window.updateRoleMatrixHeaderCheckboxes();
   }
+
+  // Auto-persist permission changes immediately
+  try {
+    saveCRMState();
+    localStorage.setItem('CRM_ROLE_PERMISSIONS', JSON.stringify(CRM_STATE.rolePermissions));
+    fetch('api.php?action=save_role_permissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role: ACTIVE_MATRIX_ROLE,
+        permissions: CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE]
+      })
+    }).catch(() => { });
+    if (typeof enforceGranularActionPermissions === 'function') {
+      enforceGranularActionPermissions();
+    }
+  } catch (e) { }
 };
 
-window.handleToggleModuleAll = function(moduleKey, isChecked) {
+window.handleToggleModuleAll = function (moduleKey, isChecked) {
   initRolePermissionsState();
   if (ACTIVE_MATRIX_ROLE === 'Super Admin') return;
 
   if (!CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE]) {
     CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE] = {};
   }
-  CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey] = {
-    view: isChecked,
-    create: isChecked,
-    edit: isChecked,
-    delete: isChecked
-  };
+
+  if (moduleKey === 'customers' || moduleKey === 'audit') {
+    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey] = {
+      view: isChecked,
+      create: false,
+      edit: false,
+      delete: false
+    };
+  } else {
+    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey] = {
+      view: isChecked,
+      create: isChecked,
+      edit: isChecked,
+      delete: isChecked
+    };
+  }
+
+  // Keep sub-modules of inbox in sync
+  if (moduleKey === 'inbox') {
+    ['autoreply', 'broadcast', 'enquiries'].forEach(subKey => {
+      CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey] = {
+        view: isChecked,
+        create: isChecked,
+        edit: isChecked,
+        delete: isChecked
+      };
+    });
+  }
   renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
 };
 
-window.applyRolePreset = function(presetType) {
+window.applyRolePreset = function (presetType) {
   initRolePermissionsState();
   if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
     showToast('Super Admin Locked', 'Super Admin always retains 100% full system access.', 'info', 'purple');
@@ -24295,12 +25854,15 @@ window.applyRolePreset = function(presetType) {
   const rolePerms = {};
 
   CRM_MODULE_DEFINITIONS.forEach(mod => {
-    if (presetType === 'all') {
+    if (mod.key === 'customers' || mod.key === 'audit' || mod.viewOnly) {
+      const viewPerm = (presetType === 'all' || presetType === 'view_only' || (presetType === 'sales' && (mod.key === 'customers' || mod.key === 'audit')));
+      rolePerms[mod.key] = { view: viewPerm, create: false, edit: false, delete: false };
+    } else if (presetType === 'all') {
       rolePerms[mod.key] = { view: true, create: true, edit: true, delete: true };
     } else if (presetType === 'view_only') {
       rolePerms[mod.key] = { view: true, create: false, edit: false, delete: false };
     } else if (presetType === 'sales') {
-      const salesAllowed = ['inbox', 'enquiries', 'followups', 'catalog', 'orders', 'customers'];
+      const salesAllowed = ['inbox', 'followups', 'catalog', 'orders'];
       const isSalesMod = salesAllowed.includes(mod.key);
       rolePerms[mod.key] = {
         view: isSalesMod,
@@ -24318,7 +25880,7 @@ window.applyRolePreset = function(presetType) {
   showToast('Preset Applied', `Applied ${presetType.toUpperCase()} permissions preset to ${ACTIVE_MATRIX_ROLE}.`, 'tune', 'blue');
 };
 
-window.handleSaveRolePermissions = function() {
+window.handleSaveRolePermissions = function () {
   if (!canUserPerformAction('staff', 'edit')) {
     showToast('Permission Denied', 'Your assigned role does not have permission to edit roles & permissions.', 'lock', 'rose');
     return;
@@ -24339,7 +25901,7 @@ window.handleSaveRolePermissions = function() {
     })
   }).then(r => r.json()).then(res => {
     console.log('Role permissions saved to DB:', res);
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('ROLE_PERMISSIONS_SAVED', 'ROLES', `Updated module action permissions matrix for role: "${currentRole}"`);
 
@@ -24358,7 +25920,7 @@ window.handleSaveRolePermissions = function() {
   alert(`Role Permissions Successfully Saved!\n\nGranular module actions (View, Create, Edit, Delete) for role "${currentRole}" have been saved to MySQL and applied live.`);
 };
 
-window.handleCreateNewRolePrompt = function() {
+window.handleCreateNewRolePrompt = function () {
   const roleName = prompt('Enter a name for the new Role (e.g. Quality Auditor, Telecaller, Accounts):');
   if (!roleName || !roleName.trim()) return;
 
@@ -24388,7 +25950,7 @@ window.handleCreateNewRolePrompt = function() {
   showToast('Role Created!', `New role "${cleanName}" created. Configure its module permissions below.`, 'add_circle', 'purple');
 };
 
-window.handleDeleteCurrentRole = function() {
+window.handleDeleteCurrentRole = function () {
   if (['Super Admin', 'Admin Manager'].includes(ACTIVE_MATRIX_ROLE)) {
     alert('System default roles cannot be deleted.');
     return;
@@ -24522,7 +26084,7 @@ function handleQuickRoleReassign(event) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ staff_id: staffId, role: newRole })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('STAFF_ROLE_REASSIGNED', 'STAFF_MODULE', `Reassigned role of ${staff.name} from "${oldRole}" to "${newRole}"`);
 
@@ -24563,7 +26125,7 @@ function handleToggleStaffStatus(staffId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(staff)
-  }).catch(() => {});
+  }).catch(() => { });
 
   showToast('Status Updated', `${staff.name} is now ${newStatus === 'ACTIVE' ? 'Active on-duty' : 'On Leave'}.`, 'badge', 'sky');
 }
@@ -24594,7 +26156,7 @@ function handleDeleteStaff(staffId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ staff_id: staffId })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('STAFF_REMOVED', 'STAFF_MODULE', `Removed staff member ${staff.name} (${staffId})`);
   saveCRMState();
@@ -24744,11 +26306,11 @@ window.closeModal = closeModal;
 window.logAudit = logAudit;
 function logAudit(action, module, details) {
   try {
-    const user = (typeof ACTIVE_ROLE !== 'undefined' && ACTIVE_ROLE === 'admin') 
-      ? 'Super Admin' 
+    const user = (typeof ACTIVE_ROLE !== 'undefined' && ACTIVE_ROLE === 'admin')
+      ? 'Super Admin'
       : (((typeof CRM_STATE !== 'undefined' && CRM_STATE && Array.isArray(CRM_STATE.staffList)) ? CRM_STATE.staffList : []).find(s => s && s.id === (typeof ACTIVE_ROLE !== 'undefined' ? ACTIVE_ROLE : ''))?.name || 'Staff');
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+
     if (typeof CRM_STATE !== 'undefined' && CRM_STATE) {
       if (!Array.isArray(CRM_STATE.auditLogs)) {
         CRM_STATE.auditLogs = [];
@@ -24761,7 +26323,7 @@ function logAudit(action, module, details) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user, action, module, details, timestamp })
-    }).catch(() => {});
+    }).catch(() => { });
   } catch (err) {
     console.warn('[logAudit] Non-fatal logging error:', err);
   }
@@ -24779,9 +26341,24 @@ function updateBadgeCounters() {
 
   const unassignedCount = activeQueries.filter(q => q.assignedTo === 'UNASSIGNED').length;
   const unreadCount = activeQueries.reduce((acc, q) => acc + (q.unreadCount || 0), 0);
+  const uCurr = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
+  const myQueueIds = [
+    ACTIVE_ROLE,
+    uCurr?.id,
+    uCurr?.staff_id,
+    uCurr?.staffId,
+    uCurr?.username,
+    uCurr?.name
+  ].filter(Boolean).map(s => String(s).toLowerCase());
+
   const myQueueCount = ACTIVE_ROLE === 'admin'
     ? activeQueries.length
-    : activeQueries.filter(q => q.assignedTo === ACTIVE_ROLE).length;
+    : activeQueries.filter(q => {
+      const assigned = String(q.assignedTo || '').toLowerCase();
+      const s = (CRM_STATE.staffList || []).find(st => st.id === q.assignedTo);
+      const sName = String(s?.name || '').toLowerCase();
+      return myQueueIds.includes(assigned) || myQueueIds.includes(sName);
+    }).length;
 
   const bUnassigned = document.getElementById('badge-unassigned-count');
   if (bUnassigned) bUnassigned.innerText = `${unassignedCount} New`;
@@ -24848,7 +26425,7 @@ function updateBadgeCounters() {
   // Dynamically synchronize each staff member's todayHandled with active assigned queries (remove hardcoded static numbers)
   if (Array.isArray(CRM_STATE.staffList)) {
     CRM_STATE.staffList.forEach(staff => {
-      const assignedToThisStaff = activeQueries.filter(q => 
+      const assignedToThisStaff = activeQueries.filter(q =>
         (q.assignedTo === staff.id || (q.staff && q.staff.id === staff.id)) &&
         (!q.assignedStaffName || q.assignedStaffName.toLowerCase() === staff.name.toLowerCase())
       );
@@ -24876,6 +26453,7 @@ function updateBadgeCounters() {
   const totalAllocated = (CRM_STATE.staffList || []).reduce((sum, s) => sum + (Number(s.dailyQuota) || 0), 0);
   if (kpiAllocated) kpiAllocated.innerText = `${totalAllocated} / ${target} msgs`;
 }
+window.updateBadgeCounters = updateBadgeCounters;
 
 function filterConversations(val) {
   renderInboxConversationList();
@@ -24960,6 +26538,15 @@ function renderBroadcastTemplateDropdown(selectedKey = null) {
 
 // 0. Admin Action: Save Changes to Current Template (Text + Dynamic Variable Values to DB)
 async function handleSaveCurrentTemplateChanges() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Modifying templates is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const presetSelect = document.getElementById('bcast-preset-select');
   const msgInput = document.getElementById('bcast-message-text');
   if (!presetSelect || !msgInput) return;
@@ -24982,7 +26569,7 @@ async function handleSaveCurrentTemplateChanges() {
 
   try {
     localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-  } catch (e) {}
+  } catch (e) { }
 
   const currentLabel = BROADCAST_PRESETS_DATA[currentKey].label || 'Custom Template';
 
@@ -25016,6 +26603,15 @@ window.handleSaveCurrentTemplateChanges = handleSaveCurrentTemplateChanges;
 
 // 1. Admin Action: Save Current Message as a New Named Template
 async function handleSaveCurrentAsNewTemplate() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Creating new templates is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const msgInput = document.getElementById('bcast-message-text');
   const text = msgInput ? msgInput.value.trim() : '';
 
@@ -25039,7 +26635,7 @@ async function handleSaveCurrentAsNewTemplate() {
 
   try {
     localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-  } catch (e) {}
+  } catch (e) { }
 
   // Persist to MySQL Database!
   try {
@@ -25065,6 +26661,15 @@ async function handleSaveCurrentAsNewTemplate() {
 
 // 2. Admin Action: Rename the Currently Selected Template
 async function handleRenameCurrentTemplate() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Renaming templates is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const presetSelect = document.getElementById('bcast-preset-select');
   if (!presetSelect) return;
 
@@ -25080,7 +26685,7 @@ async function handleRenameCurrentTemplate() {
     BROADCAST_PRESETS_DATA[currentKey].label = newName.trim();
     try {
       localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-    } catch (e) {}
+    } catch (e) { }
 
     // Persist rename to MySQL Database!
     try {
@@ -25106,6 +26711,15 @@ async function handleRenameCurrentTemplate() {
 
 // 3. Admin Action: Delete Selected Custom Template
 async function handleDeleteCurrentTemplate() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'delete')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Deleting templates is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const presetSelect = document.getElementById('bcast-preset-select');
   if (!presetSelect) return;
 
@@ -25122,7 +26736,7 @@ async function handleDeleteCurrentTemplate() {
     delete BROADCAST_PRESETS_DATA[currentKey];
     try {
       localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-    } catch (e) {}
+    } catch (e) { }
 
     // Persist delete to MySQL Database!
     try {
@@ -25150,7 +26764,7 @@ function openBroadcastModal() {
     CRM_STATE.broadcastTemplates.forEach(bt => {
       let varObj = {};
       if (bt.variables_json) {
-        try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) {}
+        try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) { }
       }
       BROADCAST_PRESETS_DATA[bt.id] = {
         label: bt.name,
@@ -25170,7 +26784,7 @@ function openBroadcastModal() {
         BROADCAST_PRESETS_DATA = Object.assign({}, BROADCAST_PRESETS_DATA, parsed);
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
   const initialKey = Object.keys(BROADCAST_PRESETS_DATA)[0] || 'festive_offer';
   renderBroadcastTemplateDropdown(initialKey);
@@ -25182,7 +26796,7 @@ function openBroadcastModal() {
   // Reset Broadcast Progress UI
   const progContainer = document.getElementById('bcast-progress-container');
   if (progContainer) progContainer.classList.add('hidden');
-  
+
   const startBtn = document.getElementById('btn-bcast-start');
   if (startBtn) {
     startBtn.classList.remove('hidden');
@@ -25251,6 +26865,12 @@ function applyBroadcastPreset(presetKey) {
 
 // Insert tag at cursor position in template textarea
 function insertBroadcastVariable(varTag) {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   const msgInput = document.getElementById('bcast-message-text');
   if (!msgInput) return;
 
@@ -25445,8 +27065,22 @@ function renderDynamicTemplateFields(preserveActiveFocus = false) {
       activeEl.focus();
       try {
         activeEl.setSelectionRange(activeCursorPos, activeCursorPos);
-      } catch (e) {}
+      } catch (e) { }
     }
+  }
+
+  // Enforce granular edit permissions on dynamic field inputs
+  const _currUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_currUser || _currUser.role === 'admin' || _currUser.id === 'admin' || _currUser.role === 'Super Admin';
+  const _canEdit = _isSA || (typeof canUserPerformAction === 'function' ? canUserPerformAction('broadcast', 'edit') : true);
+  if (!_canEdit) {
+    container.querySelectorAll('input').forEach(inp => {
+      inp.readOnly = true;
+      inp.classList.add('bg-slate-100', 'cursor-not-allowed');
+    });
+    container.querySelectorAll('button').forEach(btn => {
+      btn.style.display = 'none';
+    });
   }
 }
 
@@ -25478,13 +27112,19 @@ function handleDynamicTagChange(tag, val) {
           body_text: BROADCAST_PRESETS_DATA[currentKey].text,
           variables_json: BROADCAST_CUSTOM_TAGS
         })
-      }).catch(() => {});
+      }).catch(() => { });
     }, 1000);
   }
 }
 
 // Reset dynamic tag to default value
 function resetDynamicTagValue(tag) {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   const defVal = getDefaultTagValue(tag);
   BROADCAST_CUSTOM_TAGS[tag] = defVal;
   const inputEl = document.getElementById(`dyn-tag-input-${tag}`);
@@ -25495,6 +27135,12 @@ function resetDynamicTagValue(tag) {
 
 // Remove tag from message text
 function removeDynamicTag(tag) {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   const msgInput = document.getElementById('bcast-message-text');
   if (msgInput) {
     const reg = new RegExp(`\\{\\{\\s*${tag}\\s*\\}\\}`, 'gi');
@@ -25508,6 +27154,15 @@ function removeDynamicTag(tag) {
 
 // Quick Prompt to Add Any Custom Variable
 function promptAddNewCustomTag() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Adding variables is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const tagKey = prompt('Enter a new variable name without curly braces (e.g. discount, product_name, coupon_code, delivery_date):');
   if (!tagKey || !tagKey.trim()) return;
 
@@ -25547,7 +27202,7 @@ function renderTemplateMessagePersonalized(rawTemplate, customer = {}, account =
   const customerPhone = customer.whatsapp || customer.phone || '';
   const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  
+
   let staffName = 'Handling Staff';
   if (ACTIVE_ROLE === 'admin') {
     staffName = 'Super Admin';
@@ -25592,8 +27247,8 @@ function renderTemplateMessagePersonalized(rawTemplate, customer = {}, account =
 }
 
 function getBroadcastTargetCustomers(targetVal) {
-  const availableAccounts = typeof getAvailableWhatsAppAccounts === 'function' 
-    ? getAvailableWhatsAppAccounts() 
+  const availableAccounts = typeof getAvailableWhatsAppAccounts === 'function'
+    ? getAvailableWhatsAppAccounts()
     : (CRM_STATE.whatsappAccounts || [CRM_STATE.whatsappAccount]);
   const availableAccountIds = availableAccounts.map(a => a.id);
 
@@ -25633,21 +27288,21 @@ function getBroadcastTargetCustomers(targetVal) {
   }
 
   if (targetVal === 'TAG_VIP') {
-    return activeCustomers.filter(c => 
+    return activeCustomers.filter(c =>
       (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes('vip'))) ||
       (c.customerType && c.customerType.toLowerCase().includes('vip'))
     );
   }
 
   if (targetVal === 'TAG_WHOLESALE') {
-    return activeCustomers.filter(c => 
+    return activeCustomers.filter(c =>
       (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes('wholesale') || t.toLowerCase().includes('bulk'))) ||
       (c.customerType && c.customerType.toLowerCase().includes('wholesale'))
     );
   }
 
   if (targetVal === 'TAG_NEW') {
-    return activeCustomers.filter(c => 
+    return activeCustomers.filter(c =>
       (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes('new'))) ||
       (c.customerType && c.customerType.toLowerCase().includes('new'))
     );
@@ -25683,6 +27338,15 @@ function extractCurrentActiveNumbers(targetVal = 'ALL') {
 let BROADCAST_ATTACHED_IMAGE_DATA = null;
 
 function handleBroadcastImageFileUpload(event) {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Uploading images is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
@@ -25698,7 +27362,7 @@ function handleBroadcastImageFileUpload(event) {
   }
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const dataUrl = e.target.result;
     applyBroadcastUploadedImage(dataUrl, file.name, file.size);
 
@@ -25729,6 +27393,12 @@ function handleBroadcastDragLeave(event) {
 function handleBroadcastFileDrop(event) {
   event.preventDefault();
   event.stopPropagation();
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   const dropzone = document.getElementById('bcast-upload-dropzone');
   if (dropzone) {
     dropzone.classList.remove('border-emerald-500', 'bg-emerald-50');
@@ -25741,7 +27411,7 @@ function handleBroadcastFileDrop(event) {
       return;
     }
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
       applyBroadcastUploadedImage(e.target.result, file.name, file.size);
       uploadBroadcastImageToServer(file, e.target.result);
     };
@@ -25813,6 +27483,12 @@ async function uploadBroadcastImageToServer(file, dataUrl) {
 }
 
 function removeBroadcastUploadedImage() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   BROADCAST_ATTACHED_IMAGE_DATA = null;
 
   const fileInput = document.getElementById('bcast-image-file');
@@ -25918,7 +27594,7 @@ function updateBroadcastCustomNumbersCount() {
   const countBadge = document.getElementById('bcast-fetched-count');
   const countEl = document.getElementById('bcast-recipients-count');
   const summaryCount = document.getElementById('bcast-summary-count');
-  
+
   let numCount = 0;
   if (textarea && textarea.value.trim()) {
     const splitNums = textarea.value.split(new RegExp('[,\\r\\n;]+')).map(s => s.trim()).filter(s => s.replace(/[^0-9]/g, '').length >= 7);
@@ -25963,7 +27639,7 @@ function updateBroadcastPreview() {
   const msgCharCount = document.getElementById('bcast-message-char-count');
 
   const rawTemplate = (msgInput && msgInput.value.trim()) || "Hello {{customer_name}}, welcome to {{business_name}}! Reach us on {{line_phone}}.";
-  
+
   const audienceSelect = document.getElementById('bcast-target-audience');
   const targetVal = audienceSelect ? audienceSelect.value : 'ALL';
   const recipients = getBroadcastTargetCustomers(targetVal);
@@ -26021,6 +27697,17 @@ function updateBroadcastPreview() {
 }
 
 async function startAutomatedBroadcast() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Starting automated broadcasts is restricted.', 'lock', 'rose');
+    } else {
+      alert('Permission Denied: Your assigned role has View-Only access. Starting automated broadcasts is restricted.');
+    }
+    return;
+  }
+
   if (IS_BROADCASTING_ACTIVE) return;
 
   const msgInput = document.getElementById('bcast-message-text');
@@ -26096,8 +27783,8 @@ async function startAutomatedBroadcast() {
   // Auto-save the active broadcast template & dynamic variables to MySQL database
   const presetSelect = document.getElementById('bcast-preset-select');
   const currentKey = presetSelect ? presetSelect.value : ('tmpl_' + Date.now());
-  const currentLabel = (BROADCAST_PRESETS_DATA[currentKey] && BROADCAST_PRESETS_DATA[currentKey].label) 
-    ? BROADCAST_PRESETS_DATA[currentKey].label 
+  const currentLabel = (BROADCAST_PRESETS_DATA[currentKey] && BROADCAST_PRESETS_DATA[currentKey].label)
+    ? BROADCAST_PRESETS_DATA[currentKey].label
     : (CURRENT_BROADCAST_TEMPLATE_TITLE || 'Broadcast Template');
 
   if (!BROADCAST_PRESETS_DATA[currentKey]) {
@@ -26109,7 +27796,7 @@ async function startAutomatedBroadcast() {
 
   try {
     localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-  } catch (e) {}
+  } catch (e) { }
 
   // Save template & dynamic values to MySQL DB!
   fetch('api.php?action=save_broadcast_template', {
@@ -26209,7 +27896,7 @@ async function startAutomatedBroadcast() {
       // Update query summary in list
       const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
       if (query) {
-        query.lastMessage = attachedBroadcastImage 
+        query.lastMessage = attachedBroadcastImage
           ? `Staff (Broadcast): [Photo] "${personalizedText.length > 30 ? personalizedText.substring(0, 27) + '...' : personalizedText}"`
           : `Staff (Broadcast): "${personalizedText.length > 40 ? personalizedText.substring(0, 37) + '...' : personalizedText}"`;
         query.lastMessageTime = 'Just now';
@@ -26219,7 +27906,7 @@ async function startAutomatedBroadcast() {
       const targetPhone = customer.whatsapp || customer.phone;
       const targetJid = customer.jid || null;
       const targetAccId = customer.accountId || (account && account.id) || 'account_1';
-      
+
       try {
         await dispatchWhatsAppOutbound(targetPhone, personalizedText, newMsg, targetJid, targetAccId, true, attachedBroadcastImage, customer.id);
       } catch (sendErr) {
@@ -26555,13 +28242,13 @@ function clearPayPendingDateFilter() {
 function autoExportAllFollowups(targetMode = null) {
   const currentUser = getCurrentUser();
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
-  
+
   // Determine mode: Follow-ups or Payment Pending
   const currentHubMode = (typeof ACTIVE_FOLLOWUP_HUB_MODE !== 'undefined' ? ACTIVE_FOLLOWUP_HUB_MODE : 'FOLLOWUPS');
   const mode = targetMode || currentHubMode;
   const isPay = (mode === 'PAYMENT_PENDING');
 
-  let rawList = (CRM_STATE.followups || []).filter(fu => 
+  let rawList = (CRM_STATE.followups || []).filter(fu =>
     fu && fu.id !== 'FU-2026-00108' && fu.id !== 'FU-2026-00107' && !(fu.reason && fu.reason.includes('ytfdw'))
   );
 
@@ -26729,9 +28416,9 @@ function autoExportAllFollowups(targetMode = null) {
 
   const actorRole = isAdmin ? 'Super Admin' : (currentUser.name || 'Staff');
   logAudit(isPay ? 'ALL_PAYMENTS_AUTO_EXPORTED' : 'ALL_FOLLOWUPS_AUTO_EXPORTED', 'EXPORT', `${actorRole} automatically exported all ${records.length} records to ${filename}`);
-  
+
   if (typeof playMessageChime === 'function') {
-    try { playMessageChime(); } catch(e) {}
+    try { playMessageChime(); } catch (e) { }
   }
 
   showToast(
@@ -26771,7 +28458,7 @@ function autoExportAllBothTabs(preferredPrimary = null) {
     autoExportAllFollowups(secondary);
 
     if (typeof playMessageChime === 'function') {
-      try { playMessageChime(); } catch(e) {}
+      try { playMessageChime(); } catch (e) { }
     }
 
     showToast(
@@ -26786,7 +28473,7 @@ window.autoExportAllBothTabs = autoExportAllBothTabs;
 
 function openFollowupExportModal(mode) {
   EXPORT_HUB_MODE = mode || (typeof ACTIVE_FOLLOWUP_HUB_MODE !== 'undefined' ? ACTIVE_FOLLOWUP_HUB_MODE : 'FOLLOWUPS');
-  
+
   // Update mode tabs & form options
   switchExportHubMode(EXPORT_HUB_MODE);
 
@@ -26820,7 +28507,7 @@ function switchExportHubMode(mode) {
   EXPORT_HUB_MODE = mode;
   const btnFu = document.getElementById('export-mode-btn-followups');
   const btnPay = document.getElementById('export-mode-btn-payment');
-  
+
   if (btnFu && btnPay) {
     if (mode === 'FOLLOWUPS') {
       btnFu.className = "py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-blue-600 text-white shadow-sm";
@@ -26892,10 +28579,10 @@ function setExportDatePreset(preset) {
     const el = document.getElementById(`export-preset-${p}`);
     if (el) {
       if ((preset === 'ALL' && p === 'all') ||
-          (preset === 'TODAY' && p === 'today') ||
-          (preset === 'YESTERDAY' && p === 'yesterday') ||
-          (preset === 'THIS_WEEK' && p === 'week') ||
-          (preset === 'THIS_MONTH' && p === 'month')) {
+        (preset === 'TODAY' && p === 'today') ||
+        (preset === 'YESTERDAY' && p === 'yesterday') ||
+        (preset === 'THIS_WEEK' && p === 'week') ||
+        (preset === 'THIS_MONTH' && p === 'month')) {
         el.className = "px-2.5 py-1 rounded-lg font-bold text-[11px] bg-slate-900 text-white transition cursor-pointer";
       } else {
         el.className = "px-2.5 py-1 rounded-lg font-bold text-[11px] bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer";
@@ -26963,7 +28650,7 @@ function getFilteredExportRecords() {
   const toDate = document.getElementById('export-date-to')?.value || '';
   const todayStr = new Date().toISOString().split('T')[0];
 
-  let rawList = (CRM_STATE.followups || []).filter(fu => 
+  let rawList = (CRM_STATE.followups || []).filter(fu =>
     fu && fu.id !== 'FU-2026-00108' && fu.id !== 'FU-2026-00107' && !(fu.reason && fu.reason.includes('ytfdw'))
   );
 
@@ -27103,7 +28790,7 @@ function updateFollowupExportPreview() {
 
   if (amountBadge) {
     if (EXPORT_HUB_MODE === 'PAYMENT_PENDING') {
-      amountBadge.innerText = `₹${totalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Total`;
+      amountBadge.innerText = `₹${totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Total`;
       amountBadge.classList.remove('hidden');
     } else {
       amountBadge.classList.add('hidden');
@@ -27143,7 +28830,7 @@ function updateFollowupExportPreview() {
           return `
             <tr class="hover:bg-slate-50 transition-colors">
               <td class="px-3 py-1.5 font-bold">${r.customerName || 'Customer'}</td>
-              <td class="px-3 py-1.5 font-mono font-bold text-slate-900">₹${(parseFloat(r.paymentAmount) || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+              <td class="px-3 py-1.5 font-mono font-bold text-slate-900">₹${(parseFloat(r.paymentAmount) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
               <td class="px-3 py-1.5">${r.paymentMode || 'UPI'}</td>
               <td class="px-3 py-1.5 font-mono">${r.paymentDueDate || r.date || '—'}</td>
               <td class="px-3 py-1.5">${staff}</td>
@@ -27156,7 +28843,7 @@ function updateFollowupExportPreview() {
           tfoot.innerHTML = `
             <tr class="bg-amber-100/90 font-black text-slate-900 border-t-2 border-amber-300">
               <td class="px-3 py-2 text-amber-950 font-black">Total: ${records.length} Record${records.length === 1 ? '' : 's'}</td>
-              <td class="px-3 py-2 font-mono font-black text-amber-950">₹${totalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td class="px-3 py-2 font-mono font-black text-amber-950">₹${totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               <td colspan="4" class="px-3 py-2 text-right text-[10px] text-amber-900 font-extrabold uppercase tracking-wider">All ${records.length} matching records shown</td>
             </tr>
           `;
@@ -27270,7 +28957,7 @@ function handleExportFollowupsCSV() {
     const phone = cust ? cust.phone : (r.customerPhone || '');
     const city = cust ? (cust.city || cust.location || '') : '';
     const staff = (CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || r.assignedTo || 'Unassigned';
-    
+
     // Linked order details
     let orderId = '';
     let orderTotal = '';
@@ -27349,7 +29036,7 @@ function handleCopyFollowupsExportData() {
   }
 
   const isPay = (EXPORT_HUB_MODE === 'PAYMENT_PENDING');
-  let headers = isPay 
+  let headers = isPay
     ? ['Customer', 'Phone', 'Items', 'Amount', 'Mode', 'Due Date', 'Staff', 'Status']
     : ['Customer', 'Phone', 'Date', 'Time', 'Reason', 'Priority', 'Staff', 'Status'];
 
@@ -27431,6 +29118,11 @@ let CURRENT_EDIT_ORDER = null;
 let EDIT_ORDER_ITEMS = [];
 
 function openEditOrderModal(orderId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit orders.', 'lock', 'rose');
+    return;
+  }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) {
     showToast('Order Not Found', `Cannot find order #${orderId}`, 'error', 'rose');
@@ -27649,7 +29341,71 @@ function onEditOrderPaymentMethodChange() {
 }
 window.onEditOrderPaymentMethodChange = onEditOrderPaymentMethodChange;
 
+
+function confirmDeleteOrder(orderId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete orders.', 'lock', 'rose');
+    return;
+  }
+  if (!orderId) return;
+  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  if (!ord) {
+    if (typeof showToast === 'function') showToast('Order Not Found', `Cannot find order #${orderId}`, 'error', 'rose');
+    return;
+  }
+  if (!window.confirm(`⚠️ Permanently Delete Order #${orderId}?\n\nCustomer: ${ord.customerName || 'Customer'}\nAmount: ₹${parseFloat(ord.grandTotal || 0).toLocaleString('en-IN')}\n\nThis will remove the order permanently and restore reserved items back into sellable inventory stock.`)) {
+    return;
+  }
+
+  // Release reserved stock back into product catalog inventory
+  (ord.items || []).forEach(it => {
+    const p = (CRM_STATE?.products || []).find(prod => prod.sku === it.sku || prod.name === it.name);
+    if (p) {
+      p.reservedStock = Math.max(0, (parseInt(p.reservedStock) || 0) - (parseInt(it.qty) || 1));
+    }
+  });
+
+  // Remove from state
+  CRM_STATE.orders = (CRM_STATE.orders || []).filter(o => o.id !== orderId);
+  saveCRMState();
+
+  if (typeof closeModal === 'function') closeModal('modal-edit-order');
+
+  // Sync to database
+  fetch('api.php?action=delete_order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: orderId, order_id: orderId })
+  }).catch(() => { });
+
+  if (typeof logAudit === 'function') logAudit('ORDER_DELETED', 'ORDERS', `Order #${orderId} deleted and reserved stock released`);
+  if (typeof showToast === 'function') showToast('Order Deleted', `Order #${orderId} permanently removed and reserved stock released.`, 'delete', 'rose');
+  if (typeof renderOrdersDashboard === 'function') renderOrdersDashboard();
+  if (typeof renderOrdersHistoryTable === 'function') renderOrdersHistoryTable();
+  if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+  if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+  if (ACTIVE_VIEW === 'catalog' && typeof renderCatalogGrid === 'function') renderCatalogGrid('');
+}
+window.confirmDeleteOrder = confirmDeleteOrder;
+
+function confirmDeleteOrderFromModal() {
+  if (typeof CURRENT_EDIT_ORDER !== 'undefined' && CURRENT_EDIT_ORDER && CURRENT_EDIT_ORDER.id) {
+    confirmDeleteOrder(CURRENT_EDIT_ORDER.id);
+  } else {
+    const titleEl = document.getElementById('edit-order-modal-id-title');
+    const orderId = titleEl ? titleEl.innerText.replace('#', '').trim() : '';
+    if (orderId) confirmDeleteOrder(orderId);
+  }
+}
+window.confirmDeleteOrderFromModal = confirmDeleteOrderFromModal;
+
 function saveEditedOrder() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit orders.', 'lock', 'rose');
+    return;
+  }
   if (!CURRENT_EDIT_ORDER) return;
 
   if (EDIT_ORDER_ITEMS.length === 0) {
@@ -27757,7 +29513,7 @@ function saveEditedOrder() {
       codBalanceDue: CURRENT_EDIT_ORDER.codBalanceDue,
       isEditUpdate: true
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('ORDER_EDITED', 'ORDERS', `Updated details for Order #${CURRENT_EDIT_ORDER.id} (Status: ${newStatus}, Total: ₹${grandTotal})`);
   saveCRMState();

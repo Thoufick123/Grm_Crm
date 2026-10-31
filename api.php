@@ -362,6 +362,7 @@ if ($action === 'get_state' || $action === 'get_all') {
         } catch (Exception $e) {}
 
         // 10. Categories, Subcategories & Attributes (Website Catalog Workflow)
+        $rolePermissions = [];
         $categories = [];
         $subcategories = [];
         $attributes = ['sizes' => [], 'colors' => [], 'fabrics' => [], 'specifications' => [], 'custom' => []];
@@ -380,9 +381,9 @@ if ($action === 'get_state' || $action === 'get_all') {
                 else if ($type === 'color') $attributes['colors'][] = $ra['value'];
                 else if ($type === 'fabric') $attributes['fabrics'][] = $ra['value'];
                 else if ($type === 'role_permissions') {
-                    $decoded = json_decode($ra['value'], true);
+                    $decoded = json_decode($ra['extra'] ?? '', true);
                     if ($decoded) {
-                        $rolePermissions[$ra['name']] = $decoded;
+                        $rolePermissions[$ra['value']] = $decoded;
                     }
                 } else if ($type === 'specification') {
                     $extraStr = $ra['extra'] ?? '';
@@ -567,13 +568,17 @@ if ($action === 'save_role_permissions' && $_SERVER['REQUEST_METHOD'] === 'POST'
     }
 
     try {
-        // Save into attributes table under type 'role_permissions'
-        $stmt = $pdo->prepare("
-            INSERT INTO `attributes` (`type`, `name`, `value`) 
-            VALUES ('role_permissions', ?, ?) 
-            ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)
-        ");
-        $stmt->execute([$roleName, $permissionsJson]);
+        $checkStmt = $pdo->prepare("SELECT `id` FROM `attributes` WHERE `type` = 'role_permissions' AND `value` = ? LIMIT 1");
+        $checkStmt->execute([$roleName]);
+        $existingId = $checkStmt->fetchColumn();
+
+        if ($existingId) {
+            $stmt = $pdo->prepare("UPDATE `attributes` SET `extra` = ? WHERE `id` = ?");
+            $stmt->execute([$permissionsJson, $existingId]);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO `attributes` (`type`, `value`, `extra`) VALUES ('role_permissions', ?, ?)");
+            $stmt->execute([$roleName, $permissionsJson]);
+        }
 
         // Audit log
         try {
@@ -592,11 +597,14 @@ if ($action === 'save_role_permissions' && $_SERVER['REQUEST_METHOD'] === 'POST'
 
 if ($action === 'get_role_permissions') {
     try {
-        $stmt = $pdo->query("SELECT `name`, `value` FROM `attributes` WHERE `type` = 'role_permissions'");
+        $stmt = $pdo->query("SELECT `value`, `extra` FROM `attributes` WHERE `type` = 'role_permissions'");
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $roleMap = [];
         foreach ($rows as $r) {
-            $roleMap[$r['name']] = json_decode($r['value'], true);
+            $decoded = json_decode($r['extra'] ?? '', true);
+            if ($decoded) {
+                $roleMap[$r['value']] = $decoded;
+            }
         }
 
         echo json_encode(["status" => "success", "roles" => $roleMap]);
@@ -1109,11 +1117,12 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($pdo) {
         try {
             $cleanPhone = preg_replace('/[^0-9]/', '', $senderPhone);
-            $custId = 'cust_' . (substr($cleanPhone, -6) ?: substr(uniqid(), -6));
+            $clean10 = substr($cleanPhone, -10);
+            $custId = 'cust_' . ($clean10 ?: substr(uniqid(), -6));
 
-            // Check or insert customer
-            $checkCust = $pdo->prepare("SELECT `id` FROM `customers` WHERE `phone` LIKE ? OR `whatsapp` LIKE ? LIMIT 1");
-            $checkCust->execute(["%$cleanPhone%", "%$cleanPhone%"]);
+            // Check or insert customer (robust against spaces and formats)
+            $checkCust = $pdo->prepare("SELECT `id` FROM `customers` WHERE REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
+            $checkCust->execute(["%$clean10%", "%$clean10%"]);
             $existingCust = $checkCust->fetch();
 
             if (!$existingCust) {
@@ -1145,11 +1154,13 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($existingQ) {
                 $newUnread = ((int)$existingQ['unread_count']) + 1;
+                $existingStaff = $existingQ['assigned_to'] ?? 'UNASSIGNED';
+                $newStatus = ($existingStaff !== 'UNASSIGNED') ? 'IN_PROGRESS' : 'NEW';
                 $pdo->prepare("
                     UPDATE `queries` 
-                    SET `unread_count` = ?, `last_message` = ?, `status` = 'NEW' 
+                    SET `unread_count` = ?, `last_message` = ?, `status` = ? 
                     WHERE `id` = ?
-                ")->execute([$newUnread, $messageText, $existingQ['id']]);
+                ")->execute([$newUnread, $messageText, $newStatus, $existingQ['id']]);
             } else {
                 $pdo->prepare("
                     INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `unread_count`, `last_message`)
@@ -2011,6 +2022,55 @@ if (($action === 'upload_product_image' || $action === 'upload_media' || $action
 // =========================================================================
 // 6. WHATSAPP SALES ORDERS, TRANSACTIONS & STOCK RESERVATION
 // =========================================================================
+if ($action === 'delete_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    $orderId = $data['id'] ?? ($data['order_id'] ?? null);
+
+    if (empty($orderId)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Order ID is required"]);
+        exit;
+    }
+
+    if ($pdo) {
+        try {
+            $pdo->beginTransaction();
+
+            // Fetch order items to release reserved stock
+            $stmt = $pdo->prepare("SELECT `items_json` FROM `orders` WHERE `id` = ?");
+            $stmt->execute([$orderId]);
+            $row = $stmt->fetch();
+            if ($row && !empty($row['items_json'])) {
+                $items = json_decode($row['items_json'], true) ?: [];
+                foreach ($items as $item) {
+                    $sku = $item['sku'] ?? null;
+                    $qty = (int)($item['qty'] ?? 1);
+                    if ($sku && $qty > 0) {
+                        $upd = $pdo->prepare("UPDATE `products` SET `reserved_stock` = GREATEST(0, `reserved_stock` - ?) WHERE `sku` = ?");
+                        $upd->execute([$qty, $sku]);
+                    }
+                }
+            }
+
+            $stmtDel = $pdo->prepare("DELETE FROM `orders` WHERE `id` = ?");
+            $stmtDel->execute([$orderId]);
+
+            $pdo->commit();
+            echo json_encode(["status" => "success", "message" => "Order deleted successfully and stock released"]);
+            exit;
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(500);
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+
+    echo json_encode(["status" => "success", "message" => "Order removed locally"]);
+    exit;
+}
+
 if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
     $order = json_decode($input, true);
@@ -2734,9 +2794,19 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $cid = $cData ? $cData['id'] : ($customerId ?: null);
 
             // 2. Resolve or Create Query in MySQL
-            $qCheck = $pdo->prepare("SELECT `id` FROM `queries` WHERE `id` = ?");
-            $qCheck->execute([$queryId]);
-            if (!$qCheck->fetch()) {
+            $existingQ = null;
+            if ($queryId) {
+                $qCheck = $pdo->prepare("SELECT `id`, `customer_id` FROM `queries` WHERE `id` = ?");
+                $qCheck->execute([$queryId]);
+                $existingQ = $qCheck->fetch(PDO::FETCH_ASSOC);
+            }
+            if (!$existingQ && $cid) {
+                $qCheck = $pdo->prepare("SELECT `id`, `customer_id` FROM `queries` WHERE `customer_id` = ? LIMIT 1");
+                $qCheck->execute([$cid]);
+                $existingQ = $qCheck->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$existingQ) {
                 $pdo->prepare("
                     INSERT INTO `queries` (
                         `id`, `customer_id`, `assigned_to`, `status`, `status_notes`, `query_text`,
@@ -2751,6 +2821,7 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $cbDate, $cbTime, $statusHist
                 ]);
             } else {
+                $targetQId = $existingQ['id'];
                 $stmt = $pdo->prepare("
                     UPDATE `queries` 
                     SET `assigned_to` = ?, `status` = ?, `status_notes` = ?,
@@ -2767,8 +2838,35 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $payMode, $advAmt, $payDue,
                     $payNotes, $quotedItems, $cbDate,
                     $cbTime, $statusHist,
-                    $queryId
+                    $targetQId
                 ]);
+            }
+
+            // Sync all queries for this customer
+            if ($cid) {
+                $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ? WHERE `customer_id` = ?")->execute([$assignedTo, $status, $cid]);
+            }
+
+            // Also synchronize live_messages_queue.json
+            $targetPhone = $phone ?: ($cData['phone'] ?? ($cData['whatsapp'] ?? ''));
+            if ($targetPhone && file_exists($messagesFile)) {
+                $rawQ = file_get_contents($messagesFile);
+                $qItems = json_decode($rawQ, true) ?: [];
+                $cleanT = preg_replace('/[^0-9]/', '', $targetPhone);
+                if (strlen($cleanT) >= 7) {
+                    $clean10T = substr($cleanT, -10);
+                    $qChanged = false;
+                    foreach ($qItems as &$it) {
+                        $itP = preg_replace('/[^0-9]/', '', $it['sender_phone'] ?? '');
+                        if (str_ends_with($itP, $clean10T)) {
+                            $it['assigned_to'] = $assignedTo;
+                            $qChanged = true;
+                        }
+                    }
+                    if ($qChanged) {
+                        atomicWriteJson($messagesFile, $qItems);
+                    }
+                }
             }
 
             // 3. Synchronize customer DND fields and dedicated dnd_records table in MySQL

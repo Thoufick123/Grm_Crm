@@ -1323,7 +1323,7 @@
               </div>
 
               <form onsubmit="handleSendMessage(event)" class="flex items-center gap-2 min-w-0">
-                <button type="button" onclick="openProductSearchModal()"
+                <button type="button" id="btn-stock-share" onclick="openProductSearchModal()"
                   class="px-2.5 py-2 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-xl transition shrink-0 flex items-center gap-1.5 font-bold text-xs shadow-2xs cursor-pointer"
                   title="Search Stock &amp; Share to WhatsApp">
                   <span class="material-symbols-outlined text-[19px] text-teal-600">inventory_2</span>
@@ -1332,7 +1332,7 @@
 
                 <!-- Hidden file input for 1:1 chat photo upload -->
                 <input type="file" id="chat-image-file-input" accept="image/*" class="hidden" onchange="handleChatImageFileSelected(event)">
-                <button type="button" onclick="document.getElementById('chat-image-file-input').click()"
+                <button type="button" id="btn-chat-photo-upload" onclick="document.getElementById('chat-image-file-input').click()"
                   class="p-2 bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-xl transition shrink-0 flex items-center justify-center shadow-2xs cursor-pointer"
                   title="Upload &amp; Send Photo">
                   <span class="material-symbols-outlined text-[19px]">add_photo_alternate</span>
@@ -1420,7 +1420,7 @@
                     <input type="checkbox" id="autoreply-master-toggle" class="sr-only peer"
                       onchange="toggleAutoReplyMaster(this.checked)">
                     <div
-                      class="w-10 h-5 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500">
+                      class="w-10 h-5 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed">
                     </div>
                   </label>
                 </div>
@@ -1460,7 +1460,7 @@
                   class="text-xs bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-lg font-bold font-mono">
                   <span id="tab-rules-count">0</span> Active Templates
                 </span>
-                <button type="button" onclick="openRuleEditor(null)"
+                <button type="button" id="btn-add-autoreply-rule" onclick="openRuleEditor(null)"
                   class="px-3.5 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 shrink-0 active:scale-95 cursor-pointer">
                   <span class="material-symbols-outlined text-[16px]">add_circle</span>
                   <span>+ Add Pre-Set Question &amp; Reply</span>
@@ -1642,24 +1642,24 @@
                       <span>Choose Message Template:</span>
                     </label>
                     <div class="flex items-center gap-1">
-                      <button type="button" onclick="handleSaveCurrentTemplateChanges()"
+                      <button type="button" id="btn-bcast-save-changes" onclick="handleSaveCurrentTemplateChanges()"
                         class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
                         title="Save changes to this template and its dynamic values in database">
                         <span class="material-symbols-outlined text-[14px]">save</span>
                         <span>Save Changes</span>
                       </button>
-                      <button type="button" onclick="handleSaveCurrentAsNewTemplate()"
+                      <button type="button" id="btn-bcast-save-new" onclick="handleSaveCurrentAsNewTemplate()"
                         class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
                         title="Save current text as a new template">
                         <span class="material-symbols-outlined text-[14px]">bookmark_add</span>
                         <span>Save New</span>
                       </button>
-                      <button type="button" onclick="handleRenameCurrentTemplate()"
+                      <button type="button" id="btn-bcast-rename" onclick="handleRenameCurrentTemplate()"
                         class="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs transition cursor-pointer"
                         title="Rename template">
                         <span class="material-symbols-outlined text-[14px]">edit</span>
                       </button>
-                      <button type="button" onclick="handleDeleteCurrentTemplate()"
+                      <button type="button" id="btn-bcast-delete" onclick="handleDeleteCurrentTemplate()"
                         class="p-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs transition cursor-pointer"
                         title="Delete template">
                         <span class="material-symbols-outlined text-[14px]">delete</span>
@@ -1731,7 +1731,7 @@
                           in preview &amp; outbound messages.</p>
                       </div>
                     </div>
-                    <button type="button" onclick="promptAddNewCustomTag()"
+                    <button type="button" id="btn-bcast-add-var" onclick="promptAddNewCustomTag()"
                       class="px-2 py-1 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer">
                       <span class="material-symbols-outlined text-[13px]">add_circle</span>
                       <span>Add Variable</span>
@@ -2509,7 +2509,7 @@
                     <th class="py-3.5 px-4 text-center">Physical Stock</th>
                     <th class="py-3.5 px-4 text-center">Sellable</th>
                     <th class="py-3.5 px-4">Status</th>
-                    <th class="py-3.5 px-4 text-right">Actions</th>
+                    <th class="py-3.5 px-4 text-right sticky right-0 bg-slate-50 z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="catalog-table-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
@@ -2567,7 +2567,7 @@
             <!-- Right: Action Buttons -->
             <div class="flex items-center gap-2 self-start lg:self-center shrink-0">
               <!-- Quick Book Order Button -->
-              <button type="button" onclick="openModal('modal-convert-order')" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold shadow-sm hover:shadow transition cursor-pointer active:scale-95" title="Book a new WhatsApp Order">
+              <button type="button" id="btn-header-book-order" onclick="openModal('modal-convert-order')" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold shadow-sm hover:shadow transition cursor-pointer active:scale-95" title="Book a new WhatsApp Order">
                 <span class="material-symbols-outlined text-[17px]">add_shopping_cart</span>
                 <span>Book Order</span>
               </button>
@@ -2887,6 +2887,13 @@
 
             <!-- Right Actions -->
             <div class="flex items-center gap-2">
+              <!-- Schedule Follow-up Button (Requires Create) -->
+              <button type="button" onclick="openFollowUpModal()" id="btn-schedule-new-followup"
+                class="flex items-center gap-1.5 px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+                title="Schedule a new customer callback or follow-up">
+                <span class="material-symbols-outlined text-[17px]">add_circle</span>
+                <span>+ Schedule Follow-up</span>
+              </button>
               <!-- Direct 1-Click Automatic Export of Both Tabs (Admin & Staff) -->
               <button type="button" onclick="autoExportAllBothTabs()" id="btn-export-all-followups-direct"
                 class="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
@@ -3683,7 +3690,7 @@
                       <th class="py-3.5 px-4">Active Leads</th>
                       <th class="py-3.5 px-4">Converted Orders</th>
                       <th class="py-3.5 px-4">Status</th>
-                      <th class="py-3.5 px-4 text-right">Actions</th>
+                      <th class="py-3.5 px-4 text-right" id="th-staff-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="staff-list-table-body" class="divide-y divide-slate-100 font-medium">
@@ -4256,7 +4263,7 @@
                 </div>
 
                 <div class="pt-2">
-                  <button type="button" onclick="saveBrandSettings()"
+                  <button type="button" onclick="saveBrandSettings()" id="btn-save-brand-settings"
                     class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md flex items-center gap-2 transition hover:scale-105">
                     <span class="material-symbols-outlined text-[18px]">verified_user</span> Save Brand Identity
                   </button>
@@ -5413,10 +5420,17 @@
 
       <!-- Footer Actions -->
       <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
-        <button type="button" onclick="closeModal('modal-edit-order')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition cursor-pointer">
-          Cancel
-        </button>
-        <button type="button" onclick="saveEditedOrder()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 transition hover:shadow-lg cursor-pointer">
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeModal('modal-edit-order')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition cursor-pointer">
+            Cancel
+          </button>
+          <!-- Delete Order Button (Guarded by RBAC delete access) -->
+          <button type="button" id="btn-delete-order-modal" onclick="confirmDeleteOrderFromModal()" class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer" title="Permanently Delete Order">
+            <span class="material-symbols-outlined text-[19px]">delete</span>
+            <span>Delete Order</span>
+          </button>
+        </div>
+        <button type="button" onclick="saveEditedOrder()" id="btn-save-edit-order" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 transition hover:shadow-lg cursor-pointer">
           <span class="material-symbols-outlined text-[19px]">save</span>
           <span>Save Order Changes</span>
         </button>
@@ -5438,8 +5452,8 @@
             <span class="material-symbols-outlined text-[24px]">event_available</span>
           </div>
           <div>
-            <h3 class="font-bold text-base tracking-tight">Schedule Customer Follow-up</h3>
-            <p class="text-xs text-blue-200/80">Set calendar date, 12-hr reminder time &amp; callback notes</p>
+            <h3 id="modal-followup-title" class="font-bold text-base tracking-tight">Schedule Customer Follow-up</h3>
+            <p id="modal-followup-desc" class="text-xs text-blue-200/80">Set calendar date, 12-hr reminder time &amp; callback notes</p>
           </div>
         </div>
         <button type="button" onclick="closeModal('modal-followup')"
@@ -5449,6 +5463,7 @@
       </div>
 
       <form onsubmit="handleCreateFollowup(event)" class="flex flex-col flex-1 overflow-hidden min-h-0">
+        <input type="hidden" id="followup-edit-id" value="">
         <!-- Scrollable Modal Body Container with custom scrollbar -->
         <div class="p-5 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
           <!-- Duplicate Active Follow-up Alert (Dynamic) -->
@@ -5759,10 +5774,10 @@
           class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 rounded-b-3xl">
           <button type="button" onclick="closeModal('modal-followup')"
             class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition">Cancel</button>
-          <button type="submit"
+          <button type="submit" id="modal-followup-submit-btn"
             class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold shadow-md transition flex items-center gap-1.5 active:scale-[0.99]">
-            <span class="material-symbols-outlined text-[18px]">alarm_on</span>
-            <span>Save Follow-up</span>
+            <span id="modal-followup-submit-icon" class="material-symbols-outlined text-[18px]">alarm_on</span>
+            <span id="modal-followup-submit-text">Save Follow-up</span>
           </button>
         </div>
       </form>
