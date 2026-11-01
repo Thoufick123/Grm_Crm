@@ -667,6 +667,60 @@
     body.is-resizing-panels #app-sidebar {
       transition: none !important;
     }
+
+    /* Outbound Text Translation Language Pills */
+    .reply-lang-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+    .reply-lang-pill:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #1e293b;
+    }
+    .reply-lang-pill.active {
+      background: #059669;
+      border-color: #059669;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(5, 150, 105, 0.35);
+    }
+    #reply-translate-preview {
+      display: none;
+      font-size: 11px;
+      color: #475569;
+      background: #f0fdf4;
+      border: 1px dashed #86efac;
+      border-radius: 8px;
+      padding: 4px 10px;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* Right Panel Layout & Dropdown Safeguards */
+    #phone-switcher-dropdown {
+      z-index: 100 !important;
+    }
+    #chat-right-panel {
+      overflow-x: hidden !important;
+      word-break: break-word !important;
+    }
+    #chat-right-panel * {
+      box-sizing: border-box;
+    }
+    #chat-right-panel input,
+    #chat-right-panel select,
+    #chat-right-panel textarea {
+      max-width: 100% !important;
+    }
   </style>
 </head>
 
@@ -990,7 +1044,7 @@
 
     <!-- Top Header (Clean Height & Responsive Layout to Prevent Text Cutoff) -->
     <header
-      class="min-h-[64px] bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-20 gap-3">
+      class="min-h-[64px] bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-50 gap-3">
       <!-- Left: Sidebar Toggle Menu Button & Dynamic Header Title -->
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <!-- Sidebar Toggle Menu Bar Button -->
@@ -1042,7 +1096,7 @@
 
           <!-- Dropdown Menu Box (Positioned left-0 to open towards the open space instead of under sidebar) -->
           <div id="phone-switcher-dropdown"
-            class="hidden absolute left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 text-xs">
+            class="hidden absolute right-0 sm:left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[100] text-xs">
             <div class="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <p class="font-bold text-slate-900 text-xs">Switch WhatsApp Line</p>
@@ -1062,29 +1116,6 @@
                 <span class="material-symbols-outlined text-[16px] text-emerald-600">qr_code_scanner</span>
                 <span>+ Scan New WhatsApp Line / QR</span>
               </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Country Flag & Multi-Language Switcher (English, தமிழ், हिन्दी, తెలుగు, മലയാളം, ಕನ್ನಡ) -->
-        <div class="relative" id="header-lang-switcher-wrapper">
-          <button type="button" onclick="toggleLangSwitcherDropdown(event)" id="header-lang-btn"
-            class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 transition shadow-xs cursor-pointer"
-            title="Change CRM Language (English, தமிழ், हिन्दी, తెలుగు, മലയാളം, ಕನ್ನಡ)">
-            <span class="inline-flex items-center shrink-0" id="header-current-lang-flag"><svg class="w-5 h-3.5 rounded-[2px] shadow-2xs inline-block align-middle shrink-0 border border-slate-300" viewBox="0 0 900 600" aria-label="India Flag"><rect width="900" height="200" fill="#FF9933"/><rect y="200" width="900" height="200" fill="#FFFFFF"/><rect y="400" width="900" height="200" fill="#128807"/><g transform="translate(450, 300)"><circle r="60" fill="none" stroke="#000088" stroke-width="8"/><circle r="12" fill="#000088"/><line x1="0" y1="-60" x2="0" y2="60" stroke="#000088" stroke-width="2.5"/><line x1="-15.5" y1="-58" x2="15.5" y2="58" stroke="#000088" stroke-width="2.5"/><line x1="-30" y1="-52" x2="30" y2="52" stroke="#000088" stroke-width="2.5"/><line x1="-42.4" y1="-42.4" x2="42.4" y2="42.4" stroke="#000088" stroke-width="2.5"/><line x1="-52" y1="-30" x2="52" y2="30" stroke="#000088" stroke-width="2.5"/><line x1="-58" y1="-15.5" x2="58" y2="15.5" stroke="#000088" stroke-width="2.5"/><line x1="-60" y1="0" x2="60" y2="0" stroke="#000088" stroke-width="2.5"/><line x1="-58" y1="15.5" x2="58" y2="-15.5" stroke="#000088" stroke-width="2.5"/><line x1="-52" y1="30" x2="52" y2="-30" stroke="#000088" stroke-width="2.5"/><line x1="-42.4" y1="42.4" x2="42.4" y2="-42.4" stroke="#000088" stroke-width="2.5"/><line x1="-30" y1="52" x2="30" y2="-52" stroke="#000088" stroke-width="2.5"/><line x1="-15.5" y1="58" x2="15.5" y2="-58" stroke="#000088" stroke-width="2.5"/></g></svg></span>
-            <span id="header-current-lang-name" class="font-bold">English</span>
-            <span class="material-symbols-outlined text-[16px] text-slate-500 transition-transform duration-200" id="lang-dropdown-arrow">expand_more</span>
-          </button>
-
-          <!-- Language Dropdown Menu -->
-          <div id="header-lang-dropdown"
-            class="hidden absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 text-xs">
-            <div class="px-3.5 py-1.5 border-b border-slate-100 flex items-center justify-between">
-              <span class="font-bold text-slate-900 text-xs" data-i18n="header.language">Select Language</span>
-              <span class="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.2 rounded-full">6 Languages</span>
-            </div>
-            <div id="header-lang-options-list" class="p-1 space-y-0.5 max-h-64 overflow-y-auto">
-              <!-- Rendered dynamically by crm_i18n.js -->
             </div>
           </div>
         </div>
@@ -1184,7 +1215,7 @@
               <div class="flex items-center gap-1.5 shrink-0">
                 <span id="inbox-today-message-count"
                   class="font-mono font-extrabold text-emerald-900 bg-white border border-emerald-300 px-2 py-0.5 rounded-lg text-[10px] shadow-sm">
-                  0 / 200 msgs (0%)
+                  0 msgs
                 </span>
                 <!-- Minimize Left Panel Controller Button -->
                 <button type="button" id="btn-minimize-left-panel" onclick="toggleLeftPanel(false)"
@@ -1304,6 +1335,43 @@
               </div>
             </div>
 
+            <!-- Outbound Reply Auto-Translator Language Bar (SEND AS: 6 Indic Languages) -->
+            <div id="reply-lang-bar"
+              class="bg-slate-50/95 border-t border-slate-100 px-3 py-1.5 flex items-center gap-1.5 flex-wrap shrink-0 min-w-0">
+              <span class="text-[10px] font-bold uppercase text-slate-400 shrink-0 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px] text-indigo-500">g_translate</span>
+                Send As:
+              </span>
+              <button type="button" onclick="setReplyLang(null)" id="rl-none"
+                class="reply-lang-pill active" title="Send message as typed (no translation)">
+                🚫 Original
+              </button>
+              <button type="button" onclick="setReplyLang('en')" id="rl-en"
+                class="reply-lang-pill" title="Translate reply to English before sending">
+                🇬🇧 English
+              </button>
+              <button type="button" onclick="setReplyLang('ta')" id="rl-ta"
+                class="reply-lang-pill" title="Translate reply to Tamil before sending">
+                தமிழ் Tamil
+              </button>
+              <button type="button" onclick="setReplyLang('hi')" id="rl-hi"
+                class="reply-lang-pill" title="Translate reply to Hindi before sending">
+                हिंदी Hindi
+              </button>
+              <button type="button" onclick="setReplyLang('te')" id="rl-te"
+                class="reply-lang-pill" title="Translate reply to Telugu before sending">
+                తెలుగు Telugu
+              </button>
+              <button type="button" onclick="setReplyLang('ml')" id="rl-ml"
+                class="reply-lang-pill" title="Translate reply to Malayalam before sending">
+                മലയാളം Malayalam
+              </button>
+              <button type="button" onclick="setReplyLang('kn')" id="rl-kn"
+                class="reply-lang-pill" title="Translate reply to Kannada before sending">
+                ಕನ್ನಡ Kannada
+              </button>
+            </div>
+
             <!-- Message Input Bar with Photo Upload Support -->
             <div class="p-2.5 sm:p-3 bg-white border-t border-slate-200 shrink-0 min-w-0">
               <!-- Attached Image Preview Strip in 1:1 Chat -->
@@ -1320,6 +1388,90 @@
                 <button type="button" onclick="clearChatAttachedImage()" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Remove attachment">
                   <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
+              </div>
+
+              <!-- Voice Recording & Preview Panel (Multilingual Voice-to-Voice Translator) -->
+              <div id="voice-record-panel" class="hidden mb-2.5 p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border border-emerald-300 rounded-2xl shadow-sm transition-all duration-300">
+                <!-- 1. Live Recording State -->
+                <div id="voice-recording-active" class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="relative flex h-3.5 w-3.5 shrink-0">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-600"></span>
+                    </span>
+                    <span class="text-xs font-bold text-slate-800">Recording Voice Note...</span>
+                    <span id="voice-record-timer" class="font-mono text-xs font-extrabold text-rose-600 bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200">00:00</span>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="cancelVoiceRecording()" class="px-2.5 py-1 text-slate-500 hover:text-rose-700 hover:bg-rose-100 text-xs font-bold rounded-lg transition" title="Discard">Cancel</button>
+                    <button type="button" onclick="stopVoiceRecording()" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow transition flex items-center gap-1 active:scale-95 cursor-pointer">
+                      <span class="material-symbols-outlined text-[16px]">stop</span>
+                      <span>Stop</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 2. Post-Recording Preview & Language Selection State -->
+                <div id="voice-recording-preview" class="hidden space-y-2.5 pt-1">
+                  <div class="flex items-center justify-between border-b border-emerald-200/80 pb-2">
+                    <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                      <span class="material-symbols-outlined text-[18px] text-emerald-600">mic</span>
+                      <span>Voice Recorded</span>
+                      <span id="voice-preview-duration" class="text-[11px] font-mono text-slate-500"></span>
+                    </div>
+                    <button type="button" onclick="resetVoiceRecorder()" class="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition" title="Discard recording">
+                      <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
+
+                  <!-- Audio Preview Player (Original Staff Audio) -->
+                  <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase shrink-0">Original:</span>
+                    <audio id="voice-original-audio" controls class="w-full h-8 outline-none"></audio>
+                  </div>
+
+                  <!-- Target Language Selection (Strictly 6 Languages) & Translation Action -->
+                  <div class="flex items-center justify-between gap-2 flex-wrap pt-0.5">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                      <span class="text-[11px] font-bold text-slate-700 shrink-0 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px] text-indigo-600">translate</span>
+                        Translate To:
+                      </span>
+                      <select id="voice-target-lang" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:outline-none shadow-2xs">
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="en" selected>English</option>
+                        <option value="hi">हिंदी (Hindi)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                      </select>
+                    </div>
+
+                    <button type="button" id="btn-voice-translate" onclick="executeVoiceTranslation()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
+                      <span class="material-symbols-outlined text-[15px]">auto_awesome</span>
+                      <span id="btn-voice-translate-text">Translate Voice</span>
+                    </button>
+                  </div>
+
+                  <!-- Translated Audio Player (Visible after translation) -->
+                  <div id="voice-translated-preview-box" class="hidden bg-emerald-100/70 p-2.5 rounded-xl border border-emerald-300 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-emerald-900">
+                      <span class="flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[16px] text-emerald-700">volume_up</span>
+                        <span>Translated Voice (<span id="voice-translated-lang-label"></span>):</span>
+                      </span>
+                      <span class="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded font-mono font-bold">Ready</span>
+                    </div>
+                    <audio id="voice-translated-audio" controls class="w-full h-8 outline-none"></audio>
+                    <div class="flex items-center justify-end gap-2 pt-1">
+                      <button type="button" id="btn-voice-send-orig" onclick="dispatchTranslatedVoice('original')" class="px-3 py-1.5 bg-white hover:bg-slate-100 active:scale-95 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 transition cursor-pointer" title="Send original audio instead">Send Original</button>
+                      <button type="button" id="btn-voice-approve-send" onclick="dispatchTranslatedVoice('translated')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-extrabold rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
+                        <span class="material-symbols-outlined text-[16px]" id="btn-voice-approve-icon">send</span>
+                        <span id="btn-voice-approve-text">Approve &amp; Send to WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <form onsubmit="handleSendMessage(event)" class="flex items-center gap-2 min-w-0">
@@ -1341,13 +1493,27 @@
                 <input type="text" id="chat-input-text"
                   placeholder="Type a message or response to customer (Press Enter to send)..."
                   data-i18n-placeholder="customer.type_message"
+                  oninput="onReplyInputChange(this.value)"
                   class="flex-1 min-w-0 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-wa focus:bg-white transition"
                   autocomplete="off">
-                <button type="submit"
-                  class="w-10 h-10 rounded-xl bg-brand-wa hover:bg-brand-waDark text-white flex items-center justify-center shadow-md transition shrink-0">
+
+                <!-- Voice Recording Microphone Trigger Button -->
+                <button type="button" id="btn-voice-record" onclick="toggleVoiceRecording()"
+                  class="relative w-10 h-10 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 flex items-center justify-center shadow-2xs transition shrink-0 cursor-pointer"
+                  title="Record &amp; Translate Voice Note (குரல் பதிவு 🎙️)">
+                  <span class="material-symbols-outlined text-[20px] text-emerald-700" id="icon-voice-record">mic</span>
+                </button>
+
+                <button type="submit" id="btn-send-chat"
+                  class="relative w-10 h-10 rounded-xl bg-brand-wa hover:bg-brand-waDark text-white flex items-center justify-center shadow-md transition shrink-0"
+                  title="Send message">
                   <span class="material-symbols-outlined text-[20px]">send</span>
+                  <!-- Active language badge on send button -->
+                  <span id="send-lang-badge" class="hidden absolute -top-1.5 -right-1.5 text-[8px] font-extrabold bg-indigo-600 text-white rounded-full px-1 leading-4 shadow"></span>
                 </button>
               </form>
+              <!-- Live Translation Preview (shown when a lang is selected & user is typing) -->
+              <div id="reply-translate-preview"></div>
             </div>
 
             <!-- Floating Slide-Open Tab Button (Visible when right panel is hidden) -->
@@ -1373,7 +1539,7 @@
 
           <!-- Right Panel: Customer 360 & Query Management (Responsive Width based on VPW & Mouse Drag) -->
           <div id="chat-right-panel"
-            class="w-72 md:w-80 xl:w-80 2xl:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto transition-all duration-300 min-w-0 absolute xl:relative right-0 top-0 bottom-0 z-20 xl:z-auto shadow-2xl xl:shadow-none">
+            class="w-72 md:w-80 xl:w-80 2xl:w-88 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto overflow-x-hidden transition-all duration-300 min-w-0 absolute xl:relative right-0 top-0 bottom-0 z-20 xl:z-auto shadow-2xl xl:shadow-none">
             <!-- Rendered by JS -->
           </div>
 
@@ -8516,11 +8682,8 @@
   <!-- CLIENT-SIDE OCR ENGINE FOR PAYMENT SCREENSHOT VERIFICATION -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
-  <!-- LOAD MULTI-LANGUAGE & I18N TRANSLATION ENGINE -->
-  <script src="crm_i18n.js?v=1.0"></script>
-
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=12.0"></script>
+  <script src="crm_app.js?v=12.8"></script>
 </body>
 
 </html>

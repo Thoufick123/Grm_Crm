@@ -1,3 +1,13 @@
+// =========================================================================
+// LIGHTWEIGHT UI STRING HELPER (Native English Default)
+// =========================================================================
+if (typeof window.t !== 'function') {
+  window.t = function (key, fallback) { return fallback !== undefined ? fallback : key; };
+}
+if (typeof window.getCurrentLanguage !== 'function') {
+  window.getCurrentLanguage = function () { return { code: 'en', label: 'English' }; };
+}
+
 
 /**
  * Real-time payment amount validation coordinator.
@@ -7571,6 +7581,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
 function renderCustomer360Panel() {
   const panel = document.getElementById('chat-right-panel');
   if (!panel) return;
+  panel.scrollLeft = 0;
 
   if (!CRM_STATE || !CRM_STATE.customers) {
     panel.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">Customer profile details will appear here</div>`;
@@ -8007,10 +8018,10 @@ function renderCustomer360Panel() {
             const noteId = typeof n === 'string' ? n : (n.id || noteText);
             if (!noteText) return '';
             return `
-                        <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50/90 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition shadow-2xs group ${isQueryEditing ? 'hover:bg-amber-100 cursor-pointer active:scale-95' : 'opacity-60 cursor-not-allowed select-none'}" ${isQueryEditing ? `onclick="setQuickStatusNote('${noteText.replace(/'/g, "\\'")}')"` : ''} title="${isQueryEditing ? `Click to insert '${noteText}'` : 'Touch Edit Enquiry Status to use'}">
-                          <span>📌 ${noteText}</span>
+                        <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50/90 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition shadow-2xs group max-w-full ${isQueryEditing ? 'hover:bg-amber-100 cursor-pointer active:scale-95' : 'opacity-60 cursor-not-allowed select-none'}" ${isQueryEditing ? `onclick="setQuickStatusNote('${noteText.replace(/'/g, "\\'")}')"` : ''} title="${isQueryEditing ? `Click to insert '${noteText}'` : 'Touch Edit Enquiry Status to use'}">
+                          <span class="truncate max-w-[170px]" title="${noteText}">📌 ${noteText}</span>
                           ${isQueryEditing ? `
-                            <button type="button" onclick="event.stopPropagation(); deleteCustomQuickNote('${noteId}')" class="text-amber-400 hover:text-rose-600 rounded p-0.5 hover:bg-rose-50 flex items-center transition" title="Delete quick note">
+                            <button type="button" onclick="event.stopPropagation(); deleteCustomQuickNote('${noteId}')" class="text-amber-400 hover:text-rose-600 rounded p-0.5 hover:bg-rose-50 flex items-center transition shrink-0" title="Delete quick note">
                               <span class="material-symbols-outlined text-[10px]">close</span>
                             </button>
                           ` : ''}
@@ -9176,7 +9187,102 @@ function clearChatAttachedImage() {
   if (strip) strip.classList.add('hidden');
 }
 
-function handleSendMessage(event) {
+// =========================================================================
+// OUTBOUND TEXT TRANSLATOR ("SEND AS" LANGUAGE PILLS)
+// =========================================================================
+let REPLY_TRANSLATE_LANG = null;
+let _replyPreviewTimer = null;
+
+function setReplyLang(code) {
+  REPLY_TRANSLATE_LANG = code;
+  const pills = document.querySelectorAll('.reply-lang-pill');
+  pills.forEach(pill => pill.classList.remove('active'));
+  const activeBtn = document.getElementById(code ? `rl-${code}` : 'rl-none');
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const badge = document.getElementById('send-lang-badge');
+  if (badge) {
+    if (code) {
+      const labels = { en: 'EN', ta: 'TA', hi: 'HI', te: 'TE', ml: 'ML', kn: 'KN' };
+      badge.textContent = labels[code] || code.toUpperCase();
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  // Clear preview if lang reset to none
+  if (!code) {
+    const prev = document.getElementById('reply-translate-preview');
+    if (prev) { prev.style.display = 'none'; prev.textContent = ''; }
+  } else {
+    const input = document.getElementById('chat-input-text');
+    if (input && input.value.trim()) onReplyInputChange(input.value);
+  }
+}
+window.setReplyLang = setReplyLang;
+
+function onReplyInputChange(text) {
+  const prev = document.getElementById('reply-translate-preview');
+  if (!prev) return;
+
+  if (!REPLY_TRANSLATE_LANG || !text || !text.trim()) {
+    prev.style.display = 'none';
+    prev.textContent = '';
+    return;
+  }
+
+  clearTimeout(_replyPreviewTimer);
+  _replyPreviewTimer = setTimeout(async () => {
+    const langLabels = { en: '🇬🇧 English', ta: 'தமிழ் Tamil', hi: 'हिंदी Hindi', te: 'తెలుగు Telugu', ml: 'മലയാളം Malayalam', kn: 'ಕನ್ನಡ Kannada' };
+    prev.style.display = 'block';
+    prev.innerHTML = `<span style="opacity:0.6">⏳ ${langLabels[REPLY_TRANSLATE_LANG] || REPLY_TRANSLATE_LANG} preview...</span>`;
+    const translated = await translateOutboundText(text.trim(), REPLY_TRANSLATE_LANG);
+    if (translated && translated !== text.trim()) {
+      prev.innerHTML = `<span style="font-weight:600;color:#047857">🌐 ${langLabels[REPLY_TRANSLATE_LANG] || REPLY_TRANSLATE_LANG}:</span> ${translated}`;
+    } else {
+      prev.style.display = 'none';
+    }
+  }, 700);
+}
+window.onReplyInputChange = onReplyInputChange;
+
+async function translateOutboundText(text, targetLang) {
+  if (!text || !targetLang) return text;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+    const gResp = await fetch(gUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (gResp.ok) {
+      const gData = await gResp.json();
+      if (Array.isArray(gData) && Array.isArray(gData[0])) {
+        const translated = gData[0].map(s => s[0] || '').join('');
+        if (translated) return translated;
+      }
+    }
+  } catch (err) {
+    console.warn('[OutboundTranslate] Direct client call bypassed:', err.message || err);
+  }
+
+  try {
+    const resp = await fetch('api.php?action=translate_text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, target_lang: targetLang })
+    });
+    const data = await resp.json();
+    if (data && data.success && data.translated) return data.translated;
+  } catch (e) {
+    console.warn('[OutboundTranslate] PHP proxy failed:', e.message || e);
+  }
+
+  return text;
+}
+window.translateOutboundText = translateOutboundText;
+
+async function handleSendMessage(event) {
   event.preventDefault();
   // RBAC Guard: Only users with inbox.create permission can send messages
   const _isSuperAdminSend = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
@@ -9202,8 +9308,23 @@ function handleSendMessage(event) {
 
   const attachedMedia = CHAT_ATTACHED_IMAGE_DATA ? (CHAT_ATTACHED_IMAGE_DATA.serverUrl || CHAT_ATTACHED_IMAGE_DATA.dataUrl) : null;
 
+  // Translate text if outbound Send As language is selected
+  let textToSend = rawText;
+  if (REPLY_TRANSLATE_LANG && rawText) {
+    try {
+      const translated = await translateOutboundText(rawText, REPLY_TRANSLATE_LANG);
+      if (translated) textToSend = translated;
+    } catch (e) {
+      console.warn('[OutboundTranslate] Error translating, sending original:', e);
+    }
+  }
+
+  // Clear live translate preview if open
+  const prev = document.getElementById('reply-translate-preview');
+  if (prev) { prev.style.display = 'none'; prev.textContent = ''; }
+
   // Format outbound text with company Brand Name header
-  const formattedText = rawText ? formatOutboundBrandMessage(rawText) : `[Photo from ${getBrandName()}]`;
+  const formattedText = textToSend ? formatOutboundBrandMessage(textToSend) : `[Photo from ${getBrandName()}]`;
 
   const newMsg = {
     id: Date.now(),
@@ -26437,7 +26558,7 @@ function updateBadgeCounters() {
 
   const inboxTodayEl = document.getElementById('inbox-today-message-count');
   if (inboxTodayEl) {
-    inboxTodayEl.innerText = `${totalReceivedToday} / ${target} msgs (${todayPct}%)`;
+    inboxTodayEl.innerText = `${totalReceivedToday} msgs`;
   }
 
   // Update Quota View KPI Counters if visible
@@ -28142,10 +28263,10 @@ function renderQuickNotesList() {
     const noteId = typeof n === 'string' ? n : (n.id || noteText);
     if (!noteText) return '';
     return `
-      <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50/90 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition shadow-2xs group ${isQueryEditing ? 'hover:bg-amber-100 cursor-pointer active:scale-95' : 'opacity-60 cursor-not-allowed select-none'}" ${isQueryEditing ? `onclick="setQuickStatusNote('${noteText.replace(/'/g, "\\'")}')"` : ''} title="${isQueryEditing ? `Click to insert '${noteText}'` : 'Touch Edit Enquiry Status to use'}">
-        <span>📌 ${noteText}</span>
+      <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50/90 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition shadow-2xs group max-w-full ${isQueryEditing ? 'hover:bg-amber-100 cursor-pointer active:scale-95' : 'opacity-60 cursor-not-allowed select-none'}" ${isQueryEditing ? `onclick="setQuickStatusNote('${noteText.replace(/'/g, "\\'")}')"` : ''} title="${isQueryEditing ? `Click to insert '${noteText}'` : 'Touch Edit Enquiry Status to use'}">
+        <span class="truncate max-w-[170px]" title="${noteText}">📌 ${noteText}</span>
         ${isQueryEditing ? `
-          <button type="button" onclick="event.stopPropagation(); deleteCustomQuickNote('${noteId}')" class="text-amber-400 hover:text-rose-600 rounded p-0.5 hover:bg-rose-50 flex items-center transition" title="Delete quick note">
+          <button type="button" onclick="event.stopPropagation(); deleteCustomQuickNote('${noteId}')" class="text-amber-400 hover:text-rose-600 rounded p-0.5 hover:bg-rose-50 flex items-center transition shrink-0" title="Delete quick note">
             <span class="material-symbols-outlined text-[10px]">close</span>
           </button>
         ` : ''}
@@ -29526,3 +29647,469 @@ function saveEditedOrder() {
   if (typeof playChime === 'function') playChime('order');
 }
 window.saveEditedOrder = saveEditedOrder;
+
+// =========================================================================
+// WHATSAPP VOICE-TO-VOICE RECORDING & TRANSLATION ENGINE (6 LANGUAGES ONLY)
+// Tamil (ta), English (en), Malayalam (ml), Kannada (kn), Hindi (hi), Telugu (te)
+// =========================================================================
+window.VOICE_SUPPORTED_LANGUAGES = [
+  { code: 'ta', bcp47: 'ta-IN', name: 'Tamil', native: 'தமிழ்' },
+  { code: 'en', bcp47: 'en-IN', name: 'English', native: 'English' },
+  { code: 'ml', bcp47: 'ml-IN', name: 'Malayalam', native: 'മലയാളം' },
+  { code: 'kn', bcp47: 'kn-IN', name: 'Kannada', native: 'ಕನ್ನಡ' },
+  { code: 'hi', bcp47: 'hi-IN', name: 'Hindi', native: 'हिंदी' },
+  { code: 'te', bcp47: 'te-IN', name: 'Telugu', native: 'తెలుగు' }
+];
+
+let _voiceMediaRecorder = null;
+let _voiceAudioChunks = [];
+let _voiceRecordTimer = null;
+let _voiceRecordStartTime = null;
+let _voiceActiveStream = null;
+let _voiceCurrentBlob = null;
+let _voiceUploadedMsgId = null;
+let _voiceCurrentTranslationId = null;
+let _voiceCurrentTransAudioUrl = null;
+let _voiceSpeechRecognizer = null;
+let _voiceClientHint = '';
+
+try {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRec) {
+    _voiceSpeechRecognizer = new SpeechRec();
+    _voiceSpeechRecognizer.continuous = true;
+    _voiceSpeechRecognizer.interimResults = true;
+    _voiceSpeechRecognizer.lang = 'ta-IN';
+    _voiceSpeechRecognizer.onresult = (ev) => {
+      for (let i = ev.resultIndex; i < ev.results.length; ++i) {
+        if (ev.results[i].isFinal) {
+          _voiceClientHint += ev.results[i][0].transcript + ' ';
+        }
+      }
+    };
+  }
+} catch (e) {}
+
+window.toggleVoiceRecording = async function () {
+  const panel = document.getElementById('voice-record-panel');
+  if (!panel) return;
+
+  if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
+    window.stopVoiceRecording();
+    return;
+  }
+
+  try {
+    _voiceActiveStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    if (typeof showToast === 'function') {
+      showToast('Microphone Permission', 'Please allow microphone access in your browser to record voice notes.', 'error', 'rose');
+    } else {
+      alert('Microphone access is required to record voice notes.');
+    }
+    return;
+  }
+
+  panel.classList.remove('hidden');
+  const activeBox = document.getElementById('voice-recording-active');
+  const previewBox = document.getElementById('voice-recording-preview');
+  const transBox = document.getElementById('voice-translated-preview-box');
+  if (activeBox) activeBox.classList.remove('hidden');
+  if (previewBox) previewBox.classList.add('hidden');
+  if (transBox) transBox.classList.add('hidden');
+
+  _voiceAudioChunks = [];
+  _voiceClientHint = '';
+
+  const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) ? 'audio/webm;codecs=opus' : ((typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) ? 'audio/ogg;codecs=opus' : '');
+  const options = mimeType ? { mimeType } : {};
+  _voiceMediaRecorder = new MediaRecorder(_voiceActiveStream, options);
+
+  _voiceMediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) {
+      _voiceAudioChunks.push(e.data);
+    }
+  };
+
+  _voiceMediaRecorder.onstop = async () => {
+    _voiceCurrentBlob = new Blob(_voiceAudioChunks, { type: _voiceMediaRecorder.mimeType || 'audio/webm' });
+    const audioUrl = URL.createObjectURL(_voiceCurrentBlob);
+    const originalAudioEl = document.getElementById('voice-original-audio');
+    if (originalAudioEl) {
+      originalAudioEl.src = audioUrl;
+      originalAudioEl.load();
+    }
+
+    if (activeBox) activeBox.classList.add('hidden');
+    if (previewBox) previewBox.classList.remove('hidden');
+
+    await uploadOriginalStaffAudio();
+  };
+
+  _voiceMediaRecorder.start(250);
+  _voiceRecordStartTime = Date.now();
+
+  const timerEl = document.getElementById('voice-record-timer');
+  if (_voiceRecordTimer) clearInterval(_voiceRecordTimer);
+  _voiceRecordTimer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - _voiceRecordStartTime) / 1000);
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    if (timerEl) timerEl.textContent = `${m}:${s}`;
+    if (elapsed >= 120) {
+      window.stopVoiceRecording();
+    }
+  }, 500);
+
+  if (_voiceSpeechRecognizer) {
+    try {
+      _voiceSpeechRecognizer.lang = 'ta-IN';
+      _voiceSpeechRecognizer.start();
+    } catch (e) {}
+  }
+};
+
+window.stopVoiceRecording = function () {
+  if (_voiceRecordTimer) {
+    clearInterval(_voiceRecordTimer);
+    _voiceRecordTimer = null;
+  }
+  if (_voiceSpeechRecognizer) {
+    try { _voiceSpeechRecognizer.stop(); } catch (e) {}
+  }
+  if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
+    _voiceMediaRecorder.stop();
+  }
+  if (_voiceActiveStream) {
+    _voiceActiveStream.getTracks().forEach(t => t.stop());
+    _voiceActiveStream = null;
+  }
+};
+
+window.cancelVoiceRecording = function () {
+  window.stopVoiceRecording();
+  window.resetVoiceRecorder();
+};
+
+window.resetVoiceRecorder = function () {
+  if (_voiceActiveStream) {
+    _voiceActiveStream.getTracks().forEach(t => t.stop());
+    _voiceActiveStream = null;
+  }
+  _voiceCurrentBlob = null;
+  _voiceUploadedMsgId = null;
+  _voiceCurrentTranslationId = null;
+  _voiceCurrentTransAudioUrl = null;
+  _voiceAudioChunks = [];
+  _voiceClientHint = '';
+
+  const panel = document.getElementById('voice-record-panel');
+  if (panel) panel.classList.add('hidden');
+  const timerEl = document.getElementById('voice-record-timer');
+  if (timerEl) timerEl.textContent = '00:00';
+  const origAudio = document.getElementById('voice-original-audio');
+  if (origAudio) { origAudio.pause(); origAudio.src = ''; }
+  const transAudio = document.getElementById('voice-translated-audio');
+  if (transAudio) { transAudio.pause(); transAudio.src = ''; }
+};
+
+let _voiceUploadPromise = null;
+let _isVoiceSending = false;
+
+async function uploadOriginalStaffAudio() {
+  if (!_voiceCurrentBlob) return;
+  const formData = new FormData();
+  formData.append('audio', _voiceCurrentBlob, 'staff_voice.webm');
+  formData.append('customer_id', (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '') || '');
+  formData.append('staff_id', (window.PHP_USER_SESSION?.id || 'staff_01'));
+  formData.append('source_lang', 'ta');
+  formData.append('client_transcription', _voiceClientHint || '');
+
+  _voiceUploadPromise = (async () => {
+    try {
+      const res = await fetch('api.php?action=upload_staff_voice', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success && data.voice_message_id) {
+        _voiceUploadedMsgId = data.voice_message_id;
+        const durEl = document.getElementById('voice-preview-duration');
+        if (durEl) durEl.textContent = `(${data.duration}s)`;
+      }
+      return data;
+    } catch (err) {
+      console.warn('[Staff Voice Upload Error]:', err);
+      return null;
+    }
+  })();
+  return _voiceUploadPromise;
+}
+
+window.executeVoiceTranslation = async function () {
+  const targetLangSelect = document.getElementById('voice-target-lang');
+  const targetLang = targetLangSelect ? targetLangSelect.value : 'en';
+  const btn = document.getElementById('btn-voice-translate');
+  const btnText = document.getElementById('btn-voice-translate-text');
+
+  if (btn) {
+    btn.disabled = true;
+    if (btnText) btnText.textContent = 'Translating voice...';
+  }
+
+  // Ensure original audio finished uploading first
+  if (_voiceUploadPromise && !_voiceUploadedMsgId) {
+    if (btnText) btnText.textContent = 'Preparing audio...';
+    try { await _voiceUploadPromise; } catch (e) {}
+  }
+
+  const langLabels = {
+    ta: 'Tamil (தமிழ்)',
+    en: 'English',
+    hi: 'Hindi (हिंदी)',
+    te: 'Telugu (తెలుగు)',
+    ml: 'Malayalam (മലയാളം)',
+    kn: 'Kannada (ಕನ್ನಡ)'
+  };
+
+  try {
+    const res = await fetch('api.php?action=translate_voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        voice_message_id: _voiceUploadedMsgId,
+        target_lang: targetLang,
+        client_transcription: _voiceClientHint || '',
+        source_lang: 'ta'
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.translated_audio_url) {
+      _voiceCurrentTranslationId = data.translation_id;
+      _voiceCurrentTransAudioUrl = data.translated_audio_url;
+
+      const transBox = document.getElementById('voice-translated-preview-box');
+      if (transBox) transBox.classList.remove('hidden');
+
+      const transLabel = document.getElementById('voice-translated-lang-label');
+      if (transLabel) transLabel.textContent = langLabels[targetLang] || targetLang;
+
+      const transAudio = document.getElementById('voice-translated-audio');
+      if (transAudio) {
+        transAudio.src = data.translated_audio_url;
+        transAudio.load();
+      }
+
+      if (typeof showToast === 'function') {
+        showToast('Voice Translated', `Generated in ${langLabels[targetLang]}. Click Play to preview.`, 'success', 'emerald');
+      }
+    } else {
+      throw new Error(data.error || 'Voice translation failed');
+    }
+  } catch (err) {
+    alert('Voice translation error: ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      if (btnText) btnText.textContent = 'Translate Voice';
+    }
+  }
+};
+
+window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
+  if (_isVoiceSending) {
+    console.warn('[Voice Send] Already in flight, ignoring duplicate click');
+    return;
+  }
+
+  const approveBtn = document.getElementById('btn-voice-approve-send');
+  const origBtn = document.getElementById('btn-voice-send-orig');
+  const approveText = document.getElementById('btn-voice-approve-text');
+  const approveIcon = document.getElementById('btn-voice-approve-icon');
+
+  _isVoiceSending = true;
+
+  // Immediate frontend single-click lockout & visual loading indicator
+  if (approveBtn) {
+    approveBtn.disabled = true;
+    approveBtn.classList.add('opacity-60', 'pointer-events-none');
+    if (approveText) approveText.textContent = 'Sending (1x only)...';
+    if (approveIcon) {
+      approveIcon.textContent = 'progress_activity';
+      approveIcon.classList.add('animate-spin');
+    }
+  }
+  if (origBtn) {
+    origBtn.disabled = true;
+    origBtn.classList.add('opacity-60', 'pointer-events-none');
+  }
+
+  const targetLang = document.getElementById('voice-target-lang')?.value || 'en';
+  const custId = (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '') || '';
+  const customer = (CRM_STATE?.customers || []).find(c => c && (c.id === custId || String(c.id) === String(custId)));
+  const phone = customer ? (customer.whatsapp || customer.phone) : '';
+
+  try {
+    const res = await fetch('api.php?action=send_translated_voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: custId,
+        phone: phone,
+        voice_message_id: _voiceUploadedMsgId,
+        translation_id: _voiceCurrentTranslationId,
+        send_mode: sendMode,
+        target_lang: targetLang
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Immediately reset voice recorder and close panel so user cannot re-click
+      window.resetVoiceRecorder();
+
+      if (CRM_STATE && CRM_STATE.conversations) {
+        if (!CRM_STATE.conversations[custId]) {
+          CRM_STATE.conversations[custId] = [];
+        }
+        CRM_STATE.conversations[custId].push({
+          id: data.message_id || ('msg_voice_' + Date.now()),
+          sender: 'staff',
+          text: '🎤 WhatsApp Voice Note',
+          type: 'audio',
+          media_type: 'audio',
+          media_url: data.audio_url,
+          audioDuration: data.duration,
+          duration: data.duration,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'DELIVERED'
+        });
+      }
+
+      if (typeof renderChatMessages === 'function') {
+        renderChatMessages();
+      }
+
+      if (typeof showToast === 'function') {
+        showToast('Voice Sent', 'Voice note sent to customer WhatsApp once!', 'success', 'emerald');
+      }
+    } else {
+      throw new Error(data.error || 'Failed to dispatch voice');
+    }
+  } catch (err) {
+    alert('Failed to send voice note: ' + err.message);
+  } finally {
+    _isVoiceSending = false;
+    if (approveBtn) {
+      approveBtn.disabled = false;
+      approveBtn.classList.remove('opacity-60', 'pointer-events-none');
+      if (approveText) approveText.textContent = 'Approve & Send to WhatsApp';
+      if (approveIcon) {
+        approveIcon.textContent = 'send';
+        approveIcon.classList.remove('animate-spin');
+      }
+    }
+    if (origBtn) {
+      origBtn.disabled = false;
+      origBtn.classList.remove('opacity-60', 'pointer-events-none');
+    }
+  }
+};
+
+window.renderDualVoicePlayerBubble = function(msg, msgId, isOut) {
+  const audioSrc = msg.media_url || '';
+  const duration = msg.duration || 8;
+
+  return `
+    <div class="space-y-2 py-1">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleAudioPlay('${msgId}')" id="btn-play-${msgId}" class="w-11 h-11 rounded-full ${isOut ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-teal-600 hover:bg-teal-700'} active:scale-95 text-white flex items-center justify-center shadow-md transition shrink-0 cursor-pointer">
+          <span class="material-symbols-outlined text-[24px]" id="icon-${msgId}">play_arrow</span>
+        </button>
+        <div class="flex-1 min-w-[210px]">
+          <div class="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1">
+            <span class="flex items-center gap-1 ${isOut ? 'text-emerald-700' : 'text-teal-700'}">
+              <span class="material-symbols-outlined text-[15px]">mic</span>
+              <span>WhatsApp Voice Note</span>
+              <span class="ml-1 px-1.5 py-0.2 rounded bg-slate-100 text-[9px] font-mono font-bold text-slate-600">${isOut ? 'SENT' : 'INBOUND'}</span>
+            </span>
+            <span id="time-${msgId}" class="font-mono text-[11px] text-slate-500">${typeof formatAudioTime === 'function' ? formatAudioTime(duration) : '0:08'}</span>
+          </div>
+          <input type="range" id="seek-${msgId}" min="0" max="${duration}" value="0" step="0.1" 
+            class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600 focus:outline-none" 
+            oninput="seekAudio('${msgId}', this.value)">
+          <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+            <span class="flex items-center gap-1">
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span class="font-bold text-slate-600">Voice Note</span>
+            </span>
+            <button onclick="toggleAudioSpeed('${msgId}')" id="speed-${msgId}" class="font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[10px] transition cursor-pointer">1.0x</button>
+          </div>
+          <audio id="audio-${msgId}" src="${audioSrc}" preload="metadata" 
+            ontimeupdate="updateAudioProgress('${msgId}')" 
+            onended="onAudioEnded('${msgId}')"
+            onerror="handleAudioFallback('${msgId}')"></audio>
+        </div>
+      </div>
+      <!-- Inbound 1-Click Translation to Staff Language (Zero Text Display) -->
+      ${!isOut ? `
+        <div class="mt-2 pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2 text-[10px]">
+          <span class="text-slate-500 font-medium flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-indigo-500">translate</span>
+            <span>Listen Translated Voice:</span>
+          </span>
+          <button type="button" onclick="playInboundTranslatedVoice('${msgId}', '${audioSrc}')" id="btn-trans-voice-${msgId}"
+            class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold flex items-center gap-1 transition shadow-2xs active:scale-95 cursor-pointer">
+            <span class="material-symbols-outlined text-[14px]">headphones</span>
+            <span>Translate &amp; Listen (தமிழ்)</span>
+          </button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+};
+
+async function playInboundTranslatedVoice(msgId, originalUrl) {
+  const btn = document.getElementById(`btn-trans-voice-${msgId}`);
+  if (btn) {
+    btn.innerHTML = `<span class="material-symbols-outlined text-[14px] animate-spin">sync</span> Translating voice...`;
+    btn.disabled = true;
+  }
+
+  try {
+    const res = await fetch('api.php?action=voice_translate_inbound', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        media_url: originalUrl,
+        customer_id: typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '',
+        source_lang: 'auto'
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success' && data.translated_audio_url) {
+      const audioEl = document.getElementById(`audio-${msgId}`);
+      if (audioEl) {
+        audioEl.src = data.translated_audio_url;
+        audioEl.load();
+        audioEl.play().catch(e => console.warn(e));
+        const icon = document.getElementById(`icon-${msgId}`);
+        if (icon) icon.textContent = 'pause';
+      }
+      if (btn) {
+        btn.innerHTML = `<span class="material-symbols-outlined text-[14px] text-emerald-600">check</span> Playing (${data.target_lang_name || 'Tamil'})`;
+        btn.classList.add('bg-emerald-100', 'border-emerald-400');
+      }
+    } else {
+      throw new Error(data.error || data.message || 'Translation unavailable');
+    }
+  } catch (err) {
+    if (btn) {
+      btn.innerHTML = `<span class="material-symbols-outlined text-[14px]">headphones</span> Retry Translation`;
+      btn.disabled = false;
+    }
+    if (typeof showToast === 'function') {
+      showToast('Notice', 'Voice translation notice: ' + err.message, 'info', 'amber');
+    }
+  }
+}
+window.playInboundTranslatedVoice = playInboundTranslatedVoice;

@@ -1,7 +1,7 @@
 <?php
 /**
  * GRM CRM — Meta WhatsApp Cloud API Webhook Ingestion Engine
- * Handles Meta Webhook Verification and Ingests Live Inbound WhatsApp Messages
+ * Handles Meta Webhook Verification and Ingests Live Inbound WhatsApp Messages & Voice Notes
  */
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
@@ -66,11 +66,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $msgId = $msg['id'] ?? ('wamid_' . uniqid());
                             $msgType = $msg['type'] ?? 'text';
                             $msgText = '';
+                            $mediaUrl = null;
 
                             if ($msgType === 'text') {
                                 $msgText = $msg['text']['body'] ?? '';
                             } elseif ($msgType === 'image') {
                                 $msgText = '[Photo Attached] ' . ($msg['image']['caption'] ?? '');
+                                $mediaUrl = $msg['image']['id'] ?? null;
+                            } elseif ($msgType === 'audio' || $msgType === 'voice') {
+                                $msgText = '[Voice Note]';
+                                $mediaUrl = $msg['audio']['id'] ?? ($msg['voice']['id'] ?? null);
+                                $msgType = 'audio';
                             } else {
                                 $msgText = "[{$msgType} message]";
                             }
@@ -81,6 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 "sender_name" => $senderName,
                                 "destination_business_phone" => $businessPhone,
                                 "message_text" => $msgText,
+                                "type" => $msgType,
+                                "media_url" => $mediaUrl,
                                 "timestamp_epoch" => time(),
                                 "received_at" => date("Y-m-d H:i:s"),
                                 "source" => "META_WEBHOOK"

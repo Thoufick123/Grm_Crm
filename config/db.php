@@ -571,6 +571,78 @@ function initializeDatabaseSchema($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
+    // 14. Call Masking Settings Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `masking_settings` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `call_masking_enabled` TINYINT(1) DEFAULT 1,
+            `chat_masking_enabled` TINYINT(1) DEFAULT 1,
+            `call_timeout_seconds` INT DEFAULT 30,
+            `fallback_strategy` VARCHAR(50) DEFAULT 'RETURN_TO_POOL',
+            `virtual_company_number` VARCHAR(30) DEFAULT '+91 8000 123 456',
+            `eligible_staff_ids` TEXT DEFAULT NULL,
+            `recording_enabled` TINYINT(1) DEFAULT 1,
+            `updated_by` VARCHAR(100) DEFAULT 'Super Admin',
+            `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 15. Call Sessions Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `call_sessions` (
+            `id` VARCHAR(50) PRIMARY KEY,
+            `provider_call_id` VARCHAR(100) DEFAULT NULL,
+            `customer_id` VARCHAR(50) DEFAULT NULL,
+            `customer_name` VARCHAR(100) NOT NULL,
+            `customer_phone` VARCHAR(30) NOT NULL,
+            `masked_phone` VARCHAR(30) NOT NULL,
+            `virtual_number` VARCHAR(30) DEFAULT NULL,
+            `assigned_staff_id` VARCHAR(50) DEFAULT NULL,
+            `assigned_staff_name` VARCHAR(100) DEFAULT NULL,
+            `status` ENUM('RINGING','ASSIGNED','CONNECTED','COMPLETED','MISSED','REJECTED') DEFAULT 'RINGING',
+            `started_at` DATETIME DEFAULT NULL,
+            `answered_at` DATETIME DEFAULT NULL,
+            `ended_at` DATETIME DEFAULT NULL,
+            `duration_seconds` INT DEFAULT 0,
+            `outcome` VARCHAR(50) DEFAULT 'PENDING',
+            `outcome_notes` TEXT DEFAULT NULL,
+            `recording_url` TEXT DEFAULT NULL,
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(`status`),
+            INDEX(`assigned_staff_id`),
+            INDEX(`customer_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 16. Call Assignments Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `call_assignments` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `call_session_id` VARCHAR(50) NOT NULL,
+            `staff_id` VARCHAR(50) NOT NULL,
+            `staff_name` VARCHAR(100) DEFAULT NULL,
+            `assigned_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            `released_at` DATETIME DEFAULT NULL,
+            `assignment_status` ENUM('OFFERED','ACCEPTED','TIMEOUT','REJECTED','RELEASED') DEFAULT 'OFFERED',
+            INDEX(`call_session_id`),
+            INDEX(`staff_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 17. Call Activity Logs Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `call_activity_logs` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `call_session_id` VARCHAR(50) NOT NULL,
+            `actor_id` VARCHAR(50) NOT NULL,
+            `actor_name` VARCHAR(100) DEFAULT NULL,
+            `action` VARCHAR(100) NOT NULL,
+            `notes` TEXT DEFAULT NULL,
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(`call_session_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
     // Dynamic Alter for Customers (Email, Gender, Age)
     try {
         $existingCustCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN);
@@ -996,6 +1068,15 @@ function seedDefaultDataIfEmpty($pdo) {
         foreach ($defaultTemplates as $t) {
             $btStmt->execute($t);
         }
+    }
+
+    // Check Call Masking Settings Seed
+    $maskCount = $pdo->query("SELECT COUNT(*) FROM `masking_settings`")->fetchColumn();
+    if ($maskCount == 0) {
+        $pdo->exec("
+            INSERT INTO `masking_settings` (`id`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `updated_by`)
+            VALUES (1, 1, 1, 30, 'RETURN_TO_POOL', '+91 8000 123 456', 'staff_01,staff_02,staff_03', 1, 'Super Admin');
+        ");
     }
 }
 

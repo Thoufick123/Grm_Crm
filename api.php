@@ -23,6 +23,29 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 }
 
 // =========================================================================
+// WHATSAPP MULTILINGUAL VOICE-TO-VOICE TRANSLATOR ACTIONS (6 LANGUAGES ONLY)
+// =========================================================================
+if (isset($_GET['action'])) {
+    $act = $_GET['action'];
+    if ($act === 'upload_staff_voice') {
+        require_once __DIR__ . '/voice_translator/record_voice.php';
+        exit;
+    }
+    if ($act === 'translate_voice') {
+        require_once __DIR__ . '/voice_translator/process_voice.php';
+        exit;
+    }
+    if ($act === 'send_translated_voice') {
+        require_once __DIR__ . '/voice_translator/send_voice.php';
+        exit;
+    }
+    if ($act === 'receive_voice' || $act === 'voice_translate_inbound') {
+        require_once __DIR__ . '/voice_translator/receive_voice.php';
+        exit;
+    }
+}
+
+// =========================================================================
 // ULTRA-FAST ON-DEMAND TRANSLATION (0ms overhead, runs before DB/Sessions)
 // =========================================================================
 if (isset($_GET['action']) && $_GET['action'] === 'translate_text') {

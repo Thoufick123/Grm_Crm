@@ -33,7 +33,7 @@
         "frock"
       ],
       "replyText": "Here is stock",
-      "enabled": false
+      "enabled": true
     },
     {
       "id": "ar_02",

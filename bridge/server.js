@@ -107,7 +107,7 @@ function indexAllLidMappings() {
                                 }
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
         }
@@ -306,7 +306,7 @@ const PRODUCTS_CATALOG = {
 function getStockAutoReplyTemplate(customerName) {
     const brand = BRAND_NAME || 'GRM Garments Official';
     const cName = customerName ? customerName.split(' ')[0] : 'there';
-    
+
     return {
         text: `✨ *${brand}* ✨\nHello *${cName}*! 👋 Welcome to our store.\n\n👗 *Ready-Stock Collections:*\n1️⃣ Baby Collection (0–3Y) — *₹599*\n2️⃣ Maternity & Feeding — *₹1,299*\n3️⃣ Newborn Gift Sets (0–6M) — *₹799*\n4️⃣ Kids Daily Wear (4–5Y) — *₹450*\n5️⃣ Wholesale Bundles — *₹7,200*\n6️⃣ Festive Silk Sets — *₹899*\n\n💬 *Reply with 1 to 6* to see photos & sizes!`
     };
@@ -358,10 +358,10 @@ function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, sen
         if (/^[1-9]$/.test(key) && !isNaN(itemIdx) && catData.items[itemIdx]) {
             const item = catData.items[itemIdx];
             console.log(`[Auto-Reply Engine] 🎯 Customer chosen Item #${key} (${item.name}) from Active Category #${activeCatId} (${catData.categoryName})`);
-            
+
             // Mark product viewed (reset awaitingProduct so next number 1-6 can select a category or view other items)
             setCustomerCategory({ catId: activeCatId, awaitingProduct: false, lastProductSku: item.sku }, senderKey, senderNumber, senderJid, cleanNumber);
-            
+
             return {
                 type: 'image',
                 image: item.image,
@@ -457,7 +457,7 @@ function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, sen
     if (selectedCat && PRODUCTS_CATALOG[selectedCat]) {
         // Set state to active category and awaitingProduct = true
         setCustomerCategory({ catId: selectedCat, awaitingProduct: true }, senderKey, senderNumber, senderJid, cleanNumber);
-        
+
         const cat = PRODUCTS_CATALOG[selectedCat];
         const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣'];
 
@@ -528,6 +528,88 @@ async function getImageBuffer(url) {
     return null;
 }
 
+async function getAudioBuffer(url) {
+    if (!url) return null;
+    try {
+        if (typeof url === 'string' && (url.startsWith('data:audio/') || url.startsWith('data:video/'))) {
+            const base64Data = url.split(',')[1] || url.replace(/^data:[^;]+;base64,/, '');
+            return Buffer.from(base64Data, 'base64');
+        }
+        if (typeof url === 'string') {
+            const cleanPath = url.replace(/^[/\\]+/, '').replace(/\//g, path.sep);
+            const candidates = [
+                path.resolve(__dirname, '..', cleanPath),
+                path.resolve(__dirname, cleanPath),
+                path.resolve('d:/crm-app/crm-app', cleanPath)
+            ];
+            for (const candidate of candidates) {
+                if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+                    return fs.readFileSync(candidate);
+                }
+            }
+        }
+        if (typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))) {
+            if (typeof fetch === 'function') {
+                const res = await fetch(url);
+                if (res.ok) {
+                    const arrayBuf = await res.arrayBuffer();
+                    return Buffer.from(arrayBuf);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn(`[Audio Buffer Fetch Failed for ${url?.slice?.(0, 80)}]:`, e.message);
+    }
+    return null;
+}
+
+// Detect FFmpeg for WhatsApp PTT voice note audio transcoding
+let ffmpegBinPath = null;
+try {
+    const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+    if (ffmpegInstaller && ffmpegInstaller.path && fs.existsSync(ffmpegInstaller.path)) {
+        ffmpegBinPath = ffmpegInstaller.path;
+        console.log('[FFmpeg Audio Engine] Loaded binary from @ffmpeg-installer/ffmpeg:', ffmpegBinPath);
+    }
+} catch (e) {
+    console.warn('[FFmpeg Audio Engine] Could not load @ffmpeg-installer/ffmpeg:', e.message);
+}
+
+/**
+ * Transcodes any audio (MP3, WebM, WAV, AAC) into WhatsApp-native Opus OGG format.
+ * WhatsApp PTT voice notes STRICTLY require libopus inside an OGG container at 48000Hz mono.
+ */
+async function convertToWhatsAppOpus(inputBuffer, inputExt = 'mp3') {
+    if (inputExt === 'ogg' || inputExt === 'opus') return inputBuffer;
+    if (!inputBuffer || !inputBuffer.length) return null;
+    if (!ffmpegBinPath) return inputBuffer;
+
+    const tempDir = path.resolve(__dirname, '..', 'uploads', 'voice', 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+    const rand = Math.random().toString(36).substring(2, 7);
+    const tempIn = path.join(tempDir, `ptt_in_${Date.now()}_${rand}.${inputExt}`);
+    const tempOut = path.join(tempDir, `ptt_out_${Date.now()}_${rand}.ogg`);
+
+    try {
+        fs.writeFileSync(tempIn, inputBuffer);
+        const { execSync } = require('child_process');
+        const cmd = `"${ffmpegBinPath}" -y -i "${tempIn}" -c:a libopus -b:a 32k -ar 48000 -ac 1 "${tempOut}"`;
+        execSync(cmd, { stdio: 'ignore', timeout: 8000 });
+        if (fs.existsSync(tempOut) && fs.statSync(tempOut).size > 0) {
+            const converted = fs.readFileSync(tempOut);
+            console.log(`[Audio Transcode] Successfully transcoded ${inputBuffer.length} bytes (${inputExt}) -> ${converted.length} bytes (Opus OGG)`);
+            return converted;
+        }
+    } catch (err) {
+        console.warn('[Audio Transcode Warning]:', err.message);
+    } finally {
+        try { if (fs.existsSync(tempIn)) fs.unlinkSync(tempIn); } catch (e) {}
+        try { if (fs.existsSync(tempOut)) fs.unlinkSync(tempOut); } catch (e) {}
+    }
+    return inputBuffer;
+}
+
 const configFilePath = path.join(__dirname, '..', 'whatsapp_account_config.json');
 function loadBrandConfig() {
     try {
@@ -538,7 +620,7 @@ function loadBrandConfig() {
             if (typeof rawCfg.autoReplyEnabled === 'boolean') autoReplyConfig.enabled = rawCfg.autoReplyEnabled;
             if (Array.isArray(rawCfg.autoReplyRules)) autoReplyRules = rawCfg.autoReplyRules;
         }
-    } catch (e) {}
+    } catch (e) { }
 }
 loadBrandConfig();
 
@@ -596,7 +678,7 @@ function forwardToCRM(data) {
                     'Content-Length': Buffer.byteLength(postData)
                 }
             }, (res) => {
-                res.on('data', () => {});
+                res.on('data', () => { });
             });
 
             req.on('error', (e) => {
@@ -648,11 +730,11 @@ function resolveDestinationJid(phoneOrJid) {
                                 console.log(`[JID Resolver Disk Hit] Resolved LID ${lidDigits} -> ${ph}@s.whatsapp.net`);
                                 return `${ph}@s.whatsapp.net`;
                             }
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
         return `${lidDigits}@lid`;
     }
 
@@ -830,7 +912,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     realPhone = '+' + digits;
                                 }
                             }
-                            
+
                             // 2. Check disk reverse file if not found
                             if (!realPhone) {
                                 const reverseFile = path.join(sessionDir, `lid-mapping-${cleanNumber}_reverse.json`);
@@ -843,7 +925,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                                 realPhone = digits.length === 10 ? ('+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5)) : (digits.length === 12 && digits.startsWith('91') ? ('+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7)) : ('+' + digits));
                                             }
                                         }
-                                    } catch (e) {}
+                                    } catch (e) { }
                                 }
                             }
 
@@ -861,9 +943,9 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                                 realPhone = digits.length === 10 ? ('+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5)) : (digits.length === 12 && digits.startsWith('91') ? ('+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7)) : ('+' + digits));
                                                 break;
                                             }
-                                        } catch (e) {}
+                                        } catch (e) { }
                                     }
-                                } catch (e) {}
+                                } catch (e) { }
                             }
                         }
 
@@ -1058,12 +1140,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             }
 
                             // 2. Greetings and full catalog triggers (matches "hi", "hiiiii...", "hello...", "heyyy...", etc.)
-                            const isGreetingOrMenu = /^h+i+/i.test(cleanMsg) || 
-                                                     /^h+e+y+/i.test(cleanMsg) || 
-                                                     /^h+e+l+l+o+/i.test(cleanMsg) || 
-                                                     /^(vanakkam|namaste|start|menu|catalog|catalogue|stock|price|rate|help|order)/i.test(cleanMsg) ||
-                                                     cleanMsg.length <= 20 || 
-                                                     lastMenuEpoch === 0;
+                            const isGreetingOrMenu = /^h+i+/i.test(cleanMsg) ||
+                                /^h+e+y+/i.test(cleanMsg) ||
+                                /^h+e+l+l+o+/i.test(cleanMsg) ||
+                                /^(vanakkam|namaste|start|menu|catalog|catalogue|stock|price|rate|help|order)/i.test(cleanMsg) ||
+                                cleanMsg.length <= 20 ||
+                                lastMenuEpoch === 0;
 
                             if (!replyObj && isGreetingOrMenu && isMenuCooldownPassed) {
                                 clearCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber);
@@ -1075,67 +1157,67 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                             if (replyObj) {
                                 setTimeout(async () => {
-                                        try {
-                                            const targetJid = resolveDestinationJid(senderNumber || senderJid);
-                                            let sentRes = null;
-                                            let botText = '';
-                                            let botType = 'text';
-                                            let botMediaUrl = null;
+                                    try {
+                                        const targetJid = resolveDestinationJid(senderNumber || senderJid);
+                                        let sentRes = null;
+                                        let botText = '';
+                                        let botType = 'text';
+                                        let botMediaUrl = null;
 
-                                            if (replyObj.type === 'image' && replyObj.image) {
-                                                botType = 'image';
-                                                botMediaUrl = replyObj.image;
-                                                botText = replyObj.caption;
-                                                console.log(`[Auto-Reply Engine] 📸 Sending Product Photo to ${senderName} (${targetJid}): "${replyObj.caption.slice(0, 40)}..."`);
-                                                
-                                                const imgBuf = await getImageBuffer(replyObj.image);
-                                                if (imgBuf) {
-                                                    try {
-                                                        sentRes = await sock.sendMessage(targetJid, {
-                                                            image: imgBuf,
-                                                            caption: replyObj.caption
-                                                        });
-                                                    } catch (imgErr) {
-                                                        console.warn('[Image Send Failed, Falling back to Text]:', imgErr.message);
-                                                    }
-                                                }
+                                        if (replyObj.type === 'image' && replyObj.image) {
+                                            botType = 'image';
+                                            botMediaUrl = replyObj.image;
+                                            botText = replyObj.caption;
+                                            console.log(`[Auto-Reply Engine] 📸 Sending Product Photo to ${senderName} (${targetJid}): "${replyObj.caption.slice(0, 40)}..."`);
 
-                                                if (!sentRes) {
+                                            const imgBuf = await getImageBuffer(replyObj.image);
+                                            if (imgBuf) {
+                                                try {
                                                     sentRes = await sock.sendMessage(targetJid, {
-                                                        text: `${replyObj.caption}\n\n🖼️ *Product Image:* ${replyObj.image}`
+                                                        image: imgBuf,
+                                                        caption: replyObj.caption
                                                     });
+                                                } catch (imgErr) {
+                                                    console.warn('[Image Send Failed, Falling back to Text]:', imgErr.message);
                                                 }
-                                            } else {
-                                                botText = replyObj.text || replyObj;
-                                                console.log(`[Auto-Reply Engine] 🤖 Dispatching response to ${senderName} (${targetJid}): "${cleanMsg}"`);
-                                                sentRes = await sock.sendMessage(targetJid, { text: botText });
                                             }
 
-                                            console.log(`[Auto-Reply Engine] ✅ Delivered to ${targetJid} (ID: ${sentRes?.key?.id})`);
-
-                                            const botPayload = {
-                                                id: sentRes?.key?.id || ('bot_' + Date.now()),
-                                                sender_name: 'Bot (Auto-Reply)',
-                                                sender_phone: senderNumber,
-                                                sender_jid: targetJid,
-                                                message_text: botText,
-                                                type: botType,
-                                                media_url: botMediaUrl,
-                                                account_id: accountId,
-                                                source: 'AUTOREPLY_BOT',
-                                                rule_name: replyObj.ruleName || 'Auto-Reply',
-                                                rule_id: replyObj.ruleId || null,
-                                                is_outbound: true,
-                                                timestamp_epoch: Math.floor(Date.now() / 1000),
-                                                received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                            };
-                                            io.emit('whatsapp:inbound', botPayload);
-                                            forwardToCRM(botPayload);
-                                        } catch (err) {
-                                            console.error('[Auto-Reply Send Error]:', err.message);
+                                            if (!sentRes) {
+                                                sentRes = await sock.sendMessage(targetJid, {
+                                                    text: `${replyObj.caption}\n\n🖼️ *Product Image:* ${replyObj.image}`
+                                                });
+                                            }
+                                        } else {
+                                            botText = replyObj.text || replyObj;
+                                            console.log(`[Auto-Reply Engine] 🤖 Dispatching response to ${senderName} (${targetJid}): "${cleanMsg}"`);
+                                            sentRes = await sock.sendMessage(targetJid, { text: botText });
                                         }
-                                    }, 500);
-                                }
+
+                                        console.log(`[Auto-Reply Engine] ✅ Delivered to ${targetJid} (ID: ${sentRes?.key?.id})`);
+
+                                        const botPayload = {
+                                            id: sentRes?.key?.id || ('bot_' + Date.now()),
+                                            sender_name: 'Bot (Auto-Reply)',
+                                            sender_phone: senderNumber,
+                                            sender_jid: targetJid,
+                                            message_text: botText,
+                                            type: botType,
+                                            media_url: botMediaUrl,
+                                            account_id: accountId,
+                                            source: 'AUTOREPLY_BOT',
+                                            rule_name: replyObj.ruleName || 'Auto-Reply',
+                                            rule_id: replyObj.ruleId || null,
+                                            is_outbound: true,
+                                            timestamp_epoch: Math.floor(Date.now() / 1000),
+                                            received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                        };
+                                        io.emit('whatsapp:inbound', botPayload);
+                                        forwardToCRM(botPayload);
+                                    } catch (err) {
+                                        console.error('[Auto-Reply Send Error]:', err.message);
+                                    }
+                                }, 500);
+                            }
                         }
                     }
                 }
@@ -1181,7 +1263,25 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
     let finalText = typeof text === 'string' ? text.trim() : String(text || '');
 
     let sent = null;
-    if (mediaUrl) {
+    const isAudioMsg = (typeof mediaUrl === 'string' && (mediaUrl.includes('.mp3') || mediaUrl.includes('.ogg') || mediaUrl.includes('.webm') || mediaUrl.includes('/voice/') || mediaUrl.startsWith('data:audio')));
+    if (mediaUrl && isAudioMsg) {
+        console.log(`[Outbound Voice Send via ${activeAcc.connectedNumber || activeAcc.id}] Dispatching voice note PTT to ${jid}`);
+        const rawAudioBuf = await getAudioBuffer(mediaUrl);
+        if (rawAudioBuf) {
+            try {
+                const ext = mediaUrl.includes('.webm') ? 'webm' : (mediaUrl.includes('.ogg') ? 'ogg' : 'mp3');
+                const opusAudioBuf = await convertToWhatsAppOpus(rawAudioBuf, ext);
+                sent = await activeAcc.sock.sendMessage(jid, {
+                    audio: opusAudioBuf || rawAudioBuf,
+                    mimetype: 'audio/ogg; codecs=opus',
+                    ptt: true
+                });
+                console.log(`[Outbound Voice Delivered] Voice note delivered to ${jid} (ID: ${sent?.key?.id})`);
+            } catch (aErr) {
+                console.warn('[Voice Send Failed, Falling back]:', aErr.message);
+            }
+        }
+    } else if (mediaUrl) {
         console.log(`[Outbound Media Send via ${activeAcc.connectedNumber || activeAcc.id}] Dispatching image to ${jid} with caption: "${finalText.slice(0, 50)}..."`);
         const imgBuf = await getImageBuffer(mediaUrl);
         if (imgBuf) {
@@ -1214,7 +1314,6 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
         timestamp: new Date().toISOString()
     };
 }
-
 // Initialize all saved sessions
 function initializeAllSessions() {
     try {
@@ -1233,7 +1332,7 @@ function initializeAllSessions() {
             if (dir !== 'account_1') {
                 const credsFile = path.join(SESSIONS_BASE_DIR, dir, 'creds.json');
                 if (!fs.existsSync(credsFile)) {
-                    try { fs.rmSync(path.join(SESSIONS_BASE_DIR, dir), { recursive: true, force: true }); } catch (e) {}
+                    try { fs.rmSync(path.join(SESSIONS_BASE_DIR, dir), { recursive: true, force: true }); } catch (e) { }
                 }
             }
         });
@@ -1310,7 +1409,7 @@ io.on('connection', (socket) => {
                 const currentCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
                 currentCfg.autoReplyEnabled = autoReplyConfig.enabled;
                 fs.writeFileSync(configFilePath, JSON.stringify(currentCfg, null, 2), 'utf8');
-            } catch (e) {}
+            } catch (e) { }
         }
         io.emit('autoreply:updated', { enabled: autoReplyConfig.enabled });
         console.log(`[Auto-Reply Engine] 🔄 Auto-Reply socket toggle: ${autoReplyConfig.enabled ? 'ON' : 'OFF'}`);
@@ -1341,7 +1440,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('disconnect', () => {});
+    socket.on('disconnect', () => { });
 });
 
 // -------------------------------------------------------------
@@ -1369,7 +1468,7 @@ app.post('/api/autoreply/toggle', (req, res) => {
                 const currentCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
                 currentCfg.autoReplyEnabled = autoReplyConfig.enabled;
                 fs.writeFileSync(configFilePath, JSON.stringify(currentCfg, null, 2), 'utf8');
-            } catch (err) {}
+            } catch (err) { }
         }
 
         // Broadcast to connected Socket.IO CRM clients
@@ -1453,14 +1552,14 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
         if (accounts.has(targetId)) {
             const acc = accounts.get(targetId);
             if (acc.sock) {
-                try { await acc.sock.logout(); } catch (e) {}
-                try { acc.sock.end(); } catch (e) {}
+                try { await acc.sock.logout(); } catch (e) { }
+                try { acc.sock.end(); } catch (e) { }
             }
         }
 
         const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
         if (fs.existsSync(sessionDir)) {
-            try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) {}
+            try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) { }
         }
 
         initAccountSession(targetId, label);
@@ -1479,13 +1578,13 @@ app.post('/api/accounts/delete', async (req, res) => {
         if (accounts.has(accountId)) {
             const acc = accounts.get(accountId);
             if (acc.sock) {
-                try { await acc.sock.logout(); } catch (e) {}
-                try { acc.sock.end(); } catch (e) {}
+                try { await acc.sock.logout(); } catch (e) { }
+                try { acc.sock.end(); } catch (e) { }
             }
             accounts.delete(accountId);
             const sessionDir = path.join(SESSIONS_BASE_DIR, accountId);
             if (fs.existsSync(sessionDir)) {
-                try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) {}
+                try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) { }
             }
             broadcastAccountsUpdate();
             return res.json({ status: 'success', message: `Account ${accountId} deleted successfully.` });
@@ -1520,8 +1619,8 @@ app.post('/api/accounts/disconnect', async (req, res) => {
         }
 
         if (acc.sock) {
-            try { await acc.sock.logout(); } catch (e) {}
-            try { acc.sock.end(); } catch (e) {}
+            try { await acc.sock.logout(); } catch (e) { }
+            try { acc.sock.end(); } catch (e) { }
         }
         acc.sock = null;
         acc.status = 'DISCONNECTED';
@@ -1543,7 +1642,7 @@ app.post('/api/accounts/disconnect', async (req, res) => {
         if (targetId === 'account_1') {
             const legacyDir = path.join(__dirname, 'auth_session');
             if (fs.existsSync(legacyDir)) {
-                try { fs.rmSync(legacyDir, { recursive: true, force: true }); } catch (e) {}
+                try { fs.rmSync(legacyDir, { recursive: true, force: true }); } catch (e) { }
             }
         }
 
@@ -1554,9 +1653,9 @@ app.post('/api/accounts/disconnect', async (req, res) => {
             initAccountSession(targetId, acc.label);
         }, 800);
 
-        return res.json({ 
-            status: 'success', 
-            message: `Account ${targetId} disconnected. CRM records and customer messages are completely preserved.` 
+        return res.json({
+            status: 'success',
+            message: `Account ${targetId} disconnected. CRM records and customer messages are completely preserved.`
         });
     } catch (e) {
         console.error('[Disconnect Error]:', e.message);
@@ -1732,6 +1831,22 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Broadcast Telephony Call Masking Events (call:incoming, call:claimed, call:ended)
+app.post('/api/calls/event', (req, res) => {
+    try {
+        const { event, data } = req.body;
+        if (!event) {
+            return res.status(400).json({ status: 'error', message: 'Event name is required' });
+        }
+        // Broadcast across all connected Socket.IO staff client browser tabs
+        io.emit(event, data || {});
+        console.log(`[Call Masking Socket] Broadcasted "${event}" across clients:`, data);
+        res.json({ status: 'success', event, clients: io.engine ? io.engine.clientsCount : 0 });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
+});
+
 app.post('/api/calls/initiate', async (req, res) => {
     try {
         const { customerPhone, customerName, staffName, accountId } = req.body;
@@ -1752,7 +1867,7 @@ app.post('/api/calls/initiate', async (req, res) => {
         if (activeAcc && activeAcc.sock) {
             try {
                 await activeAcc.sock.updateProfileName(brand);
-            } catch (e) {}
+            } catch (e) { }
         }
 
         console.log(`[Call Initiated] Brand Call to ${customerPhone} by ${staffName || 'Staff'} under identity "${brand}"`);
