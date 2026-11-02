@@ -168,14 +168,17 @@ try {
     if (file_exists($queueFile)) {
         $q = json_decode(file_get_contents($queueFile), true) ?: [];
         $q[] = [
-            'id' => 'msg_' . uniqid(),
+            'id' => $waMsgId ?: ('msg_' . uniqid()),
             'sender_name' => 'CRM Staff',
-            'sender_phone' => '+91 86680 07593',
+            'sender_phone' => $phone,
+            'customer_id' => $customerId,
             'message_text' => '🎤 WhatsApp Voice Note',
             'type' => 'audio',
+            'media_type' => 'audio',
             'media_url' => $audioUrl,
             'duration' => $duration,
             'source' => 'STAFF_VOICE_OUTBOUND',
+            'is_outbound' => true,
             'timestamp_epoch' => time(),
             'received_at' => date('h:i A')
         ];

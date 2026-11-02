@@ -21,10 +21,22 @@
       "status": "DISCONNECTED"
     }
   ],
-  "autoReplyEnabled": false,
+  "autoReplyEnabled": true,
   "autoReplyCooldownMinutes": 0,
   "autoReplyKeywordMatching": true,
   "autoReplyRules": [
+    {
+      "id": "rule_1793592695146",
+      "name": "setetwew",
+      "keywords": [
+        "wewqrqe"
+      ],
+      "actionType": "custom_text",
+      "categoryId": null,
+      "replyText": "werwqrqwqrwqr",
+      "enabled": true,
+      "autoSend": true
+    },
     {
       "id": "ar_01",
       "name": "Baby Collection",

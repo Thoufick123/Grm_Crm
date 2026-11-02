@@ -1101,6 +1101,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         console.log(`[Inbound on ${accountObj.connectedNumber || accountId}] From ${senderName} (${senderJid}): "${messageText}" [${msgType}]`);
 
                         const payload = {
+                            id: msgId || ('msg_' + Date.now()),
                             sender_name: senderName,
                             sender_phone: senderNumber,
                             sender_jid: senderJid,

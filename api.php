@@ -39,11 +39,12 @@ if (isset($_GET['action'])) {
         require_once __DIR__ . '/voice_translator/send_voice.php';
         exit;
     }
-    if ($act === 'receive_voice' || $act === 'voice_translate_inbound') {
+    if ($act === 'receive_voice' || $act === 'voice_translate_inbound' || $act === 'translate_inbound_voice') {
         require_once __DIR__ . '/voice_translator/receive_voice.php';
         exit;
     }
 }
+
 
 // =========================================================================
 // ULTRA-FAST ON-DEMAND TRANSLATION (0ms overhead, runs before DB/Sessions)
@@ -204,6 +205,29 @@ if (!headers_sent() && session_status() === PHP_SESSION_NONE) {
 }
 
 $pdo = getDBConnection();
+if (isset($_GET['action']) && $_GET['action'] === 'reset_customer_payment') {
+    $raw = file_get_contents('php://input');
+    $d = json_decode($raw, true) ?: $_POST;
+    $cId = trim($d['customer_id'] ?? '');
+    $fuId = trim($d['followup_id'] ?? '');
+    $qId = trim($d['query_id'] ?? '');
+    if ($pdo) {
+        if (!empty($cId)) {
+            $pdo->prepare("UPDATE `queries` SET `is_payment_pending` = 0, `payment_amount` = 0, `shipping_amount` = 0, `advance_payment` = 0, `payment_due_date` = '', `payment_notes` = '', `quoted_items` = '' WHERE `customer_id` = ?")->execute([$cId]);
+            $pdo->prepare("UPDATE `followups` SET `is_payment_pending` = 0, `payment_amount` = 0, `shipping_amount` = 0, `advance_payment` = 0, `payment_due_date` = '', `payment_notes` = '', `quoted_items` = '' WHERE `customer_id` = ?")->execute([$cId]);
+        }
+        if (!empty($fuId)) {
+            $pdo->prepare("UPDATE `followups` SET `is_payment_pending` = 0, `payment_amount` = 0, `shipping_amount` = 0, `advance_payment` = 0, `payment_due_date` = '', `payment_notes` = '', `quoted_items` = '' WHERE `id` = ?")->execute([$fuId]);
+        }
+        if (!empty($qId)) {
+            $pdo->prepare("UPDATE `queries` SET `is_payment_pending` = 0, `payment_amount` = 0, `shipping_amount` = 0, `advance_payment` = 0, `payment_due_date` = '', `payment_notes` = '', `quoted_items` = '' WHERE `id` = ?")->execute([$qId]);
+        }
+    }
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true]);
+    exit;
+}
+
 $configFile = __DIR__ . '/whatsapp_account_config.json';
 $messagesFile = __DIR__ . '/live_messages_queue.json';
 $bridgeUrl = defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000';
@@ -298,14 +322,19 @@ if ($action === 'get_state' || $action === 'get_all') {
                 $conversations[$cid] = [];
             }
             $conversations[$cid][] = [
-                'id' => $msg['id'],
+                'id' => (string)$msg['id'],
                 'sender' => $msg['sender'],
                 'text' => $msg['text'],
+                'type' => $msg['media_type'] ?: 'text',
+                'media_type' => $msg['media_type'],
                 'mediaType' => $msg['media_type'],
+                'media_url' => $msg['media_url'],
                 'mediaUrl' => $msg['media_url'],
+                'duration' => (float)($msg['audio_duration'] ?: 8),
+                'audio_duration' => $msg['audio_duration'],
                 'audioDuration' => $msg['audio_duration'],
                 'time' => $msg['time_str'],
-                'status' => $msg['status']
+                'status' => $msg['status'] ?: 'DELIVERED'
             ];
         }
 
@@ -322,8 +351,12 @@ if ($action === 'get_state' || $action === 'get_all') {
             $o['customerPhone'] = $o['customer_phone'] ?? '';
             $o['shippingAddress'] = $o['shipping_address'] ?? '';
             $o['grandTotal'] = (float)($o['grand_total'] ?? 0);
-            $o['codAdvance'] = (float)($o['cod_advance'] ?? 0);
-            $o['codBalanceDue'] = (float)($o['cod_balance_due'] ?? 0);
+            $o['codAdvance'] = (float)($o['cod_advance'] ?? ($o['advance_payment'] ?? 0));
+            $o['codBalanceDue'] = (float)($o['cod_balance_due'] ?? ($o['balance_amount'] ?? 0));
+            $o['shippingAmount'] = (float)($o['shipping_amount'] ?? 0);
+            $o['shippingCharge'] = (float)($o['shipping_amount'] ?? 0);
+            $o['advancePayment'] = (float)($o['advance_payment'] ?? ($o['cod_advance'] ?? 0));
+            $o['balanceAmount'] = (float)($o['balance_amount'] ?? ($o['cod_balance_due'] ?? 0));
             $o['paymentMethod'] = $o['payment_method'] ?? 'COD';
             $o['paymentStatus'] = $o['payment_status'] ?? 'PENDING';
             $o['upiTransactionId'] = $o['upi_transaction_id'] ?? '';
@@ -338,7 +371,7 @@ if ($action === 'get_state' || $action === 'get_all') {
         }
 
         // 8. Followups (Normalized with lifecycle & RBAC fields)
-        $fStmt = $pdo->query("SELECT * FROM `followups` ORDER BY `created_at` DESC");
+        $fStmt = $pdo->query("SELECT * FROM `followups` WHERE `id` NOT LIKE 'FU-2026-000%' AND `id` NOT IN ('FU-2026-00107', 'FU-2026-00108', 'FU-2026-00109', 'FU-2026-00110') AND `customer_id` NOT IN ('cust_101', 'cust_102', 'cust_103') AND (`reason` IS NULL OR `reason` NOT LIKE '%ytfdw%') ORDER BY `created_at` DESC");
         $rawFollowups = $fStmt->fetchAll();
         $followups = array_map(function($fu) {
             return [
@@ -1106,8 +1139,10 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $timestampEpoch = $payload['timestamp_epoch'] ?? time();
     $receivedAt = $payload['received_at'] ?? date("h:i A");
 
+    $msgUid = $payload['id'] ?? ("msg_" . uniqid());
     $msgEntry = [
-        "id" => "msg_" . uniqid(),
+        "id" => $msgUid,
+        "message_uid" => $msgUid,
         "sender_name" => $senderName,
         "sender_phone" => $senderPhone,
         "sender_jid" => $payload['sender_jid'] ?? null,
@@ -1164,11 +1199,12 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $custId = $existingCust['id'];
             }
 
-            // Insert message
+            // Insert message (Deduplicated with UNIQUE message_uid)
             $pdo->prepare("
-                INSERT INTO `messages` (`customer_id`, `sender`, `text`, `media_type`, `media_url`, `time_str`, `status`)
-                VALUES (?, 'customer', ?, ?, ?, ?, 'DELIVERED')
-            ")->execute([$custId, $messageText, $type, $mediaUrl, $receivedAt]);
+                INSERT INTO `messages` (`message_uid`, `customer_id`, `sender`, `text`, `media_type`, `media_url`, `audio_duration`, `time_str`, `status`)
+                VALUES (?, ?, 'customer', ?, ?, ?, ?, ?, 'DELIVERED')
+                ON DUPLICATE KEY UPDATE `media_url` = IF(VALUES(`media_url`) IS NOT NULL, VALUES(`media_url`), `media_url`)
+            ")->execute([$msgUid, $custId, $messageText, $type, $mediaUrl, $duration, $receivedAt]);
 
             // Update or insert query
             $checkQ = $pdo->prepare("SELECT `id`, `unread_count` FROM `queries` WHERE `customer_id` = ? LIMIT 1");
@@ -1196,6 +1232,43 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     echo json_encode(["status" => "success", "message" => "Message stored in queue and database", "entry" => $msgEntry]);
+    exit;
+}
+
+if ($action === 'get_customer_messages') {
+    $cid = $_GET['customer_id'] ?? '';
+    if (empty($cid) && !empty($_GET['phone'])) {
+        $cPhone = preg_replace('/[^0-9]/', '', $_GET['phone']);
+        $cStmt = $pdo->prepare("SELECT id FROM customers WHERE phone LIKE ? OR whatsapp LIKE ? LIMIT 1");
+        $cStmt->execute(['%' . substr($cPhone, -10), '%' . substr($cPhone, -10)]);
+        $cid = $cStmt->fetchColumn() ?: '';
+    }
+    $msgs = [];
+    if ($pdo && !empty($cid)) {
+        $stmt = $pdo->prepare("SELECT * FROM messages WHERE customer_id = ? ORDER BY id ASC");
+        $stmt->execute([$cid]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $r) {
+            $msgs[] = [
+                'id' => (string)($r['message_uid'] ?: $r['id']),
+                'message_uid' => (string)($r['message_uid'] ?: $r['id']),
+                'db_id' => (int)$r['id'],
+                'sender' => $r['sender'],
+                'text' => $r['text'],
+                'type' => $r['media_type'] ?: 'text',
+                'media_type' => $r['media_type'],
+                'mediaType' => $r['media_type'],
+                'media_url' => $r['media_url'],
+                'mediaUrl' => $r['media_url'],
+                'duration' => (float)($r['audio_duration'] ?: 8),
+                'audioDuration' => (float)($r['audio_duration'] ?: 8),
+                'time' => $r['time_str'],
+                'status' => $r['status'] ?: 'DELIVERED',
+                'created_at' => $r['created_at']
+            ];
+        }
+    }
+    echo json_encode(['status' => 'success', 'messages' => $msgs]);
     exit;
 }
 
@@ -2123,8 +2196,11 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $orderStatus = $order['orderStatus'] ?? ($order['order_status'] ?? 'STOCK_RESERVED');
         $customerPhone = $order['customerPhone'] ?? ($order['customer_phone'] ?? '');
         $shippingAddress = $order['shippingAddress'] ?? ($order['shipping_address'] ?? '');
-        $codAdvance = (float)($order['codAdvance'] ?? ($order['cod_advance'] ?? 0));
-        $codBalanceDue = (float)($order['codBalanceDue'] ?? ($order['cod_balance_due'] ?? 0));
+        $shippingAmount = (float)($order['shippingAmount'] ?? ($order['shipping_amount'] ?? ($order['shippingCharge'] ?? ($order['shipping_charge'] ?? 0))));
+        $codAdvance = (float)($order['codAdvance'] ?? ($order['cod_advance'] ?? ($order['advancePayment'] ?? ($order['advance_payment'] ?? 0))));
+        $codBalanceDue = (float)($order['codBalanceDue'] ?? ($order['cod_balance_due'] ?? ($order['balanceAmount'] ?? ($order['balance_amount'] ?? 0))));
+        $advancePayment = $codAdvance;
+        $balanceAmount = $codBalanceDue;
         $upiTransactionId = $order['upiTransactionId'] ?? ($order['upi_transaction_id'] ?? '');
         $paymentScreenshot = $order['paymentScreenshot'] ?? ($order['payment_screenshot'] ?? '');
         $createdBy = $order['createdBy'] ?? ($order['created_by'] ?? ($order['user'] ?? 'Staff'));
@@ -2166,10 +2242,11 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             INSERT INTO `orders` (
                 `id`, `query_id`, `customer_id`, `customer_name`, `customer_phone`,
                 `shipping_address`, `items_json`, `grand_total`, `cod_advance`, `cod_balance_due`,
+                `shipping_amount`, `advance_payment`, `balance_amount`,
                 `payment_method`, `payment_status`, `upi_transaction_id`, `payment_screenshot`,
                 `order_status`, `tracking_number`, `courier_name`, `shipping_url`, `created_by`, `staff_id`, `staff_name`
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE 
                 `customer_name` = VALUES(`customer_name`),
                 `customer_phone` = VALUES(`customer_phone`),
@@ -2178,6 +2255,9 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 `grand_total` = VALUES(`grand_total`),
                 `cod_advance` = VALUES(`cod_advance`),
                 `cod_balance_due` = VALUES(`cod_balance_due`),
+                `shipping_amount` = VALUES(`shipping_amount`),
+                `advance_payment` = VALUES(`advance_payment`),
+                `balance_amount` = VALUES(`balance_amount`),
                 `payment_method` = VALUES(`payment_method`),
                 `payment_status` = VALUES(`payment_status`),
                 `upi_transaction_id` = VALUES(`upi_transaction_id`),
@@ -2192,6 +2272,7 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             $orderId, $queryId, $customerId, $customerName, $customerPhone,
             $shippingAddress, json_encode($items), $grandTotal, $codAdvance, $codBalanceDue,
+            $shippingAmount, $advancePayment, $balanceAmount,
             $paymentMethod, $paymentStatus, $upiTransactionId, $paymentScreenshot,
             $orderStatus, $trackingNumber, $courierName, $shippingUrl, $createdBy, $staffId, $staffName
         ]);
@@ -2243,6 +2324,13 @@ if ($action === 'update_order_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         exit;
     }
 
+    $validStatuses = ['PLACED', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
+    if (!in_array($newStatus, $validStatuses)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Invalid order status value: " . htmlspecialchars($newStatus)]);
+        exit;
+    }
+
     if (!$pdo) {
         echo json_encode(["status" => "success", "message" => "Order updated locally"]);
         exit;
@@ -2257,6 +2345,42 @@ if ($action === 'update_order_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
         if ($order) {
             $oldStatus = $order['order_status'];
+
+            // Strict Sequential Validation (Cannot jump stages and cannot move backward)
+            $stageOrder = [
+                'PLACED' => 1,
+                'PACKED' => 2,
+                'SHIPPED' => 3,
+                'OUT_FOR_DELIVERY' => 4,
+                'DELIVERED' => 5
+            ];
+
+            $normOld = strtoupper(trim($oldStatus));
+            $normNew = strtoupper(trim($newStatus));
+
+            if ($normOld !== $normNew && $normNew !== 'CANCELLED') {
+                if ($normOld === 'DELIVERED') {
+                    http_response_code(400);
+                    echo json_encode(["status" => "error", "message" => "Strict Validation: Delivered orders cannot be modified."]);
+                    exit;
+                }
+
+                $oldStep = $stageOrder[$normOld] ?? 1;
+                $newStep = $stageOrder[$normNew] ?? 1;
+
+                if ($newStep < $oldStep) {
+                    http_response_code(400);
+                    echo json_encode(["status" => "error", "message" => "Strict Validation: Cannot move status backward from {$normOld} to {$normNew}."]);
+                    exit;
+                }
+
+                if ($newStep > $oldStep + 1) {
+                    http_response_code(400);
+                    echo json_encode(["status" => "error", "message" => "Strict Validation: Cannot jump stages from {$normOld} to {$normNew}. Orders must proceed sequentially: Placed -> Packed -> Shipped -> Out for Delivery -> Delivered."]);
+                    exit;
+                }
+            }
+
             $items = json_decode($order['items_json'], true) ?: [];
 
             // If cancelling: release reserved stock
@@ -2474,6 +2598,17 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($pdo) {
         try {
+            // Deduplicate: If an active pending follow-up exists for this customer, update it instead of creating duplicates
+            $targetId = $fu['id'];
+            if (!empty($cId)) {
+                $existingCheck = $pdo->prepare("SELECT `id` FROM `followups` WHERE `customer_id` = ? AND `is_payment_pending` = ? AND `status` = 'PENDING' LIMIT 1");
+                $existingCheck->execute([$cId, $isPaymentPending]);
+                $existingRow = $existingCheck->fetch(PDO::FETCH_ASSOC);
+                if ($existingRow && !empty($existingRow['id'])) {
+                    $targetId = $existingRow['id'];
+                }
+            }
+
             $stmt = $pdo->prepare("
                 INSERT INTO `followups` (`id`, `query_id`, `rescheduled_from_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`, `is_payment_pending`, `payment_amount`, `shipping_amount`, `payment_mode`, `advance_payment`, `payment_due_date`, `payment_notes`, `quoted_items`)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -2494,7 +2629,7 @@ if ($action === 'save_followup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     `quoted_items` = VALUES(`quoted_items`)
             ");
             $stmt->execute([
-                $fu['id'],
+                $targetId,
                 $qId,
                 $rescheduledFrom,
                 $cId,
@@ -3577,6 +3712,553 @@ if ($action === 'restore_db') {
         echo json_encode(["status" => "error", "message" => "Database restore failed: " . $e->getMessage()]);
         exit;
     }
+}
+
+// =========================================================================
+// CALL & NUMBER MASKING TELEPHONY ENGINE (MYSQL PERSISTENCE & ATOMIC DISPATCH)
+// =========================================================================
+function notifySocketBridge($event, $data = []) {
+    $bridgeUrl = 'http://localhost:3000/api/calls/event';
+    $payload = json_encode(['event' => $event, 'data' => $data]);
+    $ch = @curl_init($bridgeUrl);
+    if ($ch) {
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        @curl_exec($ch);
+        @curl_close($ch);
+    }
+}
+
+if ($action === 'get_masking_settings') {
+    header('Content-Type: application/json');
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $stmt = $pdo->query("SELECT * FROM `masking_settings` ORDER BY `id` ASC LIMIT 1");
+        $settings = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$settings) {
+            $pdo->exec("INSERT INTO `masking_settings` (`id`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `simultaneous_ring_limit`, `updated_by`) VALUES (1, 1, 1, 30, 'RETURN_TO_POOL', '+91 97896 60115', 'staff_01,staff_02,staff_03', 1, 5, 'Super Admin')");
+            $settings = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
+        }
+
+        // Live Call Metrics
+        $metrics = [
+            "incoming_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` = 'RINGING'")->fetchColumn(),
+            "active_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` IN ('CONNECTED', 'CLAIMED', 'ASSIGNED')")->fetchColumn(),
+            "completed_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` = 'COMPLETED'")->fetchColumn(),
+            "missed_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` IN ('MISSED', 'TIMEOUT', 'REJECTED')")->fetchColumn(),
+            "total_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions`")->fetchColumn()
+        ];
+
+        // Fetch staff members with availability and eligibility
+        $staffStmt = $pdo->query("SELECT `id`, `name`, `role`, `avatar`, `status` FROM `users` WHERE `status` = 'active'");
+        $staffList = $staffStmt->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($staffList)) {
+            $staffList = [
+                ["id" => "admin", "name" => "Super Admin", "role" => "admin", "avatar" => "SA", "status" => "active"],
+                ["id" => "staff_01", "name" => "Kavitha Raman", "role" => "Sales Specialist (Baby Collection)", "avatar" => "KR", "status" => "active"],
+                ["id" => "staff_02", "name" => "Suresh Kumar", "role" => "Enquiry Specialist (Maternity & Kids)", "avatar" => "SK", "status" => "active"],
+                ["id" => "staff_03", "name" => "Priya Dharshini", "role" => "Order Fulfillment & Support", "avatar" => "PD", "status" => "active"]
+            ];
+        }
+
+        $eligibleArray = array_filter(array_map('trim', explode(',', $settings['eligible_staff_ids'] ?? '')));
+        $busyStaffIds = $pdo->query("SELECT DISTINCT `assigned_staff_id` FROM `call_sessions` WHERE `status` IN ('CONNECTED', 'CLAIMED', 'ASSIGNED') AND `assigned_staff_id` IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
+
+        $processedStaff = [];
+        $availableCount = 0;
+        $busyCount = 0;
+
+        foreach ($staffList as $st) {
+            $isEligible = in_array($st['id'], $eligibleArray) || in_array('all', $eligibleArray);
+            $isBusy = in_array($st['id'], $busyStaffIds);
+            if ($isBusy) $busyCount++;
+            else $availableCount++;
+
+            $processedStaff[] = [
+                "id" => $st['id'],
+                "name" => $st['name'],
+                "role" => $st['role'],
+                "avatar" => $st['avatar'] ?? strtoupper(substr($st['name'], 0, 2)),
+                "is_eligible" => $isEligible,
+                "is_busy" => $isBusy,
+                "status" => $isBusy ? 'BUSY' : 'AVAILABLE'
+            ];
+        }
+
+        $metrics["available_staff"] = $availableCount;
+        $metrics["busy_staff"] = $busyCount;
+
+        echo json_encode([
+            "status" => "success",
+            "settings" => $settings,
+            "metrics" => $metrics,
+            "staff" => $processedStaff
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'save_masking_settings' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?? [];
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $callMasking = isset($data['call_masking_enabled']) ? ($data['call_masking_enabled'] ? 1 : 0) : 1;
+        $chatMasking = isset($data['chat_masking_enabled']) ? ($data['chat_masking_enabled'] ? 1 : 0) : 1;
+        $timeout = intval($data['call_timeout_seconds'] ?? 30);
+        $strategy = $data['fallback_strategy'] ?? 'RETURN_TO_POOL';
+        $virtualNum = trim($data['virtual_company_number'] ?? '+91 97896 60115');
+        $recording = isset($data['recording_enabled']) ? ($data['recording_enabled'] ? 1 : 0) : 1;
+        $ringLimit = intval($data['simultaneous_ring_limit'] ?? 5);
+        $eligibleStaff = is_array($data['eligible_staff_ids'] ?? null) 
+            ? implode(',', $data['eligible_staff_ids']) 
+            : ($data['eligible_staff_ids'] ?? 'staff_01,staff_02,staff_03');
+        $updatedBy = $data['updated_by'] ?? 'Super Admin';
+
+        $stmt = $pdo->prepare("
+            INSERT INTO `masking_settings` (`id`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `simultaneous_ring_limit`, `updated_by`)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                `call_masking_enabled` = VALUES(`call_masking_enabled`),
+                `chat_masking_enabled` = VALUES(`chat_masking_enabled`),
+                `call_timeout_seconds` = VALUES(`call_timeout_seconds`),
+                `fallback_strategy` = VALUES(`fallback_strategy`),
+                `virtual_company_number` = VALUES(`virtual_company_number`),
+                `eligible_staff_ids` = VALUES(`eligible_staff_ids`),
+                `recording_enabled` = VALUES(`recording_enabled`),
+                `simultaneous_ring_limit` = VALUES(`simultaneous_ring_limit`),
+                `updated_by` = VALUES(`updated_by`)
+        ");
+        $stmt->execute([$callMasking, $chatMasking, $timeout, $strategy, $virtualNum, $eligibleStaff, $recording, $ringLimit, $updatedBy]);
+
+        try {
+            $auditStmt = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('CALL_MASKING_UPDATED', 'TELEPHONY', ?, ?, NOW())");
+            $auditStmt->execute([$updatedBy, "Updated Call & Number Masking settings. Virtual DID: $virtualNum, Call Masking: " . ($callMasking ? 'ON' : 'OFF') . ", Ring Timeout: {$timeout}s, Eligible: $eligibleStaff"]);
+        } catch (Exception $ae) {}
+
+        echo json_encode(["status" => "success", "message" => "Call masking settings saved successfully!"]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'get_incoming_calls') {
+    header('Content-Type: application/json');
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $stmt = $pdo->query("SELECT * FROM `call_sessions` WHERE `status` = 'RINGING' ORDER BY `created_at` DESC LIMIT 10");
+        $calls = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(["status" => "success", "incoming_calls" => $calls]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+// ATOMIC CALL ACCEPTANCE (RULE 2: FIRST SUCCESSFUL ACCEPTANCE WINS)
+if ($action === 'accept_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?? [];
+    $callId = trim($data['call_id'] ?? '');
+    $staffId = trim($data['staff_id'] ?? '');
+    $staffName = trim($data['staff_name'] ?? 'Staff Member');
+
+    if (empty($callId) || empty($staffId)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "call_id and staff_id are required."]);
+        exit;
+    }
+
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $pdo->beginTransaction();
+
+        // ATOMIC CONDITIONAL UPDATE: Exactly one winner can claim a call in RINGING status
+        $updateStmt = $pdo->prepare("
+            UPDATE `call_sessions`
+            SET `assigned_staff_id` = ?,
+                `assigned_staff_name` = ?,
+                `status` = 'CONNECTED',
+                `answered_at` = NOW()
+            WHERE `id` = ? AND `status` = 'RINGING'
+        ");
+        $updateStmt->execute([$staffId, $staffName, $callId]);
+
+        // Check if this worker won the atomic claim
+        if ($updateStmt->rowCount() === 0) {
+            $pdo->rollBack();
+            // Call was already claimed by another staff member, cancelled, or timed out
+            $checkStmt = $pdo->prepare("SELECT `assigned_staff_name`, `status` FROM `call_sessions` WHERE `id` = ?");
+            $checkStmt->execute([$callId]);
+            $current = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            http_response_code(409); // 409 Conflict
+            echo json_encode([
+                "status" => "conflict",
+                "message" => "This call has already been assigned to " . ($current['assigned_staff_name'] ?? 'another staff member') . ".",
+                "assigned_to" => $current['assigned_staff_name'] ?? 'Another Staff Member',
+                "call_status" => $current['status'] ?? 'CONNECTED'
+            ]);
+            exit;
+        }
+
+        // Winner gets recorded into call_assignments and call_activity_logs
+        $assignStmt = $pdo->prepare("
+            INSERT INTO `call_assignments` (`call_session_id`, `staff_id`, `staff_name`, `assignment_status`)
+            VALUES (?, ?, ?, 'ACCEPTED')
+        ");
+        $assignStmt->execute([$callId, $staffId, $staffName]);
+
+        $logStmt = $pdo->prepare("
+            INSERT INTO `call_activity_logs` (`call_session_id`, `actor_id`, `actor_name`, `action`)
+            VALUES (?, ?, ?, 'CALL_ACCEPTED')
+        ");
+        $logStmt->execute([$callId, $staffId, $staffName]);
+
+        $pdo->commit();
+
+        // Broadcast to all other staff members via Socket.IO so their Accept button immediately disables
+        notifySocketBridge('call:claimed', [
+            'call_id' => $callId,
+            'assigned_staff_id' => $staffId,
+            'assigned_staff_name' => $staffName,
+            'status' => 'CONNECTED'
+        ]);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Call successfully assigned to you!",
+            "call_id" => $callId,
+            "staff_id" => $staffId,
+            "staff_name" => $staffName
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'release_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?? [];
+    $callId = trim($data['call_id'] ?? '');
+    $reason = trim($data['reason'] ?? 'REASSIGNED');
+    $targetStaffId = trim($data['target_staff_id'] ?? '');
+    $targetStaffName = trim($data['target_staff_name'] ?? '');
+
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $pdo->beginTransaction();
+
+        if (!empty($targetStaffId)) {
+            $stmt = $pdo->prepare("
+                UPDATE `call_sessions`
+                SET `assigned_staff_id` = ?, `assigned_staff_name` = ?, `status` = 'CONNECTED'
+                WHERE `id` = ?
+            ");
+            $stmt->execute([$targetStaffId, $targetStaffName, $callId]);
+            $newStatus = 'CONNECTED';
+        } else {
+            $stmt = $pdo->prepare("
+                UPDATE `call_sessions`
+                SET `assigned_staff_id` = NULL, `assigned_staff_name` = NULL, `status` = 'RINGING'
+                WHERE `id` = ?
+            ");
+            $stmt->execute([$callId]);
+            $newStatus = 'RINGING';
+        }
+
+        $pdo->prepare("UPDATE `call_assignments` SET `released_at` = NOW(), `assignment_status` = 'RELEASED' WHERE `call_session_id` = ? AND `released_at` IS NULL")->execute([$callId]);
+
+        $pdo->prepare("INSERT INTO `call_activity_logs` (`call_session_id`, `actor_id`, `actor_name`, `action`) VALUES (?, 'admin', 'Super Admin', ?)")->execute([$callId, "CALL_RELEASED: $reason"]);
+
+        $pdo->commit();
+
+        notifySocketBridge('call:released', [
+            'call_id' => $callId,
+            'status' => $newStatus,
+            'target_staff_id' => $targetStaffId,
+            'target_staff_name' => $targetStaffName
+        ]);
+
+        echo json_encode(["status" => "success", "message" => "Call released/reassigned successfully", "new_status" => $newStatus]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'end_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?? [];
+    $callId = trim($data['call_id'] ?? '');
+    $duration = intval($data['duration_seconds'] ?? 0);
+    $outcome = trim($data['outcome'] ?? 'COMPLETED');
+    $notes = trim($data['outcome_notes'] ?? '');
+
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        if ($duration <= 0 && !empty($callId)) {
+            $startStmt = $pdo->prepare("SELECT `started_at` FROM `call_sessions` WHERE `id` = ?");
+            $startStmt->execute([$callId]);
+            $startTime = $startStmt->fetchColumn();
+            if ($startTime) {
+                $duration = max(1, time() - strtotime($startTime));
+            }
+        }
+        $stmt = $pdo->prepare("
+            UPDATE `call_sessions`
+            SET `status` = 'COMPLETED',
+                `ended_at` = NOW(),
+                `duration_seconds` = ?,
+                `outcome` = ?,
+                `outcome_notes` = ?
+            WHERE `id` = ?
+        ");
+        $stmt->execute([$duration, $outcome, $notes, $callId]);
+
+        $pdo->prepare("UPDATE `call_assignments` SET `released_at` = NOW() WHERE `call_session_id` = ? AND `released_at` IS NULL")->execute([$callId]);
+
+        $pdo->prepare("INSERT INTO `call_activity_logs` (`call_session_id`, `actor_id`, `actor_name`, `action`) VALUES (?, 'system', 'Telephony', 'CALL_COMPLETED')")->execute([$callId]);
+
+        notifySocketBridge('call:ended', [
+            'call_id' => $callId,
+            'status' => 'COMPLETED',
+            'duration_seconds' => $duration
+        ]);
+
+        echo json_encode(["status" => "success", "message" => "Call completed successfully"]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'initiate_outbound_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?? [];
+    
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $callId = 'CALL-' . rand(1000, 9999);
+        $custName = trim($data['customer_name'] ?? 'Customer');
+        $rawPhone = trim($data['customer_phone'] ?? '');
+        $customerId = trim($data['customer_id'] ?? '');
+        $staffId = trim($data['staff_id'] ?? 'admin');
+        $staffName = trim($data['staff_name'] ?? 'Super Admin');
+        
+        $cleanDigits = preg_replace('/[^0-9]/', '', $rawPhone);
+        $maskedPhone = (strlen($cleanDigits) >= 10) 
+            ? '+91 ' . substr($cleanDigits, -10, 2) . '*** ' . substr($cleanDigits, -5)
+            : $rawPhone;
+
+        $settings = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
+        $virtualNum = $settings['virtual_company_number'] ?? '+91 97896 60115';
+
+        $stmt = $pdo->prepare("
+            INSERT INTO `call_sessions` (
+                `id`, `provider_call_id`, `customer_id`, `customer_name`, `customer_phone`, 
+                `masked_phone`, `virtual_number`, `assigned_staff_id`, `assigned_staff_name`,
+                `status`, `started_at`, `answered_at`, `outcome`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONNECTED', NOW(), NOW(), 'CONNECTED')
+        ");
+        $stmt->execute([
+            $callId, 'OUT-' . uniqid(), $customerId, $custName, $rawPhone,
+            $maskedPhone, $virtualNum, $staffId, $staffName
+        ]);
+
+        $callData = [
+            'call_id' => $callId,
+            'id' => $callId,
+            'customer_id' => $customerId,
+            'customer_name' => $custName,
+            'customer_phone' => $rawPhone,
+            'masked_phone' => $maskedPhone,
+            'virtual_number' => $virtualNum,
+            'assigned_staff_id' => $staffId,
+            'assigned_staff_name' => $staffName,
+            'status' => 'CONNECTED',
+            'started_at' => date('Y-m-d H:i:s')
+        ];
+
+        notifySocketBridge('call:active', $callData);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Outbound call session registered in Call Masking Control Hub",
+            "call" => $callData
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'simulate_incoming_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?? [];
+    
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $callId = 'CALL-' . rand(1000, 9999);
+        $custName = trim($data['customer_name'] ?? 'Ananya & Baby Aarav');
+        $rawPhone = trim($data['customer_phone'] ?? '+91 97896 60115');
+        
+        $cleanDigits = preg_replace('/[^0-9]/', '', $rawPhone);
+        $maskedPhone = (strlen($cleanDigits) >= 10) 
+            ? '+91 ' . substr($cleanDigits, -10, 2) . '*** ' . substr($cleanDigits, -5)
+            : $rawPhone;
+
+        $settings = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
+        $virtualNum = $settings['virtual_company_number'] ?? '+91 97896 60115';
+        $eligibleStaff = $settings['eligible_staff_ids'] ?? 'staff_05,admin,all';
+        $eligibleArr = array_filter(array_map('trim', explode(',', $eligibleStaff)));
+        
+        // Ensure active staff from users table are always included
+        try {
+            $allActiveStaff = $pdo->query("SELECT `id` FROM `users` WHERE `status` = 'active'")->fetchAll(PDO::FETCH_COLUMN);
+            $eligibleArr = array_unique(array_merge($eligibleArr, $allActiveStaff, ['all', 'admin', 'staff_05']));
+        } catch (Exception $e) {}
+
+        $stmt = $pdo->prepare("
+            INSERT INTO `call_sessions` (
+                `id`, `provider_call_id`, `customer_name`, `customer_phone`, 
+                `masked_phone`, `virtual_number`, `status`, `started_at`, `outcome`
+            ) VALUES (?, ?, ?, ?, ?, ?, 'RINGING', NOW(), 'PENDING')
+        ");
+        $stmt->execute([
+            $callId, 'SIM-' . uniqid(), $custName, $rawPhone, $maskedPhone, $virtualNum
+        ]);
+
+        $callData = [
+            'call_id' => $callId,
+            'id' => $callId,
+            'customer_name' => $custName,
+            'customer_phone' => $rawPhone,
+            'masked_phone' => $maskedPhone,
+            'virtual_number' => $virtualNum,
+            'status' => 'RINGING',
+            'started_at' => date('Y-m-d H:i:s'),
+            'timeout_seconds' => intval($settings['call_timeout_seconds'] ?? 30),
+            'eligible_staff_ids' => array_values($eligibleArr)
+        ];
+
+        notifySocketBridge('call:incoming', $callData);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Incoming call simulated and broadcasted to eligible staff!",
+            "call" => $callData
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'get_call_sessions') {
+    header('Content-Type: application/json');
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $limit = min(100, max(1, intval($_GET['limit'] ?? 50)));
+        $stmt = $pdo->prepare("SELECT * FROM `call_sessions` ORDER BY `created_at` DESC LIMIT ?");
+        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $sessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Dynamically compute duration for completed or active sessions
+        foreach ($sessions as &$s) {
+            $dur = intval($s['duration_seconds'] ?? 0);
+            if ($dur <= 0 && !empty($s['started_at'])) {
+                $startTs = strtotime($s['started_at']);
+                if (!empty($s['ended_at'])) {
+                    $endTs = strtotime($s['ended_at']);
+                    if ($endTs > $startTs) $dur = $endTs - $startTs;
+                } elseif ($s['status'] === 'CONNECTED') {
+                    $dur = max(1, time() - $startTs);
+                }
+            }
+            $s['duration_seconds'] = $dur;
+        }
+        unset($s);
+
+        echo json_encode(["status" => "success", "sessions" => $sessions]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'log_call_session' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?? [];
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $id = $data['id'] ?? ('call_' . uniqid());
+        $providerCallId = $data['provider_call_id'] ?? null;
+        $customerId = $data['customer_id'] ?? null;
+        $customerName = $data['customer_name'] ?? 'Unknown Customer';
+        $customerPhone = $data['customer_phone'] ?? '';
+        $maskedPhone = $data['masked_phone'] ?? '';
+        $virtualNumber = $data['virtual_number'] ?? '+91 8000 123 456';
+        $assignedStaffId = $data['assigned_staff_id'] ?? null;
+        $assignedStaffName = $data['assigned_staff_name'] ?? 'Super Admin';
+        $status = $data['status'] ?? 'COMPLETED';
+        $startedAt = $data['started_at'] ?? date('Y-m-d H:i:s');
+        $answeredAt = $data['answered_at'] ?? date('Y-m-d H:i:s');
+        $endedAt = $data['ended_at'] ?? date('Y-m-d H:i:s');
+        $durationSeconds = intval($data['duration_seconds'] ?? 0);
+        $outcome = $data['outcome'] ?? 'CONNECTED';
+        $outcomeNotes = $data['outcome_notes'] ?? '';
+        $recordingUrl = $data['recording_url'] ?? null;
+
+        $stmt = $pdo->prepare("
+            INSERT INTO `call_sessions` (
+                `id`, `provider_call_id`, `customer_id`, `customer_name`, `customer_phone`, 
+                `masked_phone`, `virtual_number`, `assigned_staff_id`, `assigned_staff_name`, 
+                `status`, `started_at`, `answered_at`, `ended_at`, `duration_seconds`, 
+                `outcome`, `outcome_notes`, `recording_url`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            $id, $providerCallId, $customerId, $customerName, $customerPhone,
+            $maskedPhone, $virtualNumber, $assignedStaffId, $assignedStaffName,
+            $status, $startedAt, $answeredAt, $endedAt, $durationSeconds,
+            $outcome, $outcomeNotes, $recordingUrl
+        ]);
+
+        echo json_encode(["status" => "success", "message" => "Call session logged successfully", "call_id" => $id]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
 if ($action === 'save_user_preference' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true) ?? [];
     if (!empty($data['preferred_language'])) {
@@ -3595,4 +4277,3 @@ if ($action === 'save_user_preference' && $_SERVER['REQUEST_METHOD'] === 'POST')
 // Default fallback response
 echo json_encode(["status" => "success", "message" => "GRM CRM Backend API Active"]);
 exit;
-}

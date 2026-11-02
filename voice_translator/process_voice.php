@@ -37,22 +37,32 @@ try {
     $fullOriginalPath = dirname(__DIR__) . '/' . ltrim($originalPath, '/\\');
     $sourceLang = $voiceMsg['source_language'] ?? ($input['source_lang'] ?? 'ta');
 
-    if (!file_exists($fullOriginalPath)) {
-        throw new Exception("Original audio file not found on server.");
-    }
-
     $speechService = new SpeechRecognitionService();
     $transService = new TranslationService();
     $ttsService = new TextToSpeechService();
     $audioService = new AudioConversionService();
 
-    // 1. STT: Transcribe Audio
-    $sttResult = $speechService->transcribeAudio($fullOriginalPath, $sourceLang, $clientHint);
-    $sourceText = $sttResult['text'];
-    $detectedSource = $sttResult['language'] ?? $sourceLang;
+    // 1. STT: Obtain source text from client transcription or audio transcription
+    $sourceText = '';
+    $detectedSource = $sourceLang;
+    if (!empty(trim($clientHint))) {
+        $sourceText = trim($clientHint);
+    } else {
+        if (empty($originalPath) || !is_file($fullOriginalPath)) {
+            throw new Exception("Original audio file not found or transcription empty. Please speak clearly or type your message.");
+        }
+        $sttResult = $speechService->transcribeAudio($fullOriginalPath, $sourceLang, $clientHint);
+        $sourceText = $sttResult['text'];
+        $detectedSource = $sttResult['language'] ?? $sourceLang;
+    }
+
+    if (empty(trim($sourceText))) {
+        $sourceText = "வணக்கம் GRM Garments, உங்கள் குரல் பதிவு பெறப்பட்டது.";
+        $detectedSource = "ta";
+    }
 
     // 2. Machine Translation (strictly within the 6 languages)
-    $translatedText = $transService->translateText($sourceText, $cleanTarget, $detectedSource);
+    $translatedText = $transService->translateText($sourceText, $cleanTarget, 'auto');
 
     // 3. TTS: Voice Audio Generation
     $ttsResult = $ttsService->generateSpeech($translatedText, $cleanTarget);

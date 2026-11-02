@@ -51,40 +51,63 @@ class TextToSpeechService {
             }
         }
 
-        // 2. High-speed TTS via Google Translate TTS endpoint (Supports all 6 Indian languages)
-        $encodedText = urlencode($text);
-        // Truncate text to 200 chars per chunk if too long
-        if (strlen($text) > 200) {
-            $encodedText = urlencode(mb_substr($text, 0, 190, 'UTF-8'));
-        }
-
-        $ttsUrl = "https://translate.google.com/translate_tts?ie=UTF-8&q={$encodedText}&tl={$cleanLang}&client=tw-ob";
-
-        $audioContent = null;
-        if (function_exists('curl_init')) {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $ttsUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            curl_setopt($ch, CURLOPT_TCP_NODELAY, 1);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-            $audioContent = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($httpCode !== 200) {
-                $audioContent = null;
-            }
+        // 2. High-speed TTS via Google Translate TTS endpoint (Chunked for full speech synthesis without truncation)
+        $chunks = [];
+        if (mb_strlen($text, 'UTF-8') <= 180) {
+            $chunks[] = $text;
         } else {
-            $ctx = stream_context_create(['http' => ['timeout' => 5, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
-            $audioContent = @file_get_contents($ttsUrl, false, $ctx);
+            // Split into natural sentences or words so no sentence or thought is cut off
+            $words = preg_split('/(\s+|[.,!?।\n]+)/u', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+            $curr = '';
+            foreach ($words as $w) {
+                if (mb_strlen($curr . $w, 'UTF-8') > 170 && !empty(trim($curr))) {
+                    $chunks[] = trim($curr);
+                    $curr = $w;
+                } else {
+                    $curr .= $w;
+                }
+            }
+            if (!empty(trim($curr))) {
+                $chunks[] = trim($curr);
+            }
         }
 
-        if ($audioContent && strlen($audioContent) > 200) {
-            file_put_contents($fullPath, $audioContent);
+        $allAudioContent = '';
+        foreach ($chunks as $chunk) {
+            if (empty(trim($chunk))) continue;
+            $encodedText = urlencode($chunk);
+            $ttsUrl = "https://translate.google.com/translate_tts?ie=UTF-8&q={$encodedText}&tl={$cleanLang}&client=tw-ob";
+
+            $chunkAudio = null;
+            if (function_exists('curl_init')) {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $ttsUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+                curl_setopt($ch, CURLOPT_TCP_NODELAY, 1);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+                $chunkAudio = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($httpCode !== 200) {
+                    $chunkAudio = null;
+                }
+            } else {
+                $ctx = stream_context_create(['http' => ['timeout' => 8, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
+                $chunkAudio = @file_get_contents($ttsUrl, false, $ctx);
+            }
+
+            if ($chunkAudio && strlen($chunkAudio) > 100) {
+                $allAudioContent .= $chunkAudio;
+            }
+        }
+
+        if (strlen($allAudioContent) > 200) {
+            file_put_contents($fullPath, $allAudioContent);
             return [
                 'file_path' => $fullPath,
                 'relative_url' => 'uploads/voice/translated/' . $fileName,

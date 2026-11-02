@@ -92,7 +92,7 @@
   <script>
     (function () {
       try {
-        var validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
+        var validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking'];
         var hash = (window.location.hash || '').replace('#', '').trim().toLowerCase();
         var targetView = (hash && validViews.includes(hash)) ? hash : null;
         if (!targetView) {
@@ -129,7 +129,8 @@
             audit: { title: 'System Audit Trail & Security Logs', sub: 'Tamper-proof record of every staff assignment and order update' },
             analytics: { title: 'Staff Performance Analytics & KPIs', sub: 'Factual metrics on response times, volume handled, and conversions' },
             settings: { title: 'WhatsApp Business Settings & Phone Configuration', sub: 'Set your primary WhatsApp Business number for dynamic live message routing' },
-            backup: { title: 'Data Backup & Recovery Hub', sub: 'Full database snapshot export, restore, and zero-data-loss protection (Section 53)' }
+            backup: { title: 'Data Backup & Recovery Hub', sub: 'Full database snapshot export, restore, and zero-data-loss protection (Section 53)' },
+            masking: { title: 'Call & Number Masking Control Hub', sub: 'Lead data privacy, In-CRM WebRTC softphone & virtual brand caller ID configuration' }
           };
 
           var updateHeaderEarly = function () {
@@ -201,6 +202,38 @@
       }
     }
     window.toggleSidebar = toggleSidebar;
+
+    // Auto-initialize sidebar state on page load (open on desktop >= 1024px unless user collapsed it)
+    (function () {
+      try {
+        var isDesktop = window.innerWidth >= 1024;
+        var saved = localStorage.getItem('GRM_SIDEBAR_OPEN');
+        var shouldOpen = isDesktop ? (saved !== 'false') : (saved === 'true');
+        var sidebar = document.getElementById('app-sidebar');
+        var toggleIcon = document.getElementById('sidebar-toggle-icon');
+        var toggleBtn = document.getElementById('sidebar-toggle-btn');
+        if (sidebar) {
+          if (shouldOpen) {
+            sidebar.classList.remove('sidebar-hidden');
+            sidebar.classList.add('sidebar-visible');
+            if (toggleIcon) toggleIcon.innerText = 'menu_open';
+            if (toggleBtn) {
+              toggleBtn.classList.add('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
+              toggleBtn.setAttribute('aria-expanded', 'true');
+            }
+          } else {
+            sidebar.classList.remove('sidebar-visible');
+            sidebar.classList.add('sidebar-hidden');
+            if (toggleIcon) toggleIcon.innerText = 'menu';
+            if (toggleBtn) {
+              toggleBtn.classList.remove('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
+              toggleBtn.setAttribute('aria-expanded', 'false');
+            }
+          }
+        }
+      } catch (e) { }
+    })();
+
 
     // =========================================================================
     // INBOX WORKSTATION PANEL MINIMIZE & EXPAND CONTROLLERS
@@ -516,10 +549,27 @@
 
     .chat-bubble-in {
       border-radius: 0px 18px 18px 18px;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+      box-sizing: border-box !important;
     }
 
     .chat-bubble-out {
       border-radius: 18px 0px 18px 18px;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+      box-sizing: border-box !important;
+    }
+
+    .chat-bubble-in p,
+    .chat-bubble-out p,
+    .chat-message-row p {
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+    }
+
+    #chat-messages-stream {
+      overflow-x: hidden !important;
     }
 
     .modal-backdrop {
@@ -596,7 +646,7 @@
       background: #e2e8f0;
       cursor: col-resize;
       flex-shrink: 0;
-      z-index: 25;
+      z-index: 10;
       transition: background-color 0.15s ease, box-shadow 0.15s ease;
       display: flex;
       align-items: center;
@@ -711,15 +761,18 @@
     }
     #chat-right-panel {
       overflow-x: hidden !important;
+      max-width: 100% !important;
       word-break: break-word !important;
     }
     #chat-right-panel * {
       box-sizing: border-box;
+      max-width: 100%;
     }
-    #chat-right-panel input,
     #chat-right-panel select,
+    #chat-right-panel input,
     #chat-right-panel textarea {
       max-width: 100% !important;
+      min-width: 0 !important;
     }
   </style>
 </head>
@@ -735,7 +788,7 @@
   <!-- 1. LEFT NAVIGATION SIDEBAR -->
   <!-- ========================================================================= -->
   <aside id="app-sidebar"
-    class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-40 select-none transition-all duration-300 ease-in-out sidebar-hidden relative">
+    class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-40 select-none transition-all duration-300 ease-in-out sidebar-visible relative">
     <!-- Main Sidebar Right Edge Resizer Handle (Drag with Mouse to Resize) -->
     <div id="resizer-app-sidebar"
       class="absolute top-0 -right-1 w-2.5 h-full hover:bg-emerald-500/50 active:bg-emerald-500 cursor-col-resize z-50 transition-colors select-none group hidden lg:block"
@@ -776,7 +829,7 @@
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
           <span
-            class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">dashboard</span>
+            class="material-symbols-outlined text-[20px] text-sky-400 group-hover:scale-110 transition">dashboard</span>
           <span data-i18n="nav.dashboard">Dashboard</span>
         </div>
       </button>
@@ -786,7 +839,7 @@
         <button onclick="switchView('inbox', 'chats');" id="nav-inbox"
           class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer">
           <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-[20px]">inbox</span>
+            <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">inbox</span>
             <span data-i18n="nav.inbox">WhatsApp Inbox</span>
           </div>
           <div class="flex items-center gap-1.5">
@@ -805,7 +858,7 @@
             title="Active WhatsApp Chats & Customer Queue">
             <div class="flex items-center gap-2">
               <span
-                class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">forum</span>
+                class="material-symbols-outlined text-[15px] text-emerald-300 group-hover:scale-110 transition">forum</span>
               <span data-i18n="nav.inbox">All Chats &amp; Queue</span>
             </div>
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -817,7 +870,7 @@
             title="Auto-Reply Bot Rules & Q&A Templates">
             <div class="flex items-center gap-2">
               <span
-                class="material-symbols-outlined text-[15px] text-teal-400 group-hover:scale-110 transition">smart_toy</span>
+                class="material-symbols-outlined text-[15px] text-cyan-400 group-hover:scale-110 transition">smart_toy</span>
               <span data-i18n="nav.autoreply">Auto-Reply Hub</span>
             </div>
             <span id="nav-autoreply-pill"
@@ -830,7 +883,7 @@
             title="Custom Broadcast Templates & Blast Engine">
             <div class="flex items-center gap-2">
               <span
-                class="material-symbols-outlined text-[15px] text-purple-400 group-hover:scale-110 transition">campaign</span>
+                class="material-symbols-outlined text-[15px] text-fuchsia-400 group-hover:scale-110 transition">campaign</span>
               <span data-i18n="nav.broadcast">Broadcast Templates</span>
             </div>
             <span class="text-[9px] font-bold px-1.5 py-0.2 bg-purple-500/20 text-purple-300 rounded-full">Blast</span>
@@ -844,7 +897,7 @@
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
           <span
-            class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">schedule</span>
+            class="material-symbols-outlined text-[20px] text-amber-400 group-hover:scale-110 transition">schedule</span>
           <span data-i18n="nav.followups">Follow-up Due</span>
         </div>
         <span id="badge-followup-count"
@@ -855,7 +908,7 @@
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
           <span
-            class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">inventory_2</span>
+            class="material-symbols-outlined text-[20px] text-teal-300 group-hover:scale-110 transition">inventory_2</span>
           <span data-i18n="nav.catalog">Live Stock & Sharing</span>
         </div>
       </button>
@@ -864,25 +917,25 @@
       <div id="nav-orders-group" class="space-y-1">
         <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
           <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">shopping_bag</span>
+            <span class="material-symbols-outlined text-[20px] text-lime-400 group-hover:scale-110 transition">shopping_bag</span>
             <span class="font-bold" data-i18n="nav.orders">WhatsApp Orders</span>
           </div>
-          <span id="badge-orders-count" class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">6</span>
+          <span id="badge-orders-count" class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">5</span>
         </button>
         <!-- Sub-modules in Sidebar -->
         <div id="nav-orders-submodules" class="pl-7 pr-1 space-y-1">
           <button type="button" onclick="switchOrdersSubmodule('dashboard')" id="nav-sub-orders-dashboard" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[16px] text-emerald-400">analytics</span>
+              <span class="material-symbols-outlined text-[16px] text-lime-300">analytics</span>
               <span>1. Order Dashboard</span>
             </div>
           </button>
           <button type="button" onclick="switchOrdersSubmodule('history')" id="nav-sub-orders-history" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[16px] text-teal-400">history</span>
+              <span class="material-symbols-outlined text-[16px] text-emerald-300">receipt_long</span>
               <span>2. Order History</span>
             </div>
-            <span id="nav-sub-orders-history-badge" class="text-[9px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded-full font-bold">6</span>
+            <span id="nav-sub-orders-history-badge" class="text-[9px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded-full font-bold">5</span>
           </button>
         </div>
       </div>
@@ -915,7 +968,7 @@
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
         <div class="flex items-center gap-3">
           <span
-            class="material-symbols-outlined text-[20px] text-emerald-300 group-hover:scale-110 transition">settings_phone</span>
+            class="material-symbols-outlined text-[20px] text-yellow-400 group-hover:scale-110 transition">settings_phone</span>
           <span data-i18n="nav.settings">WhatsApp Settings</span>
         </div>
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -926,10 +979,21 @@
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-200 hover:text-white group">
         <div class="flex items-center gap-3">
           <span
-            class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">cloud_sync</span>
+            class="material-symbols-outlined text-[20px] text-cyan-400 group-hover:scale-110 transition">cloud_sync</span>
           <span class="font-bold" data-i18n="nav.backup">Data Backup & Restore</span>
         </div>
-        <span class="material-symbols-outlined text-[14px] text-emerald-400">download</span>
+        <span class="material-symbols-outlined text-[14px] text-cyan-400">download</span>
+      </button>
+
+      <!-- CALL & NUMBER MASKING MODULE -->
+      <button onclick="switchView('masking')" id="nav-masking"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav"
+        title="In-CRM Softphone Call Masking & Lead Privacy Protection">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-orange-400 group-hover:scale-110 transition">phone_locked</span>
+          <span data-i18n="nav.masking">Call &amp; Number Masking</span>
+        </div>
+        <span id="badge-nav-masking-status" class="bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full">Active</span>
       </button>
 
       <!-- STAFF MANAGEMENT MODULE WITH 3 SUB-ITEMS (Admin Only) -->
@@ -938,7 +1002,7 @@
           class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group"
           title="Staff & Team Management Hub">
           <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-[20px] text-blue-400 group-hover:scale-110 transition">badge</span>
+            <span class="material-symbols-outlined text-[20px] text-indigo-400 group-hover:scale-110 transition">badge</span>
             <span class="font-bold" data-i18n="nav.staff">Staff Management</span>
           </div>
           <div class="flex items-center gap-1.5">
@@ -989,7 +1053,7 @@
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
         <div class="flex items-center gap-3">
           <span
-            class="material-symbols-outlined text-[20px] text-indigo-400 group-hover:scale-110 transition">monitoring</span>
+            class="material-symbols-outlined text-[20px] text-pink-400 group-hover:scale-110 transition">monitoring</span>
           <span>Staff KPI & Reports</span>
         </div>
       </button>
@@ -998,7 +1062,7 @@
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav">
         <div class="flex items-center gap-3">
           <span
-            class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">history</span>
+            class="material-symbols-outlined text-[20px] text-red-400 group-hover:scale-110 transition">history</span>
           <span data-i18n="nav.audit">Audit Trail & Security</span>
         </div>
       </button>
@@ -1044,7 +1108,7 @@
 
     <!-- Top Header (Clean Height & Responsive Layout to Prevent Text Cutoff) -->
     <header
-      class="min-h-[64px] bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm z-50 gap-3">
+      class="min-h-[64px] bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm relative z-50 gap-3">
       <!-- Left: Sidebar Toggle Menu Button & Dynamic Header Title -->
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <!-- Sidebar Toggle Menu Bar Button -->
@@ -1429,6 +1493,7 @@
                     <span class="text-[10px] font-bold text-slate-500 uppercase shrink-0">Original:</span>
                     <audio id="voice-original-audio" controls class="w-full h-8 outline-none"></audio>
                   </div>
+                  
 
                   <!-- Target Language Selection (Strictly 6 Languages) & Translation Action -->
                   <div class="flex items-center justify-between gap-2 flex-wrap pt-0.5">
@@ -1437,7 +1502,7 @@
                         <span class="material-symbols-outlined text-[14px] text-indigo-600">translate</span>
                         Translate To:
                       </span>
-                      <select id="voice-target-lang" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:outline-none shadow-2xs">
+                      <select id="voice-target-lang" onchange="onVoiceTargetLangChange(this.value)" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:outline-none shadow-2xs">
                         <option value="ta">தமிழ் (Tamil)</option>
                         <option value="en" selected>English</option>
                         <option value="hi">हिंदी (Hindi)</option>
@@ -1529,7 +1594,7 @@
           </div>
 
           <!-- Right Panel Resizer Splitter (Drag with Mouse to Resize • Click to Minimize/Expand) -->
-          <div id="resizer-right-panel" class="resizer-splitter select-none"
+          <div id="resizer-right-panel" class="resizer-splitter select-none hidden xl:flex"
             title="Drag with mouse to resize customer profile • Double-click to reset">
             <button type="button" id="resizer-right-btn" onclick="toggleRightPanel(null, true)" class="resizer-snap-btn"
               style="left: -10px;" title="Minimize / Expand Customer Profile">
@@ -2726,7 +2791,7 @@
                 class="px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-800 hover:bg-white/60 cursor-pointer">
                 <span class="material-symbols-outlined text-[17px]">receipt_long</span>
                 <span>Order History</span>
-                <span id="orders-tab-history-badge" class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">0</span>
+                <span id="orders-tab-history-badge" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold bg-emerald-100 text-emerald-800">5</span>
               </button>
             </div>
 
@@ -2757,7 +2822,7 @@
           <div id="subview-orders-dashboard" class="space-y-4 sm:space-y-5">
             
             <!-- 1. Key Metrics Cards Grid: Overall Revenue, Weekly, Monthly, AOV -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
               <!-- Card 1: Overall Revenue -->
               <div class="bg-white rounded-2xl p-4 border border-emerald-200/90 shadow-2xs hover:shadow-md transition-all relative overflow-hidden group">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
@@ -2834,11 +2899,11 @@
                   <p class="text-xs text-slate-500 mt-0.5">Live progression across 4 stages &bull; Click any stage to instantly view and manage orders</p>
                 </div>
                 <span class="text-[11px] bg-slate-100 text-slate-700 font-extrabold px-3 py-1 rounded-full border border-slate-200">
-                  4 Active Stages
+                  5 Active Stages
                 </span>
               </div>
 
-              <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 <!-- 1. Placed -->
                 <div onclick="filterOrderHistoryByStatus('PLACED')" class="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 hover:border-blue-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
                   <div class="flex items-center justify-between">
@@ -2893,12 +2958,30 @@
                   </div>
                 </div>
 
-                <!-- 4. Delivered -->
+                <!-- 4. Out for Delivery -->
+                <div onclick="filterOrderHistoryByStatus('OUT_FOR_DELIVERY')" class="p-3.5 rounded-xl border border-orange-200 bg-orange-50/50 hover:bg-orange-100/60 hover:border-orange-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-black text-orange-900 flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-orange-600 ring-2 ring-orange-300/50"></span>
+                      4. Out for Delivery
+                    </span>
+                    <span class="material-symbols-outlined text-orange-500 group-hover:scale-110 transition-transform text-[22px]">two_wheeler</span>
+                  </div>
+                  <div class="my-2">
+                    <p id="pipe-ord-out-for-delivery-count" class="text-3xl font-black text-orange-700 font-mono tracking-tight">0</p>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-orange-200/60 text-[10px]">
+                    <span class="text-orange-800 font-semibold">With Courier Rider</span>
+                    <span class="text-orange-700 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
+                  </div>
+                </div>
+
+                <!-- 5. Delivered -->
                 <div onclick="filterOrderHistoryByStatus('DELIVERED')" class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 hover:border-emerald-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-black text-emerald-900 flex items-center gap-1.5">
                       <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 ring-2 ring-emerald-300/50"></span>
-                      4. Delivered
+                      5. Delivered
                     </span>
                     <span class="material-symbols-outlined text-emerald-500 group-hover:scale-110 transition-transform text-[22px]">verified</span>
                   </div>
@@ -2955,7 +3038,7 @@
           <!-- ======================================================== -->
           <!-- SUB-MODULE 2: ORDER HISTORY                              -->
           <!-- ======================================================== -->
-          <div id="subview-orders-history" class="space-y-4 hidden">
+          <div id="subview-orders-history" class="space-y-4">
             
             <!-- Filters & Search Toolbar -->
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -2979,6 +3062,10 @@
                 <button type="button" onclick="setOrderHistoryStatusFilter('SHIPPED')" id="filter-btn-status-SHIPPED" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-amber-100 cursor-pointer">
                   Shipped (<span id="count-filter-shipped">0</span>)
                 </button>
+                <button type="button" onclick="setOrderHistoryStatusFilter('OUT_FOR_DELIVERY')" id="filter-btn-status-OUT_FOR_DELIVERY" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-orange-100 cursor-pointer">
+                  Out for Delivery (<span id="count-filter-out-for-delivery">0</span>)
+                </button>
+
                 <button type="button" onclick="setOrderHistoryStatusFilter('DELIVERED')" id="filter-btn-status-DELIVERED" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-emerald-100 cursor-pointer">
                   Delivered (<span id="count-filter-delivered">0</span>)
                 </button>
@@ -3053,13 +3140,7 @@
 
             <!-- Right Actions -->
             <div class="flex items-center gap-2">
-              <!-- Schedule Follow-up Button (Requires Create) -->
-              <button type="button" onclick="openFollowUpModal()" id="btn-schedule-new-followup"
-                class="flex items-center gap-1.5 px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
-                title="Schedule a new customer callback or follow-up">
-                <span class="material-symbols-outlined text-[17px]">add_circle</span>
-                <span>+ Schedule Follow-up</span>
-              </button>
+
               <!-- Direct 1-Click Automatic Export of Both Tabs (Admin & Staff) -->
               <button type="button" onclick="autoExportAllBothTabs()" id="btn-export-all-followups-direct"
                 class="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
@@ -4602,7 +4683,320 @@
         </div>
       </section>
 
-    </main>
+    
+      <!-- ========================================================================= -->
+      <!-- CALL & NUMBER MASKING MODULE (#view-masking) -->
+      <!-- ========================================================================= -->
+            <section id="view-masking" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
+        <div class="max-w-6xl mx-auto space-y-6">
+
+          <!-- Header Banner with Inbound Simulation Button -->
+          <div
+            class="bg-gradient-to-r from-amber-950 via-slate-900 to-emerald-950 p-6 rounded-2xl text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 border border-amber-500/30">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-lg shrink-0">
+                <span class="material-symbols-outlined text-[28px]">phone_locked</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-xl font-extrabold tracking-tight">Call &amp; Number Masking Control Hub</h2>
+                  <span class="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-400/40 rounded-full text-[10px] font-bold">Privacy Shield</span>
+                </div>
+                <p class="text-xs text-amber-200/80 mt-1">Simultaneous Inbound Ring &bull; Atomic Staff Claiming &bull; Virtual DID Lead Privacy</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <button type="button" onclick="triggerSimulatedIncomingCall()" class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer" title="Simulate an incoming customer call to test atomic staff claiming">
+                <span class="material-symbols-outlined text-[16px]">ring_volume</span>
+                <span>+ Simulate Inbound Call</span>
+              </button>
+              <span class="px-3 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-xl text-xs font-bold flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                WebRTC Softphone Ready
+              </span>
+              <button type="button" onclick="loadMaskingSettingsAndSessions()" class="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition cursor-pointer" title="Refresh Telephony Status">
+                <span class="material-symbols-outlined text-[18px]">refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 6 Stat Metric Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            <!-- Stat 1: Outbound Call Masking -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Outbound Call</span>
+                <span class="material-symbols-outlined text-[16px] text-amber-600">phone_in_talk</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <span id="masking-stat-call-status" class="text-xs font-black text-slate-900">ACTIVE</span>
+                  <p class="text-[9px] text-slate-400">SIM Hidden</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="toggle-call-masking-enabled" checked onchange="toggleMaskingSetting('call_masking_enabled', this.checked)" class="sr-only peer">
+                  <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-amber-600"></div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Stat 2: Chat Phone Privacy -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Chat Masking</span>
+                <span class="material-symbols-outlined text-[16px] text-purple-600">visibility_off</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <span id="masking-stat-chat-status" class="text-xs font-black text-slate-900">ACTIVE</span>
+                  <p class="text-[9px] text-slate-400">UI +91 97***</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="toggle-chat-masking-enabled" checked onchange="toggleMaskingSetting('chat_masking_enabled', this.checked)" class="sr-only peer">
+                  <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-purple-600"></div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Stat 3: Incoming Calls Ringing -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Incoming</span>
+                <span class="material-symbols-outlined text-[16px] text-amber-500">ring_volume</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span id="masking-stat-incoming-calls" class="text-lg font-black text-amber-600">0</span>
+                  <span id="badge-incoming-pulse" class="w-2 h-2 rounded-full bg-amber-500 animate-ping hidden"></span>
+                </div>
+                <p class="text-[9px] text-slate-400">Ringing in Queue</p>
+              </div>
+            </div>
+
+            <!-- Stat 4: Active Connected Calls -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active</span>
+                <span class="material-symbols-outlined text-[16px] text-emerald-600">phone_callback</span>
+              </div>
+              <div>
+                <span id="masking-stat-active-calls" class="text-lg font-black text-emerald-600">0</span>
+                <p class="text-[9px] text-slate-400">Connected Now</p>
+              </div>
+            </div>
+
+            <!-- Stat 5: Completed Calls -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Completed</span>
+                <span class="material-symbols-outlined text-[16px] text-blue-600">check_circle</span>
+              </div>
+              <div>
+                <span id="masking-stat-completed-calls" class="text-lg font-black text-blue-600">0</span>
+                <p class="text-[9px] text-slate-400">Lifetime Calls</p>
+              </div>
+            </div>
+
+            <!-- Stat 6: Available / Busy Staff -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Staff Status</span>
+                <span class="material-symbols-outlined text-[16px] text-slate-600">groups</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-1 font-bold text-xs">
+                  <span class="text-emerald-700 font-extrabold" id="masking-stat-available-staff">0</span>
+                  <span class="text-slate-400">/</span>
+                  <span class="text-amber-700 font-extrabold" id="masking-stat-busy-staff">0</span>
+                </div>
+                <p class="text-[9px] text-slate-400">Available / Busy</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active & Incoming Calls Live Queue -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+            <div class="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[20px]">call</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm">Live Call Queue &amp; Active Connections</h3>
+                  <p class="text-xs text-slate-500">Real-time incoming calls ringing across eligible staff and active bridges</p>
+                </div>
+              </div>
+              <span id="badge-active-queue-count" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">0 in Queue</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-[11px] uppercase font-bold text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th class="py-3 px-4">Call ID</th>
+                    <th class="py-3 px-4">Customer</th>
+                    <th class="py-3 px-4">Brand DID</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4">Claimed Staff</th>
+                    <th class="py-3 px-4 text-right">Admin Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="masking-active-calls-tbody" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="6" class="py-6 text-center text-slate-400 font-medium">No active or ringing calls at this moment.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Eligible Staff Members & Call Distribution Policy -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[20px]">badge</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm">Eligible Staff Members (Inbound Ring Recipients)</h3>
+                  <p class="text-xs text-slate-500">Selected staff members receive instant incoming call popups when a customer dials the company DID</p>
+                </div>
+              </div>
+              <button type="button" onclick="saveEligibleStaffSelection()" class="px-4 py-2 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs">
+                <span class="material-symbols-outlined text-[16px]">save</span> Save Eligibility
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" id="masking-staff-eligibility-grid">
+              <!-- Dynamically populated by loadMaskingSettingsAndSessions() -->
+              <div class="p-3 bg-slate-50 rounded-xl text-slate-400 text-xs">Loading staff roster...</div>
+            </div>
+          </div>
+
+          <!-- Telephony & Masking Configuration Form -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[20px]">tune</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm">Telephony &amp; Number Masking Configuration</h3>
+                  <p class="text-xs text-slate-500">Manage virtual caller ID number, ring durations, and auto-fallback routing</p>
+                </div>
+              </div>
+              <button type="button" onclick="saveMaskingConfigurationForm()" id="btn-save-masking-config" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-xl shadow-sm flex items-center gap-2 transition cursor-pointer text-xs">
+                <span class="material-symbols-outlined text-[18px]">save</span> Save Settings
+              </button>
+            </div>
+
+            <form id="form-masking-settings" onsubmit="saveMaskingConfigurationForm(event)" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Virtual Company Number -->
+                <div>
+                  <label class="block font-bold text-slate-700 text-xs mb-1.5">Virtual Company Number (Brand DID Caller ID):</label>
+                  <input type="text" id="masking-config-virtual-num" value="+91 97896 60115" placeholder="+91 97896 60115" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                  <p class="text-[10px] text-slate-400 mt-1">This number is displayed to customers when staff initiates In-CRM calls.</p>
+                </div>
+
+                <!-- Call Timeout Seconds -->
+                <div>
+                  <label class="block font-bold text-slate-700 text-xs mb-1.5">Max Ring Timeout (Seconds):</label>
+                  <select id="masking-config-timeout" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                    <option value="20">20 Seconds (Fast Switch)</option>
+                    <option value="30" selected>30 Seconds (Recommended)</option>
+                    <option value="45">45 Seconds</option>
+                    <option value="60">60 Seconds (Extended)</option>
+                  </select>
+                  <p class="text-[10px] text-slate-400 mt-1">Duration before unanswered call falls back to alternative action.</p>
+                </div>
+
+                <!-- Fallback Strategy -->
+                <div>
+                  <label class="block font-bold text-slate-700 text-xs mb-1.5">No-Answer Fallback Strategy:</label>
+                  <select id="masking-config-fallback" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                    <option value="RETURN_TO_POOL" selected>Return Lead to Unassigned Pool</option>
+                    <option value="FORWARD_TO_ADMIN">Forward Lead to Super Admin</option>
+                    <option value="SEND_WHATSAPP_PING">Send Instant WhatsApp Call Alert</option>
+                  </select>
+                  <p class="text-[10px] text-slate-400 mt-1">Action triggered when staff does not answer an inbound customer call.</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                <!-- Recording Toggle -->
+                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                  <div>
+                    <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-[16px] text-rose-600">mic</span> Call Audio Recording
+                    </h4>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Record In-CRM WebRTC calls for QA &amp; dispute protection</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="masking-config-recording" checked class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                <!-- Privacy Policy / Anti-Poaching Guard -->
+                <div class="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200/80 flex items-start gap-3">
+                  <span class="material-symbols-outlined text-[20px] text-amber-700 shrink-0 mt-0.5">security</span>
+                  <div>
+                    <h4 class="font-bold text-amber-950 text-xs">Anti-Poaching Lead Security Active</h4>
+                    <p class="text-[11px] text-amber-900/80 mt-0.5">Staff personal SIMs remain strictly masked. Staff cannot view full customer digits or bypass the CRM dialer.</p>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Call Sessions History Table -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[20px]">history</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm">Masked Call Sessions &amp; Activity Logs</h3>
+                  <p class="text-xs text-slate-500">Live logs recorded from the MariaDB call_sessions table</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="text" id="masking-filter-input" onkeyup="filterCallSessionsTable()" placeholder="Search customer, staff, or outcome..." class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs focus:ring-1 focus:ring-brand-wa w-52 sm:w-64">
+                <button type="button" onclick="loadMaskingSettingsAndSessions()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-1 transition cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">refresh</span> Refresh
+                </button>
+              </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-[11px] uppercase font-bold text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th class="py-3 px-4">Session ID / Date</th>
+                    <th class="py-3 px-4">Customer</th>
+                    <th class="py-3 px-4">Masked Caller ID</th>
+                    <th class="py-3 px-4">Handling Staff</th>
+                    <th class="py-3 px-4">Duration</th>
+                    <th class="py-3 px-4">Status / Outcome</th>
+                    <th class="py-3 px-4">Notes &amp; Audio</th>
+                  </tr>
+                </thead>
+                <tbody id="masking-sessions-tbody" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="7" class="py-8 text-center text-slate-400">Loading call sessions from database...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+</main>
   </div>
 
   <!-- ========================================================================= -->
@@ -4872,12 +5266,50 @@
               class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
           </div>
 
+          <!-- 3b. Shipping & Courier Charge (Editable Option) -->
+          <div class="bg-gradient-to-r from-slate-50 to-blue-50/40 p-3 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="font-extrabold text-slate-800 flex items-center gap-1.5 text-xs">
+                <span class="material-symbols-outlined text-[16px] text-blue-600">local_shipping</span>
+                <span>Shipping / Courier Charge (₹):</span>
+              </label>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] text-slate-500 font-semibold" id="shipping-charge-status-pill">Free Delivery (₹0)</span>
+                <button type="button" onclick="focusShippingChargeInput()" class="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[9.5px] flex items-center gap-0.5 cursor-pointer shadow-2xs transition">
+                  <span class="material-symbols-outlined text-[11px]">edit</span>
+                  <span>Edit</span>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 font-black text-slate-500 text-xs">₹</span>
+                <input type="number" id="order-shipping-charge" min="0" step="10" placeholder="0" value="0"
+                  oninput="handleOrderShippingChange(this.value)"
+                  class="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-black text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="setQuickShippingCharge(0)" class="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold transition cursor-pointer">Free (₹0)</button>
+                <button type="button" onclick="setQuickShippingCharge(50)" class="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold transition cursor-pointer">₹50</button>
+                <button type="button" onclick="setQuickShippingCharge(100)" class="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold transition cursor-pointer">₹100</button>
+                <button type="button" onclick="setQuickShippingCharge(150)" class="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold transition cursor-pointer">₹150</button>
+              </div>
+            </div>
+          </div>
+
           <!-- 4. Grand Total Summary Strip -->
           <div
             class="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/50 border border-emerald-200 p-3.5 rounded-xl flex items-center justify-between">
             <div>
               <span class="text-emerald-950 font-extrabold text-xs block">Order Total Amount</span>
-              <p class="text-[10px] text-emerald-700 font-medium">Inclusive of taxes &amp; Doorstep Delivery</p>
+              <p class="text-[10px] text-emerald-700 font-medium flex items-center gap-1 flex-wrap">
+                <span>Items: <strong id="order-modal-subtotal" class="font-mono">₹0</strong></span> 
+                <span>•</span>
+                <span>Shipping: <strong id="order-modal-shipping-display" class="font-mono">Free</strong></span>
+                <button type="button" onclick="focusShippingChargeInput()" class="text-blue-700 hover:text-blue-900 underline font-extrabold cursor-pointer inline-flex items-center gap-0.5 ml-1">
+                  <span class="material-symbols-outlined text-[12px]">edit</span>Edit Shipping
+                </button>
+              </p>
             </div>
             <div class="text-right">
               <span id="order-modal-grand-total"
@@ -4907,7 +5339,7 @@
               <button type="button" id="tab-payment-cod" onclick="setOrderPaymentMode('COD')"
                 class="py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 cursor-pointer">
                 <span class="material-symbols-outlined text-[18px] text-amber-600">local_atm</span>
-                <span>2. COD (₹200 Advance)</span>
+                <span id="tab-cod-label">2. COD (₹200 Advance)</span>
               </button>
             </div>
 
@@ -4929,10 +5361,7 @@
                   <label class="block font-bold text-slate-800 text-xs">
                     UPI Transaction ID / Ref (UTR Number) <span class="text-rose-600">*</span>
                   </label>
-                  <button type="button" onclick="generateSampleUPIId('ONLINE')"
-                    class="text-[10px] text-emerald-700 font-bold hover:underline cursor-pointer">
-                    ⚡ Auto-Fill Sample UTR
-                  </button>
+                  <span class="text-[10px] text-slate-400 font-medium">12-Digit Bank Ref</span>
                 </div>
                 <input type="text" id="order-online-upi-id" placeholder="Enter 12-digit numeric UTR (e.g. 428910294821)" maxlength="22" autocomplete="off" spellcheck="false"
                   oninput="handleUPIIdInput('ONLINE', this)"
@@ -4957,7 +5386,7 @@
               <div>
                 <div class="flex items-center justify-between mb-1">
                   <label class="block font-bold text-slate-800 text-xs">
-                    Upload Payment Screenshot <span class="text-rose-600">*</span>
+                    Upload Payment Screenshot <span class="text-slate-400 font-normal">(Optional)</span>
                   </label>
                   <button type="button" onclick="useSampleScreenshot('ONLINE')"
                     class="text-[10px] text-emerald-700 font-bold hover:underline cursor-pointer">
@@ -5004,7 +5433,7 @@
                   <div class="flex items-center justify-between">
                     <label class="block font-extrabold text-slate-800 text-xs flex items-center gap-1">
                       <span class="material-symbols-outlined text-[16px] text-emerald-600">receipt_long</span>
-                      <span>Payment Screenshot Paid Amount <span class="text-rose-600">*</span></span>
+                      <span>Payment Screenshot Paid Amount <span class="text-slate-400 font-normal">(Optional)</span></span>
                     </label>
                     <span class="text-[10px] font-bold text-slate-400">OCR Auto-Detected / Verified</span>
                   </div>
@@ -5064,48 +5493,59 @@
             <!-- ================= OPTION 2: COD (ADVANCED PAY ₹200) ================= -->
             <div id="payment-panel-cod"
               class="hidden p-4 bg-amber-50/60 border border-amber-200 rounded-xl space-y-3.5">
-              <!-- Mandatory ₹200 Advance Notice -->
+              <!-- Mandatory Advance Notice (Dynamic) -->
               <div class="bg-amber-100/70 border border-amber-300 p-3 rounded-xl flex items-start gap-2.5">
                 <span class="material-symbols-outlined text-[20px] text-amber-800 shrink-0 mt-0.5">info</span>
                 <div>
-                  <h5 class="text-xs font-bold text-amber-950">Cash On Delivery (COD) ₹200 Advance Rule:</h5>
-                  <p class="text-[11px] text-amber-900 leading-relaxed">
+                  <h5 id="cod-rule-banner-title" class="text-xs font-bold text-amber-950">Cash On Delivery (COD) ₹200 Advance Rule:</h5>
+                  <p id="cod-rule-banner-text" class="text-[11px] text-amber-900 leading-relaxed">
                     Customer must pay a mandatory <strong class="underline font-black">₹200 advance via UPI</strong> to
                     confirm parcel booking. The remaining balance will be collected at door delivery.
                   </p>
                 </div>
               </div>
 
-              <!-- 3-Way Split Card -->
+              <!-- 3-Way Split Card with Editable Advance Option -->
               <div class="grid grid-cols-3 gap-2 bg-white p-3 rounded-xl border border-amber-200 text-center">
-                <div class="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                <div class="p-2 rounded-lg bg-slate-50 border border-slate-100 flex flex-col justify-between">
                   <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Order</span>
-                  <span id="cod-total-display" class="font-mono font-bold text-slate-800 text-xs">₹0</span>
+                  <span id="cod-total-display" class="font-mono font-black text-slate-800 text-sm my-auto">₹0</span>
+                  <span class="text-[8px] text-slate-400 font-semibold block">Incl. Shipping</span>
                 </div>
-                <div class="p-2 rounded-lg bg-emerald-50 border border-emerald-200">
-                  <span class="text-[10px] uppercase font-bold text-emerald-700 block">Advance (Now)</span>
-                  <span class="font-mono font-black text-emerald-900 text-sm">₹200</span>
-                  <span class="text-[8px] bg-emerald-200/80 text-emerald-900 font-bold px-1 rounded block mt-0.5">UPI
-                    Paid</span>
+                <div class="p-2 rounded-lg bg-emerald-50 border border-emerald-300 flex flex-col justify-between shadow-2xs">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-[9.5px] uppercase font-bold text-emerald-800">Advance (Now)</span>
+                    <button type="button" onclick="focusCODAdvanceInput()" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] flex items-center gap-0.5 shadow-2xs cursor-pointer transition">
+                      <span class="material-symbols-outlined text-[11px]">edit</span>
+                      <span>Edit</span>
+                    </button>
+                  </div>
+                  <div class="flex items-center justify-center gap-1 my-0.5">
+                    <span class="font-bold text-emerald-800 text-xs">₹</span>
+                    <input type="number" id="order-cod-advance-input" value="200" min="0" step="10"
+                      oninput="handleCODAdvanceChange(this.value)"
+                      class="w-20 text-center bg-white border border-emerald-400 rounded-md py-0.5 px-1 font-mono font-black text-emerald-950 text-xs focus:ring-2 focus:ring-emerald-500 shadow-2xs">
+                  </div>
+                  <div class="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
+                    <button type="button" onclick="setQuickCODAdvance(100)" class="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-pointer shadow-2xs">₹100</button>
+                    <button type="button" onclick="setQuickCODAdvance(200)" class="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-pointer shadow-2xs">₹200</button>
+                    <button type="button" onclick="setQuickCODAdvance(300)" class="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-pointer shadow-2xs">₹300</button>
+                  </div>
                 </div>
-                <div class="p-2 rounded-lg bg-amber-50 border border-amber-200">
+                <div class="p-2 rounded-lg bg-amber-50 border border-amber-200 flex flex-col justify-between">
                   <span class="text-[10px] uppercase font-bold text-amber-700 block">Balance on Delivery</span>
-                  <span id="cod-balance-display" class="font-mono font-black text-amber-900 text-sm">₹0</span>
-                  <span class="text-[8px] bg-amber-200/80 text-amber-900 font-bold px-1 rounded block mt-0.5">Due at
-                    Door</span>
+                  <span id="cod-balance-display" class="font-mono font-black text-amber-900 text-sm my-auto">₹0</span>
+                  <span class="text-[8px] bg-amber-200/80 text-amber-900 font-bold px-1 rounded block mt-0.5">Due at Door</span>
                 </div>
               </div>
 
-              <!-- ₹200 Advance UPI Transaction ID / UTR -->
+              <!-- Advance UPI Transaction ID / UTR -->
               <div>
                 <div class="flex items-center justify-between mb-1">
-                  <label class="block font-bold text-slate-800 text-xs">
+                  <label id="cod-upi-label" class="block font-bold text-slate-800 text-xs">
                     Advance ₹200 UPI Transaction ID / UTR <span class="text-rose-600">*</span>
                   </label>
-                  <button type="button" onclick="generateSampleUPIId('COD')"
-                    class="text-[10px] text-amber-800 font-bold hover:underline cursor-pointer">
-                    ⚡ Auto-Fill Sample UTR
-                  </button>
+                  <span class="text-[10px] text-slate-400 font-medium">12-Digit Advance Ref</span>
                 </div>
                 <input type="text" id="order-cod-upi-id" placeholder="Enter 12-digit numeric UTR (e.g. 428910294821)" maxlength="22" autocomplete="off" spellcheck="false"
                   oninput="handleUPIIdInput('COD', this)"
@@ -5126,8 +5566,8 @@
               <!-- Advance ₹200 Payment Screenshot Upload -->
               <div>
                 <div class="flex items-center justify-between mb-1">
-                  <label class="block font-bold text-slate-800 text-xs">
-                    Upload ₹200 Advance Screenshot <span class="text-rose-600">*</span>
+                  <label id="cod-screenshot-label" class="block font-bold text-slate-800 text-xs">
+                    Upload ₹200 Advance Screenshot <span class="text-slate-400 font-normal">(Optional)</span>
                   </label>
                   <button type="button" onclick="useSampleScreenshot('COD')"
                     class="text-[10px] text-amber-800 font-bold hover:underline cursor-pointer">
@@ -5176,7 +5616,7 @@
                       <span class="material-symbols-outlined text-[16px] text-amber-600">receipt_long</span>
                       <span>COD Advance Amount Shown in Screenshot <span class="text-rose-600">*</span></span>
                     </label>
-                    <span class="text-[10px] font-bold text-slate-400">Must be exactly ₹200</span>
+                    <span id="cod-screenshot-rule-text" class="text-[10px] font-bold text-slate-400">Must be exactly ₹200</span>
                   </div>
                   <div class="flex items-center gap-2">
                     <div class="relative flex-1">
@@ -5334,30 +5774,54 @@
           <p id="ship-modal-address" class="text-xs font-semibold text-slate-700 leading-relaxed">Delivery Address</p>
         </div>
 
-        <!-- 1. Courier Name / Partner Selection -->
+        <!-- 1. Courier Partner / Name Dropdown & Dynamic Add Option -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label class="block font-bold text-slate-800 text-xs">
               Courier Partner / Name <span class="text-rose-600">*</span>
             </label>
-            <span class="text-[10px] text-slate-400 font-semibold">Select quick partner or type below</span>
+            <button type="button" onclick="toggleAddCustomCourierInput()" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-extrabold flex items-center gap-1 transition cursor-pointer shadow-2xs">
+              <span class="material-symbols-outlined text-[14px]">add_circle</span>
+              <span>+ Add Courier</span>
+            </button>
           </div>
 
-          <!-- Quick Partner Chips -->
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <button type="button" onclick="setCourierQuickOption('ST Courier')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">ST Courier</button>
-            <button type="button" onclick="setCourierQuickOption('Professional Couriers')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">Professional</button>
-            <button type="button" onclick="setCourierQuickOption('DTDC')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">DTDC</button>
-            <button type="button" onclick="setCourierQuickOption('Delhivery')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">Delhivery</button>
-            <button type="button" onclick="setCourierQuickOption('Blue Dart')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">Blue Dart</button>
-            <button type="button" onclick="setCourierQuickOption('India Post (Speed Post)')" class="px-2.5 py-1 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 transition cursor-pointer">India Post</button>
-          </div>
-
+          <!-- Courier Dropdown Selection -->
           <div class="relative">
-            <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">local_shipping</span>
-            <input type="text" id="ship-courier-name" placeholder="e.g. DTDC, ST Courier, Delhivery, Blue Dart..."
-              oninput="onShippingIdChange()"
-              class="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px] pointer-events-none">local_shipping</span>
+            <select id="ship-courier-name" onchange="onShippingCourierChange(this.value)"
+              class="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-8 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer appearance-none">
+              <option value="">-- Select Courier Partner --</option>
+              <option value="ST Courier">ST Courier</option>
+              <option value="Professional Couriers">Professional Couriers</option>
+              <option value="DTDC Express">DTDC Express</option>
+              <option value="Delhivery">Delhivery</option>
+              <option value="Blue Dart">Blue Dart</option>
+              <option value="India Post (Speed Post)">India Post (Speed Post)</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 text-[18px] pointer-events-none">expand_more</span>
+          </div>
+
+          <!-- Dynamic Add Courier Partner Input Box (Inline) -->
+          <div id="add-custom-courier-box" class="hidden p-2.5 bg-indigo-50/70 border border-dashed border-indigo-300 rounded-xl space-y-2 mt-1.5 transition-all">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold text-indigo-900 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">local_shipping</span>
+                Add New Courier Partner
+              </span>
+              <button type="button" onclick="toggleAddCustomCourierInput(false)" class="text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
+                <span class="material-symbols-outlined text-[14px]">close</span>
+              </button>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="new-courier-name-input" placeholder="Enter courier name (e.g. Trackon, Shadowfax, Xpressbees...)"
+                onkeydown="if(event.key==='Enter'){addNewCourierPartnerOption(); event.preventDefault();}"
+                class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+              <button type="button" onclick="addNewCourierPartnerOption()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-extrabold shadow-sm flex items-center gap-1 cursor-pointer shrink-0">
+                <span class="material-symbols-outlined text-[14px]">check</span>
+                <span>Add Option</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -5439,7 +5903,7 @@
               <h3 class="font-extrabold text-base tracking-tight">Edit WhatsApp Order &amp; Details</h3>
               <span id="edit-order-modal-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-500/30 text-blue-300 border border-blue-400/40 uppercase">PLACED</span>
             </div>
-            <p class="text-xs text-blue-200 mt-0.5">Modify items, shipping address, status, or tracking for Order <span id="edit-order-modal-id-title" class="font-mono font-bold text-white">#WA-2026-0000</span></p>
+            <p class="text-xs text-blue-200 mt-0.5">Modify items, shipping address, status, or tracking for Order <span id="edit-order-modal-id-title" class="font-mono font-bold text-white">#WO00001</span></p>
           </div>
         </div>
         <button type="button" onclick="closeModal('modal-edit-order')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer">
@@ -5557,11 +6021,12 @@
               <span>Fulfillment &amp; Courier Tracking:</span>
             </label>
             <div class="w-40">
-              <select id="edit-order-status" class="w-full bg-white border border-indigo-300 rounded-xl p-2 text-xs font-extrabold text-indigo-950 focus:ring-2 focus:ring-indigo-500/20">
+              <select id="edit-order-status" onchange="onEditOrderStatusChange(this.value)" class="w-full bg-white border border-indigo-300 rounded-xl p-2 text-xs font-extrabold text-indigo-950 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer">
                 <option value="PLACED">1. PLACED</option>
                 <option value="PACKED">2. PACKED</option>
                 <option value="SHIPPED">3. SHIPPED</option>
-                <option value="DELIVERED">4. DELIVERED</option>
+                <option value="OUT_FOR_DELIVERY">4. OUT FOR DELIVERY</option>
+                <option value="DELIVERED">5. DELIVERED</option>
                 <option value="CANCELLED">CANCELLED</option>
               </select>
             </div>
@@ -5586,16 +6051,9 @@
 
       <!-- Footer Actions -->
       <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
-        <div class="flex items-center gap-2">
-          <button type="button" onclick="closeModal('modal-edit-order')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition cursor-pointer">
-            Cancel
-          </button>
-          <!-- Delete Order Button (Guarded by RBAC delete access) -->
-          <button type="button" id="btn-delete-order-modal" onclick="confirmDeleteOrderFromModal()" class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer" title="Permanently Delete Order">
-            <span class="material-symbols-outlined text-[19px]">delete</span>
-            <span>Delete Order</span>
-          </button>
-        </div>
+        <button type="button" onclick="closeModal('modal-edit-order')" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition cursor-pointer">
+          Cancel
+        </button>
         <button type="button" onclick="saveEditedOrder()" id="btn-save-edit-order" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 transition hover:shadow-lg cursor-pointer">
           <span class="material-symbols-outlined text-[19px]">save</span>
           <span>Save Order Changes</span>
@@ -8413,14 +8871,78 @@
     </div>
   </div>
 
-  <!-- MODAL: BRAND-MASKED WHATSAPP VOICE CALL -->
-  <div id="modal-brand-call" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
-    <div
-      class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-emerald-200">
+    <!-- MODAL: INCOMING CALL REAL-TIME BROADCAST & ATOMIC CLAIM (FIRST ACCEPTS WINS) -->
+  <div id="modal-incoming-call-alert" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border-2 border-amber-400 flex flex-col">
+      <!-- Top Ringing Header -->
+      <div class="bg-gradient-to-r from-amber-600 via-amber-700 to-slate-900 p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-white shadow-glow animate-bounce">
+            <span class="material-symbols-outlined text-[26px]">ring_volume</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-extrabold text-base tracking-tight">Incoming Customer Call</h3>
+              <span class="text-[10px] bg-white/20 text-white font-mono px-2 py-0.5 rounded-full font-bold animate-pulse">Ringing</span>
+            </div>
+            <p class="text-xs text-amber-100 mt-0.5">Simultaneous broadcast to all eligible staff</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span id="incoming-call-countdown" class="text-xs font-mono font-black bg-black/30 px-2 py-1 rounded-lg text-amber-200">30s</span>
+        </div>
+      </div>
 
-      <!-- Top Brand Calling Header -->
+      <!-- Caller Details -->
+      <div class="p-6 text-center space-y-4">
+        <div class="w-16 h-16 mx-auto rounded-full bg-amber-100 text-amber-800 font-extrabold text-xl flex items-center justify-center border-2 border-amber-300 shadow-sm" id="incoming-call-avatar">
+          CU
+        </div>
+
+        <div>
+          <h4 class="text-lg font-black text-slate-900 leading-tight" id="incoming-call-name">Customer Name</h4>
+          <p class="text-xs font-mono font-bold text-slate-500 mt-1" id="incoming-call-phone">+91 97*** 60115 (Masked)</p>
+          <div class="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-semibold">
+            <span class="material-symbols-outlined text-[15px] text-emerald-600">sim_card</span>
+            <span>Called Brand DID: </span>
+            <strong id="incoming-call-did">+91 97896 60115</strong>
+          </div>
+        </div>
+
+        <!-- Claim Status Warning/Notice Banner -->
+        <div id="incoming-call-claim-banner" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900 flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-[18px] text-amber-600">info</span>
+          <span id="incoming-call-claim-text">This call has already been assigned to another staff member.</span>
+        </div>
+
+        <input type="hidden" id="incoming-call-id" value="">
+
+        <!-- Action Buttons -->
+        <div class="pt-3 flex items-center gap-3">
+          <button type="button" onclick="dismissIncomingCallAlert()" id="btn-decline-incoming-call"
+            class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">call_end</span>
+            <span>Dismiss</span>
+          </button>
+
+          <button type="button" onclick="claimIncomingCallNow()" id="btn-accept-incoming-call"
+            class="flex-2 py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black rounded-2xl shadow-lg transition text-xs flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
+            <span class="material-symbols-outlined text-[20px] animate-pulse">call</span>
+            <span id="btn-accept-incoming-text">Accept Call (Claim Now)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BRAND-MASKED WHATSAPP VOICE CALL -->
+  <div id="modal-brand-call" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div
+      class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-emerald-200 flex flex-col max-h-[92vh] my-auto">
+
+      <!-- Top Brand Calling Header (Fixed at top) -->
       <div
-        class="bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 p-5 text-white flex items-center justify-between">
+        class="bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-2xl bg-emerald-500/30 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-glow">
@@ -8444,7 +8966,7 @@
         </button>
       </div>
 
-      <div class="p-6 space-y-5 text-xs">
+      <div class="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1 custom-chat-scroll min-h-0">
         <!-- Caller & Recipient Identity Card -->
         <div
           class="bg-gradient-to-b from-emerald-50/70 to-teal-50/40 p-4 rounded-2xl border border-emerald-200/80 space-y-3">
@@ -8600,24 +9122,107 @@
             class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa"></textarea>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="pt-2 flex items-center justify-between border-t border-slate-100">
-          <button type="button" onclick="openFollowupModal(ACTIVE_CUSTOMER_ID)"
-            class="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
-            <span class="material-symbols-outlined text-[16px]">calendar_add_on</span> Schedule Follow-up
-          </button>
+      </div>
 
-          <button type="button" onclick="endBrandMaskedCall(true)"
-            class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition">
-            <span class="material-symbols-outlined text-[16px]">check_circle</span> Save Outcome &amp; Finish
+      <!-- Action Buttons Sticky Footer -->
+      <div class="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <button type="button" onclick="openFollowupModal(ACTIVE_CUSTOMER_ID)"
+          class="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
+          <span class="material-symbols-outlined text-[16px]">calendar_add_on</span> Schedule Follow-up
+        </button>
+
+        <button type="button" onclick="endBrandMaskedCall(true)"
+          class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition">
+          <span class="material-symbols-outlined text-[16px]">check_circle</span> Save Outcome &amp; Finish
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION TOAST -->
+  
+  <!-- MODAL: REASSIGN INBOUND CALL (Available Staff Only) -->
+  <div id="modal-reassign-call" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-purple-200 flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-purple-800 via-indigo-900 to-slate-900 p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-white shadow-glow">
+            <span class="material-symbols-outlined text-[24px]">swap_horiz</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-extrabold text-base tracking-tight">Reassign Live Call</h3>
+              <span id="reassign-modal-call-id" class="text-[11px] font-mono font-bold bg-amber-400 text-slate-900 px-2 py-0.5 rounded-full">CALL-0000</span>
+            </div>
+            <p class="text-xs text-purple-200/90 mt-0.5">Transfer to an available staff member or ringing pool</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-reassign-call')" class="text-purple-300 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition cursor-pointer">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4 text-xs overflow-y-auto max-h-[70vh]">
+        <!-- Current Call Info Banner -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 font-extrabold flex items-center justify-center text-xs" id="reassign-modal-cust-avatar">
+              CU
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-900 text-xs" id="reassign-modal-cust-name">Customer Name</h4>
+              <p class="text-[11px] font-mono text-slate-500" id="reassign-modal-cust-phone">+91 97*** 60115</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] text-slate-400 block font-semibold">Currently Assigned:</span>
+            <span id="reassign-modal-current-staff" class="font-bold text-slate-800 text-xs">Ringing Pool</span>
+          </div>
+        </div>
+
+        <!-- Available Staff Selection Section -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Available Staff Members (Ready Now):
+            </label>
+            <span id="reassign-modal-available-count" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Loading...</span>
+          </div>
+
+          <div id="reassign-available-staff-container" class="space-y-2">
+            <!-- Dynamically populated with available staff cards -->
+          </div>
+        </div>
+
+        <!-- Transfer Reason (Optional) -->
+        <div>
+          <label class="block font-bold text-slate-700 text-xs mb-1">Transfer Reason / Note:</label>
+          <input type="text" id="reassign-transfer-reason" value="Admin Live Transfer" placeholder="e.g. Baby Collection Specialist required" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:ring-1 focus:ring-purple-500">
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-50 px-5 py-4 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+        <button type="button" onclick="submitReassignToRingingPool()" class="px-3.5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5" title="Release back to Ringing Pool for any staff to claim">
+          <span class="material-symbols-outlined text-[16px]">restart_alt</span> Release to Pool
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeModal('modal-reassign-call')" class="px-4 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-bold transition cursor-pointer">
+            Cancel
+          </button>
+          <button type="button" id="btn-confirm-reassign-call" onclick="submitReassignCall()" class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 text-white font-bold rounded-xl text-xs transition shadow-md cursor-pointer flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">check</span> Reassign Call
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- NOTIFICATION TOAST -->
-  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <!-- NOTIFICATION TOAST (Upper Right Header Position) -->
+  <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- AUDIO SOUND ALERT (Web Audio API synthetic notification chime) -->
   <script>
@@ -8654,8 +9259,9 @@
 
     function showToast(title, message, icon = 'info', color = 'emerald') {
       const container = document.getElementById('toast-container');
+      if (!container) return;
       const toast = document.createElement('div');
-      toast.className = `pointer-events-auto bg-white border border-${color}-200 shadow-xl rounded-2xl p-4 flex items-start gap-3 w-80 transform transition-all duration-300 translate-y-4 opacity-0`;
+      toast.className = `pointer-events-auto bg-white/95 backdrop-blur-md border border-${color}-200 shadow-2xl rounded-2xl p-4 flex items-start gap-3 w-84 transform transition-all duration-300 -translate-y-4 opacity-0 z-[9999]`;
       toast.innerHTML = `
         <div class="w-8 h-8 rounded-xl bg-${color}-100 text-${color}-600 flex items-center justify-center shrink-0">
           <span class="material-symbols-outlined text-[20px]">${icon}</span>
@@ -8667,10 +9273,10 @@
       `;
       container.appendChild(toast);
       setTimeout(() => {
-        toast.classList.remove('translate-y-4', 'opacity-0');
+        toast.classList.remove('-translate-y-4', 'opacity-0');
       }, 10);
       setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-x-8');
+        toast.classList.add('opacity-0', '-translate-y-4');
         setTimeout(() => toast.remove(), 300);
       }, 4000);
     }
@@ -8683,7 +9289,7 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=12.8"></script>
+  <script src="crm_app.js?v=18.1"></script>
 </body>
 
 </html>

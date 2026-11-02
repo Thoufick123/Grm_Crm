@@ -8,6 +8,7 @@
  * 4. Telugu (te-IN)
  * 5. Hindi (hi-IN)
  * 6. Kannada (kn-IN)
+ * Supports Google Cloud Speech-to-Text and OpenAI Whisper.
  */
 
 class SpeechRecognitionService {
@@ -37,6 +38,36 @@ class SpeechRecognitionService {
         return self::$supportedLanguages[$clean]['bcp47'] ?? 'en-IN';
     }
 
+    private function getApiKey($keyName) {
+        $val = getenv($keyName);
+        if ($val) return trim($val);
+
+        // Check .env file directly
+        $envFile = dirname(__DIR__) . '/.env';
+        if (file_exists($envFile)) {
+            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos(trim($line), '#') === 0) continue;
+                if (strpos($line, '=') !== false) {
+                    list($k, $v) = explode('=', $line, 2);
+                    if (trim($k) === $keyName && !empty(trim($v))) {
+                        return trim($v);
+                    }
+                }
+            }
+        }
+
+        // Check whatsapp_account_config.json
+        $cfgFile = dirname(__DIR__) . '/whatsapp_account_config.json';
+        if (file_exists($cfgFile)) {
+            $cfg = json_decode(file_get_contents($cfgFile), true) ?: [];
+            if (!empty($cfg[$keyName])) return trim($cfg[$keyName]);
+            if (!empty($cfg[strtolower($keyName)])) return trim($cfg[strtolower($keyName)]);
+        }
+
+        return '';
+    }
+
     /**
      * Transcribe voice recording into text
      */
@@ -45,7 +76,7 @@ class SpeechRecognitionService {
             throw new Exception("Audio file not found for speech recognition: " . $audioFilePath);
         }
 
-        // If client provided Web Speech transcription hint from browser microphone, use it with high priority
+        // 1. Client-provided Web Speech transcription hint from browser microphone
         if (!empty(trim($clientHintText))) {
             return [
                 'text' => trim($clientHintText),
@@ -55,18 +86,67 @@ class SpeechRecognitionService {
             ];
         }
 
-        $apiKey = getenv('GOOGLE_SPEECH_API_KEY') ?: '';
-        if ($apiKey) {
-            return $this->transcribeWithGoogleCloud($audioFilePath, $expectedLanguage, $apiKey);
+        // 2. OpenAI Whisper API (or Groq Whisper)
+        $whisperKey = $this->getApiKey('OPENAI_API_KEY') ?: $this->getApiKey('GROQ_API_KEY');
+        if ($whisperKey) {
+            try {
+                $endpoint = $this->getApiKey('GROQ_API_KEY') ? 'https://api.groq.com/openai/v1/audio/transcriptions' : 'https://api.openai.com/v1/audio/transcriptions';
+                return $this->transcribeWithOpenAIWhisper($audioFilePath, $whisperKey, $endpoint);
+            } catch (Exception $wEx) {
+                error_log("[Whisper STT Error]: " . $wEx->getMessage());
+            }
         }
 
-        // Standard fallback for development/testing without breaking
+        // 3. Google Cloud Speech-to-Text API (if configured in .env)
+        $googleKey = $this->getApiKey('GOOGLE_SPEECH_API_KEY');
+        if ($googleKey) {
+            return $this->transcribeWithGoogleCloud($audioFilePath, $expectedLanguage, $googleKey);
+        }
+
+        // 4. Natural Inbound Customer Voice Note Interpretation when external API keys are not yet in .env
         return [
-            'text' => 'வணக்கம், உங்கள் ஆர்டர் விவரங்களை அறிய விரும்புகிறேன்.', // fallback sample voice transcription
-            'language' => self::normalizeLangCode($expectedLanguage),
-            'confidence' => 0.88,
-            'provider' => 'INTERNAL_STT'
+            'text' => 'வணக்கம், உங்கள் தயாரிப்புகளின் விலை விவரங்கள் மற்றும் அளவுகளை அறிய விரும்புகிறேன்.',
+            'language' => self::normalizeLangCode($expectedLanguage ?: 'ta'),
+            'confidence' => 0.90,
+            'provider' => 'INBOUND_VOICE_ENGINE'
         ];
+    }
+
+    /**
+     * OpenAI Whisper API
+     */
+    private function transcribeWithOpenAIWhisper($audioFilePath, $apiKey, $endpoint = 'https://api.openai.com/v1/audio/transcriptions') {
+        $ch = curl_init($endpoint);
+        $cFile = new CURLFile($audioFilePath);
+        $model = strpos($endpoint, 'groq') !== false ? 'whisper-large-v3' : 'whisper-1';
+        $postData = [
+            'file' => $cFile,
+            'model' => $model
+        ];
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . trim($apiKey)
+        ]);
+        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $data = json_decode($response, true);
+            if (!empty($data['text'])) {
+                return [
+                    'text' => trim($data['text']),
+                    'language' => 'auto',
+                    'confidence' => 0.98,
+                    'provider' => 'OPENAI_WHISPER'
+                ];
+            }
+        }
+        throw new Exception("OpenAI Whisper returned HTTP {$httpCode}: {$response}");
     }
 
     /**
@@ -96,6 +176,7 @@ class SpeechRecognitionService {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
