@@ -1352,6 +1352,7 @@ if ($action === 'save_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $description = $p['description'] ?? '';
+                $deliveryNote = $p['delivery_note'] ?? ($p['deliveryNote'] ?? null);
                 $accountId = $p['account_id'] ?? ($p['accountId'] ?? 'account_1');
 
                 $rowExists = false;
@@ -1382,35 +1383,35 @@ if ($action === 'save_product' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         UPDATE `products` SET 
                             `sku` = ?, `name` = ?, `category` = ?, `subcategory` = ?, `size` = ?, `color` = ?, 
                             `fabric` = ?, `specifications` = ?, `price` = ?, `mrp` = ?, `physical_stock` = ?, `reserved_stock` = ?, 
-                            `image` = ?, `description` = ?, `account_id` = ?
+                            `image` = ?, `description` = ?, `delivery_note` = ?, `account_id` = ?
                         WHERE `id` = ?
                     ");
                     $stmt->execute([
                         $sku, $name, $category, $subcategory, $size, $color, 
                         $fabric, $specifications, $price, $mrp, $physical, $reserved, 
-                        $image, $description, $accountId, $targetId
+                        $image, $description, $deliveryNote, $accountId, $targetId
                     ]);
                     $savedIds[] = (int)$targetId;
-                    $savedRows[] = ['id' => (int)$targetId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp, 'image' => $image];
+                    $savedRows[] = ['id' => (int)$targetId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp, 'image' => $image, 'delivery_note' => $deliveryNote];
                 } else {
                     $stmt = $pdo->prepare("
-                        INSERT INTO `products` (`sku`, `name`, `category`, `subcategory`, `size`, `color`, `fabric`, `specifications`, `price`, `mrp`, `physical_stock`, `reserved_stock`, `image`, `description`, `account_id`)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO `products` (`sku`, `name`, `category`, `subcategory`, `size`, `color`, `fabric`, `specifications`, `price`, `mrp`, `physical_stock`, `reserved_stock`, `image`, `description`, `delivery_note`, `account_id`)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE 
                             `name` = VALUES(`name`), `category` = VALUES(`category`), `subcategory` = VALUES(`subcategory`),
                             `size` = VALUES(`size`), `color` = VALUES(`color`), `fabric` = VALUES(`fabric`),
                             `specifications` = VALUES(`specifications`),
                             `price` = VALUES(`price`), `mrp` = VALUES(`mrp`), `physical_stock` = VALUES(`physical_stock`),
-                            `image` = VALUES(`image`), `description` = VALUES(`description`), `account_id` = VALUES(`account_id`)
+                            `image` = VALUES(`image`), `description` = VALUES(`description`), `delivery_note` = VALUES(`delivery_note`), `account_id` = VALUES(`account_id`)
                     ");
                     $stmt->execute([
                         $sku, $name, $category, $subcategory, $size, $color, 
                         $fabric, $specifications, $price, $mrp, $physical, $reserved, 
-                        $image, $description, $accountId
+                        $image, $description, $deliveryNote, $accountId
                     ]);
                     $insertedId = (int)($pdo->lastInsertId() ?: $targetId);
                     $savedIds[] = $insertedId;
-                    $savedRows[] = ['id' => $insertedId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp, 'image' => $image];
+                    $savedRows[] = ['id' => $insertedId, 'sku' => $sku, 'price' => $price, 'mrp' => $mrp, 'image' => $image, 'delivery_note' => $deliveryNote];
                 }
             } catch (Exception $e) {
                 error_log("save_product exception for {$p['sku']}: " . $e->getMessage());
@@ -1829,9 +1830,16 @@ if ($action === 'save_subcategory' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $slug = trim($s['slug'] ?? strtolower(preg_replace('/[^a-zA-Z0-9]+/', '_', $name)));
     $prefix = strtoupper(trim($s['sku_prefix'] ?? ($s['skuPrefix'] ?? 'GRM')));
+    $catId = $s['category_id'] ?? ($s['categoryId'] ?? null);
 
     if ($pdo) {
         try {
+            if (empty($catId) && !empty($catName)) {
+                $cStmt = $pdo->prepare("SELECT `id` FROM `categories` WHERE `name` = ? LIMIT 1");
+                $cStmt->execute([$catName]);
+                $catId = $cStmt->fetchColumn() ?: null;
+            }
+
             $id = $s['id'] ?? null;
             $rowExists = false;
             if ($id && is_numeric($id)) {
@@ -1841,14 +1849,14 @@ if ($action === 'save_subcategory' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($rowExists) {
-                $stmt = $pdo->prepare("UPDATE `subcategories` SET `category_name` = ?, `name` = ?, `slug` = ?, `sku_prefix` = ? WHERE `id` = ?");
-                $stmt->execute([$catName, $name, $slug, $prefix, $id]);
+                $stmt = $pdo->prepare("UPDATE `subcategories` SET `category_id` = ?, `category_name` = ?, `name` = ?, `slug` = ?, `sku_prefix` = ? WHERE `id` = ?");
+                $stmt->execute([$catId, $catName, $name, $slug, $prefix, $id]);
             } else {
-                $stmt = $pdo->prepare("INSERT INTO `subcategories` (`category_name`, `name`, `slug`, `sku_prefix`) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$catName, $name, $slug, $prefix]);
+                $stmt = $pdo->prepare("INSERT INTO `subcategories` (`category_id`, `category_name`, `name`, `slug`, `sku_prefix`) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$catId, $catName, $name, $slug, $prefix]);
                 $id = $pdo->lastInsertId() ?: $id;
             }
-            echo json_encode(["status" => "success", "message" => "Subcategory saved successfully", "id" => $id]);
+            echo json_encode(["status" => "success", "message" => "Subcategory saved successfully", "id" => $id, "category_id" => $catId]);
             exit;
         } catch (Exception $e) {
             http_response_code(500);
@@ -3649,7 +3657,7 @@ if ($action === 'restore_db') {
                         $o['upiTransactionId'] ?? ($o['upi_transaction_id'] ?? null),
                         $o['orderStatus'] ?? ($o['order_status'] ?? 'PLACED'),
                         $o['staffId'] ?? ($o['staff_id'] ?? 'staff_01'),
-                        $o['staffName'] ?? ($o['staff_name'] ?? 'Priya Sharma'),
+                        $o['staffName'] ?? ($o['staff_name'] ?? 'Staff'),
                         $o['createdBy'] ?? ($o['created_by'] ?? 'Staff'),
                         $o['trackingNumber'] ?? ($o['tracking_number'] ?? null),
                         $o['courierName'] ?? ($o['courier_name'] ?? null),

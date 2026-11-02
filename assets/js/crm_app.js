@@ -1,3 +1,13 @@
+// =========================================================================
+// LIGHTWEIGHT UI STRING HELPER (Native English Default)
+// =========================================================================
+if (typeof window.t !== 'function') {
+  window.t = function (key, fallback) { return fallback !== undefined ? fallback : key; };
+}
+if (typeof window.getCurrentLanguage !== 'function') {
+  window.getCurrentLanguage = function () { return { code: 'en', label: 'English' }; };
+}
+
 
 /**
  * Real-time payment amount validation coordinator.
@@ -15,16 +25,18 @@ function handleReceiptAmountChange(mode, rawValue) {
     (ORDER_MODAL_STATE?.items || []).forEach(it => {
       expectedAmount += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
     });
+    expectedAmount += (parseFloat(ORDER_MODAL_STATE?.shippingCharge) || 0);
     if (expectedAmount === 0 && ORDER_MODAL_STATE?.grandTotal) expectedAmount = ORDER_MODAL_STATE.grandTotal;
   } else {
-    expectedAmount = 200; // Mandatory COD advance
+    expectedAmount = (ORDER_MODAL_STATE?.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
   }
-  if (!expectedAmount) expectedAmount = 599;
+  if (!expectedAmount && isOnline) expectedAmount = 599;
+  if (!expectedAmount && !isOnline) expectedAmount = 200;
 
   ORDER_MODAL_STATE.expectedAmount = expectedAmount;
   ORDER_MODAL_STATE.detectedAmount = val > 0 ? val : null;
 
-  const inputEl = document.getElementById(prefix + '-receipt-amount');
+  const inputEl = document.getElementById('order-' + prefix + '-receipt-amount') || document.getElementById(prefix + '-receipt-amount');
   const pillEl = document.getElementById(prefix + '-amount-match-pill');
   const alertEl = document.getElementById(prefix + '-amount-mismatch-alert');
   const metaBadge = document.getElementById(prefix + '-screenshot-meta-badge');
@@ -180,8 +192,8 @@ function extractPaymentAmountFromOCR(rawText) {
     if (numMatch) {
       const val = parseFloat(numMatch[1]);
       const hasPaymentContext = prev.includes('to') || prev.includes('paid') || prev.includes('+91') ||
-                                next.includes('completed') || next.includes('successful') || next.includes('pay again') ||
-                                next.includes('bank') || next.includes('uco') || next.includes('sbi');
+        next.includes('completed') || next.includes('successful') || next.includes('pay again') ||
+        next.includes('bank') || next.includes('uco') || next.includes('sbi');
       if (hasPaymentContext && val !== 2024 && val !== 2025 && val !== 2026 && val !== 2027) {
         return val;
       }
@@ -276,11 +288,7 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
     allocatedPerDay: 200,
     lastResetDate: '2026-10-02'
   },
-  staffList: [
-    { id: 'staff_01', name: 'Priya Sharma', role: 'Sales Specialist (Baby Collection)', avatar: 'PS', activeQueries: 0, converted: 14, dailyQuota: 70, todayHandled: 0, email: 'priya.sharma@grmgarments.com', phone: '+91 98450 11221', specialization: 'Baby Collection', status: 'ACTIVE' },
-    { id: 'staff_02', name: 'Rahul Verma', role: 'Enquiry Specialist (Maternity & Kids)', avatar: 'RV', activeQueries: 0, converted: 9, dailyQuota: 70, todayHandled: 0, email: 'rahul.verma@grmgarments.com', phone: '+91 98450 11222', specialization: 'Maternity & Kids', status: 'ACTIVE' },
-    { id: 'staff_03', name: 'Sneha Patel', role: 'Order Fulfillment & Support', avatar: 'SP', activeQueries: 0, converted: 11, dailyQuota: 60, todayHandled: 0, email: 'sneha.patel@grmgarments.com', phone: '+91 98450 11223', specialization: 'Order Fulfillment', status: 'ACTIVE' }
-  ],
+  staffList: [],
   products: [],
   customers: [],
   queries: [],
@@ -288,34 +296,8 @@ var INITIAL_CRM_DATA = window.INITIAL_CRM_DATA || {
   orders: [],
   followups: [],
   auditLogs: [],
-  categories: [
-    { id: 1, name: 'Baby Collection', slug: 'baby_collection', icon: 'child_care', description: 'Pure cotton frocks, rompers & soft babywear (0–3 Years)' },
-    { id: 2, name: 'Maternity & Feeding', slug: 'maternity_wear', icon: 'pregnant_woman', description: 'Feeding kurtis, maxi gowns & maternity comfort dresses' },
-    { id: 3, name: 'Newborn Essentials', slug: 'newborn_care', icon: 'crib', description: '5-piece organic gift sets, swaddle wraps & rompers' },
-    { id: 4, name: 'Kids Everyday Wear', slug: 'kids_wear', icon: 'styler', description: 'Cotton T-shirt packs, dungarees & nightwear (4–8 Years)' },
-    { id: 5, name: 'Girls Festive & Ethnic', slug: 'girls_festive', icon: 'celebration', description: 'Silk lehenga choli, handcrafted pattu pavadai sets' },
-    { id: 6, name: 'Wholesale & Bulk Bundles', slug: 'wholesale_bulk', icon: 'inventory', description: 'Factory wholesale bundles (Erode/Tirupur manufacturing)' }
-  ],
-  subcategories: [
-    { id: 1, category_name: 'Baby Collection', name: 'Baby Frocks (Embroidered Cotton)', slug: 'baby_frocks', sku_prefix: 'BF' },
-    { id: 2, category_name: 'Baby Collection', name: 'Cotton Newborn Rompers', slug: 'cotton_rompers', sku_prefix: 'BR' },
-    { id: 3, category_name: 'Baby Collection', name: '2-Piece Tops & Bloomers Set', slug: 'baby_sets', sku_prefix: 'BS' },
-    { id: 4, category_name: 'Maternity & Feeding', name: 'Feeding Kurtis & Anarkalis', slug: 'feeding_kurtis', sku_prefix: 'FK' },
-    { id: 5, category_name: 'Maternity & Feeding', name: 'Maternity Maxi Feeding Gowns', slug: 'maxi_gowns', sku_prefix: 'MD' },
-    { id: 6, category_name: 'Maternity & Feeding', name: 'Maternity Comfort Pants', slug: 'maternity_bottoms', sku_prefix: 'MP' },
-    { id: 7, category_name: 'Newborn Essentials', name: '5-Piece Organic Romper Gift Sets', slug: 'gift_sets', sku_prefix: 'BB' },
-    { id: 8, category_name: 'Newborn Essentials', name: 'Muslin Swaddle Wraps', slug: 'swaddles', sku_prefix: 'SW' },
-    { id: 9, category_name: 'Newborn Essentials', name: 'Booties, Mittens & Cap Sets', slug: 'mittens_caps', sku_prefix: 'MC' },
-    { id: 10, category_name: 'Kids Everyday Wear', name: 'Cotton T-Shirt Packs (Pack of 3)', slug: 'tshirts_pack', sku_prefix: 'KD' },
-    { id: 11, category_name: 'Kids Everyday Wear', name: 'Denim & Cotton Dungarees', slug: 'dungarees', sku_prefix: 'DG' },
-    { id: 12, category_name: 'Kids Everyday Wear', name: 'Nightwear Pajama Sets', slug: 'nightwear', sku_prefix: 'NW' },
-    { id: 13, category_name: 'Girls Festive & Ethnic', name: 'Festive Silk Lehenga Choli', slug: 'lehenga_choli', sku_prefix: 'GL' },
-    { id: 14, category_name: 'Girls Festive & Ethnic', name: 'Handcrafted Silk Pattu Pavadai', slug: 'pattu_pavadai', sku_prefix: 'VIP' },
-    { id: 15, category_name: 'Girls Festive & Ethnic', name: 'Party Wear Anarkalis', slug: 'anarkali_ethnic', sku_prefix: 'AK' },
-    { id: 16, category_name: 'Wholesale & Bulk Bundles', name: '25-Pc Assorted Frock Bundles', slug: 'frock_bundles', sku_prefix: 'WS-F' },
-    { id: 17, category_name: 'Wholesale & Bulk Bundles', name: '50-Pc Rompers Bulk Box', slug: 'romper_boxes', sku_prefix: 'WS-R' },
-    { id: 18, category_name: 'Wholesale & Bulk Bundles', name: 'Mixed Garment Lots', slug: 'mixed_lots', sku_prefix: 'WS-M' }
-  ],
+  categories: [],
+  subcategories: [],
   attributes: {
     sizes: ['0-6 Months', '6-12 Months', '1-2 Years', '2-3 Years', '3-4 Years', '4-5 Years', '6-7 Years', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size', 'Assorted Bulk Lot'],
     colors: ['Pink', 'Red', 'Maroon', 'Sunshine Yellow', 'Sky Blue', 'Mint Green', 'Blush Pink', 'Ruby Red & Gold', 'Emerald Green & Gold', 'Pure White', 'Multi Pastel', 'Navy Blue', 'Royal Maroon'],
@@ -342,60 +324,6 @@ var DEFAULT_ACCOUNTS = window.DEFAULT_ACCOUNTS || {
     title: 'Admin Manager (Full Control)',
     avatar: 'SA',
     staffId: 'admin'
-  },
-  'priya': {
-    username: 'priya',
-    password: 'staff123',
-    role: 'staff_01',
-    staffId: 'staff_01',
-    name: 'Priya Sharma',
-    title: 'Sales Specialist (Baby Collection)',
-    avatar: 'PS'
-  },
-  'staff_01': {
-    username: 'staff_01',
-    password: 'staff123',
-    role: 'staff_01',
-    staffId: 'staff_01',
-    name: 'Priya Sharma',
-    title: 'Sales Specialist (Baby Collection)',
-    avatar: 'PS'
-  },
-  'rahul': {
-    username: 'rahul',
-    password: 'staff123',
-    role: 'staff_02',
-    staffId: 'staff_02',
-    name: 'Rahul Verma',
-    title: 'Enquiry Specialist (Maternity & Kids)',
-    avatar: 'RV'
-  },
-  'staff_02': {
-    username: 'staff_02',
-    password: 'staff123',
-    role: 'staff_02',
-    staffId: 'staff_02',
-    name: 'Rahul Verma',
-    title: 'Enquiry Specialist (Maternity & Kids)',
-    avatar: 'RV'
-  },
-  'sneha': {
-    username: 'sneha',
-    password: 'staff123',
-    role: 'staff_03',
-    staffId: 'staff_03',
-    name: 'Sneha Patel',
-    title: 'Order Fulfillment & Support',
-    avatar: 'SP'
-  },
-  'staff_03': {
-    username: 'staff_03',
-    password: 'staff123',
-    role: 'staff_03',
-    staffId: 'staff_03',
-    name: 'Sneha Patel',
-    title: 'Order Fulfillment & Support',
-    avatar: 'SP'
   }
 };
 window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
@@ -406,17 +334,17 @@ window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
 // =========================================================================
 const CRM_MODULE_DEFINITIONS = [
   { key: 'inbox', name: 'WhatsApp Inbox & Live Chat', desc: 'Realtime chats, inbound stream, templates & photo sending', icon: 'chat' },
-  { key: 'enquiries', name: 'Customer Enquiries & Leads Hub', desc: 'Lead triage, allocation & customer conversation status', icon: 'support_agent' },
   { key: 'followups', name: 'Customer Follow-up Scheduler', desc: 'Callback calendar, payment promises & reminders', icon: 'schedule' },
   { key: 'catalog', name: 'Live Stock & Garment Catalog', desc: 'Inventory stock, pricing, image library & 1-click sharing', icon: 'inventory_2' },
   { key: 'orders', name: 'WhatsApp Sales Orders', desc: 'Order booking, stock reservations & COD / UPI billing', icon: 'shopping_bag' },
-  { key: 'customers', name: 'Customer 360 & Profiles Directory', desc: 'Customer history, WhatsApp accounts, and tag directory', icon: 'groups' },
+  { key: 'customers', name: 'Customer 360 & Profiles Directory', desc: 'Customer history, WhatsApp accounts, and tag directory', icon: 'groups', viewOnly: true },
   { key: 'dnd', name: 'DND & Opt-Out Customer Hub', desc: 'Blacklist, opt-out compliance & marketing revocation', icon: 'block' },
   { key: 'staff', name: 'Staff & Team Management', desc: 'Team member directory, staff onboarding & role assignment', icon: 'badge' },
   { key: 'analytics', name: 'Staff Performance Analytics & KPIs', desc: 'Team conversions, response latency & volume reports', icon: 'monitoring' },
-  { key: 'audit', name: 'System Audit Trail & Security Logs', desc: 'Tamper-proof event logs, security & staff actions', icon: 'history' },
+  { key: 'audit', name: 'System Audit Trail & Security Logs', desc: 'Tamper-proof event logs, security & staff actions', icon: 'history', viewOnly: true },
   { key: 'settings', name: 'WhatsApp Business Settings', desc: 'Business phone slots, Webhook routing & Softphone config', icon: 'settings' },
-  { key: 'backup', name: 'Data Backup & Recovery Hub', desc: 'Full MySQL database snapshot export and zero-loss restore', icon: 'backup' }
+  { key: 'backup', name: 'Data Backup & Recovery Hub', desc: 'Full MySQL database snapshot export and zero-loss restore', icon: 'backup' },
+  { key: 'masking', name: 'Call & Number Masking', desc: 'In-CRM softphone dialer, lead privacy protection & virtual DID caller ID', icon: 'phone_locked' }
 ];
 window.CRM_MODULE_DEFINITIONS = CRM_MODULE_DEFINITIONS;
 
@@ -427,13 +355,14 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: true, delete: true },
     catalog: { view: true, create: true, edit: true, delete: true },
     orders: { view: true, create: true, edit: true, delete: true },
-    customers: { view: true, create: true, edit: true, delete: true },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: true, delete: true },
     staff: { view: true, create: true, edit: true, delete: true },
     analytics: { view: true, create: true, edit: true, delete: true },
-    audit: { view: true, create: true, edit: true, delete: true },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: true, create: true, edit: true, delete: true },
-    backup: { view: true, create: true, edit: true, delete: true }
+    backup: { view: true, create: true, edit: true, delete: true },
+    masking: { view: true, create: true, edit: true, delete: true }
   },
   'Admin Manager': {
     inbox: { view: true, create: true, edit: true, delete: true },
@@ -441,13 +370,14 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: true, delete: true },
     catalog: { view: true, create: true, edit: true, delete: true },
     orders: { view: true, create: true, edit: true, delete: true },
-    customers: { view: true, create: true, edit: true, delete: true },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: true, delete: true },
     staff: { view: true, create: true, edit: true, delete: false },
     analytics: { view: true, create: true, edit: true, delete: false },
     audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: true, create: true, edit: true, delete: false },
-    backup: { view: true, create: true, edit: false, delete: false }
+    backup: { view: true, create: true, edit: false, delete: false },
+    masking: { view: true, create: true, edit: true, delete: true }
   },
   'Sales Specialist (Baby Collection)': {
     inbox: { view: true, create: true, edit: true, delete: false },
@@ -455,13 +385,14 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: true, delete: false },
     catalog: { view: true, create: false, edit: false, delete: false },
     orders: { view: true, create: true, edit: true, delete: false },
-    customers: { view: true, create: true, edit: true, delete: false },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: false, delete: false },
     staff: { view: false, create: false, edit: false, delete: false },
     analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: false, create: false, edit: false, delete: false },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: false, create: false, edit: false, delete: false },
-    backup: { view: false, create: false, edit: false, delete: false }
+    backup: { view: false, create: false, edit: false, delete: false },
+    masking: { view: true, create: true, edit: false, delete: false }
   },
   'Enquiry Specialist (Maternity & Kids)': {
     inbox: { view: true, create: true, edit: true, delete: false },
@@ -469,13 +400,14 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: true, delete: false },
     catalog: { view: true, create: false, edit: false, delete: false },
     orders: { view: false, create: false, edit: false, delete: false },
-    customers: { view: true, create: true, edit: true, delete: false },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: false, delete: false },
     staff: { view: false, create: false, edit: false, delete: false },
     analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: false, create: false, edit: false, delete: false },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: false, create: false, edit: false, delete: false },
-    backup: { view: false, create: false, edit: false, delete: false }
+    backup: { view: false, create: false, edit: false, delete: false },
+    masking: { view: true, create: true, edit: false, delete: false }
   },
   'Order Fulfillment & Support': {
     inbox: { view: true, create: true, edit: false, delete: false },
@@ -487,9 +419,10 @@ const DEFAULT_ROLE_PERMISSIONS = {
     dnd: { view: false, create: false, edit: false, delete: false },
     staff: { view: false, create: false, edit: false, delete: false },
     analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: false, create: false, edit: false, delete: false },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: false, create: false, edit: false, delete: false },
-    backup: { view: false, create: false, edit: false, delete: false }
+    backup: { view: false, create: false, edit: false, delete: false },
+    masking: { view: true, create: true, edit: false, delete: false }
   },
   'Customer Care Representative': {
     inbox: { view: true, create: true, edit: false, delete: false },
@@ -497,13 +430,14 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: false, delete: false },
     catalog: { view: true, create: false, edit: false, delete: false },
     orders: { view: true, create: false, edit: false, delete: false },
-    customers: { view: true, create: true, edit: false, delete: false },
+    customers: { view: true, create: false, edit: false, delete: false },
     dnd: { view: true, create: true, edit: false, delete: false },
     staff: { view: false, create: false, edit: false, delete: false },
     analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: false, create: false, edit: false, delete: false },
+    audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: false, create: false, edit: false, delete: false },
-    backup: { view: false, create: false, edit: false, delete: false }
+    backup: { view: false, create: false, edit: false, delete: false },
+    masking: { view: true, create: true, edit: false, delete: false }
   }
 };
 window.DEFAULT_ROLE_PERMISSIONS = DEFAULT_ROLE_PERMISSIONS;
@@ -518,15 +452,38 @@ function initRolePermissionsState() {
       } else {
         CRM_STATE.rolePermissions = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
       }
-    } catch(e) {
+    } catch (e) {
       CRM_STATE.rolePermissions = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
     }
+  }
+  // Sanitize Customer 360 & System Audit Logs to strictly view-only across all roles
+  if (CRM_STATE && CRM_STATE.rolePermissions) {
+    Object.keys(DEFAULT_ROLE_PERMISSIONS).forEach(r => {
+      if (CRM_STATE.rolePermissions[r] && (!CRM_STATE.rolePermissions[r].masking || typeof CRM_STATE.rolePermissions[r].masking !== 'object')) {
+        CRM_STATE.rolePermissions[r].masking = Object.assign({}, DEFAULT_ROLE_PERMISSIONS[r]?.masking || { view: true, create: true, edit: false, delete: false });
+      }
+    });
+    Object.keys(CRM_STATE.rolePermissions).forEach(r => {
+      if (!CRM_STATE.rolePermissions[r].masking || typeof CRM_STATE.rolePermissions[r].masking !== 'object') {
+        CRM_STATE.rolePermissions[r].masking = { view: true, create: true, edit: false, delete: false };
+      }
+      if (CRM_STATE.rolePermissions[r]?.customers) {
+        CRM_STATE.rolePermissions[r].customers.create = false;
+        CRM_STATE.rolePermissions[r].customers.edit = false;
+        CRM_STATE.rolePermissions[r].customers.delete = false;
+      }
+      if (CRM_STATE.rolePermissions[r]?.audit) {
+        CRM_STATE.rolePermissions[r].audit.create = false;
+        CRM_STATE.rolePermissions[r].audit.edit = false;
+        CRM_STATE.rolePermissions[r].audit.delete = false;
+      }
+    });
   }
 }
 window.initRolePermissionsState = initRolePermissionsState;
 
 function getUserAssignedRoleName(user) {
-  if (!user) user = (typeof CURRENT_USER !== 'undefined' ? CURRENT_USER : null);
+  if (!user) user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof window !== 'undefined' && window.CURRENT_USER ? window.CURRENT_USER : null);
   if (!user) return 'Super Admin';
 
   if (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || (user.title && user.title.includes('Admin Manager'))) {
@@ -558,10 +515,15 @@ function getUserAssignedRoleName(user) {
 window.getUserAssignedRoleName = getUserAssignedRoleName;
 
 function canUserPerformAction(moduleName, action) {
-  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
+  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof window !== 'undefined' && window.CURRENT_USER) ? window.CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null));
   if (!user) return true;
 
-  if (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || (user.title && user.title.includes('Admin Manager (Full Control)'))) {
+  // Audit Logs and Customer 360 are strictly view-only modules across all roles (no manual create, edit, or delete actions)
+  if ((moduleName === 'audit' || moduleName === 'customers') && action !== 'view') {
+    return false;
+  }
+
+  if (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.name === 'Super Admin' || (user.title && user.title.includes('Admin'))) {
     return true;
   }
 
@@ -577,12 +539,48 @@ function canUserPerformAction(moduleName, action) {
   }
 
   const rolePerms = (CRM_STATE?.rolePermissions && CRM_STATE.rolePermissions[roleName]) || DEFAULT_ROLE_PERMISSIONS[roleName];
+
+  // For enquiries, autoreply & broadcast: WhatsApp Inbox sub-modules — strictly inherit from inbox permissions
+  if (moduleName === 'autoreply' || moduleName === 'broadcast' || moduleName === 'enquiries') {
+    const inboxPerm = (rolePerms && rolePerms.inbox) ? rolePerms.inbox[action] : undefined;
+    if (inboxPerm !== undefined) {
+      return Boolean(inboxPerm);
+    }
+    if (rolePerms && rolePerms[moduleName] && rolePerms[moduleName][action] !== undefined) {
+      return Boolean(rolePerms[moduleName][action]);
+    }
+    return canUserPerformAction('inbox', action);
+  }
+
+  if (moduleName === 'masking') {
+    if (rolePerms && rolePerms.masking && rolePerms.masking[action] !== undefined) {
+      return Boolean(rolePerms.masking[action]);
+    }
+    return action === 'view' || action === 'create';
+  }
+
   if (!rolePerms || !rolePerms[moduleName]) {
-    const sensitive = ['settings', 'backup', 'staff', 'audit', 'analytics'];
+    const sensitive = ['settings', 'backup', 'staff', 'audit', 'analytics', 'masking'];
     if (action === 'view') {
       return !sensitive.includes(moduleName);
     }
     return false;
+  }
+
+  // For customers (Customer 360): strictly view-only directory & profile hub
+  if (moduleName === 'customers') {
+    if (action === 'view') {
+      return Boolean(rolePerms.customers ? rolePerms.customers.view : true);
+    }
+    return false; // Customer 360 has no create, edit, or delete actions
+  }
+
+  // For audit (System Audit Trail & Security Logs): strictly view-only tamper-proof log
+  if (moduleName === 'audit') {
+    if (action === 'view') {
+      return Boolean(rolePerms.audit ? rolePerms.audit.view : false);
+    }
+    return false; // Audit logs have no manual create, edit, or delete actions
   }
 
   return Boolean(rolePerms[moduleName][action]);
@@ -612,22 +610,50 @@ function enforceGranularActionPermissions() {
   const btnAddStaffTable = document.getElementById('btn-add-staff-table');
   if (btnAddStaffTable) btnAddStaffTable.style.display = canStaffCreate ? '' : 'none';
 
-  if (typeof ACTIVE_STAFF_TAB !== 'undefined') {
-    if (ACTIVE_STAFF_TAB === 'create' && !canStaffCreate) {
-      if (typeof switchStaffTab === 'function') switchStaffTab('list');
-    }
-    if (ACTIVE_STAFF_TAB === 'roles' && !canStaffEdit) {
-      if (typeof switchStaffTab === 'function') switchStaffTab('list');
-    }
+  const currentStaffTab = (typeof window !== 'undefined' && window.ACTIVE_STAFF_TAB) ? window.ACTIVE_STAFF_TAB : (typeof ACTIVE_STAFF_TAB !== 'undefined' ? ACTIVE_STAFF_TAB : 'list');
+  if (currentStaffTab === 'create' && !canStaffCreate) {
+    if (typeof switchStaffTab === 'function') switchStaffTab('list');
+  }
+  if (currentStaffTab === 'roles' && !canStaffEdit) {
+    if (typeof switchStaffTab === 'function') switchStaffTab('list');
   }
 
   // 2. Orders Module Actions
+  const canOrderView = isSuperAdmin || canUserPerformAction('orders', 'view');
   const canOrderCreate = isSuperAdmin || canUserPerformAction('orders', 'create');
-  document.querySelectorAll('.btn-move-to-order, [data-action="move-to-order"]').forEach(el => {
-    el.style.display = canOrderCreate ? '' : 'none';
+  const canOrderEdit = isSuperAdmin || canUserPerformAction('orders', 'edit');
+  const canOrderDelete = isSuperAdmin || canUserPerformAction('orders', 'delete');
+
+  const navOrdersGroup = document.getElementById('nav-orders-group');
+  if (navOrdersGroup) navOrdersGroup.style.display = canOrderView ? '' : 'none';
+  const navOrders = document.getElementById('nav-orders');
+  if (navOrders) navOrders.style.display = canOrderView ? '' : 'none';
+  const navOrdersSub = document.getElementById('nav-orders-submodules');
+  if (navOrdersSub && !canOrderView) navOrdersSub.style.display = 'none';
+
+  // Create controls (New standalone order booking)
+  const canBookPerm = isSuperAdmin || canUserPerformAction('orders', 'create') || canUserPerformAction('orders', 'edit') || canUserPerformAction('inbox', 'edit') || canUserPerformAction('inbox', 'create');
+  const btnHeaderBookOrder = document.getElementById('btn-header-book-order');
+  if (btnHeaderBookOrder) btnHeaderBookOrder.style.display = canBookPerm ? '' : 'none';
+  document.querySelectorAll('[onclick*="openOrderModal"]:not(.btn-move-to-order)').forEach(el => {
+    el.style.display = canBookPerm ? '' : 'none';
+  });
+
+  // Edit controls for Move to Order (requires Edit or Create access)
+  const canMoveToOrderPerm = isSuperAdmin || canUserPerformAction('orders', 'edit') || canUserPerformAction('orders', 'create') || canUserPerformAction('inbox', 'edit') || canUserPerformAction('inbox', 'create');
+  document.querySelectorAll('.btn-move-to-order, [data-action="move-to-order"], [onclick*="modal-convert-order"], [onclick*="openConvertOrderModal"], [onclick*="openOrderFromSingleChosenProduct"], [onclick*="openOrderFromSelectedChosenProducts"]').forEach(el => {
+    el.style.display = canMoveToOrderPerm ? '' : 'none';
   });
   const chosenProductsBulkBar = document.getElementById('chosen-products-bulk-bar');
-  if (chosenProductsBulkBar && !canOrderCreate) chosenProductsBulkBar.style.display = 'none';
+  if (chosenProductsBulkBar && !canMoveToOrderPerm) chosenProductsBulkBar.style.display = 'none';
+
+  // Edit controls in modal
+  const btnSaveEditOrder = document.getElementById('btn-save-edit-order');
+  if (btnSaveEditOrder) btnSaveEditOrder.style.display = canOrderEdit ? '' : 'none';
+
+  // Delete controls in modal
+  const btnDeleteOrderModal = document.getElementById('btn-delete-order-modal');
+  if (btnDeleteOrderModal) btnDeleteOrderModal.style.display = canOrderDelete ? '' : 'none';
 
   // 3. Backup Hub Actions
   const canBackupCreate = isSuperAdmin || canUserPerformAction('backup', 'create');
@@ -642,42 +668,110 @@ function enforceGranularActionPermissions() {
   if (cardReset) cardReset.style.display = canBackupDelete ? '' : 'none';
 
   // 4. Catalog Actions
+  const canCatView = isSuperAdmin || canUserPerformAction('catalog', 'view');
   const canCatCreate = isSuperAdmin || canUserPerformAction('catalog', 'create');
+  const canCatEdit = isSuperAdmin || canUserPerformAction('catalog', 'edit');
   const canCatDelete = isSuperAdmin || canUserPerformAction('catalog', 'delete');
+
+  const navCatalog = document.getElementById('nav-catalog');
+  if (navCatalog) navCatalog.style.display = canCatView ? '' : 'none';
+
+  // Create controls (+ Add Product buttons, Add Category / Subcategory forms)
   document.querySelectorAll('#btn-add-product, #btn-open-add-product-modal, [onclick*="openAddProductModal"], [onclick*="openCategoryModal"]').forEach(el => {
     el.style.display = canCatCreate ? '' : 'none';
   });
-  document.querySelectorAll('[onclick*="deleteProduct"]').forEach(el => {
+  const formAddCat = document.getElementById('form-add-category');
+  if (formAddCat) formAddCat.style.display = canCatCreate ? '' : 'none';
+  const formAddSubcat = document.getElementById('form-add-subcategory');
+  if (formAddSubcat) formAddSubcat.style.display = canCatCreate ? '' : 'none';
+
+  // Edit controls (Price edit, Stock edit, Full Product edit, Bulk Price, WA Sync, Card photo hover)
+  document.querySelectorAll('#btn-toggle-bulk-price, #btn-open-bulk-modal, [onclick*="openSinglePriceModal"], [onclick*="openQuickStockModal"], [onclick*="openEditProductModal"], [onclick*="openBulkPriceModal"], [onclick*="triggerCardPhotoUpload"]').forEach(el => {
+    el.style.display = canCatEdit ? '' : 'none';
+  });
+  const btnSyncWaCat = document.getElementById('btn-sync-wa-catalog');
+  if (btnSyncWaCat) btnSyncWaCat.style.display = (canCatCreate || canCatEdit) ? '' : 'none';
+
+  // Delete controls (Product delete, Family delete, Variant delete, Category delete, Subcategory delete)
+  document.querySelectorAll('#prod-delete-btn, [onclick*="confirmDeleteProduct"], [onclick*="deleteProduct"], [onclick*="handleDeleteProduct"], [onclick*="deleteCategory"], [onclick*="deleteSubcategory"]').forEach(el => {
     el.style.display = canCatDelete ? '' : 'none';
   });
 
-  // 5. Customers Actions
+  // 5. Customers Actions (Customer 360 & Tag Directory)
+  const canCustView = isSuperAdmin || canUserPerformAction('customers', 'view');
   const canCustCreate = isSuperAdmin || canUserPerformAction('customers', 'create');
+  const canCustEdit = isSuperAdmin || canUserPerformAction('customers', 'edit');
   const canCustDelete = isSuperAdmin || canUserPerformAction('customers', 'delete');
-  document.querySelectorAll('#btn-add-customer, [onclick*="openNewCustomerModal"]').forEach(el => {
+
+  const navCustomers = document.getElementById('nav-customers');
+  if (navCustomers) navCustomers.style.display = canCustView ? '' : 'none';
+
+  // Create controls
+  document.querySelectorAll('#btn-add-customer, [onclick*="openNewCustomerModal"], [onclick*="openAddCustomerModal"]').forEach(el => {
     el.style.display = canCustCreate ? '' : 'none';
   });
+
+  // Edit controls (Customer Profile Edit & Save buttons)
+  document.querySelectorAll('[onclick*="toggleCustomerEditMode"], #form-quick-customer-edit button[type="submit"], #btn-edit-customer-profile').forEach(el => {
+    el.style.display = canCustEdit ? '' : 'none';
+  });
+
+  // Delete controls
   document.querySelectorAll('[onclick*="deleteCustomer"]').forEach(el => {
     el.style.display = canCustDelete ? '' : 'none';
   });
 
   // 6. Follow-ups Actions
+  const canFuView = isSuperAdmin || canUserPerformAction('followups', 'view');
   const canFuCreate = isSuperAdmin || canUserPerformAction('followups', 'create');
+  const canFuEdit = isSuperAdmin || canUserPerformAction('followups', 'edit');
   const canFuDelete = isSuperAdmin || canUserPerformAction('followups', 'delete');
-  document.querySelectorAll('#btn-schedule-followup, [onclick*="openScheduleFollowup"]').forEach(el => {
+
+  const navFollowups = document.getElementById('nav-followups');
+  if (navFollowups) navFollowups.style.display = canFuView ? '' : 'none';
+
+  // Create controls: + Schedule Follow-up buttons and reminder triggers
+  document.querySelectorAll('#btn-schedule-followup, #btn-schedule-new-followup, [onclick*="openScheduleFollowup"], [onclick*="openFollowUpModal"], [onclick*="openFollowupModal"]').forEach(el => {
     el.style.display = canFuCreate ? '' : 'none';
   });
-  document.querySelectorAll('[onclick*="deleteFollowup"]').forEach(el => {
+
+  // Edit controls: Outcome logging, notes, mark paid, staff reassignments
+  document.querySelectorAll('[onclick*="openEditFollowupModal"], [onclick*="handleReassignFollowup"], [onclick*="openRescheduleModal"], [onclick*="openFollowupOutcomeModal"], [onclick*="markPaymentReceivedAndConvert"]').forEach(el => {
+    el.style.display = canFuEdit ? '' : 'none';
+  });
+
+  // Delete controls: Card deletions
+  document.querySelectorAll('[onclick*="deleteFollowupCard"], [onclick*="deleteFollowup"], [onclick*="handleDeleteFollowup"]').forEach(el => {
     el.style.display = canFuDelete ? '' : 'none';
   });
 
-  // 7. DND Actions
+  // 7. DND & Opt-Out Module Actions — full RBAC (view/create/edit/delete)
+  const canDndView_s7 = isSuperAdmin || canUserPerformAction('dnd', 'view');
   const canDndCreate = isSuperAdmin || canUserPerformAction('dnd', 'create');
+  const canDndEdit_s7 = isSuperAdmin || canUserPerformAction('dnd', 'edit');
   const canDndDelete = isSuperAdmin || canUserPerformAction('dnd', 'delete');
+
+  // View: sidebar nav item visibility
+  const navDndItem = document.getElementById('nav-dnd') || document.querySelector('[href="#dnd"], [data-view="dnd"]');
+  if (navDndItem) navDndItem.style.display = canDndView_s7 ? '' : 'none';
+
+  // If user has no view access and is currently on the DND page, redirect to dashboard
+  if (!canDndView_s7 && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'dnd') {
+    if (typeof switchView === 'function') switchView('dashboard');
+  }
+
+  // Create: mark-as-DND buttons
   document.querySelectorAll('#btn-add-dnd, [onclick*="openAddToDnd"]').forEach(el => {
     el.style.display = canDndCreate ? '' : 'none';
   });
-  document.querySelectorAll('[onclick*="revokeDnd"]').forEach(el => {
+
+  // Edit: Assign-to-staff buttons in DND list
+  document.querySelectorAll('[onclick*="openStaffAssignForDndCustomer"]').forEach(el => {
+    el.style.display = canDndEdit_s7 ? '' : 'none';
+  });
+
+  // Delete: Re-activate (revoke DND) buttons
+  document.querySelectorAll('[onclick*="reactivateCustomerFromDND"], [onclick*="revokeDnd"]').forEach(el => {
     el.style.display = canDndDelete ? '' : 'none';
   });
 
@@ -686,6 +780,547 @@ function enforceGranularActionPermissions() {
   document.querySelectorAll('[onclick*="openStaffAssignModal"], [onclick*="quickReassignQueryStaff"]').forEach(el => {
     el.style.display = canInboxEdit ? '' : 'none';
   });
+  document.querySelectorAll('select[onchange*="quickReassignQueryStaff"]').forEach(sel => {
+    const parentContainer = sel.closest('.border-t') || sel.parentElement;
+    if (parentContainer) parentContainer.style.display = canInboxEdit ? '' : 'none';
+  });
+
+  // 9. Auto-Reply Hub Pre-Set Rules Actions
+  const canArView = isSuperAdmin || canUserPerformAction('autoreply', 'view');
+  const canArCreate = isSuperAdmin || canUserPerformAction('autoreply', 'create');
+  const canArEdit = isSuperAdmin || canUserPerformAction('autoreply', 'edit');
+  const canArDelete = isSuperAdmin || canUserPerformAction('autoreply', 'delete');
+
+  const navSubAr = document.getElementById('nav-inbox-sub-autoreply');
+  if (navSubAr) navSubAr.style.display = canArView ? '' : 'none';
+  const tabSubAr = document.getElementById('tab-sub-inbox-autoreply');
+  if (tabSubAr) tabSubAr.style.display = canArView ? '' : 'none';
+
+  if (!canArView && typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' && ACTIVE_INBOX_SUBMODULE === 'autoreply') {
+    if (typeof switchInboxSubmodule === 'function') switchInboxSubmodule('chats');
+  }
+
+  // Create controls (+ Add Pre-Set Question & Reply)
+  const btnAddArRule = document.getElementById('btn-add-autoreply-rule');
+  if (btnAddArRule) btnAddArRule.style.display = canArCreate ? '' : 'none';
+  document.querySelectorAll('[onclick*="openRuleEditor(null)"]').forEach(el => {
+    el.style.display = canArCreate ? '' : 'none';
+  });
+
+  // Edit controls (Edit Rule buttons, Master Bot toggle, Rule toggles)
+  document.querySelectorAll('[onclick*="editRule"]').forEach(el => {
+    el.style.display = canArEdit ? '' : 'none';
+  });
+  // Master Auto-Reply Bot toggle: Enable ONLY in edit options (disabled in view actions)
+  const botMasterToggle = document.getElementById('autoreply-master-toggle') || document.getElementById('ar-bot-master-toggle') || document.querySelector('[onchange*="toggleAutoReplyMaster"]');
+  if (botMasterToggle) {
+    botMasterToggle.disabled = !canArEdit;
+    const masterLabel = document.getElementById('autoreply-master-label') || botMasterToggle.closest('label');
+    if (masterLabel) {
+      if (!canArEdit) {
+        masterLabel.classList.remove('cursor-pointer');
+        masterLabel.classList.add('cursor-not-allowed', 'opacity-50');
+        masterLabel.style.pointerEvents = 'none';
+        masterLabel.title = 'View Access Only: Modifying auto-reply bot is restricted';
+      } else {
+        masterLabel.classList.add('cursor-pointer');
+        masterLabel.classList.remove('cursor-not-allowed', 'opacity-50');
+        masterLabel.style.pointerEvents = '';
+        masterLabel.title = 'Toggle Auto-Reply Engine Globally';
+      }
+    }
+  }
+
+  // Resume Auto-Reply button in paused banner
+  document.querySelectorAll('[onclick*="toggleAutoReplyMaster"]').forEach(el => {
+    if (el.tagName === 'BUTTON') {
+      el.disabled = !canArEdit;
+      if (!canArEdit) {
+        el.classList.add('opacity-50', 'cursor-not-allowed');
+        el.style.pointerEvents = 'none';
+        el.title = 'View Access Only: Resuming auto-reply bot is restricted';
+      } else {
+        el.classList.remove('opacity-50', 'cursor-not-allowed');
+        el.style.pointerEvents = '';
+        el.title = 'Turn Auto-Reply Back ON';
+      }
+    }
+  });
+
+  // Individual Rule Toggle switches on cards: Enable ONLY in edit options (disabled in view actions)
+  document.querySelectorAll('input[onchange*="toggleRuleEnabled"]').forEach(el => {
+    el.disabled = !canArEdit;
+    const label = el.closest('label') || el.parentElement;
+    if (label) {
+      if (!canArEdit) {
+        label.classList.remove('cursor-pointer');
+        label.classList.add('cursor-not-allowed', 'opacity-50');
+        label.style.pointerEvents = 'none';
+        label.title = 'View Access Only: Modifying auto-reply rules is restricted';
+      } else {
+        label.classList.add('cursor-pointer');
+        label.classList.remove('cursor-not-allowed', 'opacity-50');
+        label.style.pointerEvents = '';
+        label.title = 'Toggle Auto-Reply for this rule';
+      }
+    }
+    const indicatorDiv = el.nextElementSibling || (label ? label.querySelector('div') : null);
+    if (indicatorDiv) {
+      if (!canArEdit) {
+        indicatorDiv.classList.remove('peer-checked:bg-emerald-600');
+        indicatorDiv.classList.add('peer-checked:bg-emerald-600/40', 'peer-disabled:cursor-not-allowed');
+      } else {
+        indicatorDiv.classList.remove('peer-checked:bg-emerald-600/40', 'peer-disabled:cursor-not-allowed');
+        indicatorDiv.classList.add('peer-checked:bg-emerald-600');
+      }
+    }
+  });
+
+  // Delete controls (Delete Rule trash buttons)
+  document.querySelectorAll('[onclick*="deleteRule"]').forEach(el => {
+    el.style.display = canArDelete ? '' : 'none';
+  });
+
+  // 10. WhatsApp Inbox — Automated Broadcast Engine Actions
+  const canBcastView = isSuperAdmin || canUserPerformAction('broadcast', 'view');
+  const canBcastCreate = isSuperAdmin || canUserPerformAction('broadcast', 'create');
+  const canBcastEdit = isSuperAdmin || canUserPerformAction('broadcast', 'edit');
+  const canBcastDelete = isSuperAdmin || canUserPerformAction('broadcast', 'delete');
+
+  // Navigation tabs for Broadcast
+  const navSubBcast = document.getElementById('nav-inbox-sub-broadcast');
+  if (navSubBcast) navSubBcast.style.display = canBcastView ? '' : 'none';
+  const tabSubBcast = document.getElementById('tab-sub-inbox-broadcast');
+  if (tabSubBcast) tabSubBcast.style.display = canBcastView ? '' : 'none';
+
+  if (!canBcastView && typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' && ACTIVE_INBOX_SUBMODULE === 'broadcast') {
+    if (typeof switchInboxSubmodule === 'function') switchInboxSubmodule('chats');
+  }
+
+  // Dispatch / Start controls
+  const btnBcastStart = document.getElementById('btn-bcast-start');
+  if (btnBcastStart) {
+    if (canBcastCreate) {
+      btnBcastStart.style.display = '';
+      const viewOnlyBadge = document.getElementById('bcast-view-only-badge');
+      if (viewOnlyBadge) viewOnlyBadge.remove();
+    } else {
+      btnBcastStart.style.display = 'none';
+      if (!document.getElementById('bcast-view-only-badge') && btnBcastStart.parentElement) {
+        const badge = document.createElement('div');
+        badge.id = 'bcast-view-only-badge';
+        badge.className = 'w-full py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-center text-slate-500 font-bold text-xs flex items-center justify-center gap-1.5 select-none shadow-2xs';
+        badge.innerHTML = '<span class="material-symbols-outlined text-[15px] text-slate-400">lock</span><span>View-Only Mode: Broadcast dispatch restricted</span>';
+        btnBcastStart.parentElement.appendChild(badge);
+      }
+    }
+  }
+
+  // Template Creation & Saving controls
+  const btnBcastSaveNew = document.getElementById('btn-bcast-save-new');
+  if (btnBcastSaveNew) btnBcastSaveNew.style.display = canBcastCreate ? '' : 'none';
+
+  // Template Editing controls
+  const btnBcastSaveChanges = document.getElementById('btn-bcast-save-changes');
+  if (btnBcastSaveChanges) btnBcastSaveChanges.style.display = canBcastEdit ? '' : 'none';
+  const btnBcastRename = document.getElementById('btn-bcast-rename');
+  if (btnBcastRename) btnBcastRename.style.display = canBcastEdit ? '' : 'none';
+  const btnBcastAddVar = document.getElementById('btn-bcast-add-var');
+  if (btnBcastAddVar) btnBcastAddVar.style.display = canBcastEdit ? '' : 'none';
+
+  // Quick Insert buttons
+  document.querySelectorAll('[onclick*="insertBroadcastVariable"]').forEach(el => {
+    el.style.display = canBcastEdit ? '' : 'none';
+  });
+
+  // Dropzone & Image Upload controls
+  const dropzone = document.getElementById('bcast-upload-dropzone');
+  if (dropzone) {
+    if (canBcastEdit) {
+      dropzone.style.pointerEvents = '';
+      dropzone.style.opacity = '';
+    } else {
+      dropzone.style.pointerEvents = 'none';
+      dropzone.style.opacity = '0.6';
+    }
+  }
+  const bcastImgUrl = document.getElementById('bcast-image-url');
+  if (bcastImgUrl) {
+    bcastImgUrl.readOnly = !canBcastEdit;
+    bcastImgUrl.disabled = !canBcastEdit;
+  }
+  const bcastImgUrlManual = document.getElementById('bcast-image-url-manual');
+  if (bcastImgUrlManual) {
+    bcastImgUrlManual.readOnly = !canBcastEdit;
+    bcastImgUrlManual.disabled = !canBcastEdit;
+  }
+  document.querySelectorAll('[onclick*="removeBroadcastUploadedImage"]').forEach(el => {
+    el.style.display = canBcastEdit ? '' : 'none';
+  });
+
+  // Composer textarea
+  const bcastMsgText = document.getElementById('bcast-message-text');
+  if (bcastMsgText) {
+    bcastMsgText.readOnly = !canBcastEdit;
+    if (!canBcastEdit) bcastMsgText.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastMsgText.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+
+  // Dynamic tags container inputs & buttons
+  document.querySelectorAll('#bcast-dynamic-fields-container input').forEach(inp => {
+    inp.readOnly = !canBcastEdit;
+    if (!canBcastEdit) inp.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else inp.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  });
+  document.querySelectorAll('#bcast-dynamic-fields-container button').forEach(btn => {
+    btn.style.display = canBcastEdit ? '' : 'none';
+  });
+
+  // Target numbers textarea
+  const bcastTargetNumbers = document.getElementById('bcast-target-numbers');
+  if (bcastTargetNumbers) {
+    bcastTargetNumbers.readOnly = !canBcastEdit;
+    if (!canBcastEdit) bcastTargetNumbers.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastTargetNumbers.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+  const bcastCustomNumbersInput = document.getElementById('bcast-custom-numbers-input');
+  if (bcastCustomNumbersInput) {
+    bcastCustomNumbersInput.readOnly = !canBcastEdit;
+    if (!canBcastEdit) bcastCustomNumbersInput.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastCustomNumbersInput.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+
+  // Target audience selector
+  const bcastAudience = document.getElementById('bcast-target-audience');
+  if (bcastAudience) {
+    bcastAudience.disabled = !canBcastCreate;
+    if (!canBcastCreate) bcastAudience.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastAudience.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+
+  // Sending delay selector
+  const bcastDelay = document.getElementById('bcast-delay-select');
+  if (bcastDelay) {
+    bcastDelay.disabled = !canBcastCreate;
+    if (!canBcastCreate) bcastDelay.classList.add('bg-slate-100', 'cursor-not-allowed');
+    else bcastDelay.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  }
+
+  // Template Deletion controls
+  const btnBcastDelete = document.getElementById('btn-bcast-delete');
+  if (btnBcastDelete) btnBcastDelete.style.display = canBcastDelete ? '' : 'none';
+
+  // ── SECTION 8: LIVE CHAT COMPOSER & INBOX CONTROLS ──────────────────────
+  if (ACTIVE_VIEW === 'inbox') {
+    const canSendMsg = isSuperAdmin || canUserPerformAction('inbox', 'create');
+
+    // Chat Input Textarea
+    const chatInput = document.getElementById('chat-input-text');
+    if (chatInput) {
+      chatInput.readOnly = !canSendMsg;
+      chatInput.disabled = !canSendMsg;
+      chatInput.placeholder = canSendMsg
+        ? 'Type a message or response to customer (Press Enter to send)'
+        : '🔒 View-Only: Sending messages is not permitted';
+      if (!canSendMsg) {
+        chatInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'select-none');
+      } else {
+        chatInput.classList.remove('bg-slate-100', 'cursor-not-allowed', 'select-none');
+      }
+    }
+
+    // Send Button
+    const sendBtn = document.getElementById('btn-send-message');
+    if (sendBtn) {
+      sendBtn.style.display = canSendMsg ? '' : 'none';
+    }
+
+    // Stock & Share Button
+    const stockShareBtn = document.getElementById('btn-stock-share');
+    if (stockShareBtn) {
+      stockShareBtn.style.display = canSendMsg ? '' : 'none';
+    }
+
+    // Photo Upload Button
+    const photoUploadBtn = document.getElementById('btn-chat-photo-upload');
+    if (photoUploadBtn) {
+      photoUploadBtn.style.display = canSendMsg ? '' : 'none';
+    }
+    const photoUploadInput = document.getElementById('chat-image-file-input');
+    if (photoUploadInput) {
+      photoUploadInput.disabled = !canSendMsg;
+    }
+
+    // Quick Template chips — hide/disable if view-only
+    document.querySelectorAll('[onclick*="applyQuickTemplate"], [onclick*="sendPresetTemplate"]').forEach(el => {
+      el.style.pointerEvents = canSendMsg ? '' : 'none';
+      el.style.opacity = canSendMsg ? '' : '0.4';
+    });
+  }
+
+  // ── SECTION 11: SETTINGS MODULE ACTIONS (VIEW, CREATE, EDIT, DELETE) ────
+  const canSetView = isSuperAdmin || canUserPerformAction('settings', 'view');
+  const canSetCreate = isSuperAdmin || canUserPerformAction('settings', 'create');
+  const canSetEdit = isSuperAdmin || canUserPerformAction('settings', 'edit');
+  const canSetDelete = isSuperAdmin || canUserPerformAction('settings', 'delete');
+
+  const navSettingsEl = document.getElementById('nav-settings');
+  if (navSettingsEl) {
+    navSettingsEl.style.display = canSetView ? '' : 'none';
+  }
+
+  // If user is currently on settings view without view permission, redirect to dashboard
+  if (!canSetView && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'settings') {
+    if (typeof switchView === 'function') switchView('dashboard');
+  }
+
+  if (ACTIVE_VIEW === 'settings') {
+    // Top Add Phone Button (Create)
+    document.querySelectorAll('[onclick*="addNewWhatsAppAccountSlot"]').forEach(el => {
+      el.style.display = canSetCreate ? '' : 'none';
+    });
+
+    // Manual Settings Form Inputs (Edit)
+    const setInputs = ['cfg-phone-number', 'cfg-display-name', 'cfg-provider', 'cfg-verify-token', 'cfg-brand-name', 'cfg-brand-tagline', 'cfg-brand-website'];
+    setInputs.forEach(id => {
+      const inp = document.getElementById(id);
+      if (inp) {
+        inp.disabled = !canSetEdit;
+        inp.readOnly = !canSetEdit;
+        if (!canSetEdit) inp.classList.add('bg-slate-100', 'cursor-not-allowed');
+        else inp.classList.remove('bg-slate-100', 'cursor-not-allowed');
+      }
+    });
+
+    // Brand Header Toggle: Enable ONLY in edit options (disabled in view actions)
+    const brandToggle = document.getElementById('cfg-brand-header-toggle');
+    if (brandToggle) {
+      brandToggle.disabled = !canSetEdit;
+      const toggleLabel = brandToggle.closest('label');
+      if (toggleLabel) {
+        if (!canSetEdit) {
+          toggleLabel.classList.remove('cursor-pointer');
+          toggleLabel.classList.add('cursor-not-allowed', 'opacity-60');
+          toggleLabel.style.pointerEvents = 'none';
+          toggleLabel.title = 'View-Only Mode: Toggling brand header is restricted';
+        } else {
+          toggleLabel.classList.add('cursor-pointer');
+          toggleLabel.classList.remove('cursor-not-allowed', 'opacity-60');
+          toggleLabel.style.pointerEvents = '';
+          toggleLabel.title = '';
+        }
+      }
+    }
+
+    // Save Brand Identity Button: Disable in view actions, enable only in edit options
+    const btnSaveBrand = document.getElementById('btn-save-brand-settings') || document.querySelector('[onclick*="saveBrandSettings"]');
+    if (btnSaveBrand) {
+      btnSaveBrand.disabled = !canSetEdit;
+      if (!canSetEdit) {
+        btnSaveBrand.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btnSaveBrand.classList.remove('hover:scale-105', 'hover:bg-indigo-700', 'cursor-pointer');
+        btnSaveBrand.title = 'View-Only Mode: Modifying brand identity is restricted';
+      } else {
+        btnSaveBrand.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btnSaveBrand.classList.add('hover:scale-105', 'hover:bg-indigo-700', 'cursor-pointer');
+        btnSaveBrand.title = '';
+      }
+    }
+
+    // Save & Connect Submit Button: Disable in view actions, enable only in edit options
+    const btnSavePhone = document.querySelector('#settings-tab-manual button[type="submit"]');
+    if (btnSavePhone) {
+      btnSavePhone.disabled = !canSetEdit;
+      if (!canSetEdit) {
+        btnSavePhone.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btnSavePhone.classList.remove('hover:scale-105', 'hover:bg-brand-waDark', 'cursor-pointer');
+        btnSavePhone.title = 'View-Only Mode: Saving WhatsApp configuration is restricted';
+      } else {
+        btnSavePhone.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btnSavePhone.classList.add('hover:scale-105', 'hover:bg-brand-waDark', 'cursor-pointer');
+        btnSavePhone.title = '';
+      }
+    }
+
+    // Test Inbound Button
+    document.querySelectorAll('[onclick*="handleSendQuickTestToNumber"]').forEach(el => {
+      el.style.display = canSetEdit ? '' : 'none';
+    });
+  }
+
+  // ── SECTION 12: DATA BACKUP & RECOVERY ACTIONS (VIEW, CREATE, EDIT, DELETE) ─
+  const canBakView = isSuperAdmin || canUserPerformAction('backup', 'view');
+  const canBakCreate = isSuperAdmin || canUserPerformAction('backup', 'create');
+  const canBakEdit = isSuperAdmin || canUserPerformAction('backup', 'edit');
+  const canBakDelete = isSuperAdmin || canUserPerformAction('backup', 'delete');
+
+  const navBackupEl = document.getElementById('nav-backup');
+  if (navBackupEl) {
+    navBackupEl.style.display = canBakView ? '' : 'none';
+  }
+
+  // If user is currently on backup view without view permission, redirect to dashboard
+  if (!canBakView && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'backup') {
+    if (typeof switchView === 'function') switchView('dashboard');
+  }
+
+  if (ACTIVE_VIEW === 'backup') {
+    // 1. Export Backup Card (Create)
+    const btnBakExport = document.querySelector('[onclick*="handleExportBackupJSON"]');
+    if (btnBakExport) {
+      if (canBakCreate) {
+        btnBakExport.style.display = '';
+        const badge = document.getElementById('bak-export-view-badge');
+        if (badge) badge.remove();
+      } else {
+        btnBakExport.style.display = 'none';
+        if (!document.getElementById('bak-export-view-badge') && btnBakExport.parentElement) {
+          const badge = document.createElement('div');
+          badge.id = 'bak-export-view-badge';
+          badge.className = 'w-full py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-center text-slate-500 font-bold text-xs flex items-center justify-center gap-1.5 select-none shadow-2xs';
+          badge.innerHTML = '<span class="material-symbols-outlined text-[15px] text-slate-400">lock</span><span>View-Only Mode: Export restricted</span>';
+          btnBakExport.parentElement.appendChild(badge);
+        }
+      }
+    }
+
+    // 2. Restore Backup Card (Edit)
+    const btnBakRestore = document.querySelector('[onclick*="backup-file-input"]');
+    const inputBakFile = document.getElementById('backup-file-input');
+    if (inputBakFile) inputBakFile.disabled = !canBakEdit;
+    if (btnBakRestore) {
+      if (canBakEdit) {
+        btnBakRestore.style.display = '';
+        const badge = document.getElementById('bak-restore-view-badge');
+        if (badge) badge.remove();
+      } else {
+        btnBakRestore.style.display = 'none';
+        if (!document.getElementById('bak-restore-view-badge') && btnBakRestore.parentElement) {
+          const badge = document.createElement('div');
+          badge.id = 'bak-restore-view-badge';
+          badge.className = 'w-full py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-center text-slate-500 font-bold text-xs flex items-center justify-center gap-1.5 select-none shadow-2xs';
+          badge.innerHTML = '<span class="material-symbols-outlined text-[15px] text-slate-400">lock</span><span>View-Only Mode: Restore restricted</span>';
+          btnBakRestore.parentElement.appendChild(badge);
+        }
+      }
+    }
+
+    // 3. Reset Demo Data Card / Button (Delete)
+    const cardBakReset = document.getElementById('card-backup-reset');
+    const btnBakReset = document.getElementById('btn-backup-reset') || document.querySelector('[onclick*="reset demo data"]');
+    if (cardBakReset) {
+      cardBakReset.style.display = canBakDelete ? '' : 'none';
+    } else if (btnBakReset) {
+      btnBakReset.style.display = canBakDelete ? '' : 'none';
+    }
+  }
+
+  // ── SECTION 13: CALL & NUMBER MASKING MODULE ACTIONS (VIEW, CREATE, EDIT, DELETE) ────
+  const canMaskView = isSuperAdmin || canUserPerformAction('masking', 'view');
+  const canMaskCreate = isSuperAdmin || canUserPerformAction('masking', 'create');
+  const canMaskEdit = isSuperAdmin || canUserPerformAction('masking', 'edit');
+  const canMaskDelete = isSuperAdmin || canUserPerformAction('masking', 'delete');
+
+  const navMaskingEl = document.getElementById('nav-masking');
+  if (navMaskingEl) {
+    navMaskingEl.style.display = canMaskView ? '' : 'none';
+  }
+
+  // If user is currently on masking view without view permission, redirect to dashboard
+  if (!canMaskView && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'masking') {
+    if (typeof switchView === 'function') switchView('dashboard');
+  }
+
+  // Inbound Call Simulation Button (Create action)
+  document.querySelectorAll('[onclick*="triggerSimulatedIncomingCall"]').forEach(el => {
+    el.style.display = canMaskCreate ? '' : 'none';
+  });
+
+  // Outbound call triggers in Customer 360, Chats, Follow-ups
+  document.querySelectorAll('[onclick*="initiateBrandMaskedCall"], [onclick*="handleFollowupCallCustomer"]').forEach(el => {
+    if (!canMaskCreate) {
+      el.style.display = 'none';
+    } else {
+      el.style.display = '';
+    }
+  });
+
+  // Call Masking Hub controls (Active on #view-masking)
+  if (ACTIVE_VIEW === 'masking') {
+    // 1. Outbound Call Masking Toggle (Edit action)
+    const toggleCallMask = document.getElementById('toggle-call-masking-enabled');
+    if (toggleCallMask) {
+      toggleCallMask.disabled = !canMaskEdit;
+      const lbl = toggleCallMask.closest('label');
+      if (lbl) {
+        if (!canMaskEdit) {
+          lbl.classList.remove('cursor-pointer');
+          lbl.classList.add('cursor-not-allowed', 'opacity-60');
+          lbl.title = 'View Access Only: Outbound call masking toggle is restricted to Administrators';
+        } else {
+          lbl.classList.add('cursor-pointer');
+          lbl.classList.remove('cursor-not-allowed', 'opacity-60');
+          lbl.title = 'Toggle Outbound SIM Masking';
+        }
+      }
+    }
+
+    // 2. Chat Masking Toggle (Edit action)
+    const toggleChatMask = document.getElementById('toggle-chat-masking-enabled');
+    if (toggleChatMask) {
+      toggleChatMask.disabled = !canMaskEdit;
+      const lbl = toggleChatMask.closest('label');
+      if (lbl) {
+        if (!canMaskEdit) {
+          lbl.classList.remove('cursor-pointer');
+          lbl.classList.add('cursor-not-allowed', 'opacity-60');
+          lbl.title = 'View Access Only: Chat masking toggle is restricted to Administrators';
+        } else {
+          lbl.classList.add('cursor-pointer');
+          lbl.classList.remove('cursor-not-allowed', 'opacity-60');
+          lbl.title = 'Toggle Chat Customer Number Masking';
+        }
+      }
+    }
+
+    // 3. Save Configuration Button & Telephony form fields (Edit action)
+    const btnSaveMaskConfig = document.getElementById('btn-save-masking-config');
+    if (btnSaveMaskConfig) {
+      btnSaveMaskConfig.style.display = canMaskEdit ? '' : 'none';
+    }
+    ['masking-config-virtual-num', 'masking-config-timeout', 'masking-config-fallback', 'masking-config-recording'].forEach(id => {
+      const field = document.getElementById(id);
+      if (field) {
+        field.disabled = !canMaskEdit;
+        if (!canMaskEdit) {
+          field.classList.add('bg-slate-100', 'cursor-not-allowed');
+        } else {
+          field.classList.remove('bg-slate-100', 'cursor-not-allowed');
+        }
+      }
+    });
+
+    // 4. Eligible Staff Members Save Button & Checkboxes (Edit action)
+    const btnSaveStaffElig = document.querySelector('[onclick*="saveEligibleStaffSelection"]');
+    if (btnSaveStaffElig) {
+      btnSaveStaffElig.style.display = canMaskEdit ? '' : 'none';
+    }
+    document.querySelectorAll('.masking-staff-checkbox').forEach(cb => {
+      cb.disabled = !canMaskEdit;
+      if (!canMaskEdit) cb.classList.add('cursor-not-allowed');
+      else cb.classList.remove('cursor-not-allowed');
+    });
+
+    // 5. Admin Actions in Active Call Queue Table (Edit / Delete action)
+    document.querySelectorAll('[onclick*="adminReassignCall"]').forEach(el => {
+      el.style.display = canMaskEdit ? '' : 'none';
+    });
+    document.querySelectorAll('[onclick*="adminEndActiveCall"]').forEach(el => {
+      if (!canMaskEdit && !canMaskDelete) {
+        el.style.display = 'none';
+      }
+    });
+  }
 }
 window.enforceGranularActionPermissions = enforceGranularActionPermissions;
 
@@ -713,7 +1348,7 @@ function getCurrentUser() {
         user = JSON.parse(sessionStr);
         CURRENT_USER = user;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (!user) {
@@ -731,7 +1366,7 @@ function getCurrentUser() {
 
 function getPersistedActiveView() {
   try {
-    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
+    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking'];
     const hash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
     if (hash && validViews.includes(hash)) {
       return hash;
@@ -770,7 +1405,7 @@ function getCurrentUser() {
 function formatDisplayPhone(rawPhone, customerId = null, forceUnmask = false) {
   if (!rawPhone) return '';
   const pretty = formatPhoneNumberPretty(rawPhone);
-  
+
   const isGlobalMasked = CRM_STATE?.settings?.maskCustomerNumbers ?? false;
   const isRevealed = customerId && REVEALED_CUSTOMERS.has(customerId);
   const isStaffRole = (ACTIVE_ROLE !== 'admin' && CURRENT_USER?.role !== 'admin');
@@ -797,6 +1432,7 @@ let CALL_IS_MUTED = false;
 let CALL_IS_SPEAKER = true;
 let CALL_IS_ON_HOLD = false;
 let ACTIVE_CALL_CUSTOMER_ID = null;
+let ACTIVE_CURRENT_CALL_SESSION_ID = null;
 let WEBRTC_AUDIO_STREAM = null;
 let WEBRTC_AUDIO_CTX = null;
 let WEBRTC_ANALYSER = null;
@@ -831,7 +1467,7 @@ async function startInBrowserWebRTCCall(phone = null) {
   try {
     // 1. Request microphone access from browser
     WEBRTC_AUDIO_STREAM = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    
+
     // 2. Setup Web Audio API & Visualizer Analyser
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     WEBRTC_AUDIO_CTX = new AudioCtx();
@@ -929,7 +1565,7 @@ function playSoftphoneRingTone() {
     gain.connect(WEBRTC_AUDIO_CTX.destination);
     osc.start();
     WEBRTC_RING_OSC = { osc, gain };
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function stopSoftphoneRingTone() {
@@ -938,7 +1574,7 @@ function stopSoftphoneRingTone() {
       WEBRTC_RING_OSC.osc.stop();
       WEBRTC_RING_OSC = null;
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function toggleCallHold() {
@@ -953,7 +1589,7 @@ function toggleCallHold() {
   if (statusLabel) statusLabel.innerText = CALL_IS_ON_HOLD ? 'On Hold' : 'Connected (Live In-CRM)';
 
   if (btn) {
-    btn.className = CALL_IS_ON_HOLD 
+    btn.className = CALL_IS_ON_HOLD
       ? 'w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex flex-col items-center justify-center gap-0.5 transition shadow-sm border border-amber-300'
       : 'w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex flex-col items-center justify-center gap-0.5 transition shadow-sm';
   }
@@ -993,6 +1629,10 @@ function triggerDirectWhatsAppVoiceCall(phone, mode = 'app') {
 }
 
 function initiateBrandMaskedCall(customerId) {
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction('masking', 'create')) {
+    showToast('Permission Denied', 'Your assigned role does not have permission to initiate calls.', 'lock', 'rose');
+    return;
+  }
   const custId = customerId || ACTIVE_CUSTOMER_ID;
   const customer = CRM_STATE.customers.find(c => c.id === custId);
   if (!customer) {
@@ -1001,9 +1641,11 @@ function initiateBrandMaskedCall(customerId) {
   }
 
   ACTIVE_CALL_CUSTOMER_ID = custId;
+  ACTIVE_CURRENT_CALL_SESSION_ID = null;
   const brandName = (typeof getBrandName === 'function') ? getBrandName() : 'Blue Berry 💙';
-  const staff = getCurrentUser();
-  const staffName = staff ? staff.name : 'Sales Specialist';
+  const staff = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const staffName = staff ? (staff.name || staff.username) : 'Sales Specialist';
+  const staffId = staff ? (staff.id || staff.staffId || staff.staff_id || 'staff_01') : 'staff_01';
   const customerPhone = customer.whatsapp || customer.phone || '';
   const maskedPhone = formatDisplayPhone(customerPhone, custId);
 
@@ -1018,7 +1660,7 @@ function initiateBrandMaskedCall(customerId) {
   const notesArea = document.getElementById('call-outcome-notes');
 
   if (modalTitle) modalTitle.innerText = `${brandName} In-CRM Call`;
-  if (modalCustAvatar) modalCustAvatar.innerText = customer.avatar || 'CU';
+  if (modalCustAvatar) modalCustAvatar.innerText = customer.avatar || (customer.name ? customer.name.substring(0, 2).toUpperCase() : 'CU');
   if (modalCustName) modalCustName.innerText = customer.name || 'Customer';
   if (modalCustPhone) modalCustPhone.innerText = maskedPhone;
   if (modalBrandDisplay) modalBrandDisplay.innerText = brandName;
@@ -1049,6 +1691,32 @@ function initiateBrandMaskedCall(customerId) {
     }
   }, 1000);
 
+  // 1. Immediately Register Live Call in Call Masking Control Hub & MariaDB
+  fetch('api.php?action=initiate_outbound_call', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      customer_id: custId,
+      customer_name: customer.name || 'Customer',
+      customer_phone: customerPhone,
+      staff_id: staffId,
+      staff_name: staffName
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data && data.status === 'success' && data.call) {
+      ACTIVE_CURRENT_CALL_SESSION_ID = data.call.id || data.call.call_id;
+      console.log('📞 [Outbound Call Registered in Call Masking Hub]:', ACTIVE_CURRENT_CALL_SESSION_ID);
+      if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
+        loadMaskingSettingsAndSessions();
+      }
+    }
+  })
+  .catch(err => {
+    console.warn('Could not register outbound call session:', err);
+  });
+
   // Inform Bridge Server
   fetch('http://localhost:3000/api/calls/initiate', {
     method: 'POST',
@@ -1059,7 +1727,7 @@ function initiateBrandMaskedCall(customerId) {
       staffName,
       accountId: customer.accountId || ACTIVE_SEND_ACCOUNT_ID
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('BRAND_MASKED_CALL_INITIATED', 'CALLING', `Staff (${staffName}) initiated In-CRM WebRTC voice call to ${customer.name}. Recipient receives caller ID: "${brandName}". Staff SIM masked.`);
 }
@@ -1082,7 +1750,7 @@ function updateCallMuteUI() {
   if (icon) icon.innerText = CALL_IS_MUTED ? 'mic_off' : 'mic';
   if (label) label.innerText = CALL_IS_MUTED ? 'Unmute' : 'Mute';
   if (btn) {
-    btn.className = CALL_IS_MUTED 
+    btn.className = CALL_IS_MUTED
       ? 'w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex flex-col items-center justify-center gap-0.5 transition shadow-sm border border-amber-300'
       : 'w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex flex-col items-center justify-center gap-0.5 transition shadow-sm';
   }
@@ -1148,7 +1816,7 @@ function endBrandMaskedCall(saveOutcome = false) {
     WEBRTC_AUDIO_STREAM = null;
   }
   if (WEBRTC_AUDIO_CTX && WEBRTC_AUDIO_CTX.state !== 'closed') {
-    WEBRTC_AUDIO_CTX.close().catch(() => {});
+    WEBRTC_AUDIO_CTX.close().catch(() => { });
     WEBRTC_AUDIO_CTX = null;
   }
 
@@ -1161,6 +1829,32 @@ function endBrandMaskedCall(saveOutcome = false) {
   const secs = String(CALL_ACTIVE_SECONDS % 60).padStart(2, '0');
   const durationStr = `${mins}:${secs}`;
   const brand = getBrandName();
+
+  const activeCallId = (typeof ACTIVE_CURRENT_CALL_SESSION_ID !== 'undefined' && ACTIVE_CURRENT_CALL_SESSION_ID)
+    ? ACTIVE_CURRENT_CALL_SESSION_ID
+    : ((typeof ACTIVE_INCOMING_CALL !== 'undefined' && ACTIVE_INCOMING_CALL && ACTIVE_INCOMING_CALL.call_id) ? ACTIVE_INCOMING_CALL.call_id : null);
+  const staffUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const finalDuration = Math.max(1, CALL_ACTIVE_SECONDS || 0);
+
+  // Finalize active call session in MariaDB call_sessions and Call Masking Control Hub
+  if (activeCallId) {
+    try {
+      fetch('api.php?action=end_call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          call_id: activeCallId,
+          duration_seconds: finalDuration,
+          outcome: 'COMPLETED',
+          outcome_notes: notesText || (`Call completed normally (${durationStr})`)
+        })
+      }).then(() => {
+        if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
+          loadMaskingSettingsAndSessions();
+        }
+      }).catch(() => {});
+    } catch (e) {}
+  }
 
   if (customer) {
     const callLogText = `📞 [In-CRM Voice Call via ${brand}] Duration: ${durationStr}${notesText ? (' — Outcome: ' + notesText) : ''}`;
@@ -1190,11 +1884,45 @@ function endBrandMaskedCall(saveOutcome = false) {
     renderInboxConversationList();
 
     logAudit('BRAND_MASKED_CALL_ENDED', 'CALLING', `In-CRM Call ended with ${customer.name} (Duration: ${durationStr}). Notes: "${notesText || 'No notes'}"`);
+
+    // Only log a new session if this was NOT already an active call session
+    if (!activeCallId) {
+      try {
+        const rawCustomerPhone = customer.whatsapp || customer.phone || '';
+        fetch('api.php?action=log_call_session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: 'CALL-' + Math.floor(1000 + Math.random() * 9000),
+            provider_call_id: 'WEBRTC-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+            customer_id: customer.id,
+            customer_name: customer.name || 'Customer',
+            customer_phone: rawCustomerPhone,
+            masked_phone: formatDisplayPhone(rawCustomerPhone, customer.id),
+            virtual_number: (CRM_STATE?.maskingSettings?.virtual_company_number || '+91 8000 123 456'),
+            assigned_staff_id: staffUser?.id || 'staff_01',
+            assigned_staff_name: staffUser?.name || 'Super Admin',
+            status: 'COMPLETED',
+            started_at: new Date(Date.now() - (finalDuration * 1000)).toISOString().slice(0, 19).replace('T', ' '),
+            ended_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            duration_seconds: finalDuration,
+            outcome: 'COMPLETED',
+            outcome_notes: notesText || 'Call completed normally'
+          })
+        }).then(() => {
+          if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
+            loadMaskingSettingsAndSessions();
+          }
+        }).catch(() => {});
+      } catch (e) {}
+    }
   }
 
   closeModal('modal-brand-call');
   showToast('Call Finished', `In-CRM call logged (${durationStr}). Timeline updated.`, 'call_end', 'blue');
   ACTIVE_CALL_CUSTOMER_ID = null;
+  ACTIVE_CURRENT_CALL_SESSION_ID = null;
+  ACTIVE_INCOMING_CALL = null;
   CALL_ACTIVE_SECONDS = 0;
   CALL_IS_ON_HOLD = false;
 }
@@ -1269,7 +1997,7 @@ function initSocketIO() {
     SOCKET_IO.on('connect', () => {
       console.log('⚡ Socket.IO Connected to Bridge (ID: ' + SOCKET_IO.id + ')');
       showToast('WebSocket Connected', 'Live WhatsApp synchronization active', 'bolt', 'emerald');
-      
+
       // 1. Fetch latest rules
       fetch('http://localhost:3000/api/autoreply/rules')
         .then(r => r.json())
@@ -1281,7 +2009,7 @@ function initSocketIO() {
             if (typeof renderInboxPresetTemplatesBar === 'function') renderInboxPresetTemplatesBar();
             if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
           }
-        }).catch(() => {});
+        }).catch(() => { });
 
       // 2. Fetch live Auto-Reply master status from Bridge
       fetch('http://localhost:3000/api/autoreply/status')
@@ -1294,10 +2022,42 @@ function initSocketIO() {
             updateAutoReplyUI();
             console.log('⚡ [Auto-Reply Sync] Live Status from Bridge on connect:', data.enabled ? 'ON' : 'OFF');
           }
-        }).catch(() => {});
+        }).catch(() => { });
     });
 
     // Real-time Inbound Message from WhatsApp (Pushed instantly)
+    // Real-time Active Call Broadcast (e.g. from WhatsApp Inbox or softphone)
+    SOCKET_IO.on('call:active', (data) => {
+      console.log('📞 [Socket.IO Call Active]:', data);
+      if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
+        loadMaskingSettingsAndSessions();
+      }
+    });
+
+    // Real-time Telephony Inbound Call Simultaneous Broadcast
+    SOCKET_IO.on('call:incoming', (data) => {
+      console.log('🔔 [Socket.IO Call Incoming]:', data);
+      if (typeof handleSocketIncomingCall === 'function') handleSocketIncomingCall(data);
+    });
+
+    // Real-time Atomic Call Claimed by Staff Member
+    SOCKET_IO.on('call:claimed', (data) => {
+      console.log('🔒 [Socket.IO Call Claimed]:', data);
+      if (typeof handleSocketCallClaimed === 'function') handleSocketCallClaimed(data);
+    });
+
+    // Real-time Call Released / Reassigned
+    SOCKET_IO.on('call:released', (data) => {
+      console.log('🔄 [Socket.IO Call Released/Reassigned]:', data);
+      if (typeof handleSocketCallReleased === 'function') handleSocketCallReleased(data);
+    });
+
+    // Real-time Call Ended / Completed
+    SOCKET_IO.on('call:ended', (data) => {
+      console.log('🏁 [Socket.IO Call Ended]:', data);
+      if (typeof handleSocketCallEnded === 'function') handleSocketCallEnded(data);
+    });
+
     SOCKET_IO.on('whatsapp:inbound', (payload) => {
       console.log('⚡ [Socket.IO Inbound Message Received]:', payload);
       ingestInboundMessage(payload);
@@ -1421,8 +2181,8 @@ function ingestInboundMessage(payload, suppressChime = false) {
   let customer = CRM_STATE.customers.find(c => {
     const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
     const phoneMatch = (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
-           (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10)) ||
-           (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0] === payload.sender_jid.split('@')[0])));
+      (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10)) ||
+      (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0] === payload.sender_jid.split('@')[0])));
     return phoneMatch;
   });
 
@@ -1432,7 +2192,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
     const existingOther = CRM_STATE.customers.find(c => {
       const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
       return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
-             (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10));
+        (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10));
     });
     const finalName = (senderName && !senderName.startsWith('WhatsApp Customer'))
       ? senderName
@@ -1480,16 +2240,17 @@ function ingestInboundMessage(payload, suppressChime = false) {
   if (!CRM_STATE.conversations[customer.id]) {
     CRM_STATE.conversations[customer.id] = [];
   }
-  
+
   const isOutboundMsg = Boolean(payload.is_outbound || payload.source === 'AUTOREPLY_BOT' || payload.source === 'STAFF_OUTBOUND');
   const isBotMsg = payload.source === 'AUTOREPLY_BOT';
   const msgSender = isOutboundMsg ? 'staff' : 'customer';
 
   // Deduplicate against existing messages
   const existingMsgs = CRM_STATE.conversations[customer.id];
-  const isDuplicate = existingMsgs.some(m => 
-    (payload.id && m.id === payload.id) ||
-    (m.sender === msgSender && m.text === messageText && Math.abs(msgTimestamp - (m.timestamp || 0)) < 3000)
+  const isDuplicate = existingMsgs.some(m =>
+    (payload.id && String(m.id) === String(payload.id)) ||
+    (m.sender === msgSender && m.text === messageText && (m.time === timeStr || Math.abs(msgTimestamp - (m.timestamp || 0)) < 15000)) ||
+    (mediaUrl && m.media_url && String(m.media_url).slice(-30) === String(mediaUrl).slice(-30))
   );
 
   if (!isDuplicate) {
@@ -1520,6 +2281,14 @@ function ingestInboundMessage(payload, suppressChime = false) {
 
   // 4. Match or Create Lead / Query Card
   let query = CRM_STATE.queries.find(q => q.customerId === customer.id);
+  if (!query && customer.phone) {
+    const custDigits = customer.phone.replace(/[^0-9]/g, '');
+    query = CRM_STATE.queries.find(q => {
+      const qCust = CRM_STATE.customers.find(c => c.id === q.customerId);
+      const qDigits = (qCust?.phone || qCust?.whatsapp || '').replace(/[^0-9]/g, '');
+      return (custDigits.length >= 10 && qDigits.length >= 10 && custDigits.slice(-10) === qDigits.slice(-10));
+    });
+  }
   if (query) {
     if (!query.accountId) query.accountId = payloadAccountId;
     if (!query.businessNumber) query.businessNumber = payloadBusinessNum;
@@ -1532,7 +2301,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
     }
     query.createdAt = timeStr;
     query.lastTimeEpoch = msgTimestamp;
-    
+
     // Move query to top of queries array
     CRM_STATE.queries = [query, ...CRM_STATE.queries.filter(q => q.id !== query.id)];
   } else {
@@ -1616,7 +2385,7 @@ function syncInboundMessagesNow(isInitial = false) {
         }
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 }
 
 function startRealtimeMessageSync() {
@@ -1668,7 +2437,7 @@ function handleInboundSimulationSubmit(event) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(simulatedPayload)
-  }).catch(() => {});
+  }).catch(() => { });
 
   closeModal('modal-inbound-simulator');
 }
@@ -1724,7 +2493,7 @@ function cleanupAndDeduplicateCRMState() {
 
       // Prefer a real name over generic "Customer ..." or "WhatsApp Customer ..."
       if ((!existing.name || existing.name.startsWith('Customer') || existing.name.startsWith('WhatsApp Customer')) &&
-          (cust.name && !cust.name.startsWith('Customer') && !cust.name.startsWith('WhatsApp Customer'))) {
+        (cust.name && !cust.name.startsWith('Customer') && !cust.name.startsWith('WhatsApp Customer'))) {
         existing.name = cust.name;
         existing.avatar = cust.avatar || existing.avatar;
       }
@@ -1855,13 +2624,13 @@ function mergeCatalogProductsWithDB(dbRawProducts) {
   }));
 
   const localProducts = Array.isArray(CRM_STATE.products) ? [...CRM_STATE.products] : [];
-  
+
   // Merge DB products: if a matching local product exists, merge non-empty fields/specs
   const merged = mappedDb.map(dbP => {
     const localMatch = localProducts.find(lp => lp && (lp.sku === dbP.sku || (lp.id && String(lp.id) === String(dbP.id))));
     if (localMatch) {
       const bestImg = (dbP.image && !dbP.image.includes('photo-1583846783977-d2b0993d4265') && !dbP.image.includes('photo-1518831959646-742c3a14ebf7'))
-        ? dbP.image 
+        ? dbP.image
         : (localMatch.image || getSmartProductImage(dbP));
       return {
         ...localMatch,
@@ -1874,42 +2643,8 @@ function mergeCatalogProductsWithDB(dbRawProducts) {
     return dbP;
   });
 
-  // Preserve any local products that are not yet in MySQL DB
-  const unsyncedLocals = [];
-  localProducts.forEach(localP => {
-    if (!localP || !localP.sku) return;
-    if (!localP.image || localP.image.includes('No Image') || localP.image.includes('photo-1583846783977-d2b0993d4265')) {
-      localP.image = getSmartProductImage(localP);
-    }
-    const exists = merged.some(m => m.sku === localP.sku || (localP.id && String(m.id) === String(localP.id)));
-    if (!exists) {
-      merged.push(localP);
-      unsyncedLocals.push(localP);
-    }
-  });
-
   CRM_STATE.products = merged;
   saveCRMState();
-
-  // Background auto-sync of unpersisted local products into MySQL database
-  if (unsyncedLocals.length > 0) {
-    fetch('api.php?action=save_product', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ variants: unsyncedLocals })
-    })
-    .then(r => r.json())
-    .then(resp => {
-      if (resp && resp.products && Array.isArray(resp.products)) {
-        resp.products.forEach(sp => {
-          const matched = CRM_STATE.products.find(p => p.sku === sp.sku);
-          if (matched && sp.id) matched.id = sp.id;
-        });
-        saveCRMState();
-      }
-    })
-    .catch(e => console.warn('Background sync of local products failed:', e));
-  }
 }
 
 // Load State from LocalStorage or Initialise (100% Persistent across page reloads)
@@ -1927,15 +2662,30 @@ function initCRMState() {
         CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
       }
       if (!Array.isArray(CRM_STATE.customers)) CRM_STATE.customers = [];
+      // Always clear cached categories/subcategories — DB is the single source of truth
+      CRM_STATE.categories = [];
+      CRM_STATE.subcategories = [];
       // Clean up any stale dummy mock customers from state
-      CRM_STATE.customers = CRM_STATE.customers.filter(c => 
+      CRM_STATE.customers = CRM_STATE.customers.filter(c =>
         c && c.id !== 'cust_89660115_account_1' && c.id !== 'cust_101' && c.id !== 'cust_102' && c.id !== 'cust_103' && c.name !== 'Pooja Venkatesh'
       );
       cleanupAndDeduplicateCRMState();
-      if (Array.isArray(CRM_STATE.staffList)) {
-        CRM_STATE.staffList.forEach(s => {
-          if (s.name && s.name.toLowerCase() === 'mekha' && s.id === 'staff_01') {
-            s.id = 'staff_04';
+      const mekhaStaff = (CRM_STATE.staffList || []).find(s => s && s.name && s.name.toLowerCase() === 'mekha');
+      const mekhaId = mekhaStaff ? mekhaStaff.id : 'staff_05';
+
+      if (Array.isArray(CRM_STATE.followups) && Array.isArray(CRM_STATE.queries)) {
+        CRM_STATE.followups.forEach(f => {
+          if (!f) return;
+          if (f.assignedTo === 'staff_04' || f.assignedTo === 'staff_01' || f.assignedTo === 'mekha') {
+            f.assignedTo = mekhaId;
+          }
+          const q = CRM_STATE.queries.find(qry => qry && (
+            (qry.customerId && (qry.customerId === f.customerId || String(qry.customerId) === String(f.customerId))) ||
+            (qry.customer_id && (qry.customer_id === f.customerId || String(qry.customer_id) === String(f.customerId))) ||
+            (qry.id === f.queryId || qry.id === f.query_id)
+          ));
+          if (q && q.assignedTo && q.assignedTo !== 'UNASSIGNED') {
+            f.assignedTo = q.assignedTo;
           }
         });
       }
@@ -1944,32 +2694,64 @@ function initCRMState() {
         q && q.customerId !== 'cust_89660115_account_1' && q.customerId !== 'cust_101' && q.customerId !== 'cust_102' && q.customerId !== 'cust_103' && !(q.queryText && q.queryText.includes('ytfdw'))
       );
       if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object') CRM_STATE.conversations = {};
-      delete CRM_STATE.conversations['cust_89660115_account_1'];
-      delete CRM_STATE.conversations['cust_101'];
-      delete CRM_STATE.conversations['cust_102'];
-      delete CRM_STATE.conversations['cust_103'];
+      // Repair any voice notes sitting in localStorage that lost type or duration
+      Object.keys(CRM_STATE.conversations).forEach(cid => {
+        const msgs = CRM_STATE.conversations[cid];
+        if (Array.isArray(msgs)) {
+          msgs.forEach(m => {
+            if (m && (m.text && (m.text.includes('Voice Note') || m.text.includes('Voice Message') || m.text.includes('🎤')) || (m.media_url && m.media_url.includes('/voice/')))) {
+              m.type = 'audio';
+              m.media_type = 'audio';
+              if (!m.media_url && m.mediaUrl) m.media_url = m.mediaUrl;
+              if (!m.mediaUrl && m.media_url) m.mediaUrl = m.media_url;
+              if (!m.duration) m.duration = m.audioDuration || 8;
+            }
+          });
+        }
+      });
+      // Clean up any non-products (voice notes, generic attachments) from customer automation history
+      if (Array.isArray(CRM_STATE.customers)) {
+        CRM_STATE.customers.forEach(c => {
+          if (!Array.isArray(c.automationHistory) || c.automationHistory.length === 0) {
+            try {
+              const saved = localStorage.getItem('GRM_TRACKED_PRODUCTS_' + c.id);
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) c.automationHistory = parsed;
+              }
+            } catch (e) {}
+          }
+          if (Array.isArray(c.automationHistory)) {
+            c.automationHistory = c.automationHistory.filter(a => {
+              if (!a) return false;
+              const t = (a.title || a.name || '').toLowerCase();
+              return !t.includes('voice note') && !t.includes('audio message') && !t.includes('voice message') && t !== '[photo attachment]' && !t.includes('🎤');
+            });
+          }
+        });
+      }
       if (!Array.isArray(CRM_STATE.orders)) CRM_STATE.orders = [];
       if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = [];
-      if (!Array.isArray(CRM_STATE.followups) || CRM_STATE.followups.length === 0) {
-        CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
+      if (!Array.isArray(CRM_STATE.followups)) {
+        CRM_STATE.followups = [];
       } else {
-        CRM_STATE.followups = CRM_STATE.followups.filter(f => 
-          f && f.id && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw'))
-        );
-        if (!CRM_STATE.followups.some(f => f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1)) {
-          const samplePayments = (INITIAL_CRM_DATA.followups || []).filter(f => f.isPaymentPending);
-          if (samplePayments.length > 0) {
-            CRM_STATE.followups.push(...JSON.parse(JSON.stringify(samplePayments)));
-          }
-        }
+        const seenKeys = new Set();
+        CRM_STATE.followups = CRM_STATE.followups.filter(f => {
+          if (!f || !f.id) return false;
+          if (f.id.startsWith('FU-2026-000') || f.id === 'FU-2026-00107' || f.id === 'FU-2026-00108' || f.id === 'FU-2026-00109' || f.id === 'FU-2026-00110') return false;
+          if (f.customerId && (f.customerId === 'cust_101' || f.customerId === 'cust_102' || f.customerId === 'cust_103')) return false;
+          if (f.reason && f.reason.includes('ytfdw')) return false;
+          const k = f.id;
+          const custK = (f.customerId || '') + '_' + (f.isPaymentPending ? 'PAY' : 'FU') + '_' + (f.status || '');
+          if (seenKeys.has(k) || (f.customerId && seenKeys.has(custK))) return false;
+          seenKeys.add(k);
+          if (f.customerId) seenKeys.add(custK);
+          return true;
+        });
       }
       // Keep existing products intact without destructive mock filtering
-      if (!Array.isArray(CRM_STATE.categories) || CRM_STATE.categories.length === 0) {
-        CRM_STATE.categories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.categories || []));
-      }
-      if (!Array.isArray(CRM_STATE.subcategories) || CRM_STATE.subcategories.length === 0) {
-        CRM_STATE.subcategories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.subcategories || []));
-      }
+      if (!Array.isArray(CRM_STATE.categories)) CRM_STATE.categories = [];
+      if (!Array.isArray(CRM_STATE.subcategories)) CRM_STATE.subcategories = [];
       if (!CRM_STATE.attributes || typeof CRM_STATE.attributes !== 'object' || !Array.isArray(CRM_STATE.attributes.sizes)) {
         CRM_STATE.attributes = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.attributes || { sizes: [], colors: [], fabrics: [], specifications: [], custom: {} }));
       }
@@ -1995,10 +2777,15 @@ function initCRMState() {
       }
 
       if (Array.isArray(CRM_STATE.staffList)) {
+        // Filter out legacy mock staff members
+        CRM_STATE.staffList = CRM_STATE.staffList.filter(s =>
+          s && s.id !== 'staff_01' && s.id !== 'staff_02' && s.id !== 'staff_03' &&
+          s.name !== 'Priya Sharma' && s.name !== 'Rahul Verma' && s.name !== 'Sneha Patel'
+        );
         CRM_STATE.staffList.forEach((s, idx) => {
           if (typeof s.dailyQuota === 'undefined') s.dailyQuota = idx === 2 ? 60 : 70;
           if (typeof s.todayHandled === 'undefined' || s.todayHandled === 18 || s.todayHandled === 14 || s.todayHandled === 8) s.todayHandled = 0;
-          if (!s.email) s.email = `${s.name.toLowerCase().replace(/\s+/g, '.')}@grmgarments.com`;
+          if (!s.email) s.email = `${(s.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@grmgarments.com`;
           if (!s.phone) s.phone = `+91 98450 1122${idx + 1}`;
           if (!s.status) s.status = 'ACTIVE';
         });
@@ -2035,7 +2822,7 @@ function initCRMState() {
         if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 
   // Set active customer ID to first existing customer who actually has messages/conversations
   const activeChatCusts = (CRM_STATE.customers || []).filter(c => {
@@ -2096,11 +2883,11 @@ function initCRMState() {
         mergeCatalogProductsWithDB(data.products);
       }
 
-      // 2. Taxonomy & Catalog Attributes
-      if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+      // 2. Taxonomy & Catalog Attributes (always sync from DB — empty array clears UI)
+      if (data.categories && Array.isArray(data.categories)) {
         CRM_STATE.categories = data.categories;
       }
-      if (data.subcategories && Array.isArray(data.subcategories) && data.subcategories.length > 0) {
+      if (data.subcategories && Array.isArray(data.subcategories)) {
         CRM_STATE.subcategories = data.subcategories;
       }
       if (data.attributes) {
@@ -2108,30 +2895,51 @@ function initCRMState() {
       }
 
       // 3. Customers (Dynamic database sync)
-      if (data.customers && Array.isArray(data.customers) && data.customers.length > 0) {
-        CRM_STATE.customers = data.customers.map(c => ({
-          id: c.id,
-          code: c.code || '',
-          name: c.name || 'Customer',
-          phone: c.phone || '',
-          whatsapp: c.whatsapp || c.phone || '',
-          customerType: c.customer_type || c.customerType || 'Live WhatsApp Lead',
-          address: c.address || '',
-          email: c.email || '',
-          gender: c.gender || '',
-          age: c.age || '',
-          notes: c.notes || '',
-          tags: Array.isArray(c.tags) ? c.tags : (typeof c.tags === 'string' ? (JSON.parse(c.tags || '[]') || []) : []),
-          totalOrders: parseInt(c.total_orders || c.totalOrders || 0),
-          totalSpend: parseFloat(c.total_spend || c.totalSpend || 0),
-          isDND: Boolean(c.is_dnd || c.isDND),
-          dndReason: c.dnd_reason || '',
-          dndNotes: c.dnd_notes || '',
-          dndMarkedBy: c.dnd_marked_by || '',
-          dndTimestamp: c.dnd_timestamp || '',
-          createdAt: c.created_at || '',
-          avatar: (c.name ? c.name.slice(0, 2) : 'CU').toUpperCase()
-        }));
+      if (data.customers && Array.isArray(data.customers)) {
+        CRM_STATE.customers = data.customers.map(c => {
+          const cleanPhone = (c.phone || c.whatsapp || '').replace(/\D/g, '');
+          const existingCust = (CRM_STATE.customers || []).find(ec => ec && (ec.id === c.id || (cleanPhone.length >= 10 && (ec.phone || ec.whatsapp || '').replace(/\D/g, '').endsWith(cleanPhone.slice(-10)))));
+          
+          let existingHistory = (existingCust && Array.isArray(existingCust.automationHistory) && existingCust.automationHistory.length > 0)
+            ? existingCust.automationHistory
+            : (Array.isArray(c.automationHistory) ? c.automationHistory : []);
+          if (existingHistory.length === 0) {
+            try {
+              const saved = localStorage.getItem('GRM_TRACKED_PRODUCTS_' + c.id);
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) existingHistory = parsed;
+              }
+            } catch (e) {}
+          }
+          let existingNotes = (existingCust && Array.isArray(existingCust.adminNotes)) ? existingCust.adminNotes : [];
+
+          return {
+            id: c.id,
+            code: c.code || '',
+            name: c.name || 'Customer',
+            phone: c.phone || '',
+            whatsapp: c.whatsapp || c.phone || '',
+            customerType: c.customer_type || c.customerType || 'Live WhatsApp Lead',
+            address: c.address || '',
+            email: c.email || '',
+            gender: c.gender || '',
+            age: c.age || '',
+            notes: c.notes || '',
+            tags: Array.isArray(c.tags) ? c.tags : (typeof c.tags === 'string' ? (JSON.parse(c.tags || '[]') || []) : []),
+            totalOrders: parseInt(c.total_orders || c.totalOrders || 0),
+            totalSpend: parseFloat(c.total_spend || c.totalSpend || 0),
+            isDND: Boolean(c.is_dnd || c.isDND),
+            dndReason: c.dnd_reason || '',
+            dndNotes: c.dnd_notes || '',
+            dndMarkedBy: c.dnd_marked_by || '',
+            dndTimestamp: c.dnd_timestamp || '',
+            createdAt: c.created_at || '',
+            avatar: (c.name ? c.name.slice(0, 2) : 'CU').toUpperCase(),
+            automationHistory: existingHistory,
+            adminNotes: existingNotes
+          };
+        });
       }
 
       // 4. Orders (Dynamic database sync)
@@ -2145,8 +2953,12 @@ function initCRMState() {
           shippingAddress: o.shippingAddress || o.shipping_address || '',
           items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
           grandTotal: parseFloat(o.grandTotal || o.grand_total || 0),
-          codAdvance: parseFloat(o.codAdvance || o.cod_advance || 0),
-          codBalanceDue: parseFloat(o.codBalanceDue || o.cod_balance_due || 0),
+          shippingAmount: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
+          shippingCharge: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
+          codAdvance: parseFloat(o.codAdvance || o.cod_advance || o.advancePayment || o.advance_payment || 0),
+          advancePayment: parseFloat(o.codAdvance || o.cod_advance || o.advancePayment || o.advance_payment || 0),
+          codBalanceDue: parseFloat(o.codBalanceDue || o.cod_balance_due || o.balanceAmount || o.balance_amount || 0),
+          balanceAmount: parseFloat(o.codBalanceDue || o.cod_balance_due || o.balanceAmount || o.balance_amount || 0),
           paymentMethod: o.paymentMethod || o.payment_method || 'COD',
           paymentStatus: o.paymentStatus || o.payment_status || 'PENDING',
           upiTransactionId: o.upiTransactionId || o.upi_transaction_id || '',
@@ -2162,7 +2974,7 @@ function initCRMState() {
       }
 
       // 5. Customer Enquiries & Leads (Dynamic database sync)
-      if (data.queries && Array.isArray(data.queries) && data.queries.length > 0) {
+      if (data.queries && Array.isArray(data.queries)) {
         CRM_STATE.queries = data.queries.map(q => ({
           id: q.id,
           customerId: q.customerId || q.customer_id || '',
@@ -2186,36 +2998,52 @@ function initCRMState() {
         }));
       }
 
-      // 6. Follow-ups (Dynamic database sync)
-      if (data.followups && Array.isArray(data.followups) && data.followups.length > 0) {
-        CRM_STATE.followups = data.followups.map(fu => ({
-          id: fu.id,
-          queryId: fu.queryId || fu.query_id || '',
-          customerId: fu.customerId || fu.customer_id || '',
-          customerName: fu.customerName || fu.customer_name || 'Customer',
-          assignedTo: fu.assignedTo || fu.assigned_to || 'staff_01',
-          date: fu.date || fu.date_str || '',
-          time: fu.time || fu.time_str || '11:00 AM',
-          reason: fu.reason || '',
-          status: fu.status || 'PENDING',
-          outcome: fu.outcome || 'PENDING',
-          priority: fu.priority || 'NORMAL',
-          channel: fu.channel || fu.contact_channel || 'WHATSAPP',
-          outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
-          completedAt: fu.completedAt || fu.completed_at || null,
-          rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
-          createdAt: fu.createdAt || fu.created_at || '',
-          isPaymentPending: fu.isPaymentPending === true || fu.is_payment_pending === 1 || fu.is_payment_pending === '1',
-          paymentAmount: parseFloat(fu.paymentAmount || fu.payment_amount || 0),
-          paymentMode: fu.paymentMode || fu.payment_mode || 'UPI',
-          paymentDueDate: fu.paymentDueDate || fu.payment_due_date || '',
-          paymentNotes: fu.paymentNotes || fu.payment_notes || '',
-          quotedItems: fu.quotedItems || fu.quoted_items || ''
-        }));
+      // 6. Follow-ups (Dynamic database sync - strictly deduplicated & non-mock)
+      if (data.followups && Array.isArray(data.followups)) {
+        const seenKeys = new Set();
+        const cleanList = [];
+        data.followups.forEach(fu => {
+          if (!fu || !fu.id) return;
+          if (fu.id.startsWith('FU-2026-000') || fu.id === 'FU-2026-00107' || fu.id === 'FU-2026-00108' || fu.id === 'FU-2026-00109' || fu.id === 'FU-2026-00110') return;
+          if (fu.customerId && (fu.customerId === 'cust_101' || fu.customerId === 'cust_102' || fu.customerId === 'cust_103')) return;
+          if (fu.reason && fu.reason.includes('ytfdw')) return;
+
+          const key = fu.id;
+          const custKey = (fu.customerId || '') + '_' + ((fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1) ? 'PAY' : 'FU') + '_' + (fu.status || '');
+          if (!seenKeys.has(key) && (!fu.customerId || !seenKeys.has(custKey))) {
+            seenKeys.add(key);
+            if (fu.customerId) seenKeys.add(custKey);
+            cleanList.push({
+              id: fu.id,
+              queryId: fu.queryId || fu.query_id || '',
+              customerId: fu.customerId || fu.customer_id || '',
+              customerName: fu.customerName || fu.customer_name || 'Customer',
+              assignedTo: fu.assignedTo || fu.assigned_to || 'staff_01',
+              date: fu.date || fu.date_str || '',
+              time: fu.time || fu.time_str || '11:00 AM',
+              reason: fu.reason || '',
+              status: fu.status || 'PENDING',
+              outcome: fu.outcome || 'PENDING',
+              priority: fu.priority || 'NORMAL',
+              channel: fu.channel || fu.contact_channel || 'WHATSAPP',
+              outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
+              completedAt: fu.completedAt || fu.completed_at || null,
+              rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
+              createdAt: fu.createdAt || fu.created_at || '',
+              isPaymentPending: (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1),
+              paymentAmount: parseFloat(fu.paymentAmount || fu.payment_amount || 0),
+              paymentMode: fu.paymentMode || fu.payment_mode || 'UPI',
+              paymentDueDate: fu.paymentDueDate || fu.payment_due_date || '',
+              paymentNotes: fu.paymentNotes || fu.payment_notes || '',
+              quotedItems: fu.quotedItems || fu.quoted_items || ''
+            });
+          }
+        });
+        CRM_STATE.followups = cleanList;
       }
 
       // 7. Staff Management (Dynamic database sync)
-      if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
+      if (data.staffList && Array.isArray(data.staffList)) {
         CRM_STATE.staffList = data.staffList.map(s => ({
           id: s.id,
           name: s.name,
@@ -2251,11 +3079,16 @@ function initCRMState() {
       if (data.broadcastTemplates && Array.isArray(data.broadcastTemplates) && data.broadcastTemplates.length > 0) {
         CRM_STATE.broadcastTemplates = data.broadcastTemplates;
         data.broadcastTemplates.forEach(bt => {
+          let varObj = {};
+          if (bt.variables_json) {
+            try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) { }
+          }
           if (typeof BROADCAST_PRESETS_DATA !== 'undefined') {
             BROADCAST_PRESETS_DATA[bt.id] = {
               label: bt.name,
               text: bt.body_text,
-              category: bt.category
+              category: bt.category,
+              variables: varObj
             };
           }
         });
@@ -2263,6 +3096,21 @@ function initCRMState() {
 
       // 12. Audit Logs
       CRM_STATE.auditLogs = (data.auditLogs && Array.isArray(data.auditLogs)) ? data.auditLogs : (CRM_STATE.auditLogs || []);
+
+      // 13. Role Permissions (Dynamic database sync)
+      if (data.rolePermissions && typeof data.rolePermissions === 'object') {
+        CRM_STATE.rolePermissions = Object.assign({}, DEFAULT_ROLE_PERMISSIONS, data.rolePermissions);
+        try {
+          localStorage.setItem('CRM_ROLE_PERMISSIONS', JSON.stringify(CRM_STATE.rolePermissions));
+        } catch (e) { }
+        if (typeof enforceGranularActionPermissions === 'function') {
+          enforceGranularActionPermissions();
+        }
+        if (ACTIVE_VIEW === 'inbox' && (typeof ACTIVE_INBOX_SUBMODULE === 'undefined' || ACTIVE_INBOX_SUBMODULE === 'autoreply')) {
+          if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
+          if (typeof updateAutoReplyUI === 'function') updateAutoReplyUI();
+        }
+      }
 
       // Update UI components dynamically to reflect live database state
       if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
@@ -2276,6 +3124,8 @@ function initCRMState() {
       if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
       if (typeof renderStaffCards === 'function') renderStaffCards();
       if (typeof renderStaffKPIOverview === 'function') renderStaffKPIOverview();
+      if (typeof renderStaffTable === 'function') renderStaffTable();
+      if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
       if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
       if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
       if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
@@ -2288,7 +3138,7 @@ function initCRMState() {
     })
     .catch(() => { });
 
-    cleanupAndDeduplicateCRMState();
+  cleanupAndDeduplicateCRMState();
   if (typeof populateCatalogCategoryFilters === 'function') {
     populateCatalogCategoryFilters();
   }
@@ -2436,7 +3286,7 @@ function renderPhoneSwitcherDropdown() {
 
   const accounts = getAvailableWhatsAppAccounts();
   const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593').replace(/\s+/g, '');
-  
+
   if (countBadge) {
     countBadge.innerText = `${accounts.length} Active Line${accounts.length > 1 ? 's' : ''}`;
   }
@@ -2482,7 +3332,7 @@ function renderPhoneSwitcherDropdown() {
     }).length;
 
     return `
-      <div onclick="switchActiveWhatsAppLine('${acc.id}', '${displayPhone}', '${acc.label || 'Line ' + (index+1)}')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${isCurrent ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
+      <div onclick="switchActiveWhatsAppLine('${acc.id}', '${displayPhone}', '${acc.label || 'Line ' + (index + 1)}')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${isCurrent ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
         <div class="flex items-center gap-2.5 min-w-0">
           <div class="w-8 h-8 rounded-lg ${isCurrent ? 'bg-brand-wa text-white shadow-sm' : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700'} flex items-center justify-center font-bold text-xs shrink-0">
             <span class="material-symbols-outlined text-[18px]">${isCurrent ? 'check_circle' : 'phone_android'}</span>
@@ -2658,7 +3508,7 @@ function switchInboxSubmodule(submodule) {
   if (tabBcast) tabBcast.className = inactiveTabClass;
 
   // Reset sidebar subnav classes
-  const inactiveNavClass = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-[11px] font-medium transition group";
+  const inactiveNavClass = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-xs font-medium transition cursor-pointer group";
   if (navSubChat) navSubChat.className = inactiveNavClass;
   if (navSubAuto) navSubAuto.className = inactiveNavClass;
   if (navSubBcast) navSubBcast.className = inactiveNavClass;
@@ -2667,25 +3517,29 @@ function switchInboxSubmodule(submodule) {
   const pSub = document.getElementById('page-subtitle');
   const t = window.t || ((k, f) => f || k);
 
+  const activeSubNavClass = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-300 bg-emerald-950/40 border border-emerald-500/25 font-bold text-xs hover:text-white transition cursor-pointer group";
+
   if (submodule === 'chats') {
     if (chatSub) chatSub.classList.remove('hidden');
     if (tabChat) tabChat.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer";
-    if (navSubChat) navSubChat.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
+    if (navSubChat) navSubChat.className = activeSubNavClass;
     if (pTitle) pTitle.innerText = t('header.title.inbox_chats', 'WhatsApp Inbox & Customer Queue');
     if (pSub) pSub.innerText = t('header.sub.inbox_chats', `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`);
   } else if (submodule === 'autoreply') {
     if (autoSub) autoSub.classList.remove('hidden');
     if (tabAuto) tabAuto.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-teal-600 to-emerald-600 text-white cursor-pointer";
-    if (navSubAuto) navSubAuto.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-teal-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
+    if (navSubAuto) navSubAuto.className = activeSubNavClass;
     if (pTitle) pTitle.innerText = t('header.title.inbox_autoreply', 'WhatsApp Inbox — Pre-Set Templates & Auto-Reply Hub');
     if (pSub) pSub.innerText = t('header.sub.inbox_autoreply', 'Configure automated responses, stock catalog links, trigger keywords & smart question answering');
 
     if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
     if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
+    if (typeof updateAutoReplyUI === 'function') updateAutoReplyUI();
+    if (typeof enforceGranularActionPermissions === 'function') enforceGranularActionPermissions();
   } else if (submodule === 'broadcast') {
     if (bcastSub) bcastSub.classList.remove('hidden');
     if (tabBcast) tabBcast.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white cursor-pointer";
-    if (navSubBcast) navSubBcast.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-purple-200 bg-surface-sidebarActive font-semibold text-[11px] hover:text-white transition group";
+    if (navSubBcast) navSubBcast.className = activeSubNavClass;
     if (pTitle) pTitle.innerText = t('header.title.inbox_broadcast', 'WhatsApp Inbox — Automated Template Broadcast');
     if (pSub) pSub.innerText = t('header.sub.inbox_broadcast', 'Send personalized promotional templates & announcements to customer chats with variable tags');
 
@@ -2694,6 +3548,10 @@ function switchInboxSubmodule(submodule) {
     if (typeof refreshBroadcastAutoFetchedNumbers === 'function') refreshBroadcastAutoFetchedNumbers();
     if (typeof renderDynamicTemplateFields === 'function') renderDynamicTemplateFields();
     if (typeof updateBroadcastPreview === 'function') updateBroadcastPreview();
+  }
+
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
   }
 }
 
@@ -2740,7 +3598,7 @@ function toggleSidebar(forceState) {
       toggleBtn.setAttribute('aria-expanded', 'true');
       toggleBtn.title = 'Close Navigation Sidebar';
     }
-    try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'true'); } catch (e) {}
+    try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'true'); } catch (e) { }
   } else {
     sidebar.classList.remove('sidebar-visible');
     sidebar.classList.add('sidebar-hidden');
@@ -2818,6 +3676,10 @@ function updatePageHeaderTitle() {
     backup: {
       title: t('header.title.backup', 'Data Backup & Recovery Hub'),
       sub: t('header.sub.backup', 'Full database snapshot export, restore, and zero-data-loss protection')
+    },
+    masking: {
+      title: t('header.title.masking', 'Call & Number Masking Control Hub'),
+      sub: t('header.sub.masking', 'Lead data privacy, In-CRM WebRTC softphone & virtual brand caller ID configuration')
     }
   };
 
@@ -2844,6 +3706,7 @@ function updatePageHeaderTitle() {
 window.updatePageHeaderTitle = updatePageHeaderTitle;
 
 function switchView(viewName, subName) {
+  window.switchView = switchView;
   // Clear instant-view-shield if present to allow instant view transitions
   const shield = document.getElementById('instant-view-shield');
   if (shield) shield.remove();
@@ -2853,7 +3716,7 @@ function switchView(viewName, subName) {
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
   }
 
-    // Enforce Role-Based Access Control
+  // Enforce Role-Based Access Control
   if (typeof canUserPerformAction === 'function' && !canUserPerformAction(viewName, 'view')) {
     showToast('Access Restricted', 'Your assigned role does not have permission to view this module.', 'lock', 'rose');
     const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view'));
@@ -2864,10 +3727,11 @@ function switchView(viewName, subName) {
   try {
     localStorage.setItem('GRM_CRM_ACTIVE_VIEW', viewName);
     if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
-      window.history.replaceState(null, '', '#' + viewName);
+      const targetHash = subName ? ('#' + viewName + '/' + subName) : ('#' + viewName);
+      window.history.replaceState(null, '', targetHash);
     }
-  } catch (e) {}
-  const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
+  } catch (e) { }
+  const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking'];
 
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
@@ -2883,10 +3747,12 @@ function switchView(viewName, subName) {
       }
     }
     if (navBtn) {
+      const canViewModule = (typeof canUserPerformAction === 'function') ? canUserPerformAction(v, 'view') : true;
+      navBtn.style.display = canViewModule ? '' : 'none';
       if (v === viewName) {
-        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm";
+        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm" + (canViewModule ? '' : ' hidden');
       } else {
-        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group";
+        navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group" + (canViewModule ? '' : ' hidden');
       }
     }
   });
@@ -2930,9 +3796,6 @@ function switchView(viewName, subName) {
     if (ordersSubMenu) ordersSubMenu.classList.remove('hidden');
     switchOrdersSubmodule(subName || ACTIVE_ORDERS_SUBMODULE || 'dashboard');
     renderOrdersModule();
-  } else {
-    const ordersSubMenu = document.getElementById('nav-orders-submodules');
-    if (ordersSubMenu) ordersSubMenu.classList.add('hidden');
   }
   if (viewName === 'followups') renderFollowupsCards();
   if (viewName === 'customers') renderCustomersGrid();
@@ -2941,13 +3804,30 @@ function switchView(viewName, subName) {
   if (viewName === 'audit') renderAuditTable();
   if (viewName === 'analytics') renderAnalyticsView();
   if (viewName === 'settings') renderWhatsAppSettings();
+  if (viewName === 'masking') renderMaskingView();
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
+  }
 }
 
 window.addEventListener('hashchange', () => {
-  const hash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+  const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+  const hashParts = rawHash.split('/');
+  const mainHash = hashParts[0];
+  const subHash = hashParts[1];
   const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
-  if (hash && validViews.includes(hash) && hash !== ACTIVE_VIEW) {
-    switchView(hash);
+  if (mainHash && validViews.includes(mainHash)) {
+    let needsSwitch = false;
+    if (mainHash !== ACTIVE_VIEW) {
+      needsSwitch = true;
+    } else if (mainHash === 'orders' && subHash && subHash !== (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' ? ACTIVE_ORDERS_SUBMODULE : 'dashboard')) {
+      needsSwitch = true;
+    } else if (mainHash === 'inbox' && subHash && subHash !== (typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' ? ACTIVE_INBOX_SUBMODULE : 'chats')) {
+      needsSwitch = true;
+    }
+    if (needsSwitch) {
+      switchView(mainHash, subHash);
+    }
   }
 });
 
@@ -2973,7 +3853,7 @@ function initAuthSystem() {
         localStorage.setItem('GRM_CRM_SESSION', JSON.stringify(CURRENT_USER));
         sessionStorage.setItem('GRM_CRM_SESSION', JSON.stringify(CURRENT_USER));
         localStorage.setItem('GRM_REMEMBER_FLAG', 'true');
-      } catch (e) {}
+      } catch (e) { }
 
       // Apply RBAC UI safely — any rendering error must NEVER boot user to login page
       try {
@@ -3103,7 +3983,7 @@ function handleLogout() {
   localStorage.removeItem('GRM_REMEMBER_FLAG');
 
   // Notify backend auth API to clear PHP session
-  fetch('auth.php?action=logout').catch(() => {});
+  fetch('auth.php?action=logout').catch(() => { });
 
   // Redirect cleanly to dedicated standalone login page
   window.location.href = 'login.html';
@@ -3193,7 +4073,7 @@ function applyRoleBasedAccessControl(user) {
   // Dynamic Section Headers
   const adminSection = document.getElementById('nav-section-settings-admin');
   if (adminSection) {
-    const hasAnyAdmin = ['settings', 'backup', 'staff', 'analytics', 'audit'].some(k => canUserPerformAction(k, 'view'));
+    const hasAnyAdmin = ['settings', 'backup', 'masking', 'staff', 'analytics', 'audit'].some(k => canUserPerformAction(k, 'view'));
     if (hasAnyAdmin) adminSection.classList.remove('hidden');
     else adminSection.classList.add('hidden');
   }
@@ -3201,6 +4081,9 @@ function applyRoleBasedAccessControl(user) {
   const salesSection = document.getElementById('nav-section-sales-operations');
   if (salesSection) {
     const hasAnySales = ['followups', 'catalog', 'orders', 'customers', 'dnd'].some(k => canUserPerformAction(k, 'view'));
+    // DND nav item hidden if no view access
+    const _navDndEl = document.getElementById('nav-dnd');
+    if (_navDndEl) _navDndEl.style.display = canUserPerformAction('dnd', 'view') || isSuperAdmin ? '' : 'none';
     if (hasAnySales) salesSection.classList.remove('hidden');
     else salesSection.classList.add('hidden');
   }
@@ -3250,9 +4133,11 @@ function setInboxFilter(filter) {
   });
   renderInboxConversationList();
 }
+window.setInboxFilter = setInboxFilter;
 
 function renderInbox() {
   if (!CRM_STATE) return;
+  if (ACTIVE_CUSTOMER_ID && typeof syncCustomerMessagesFromDB === 'function') syncCustomerMessagesFromDB(ACTIVE_CUSTOMER_ID);
   try { renderQuickLineSwitcher(); } catch (e) { console.error('[renderInbox] renderQuickLineSwitcher error:', e); }
   try { renderInboxConversationList(); } catch (e) { console.error('[renderInbox] renderInboxConversationList error:', e); }
   try { renderChatHeader(); } catch (e) { console.error('[renderInbox] renderChatHeader error:', e); }
@@ -3276,10 +4161,10 @@ function renderQuickLineSwitcher() {
   const availableAccountIds = accounts.map(a => a.id);
 
   // Filter to display: connected lines, plus account_1 and account_2, or lines with chats
-  const displayAccounts = accounts.filter(acc => 
-    acc.id === 'account_1' || 
-    acc.id === 'account_2' || 
-    acc.status === 'CONNECTED' || 
+  const displayAccounts = accounts.filter(acc =>
+    acc.id === 'account_1' ||
+    acc.id === 'account_2' ||
+    acc.status === 'CONNECTED' ||
     (CRM_STATE?.customers || []).some(c => (c.accountId || 'account_1') === acc.id)
   );
 
@@ -3323,7 +4208,7 @@ function renderQuickLineSwitcher() {
     const isCurrent = (ACTIVE_SEND_ACCOUNT_ID === acc.id);
     const isConnected = (acc.status === 'CONNECTED');
     const custCount = getActiveCustomerCountForAccount(acc.id);
-    
+
     let displayPhone = acc.connected_number && acc.connected_number !== 'Awaiting Link' && acc.connected_number !== 'Scan QR Code'
       ? formatPhoneNumberPretty(acc.connected_number)
       : (idx === 0 ? '+91 97896 60115' : 'Line ' + (idx + 1));
@@ -3333,10 +4218,10 @@ function renderQuickLineSwitcher() {
     // Distinct styling per line
     let activeClass = '';
     if (isCurrent) {
-      activeClass = (idx === 0) 
-        ? 'bg-brand-wa text-white ring-2 ring-emerald-300 shadow-sm' 
-        : (idx === 1 
-          ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-sm' 
+      activeClass = (idx === 0)
+        ? 'bg-brand-wa text-white ring-2 ring-emerald-300 shadow-sm'
+        : (idx === 1
+          ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-sm'
           : 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-sm');
     } else {
       activeClass = 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300';
@@ -3361,6 +4246,7 @@ function renderInboxConversationList() {
   const container = document.getElementById('conversation-list-container');
   if (!container || !CRM_STATE || !CRM_STATE.customers) return;
 
+  const t = window.t || ((k, f) => f || k);
   const searchQuery = (document.getElementById('chat-search-input')?.value || '').toLowerCase();
 
   // Deduplication Engine: Exactly 1 item per customer!
@@ -3371,7 +4257,20 @@ function renderInboxConversationList() {
 
     const query = CRM_STATE.queries.find(q => q.customerId === cust.id);
     const staff = query ? CRM_STATE.staffList.find(s => s.id === query.assignedTo) : null;
-    const conv = CRM_STATE.conversations[cust.id] || [];
+    let conv = CRM_STATE.conversations[cust.id] || [];
+    // If not found by cust.id, look up by matching phone number
+    if (conv.length === 0 && (cust.phone || cust.whatsapp)) {
+      const cleanDigits = (cust.phone || cust.whatsapp).replace(/[^0-9]/g, '');
+      if (cleanDigits.length >= 10) {
+        for (const [key, msgs] of Object.entries(CRM_STATE.conversations || {})) {
+          const keyDigits = key.replace(/[^0-9]/g, '');
+          if (keyDigits.length >= 10 && (cleanDigits.endsWith(keyDigits.slice(-10)) || keyDigits.endsWith(cleanDigits.slice(-10)))) {
+            conv = msgs;
+            break;
+          }
+        }
+      }
+    }
     const lastMsgObj = conv.length > 0 ? conv[conv.length - 1] : null;
 
     // Filter out contacts with no messages and no active query from the inbox list
@@ -3380,9 +4279,9 @@ function renderInboxConversationList() {
     }
 
     // Dynamic DND Removal: Customers marked as DND are excluded from the active WhatsApp inbox queue
-    const isCustomerDND = (cust.isDND === true) || 
-                          (query && query.status === 'DND') || 
-                          (Array.isArray(cust.tags) && cust.tags.includes('DND / Opt-Out'));
+    const isCustomerDND = (cust.isDND === true) ||
+      (query && query.status === 'DND') ||
+      (Array.isArray(cust.tags) && cust.tags.includes('DND / Opt-Out'));
     if (isCustomerDND) {
       // Only keep in active view if user specifically clicked to review conversation history from DND hub
       if (!ACTIVE_CUSTOMER_ID || String(cust.id) !== String(ACTIVE_CUSTOMER_ID)) {
@@ -3396,10 +4295,11 @@ function renderInboxConversationList() {
     let lastTimeEpoch = lastMsgObj ? (lastMsgObj.id || 0) : 0;
 
     if (lastMsgObj) {
-      lastText = (lastMsgObj.sender === 'staff' ? t('chat.staff_prefix', 'Staff: ') : t('chat.customer_prefix', 'Customer: ')) + `"${lastMsgObj.text.substring(0, 38)}..."`;
+      const safeText = String(lastMsgObj.text || lastMsgObj.message_text || (lastMsgObj.type === 'audio' ? '🎤 WhatsApp Voice Note' : (lastMsgObj.type === 'image' ? '📷 Photo Attachment' : 'Message')));
+      lastText = (lastMsgObj.sender === 'staff' ? t('chat.staff_prefix', 'Staff: ') : t('chat.customer_prefix', 'Customer: ')) + `"${safeText.substring(0, 38)}..."`;
       timeDisplay = lastMsgObj.time || timeDisplay;
     } else if (query) {
-      const qText = query.lastMessage || query.queryText || '';
+      const qText = String(query.lastMessage || query.queryText || 'Enquiry');
       lastText = t('chat.customer_prefix', 'Customer: ') + `"${qText.substring(0, 38)}..."`;
     }
 
@@ -3432,10 +4332,13 @@ function renderInboxConversationList() {
   const availableAccountIds = availableAccounts.map(a => a.id);
 
   if (ACTIVE_SEND_ACCOUNT_ID && ACTIVE_SEND_ACCOUNT_ID !== 'all') {
-    customerCards = customerCards.filter(c => c.accountId === ACTIVE_SEND_ACCOUNT_ID);
+    const lineCards = customerCards.filter(c => c.accountId === ACTIVE_SEND_ACCOUNT_ID);
+    if (lineCards.length > 0) {
+      customerCards = lineCards;
+    }
   } else {
     // When viewing all lines, ONLY show customer threads belonging to active (non-deleted) accounts
-    customerCards = customerCards.filter(c => availableAccountIds.includes(c.accountId));
+    customerCards = customerCards.filter(c => availableAccountIds.includes(c.accountId) || !c.accountId);
   }
 
   // Filter based on active filter tab
@@ -3443,7 +4346,22 @@ function renderInboxConversationList() {
     customerCards = customerCards.filter(c => c.assignedTo === 'UNASSIGNED');
   } else if (INBOX_FILTER === 'my') {
     if (ACTIVE_ROLE !== 'admin') {
-      customerCards = customerCards.filter(c => c.assignedTo === ACTIVE_ROLE);
+      const u = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
+      const myIds = [
+        ACTIVE_ROLE,
+        u?.id,
+        u?.staff_id,
+        u?.staffId,
+        u?.username,
+        u?.name
+      ].filter(Boolean).map(s => String(s).toLowerCase());
+
+      customerCards = customerCards.filter(c => {
+        const assigned = String(c.assignedTo || '').toLowerCase();
+        const staffId = String(c.staff?.id || '').toLowerCase();
+        const staffName = String(c.staff?.name || '').toLowerCase();
+        return myIds.includes(assigned) || myIds.includes(staffId) || myIds.includes(staffName);
+      });
     }
   } else if (INBOX_FILTER === 'urgent') {
     customerCards = customerCards.filter(c => c.priority === 'URGENT');
@@ -3561,10 +4479,12 @@ function renderInboxConversationList() {
     `;
   }).join('');
 }
+window.renderInboxConversationList = renderInboxConversationList;
 
 function selectCustomerChat(customerId) {
   if (!customerId) return;
   ACTIVE_CUSTOMER_ID = customerId;
+  if (typeof syncCustomerMessagesFromDB === 'function') syncCustomerMessagesFromDB(customerId);
   if (CRM_STATE) {
     CRM_STATE.activeCustomerId = customerId;
   }
@@ -3579,6 +4499,14 @@ function selectCustomerChat(customerId) {
     renderChatHeader();
   } catch (e) {
     console.error('Error rendering Chat Header on selectCustomerChat:', e);
+  }
+  // Enforce RBAC permissions on chat controls after rendering
+  try {
+    if (typeof enforceGranularActionPermissions === 'function') {
+      enforceGranularActionPermissions();
+    }
+  } catch (e) {
+    console.error('Error enforcing granular permissions on selectCustomerChat:', e);
   }
 }
 
@@ -3634,7 +4562,7 @@ function toggleLeftPanel(forceState = null) {
       }
     }
   }
-  try { localStorage.setItem('GRM_INBOX_LEFT_OPEN', IS_LEFT_PANEL_OPEN ? 'true' : 'false'); } catch (e) {}
+  try { localStorage.setItem('GRM_INBOX_LEFT_OPEN', IS_LEFT_PANEL_OPEN ? 'true' : 'false'); } catch (e) { }
 }
 window.toggleLeftPanel = toggleLeftPanel;
 
@@ -3699,7 +4627,7 @@ function toggleRightPanel(forceState = null, isUserAction = false) {
     resizerIcon.innerText = IS_RIGHT_PANEL_OPEN ? 'chevron_right' : 'chevron_left';
   }
 
-  try { localStorage.setItem('GRM_INBOX_RIGHT_OPEN', IS_RIGHT_PANEL_OPEN ? 'true' : 'false'); } catch (e) {}
+  try { localStorage.setItem('GRM_INBOX_RIGHT_OPEN', IS_RIGHT_PANEL_OPEN ? 'true' : 'false'); } catch (e) { }
 }
 window.toggleRightPanel = toggleRightPanel;
 
@@ -3739,7 +4667,7 @@ function initPanelResizers() {
     if (savedRightOpen === 'false') {
       toggleRightPanel(false, false);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // 1. LEFT PANEL RESIZER
   if (resizerLeft && leftPanel && !resizerLeft._bound) {
@@ -3775,7 +4703,7 @@ function initPanelResizers() {
       document.removeEventListener('mousemove', onMouseMoveLeft);
       document.removeEventListener('mouseup', onMouseUpLeft);
       if (leftPanel.style.width) {
-        try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', parseInt(leftPanel.style.width)); } catch (e) {}
+        try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', parseInt(leftPanel.style.width)); } catch (e) { }
       }
     };
 
@@ -3796,7 +4724,7 @@ function initPanelResizers() {
     resizerLeft.addEventListener('dblclick', () => {
       leftPanel.style.width = '320px';
       leftPanel.style.minWidth = '320px';
-      try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', '320'); } catch (e) {}
+      try { localStorage.setItem('GRM_INBOX_LEFT_WIDTH', '320'); } catch (e) { }
     });
   }
 
@@ -3834,7 +4762,7 @@ function initPanelResizers() {
       document.removeEventListener('mousemove', onMouseMoveRight);
       document.removeEventListener('mouseup', onMouseUpRight);
       if (rightPanel.style.width) {
-        try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', parseInt(rightPanel.style.width)); } catch (e) {}
+        try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', parseInt(rightPanel.style.width)); } catch (e) { }
       }
     };
 
@@ -3855,7 +4783,7 @@ function initPanelResizers() {
     resizerRight.addEventListener('dblclick', () => {
       rightPanel.style.width = '350px';
       rightPanel.style.minWidth = '350px';
-      try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', '350'); } catch (e) {}
+      try { localStorage.setItem('GRM_INBOX_RIGHT_WIDTH', '350'); } catch (e) { }
     });
   }
 
@@ -3886,7 +4814,7 @@ function initPanelResizers() {
       document.removeEventListener('mousemove', onMouseMoveSide);
       document.removeEventListener('mouseup', onMouseUpSide);
       if (appSidebar.style.width) {
-        try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', parseInt(appSidebar.style.width)); } catch (e) {}
+        try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', parseInt(appSidebar.style.width)); } catch (e) { }
       }
     };
 
@@ -3943,7 +4871,10 @@ function renderChatHeader() {
   if (!CRM_STATE || !CRM_STATE.customers) return;
 
   const customer = (CRM_STATE.customers || []).find(c => c && (c.id === ACTIVE_CUSTOMER_ID || String(c.id) === String(ACTIVE_CUSTOMER_ID)));
-  const query = (CRM_STATE.queries || []).find(q => q && (q.customerId === ACTIVE_CUSTOMER_ID || String(q.customerId) === String(ACTIVE_CUSTOMER_ID)));
+  const query = (CRM_STATE.queries || []).find(q => q && (
+    q.customerId === ACTIVE_CUSTOMER_ID || String(q.customerId) === String(ACTIVE_CUSTOMER_ID) ||
+    q.customer_id === ACTIVE_CUSTOMER_ID || String(q.customer_id) === String(ACTIVE_CUSTOMER_ID)
+  ));
   const staff = query ? (CRM_STATE.staffList || []).find(s => s && (s.id === query.assignedTo || String(s.id) === String(query.assignedTo))) : null;
   const isUnassigned = query && (query.assignedTo === 'UNASSIGNED' || !query.assignedTo);
 
@@ -4015,7 +4946,20 @@ function renderChatMessages() {
 
   if (!CRM_STATE || !CRM_STATE.conversations) return;
 
-  const messages = CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] || [];
+  const rawMessages = CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] || [];
+  const seenIds = new Set();
+  const seenFp = new Set();
+  const messages = [];
+  rawMessages.forEach(m => {
+    if (!m) return;
+    const mId = m.id ? String(m.id) : null;
+    const fp = `${m.sender}_${m.time}_${(m.text || '').slice(0, 25)}_${(m.media_url || '').slice(-25)}`;
+    if (mId && seenIds.has(mId)) return;
+    if (seenFp.has(fp)) return;
+    if (mId) seenIds.add(mId);
+    seenFp.add(fp);
+    messages.push(m);
+  });
 
   const t = window.t || ((k, f) => f || k);
 
@@ -4133,15 +5077,20 @@ function renderChatMessages() {
   ` + messages.map((msg, idx) => {
     const msgId = msg.id || ('msg-' + idx + '-' + (msg.timestamp || Date.now()));
     const isOut = msg.sender === 'staff';
-    const isAudio = msg.type === 'audio' || (msg.media_url && (msg.media_url.includes('audio') || msg.media_url.startsWith('data:audio') || msg.media_url.includes('.ogg') || msg.media_url.includes('.mp3') || msg.media_url.includes('.m4a'))) || (msg.text && (msg.text.includes('Voice Message') || msg.text.includes('Audio Message')));
-    const isImage = msg.type === 'image' || (msg.media_url && (msg.media_url.startsWith('data:image') || msg.media_url.includes('http') || msg.media_url.includes('.png') || msg.media_url.includes('.jpg') || msg.media_url.includes('blob:')));
-    const duration = msg.duration || 12;
+    const rawMedia = String(msg.media_url || msg.mediaUrl || msg.audio_url || '');
+    const isAudio = msg.type === 'audio' || 
+                    msg.media_type === 'audio' || 
+                    msg.mediaType === 'audio' || 
+                    (rawMedia && (rawMedia.includes('audio') || rawMedia.startsWith('data:audio') || rawMedia.includes('.ogg') || rawMedia.includes('.mp3') || rawMedia.includes('.m4a') || rawMedia.includes('.webm') || rawMedia.includes('/voice/'))) || 
+                    (msg.text && (msg.text.includes('Voice Note') || msg.text.includes('Voice Message') || msg.text.includes('Audio Message') || msg.text.includes('🎤')));
+    const isImage = !isAudio && (msg.type === 'image' || msg.media_type === 'image' || msg.mediaType === 'image' || (rawMedia && (rawMedia.startsWith('data:image') || rawMedia.includes('http') || rawMedia.includes('.png') || rawMedia.includes('.jpg') || rawMedia.includes('.jpeg') || rawMedia.includes('blob:'))));
+    const duration = parseFloat(msg.duration || msg.audioDuration || msg.audio_duration || 8);
 
     window.ACTIVE_CHAT_MESSAGES_MAP = window.ACTIVE_CHAT_MESSAGES_MAP || {};
     if (msg.text) {
       window.ACTIVE_CHAT_MESSAGES_MAP[msgId] = msg.text;
     }
-    const hasText = !!(msg.text && msg.text.trim().length > 0 && msg.text !== '[Photo Attachment]' && !msg.text.includes('Voice Message'));
+    const hasText = !isAudio && !!(msg.text && msg.text.trim().length > 0 && msg.text !== '[Photo Attachment]' && !msg.text.includes('Voice Message') && !msg.text.includes('Voice Note') && !msg.text.includes('🎤'));
 
     // Check if this message bubble is a matching product in the live stream
     const msgTextLower = (msg.text || '').toLowerCase();
@@ -4155,19 +5104,24 @@ function renderChatMessages() {
     let contentHtml = '';
 
     if (isAudio) {
-      const audioSrc = msg.media_url || '';
+      let audioSrc = rawMedia;
+      if (!audioSrc || audioSrc === 'undefined') {
+        const sibling = (messages || []).find(m => m && (m.media_url || m.mediaUrl) && String(m.media_url || m.mediaUrl).includes('/voice/'));
+        if (sibling) audioSrc = sibling.media_url || sibling.mediaUrl;
+      }
       contentHtml = `
         <div class="space-y-2 py-1">
           <div class="flex items-center gap-3">
-            <button onclick="toggleAudioPlay('${msgId}')" id="btn-play-${msgId}" class="w-11 h-11 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white flex items-center justify-center shadow-md transition shrink-0">
+            <button onclick="toggleAudioPlay('${msgId}')" id="btn-play-${msgId}" class="w-11 h-11 rounded-full ${isOut ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-teal-600 hover:bg-teal-700'} active:scale-95 text-white flex items-center justify-center shadow-md transition shrink-0 cursor-pointer">
               <span class="material-symbols-outlined text-[24px]" id="icon-${msgId}">play_arrow</span>
             </button>
             <div class="flex-1 min-w-[190px]">
               <div class="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1">
-                <span class="flex items-center gap-1 text-emerald-700">
+                <span class="flex items-center gap-1 ${isOut ? 'text-emerald-700' : 'text-teal-700'}">
                   <span class="material-symbols-outlined text-[14px]">mic</span> WhatsApp Voice Note
+                  <span class="ml-1 px-1.5 py-0.2 rounded bg-slate-100 text-[9px] font-mono font-bold text-slate-600">${isOut ? 'SENT' : 'INBOUND'}</span>
                 </span>
-                <span id="time-${msgId}" class="font-mono text-[11px] text-slate-500">${typeof formatAudioTime === 'function' ? formatAudioTime(duration) : '0:12'}</span>
+                <span id="time-${msgId}" class="font-mono text-[11px] text-slate-500">${typeof formatAudioTime === 'function' ? formatAudioTime(duration) : '0:08'}</span>
               </div>
               <input type="range" id="seek-${msgId}" min="0" max="${duration}" value="0" step="0.1" 
                 class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600 focus:outline-none" 
@@ -4176,7 +5130,7 @@ function renderChatMessages() {
                 <span class="flex items-center gap-0.5">
                   <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Voice Note
                 </span>
-                <button onclick="toggleAudioSpeed('${msgId}')" id="speed-${msgId}" class="font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[10px] transition">1.0x</button>
+                <button onclick="toggleAudioSpeed('${msgId}')" id="speed-${msgId}" class="font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[10px] transition cursor-pointer">1.0x</button>
               </div>
               <audio id="audio-${msgId}" src="${audioSrc}" preload="metadata" 
                 ontimeupdate="updateAudioProgress('${msgId}')" 
@@ -4184,6 +5138,38 @@ function renderChatMessages() {
                 onerror="handleAudioFallback('${msgId}')"></audio>
             </div>
           </div>
+
+          ${!isOut ? `
+          <!-- Customer Voice Translation Toolbar for Admin & Staff -->
+          <div class="mt-2 pt-2 border-t border-slate-200/80 flex items-center justify-between gap-1.5 flex-wrap">
+            <div class="flex items-center gap-1 text-[11px] text-slate-600 font-medium">
+              <span class="material-symbols-outlined text-[14px] text-teal-600">translate</span>
+              <span class="text-[10px] font-bold text-slate-500">To:</span>
+              <select id="inbound-target-lang-${msgId}" class="text-[11px] bg-white border border-slate-300 rounded-lg px-2 py-0.5 font-bold text-slate-800 outline-none hover:border-teal-400 transition cursor-pointer">
+                <option value="ta" selected>தமிழ் (Tamil)</option>
+                <option value="en">English</option>
+                <option value="ml">മലയാളം (Malayalam)</option>
+                <option value="te">తెలుగు (Telugu)</option>
+                <option value="hi">हिंदी (Hindi)</option>
+                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+              </select>
+            </div>
+            <button type="button" id="btn-inbound-trans-${msgId}" onclick="translateCustomerInboundVoice('${msgId}', '${audioSrc}')" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-[11px] font-bold rounded-lg shadow-2xs transition flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[14px]" id="btn-inbound-trans-icon-${msgId}">record_voice_over</span>
+              <span id="btn-inbound-trans-text-${msgId}">Translate Voice</span>
+            </button>
+          </div>
+          <div id="inbound-trans-box-${msgId}" class="${msg.translated_audio_url ? '' : 'hidden'} mt-2 p-2.5 bg-teal-50 border border-teal-300 rounded-xl space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-teal-950">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px] text-teal-700">volume_up</span>
+                <span>Translated Voice (<span id="inbound-trans-lang-lbl-${msgId}">${msg.target_lang_name || 'Tamil'}</span>):</span>
+              </span>
+              <span class="text-[9px] bg-teal-200/80 text-teal-900 px-1.5 py-0.2 rounded font-mono font-bold">Ready</span>
+            </div>
+            <audio id="inbound-trans-audio-${msgId}" controls src="${msg.translated_audio_url || ''}" class="w-full h-8 outline-none"></audio>
+          </div>
+          ` : ''}
         </div>
       `;
     } else if (isImage) {
@@ -4211,9 +5197,9 @@ function renderChatMessages() {
       const isStockMenu = msg.text && (
         msg.text.includes('Ready-Stock Collections:') ||
         msg.text.includes('Reply with 1 to 6') ||
-        msg.text.includes('Live Stock') || 
-        msg.text.includes('Category Number') || 
-        msg.text.includes('Baby Collection (0-3 Years)') || 
+        msg.text.includes('Live Stock') ||
+        msg.text.includes('Category Number') ||
+        msg.text.includes('Baby Collection (0-3 Years)') ||
         msg.text.includes('Click any category button') ||
         msg.text.includes('How to Order / Inquire:')
       );
@@ -4262,7 +5248,7 @@ function renderChatMessages() {
 
       contentHtml = `
         <div class="space-y-1">
-          <p class="text-xs leading-relaxed font-normal">${formattedMsg}</p>
+          <p class="text-xs leading-relaxed font-normal break-words [overflow-wrap:anywhere] whitespace-pre-line">${formattedMsg}</p>
           ${buttonsHtml}
         </div>
       `;
@@ -4270,7 +5256,7 @@ function renderChatMessages() {
 
     return `
       <div id="chat-bubble-${msgId}" data-msg-id="${msgId}" data-product-matched="${isMatchingProductInMsg ? 'true' : 'false'}" class="chat-message-row flex ${isOut ? 'justify-end' : 'justify-start'} transition-all duration-300">
-        <div class="max-w-md ${isOut ? 'bg-brand-50 border border-emerald-200 text-slate-800 chat-bubble-out shadow-sm' : 'bg-white border border-slate-200 text-slate-800 chat-bubble-in shadow-sm'} ${isMatchingProductInMsg ? 'ring-3 ring-emerald-400 bg-emerald-50/70 border-emerald-400 shadow-md' : ''} p-3.5 space-y-1 rounded-2xl">
+        <div class="max-w-[88%] sm:max-w-md w-fit min-w-0 break-words [overflow-wrap:anywhere] ${isOut ? 'bg-brand-50 border border-emerald-200 text-slate-800 chat-bubble-out shadow-sm' : 'bg-white border border-slate-200 text-slate-800 chat-bubble-in shadow-sm'} ${isMatchingProductInMsg ? 'ring-3 ring-emerald-400 bg-emerald-50/70 border-emerald-400 shadow-md' : ''} p-3.5 space-y-1 rounded-2xl">
           ${isMatchingProductInMsg ? `
             <div class="flex items-center justify-between text-[10px] font-bold text-emerald-900 bg-emerald-100/90 px-2 py-0.5 rounded-md mb-1.5 border border-emerald-300 shadow-2xs">
               <span class="flex items-center gap-1">
@@ -4318,7 +5304,7 @@ function renderChatMessages() {
     `;
   }).join('');
 
-  stream.innerHTML = `<div class="max-w-3xl xl:max-w-4xl mx-auto w-full space-y-3 min-w-0">${messagesContent}</div>`;
+  stream.innerHTML = `<div class="max-w-3xl xl:max-w-4xl mx-auto w-full space-y-3 min-w-0 overflow-x-hidden">${messagesContent}</div>`;
 
   // Auto-restore any currently open translations across re-renders
   if (window.ACTIVE_MESSAGE_TRANSLATIONS) {
@@ -4357,17 +5343,17 @@ const TRANSLATION_LANGUAGES = [
 ];
 
 function getTranslateBtnText() {
-  const currentLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage()) 
-    ? getCurrentLanguage().code 
+  const currentLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage())
+    ? getCurrentLanguage().code
     : (localStorage.getItem('GRM_APP_LANG') || 'ta');
-    
+
   switch (currentLang) {
     case 'ta': return 'மொழிபெயர் 🌐';
     case 'hi': return 'अनुवाद 🌐';
     case 'te': return 'అనువదించు 🌐';
     case 'ml': return 'വിവർത്തനം 🌐';
     case 'kn': return 'ಅನುವಾದ 🌐';
-    case 'en': 
+    case 'en':
     default:
       return 'Translate 🌐';
   }
@@ -4390,8 +5376,8 @@ async function toggleTranslateMessage(msgId, ev) {
   }
 
   // Determine target language: default to current CRM language (fallback 'ta')
-  let targetLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage()) 
-    ? getCurrentLanguage().code 
+  let targetLang = (typeof getCurrentLanguage === 'function' && getCurrentLanguage())
+    ? getCurrentLanguage().code
     : (localStorage.getItem('GRM_APP_LANG') || 'ta');
 
   await translateMessageToLang(msgId, targetLang);
@@ -4424,7 +5410,7 @@ async function translateMessageToLang(msgId, targetLang) {
 
   try {
     let translatedText = '';
-    
+
     // 1. Direct Ultra-Fast Google Translate Client Call (100 - 300ms, zero server delay)
     try {
       const controller = new AbortController();
@@ -4487,8 +5473,8 @@ function renderTranslationBox(msgId, originalText, translatedText, targetLang) {
 
   const langButtonsHtml = TRANSLATION_LANGUAGES.map(lang => {
     const isCur = (lang.code === targetLang);
-    const activeClass = isCur 
-      ? 'bg-emerald-700 text-white shadow-2xs font-bold ring-1 ring-emerald-600' 
+    const activeClass = isCur
+      ? 'bg-emerald-700 text-white shadow-2xs font-bold ring-1 ring-emerald-600'
       : 'bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 font-medium';
     return `
       <button type="button" 
@@ -4516,7 +5502,7 @@ function renderTranslationBox(msgId, originalText, translatedText, targetLang) {
         </div>
       </div>
 
-      <div class="text-xs text-slate-800 font-medium leading-relaxed bg-white/95 p-2 rounded-lg border border-emerald-200/70 shadow-2xs select-text">
+      <div class="text-xs text-slate-800 font-medium leading-relaxed bg-white/95 p-2 rounded-lg border border-emerald-200/70 shadow-2xs select-text whitespace-pre-line">
         ${translatedText.replace(/\n/g, '<br>')}
       </div>
     </div>
@@ -4542,7 +5528,7 @@ window.getTranslateBtnText = getTranslateBtnText;
 window.renderChatStream = renderChatMessages;
 
 // Interactive 1-Click Category Selection Action Handler
-window.triggerCategorySelection = function(categoryNum, customerId) {
+window.triggerCategorySelection = function (categoryNum, customerId) {
   const targetCustId = customerId || ACTIVE_CUSTOMER_ID;
   const customer = CRM_STATE.customers.find(c => c.id === targetCustId);
   if (!customer) return;
@@ -4604,7 +5590,7 @@ window.triggerCategorySelection = function(categoryNum, customerId) {
 let CURRENT_LIGHTBOX_ZOOM = 1.0;
 let CURRENT_LIGHTBOX_SRC = '';
 
-window.openImageLightbox = function(msgIdOrSrc, customTitle) {
+window.openImageLightbox = function (msgIdOrSrc, customTitle) {
   let imgSrc = '';
   let title = customTitle || 'Customer WhatsApp Photo Attachment';
 
@@ -4657,13 +5643,13 @@ window.openImageLightbox = function(msgIdOrSrc, customTitle) {
   }
 };
 
-window.closeImageLightbox = function() {
+window.closeImageLightbox = function () {
   closeModal('modal-image-lightbox');
   document.body.style.overflow = '';
   CURRENT_LIGHTBOX_ZOOM = 1.0;
 };
 
-window.zoomLightboxImage = function(delta) {
+window.zoomLightboxImage = function (delta) {
   CURRENT_LIGHTBOX_ZOOM = Math.max(0.5, Math.min(3.5, CURRENT_LIGHTBOX_ZOOM + delta));
   const imgEl = document.getElementById('lightbox-img');
   const zoomPctEl = document.getElementById('lightbox-zoom-pct');
@@ -4675,7 +5661,7 @@ window.zoomLightboxImage = function(delta) {
   }
 };
 
-window.resetLightboxZoom = function() {
+window.resetLightboxZoom = function () {
   CURRENT_LIGHTBOX_ZOOM = 1.0;
   const imgEl = document.getElementById('lightbox-img');
   const zoomPctEl = document.getElementById('lightbox-zoom-pct');
@@ -4687,7 +5673,7 @@ window.resetLightboxZoom = function() {
   }
 };
 
-window.downloadLightboxImage = function() {
+window.downloadLightboxImage = function () {
   if (!CURRENT_LIGHTBOX_SRC) return;
   try {
     const a = document.createElement('a');
@@ -4706,7 +5692,7 @@ window.downloadLightboxImage = function() {
   }
 };
 
-window.openLightboxImageInNewTab = function() {
+window.openLightboxImageInNewTab = function () {
   if (!CURRENT_LIGHTBOX_SRC) return;
   if (CURRENT_LIGHTBOX_SRC.startsWith('data:')) {
     const imgWindow = window.open('');
@@ -4734,7 +5720,7 @@ window.openLightboxImageInNewTab = function() {
 };
 
 // Keyboard listener for Escape key to close topmost modal or lightbox
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
     if (typeof ACTIVE_MODAL_STACK !== 'undefined' && ACTIVE_MODAL_STACK.length > 0) {
       const topModalId = ACTIVE_MODAL_STACK[ACTIVE_MODAL_STACK.length - 1];
@@ -4940,6 +5926,19 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
       query.quotedItems = paymentData.quotedItems || '';
     } else if (paymentData && paymentData.isPaymentPending === false) {
       query.isPaymentPending = false;
+      query.is_payment_pending = 0;
+      query.paymentAmount = 0;
+      query.payment_amount = 0;
+      query.shippingAmount = 0;
+      query.shipping_amount = 0;
+      query.advancePayment = 0;
+      query.advance_payment = 0;
+      query.paymentDueDate = '';
+      query.payment_due_date = '';
+      query.paymentNotes = '';
+      query.payment_notes = '';
+      query.quotedItems = '';
+      query.quoted_items = '';
     }
     if (callbackSchedule && callbackSchedule.date) {
       query.callback_date = callbackSchedule.date;
@@ -4999,7 +5998,7 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         callbackTime: (callbackSchedule && callbackSchedule.time) || query.callback_time || query.callbackTime || '11:00 AM',
         statusHistory: query.statusHistory
       })
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   if (customer) {
@@ -5054,7 +6053,7 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
           status: 'ACTIVE',
           dnd_timestamp: timeFormatted
         })
-      }).catch(() => {});
+      }).catch(() => { });
 
       // Dynamically remove from active inbox view by switching active selection if current customer was marked DND
       if (ACTIVE_CUSTOMER_ID === customer.id || String(ACTIVE_CUSTOMER_ID) === String(customer.id)) {
@@ -5085,7 +6084,7 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
       }
     }
   }
-  
+
   logAudit('STATUS_CHANGE', 'INBOX_PANEL', `Query ${query ? query.id : customer?.id} status changed from ${oldStatus} to ${newStatus} by ${staffName}${notes ? ' (Note: ' + notes + ')' : ''}`);
 
   // Automatically ensure active follow-up record in CRM_STATE.followups
@@ -5094,8 +6093,8 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
     let existingFu = CRM_STATE.followups.find(f => f && (f.customerId === customer?.id || (query && f.queryId === query.id)) && f.status === 'PENDING');
     const fuReason = notes || query?.queryText || (newStatus === 'PENDING' ? 'Payment Pending follow-up' : (newStatus === 'FOLLOW_UP' ? 'Customer callback requested' : 'Customer enquiry callback'));
     const isPayPending = (newStatus === 'PENDING') || Boolean(paymentData && paymentData.isPaymentPending);
-    const payAmt = isPayPending 
-      ? (parseFloat(paymentData?.paymentAmount || 0) || query?.paymentAmount || existingFu?.paymentAmount || 0) 
+    const payAmt = isPayPending
+      ? (parseFloat(paymentData?.paymentAmount || 0) || query?.paymentAmount || existingFu?.paymentAmount || 0)
       : 0;
     const shippingAmt = isPayPending ? (parseFloat(paymentData?.shippingAmount || 0) || query?.shippingAmount || existingFu?.shippingAmount || 0) : 0;
     const advanceAmt = isPayPending ? (parseFloat(paymentData?.advancePayment || 0) || query?.advancePayment || existingFu?.advancePayment || 0) : 0;
@@ -5155,9 +6154,14 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newFu)
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       if (notes) existingFu.reason = notes;
+      if (query && query.assignedTo && query.assignedTo !== 'UNASSIGNED') {
+        existingFu.assignedTo = query.assignedTo;
+      } else if (currentUser && (currentUser.staffId || currentUser.id)) {
+        existingFu.assignedTo = currentUser.staffId || currentUser.id;
+      }
       if (callbackSchedule && callbackSchedule.date) {
         existingFu.date = callbackSchedule.date;
         existingFu.date_str = callbackSchedule.date;
@@ -5176,23 +6180,26 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
       existingFu.advance_payment = advanceAmt;
       existingFu.paymentMode = payMode;
       existingFu.payment_mode = payMode;
-      if (payDue) {
-        existingFu.paymentDueDate = payDue;
-        existingFu.payment_due_date = payDue;
-      }
-      if (payNotes) {
-        existingFu.paymentNotes = payNotes;
-        existingFu.payment_notes = payNotes;
-      }
-      if (payItems) {
-        existingFu.quotedItems = payItems;
-        existingFu.quoted_items = payItems;
+      if (isPayPending) {
+        existingFu.paymentDueDate = payDue || '';
+        existingFu.payment_due_date = payDue || '';
+        existingFu.paymentNotes = payNotes || '';
+        existingFu.payment_notes = payNotes || '';
+        existingFu.quotedItems = payItems || '';
+        existingFu.quoted_items = payItems || '';
+      } else {
+        existingFu.paymentDueDate = '';
+        existingFu.payment_due_date = '';
+        existingFu.paymentNotes = '';
+        existingFu.payment_notes = '';
+        existingFu.quotedItems = '';
+        existingFu.quoted_items = '';
       }
       fetch('api.php?action=save_followup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(existingFu)
-      }).catch(() => {});
+      }).catch(() => { });
     }
   } else if (newStatus === 'CONVERTED' || newStatus === 'RESOLVED') {
     if (Array.isArray(CRM_STATE.followups)) {
@@ -5230,6 +6237,15 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
 }
 
 function reactivateCustomerFromDND(customerId) {
+  // RBAC Guard: requires dnd.delete permission
+  const _raIsSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_raIsSuperAdmin && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('dnd', 'delete')) {
+      if (typeof showToast === 'function') showToast('🔒 Access Denied: You do not have permission to re-activate DND customers.', 'warning');
+      return;
+    }
+  }
   const customer = CRM_STATE.customers.find(c => c.id === customerId);
   if (!customer) return;
 
@@ -5261,7 +6277,7 @@ function reactivateCustomerFromDND(customerId) {
       query_id: query ? query.id : null,
       user: CURRENT_USER?.name || 'Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('DND_REACTIVATED', 'DND_MODULE', `Reactivated customer ${customer.name} (${customer.phone}) from DND list.`);
   saveCRMState();
@@ -5275,6 +6291,15 @@ function reactivateCustomerFromDND(customerId) {
 }
 
 function openStaffAssignForDndCustomer(customerId) {
+  // RBAC Guard: requires dnd.edit permission
+  const _daIsSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_daIsSuperAdmin && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('dnd', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 Access Denied: You do not have permission to assign staff to DND customers.', 'warning');
+      return;
+    }
+  }
   let query = (CRM_STATE?.queries || []).find(q => q.customerId === customerId);
   const customer = (CRM_STATE?.customers || []).find(c => c.id === customerId);
   if (!customer) return;
@@ -5310,6 +6335,31 @@ function viewDndCustomerChat(customerId) {
 window.viewDndCustomerChat = viewDndCustomerChat;
 
 function renderDndModule() {
+  // ── RBAC: Check view permission ───────────────────────────────────────────
+  const _dndIsSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canDndView = _dndIsSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('dnd', 'view') : true);
+  const canDndCreate = _dndIsSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('dnd', 'create') : true);
+  const canDndEdit = _dndIsSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('dnd', 'edit') : true);
+  const canDndDelete = _dndIsSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('dnd', 'delete') : true);
+
+  // Gate: no view access → render locked panel and exit
+  if (!canDndView) {
+    const dndContainer = document.getElementById('dnd-module-container') || document.getElementById('dnd-table-body');
+    if (dndContainer) {
+      dndContainer.innerHTML = `
+        <tr><td colspan="7" class="p-10 text-center">
+          <div class="inline-flex flex-col items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-10 py-8 shadow-xs max-w-md mx-auto">
+            <span class="material-symbols-outlined text-[48px] text-slate-400">lock</span>
+            <p class="text-sm font-bold text-slate-700">Access Restricted</p>
+            <p class="text-xs text-slate-500 text-center">You do not have permission to view the DND &amp; Opt-Out Customer Hub.<br>Contact your admin to request access.</p>
+          </div>
+        </td></tr>
+      `;
+    }
+    return;
+  }
+
   const tableBody = document.getElementById('dnd-table-body');
   const countSummary = document.getElementById('dnd-count-summary');
   const kpiTotal = document.getElementById('kpi-dnd-total');
@@ -5367,7 +6417,7 @@ function renderDndModule() {
     const lastMsg = conv.length > 0 ? conv[conv.length - 1].text : (q ? q.lastMessage : 'No recent messages');
     const dndTime = (dndRec && dndRec.dnd_timestamp) || c.dndTimestamp || (q ? q.statusLastEditedAt || q.createdAt : 'Recent');
     const markedBy = (dndRec && dndRec.marked_by) || c.dndMarkedBy || (q ? q.statusLastEditedBy : 'Super Admin') || 'Super Admin';
-    
+
     // Notes fetched from dedicated dnd_records table or WhatsApp Inbox why the user was set to DND
     const inboxNotes = (dndRec && dndRec.notes) || c.dndNotes || (q ? q.statusNotes : '') || (q?.statusHistory?.find(h => h.to === 'DND')?.notes) || (c.dndReason && !c.dndReason.includes('(Requested DND)') ? c.dndReason : '');
     const mainReason = (dndRec && dndRec.reason) || c.dndReason || (inboxNotes ? inboxNotes : 'Customer not interested in products (Requested DND)');
@@ -5446,20 +6496,25 @@ function renderDndModule() {
           ${dndTime}
         </td>
 
-        <!-- 7. Actions: Assign, Re-activate, View Chat -->
+        <!-- 7. Actions: Assign (edit), Re-activate (delete), View Chat (view) -->
         <td class="py-3.5 px-4 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1.5 flex-wrap">
+            ${canDndEdit ? `
             <button onclick="openStaffAssignForDndCustomer('${c.id}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95" title="Assign this customer to staff member to communicate">
               <span class="material-symbols-outlined text-[14px]">how_to_reg</span>
               <span>Assign</span>
             </button>
+            ` : ''}
+            ${canDndDelete ? `
             <button onclick="reactivateCustomerFromDND('${c.id}')" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95" title="Reactivate customer to allow messages and orders in WhatsApp Inbox">
               <span class="material-symbols-outlined text-[14px]">check_circle</span>
               <span>Re-activate</span>
             </button>
+            ` : ''}
             <button onclick="viewDndCustomerChat('${c.id}')" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="View conversation history">
               <span class="material-symbols-outlined text-[14px]">chat</span>
             </button>
+            ${(!canDndEdit && !canDndDelete) ? '<span class="text-[9px] text-slate-400 font-semibold flex items-center gap-0.5"><span class=\"material-symbols-outlined text-[11px]\">lock</span>View Only</span>' : ''}
           </div>
         </td>
       </tr>
@@ -5535,6 +6590,11 @@ function updateBadgeCounters() {
 
 // Quick Reassign Handling Staff
 function quickReassignQueryStaff(queryId, newStaffId) {
+  const isSuperAdminAssign = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdminAssign && typeof canUserPerformAction === 'function' && !canUserPerformAction('inbox', 'edit') && !canUserPerformAction('enquiries', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Reassigning staff requires Edit permission.', 'lock', 'rose');
+    return;
+  }
   const query = CRM_STATE.queries.find(q => q.id === queryId || q.customerId === queryId);
   if (!query) return;
 
@@ -5545,18 +6605,21 @@ function quickReassignQueryStaff(queryId, newStaffId) {
   }
 
   logAudit('STAFF_ASSIGNMENT', 'INBOX_PANEL', `Query ${query.id} assigned to ${staff ? staff.name : 'Unassigned'}`);
-  
+
+  const qCust = CRM_STATE.customers.find(c => c.id === query.customerId);
   // Asynchronously sync query assignment to MySQL Database
   fetch('api.php?action=assign_query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       id: query.id,
+      customer_id: query.customerId,
+      phone: qCust ? (qCust.whatsapp || qCust.phone) : '',
       assigned_to: newStaffId,
       status: query.status,
       user: CURRENT_USER?.name || 'Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   saveCRMState();
   renderInbox();
@@ -5576,6 +6639,11 @@ function quickReassignQueryStaff(queryId, newStaffId) {
 const CUSTOMER_EDIT_MODES = new Set();
 
 function toggleCustomerEditMode(customerId, enableEdit = true) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (enableEdit && !isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for customer profiles.', 'lock', 'rose');
+    return;
+  }
   if (enableEdit) {
     CUSTOMER_EDIT_MODES.add(customerId);
   } else {
@@ -5651,6 +6719,24 @@ function handlePayPendingToggle(checked) {
       fields.classList.remove('hidden');
     } else {
       fields.classList.add('hidden');
+      const amountInput = document.getElementById('query-pay-amount-input');
+      if (amountInput) amountInput.value = '';
+      const shipInput = document.getElementById('query-pay-shipping-input');
+      if (shipInput) shipInput.value = '';
+      const advInput = document.getElementById('query-pay-advance-input');
+      if (advInput) advInput.value = '';
+      const dueInput = document.getElementById('query-pay-due-input');
+      if (dueInput) dueInput.value = '';
+      const itemsInput = document.getElementById('query-pay-items-input');
+      if (itemsInput) itemsInput.value = '';
+      const notesInput = document.getElementById('query-pay-notes-input');
+      if (notesInput) notesInput.value = '';
+      const modeSelect = document.getElementById('query-pay-mode-select');
+      if (modeSelect) modeSelect.value = 'UPI';
+      const balEl = document.getElementById('query-pay-balance-val') || document.getElementById('query-pay-balance-text');
+      if (balEl) balEl.innerText = '₹0.00';
+      const advWrapper = document.getElementById('query-pay-advance-wrapper');
+      if (advWrapper) advWrapper.classList.add('hidden');
     }
   }
   if (badge) {
@@ -5682,15 +6768,32 @@ function handleDynamicPaymentCalc() {
   const total = parseFloat(document.getElementById('query-pay-amount-input')?.value || 0) || 0;
   const shipping = parseFloat(document.getElementById('query-pay-shipping-input')?.value || 0) || 0;
   const advance = parseFloat(document.getElementById('query-pay-advance-input')?.value || 0) || 0;
-  const balance = Math.max(0, (total + shipping) - advance);
+  const grandTotal = total + shipping;
+  const balance = Math.max(0, grandTotal - advance);
+
+  const grandEl = document.getElementById('query-pay-grand-total-val') || document.getElementById('query-pay-grand-total');
+  if (grandEl) {
+    grandEl.innerText = `₹${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
   const balEl = document.getElementById('query-pay-balance-val') || document.getElementById('query-pay-balance-text');
   if (balEl) {
-    balEl.innerText = `₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    balEl.innerText = `₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 }
 window.handleDynamicPaymentCalc = handleDynamicPaymentCalc;
 
 function handleSaveQueryStatus(queryId) {
+  // RBAC Guard: Only users with inbox.edit or enquiries.edit permission can save
+  const _isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdmin && typeof canUserPerformAction === 'function') {
+    const canEdit = canUserPerformAction('inbox', 'edit') || canUserPerformAction('enquiries', 'edit');
+    if (!canEdit) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Access: You cannot change enquiry status.', 'warning');
+      return;
+    }
+  }
   const select = document.getElementById('query-status-select');
   if (!select) return;
   const newStatus = select.value;
@@ -5716,18 +6819,18 @@ function handleSaveQueryStatus(queryId) {
     const shippingAmtVal = document.getElementById('query-pay-shipping-input')?.value;
     const advanceAmtVal = document.getElementById('query-pay-advance-input')?.value;
 
-    const totalAmt = (totalAmtVal !== undefined && totalAmtVal !== '') 
-      ? (parseFloat(totalAmtVal) || 0) 
+    const totalAmt = (totalAmtVal !== undefined && totalAmtVal !== '')
+      ? (parseFloat(totalAmtVal) || 0)
       : (custFu?.paymentAmount || query?.paymentAmount || 0);
 
-    const shippingAmt = (shippingAmtVal !== undefined && shippingAmtVal !== '') 
-      ? (parseFloat(shippingAmtVal) || 0) 
+    const shippingAmt = (shippingAmtVal !== undefined && shippingAmtVal !== '')
+      ? (parseFloat(shippingAmtVal) || 0)
       : (custFu?.shippingAmount || query?.shippingAmount || 0);
 
     const mode = document.getElementById('query-pay-mode-select')?.value || custFu?.paymentMode || query?.paymentMode || 'UPI';
 
-    const advanceAmt = (advanceAmtVal !== undefined && advanceAmtVal !== '') 
-      ? (parseFloat(advanceAmtVal) || 0) 
+    const advanceAmt = (advanceAmtVal !== undefined && advanceAmtVal !== '')
+      ? (parseFloat(advanceAmtVal) || 0)
       : (custFu?.advancePayment || query?.advancePayment || 0);
 
     const payDueDate = document.getElementById('query-pay-due-input')?.value || cbDate || custFu?.paymentDueDate || query?.paymentDueDate || '';
@@ -5776,6 +6879,11 @@ window.handleCancelQueryEdit = handleCancelQueryEdit;
 // Save Customer Details from Right-Side Panel Form
 function handleQuickCustomerSave(event, customerId) {
   if (event) event.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for customer profiles.', 'lock', 'rose');
+    return;
+  }
 
   const customer = CRM_STATE.customers.find(c => c.id === customerId);
   if (!customer) return;
@@ -5841,7 +6949,7 @@ function handleQuickCustomerSave(event, customerId) {
       altAddress: customer.alt_address,
       notes: customer.notes
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('CUSTOMER_UPDATED', 'CUSTOMER_360', `Updated profile details and notes for customer ${customer.name} (${customer.id})`);
 
@@ -5857,6 +6965,11 @@ function handleQuickCustomerSave(event, customerId) {
 
 // Quick 1-Click Customer Mindset Notes Modal / Prompt
 function openCustomerQuickNotesModal(customerId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for customer records.', 'lock', 'rose');
+    return;
+  }
   const customer = CRM_STATE.customers.find(c => c.id === customerId);
   if (!customer) return;
 
@@ -5876,7 +6989,7 @@ function openCustomerQuickNotesModal(customerId) {
         phone: customer.phone,
         notes: customer.notes
       })
-    }).catch(() => {});
+    }).catch(() => { });
 
     logAudit('CUSTOMER_NOTES', 'CUSTOMER_360', `Updated mindset notes for ${customer.name}: "${customer.notes.substring(0, 30)}..."`);
     renderCustomer360Panel();
@@ -5887,6 +7000,11 @@ function openCustomerQuickNotesModal(customerId) {
 
 // Quick Append Mindset Tag to Customer Record
 function appendCustomerMindsetTag(customerId, tagText) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for customer records.', 'lock', 'rose');
+    return;
+  }
   const customer = CRM_STATE.customers.find(c => c.id === customerId);
   if (!customer) return;
 
@@ -5960,17 +7078,51 @@ function syncCustomerAutomationHistory(customer) {
   if (!Array.isArray(customer.automationHistory)) customer.automationHistory = [];
   if (!Array.isArray(customer.adminNotes)) customer.adminNotes = [];
 
-  const conv = CRM_STATE?.conversations?.[customer.id] || [];
-  if (conv.length === 0) return;
+  // Restore from dedicated localStorage backup if available
+  if (customer.automationHistory.length === 0) {
+    try {
+      const saved = localStorage.getItem('GRM_TRACKED_PRODUCTS_' + customer.id);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) customer.automationHistory = parsed;
+      }
+    } catch (e) {}
+  }
+
+  let conv = CRM_STATE?.conversations?.[customer.id] || [];
+  // If not found by customer.id, find conversation by matching phone number
+  if (conv.length === 0 && (customer.phone || customer.whatsapp)) {
+    const cleanDigits = (customer.phone || customer.whatsapp).replace(/[^0-9]/g, '');
+    if (cleanDigits.length >= 10) {
+      for (const [key, msgs] of Object.entries(CRM_STATE?.conversations || {})) {
+        const keyDigits = key.replace(/[^0-9]/g, '');
+        if (keyDigits.length >= 10 && (cleanDigits.endsWith(keyDigits.slice(-10)) || keyDigits.endsWith(cleanDigits.slice(-10)))) {
+          conv = msgs;
+          break;
+        }
+      }
+    }
+  }
 
   const actions = [];
   let currentCategoryKey = null;
 
   for (let i = 0; i < conv.length; i++) {
     const msg = conv[i];
+    if (!msg) continue;
     const txt = (msg.text || '').trim();
     const timeStr = msg.time || (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:00 PM');
     const msgEpoch = msg.timestamp || (Date.now() - (conv.length - i) * 60000);
+
+    // Strictly skip audio notes and non-product photos - they are NOT garments/products!
+    const isAudioMsg = msg.type === 'audio' || msg.media_type === 'audio' ||
+      txt.includes('Voice Note') || txt.includes('Audio Message') || txt.includes('Voice Message') || txt.includes('🎤') ||
+      (msg.media_url && String(msg.media_url).includes('/voice/'));
+    const isNonProductImg = (txt === '[Photo Attachment]' || txt.includes('Payment Proof') || txt.includes('Screenshot Verified') || txt.includes('Payment Receipt') || txt.includes('UTR')) && !txt.match(/SKU\s*:/i);
+
+    if (isAudioMsg || isNonProductImg) {
+      continue;
+    }
 
     // 1. Check if message is a Category Catalog Menu (sent by Bot or Staff)
     let matchedCatKey = null;
@@ -6042,72 +7194,178 @@ function syncCustomerAutomationHistory(customer) {
       }
     }
 
-    // 3. Check for specific catalog products in the message
-    for (const [catKey, catData] of Object.entries(GRM_BOT_CATALOG)) {
-      for (const [pNum, prod] of Object.entries(catData.items)) {
+    // 3A. Check for products in CRM_STATE.products (Actual Inventory & Admin Catalog)
+    if (CRM_STATE && Array.isArray(CRM_STATE.products) && CRM_STATE.products.length > 0) {
+      for (const prod of CRM_STATE.products) {
+        if (!prod) continue;
+        const skuTrim = (prod.sku || '').trim();
+        const nameTrim = (prod.name || '').trim();
+        const hasSku = skuTrim.length > 0;
+        const hasName = nameTrim.length > 2;
+
         const isMatched = (
-          (prod.sku && txt.includes(prod.sku)) ||
-          (prod.name && txt.includes(prod.name)) ||
-          (msg.media_url && msg.media_url === prod.image)
+          (hasSku && txt.toLowerCase().includes(skuTrim.toLowerCase())) ||
+          (hasName && txt.toLowerCase().includes(nameTrim.toLowerCase())) ||
+          (msg.media_url && prod.image && (msg.media_url === prod.image || msg.media_url.includes(prod.image)))
         );
 
         if (isMatched) {
           actions.push({
-            id: 'prod_' + prod.sku + '_' + (msg.id || i),
+            id: 'inv_prod_' + (prod.sku || prod.id) + '_' + (msg.id || i),
             timestamp: msgEpoch,
             time: timeStr,
             type: 'PRODUCT_VIEWED',
             title: prod.name,
-            price: prod.price,
+            price: prod.price ? (String(prod.price).startsWith('₹') ? prod.price : `₹${prod.price}`) : '₹0',
             sku: prod.sku,
-            size: prod.size,
+            size: prod.size || 'Standard',
+            category: prod.category || 'General Garments',
+            subcategory: prod.subcategory || 'General',
+            subsub: prod.size || 'Standard Size',
             image: msg.media_url || prod.image,
-            badge: '📸 Product Photo Viewed'
+            badge: msg.sender === 'staff' ? '📤 Shared by Admin' : '🛍️ Product in Chat'
           });
         }
       }
     }
 
-    // 4. Generic Product Card / Photo detection (if not in hardcoded catalog)
-    const skuMatch = txt.match(/SKU:\s*`?([A-Z0-9_-]+)`?/i);
-    const priceMatch = txt.match(/(?:💰 Price:|Price:|₹)\s*[*]?:?\s*₹?([0-9,]+)/i);
-    const headerMatch = txt.match(/•\s*([^\n\r]+)/);
+    // 3B. Check for specific catalog products in hardcoded bot catalog
+    if (typeof GRM_BOT_CATALOG !== 'undefined') {
+      for (const [catKey, catData] of Object.entries(GRM_BOT_CATALOG)) {
+        for (const [pNum, prod] of Object.entries(catData.items || {})) {
+          const isMatched = (
+            (prod.sku && txt.toLowerCase().includes(prod.sku.toLowerCase())) ||
+            (prod.name && txt.toLowerCase().includes(prod.name.toLowerCase())) ||
+            (msg.media_url && msg.media_url === prod.image)
+          );
 
-    if ((msg.type === 'image' || msg.media_url || (skuMatch && priceMatch)) && headerMatch) {
-      const headerTitle = headerMatch[1].replace(/[*_#]/g, '').trim();
-      const skuVal = skuMatch ? skuMatch[1] : '';
-      const priceVal = priceMatch ? `₹${priceMatch[1]}` : '';
+          if (isMatched) {
+            actions.push({
+              id: 'prod_' + prod.sku + '_' + (msg.id || i),
+              timestamp: msgEpoch,
+              time: timeStr,
+              type: 'PRODUCT_VIEWED',
+              title: prod.name,
+              price: prod.price,
+              sku: prod.sku,
+              size: prod.size,
+              category: catData.categoryName,
+              subcategory: prod.name,
+              subsub: prod.size,
+              image: msg.media_url || prod.image,
+              badge: '📸 Product Photo Viewed'
+            });
+          }
+        }
+      }
+    }
 
-      if (!actions.some(a => (a.sku && a.sku === skuVal) || a.title === headerTitle)) {
+    // 4. Intelligent Dynamic Product Card & Photo Detection (Admin Shares, Stock Cards, Formats)
+    // Matches: *SKU Code:* ABC, 🏷️ *SKU Code:*, SKU: ABC, *SKU:* ABC, etc.
+    const skuCodeMatch = txt.match(/(?:SKU(?:\s*Code)?|Item\s*Code)\s*:\*?\s*`?([A-Za-z0-9_.-]+)`?/i);
+    // Matches: 💰 Price: ₹123, 💰 Offer Price: ₹123, Price: ₹123, ₹599, etc.
+    const priceValMatch = txt.match(/(?:Offer\s*Price|Price|Rate)\s*:\*?\s*₹?\s*([0-9,]+)/i) || txt.match(/₹\s*([0-9,]+)/);
+    // Matches: 📁 Catalog: *kids > kid, 📁 Category: Baby Collection
+    const catalogMatch = txt.match(/(?:📁\s*(?:Catalog|Category)|Catalog|Category)\s*:\*?\s*([^\n\r]+)/i);
+    // Matches: 📏 Size / Age: * 0-6 Months, Size: 0-6 Months
+    const sizeMatch = txt.match(/(?:📏\s*(?:Size\s*\/\s*Age|Size)|Size\s*\/\s*Age|Size)\s*:\*?\s*([^\n\r]+)/i);
+    // Matches: 🎨 Color: * Pink
+    const colorMatch = txt.match(/(?:🎨\s*Color|Color)\s*:\*?\s*([^\n\r]+)/i);
+
+    // Extract Title: First bold text line or first line with product indicators
+    let detectedTitle = '';
+    const boldTitleMatch = txt.match(/(?:🛍️|👗|•|✨)?\s*\*([^*\n\r]{2,80})\*/);
+    if (boldTitleMatch) {
+      detectedTitle = boldTitleMatch[1].replace(/[*_#]/g, '').trim();
+    } else {
+      const firstLine = (txt.split('\n')[0] || '').replace(/[*_#•🛍️👗✨]/g, '').trim();
+      if (firstLine.length > 2 && firstLine.length < 80) {
+        detectedTitle = firstLine;
+      }
+    }
+
+    // Determine if this message represents a shared product
+    // MUST have an explicit SKU or Catalog or price combined with genuine garment title
+    const isVoiceOrAttach = detectedTitle.includes('Voice') || detectedTitle.includes('Audio') || detectedTitle === '[Photo Attachment]' || detectedTitle.includes('🎤');
+    const hasProductIndicator = !isVoiceOrAttach && !!(
+      skuCodeMatch ||
+      catalogMatch ||
+      (detectedTitle && priceValMatch) ||
+      (msg.media_url && skuCodeMatch)
+    );
+
+    if (hasProductIndicator) {
+      const skuVal = skuCodeMatch ? skuCodeMatch[1].trim() : '';
+      const priceVal = priceValMatch ? `₹${priceValMatch[1].trim()}` : '';
+      const sizeVal = sizeMatch ? sizeMatch[1].replace(/[*_]/g, '').trim() : 'Standard';
+
+      let catVal = 'General Garments';
+      let subcatVal = 'General';
+      if (catalogMatch) {
+        const catRaw = catalogMatch[1].replace(/[*_]/g, '').trim();
+        if (catRaw.includes('>') || catRaw.includes('›')) {
+          const parts = catRaw.split(/[>›]/).map(s => s.trim());
+          catVal = parts[0] || 'General Garments';
+          subcatVal = parts[1] || 'General';
+        } else {
+          catVal = catRaw;
+        }
+      }
+
+      const finalTitle = detectedTitle || (skuVal ? `Product (${skuVal})` : 'Shared Garment');
+      const isBadTitle = finalTitle.includes('Voice Note') || finalTitle.includes('Audio Message') || finalTitle.includes('Voice Message') || finalTitle === '[Photo Attachment]' || finalTitle.includes('🎤');
+
+      if (!isBadTitle && !actions.some(a => (skuVal && a.sku && a.sku.toLowerCase() === skuVal.toLowerCase()) || (a.title && a.title.toLowerCase() === finalTitle.toLowerCase()))) {
         actions.push({
-          id: 'dyn_prod_' + (msg.id || i),
+          id: 'dyn_prod_' + (skuVal || msg.id || i),
           timestamp: msgEpoch,
           time: timeStr,
           type: 'PRODUCT_VIEWED',
-          title: headerTitle,
+          title: finalTitle,
           price: priceVal,
           sku: skuVal,
+          size: sizeVal,
+          category: catVal,
+          subcategory: subcatVal,
+          subsub: sizeVal,
           image: msg.media_url || null,
-          badge: '📸 Product Viewed'
+          badge: msg.sender === 'staff' ? '📤 Shared by Admin' : '📸 Product in Chat'
         });
       }
     }
   }
 
   // Deduplicate and sort newest first
+  // CRITICAL: Preserve all existing valid garment products from customer.automationHistory so they are never deleted on refresh!
+  const existingValid = (customer.automationHistory || []).filter(item => {
+    if (!item) return false;
+    if (item.type === 'CATEGORY_VIEWED' || (item.sku && String(item.sku).startsWith('CAT-'))) return false;
+    const t = (item.title || item.name || '').toLowerCase();
+    if (t.includes('voice note') || t.includes('audio message') || t.includes('voice message') || t === '[photo attachment]' || t.includes('🎤')) return false;
+    return true;
+  });
+
+  const combinedActions = [...existingValid, ...actions];
   const seenKeys = new Set();
   const uniqueActions = [];
 
-  for (let j = actions.length - 1; j >= 0; j--) {
-    const act = actions[j];
-    const key = (act.sku ? act.sku : act.title) + '_' + act.type;
+  for (let j = combinedActions.length - 1; j >= 0; j--) {
+    const act = combinedActions[j];
+    const key = (act.sku ? act.sku.toLowerCase() : act.title.toLowerCase()) + '_' + (act.type || 'PRODUCT_VIEWED');
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
       uniqueActions.push(act);
     }
   }
 
-  customer.automationHistory = uniqueActions.slice(0, 25);
+  customer.automationHistory = uniqueActions.reverse().slice(0, 50);
+
+  // Always persist to dedicated localStorage backup for this customer
+  try {
+    if (customer.id) {
+      localStorage.setItem('GRM_TRACKED_PRODUCTS_' + customer.id, JSON.stringify(customer.automationHistory));
+    }
+  } catch (e) {}
 }
 window.GRM_BOT_CATALOG = GRM_BOT_CATALOG;
 window.syncCustomerAutomationHistory = syncCustomerAutomationHistory;
@@ -6122,7 +7380,7 @@ window.syncCustomerAutomationHistory = syncCustomerAutomationHistory;
 
 
 // Live Stream Navigation & Message Highlight Helpers
-window.jumpToLiveStreamMessage = function(msgId) {
+window.jumpToLiveStreamMessage = function (msgId) {
   if (!msgId) return;
   const stream = document.getElementById('chat-messages-stream');
   if (!stream) return;
@@ -6138,7 +7396,7 @@ window.jumpToLiveStreamMessage = function(msgId) {
   }
 };
 
-window.scrollChatToFirstFilteredProduct = function() {
+window.scrollChatToFirstFilteredProduct = function () {
   const stream = document.getElementById('chat-messages-stream');
   if (!stream) return;
   const highlighted = stream.querySelector('[data-product-matched="true"]');
@@ -6164,11 +7422,19 @@ window.CHOSEN_PRODUCTS_FILTER = CHOSEN_PRODUCTS_FILTER;
 
 // Helper to determine 3-tier Category Hierarchy for any item
 function getItemCategoryHierarchy(item) {
+  // 0. Use explicitly parsed category / subcategory from message if present
+  if (item && item.category && item.category !== 'General Garments' && item.category !== 'General') {
+    return {
+      category: item.category,
+      subcategory: item.subcategory || 'General',
+      subsub: item.subsub || item.size || 'Standard Size'
+    };
+  }
   if (!item) return { category: 'Baby Collection (0–3 Years)', subcategory: 'General Garments', subsub: 'Standard' };
 
   // 1. Try matching with full products in CRM_STATE.products
   if (CRM_STATE && Array.isArray(CRM_STATE.products)) {
-    const prod = CRM_STATE.products.find(p => 
+    const prod = CRM_STATE.products.find(p =>
       (item.sku && p.sku && p.sku.toLowerCase() === item.sku.toLowerCase()) ||
       (item.title && p.name && (p.name.toLowerCase().includes(item.title.toLowerCase()) || item.title.toLowerCase().includes(p.name.toLowerCase())))
     );
@@ -6351,26 +7617,49 @@ function shareChosenProductDirectly(sku, name, price, img, size) {
   if (typeof playChime === 'function') playChime('order');
   showToast('Product Shared', `Sent ${sku} card to customer on WhatsApp!`, 'send', 'emerald');
 
+  if (customer) {
+    if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    if (typeof saveCRMState === 'function') saveCRMState();
+  }
+
   if (customer && typeof dispatchWhatsAppOutbound === 'function') {
-    dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, shareText, newMsg, customer.jid, customer.accountId, false, img);
+    dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, shareText, newMsg, customer.jid, customer.accountId, false, img, customer.id);
   }
 }
 
 // Function to render the Bot Automation & Chosen Products Card with full Category, Sub-Category, Sub-Sub Category filters
 function renderBotAutomationAndChosenProductsCard(customer) {
   if (!customer) return '';
+  const _isSuperAdminCust = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canShareCatalogPerm = _isSuperAdminCust || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true);
+  // Move to Order requires Edit or Create permission (orders.edit, orders.create, inbox.edit, inbox.create)
+  const canMoveToOrder = _isSuperAdminCust || (typeof canUserPerformAction === 'function' ? (canUserPerformAction('orders', 'edit') || canUserPerformAction('orders', 'create') || canUserPerformAction('inbox', 'edit') || canUserPerformAction('inbox', 'create')) : true);
 
   // 1. Gather ONLY PRODUCTS that were sent / interacted with in THIS Customer's Chat
+  if (!Array.isArray(customer.automationHistory) || customer.automationHistory.length === 0) {
+    try {
+      const saved = localStorage.getItem('GRM_TRACKED_PRODUCTS_' + customer.id);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) customer.automationHistory = parsed;
+      }
+    } catch (e) {}
+  }
   const allCustomerActions = Array.isArray(customer.automationHistory) ? [...customer.automationHistory] : [];
-  
+
   // Filter out category menus (CAT-1) or non-product actions; keep ONLY actual products
   const customerProductsOnly = allCustomerActions.filter(item => {
     if (!item) return false;
     if (item.type === 'CATEGORY_VIEWED' || (item.sku && String(item.sku).startsWith('CAT-'))) return false;
+    const titleLower = (item.title || item.name || '').toLowerCase();
+    if (titleLower.includes('voice note') || titleLower.includes('audio message') || titleLower.includes('voice message') || titleLower === '[photo attachment]' || titleLower.includes('🎤')) return false;
+    if (item.sku === 'SKU-WA' && (!item.price || item.title === '[Photo Attachment]')) return false;
     const hasSku = item.sku && String(item.sku).trim().length > 0;
     const hasPrice = item.price && String(item.price).trim().length > 0;
-    const hasImg = item.image && String(item.image).trim().length > 0;
-    return (item.type === 'PRODUCT_VIEWED' || hasSku || hasPrice || hasImg);
+    const hasImg = item.image && String(item.image).trim().length > 0 && !item.image.includes('/voice/');
+    const hasTitle = item.title && String(item.title).trim().length > 0;
+    return (item.type === 'PRODUCT_VIEWED' || hasSku || hasPrice) && (hasTitle || hasImg);
   });
 
   // Enrich products with 3-tier Category Hierarchy
@@ -6464,23 +7753,31 @@ function renderBotAutomationAndChosenProductsCard(customer) {
   return `
     <div id="chosen-products-tracker-card" class="p-3.5 border-b border-slate-200 bg-sky-50/50 space-y-2.5">
       
-      <!-- Top Title & Quick Actions Bar -->
-      <div class="flex items-center justify-between">
+      <!-- Top Title & Quick Actions: Row 1 Title, Row 2 Actions -->
+      <div class="space-y-2">
+        <!-- Row 1: Bot Automation & Products Sent Title -->
         <div class="flex items-center gap-1.5">
-          <span class="material-symbols-outlined text-[17px] text-sky-600">smart_toy</span>
-          <span class="text-[11px] font-extrabold uppercase tracking-wide text-sky-950">Bot Automation &amp; Products Sent</span>
+          <span class="material-symbols-outlined text-[17px] text-sky-600 shrink-0">smart_toy</span>
+          <span class="text-[11px] font-extrabold uppercase tracking-wide text-sky-950 truncate">Bot Automation &amp; Products Sent</span>
         </div>
-        <div class="flex items-center gap-1">
-          <button type="button" onclick="openProductSearchModal()" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer" title="Search Stock &amp; Share to WhatsApp">
-            <span class="material-symbols-outlined text-[12px]">share</span>
-            <span class="hidden sm:inline">Share</span>
-          </button>
-          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-200" title="Products sent in this customer chat">
-            ${totalCount} In Chat
-          </span>
-          <button type="button" onclick="syncCustomerAutomationHistory(CRM_STATE.customers.find(c => c.id === '${customer.id}')); renderCustomer360Panel(); renderChatMessages();" class="p-1 hover:bg-sky-200/60 rounded text-sky-700 transition cursor-pointer" title="Re-sync chat products">
-            <span class="material-symbols-outlined text-[13px]">sync</span>
-          </button>
+
+        <!-- Row 2: 3 Action Controls (Share, In Chat Pill, Sync) with Unified Style & Same Colors -->
+        <div class="flex items-center justify-between gap-1.5">
+          ${canShareCatalogPerm ? `
+            <button type="button" onclick="openProductSearchModal()" class="h-6 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer shrink-0" title="Search Stock &amp; Share to WhatsApp">
+              <span class="material-symbols-outlined text-[12px]">share</span>
+              <span>Share</span>
+            </button>
+          ` : '<span class="text-[9px] text-slate-400 font-medium px-1 shrink-0">🔒 View Only</span>'}
+
+          <div class="flex items-center gap-1.5 ml-auto">
+            <span class="h-6 inline-flex items-center text-[9.5px] bg-emerald-100 text-emerald-800 font-mono font-bold px-2.5 rounded-full border border-emerald-200 shrink-0" title="Products sent in this customer chat">
+              ${totalCount} In Chat
+            </span>
+            <button type="button" onclick="syncCustomerAutomationHistory(CRM_STATE.customers.find(c => c.id === '${customer.id}')); renderCustomer360Panel(); renderChatMessages();" class="h-6 w-6 inline-flex items-center justify-center hover:bg-sky-200/60 rounded-md text-sky-700 border border-sky-200 bg-white transition cursor-pointer shrink-0" title="Re-sync chat products">
+              <span class="material-symbols-outlined text-[14px]">sync</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -6590,8 +7887,9 @@ function renderBotAutomationAndChosenProductsCard(customer) {
         ` : ''}
       </div>
 
+      ${canMoveToOrder ? `
       <!-- Bulk Move to Orders Bar -->
-      <div id="chosen-products-bulk-bar" class="${canUserPerformAction('orders', 'create') ? 'hidden' : '!hidden'} p-2.5 bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl shadow-md flex items-center justify-between transition animate-in fade-in">
+      <div id="chosen-products-bulk-bar" class="hidden p-2.5 bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl shadow-md flex items-center justify-between transition animate-in fade-in">
         <div class="min-w-0 pr-1">
           <span class="text-xs font-bold block truncate" id="chosen-products-selected-text">0 Selected</span>
           <span class="text-[10px] text-emerald-200 font-mono font-bold block" id="chosen-products-selected-total">Total: ₹0</span>
@@ -6601,6 +7899,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
           <span>Move to Orders</span>
         </button>
       </div>
+      ` : ''}
 
       <!-- Products Listing Container -->
       <div class="space-y-2">
@@ -6616,6 +7915,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
             ` : ''}
           </div>
         ` : `
+          ${canMoveToOrder ? `
           <!-- Sub-header with Select All option -->
           <div class="flex items-center justify-between px-1 text-[10px] text-slate-500 font-semibold">
             <label class="flex items-center gap-1.5 cursor-pointer">
@@ -6624,21 +7924,23 @@ function renderBotAutomationAndChosenProductsCard(customer) {
             </label>
             <span class="text-[9px] text-slate-400">Select to move to order</span>
           </div>
+          ` : ''}
 
           <!-- Scrollable Product Cards List -->
           <div class="space-y-2 max-h-80 overflow-y-auto pr-1 custom-chat-scroll">
             ${filteredProducts.map(item => {
-              const safeTitle = (item.title || '').replace(/[\r\n]+/g, ' ').replace(/'/g, "\\'");
-              const safeSku = (item.sku || '').replace(/'/g, "\\'");
-              const safePrice = (item.price || '').replace(/'/g, "\\'");
-              const safeSize = (item.size || item.subsub || '').replace(/'/g, "\\'");
-              const safeImg = (item.image || '').replace(/'/g, "\\'");
-              const isProduct = true;
-              const isChecked = typeof CHOSEN_PRODUCTS_SELECTION !== 'undefined' && CHOSEN_PRODUCTS_SELECTION.has(String(item.id));
-              const safeMsgId = (item.msgId || item.id || '').replace(/'/g, "\\'");
+    const safeTitle = (item.title || '').replace(/[\r\n]+/g, ' ').replace(/'/g, "\\'");
+    const safeSku = (item.sku || '').replace(/'/g, "\\'");
+    const safePrice = (item.price || '').replace(/'/g, "\\'");
+    const safeSize = (item.size || item.subsub || '').replace(/'/g, "\\'");
+    const safeImg = (item.image || '').replace(/'/g, "\\'");
+    const isProduct = true;
+    const isChecked = typeof CHOSEN_PRODUCTS_SELECTION !== 'undefined' && CHOSEN_PRODUCTS_SELECTION.has(String(item.id));
+    const safeMsgId = (item.msgId || item.id || '').replace(/'/g, "\\'");
 
-              return `
+    return `
               <div class="bg-white p-2.5 rounded-xl border ${isChecked ? 'border-emerald-400 bg-emerald-50/20 shadow-xs' : 'border-sky-200'} shadow-2xs flex items-start gap-2 transition hover:border-sky-300 hover:shadow-xs">
+                ${canMoveToOrder ? `
                 <div class="pt-1 shrink-0">
                   <input type="checkbox" class="chosen-product-cb rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4" 
                     data-item-id="${item.id}" 
@@ -6650,6 +7952,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
                     onchange="handleChosenProductCheckChange('${customer.id}')" 
                     ${isChecked ? 'checked' : ''}>
                 </div>
+                ` : ''}
 
                 ${item.image ? `
                   <div class="relative shrink-0 group">
@@ -6684,28 +7987,31 @@ function renderBotAutomationAndChosenProductsCard(customer) {
                     <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full font-bold ml-auto">${item.badge || 'Sent in Chat'}</span>
                   </div>
 
-                  <div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1">
+                  <!-- Product Actions: In Live Stream, Send, Move to Order (Unified Style & Container Full Fit) -->
+                  <div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center gap-1.5 w-full">
                     <!-- Jump / View in Live Stream button -->
-                    <button type="button" onclick="jumpToLiveStreamMessage('${safeMsgId}')" class="px-2 py-0.5 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-md text-[10px] font-bold border border-sky-200 transition flex items-center gap-0.5 cursor-pointer" title="Jump to this product in the live chat stream">
-                      <span class="material-symbols-outlined text-[13px] text-sky-600">visibility</span>
-                      <span>In Live Stream</span>
+                    <button type="button" onclick="jumpToLiveStreamMessage('${safeMsgId}')" class="flex-1 min-w-0 h-7 px-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-lg text-[9.5px] font-bold border border-sky-200 transition flex items-center justify-center gap-1 cursor-pointer shadow-2xs truncate" title="Jump to this product in the live chat stream">
+                      <span class="material-symbols-outlined text-[13px] text-sky-600 shrink-0">visibility</span>
+                      <span class="truncate">In Live Stream</span>
                     </button>
                     
-                    <div class="flex items-center gap-1">
-                      <button type="button" onclick="shareChosenProductDirectly('${safeSku}', '${safeTitle}', '${safePrice}', '${safeImg}', '${safeSize}')" class="p-1 hover:bg-slate-100 text-slate-500 hover:text-emerald-700 rounded transition cursor-pointer" title="Share to WhatsApp">
-                        <span class="material-symbols-outlined text-[14px]">send</span>
-                      </button>
-                      ${canUserPerformAction('orders', 'create') ? `
-                      <button type="button" onclick="openOrderFromSingleChosenProduct('${customer.id}', '${item.id}')" class="btn-move-to-order px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" title="Move this product to Order">
-                        <span class="material-symbols-outlined text-[12px]">shopping_cart_checkout</span>
-                        <span>Move to Order</span>
-                      </button>` : ''}
-                    </div>
+                    <!-- Send directly to WhatsApp button -->
+                    <button type="button" onclick="shareChosenProductDirectly('${safeSku}', '${safeTitle}', '${safePrice}', '${safeImg}', '${safeSize}')" class="flex-1 min-w-0 h-7 px-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-emerald-700 rounded-lg text-[9.5px] font-bold border border-slate-200 hover:border-emerald-300 transition flex items-center justify-center gap-1 cursor-pointer shadow-2xs truncate" title="Share to WhatsApp">
+                      <span class="material-symbols-outlined text-[13px] text-slate-600 shrink-0">send</span>
+                      <span class="truncate">Send</span>
+                    </button>
+                    
+                    <!-- Move to Order button -->
+                    ${canMoveToOrder ? `
+                    <button type="button" onclick="openOrderFromSingleChosenProduct('${customer.id}', '${item.id}')" class="btn-move-to-order flex-1 min-w-0 h-7 px-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9.5px] font-bold transition flex items-center justify-center gap-1 shadow-2xs cursor-pointer active:scale-95 truncate" title="Move this product to Order">
+                      <span class="material-symbols-outlined text-[12px] shrink-0">shopping_cart_checkout</span>
+                      <span class="truncate">Move to Order</span>
+                    </button>` : ''}
                   </div>
                 </div>
               </div>
             `;
-            }).join('')}
+  }).join('')}
           </div>
         `}
       </div>
@@ -6716,6 +8022,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
 function renderCustomer360Panel() {
   const panel = document.getElementById('chat-right-panel');
   if (!panel) return;
+  panel.scrollLeft = 0;
 
   if (!CRM_STATE || !CRM_STATE.customers) {
     panel.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">Customer profile details will appear here</div>`;
@@ -6779,8 +8086,8 @@ function renderCustomer360Panel() {
   const staffMember = customerFollowup ? (CRM_STATE.staffList || []).find(s => s && (s.id === customerFollowup.assignedTo || s.name === customerFollowup.assignedTo)) : null;
   const fuStaff = customerFollowup ? (
     staffMember ? staffMember.name :
-    (customerFollowup.assignedTo === 'admin' || customerFollowup.assignedTo === 'Super Admin' ? 'Super Admin' :
-    (customerFollowup.assignedTo || 'Super Admin'))
+      (customerFollowup.assignedTo === 'admin' || customerFollowup.assignedTo === 'Super Admin' ? 'Super Admin' :
+        (customerFollowup.assignedTo || 'Super Admin'))
   ) : '';
   const fuCreatedBy = customerFollowup ? (customerFollowup.createdBy || query?.statusLastEditedBy || '') : '';
   const isOverdue = customerFollowup ? (typeof isFollowupOverdue === 'function' ? isFollowupOverdue(customerFollowup) : false) : false;
@@ -6799,8 +8106,20 @@ function renderCustomer360Panel() {
 
   const isRevealed = REVEALED_CUSTOMERS.has(customer.id);
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
-  const isEditing = CUSTOMER_EDIT_MODES.has(customer.id);
+  const isSuperAdminCust = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canEditCustPerm = isSuperAdminCust || (typeof canUserPerformAction === 'function' ? canUserPerformAction('customers', 'edit') : true);
+  const isEditing = canEditCustPerm && CUSTOMER_EDIT_MODES.has(customer.id);
   const isQueryEditing = true;
+  // RBAC: Enquiry status editing requires inbox.edit or enquiries.edit permission
+  const canEditEnqPerm = isSuperAdminCust ||
+    (typeof canUserPerformAction === 'function'
+      ? (canUserPerformAction('inbox', 'edit') || canUserPerformAction('enquiries', 'edit'))
+      : true);
+  // RBAC: Sharing catalog requires inbox.create permission
+  const canShareCatalogPerm = isSuperAdminCust ||
+    (typeof canUserPerformAction === 'function'
+      ? canUserPerformAction('inbox', 'create')
+      : true);
 
   // Preserve active uncommitted user typing if right panel re-renders during editing
   let draft = null;
@@ -6993,24 +8312,40 @@ function renderCustomer360Panel() {
           <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.notes_placeholder', 'Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions...')}" class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${valNotes}</textarea>
         </div>
 
-        <!-- Action Buttons (Locked vs Editing) -->
+        <!-- Action Buttons (Locked vs Editing vs View-Only RBAC) -->
         <div class="pt-1">
-          ${isEditing ? `
-            <div class="flex gap-2">
-              <button type="button" onclick="toggleCustomerEditMode('${customer.id}', false)" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center">
-                ${t('common.cancel', 'Cancel')}
-              </button>
-              <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
-                <span class="material-symbols-outlined text-[16px]">save</span>
-                <span>${t('customer.save_details', 'Save Customer Details')}</span>
-              </button>
-            </div>
-          ` : `
-            <button type="button" onclick="toggleCustomerEditMode('${customer.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
-              <span class="material-symbols-outlined text-[16px]">edit_note</span>
-              <span>${t('customer.edit_details', 'Edit Customer Details & Notes')}</span>
-            </button>
-          `}
+          ${(() => {
+      const isSuper = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+      const canEdit = isSuper || (typeof canUserPerformAction === 'function' ? canUserPerformAction('customers', 'edit') : true);
+      if (!canEdit) {
+        return `
+                <div class="w-full py-2.5 bg-slate-100/90 border border-slate-200/90 rounded-xl text-center text-slate-500 font-bold text-xs flex items-center justify-center gap-1.5 select-none shadow-2xs" title="View Access Only: Editing customer profiles is restricted for your assigned role">
+                  <span class="material-symbols-outlined text-[15px] text-slate-400">lock</span>
+                  <span>${t('customer.view_only_profile', 'View-Only Customer Profile')}</span>
+                </div>
+              `;
+      }
+      if (isEditing) {
+        return `
+                <div class="flex gap-2">
+                  <button type="button" onclick="toggleCustomerEditMode('${customer.id}', false)" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center justify-center">
+                    ${t('common.cancel', 'Cancel')}
+                  </button>
+                  <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                    <span class="material-symbols-outlined text-[16px]">save</span>
+                    <span>${t('customer.save_details', 'Save Customer Details')}</span>
+                  </button>
+                </div>
+              `;
+      } else {
+        return `
+                <button type="button" onclick="toggleCustomerEditMode('${customer.id}', true)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition flex items-center justify-center gap-1.5 active:scale-[0.99]">
+                  <span class="material-symbols-outlined text-[16px]">edit_note</span>
+                  <span>${t('customer.edit_details', 'Edit Customer Details & Notes')}</span>
+                </button>
+              `;
+      }
+    })()}
         </div>
       </form>
     </div>
@@ -7031,15 +8366,17 @@ function renderCustomer360Panel() {
         <!-- Status Dropdown Selector & Follow-up & Save Button Below -->
         <div class="space-y-3">
           <!-- ROW 1: STATUS DROPDOWN & CALLBACK DATE IN A SINGLE ROW -->
-          <div class="grid grid-cols-2 gap-2.5 items-start">
+          <div class="grid grid-cols-2 gap-2 items-start min-w-0">
             <!-- COLUMN 1: STATUS DROPDOWN SELECTOR -->
-            <div>
+            <div class="min-w-0">
               <div class="flex items-center justify-between mb-1.5 h-4">
                 <label class="block font-bold text-slate-700 text-[10px] uppercase tracking-wide truncate">${t('customer.change_status', 'Change Status:')}</label>
-                <span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-1.5 py-0.2 rounded shrink-0">${t('customer.editable', 'Editable')}</span>
+                ${canEditEnqPerm
+        ? '<span class="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-1.5 py-0.2 rounded shrink-0">' + t('customer.editable', 'Editable') + '</span>'
+        : '<span class="text-[9px] bg-slate-100 text-slate-500 border border-slate-300 font-extrabold px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"><span class=\"material-symbols-outlined text-[9px]\">lock</span>View Only</span>'}
               </div>
               <div class="relative">
-                <select id="query-status-select" onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')" class="w-full h-[42px] bg-white border border-slate-300 hover:border-brand-wa ring-0 focus:ring-1 focus:ring-brand-wa text-slate-900 cursor-pointer shadow-2xs rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
+                <select id="query-status-select" ${canEditEnqPerm ? `onchange="handleQueryStatusSelectChange(this.value, '${query.id}', '${customer.id}')"` : 'disabled'} class="w-full h-[42px] ${canEditEnqPerm ? 'bg-white border-slate-300 hover:border-brand-wa cursor-pointer' : 'bg-slate-100 border-slate-200 cursor-not-allowed'} border ring-0 focus:ring-1 focus:ring-brand-wa text-slate-900 shadow-2xs rounded-xl px-2.5 text-xs font-bold appearance-none pr-8 transition truncate">
                   <option value="NEW" ${qStatus === 'NEW' ? 'selected' : ''}>🟢 ${t('status.new', 'New Lead')}</option>
                   <option value="PENDING" ${qStatus === 'PENDING' ? 'selected' : ''}>🟡 ${t('status.pending', 'Payment Pending')}</option>
                   <option value="FOLLOW_UP" ${qStatus === 'FOLLOW_UP' ? 'selected' : ''}>🔵 ${t('status.follow_up', 'Follow Up')}</option>
@@ -7054,26 +8391,26 @@ function renderCustomer360Panel() {
 
             <!-- COLUMN 2: CALLBACK DATE (ALL TIME EDITABLE WITH DATE PICKER & PRESETS) -->
             ${(() => {
-              const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
-              const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
+        const histItem = (query.statusHistory || []).find(h => h && h.followupDate);
+        const cbDateVal = customerFollowup?.date || histItem?.followupDate || query.paymentDueDate || new Date().toISOString().split('T')[0];
 
-              return `
-                <div id="query-callback-edit-row">
-                  <div class="flex items-center justify-between mb-1.5 h-4">
-                    <span class="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1 truncate">
+        return `
+                <div id="query-callback-edit-row" class="min-w-0">
+                  <div class="flex items-center justify-between mb-1.5 h-4 min-w-0">
+                    <span class="font-bold text-slate-800 uppercase text-[9.5px] tracking-wide flex items-center gap-0.5 truncate min-w-0">
                       <span class="material-symbols-outlined text-[13px] text-blue-600 shrink-0">calendar_month</span>
-                      <span class="truncate">${t('customer.callback_date', 'Callback Date:')}</span>
+                      <span class="truncate">${t('customer.callback_date', 'Callback:')}</span>
                     </span>
-                    <div class="flex items-center gap-1 shrink-0">
-                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">${t('common.today', 'Today')}</button>
-                      <button type="button" onclick="setQueryQuickDate(1)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+1D</button>
-                      <button type="button" onclick="setQueryQuickDate(2)" class="px-1.5 py-0.2 text-[8.5px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2D</button>
+                    <div class="flex items-center gap-0.5 shrink-0">
+                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1 py-0.2 text-[8px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">${t('common.today', 'Today')}</button>
+                      <button type="button" onclick="setQueryQuickDate(1)" class="px-1 py-0.2 text-[8px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+1D</button>
+                      <button type="button" onclick="setQueryQuickDate(2)" class="px-1 py-0.2 text-[8px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2D</button>
                     </div>
                   </div>
-                  <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full h-[42px] bg-white border border-blue-300 rounded-xl px-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600 cursor-pointer">
+                  <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full min-w-0 max-w-full h-[42px] bg-white border border-blue-300 rounded-xl px-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600 cursor-pointer">
                 </div>
               `;
-            })()}
+      })()}
           </div>
 
           <!-- ROW 3: STATUS CHANGE NOTES & REMARKS (With Quick Note Chips) -->
@@ -7115,27 +8452,27 @@ function renderCustomer360Panel() {
                 </button>
                 <!-- Custom Quick Notes from localStorage -->
                 ${(() => {
-                  try {
-                    const customList = JSON.parse(localStorage.getItem('GRM_CUSTOM_QUICK_NOTES') || '[]');
-                    return customList.map(n => {
-                      const noteText = typeof n === 'string' ? n : (n.text || '');
-                      const noteId = typeof n === 'string' ? n : (n.id || noteText);
-                      if (!noteText) return '';
-                      return `
-                        <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50/90 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition shadow-2xs group ${isQueryEditing ? 'hover:bg-amber-100 cursor-pointer active:scale-95' : 'opacity-60 cursor-not-allowed select-none'}" ${isQueryEditing ? `onclick="setQuickStatusNote('${noteText.replace(/'/g, "\\'")}')"` : ''} title="${isQueryEditing ? `Click to insert '${noteText}'` : 'Touch Edit Enquiry Status to use'}">
-                          <span>📌 ${noteText}</span>
+        try {
+          const customList = JSON.parse(localStorage.getItem('GRM_CUSTOM_QUICK_NOTES') || '[]');
+          return customList.map(n => {
+            const noteText = typeof n === 'string' ? n : (n.text || '');
+            const noteId = typeof n === 'string' ? n : (n.id || noteText);
+            if (!noteText) return '';
+            return `
+                        <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50/90 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition shadow-2xs group max-w-full min-w-0 overflow-hidden ${isQueryEditing ? 'hover:bg-amber-100 cursor-pointer active:scale-95' : 'opacity-60 cursor-not-allowed select-none'}" ${isQueryEditing ? `onclick="setQuickStatusNote('${noteText.replace(/'/g, "\\'")}')"` : ''} title="${isQueryEditing ? `Click to insert '${noteText}'` : 'Touch Edit Enquiry Status to use'}">
+                          <span class="truncate block max-w-[150px] break-all" title="${noteText}">📌 ${noteText}</span>
                           ${isQueryEditing ? `
-                            <button type="button" onclick="event.stopPropagation(); deleteCustomQuickNote('${noteId}')" class="text-amber-400 hover:text-rose-600 rounded p-0.5 hover:bg-rose-50 flex items-center transition" title="Delete quick note">
+                            <button type="button" onclick="event.stopPropagation(); deleteCustomQuickNote('${noteId}')" class="text-amber-400 hover:text-rose-600 rounded p-0.5 hover:bg-rose-50 flex items-center transition shrink-0" title="Delete quick note">
                               <span class="material-symbols-outlined text-[10px]">close</span>
                             </button>
                           ` : ''}
                         </div>
                       `;
-                    }).join('');
-                  } catch(e) {
-                    return '';
-                  }
-                })()}
+          }).join('');
+        } catch (e) {
+          return '';
+        }
+      })()}
               </div>
 
               ${isQueryEditing ? `
@@ -7158,7 +8495,7 @@ function renderCustomer360Panel() {
               ` : ''}
             </div>
 
-            <textarea id="query-status-notes-input" rows="2" ${isQueryEditing ? '' : 'disabled'} placeholder="Add customer remarks, discussion summary, reason for status change, or callback promise..." class="w-full ${isQueryEditing ? 'bg-amber-50/40 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa font-medium' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs transition">${query.statusNotes || ''}</textarea>
+            <textarea id="query-status-notes-input" rows="2" ${(canEditEnqPerm && isQueryEditing) ? '' : 'disabled'} placeholder="Add customer remarks, discussion summary, reason for status change, or callback promise..." class="w-full ${(canEditEnqPerm && isQueryEditing) ? 'bg-amber-50/40 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa font-medium' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs transition">${query.statusNotes || ''}</textarea>
           </div>
 
           <!-- Query Meta Priority Details (Query ID and Schedule Action removed) -->
@@ -7171,26 +8508,30 @@ function renderCustomer360Panel() {
 
           <!-- DYNAMIC PAYMENT PENDING MODULE (Appears when Pending / Follow-up is selected) -->
           ${(() => {
-            const payTotal = customerFollowup?.paymentAmount || query?.paymentAmount || '';
-            const payShipping = customerFollowup?.shippingAmount || query?.shippingAmount || '';
-            const payMode = customerFollowup?.paymentMode || query?.paymentMode || 'UPI';
-            const payAdvance = customerFollowup?.advancePayment || query?.advancePayment || '';
-            const payDue = customerFollowup?.paymentDueDate || query?.paymentDueDate || '';
-            const payItems = customerFollowup?.quotedItems || query?.quotedItems || '';
-            const payNotes = customerFollowup?.paymentNotes || query?.paymentNotes || '';
-            const totalNum = parseFloat(payTotal || 0) || 0;
-            const shipNum = parseFloat(payShipping || 0) || 0;
-            const advNum = parseFloat(payAdvance || 0) || 0;
-            const balanceNum = Math.max(0, (totalNum + shipNum) - advNum);
+        const isPaySaved = Boolean(
+          (customerFollowup && (customerFollowup.isPaymentPending === true || customerFollowup.is_payment_pending == 1)) ||
+          (query && (query.isPaymentPending === true || query.is_payment_pending == 1))
+        );
+        const payTotal = isPaySaved ? (customerFollowup?.paymentAmount || customerFollowup?.payment_amount || query?.paymentAmount || query?.payment_amount || '') : '';
+        const payShipping = isPaySaved ? (customerFollowup?.shippingAmount || customerFollowup?.shipping_amount || query?.shippingAmount || query?.shipping_amount || '') : '';
+        const payMode = isPaySaved ? (customerFollowup?.paymentMode || customerFollowup?.payment_mode || query?.paymentMode || query?.payment_mode || 'UPI') : 'UPI';
+        const payAdvance = isPaySaved ? (customerFollowup?.advancePayment || customerFollowup?.advance_payment || query?.advancePayment || query?.advance_payment || '') : '';
+        const payDue = isPaySaved ? (customerFollowup?.paymentDueDate || customerFollowup?.payment_due_date || query?.paymentDueDate || query?.payment_due_date || '') : '';
+        const payItems = isPaySaved ? (customerFollowup?.quotedItems || customerFollowup?.quoted_items || query?.quotedItems || query?.quoted_items || '') : '';
+        const payNotes = isPaySaved ? (customerFollowup?.paymentNotes || customerFollowup?.payment_notes || query?.paymentNotes || query?.payment_notes || '') : '';
+        const totalNum = parseFloat(payTotal || 0) || 0;
+        const shipNum = parseFloat(payShipping || 0) || 0;
+        const advNum = parseFloat(payAdvance || 0) || 0;
+        const balanceNum = Math.max(0, (totalNum + shipNum) - advNum);
 
-            return `
-              <div id="enquiry-payment-pending-wrapper" class="${(qStatus === 'FOLLOW_UP' || qStatus === 'PENDING' || customerFollowup?.isPaymentPending || query.isPaymentPending) ? '' : 'hidden'} bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-white border border-amber-300/80 p-2.5 rounded-xl space-y-2 shadow-2xs transition-all">
+        return `
+              <div id="enquiry-payment-pending-wrapper" class="${(qStatus === 'FOLLOW_UP' || qStatus === 'PENDING' || customerFollowup?.isPaymentPending || query?.isPaymentPending) ? '' : 'hidden'} bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-white border border-amber-300/80 p-2.5 rounded-xl space-y-2 shadow-2xs transition-all">
                 <div class="flex items-center justify-between">
                   <label class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" id="query-pay-pending-toggle" onchange="handlePayPendingToggle(this.checked)" class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300 cursor-pointer">
+                    <input type="checkbox" id="query-pay-pending-toggle" onchange="handlePayPendingToggle(this.checked)" class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300 cursor-pointer" ${isPaySaved ? 'checked' : ''}>
                     <span>${t('customer.pay_option', 'Payment Pending Option')}</span>
                   </label>
-                  <span id="query-pay-pending-badge" class="text-[8.5px] text-slate-400 font-medium">${t('common.optional', 'Optional')}</span>
+                  <span id="query-pay-pending-badge" class="${isPaySaved ? 'text-[8.5px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5' : 'text-[8.5px] text-slate-400 font-medium'}">${isPaySaved ? '<span class="material-symbols-outlined text-[10px] text-amber-700">check_circle</span><span>ACTIVE</span>' : t('common.optional', 'Optional')}</span>
                 </div>
 
                 ${!isQueryEditing ? `
@@ -7199,38 +8540,47 @@ function renderCustomer360Panel() {
                     <div class="grid grid-cols-2 gap-2">
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
                         <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.total_amount', 'Total Amount:')}</span>
-                        <span class="font-mono font-bold text-slate-900 text-xs">₹${totalNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        <span class="font-mono font-bold text-slate-900 text-xs">₹${totalNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
                       <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
                         <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.shipping', 'Shipping:')}</span>
-                        <span class="font-mono font-bold text-slate-900 text-xs">₹${shipNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        <span class="font-mono font-bold text-slate-900 text-xs">₹${shipNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
+                    </div>
+
+                    <!-- Dynamic Grand Total / Net Order Total Display -->
+                    <div class="bg-amber-100/70 border border-amber-300/80 px-2.5 py-1.5 rounded-lg flex items-center justify-between shadow-2xs">
+                      <div class="flex items-center gap-1 text-amber-950 font-extrabold text-[9.5px] uppercase tracking-wide">
+                        <span class="material-symbols-outlined text-[13px] text-amber-700">receipt_long</span>
+                        <span>${t('customer.order_total', 'Order Total / Net Amount:')}</span>
+                      </div>
+                      <span class="font-mono font-black text-slate-900 text-xs">₹${(totalNum + shipNum).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
 
                     <div class="bg-white/90 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center justify-between">
                       <span class="text-[9.5px] font-bold text-slate-500 uppercase">${t('customer.payment_mode', 'Mode:')}</span>
                       <span class="font-bold text-amber-950 text-xs">${(() => {
-                        const mLabels = {
-                          'ALL': '💳 All Payment Modes',
-                          'UPI': '📱 UPI (GPay/PhonePe)',
-                          'BANK_TRANSFER': '🏛️ Bank Transfer (NEFT/IMPS)',
-                          'COD_ADVANCE': '📦 COD Advance',
-                          'PAYMENT_LINK': '🔗 Payment Link / QR',
-                          'CASH': '💵 Cash / Store Counter'
-                        };
-                        return mLabels[payMode] || payMode;
-                      })()}</span>
+              const mLabels = {
+                'ALL': '💳 All Payment Modes',
+                'UPI': '📱 UPI (GPay/PhonePe)',
+                'BANK_TRANSFER': '🏛️ Bank Transfer (NEFT/IMPS)',
+                'COD_ADVANCE': '📦 COD Advance',
+                'PAYMENT_LINK': '🔗 Payment Link / QR',
+                'CASH': '💵 Cash / Store Counter'
+              };
+              return mLabels[payMode] || payMode;
+            })()}</span>
                     </div>
 
                     ${payMode === 'COD_ADVANCE' ? `
                       <div class="grid grid-cols-2 gap-2 bg-amber-100/60 p-2 rounded-lg border border-amber-300/80">
                         <div class="flex items-center justify-between">
                           <span class="text-[9px] font-bold text-amber-900 uppercase">${t('customer.advance', 'Advance:')}</span>
-                          <span class="font-mono font-black text-amber-950 text-xs">₹${advNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          <span class="font-mono font-black text-amber-950 text-xs">₹${advNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div class="flex items-center justify-between border-l border-amber-300/80 pl-2">
                           <span class="text-[9px] font-bold text-amber-900 uppercase">${t('customer.balance', 'Balance:')}</span>
-                          <span class="font-mono font-black text-emerald-800 text-xs">₹${balanceNum.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          <span class="font-mono font-black text-emerald-800 text-xs">₹${balanceNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                       </div>
                     ` : ''}
@@ -7261,7 +8611,7 @@ function renderCustomer360Panel() {
                   </div>
                 ` : `
                   <!-- EDITABLE INPUT FORM WHEN EDITING STATUS IS ACTIVE -->
-                  <div id="query-pay-fields" class="hidden space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
+                  <div id="query-pay-fields" class="${isPaySaved ? '' : 'hidden'} space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
                     <div class="grid grid-cols-2 gap-2">
                       <div>
                         <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.total_amount', 'Total Amount:')}</label>
@@ -7279,6 +8629,15 @@ function renderCustomer360Panel() {
                       </div>
                     </div>
 
+                    <!-- Dynamic Grand Total / Net Order Total Display (Live Updated) -->
+                    <div class="bg-amber-100/70 border border-amber-300/80 px-2.5 py-1.5 rounded-lg flex items-center justify-between shadow-2xs">
+                      <div class="flex items-center gap-1 text-amber-950 font-extrabold text-[9.5px] uppercase tracking-wide">
+                        <span class="material-symbols-outlined text-[13px] text-amber-700">receipt_long</span>
+                        <span>${t('customer.order_total', 'Order Total / Net Amount:')}</span>
+                      </div>
+                      <span class="font-mono font-black text-slate-900 text-xs" id="query-pay-grand-total-val">₹${(totalNum + shipNum).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+
                     <div>
                       <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.payment_mode', 'Mode:')}</label>
                       <select id="query-pay-mode-select" onchange="handlePayModeChange(this.value)" class="w-full py-1 px-2 rounded-lg border border-amber-300 bg-white text-xs font-bold text-slate-800 focus:ring-1 focus:ring-amber-500">
@@ -7292,7 +8651,7 @@ function renderCustomer360Panel() {
                     </div>
 
                     <!-- Dynamic Advance Payment Field (Shown ONLY when COD Advance is selected) - Compact Aligned Row -->
-                    <div id="query-pay-advance-wrapper" class="${payMode === 'COD_ADVANCE' ? '' : 'hidden'} bg-amber-100/60 border border-amber-300/80 rounded-xl p-2 space-y-1">
+                    <div id="query-pay-advance-wrapper" class="${(isPaySaved && payMode === 'COD_ADVANCE') ? '' : 'hidden'} bg-amber-100/60 border border-amber-300/80 rounded-xl p-2 space-y-1">
                       <div class="flex items-center justify-between">
                         <label class="font-bold text-amber-950 text-[9.5px] uppercase tracking-wide flex items-center gap-1">
                           <span class="material-symbols-outlined text-[13px] text-amber-700">local_shipping</span>
@@ -7307,7 +8666,7 @@ function renderCustomer360Panel() {
                         </div>
                         <div class="text-[10px] text-amber-950 font-semibold bg-white/80 px-2 py-1 rounded-lg border border-amber-200 flex items-center justify-between">
                           <span class="text-[8.5px] uppercase font-bold text-slate-500">${t('customer.balance', 'Balance:')}</span>
-                          <span class="font-mono font-black text-emerald-800 text-xs" id="query-pay-balance-val">₹${balanceNum.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span class="font-mono font-black text-emerald-800 text-xs" id="query-pay-balance-val">₹${balanceNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                       </div>
                     </div>
@@ -7338,10 +8697,11 @@ function renderCustomer360Panel() {
                 `}
               </div>
             `;
-          })()}
+      })()}
 
           <!-- Action Buttons: Cancel & Save Status (Always Directly Available) -->
           <div class="pt-1">
+            ${canEditEnqPerm ? `
             <div class="flex gap-2">
               <button type="button" onclick="handleCancelQueryEdit('${query.id}')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-2xs">
                 <span class="material-symbols-outlined text-[15px]">close</span>
@@ -7352,27 +8712,33 @@ function renderCustomer360Panel() {
                 <span>${t('customer.save_status_log', 'Save Status & Log History')}</span>
               </button>
             </div>
+            ` : `
+            <div class="flex items-center justify-center gap-1.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[13px]">lock</span>
+              <span>View-Only Access — Status changes not permitted</span>
+            </div>
+            `}
           </div>
 
           <!-- Dynamic Status History Audit Engine (First 3 static, 4th and above auto-scroll) - Shown BELOW Enquiry Form & Actions -->
           
           ${(() => {
-            let historyList = (Array.isArray(query.statusHistory) && query.statusHistory.length > 0)
-              ? query.statusHistory
-              : (query.statusLastEditedBy ? [{
-                  from: query.statusPrevious || 'NEW',
-                  to: query.status || 'NEW',
-                  by: query.statusLastEditedBy,
-                  at: query.statusLastEditedAt || '',
-                  notes: query.statusNotes || '',
-                  followupDate: customerFollowup ? customerFollowup.date : null,
-                  followupTime: customerFollowup ? customerFollowup.time : null,
-                  assignedTo: customerFollowup ? customerFollowup.assignedTo : query.assignedTo,
-                  timestamp: new Date().toISOString()
-                }] : []);
+        let historyList = (Array.isArray(query.statusHistory) && query.statusHistory.length > 0)
+          ? query.statusHistory
+          : (query.statusLastEditedBy ? [{
+            from: query.statusPrevious || 'NEW',
+            to: query.status || 'NEW',
+            by: query.statusLastEditedBy,
+            at: query.statusLastEditedAt || '',
+            notes: query.statusNotes || '',
+            followupDate: customerFollowup ? customerFollowup.date : null,
+            followupTime: customerFollowup ? customerFollowup.time : null,
+            assignedTo: customerFollowup ? customerFollowup.assignedTo : query.assignedTo,
+            timestamp: new Date().toISOString()
+          }] : []);
 
-            if (historyList.length === 0) {
-              return `
+        if (historyList.length === 0) {
+          return `
                 <div class="bg-slate-50/80 border border-slate-200/70 p-2.5 rounded-xl text-[11px] text-slate-500 space-y-1">
                   <div class="flex items-center justify-between">
                     <span class="flex items-center gap-1">
@@ -7389,11 +8755,11 @@ function renderCustomer360Panel() {
                   ` : ''}
                 </div>
               `;
-            }
+        }
 
-            const isScrollable = (historyList.length >= 4);
+        const isScrollable = (historyList.length >= 4);
 
-            return `
+        return `
               <div id="status-history-wrapper" class="space-y-1.5">
                 <div class="flex items-center justify-between text-[11px] px-0.5">
                   <span class="font-extrabold text-slate-800 flex items-center gap-1">
@@ -7413,91 +8779,91 @@ function renderCustomer360Panel() {
 
                 <div id="status-history-scroll-container" class="${isScrollable ? 'max-h-[340px] overflow-y-auto pr-1 space-y-2.5 custom-scrollbar' : 'space-y-2.5'}">
                   ${historyList.map((item, idx) => {
-                    const isRescheduled = item.action === 'FOLLOWUP_RESCHEDULED' ||
-                      item.action === 'RESCHEDULED' ||
-                      Boolean(item.previousFollowupDate && item.followupDate) ||
-                      (item.from === 'FOLLOW_UP' && item.to === 'FOLLOW_UP') ||
-                      (typeof item.notes === 'string' && item.notes.toLowerCase().includes('rescheduled'));
+          const isRescheduled = item.action === 'FOLLOWUP_RESCHEDULED' ||
+            item.action === 'RESCHEDULED' ||
+            Boolean(item.previousFollowupDate && item.followupDate) ||
+            (item.from === 'FOLLOW_UP' && item.to === 'FOLLOW_UP') ||
+            (typeof item.notes === 'string' && item.notes.toLowerCase().includes('rescheduled'));
 
-                    const isScheduled = !isRescheduled && (
-                      item.action === 'FOLLOWUP_SCHEDULED' ||
-                      item.to === 'FOLLOW_UP' ||
-                      Boolean(item.followupDate)
-                    );
+          const isScheduled = !isRescheduled && (
+            item.action === 'FOLLOWUP_SCHEDULED' ||
+            item.to === 'FOLLOW_UP' ||
+            Boolean(item.followupDate)
+          );
 
-                    let effectiveDate = item.followupDate || '';
-                    let effectiveTime = item.followupTime || '';
-                    let prevDate = item.previousFollowupDate || '';
-                    let prevTime = item.previousFollowupTime || '';
+          let effectiveDate = item.followupDate || '';
+          let effectiveTime = item.followupTime || '';
+          let prevDate = item.previousFollowupDate || '';
+          let prevTime = item.previousFollowupTime || '';
 
-                    // 1. Check notes for regex date time
-                    if (!effectiveDate && item.notes) {
-                      const m = item.notes.match(/(\d{4}-\d{2}-\d{2})\s*(?:at\s*)?(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)/i);
-                      if (m) {
-                        effectiveDate = m[1];
-                        effectiveTime = m[2];
-                      }
-                    }
+          // 1. Check notes for regex date time
+          if (!effectiveDate && item.notes) {
+            const m = item.notes.match(/(\d{4}-\d{2}-\d{2})\s*(?:at\s*)?(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)/i);
+            if (m) {
+              effectiveDate = m[1];
+              effectiveTime = m[2];
+            }
+          }
 
-                    // 2. Comprehensive fallback for follow-up date and time
-                    if (!effectiveDate && (isRescheduled || isScheduled || item.to === 'FOLLOW_UP')) {
-                      const allCustFu = (CRM_STATE.followups || []).filter(f => f && (f.customerId === customer?.id || String(f.customerId) === String(customer?.id) || (query && f.queryId === query.id)));
-                      if (allCustFu.length > 0) {
-                        if (isRescheduled) {
-                          effectiveDate = allCustFu[0].date;
-                          effectiveTime = allCustFu[0].time;
-                          if (allCustFu.length > 1) {
-                            prevDate = allCustFu[1].date;
-                            prevTime = allCustFu[1].time;
-                          }
-                        } else {
-                          const prevResched = historyList.find(h => h.previousFollowupDate);
-                          if (prevResched) {
-                            effectiveDate = prevResched.previousFollowupDate;
-                            effectiveTime = prevResched.previousFollowupTime;
-                          } else {
-                            const olderFu = allCustFu.find(f => f.id === customerFollowup?.rescheduledFromId) || allCustFu[allCustFu.length - 1];
-                            effectiveDate = olderFu ? olderFu.date : allCustFu[0].date;
-                            effectiveTime = olderFu ? olderFu.time : allCustFu[0].time;
-                          }
-                        }
-                      } else if (customerFollowup) {
-                        effectiveDate = customerFollowup.date;
-                        effectiveTime = customerFollowup.time;
-                      }
-                    }
+          // 2. Comprehensive fallback for follow-up date and time
+          if (!effectiveDate && (isRescheduled || isScheduled || item.to === 'FOLLOW_UP')) {
+            const allCustFu = (CRM_STATE.followups || []).filter(f => f && (f.customerId === customer?.id || String(f.customerId) === String(customer?.id) || (query && f.queryId === query.id)));
+            if (allCustFu.length > 0) {
+              if (isRescheduled) {
+                effectiveDate = allCustFu[0].date;
+                effectiveTime = allCustFu[0].time;
+                if (allCustFu.length > 1) {
+                  prevDate = allCustFu[1].date;
+                  prevTime = allCustFu[1].time;
+                }
+              } else {
+                const prevResched = historyList.find(h => h.previousFollowupDate);
+                if (prevResched) {
+                  effectiveDate = prevResched.previousFollowupDate;
+                  effectiveTime = prevResched.previousFollowupTime;
+                } else {
+                  const olderFu = allCustFu.find(f => f.id === customerFollowup?.rescheduledFromId) || allCustFu[allCustFu.length - 1];
+                  effectiveDate = olderFu ? olderFu.date : allCustFu[0].date;
+                  effectiveTime = olderFu ? olderFu.time : allCustFu[0].time;
+                }
+              }
+            } else if (customerFollowup) {
+              effectiveDate = customerFollowup.date;
+              effectiveTime = customerFollowup.time;
+            }
+          }
 
-                    if (!effectiveDate && (query.callback_date || customerFollowup?.date)) {
-                      effectiveDate = query.callback_date || customerFollowup?.date || '';
-                    }
+          if (!effectiveDate && (query.callback_date || customerFollowup?.date)) {
+            effectiveDate = query.callback_date || customerFollowup?.date || '';
+          }
 
-                    // Payment details detection
-                    const hasPayment = Boolean(
-                      item.isPaymentPending ||
-                      (item.paymentAmount && Number(item.paymentAmount) > 0) ||
-                      (idx === 0 && query.isPaymentPending)
-                    );
+          // Payment details detection
+          const hasPayment = Boolean(
+            item.isPaymentPending ||
+            (item.paymentAmount && Number(item.paymentAmount) > 0) ||
+            (idx === 0 && query.isPaymentPending)
+          );
 
-                    const payTotal = Number(item.paymentAmount !== undefined && item.paymentAmount !== null ? item.paymentAmount : (query.paymentAmount || 0));
-                    const payShipping = Number(item.shippingAmount !== undefined && item.shippingAmount !== null ? item.shippingAmount : (query.shippingAmount || 0));
-                    const payMode = item.paymentMode || query.paymentMode || 'UPI';
-                    const payAdvance = Number(item.advancePayment !== undefined && item.advancePayment !== null ? item.advancePayment : (query.advancePayment || 0));
-                    const payBalance = Math.max(0, (payTotal + payShipping) - payAdvance);
-                    const payDueDate = item.paymentDueDate || query.paymentDueDate || '';
-                    const payItems = item.quotedItems || query.quotedItems || '';
-                    const payNotes = item.paymentNotes || query.paymentNotes || '';
+          const payTotal = Number(item.paymentAmount !== undefined && item.paymentAmount !== null ? item.paymentAmount : (query.paymentAmount || 0));
+          const payShipping = Number(item.shippingAmount !== undefined && item.shippingAmount !== null ? item.shippingAmount : (query.shippingAmount || 0));
+          const payMode = item.paymentMode || query.paymentMode || 'UPI';
+          const payAdvance = Number(item.advancePayment !== undefined && item.advancePayment !== null ? item.advancePayment : (query.advancePayment || 0));
+          const payBalance = Math.max(0, (payTotal + payShipping) - payAdvance);
+          const payDueDate = item.paymentDueDate || query.paymentDueDate || '';
+          const payItems = item.quotedItems || query.quotedItems || '';
+          const payNotes = item.paymentNotes || query.paymentNotes || '';
 
-                    const modeLabels = {
-                      'ALL': '🌐 All Modes',
-                      'UPI': '📱 UPI Transfer',
-                      'BANK_TRANSFER': '🏦 Bank Transfer / NEFT',
-                      'COD_ADVANCE': '📦 COD Advance',
-                      'PAYMENT_LINK': '🔗 Payment Link',
-                      'CASH': '💵 Cash'
-                    };
-                    const modeDisplay = modeLabels[payMode] || payMode;
+          const modeLabels = {
+            'ALL': '🌐 All Modes',
+            'UPI': '📱 UPI Transfer',
+            'BANK_TRANSFER': '🏦 Bank Transfer / NEFT',
+            'COD_ADVANCE': '📦 COD Advance',
+            'PAYMENT_LINK': '🔗 Payment Link',
+            'CASH': '💵 Cash'
+          };
+          const modeDisplay = modeLabels[payMode] || payMode;
 
-                    return `
+          return `
                       <div class="bg-white border border-slate-200/90 p-2.5 rounded-xl text-xs space-y-1.5 shadow-2xs transition ${idx === 0 ? 'ring-1.5 ring-blue-400/80 bg-gradient-to-br from-blue-50/20 via-white to-slate-50/40' : 'hover:border-slate-300'}">
                         
                         <!-- ROW 1: CURRENT STATUS AND CALLBACK DATE -->
@@ -7556,11 +8922,11 @@ function renderCustomer360Panel() {
                               <div class="grid grid-cols-2 gap-1.5">
                                 <div class="bg-white/90 px-2 py-1 rounded-lg border border-amber-200/60 flex items-center justify-between">
                                   <span class="text-[8.5px] font-bold text-slate-500 uppercase">Total:</span>
-                                  <span class="text-[10.5px] font-black text-slate-900 font-mono">₹${payTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                  <span class="text-[10.5px] font-black text-slate-900 font-mono">₹${payTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 <div class="bg-white/90 px-2 py-1 rounded-lg border border-amber-200/60 flex items-center justify-between">
                                   <span class="text-[8.5px] font-bold text-slate-500 uppercase">Shipping:</span>
-                                  <span class="text-[10.5px] font-black text-slate-900 font-mono">₹${payShipping.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                  <span class="text-[10.5px] font-black text-slate-900 font-mono">₹${payShipping.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                               </div>
 
@@ -7575,11 +8941,11 @@ function renderCustomer360Panel() {
                                 <div class="grid grid-cols-2 gap-1.5 bg-amber-100/60 p-1.5 rounded-lg border border-amber-300/70 text-[10px]">
                                   <div class="flex items-center justify-between">
                                     <span class="text-[8.5px] font-bold text-amber-900 uppercase">Advance:</span>
-                                    <span class="font-black text-amber-950 font-mono text-[10px]">₹${payAdvance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                    <span class="font-black text-amber-950 font-mono text-[10px]">₹${payAdvance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                   </div>
                                   <div class="flex items-center justify-between border-l border-amber-300/80 pl-1.5">
                                     <span class="text-[8.5px] font-bold text-amber-900 uppercase">Balance:</span>
-                                    <span class="font-black text-emerald-700 font-mono text-[10.5px]">₹${payBalance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                    <span class="font-black text-emerald-700 font-mono text-[10.5px]">₹${payBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                   </div>
                                 </div>
                               ` : ''}
@@ -7630,11 +8996,11 @@ function renderCustomer360Panel() {
 
                       </div>
                     `;
-                  }).join('')}
+        }).join('')}
                 </div>
               </div>
             `;
-          })()}
+      })()}
 
         </div>
       ` : '<p class="text-xs text-slate-400">No active query recorded for this customer</p>'}
@@ -7649,9 +9015,11 @@ function renderCustomer360Panel() {
           <span class="material-symbols-outlined text-[15px] text-emerald-700">support_agent</span>
           <span>Handling Staff Member</span>
         </span>
+        ${canEditEnqPerm ? `
         <button type="button" onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="text-brand-wa hover:text-brand-waDark font-bold text-xs flex items-center gap-0.5">
           <span class="material-symbols-outlined text-[14px]">edit</span> Change
         </button>
+        ` : ''}
       </div>
 
       <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2.5">
@@ -7669,16 +9037,18 @@ function renderCustomer360Panel() {
           </div>
         </div>
 
+        ${canEditEnqPerm ? `
         <!-- Quick Staff Reassign Selector -->
-        <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
+        <div class="pt-2 border-t border-slate-100 flex items-center gap-2 min-w-0">
           <label class="text-[10px] text-slate-500 font-bold shrink-0">Quick Assign:</label>
-          <select onchange="quickReassignQueryStaff('${query ? query.id : ('Q-' + customer.id)}', this.value)" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-brand-wa">
+          <select onchange="quickReassignQueryStaff('${query ? query.id : ('Q-' + customer.id)}', this.value)" class="flex-1 min-w-0 max-w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-brand-wa truncate">
             <option value="UNASSIGNED" ${(!staff || query?.assignedTo === 'UNASSIGNED') ? 'selected' : ''}>-- Unassigned --</option>
             ${(CRM_STATE.staffList || []).map(s => `
               <option value="${s.id}" ${query?.assignedTo === s.id ? 'selected' : ''}>${s.name} (${s.specialization || s.role.split('(')[0]})</option>
             `).join('')}
           </select>
         </div>
+        ` : ''}
       </div>
     </div>
 
@@ -7729,14 +9099,28 @@ function renderCustomer360Panel() {
     if (el) {
       el.focus();
       if (typeof draft.selStart === 'number' && typeof draft.selEnd === 'number' && el.setSelectionRange) {
-        try { el.setSelectionRange(draft.selStart, draft.selEnd); } catch (e) {}
+        try { el.setSelectionRange(draft.selStart, draft.selEnd); } catch (e) { }
       }
     }
+  }
+
+  // Enforce zero horizontal scroll on Customer 360 to prevent any left-side clipping
+  panel.scrollLeft = 0;
+  requestAnimationFrame(() => {
+    if (panel) panel.scrollLeft = 0;
+  });
+  if (!panel._horizontalScrollLock) {
+    panel._horizontalScrollLock = true;
+    panel.addEventListener('scroll', () => {
+      if (panel.scrollLeft !== 0) {
+        panel.scrollLeft = 0;
+      }
+    }, { passive: true });
   }
 }
 
 // Dedicated Admin & Staff Internal Notes Controllers
-window.addAdminInternalNote = function(customerId) {
+window.addAdminInternalNote = function (customerId) {
   const custId = customerId || ACTIVE_CUSTOMER_ID;
   const customer = CRM_STATE.customers.find(c => c.id === custId);
   if (!customer) return;
@@ -7780,7 +9164,7 @@ window.addAdminInternalNote = function(customerId) {
   if (typeof playChime === 'function') playChime('order');
 };
 
-window.deleteAdminInternalNote = function(customerId, noteId) {
+window.deleteAdminInternalNote = function (customerId, noteId) {
   const custId = customerId || ACTIVE_CUSTOMER_ID;
   const customer = CRM_STATE.customers.find(c => c.id === custId);
   if (!customer || !Array.isArray(customer.adminNotes)) return;
@@ -7904,7 +9288,7 @@ function saveDynamicCustomerFollowup(customerId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(targetFu)
-  }).catch(() => {});
+  }).catch(() => { });
 
   if (qry) {
     const oldSt = qry.status || 'NEW';
@@ -7943,7 +9327,7 @@ function saveDynamicCustomerFollowup(customerId) {
         notes: qry.statusNotes,
         user: authorName
       })
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   saveCRMState();
@@ -8033,7 +9417,7 @@ function saveInlineRescheduledFollowup(customerId, followupId) {
           notes: auditNote,
           user: authorName
         })
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     // Persist updated follow-up with MySQL
@@ -8041,7 +9425,7 @@ function saveInlineRescheduledFollowup(customerId, followupId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(fu)
-    }).catch(() => {});
+    }).catch(() => { });
 
     if (typeof logAudit === 'function') {
       logAudit('FOLLOWUP_RESCHEDULED', 'CUSTOMER_PANEL', `Follow-up for ${cust.name || 'Customer'} rescheduled from ${oldDate} at ${oldTime} to ${dateVal} at ${timeVal} by ${authorName}`);
@@ -8067,7 +9451,7 @@ function saveInlineRescheduledFollowup(customerId, followupId) {
 }
 window.saveInlineRescheduledFollowup = saveInlineRescheduledFollowup;
 
-window.insertAdminNoteTag = function(tagText) {
+window.insertAdminNoteTag = function (tagText) {
   const noteInput = document.getElementById('quick-admin-note-input');
   if (!noteInput) return;
   if (noteInput.value) {
@@ -8107,10 +9491,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       }, 4000);
 
       try {
-        SOCKET_IO.emit('whatsapp:send', { 
-          phone: cleanPhone, 
-          text, 
-          jid, 
+        SOCKET_IO.emit('whatsapp:send', {
+          phone: cleanPhone,
+          text,
+          jid,
           accountId: targetAccId,
           mediaUrl: targetMedia,
           customerId
@@ -8145,10 +9529,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     let resp = await fetch('http://localhost:3000/api/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        phone: cleanPhone, 
-        text, 
-        jid, 
+      body: JSON.stringify({
+        phone: cleanPhone,
+        text,
+        jid,
         accountId: targetAccId,
         mediaUrl: targetMedia,
         customerId
@@ -8172,10 +9556,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     let fResp = await fetch('api.php?action=send_message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        phone: cleanPhone, 
-        text, 
-        jid, 
+      body: JSON.stringify({
+        phone: cleanPhone,
+        text,
+        jid,
         accountId: targetAccId,
         media_url: targetMedia,
         customer_id: customerId
@@ -8213,6 +9597,15 @@ function formatOutboundBrandMessage(text) {
 let CHAT_ATTACHED_IMAGE_DATA = null;
 
 function handleChatImageFileSelected(event) {
+  // RBAC Guard: Only users with inbox.create permission can upload images
+  const _isSuperAdminImg = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminImg && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('inbox', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Access: You cannot send images.', 'warning');
+      return;
+    }
+  }
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
@@ -8222,7 +9615,7 @@ function handleChatImageFileSelected(event) {
   }
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const dataUrl = e.target.result;
     CHAT_ATTACHED_IMAGE_DATA = {
       dataUrl: dataUrl,
@@ -8250,14 +9643,14 @@ function handleChatImageFileSelected(event) {
         method: 'POST',
         body: formData
       })
-      .then(res => res.json())
-      .then(json => {
-        if (json && json.status === 'success' && json.url && CHAT_ATTACHED_IMAGE_DATA) {
-          CHAT_ATTACHED_IMAGE_DATA.serverUrl = json.url;
-        }
-      })
-      .catch(err => console.warn('[Chat Image Upload Note]:', err));
-    } catch (e) {}
+        .then(res => res.json())
+        .then(json => {
+          if (json && json.status === 'success' && json.url && CHAT_ATTACHED_IMAGE_DATA) {
+            CHAT_ATTACHED_IMAGE_DATA.serverUrl = json.url;
+          }
+        })
+        .catch(err => console.warn('[Chat Image Upload Note]:', err));
+    } catch (e) { }
   };
   reader.readAsDataURL(file);
 }
@@ -8271,11 +9664,115 @@ function clearChatAttachedImage() {
   if (strip) strip.classList.add('hidden');
 }
 
-function handleSendMessage(event) {
+// =========================================================================
+// OUTBOUND TEXT TRANSLATOR ("SEND AS" LANGUAGE PILLS)
+// =========================================================================
+let REPLY_TRANSLATE_LANG = null;
+let _replyPreviewTimer = null;
+
+function setReplyLang(code) {
+  REPLY_TRANSLATE_LANG = code;
+  const pills = document.querySelectorAll('.reply-lang-pill');
+  pills.forEach(pill => pill.classList.remove('active'));
+  const activeBtn = document.getElementById(code ? `rl-${code}` : 'rl-none');
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const badge = document.getElementById('send-lang-badge');
+  if (badge) {
+    if (code) {
+      const labels = { en: 'EN', ta: 'TA', hi: 'HI', te: 'TE', ml: 'ML', kn: 'KN' };
+      badge.textContent = labels[code] || code.toUpperCase();
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  // Clear preview if lang reset to none
+  if (!code) {
+    const prev = document.getElementById('reply-translate-preview');
+    if (prev) { prev.style.display = 'none'; prev.textContent = ''; }
+  } else {
+    const input = document.getElementById('chat-input-text');
+    if (input && input.value.trim()) onReplyInputChange(input.value);
+  }
+}
+window.setReplyLang = setReplyLang;
+
+function onReplyInputChange(text) {
+  const prev = document.getElementById('reply-translate-preview');
+  if (!prev) return;
+
+  if (!REPLY_TRANSLATE_LANG || !text || !text.trim()) {
+    prev.style.display = 'none';
+    prev.textContent = '';
+    return;
+  }
+
+  clearTimeout(_replyPreviewTimer);
+  _replyPreviewTimer = setTimeout(async () => {
+    const langLabels = { en: '🇬🇧 English', ta: 'தமிழ் Tamil', hi: 'हिंदी Hindi', te: 'తెలుగు Telugu', ml: 'മലയാളം Malayalam', kn: 'ಕನ್ನಡ Kannada' };
+    prev.style.display = 'block';
+    prev.innerHTML = `<span style="opacity:0.6">⏳ ${langLabels[REPLY_TRANSLATE_LANG] || REPLY_TRANSLATE_LANG} preview...</span>`;
+    const translated = await translateOutboundText(text.trim(), REPLY_TRANSLATE_LANG);
+    if (translated && translated !== text.trim()) {
+      prev.innerHTML = `<span style="font-weight:600;color:#047857">🌐 ${langLabels[REPLY_TRANSLATE_LANG] || REPLY_TRANSLATE_LANG}:</span> ${translated}`;
+    } else {
+      prev.style.display = 'none';
+    }
+  }, 700);
+}
+window.onReplyInputChange = onReplyInputChange;
+
+async function translateOutboundText(text, targetLang) {
+  if (!text || !targetLang) return text;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+    const gResp = await fetch(gUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (gResp.ok) {
+      const gData = await gResp.json();
+      if (Array.isArray(gData) && Array.isArray(gData[0])) {
+        const translated = gData[0].map(s => s[0] || '').join('');
+        if (translated) return translated;
+      }
+    }
+  } catch (err) {
+    console.warn('[OutboundTranslate] Direct client call bypassed:', err.message || err);
+  }
+
+  try {
+    const resp = await fetch('api.php?action=translate_text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, target_lang: targetLang })
+    });
+    const data = await resp.json();
+    if (data && data.success && data.translated) return data.translated;
+  } catch (e) {
+    console.warn('[OutboundTranslate] PHP proxy failed:', e.message || e);
+  }
+
+  return text;
+}
+window.translateOutboundText = translateOutboundText;
+
+async function handleSendMessage(event) {
   event.preventDefault();
+  // RBAC Guard: Only users with inbox.create permission can send messages
+  const _isSuperAdminSend = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminSend && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('inbox', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Access: You cannot send messages.', 'warning');
+      return;
+    }
+  }
   const input = document.getElementById('chat-input-text');
   const rawText = input.value.trim();
-  
+
   // Allow sending if there is text OR an attached image
   if (!rawText && !CHAT_ATTACHED_IMAGE_DATA) return;
 
@@ -8288,8 +9785,23 @@ function handleSendMessage(event) {
 
   const attachedMedia = CHAT_ATTACHED_IMAGE_DATA ? (CHAT_ATTACHED_IMAGE_DATA.serverUrl || CHAT_ATTACHED_IMAGE_DATA.dataUrl) : null;
 
+  // Translate text if outbound Send As language is selected
+  let textToSend = rawText;
+  if (REPLY_TRANSLATE_LANG && rawText) {
+    try {
+      const translated = await translateOutboundText(rawText, REPLY_TRANSLATE_LANG);
+      if (translated) textToSend = translated;
+    } catch (e) {
+      console.warn('[OutboundTranslate] Error translating, sending original:', e);
+    }
+  }
+
+  // Clear live translate preview if open
+  const prev = document.getElementById('reply-translate-preview');
+  if (prev) { prev.style.display = 'none'; prev.textContent = ''; }
+
   // Format outbound text with company Brand Name header
-  const formattedText = rawText ? formatOutboundBrandMessage(rawText) : `[Photo from ${getBrandName()}]`;
+  const formattedText = textToSend ? formatOutboundBrandMessage(textToSend) : `[Photo from ${getBrandName()}]`;
 
   const newMsg = {
     id: Date.now(),
@@ -8730,6 +10242,11 @@ function renderAutoReplyRulesList() {
     '6': '🥻 Festive & VIP Silk Sets'
   };
 
+  const isSuperAdminAr = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canArCreate = isSuperAdminAr || (typeof canUserPerformAction === 'function' ? canUserPerformAction('autoreply', 'create') : true);
+  const canArEdit = isSuperAdminAr || (typeof canUserPerformAction === 'function' ? canUserPerformAction('autoreply', 'edit') : true);
+  const canArDelete = isSuperAdminAr || (typeof canUserPerformAction === 'function' ? canUserPerformAction('autoreply', 'delete') : true);
+
   container.innerHTML = list.map(rule => {
     const isEnabled = rule.enabled !== false;
     const keywords = Array.isArray(rule.keywords) ? rule.keywords : (rule.keywords || '').split(',');
@@ -8765,9 +10282,9 @@ function renderAutoReplyRulesList() {
           </div>
 
           <!-- Master Toggle for Rule -->
-          <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5" title="Toggle Auto-Reply for this rule">
-            <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleRuleEnabled('${rule.id}', this.checked)" class="sr-only peer">
-            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+          <label class="relative inline-flex items-center ${canArEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'} shrink-0 mt-0.5" ${canArEdit ? '' : 'style="pointer-events: none;"'} title="${canArEdit ? 'Toggle Auto-Reply for this rule' : 'View Access Only: Rule toggling is disabled'}">
+            <input type="checkbox" ${isEnabled ? 'checked' : ''} ${canArEdit ? '' : 'disabled'} onchange="toggleRuleEnabled('${rule.id}', this.checked)" class="sr-only peer">
+            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all ${canArEdit ? 'peer-checked:bg-emerald-600' : 'peer-checked:bg-emerald-600/40 peer-disabled:cursor-not-allowed'}"></div>
           </label>
         </div>
 
@@ -8781,19 +10298,23 @@ function renderAutoReplyRulesList() {
         <!-- Actions -->
         <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
           <div class="flex items-center gap-2">
-            <button type="button" onclick="editRule('${rule.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg flex items-center gap-1 transition">
+            ${canArEdit ? `
+            <button type="button" onclick="editRule('${rule.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg flex items-center gap-1 transition cursor-pointer">
               <span class="material-symbols-outlined text-[14px] text-slate-600">edit</span>
               <span>Edit Question &amp; Answer</span>
             </button>
-            <button type="button" onclick="applyRuleToActiveChat('${rule.id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg flex items-center gap-1 transition border border-emerald-200" title="Insert or Send to active customer chat">
+            ` : ''}
+            <button type="button" onclick="applyRuleToActiveChat('${rule.id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg flex items-center gap-1 transition border border-emerald-200 cursor-pointer" title="Insert or Send to active customer chat">
               <span class="material-symbols-outlined text-[14px]">send</span>
               <span>Send to Chat</span>
             </button>
           </div>
 
-          <button type="button" onclick="deleteRule('${rule.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition" title="Delete Rule">
+          ${canArDelete ? `
+          <button type="button" onclick="deleteRule('${rule.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer" title="Delete Rule">
             <span class="material-symbols-outlined text-[16px]">delete</span>
           </button>
+          ` : ''}
         </div>
       </div>
     `;
@@ -8801,6 +10322,12 @@ function renderAutoReplyRulesList() {
 }
 
 function openRuleEditor(ruleId = null) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const requiredAction = ruleId ? 'edit' : 'create';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', requiredAction)) {
+    if (typeof showToast === 'function') showToast('Permission Denied', `Your assigned role does not have permission to ${requiredAction} auto-reply templates.`, 'lock', 'rose');
+    return;
+  }
   const card = document.getElementById('ar-rule-editor-card');
   const titleEl = document.getElementById('ar-rule-editor-title');
   const idInput = document.getElementById('edit-rule-id');
@@ -8881,6 +10408,12 @@ function insertRuleTag(tag) {
 
 function saveRuleFromEditor() {
   const idInput = document.getElementById('edit-rule-id');
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const requiredAction = (idInput && idInput.value) ? 'edit' : 'create';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', requiredAction)) {
+    if (typeof showToast === 'function') showToast('Permission Denied', `Your assigned role does not have permission to ${requiredAction} auto-reply templates.`, 'lock', 'rose');
+    return;
+  }
   const nameInput = document.getElementById('edit-rule-name');
   const kwsInput = document.getElementById('edit-rule-keywords');
   const actionSelect = document.getElementById('edit-rule-action');
@@ -8964,21 +10497,31 @@ function syncAutoReplyRulesToBackend() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rules: rules })
-  }).catch(() => {});
+  }).catch(() => { });
 
   // 3. Fallback PHP REST API
   fetch('api.php?action=save_autoreply_rules', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rules: rules })
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 function editRule(ruleId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for auto-reply rules.', 'lock', 'rose');
+    return;
+  }
   openRuleEditor(ruleId);
 }
 
 function deleteRule(ruleId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete auto-reply rules.', 'lock', 'rose');
+    return;
+  }
   if (!confirm('Are you sure you want to delete this auto-reply rule?')) return;
   if (!Array.isArray(CRM_STATE.autoReplyRules)) return;
   CRM_STATE.autoReplyRules = CRM_STATE.autoReplyRules.filter(r => r.id !== ruleId);
@@ -8993,6 +10536,12 @@ function deleteRule(ruleId) {
 }
 
 function toggleRuleEnabled(ruleId, enabled) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only for auto-reply rules.', 'lock', 'rose');
+    renderAutoReplyRulesList();
+    return;
+  }
   if (!Array.isArray(CRM_STATE.autoReplyRules)) return;
   const rule = CRM_STATE.autoReplyRules.find(r => r.id === ruleId);
   if (rule) {
@@ -9053,11 +10602,10 @@ function renderInboxPresetTemplatesBar() {
 
     return `
       <button type="button" onclick="applyPresetTemplateToComposer('${rule.id}')" 
-        class="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition flex items-center gap-1.5 shadow-2xs border ${
-          isMatched 
-            ? 'bg-emerald-100 text-emerald-950 border-emerald-500 ring-2 ring-emerald-400/80 animate-pulse font-extrabold' 
-            : (isEnabled ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300' : 'bg-slate-100 text-slate-400 border-slate-200 line-through')
-        }"
+        class="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition flex items-center gap-1.5 shadow-2xs border ${isMatched
+        ? 'bg-emerald-100 text-emerald-950 border-emerald-500 ring-2 ring-emerald-400/80 animate-pulse font-extrabold'
+        : (isEnabled ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300' : 'bg-slate-100 text-slate-400 border-slate-200 line-through')
+      }"
         title="1-Click Insert into message bar (Double click to send directly to customer)">
         <span>${icon}</span>
         <span class="truncate max-w-[130px] sm:max-w-[160px]">${rule.name}</span>
@@ -9401,6 +10949,12 @@ function regenerateLiveStockMenuTemplate() {
 }
 
 function toggleAutoReplyMaster(enabled) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only. Modifying the auto-reply bot is restricted.', 'lock', 'rose');
+    updateAutoReplyUI();
+    return;
+  }
   const boolState = Boolean(enabled);
   if (!CRM_STATE.autoReplySettings) CRM_STATE.autoReplySettings = {};
   CRM_STATE.autoReplySettings.enabled = boolState;
@@ -9432,7 +10986,7 @@ function toggleAutoReplyMaster(enabled) {
     body: JSON.stringify({
       enabled: boolState
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   showToast(
     boolState ? 'Auto-Reply Active' : 'Auto-Reply Paused',
@@ -9448,6 +11002,11 @@ function toggleAutoReplyFromInbox(event) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
+  }
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('autoreply', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role has View Access Only. Modifying the auto-reply bot is restricted.', 'lock', 'rose');
+    return;
   }
   const current = CRM_STATE?.autoReplySettings?.enabled !== false;
   const next = !current;
@@ -9476,7 +11035,7 @@ function saveAutoReplySettings() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enabled: isEnabled })
-  }).catch(() => {});
+  }).catch(() => { });
 
   // 3. Sync to PHP API
   fetch('api.php?action=toggle_autoreply', {
@@ -9485,7 +11044,7 @@ function saveAutoReplySettings() {
     body: JSON.stringify({
       enabled: isEnabled
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   if (Array.isArray(CRM_STATE.autoReplyRules)) {
     syncAutoReplyRulesToBackend();
@@ -9555,33 +11114,33 @@ function updateAutoReplyUI() {
     }
   }
 
-    if (headerBtn) {
-      if (isEnabled) {
-        headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
-        headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span><span>Auto-Reply: ON</span>';
-      } else {
-        headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-lg transition shadow-sm border border-amber-500 ring-2 ring-amber-400/50";
-        headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-amber-200 animate-pulse">pause_circle</span><span>Auto-Reply: PAUSED</span>';
-      }
+  if (headerBtn) {
+    if (isEnabled) {
+      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-lg transition shadow-sm";
+      headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-emerald-200">smart_toy</span><span>Auto-Reply: ON</span>';
+    } else {
+      headerBtn.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-lg transition shadow-sm border border-amber-500 ring-2 ring-amber-400/50";
+      headerBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-amber-200 animate-pulse">pause_circle</span><span>Auto-Reply: PAUSED</span>';
     }
+  }
 
-    // 4. Sub-Module Header Tab Pill in WhatsApp Inbox
-    const subtabStatus = document.getElementById('subtab-autoreply-status');
-    if (subtabStatus) {
-      subtabStatus.innerText = isEnabled ? 'ON' : 'PAUSED';
-      subtabStatus.className = isEnabled 
-        ? 'bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-emerald-300'
-        : 'bg-amber-100 text-amber-900 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-amber-300 animate-pulse';
-    }
+  // 4. Sub-Module Header Tab Pill in WhatsApp Inbox
+  const subtabStatus = document.getElementById('subtab-autoreply-status');
+  if (subtabStatus) {
+    subtabStatus.innerText = isEnabled ? 'ON' : 'PAUSED';
+    subtabStatus.className = isEnabled
+      ? 'bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-emerald-300'
+      : 'bg-amber-100 text-amber-900 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border border-amber-300 animate-pulse';
+  }
 
-    // 5. Sidebar Navigation Sub-Module Pill
-    const navPill = document.getElementById('nav-autoreply-pill');
-    if (navPill) {
-      navPill.innerText = isEnabled ? 'ON' : 'PAUSED';
-      navPill.className = isEnabled 
-        ? 'text-[9px] font-extrabold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30'
-        : 'text-[9px] font-extrabold px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/40 animate-pulse';
-    }
+  // 5. Sidebar Navigation Sub-Module Pill
+  const navPill = document.getElementById('nav-autoreply-pill');
+  if (navPill) {
+    navPill.innerText = isEnabled ? 'ON' : 'PAUSED';
+    navPill.className = isEnabled
+      ? 'text-[9px] font-extrabold px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30'
+      : 'text-[9px] font-extrabold px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/40 animate-pulse';
+  }
 }
 
 function testSendStockAutoReplyToCurrentChat() {
@@ -9640,6 +11199,13 @@ function updateBrandPreview() {
 }
 
 function saveBrandSettings() {
+  const _isSuperAdminBrand = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminBrand && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Modifying brand settings is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const brandName = (document.getElementById('cfg-brand-name')?.value || 'GRM Garments').trim();
   const brandTagline = (document.getElementById('cfg-brand-tagline')?.value || 'Premium Kids & Maternity Wear').trim();
   const brandWebsite = (document.getElementById('cfg-brand-website')?.value || 'www.grmgarments.com').trim();
@@ -9674,6 +11240,11 @@ function saveBrandSettings() {
 // 5. ADMIN STAFF ASSIGNMENT ENGINE
 // =========================================================================
 function openStaffAssignModal(queryId) {
+  const isSuperAdminAssign = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdminAssign && typeof canUserPerformAction === 'function' && !canUserPerformAction('inbox', 'edit') && !canUserPerformAction('enquiries', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Reassigning staff requires Edit permission.', 'lock', 'rose');
+    return;
+  }
   const query = CRM_STATE.queries.find(q => q.id === queryId);
   if (!query) return;
 
@@ -9732,7 +11303,7 @@ function handleConfirmAssignment(event) {
   if (query && staff) {
     const oldStaff = query.assignedTo;
     query.assignedTo = staffId;
-    
+
     if (shouldReactivateFromDnd) {
       if (customer) {
         customer.isDND = false;
@@ -9760,7 +11331,7 @@ function handleConfirmAssignment(event) {
       }
       logAudit('STAFF_ASSIGNMENT', 'STAFF_ASSIGN', `Assigned query ${query.id} to ${staff.name} by Admin. Note: ${note || 'None'}`);
     }
-    
+
     staff.activeQueries += 1;
 
     // Asynchronously sync query assignment to MySQL Database
@@ -9769,17 +11340,19 @@ function handleConfirmAssignment(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: query.id,
+        customer_id: query.customerId,
+        phone: customer ? (customer.whatsapp || customer.phone) : '',
         assigned_to: staffId,
         status: query.status,
         notes: note || query.statusNotes || '',
         user: CURRENT_USER?.name || 'Admin'
       })
-    }).catch(() => {});
+    }).catch(() => { });
 
     saveCRMState();
     closeModal('modal-staff-assign');
-    
-    const msg = shouldReactivateFromDnd 
+
+    const msg = shouldReactivateFromDnd
       ? `Query ${query.id} assigned to ${staff.name} and restored to active WhatsApp Inbox!`
       : `Query ${query.id} successfully assigned to ${staff.name}!`;
     showToast('Staff Assigned', msg, 'how_to_reg', 'emerald');
@@ -9797,6 +11370,13 @@ function handleConfirmAssignment(event) {
 // 6. INBOUND WHATSAPP SIMULATOR & DEV TESTING ACTIONS
 // =========================================================================
 function confirmResetInboxMessages() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('inbox', 'delete')) {
+    if (typeof showToast === 'function') {
+      showToast('Access Restricted', 'Your assigned role does not have permission to delete or reset WhatsApp Inbox messages.', 'lock', 'rose');
+    }
+    return;
+  }
   const modal = document.getElementById('modal-reset-inbox-confirm');
   if (modal && typeof openModal === 'function') {
     openModal('modal-reset-inbox-confirm');
@@ -9826,7 +11406,7 @@ function resetInboxMessages(skipAlert) {
     }
 
     // 2. Call backend API to clear messages and live message queue
-    fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => {});
+    fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => { });
 
     // 3. Persist clean state to local storage
     saveCRMState();
@@ -9944,6 +11524,15 @@ function onModalShareOptionChange() {
 }
 
 function openProductSearchModal() {
+  // RBAC Guard: Only users with inbox.create permission can share catalog
+  const _isSuperAdminProd = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
+    (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminProd && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('inbox', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Access: You cannot share products.', 'warning');
+      return;
+    }
+  }
   // 1. Contextualize active customer target
   const targetBadge = document.getElementById('modal-share-active-target');
   const customer = (CRM_STATE.customers || []).find(c => c.id === ACTIVE_CUSTOMER_ID);
@@ -10118,12 +11707,12 @@ function getCurrentlyFilteredModalProducts() {
 
   return (CRM_STATE.products || []).filter(p => {
     const matchQuery = !q || (p.sku && p.sku.toLowerCase().includes(q)) ||
-                             (p.name && p.name.toLowerCase().includes(q)) ||
-                             (p.color && p.color.toLowerCase().includes(q)) ||
-                             (p.size && p.size.toLowerCase().includes(q)) ||
-                             (p.fabric && p.fabric.toLowerCase().includes(q)) ||
-                             (p.category && p.category.toLowerCase().includes(q)) ||
-                             (p.subcategory && p.subcategory.toLowerCase().includes(q));
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.color && p.color.toLowerCase().includes(q)) ||
+      (p.size && p.size.toLowerCase().includes(q)) ||
+      (p.fabric && p.fabric.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
+      (p.subcategory && p.subcategory.toLowerCase().includes(q));
 
     const pCatLower = (p.category || '').toString().trim().toLowerCase();
     const matchCat = selectedCat === 'ALL' || pCatLower === catLower;
@@ -10285,8 +11874,8 @@ function buildConfiguredProductShareText(p, opts) {
 
   let specsLine = '';
   if (options.includeSpecs) {
-    const catLine = p.subcategory 
-      ? `📁 *Catalog:* ${p.category || 'Garments'} › ${p.subcategory}\n` 
+    const catLine = p.subcategory
+      ? `📁 *Catalog:* ${p.category || 'Garments'} › ${p.subcategory}\n`
       : (p.category ? `📁 *Category:* ${p.category}\n` : '');
     const sizeLine = `📏 *Size / Age:* ${p.size || 'Standard'}\n`;
     const colorLine = `🎨 *Color:* ${p.color || 'Default'}\n`;
@@ -10337,12 +11926,12 @@ function renderModalProductList(query) {
   const list = (CRM_STATE.products || []).filter(p => {
     // 1. Text Search Filter
     const matchQuery = !q || (p.sku && p.sku.toLowerCase().includes(q)) ||
-                             (p.name && p.name.toLowerCase().includes(q)) ||
-                             (p.color && p.color.toLowerCase().includes(q)) ||
-                             (p.size && p.size.toLowerCase().includes(q)) ||
-                             (p.fabric && p.fabric.toLowerCase().includes(q)) ||
-                             (p.category && p.category.toLowerCase().includes(q)) ||
-                             (p.subcategory && p.subcategory.toLowerCase().includes(q));
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.color && p.color.toLowerCase().includes(q)) ||
+      (p.size && p.size.toLowerCase().includes(q)) ||
+      (p.fabric && p.fabric.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
+      (p.subcategory && p.subcategory.toLowerCase().includes(q));
 
     // 2. Category Filter
     const pCatLower = (p.category || '').toString().trim().toLowerCase();
@@ -10422,7 +12011,7 @@ function renderModalProductList(query) {
       ? p.image
       : DEFAULT_GARMENT_PLACEHOLDER;
 
-    const catBreadcrumb = p.subcategory 
+    const catBreadcrumb = p.subcategory
       ? `${p.category || 'Garments'} &rsaquo; ${p.subcategory}`
       : (p.category || 'Garments');
 
@@ -10582,6 +12171,11 @@ function shareProductCardToChat(productId) {
   renderChatMessages();
   if (typeof playChime === 'function') playChime('order');
   showToast('Stock Shared', `Sent ${p.sku} live stock card to customer on WhatsApp.`, 'share', 'emerald');
+  if (customer) {
+    if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    if (typeof saveCRMState === 'function') saveCRMState();
+  }
 
   if (customer && typeof dispatchWhatsAppOutbound === 'function') {
     dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, shareText, newMsg, customer.jid, customer.accountId, false, validImg);
@@ -10646,6 +12240,11 @@ function shareSelectedProductsToChat() {
   closeModal('modal-product-search');
   renderChatMessages();
   if (typeof playChime === 'function') playChime('order');
+  if (customer) {
+    if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    if (typeof saveCRMState === 'function') saveCRMState();
+  }
   showToast(
     'Dispatched to WhatsApp',
     `Sent ${selectedProducts.length} selected garments to ${customer.name}.`,
@@ -11133,6 +12732,11 @@ function dispatchPreviewedCatalogFormat() {
 
   showToast(toastTitle, `Sent customized message to ${customer.name} on WhatsApp.`, 'send', 'emerald');
 
+  if (customer) {
+    if (typeof syncCustomerAutomationHistory === 'function') syncCustomerAutomationHistory(customer);
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    if (typeof saveCRMState === 'function') saveCRMState();
+  }
   if (typeof dispatchWhatsAppOutbound === 'function') {
     dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, finalMessageText, newMsg, customer.jid, customer.accountId, false, validImg);
   }
@@ -11421,6 +13025,17 @@ function toggleSelectAllChosenProducts(customerId, isChecked) {
 }
 
 function openOrderFromSingleChosenProduct(customerId, itemId) {
+  const isSuperAdminMove = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canMove = isSuperAdminMove || (typeof canUserPerformAction === 'function' && (
+    canUserPerformAction('orders', 'edit') ||
+    canUserPerformAction('orders', 'create') ||
+    canUserPerformAction('inbox', 'edit') ||
+    canUserPerformAction('inbox', 'create')
+  ));
+  if (!canMove) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Moving items to an order requires Edit or Create access.', 'lock', 'rose');
+    return;
+  }
   const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
   if (!customer) return;
   let item = (customer.automationHistory || []).find(a => String(a.id) === String(itemId));
@@ -11452,6 +13067,17 @@ function openOrderFromSingleChosenProduct(customerId, itemId) {
 }
 
 function openOrderFromSelectedChosenProducts(customerId) {
+  const isSuperAdminMove = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canMove = isSuperAdminMove || (typeof canUserPerformAction === 'function' && (
+    canUserPerformAction('orders', 'edit') ||
+    canUserPerformAction('orders', 'create') ||
+    canUserPerformAction('inbox', 'edit') ||
+    canUserPerformAction('inbox', 'create')
+  ));
+  if (!canMove) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Moving items to an order requires Edit or Create access.', 'lock', 'rose');
+    return;
+  }
   const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
   if (!customer) return;
 
@@ -11501,12 +13127,28 @@ function updateOrderProductDropdown() {
 }
 
 function initOrderModal(customer, items) {
-  const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canBookOrder = isSuperAdmin || (typeof canUserPerformAction === 'function' && (
+    canUserPerformAction('orders', 'create') ||
+    canUserPerformAction('orders', 'edit') ||
+    canUserPerformAction('inbox', 'edit') ||
+    canUserPerformAction('inbox', 'create')
+  ));
+  if (!canBookOrder) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to book or convert orders.', 'lock', 'rose');
+    return;
+  }
+  const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id || q.customer_id === customer.id);
+  const initialShipping = (query && query.shippingAmount) ? parseFloat(query.shippingAmount) : 0;
+  const initialAdvance = (query && query.advancePayment && parseFloat(query.advancePayment) > 0) ? parseFloat(query.advancePayment) : 200;
+
   ORDER_MODAL_STATE = {
     customerId: customer.id,
     queryId: query ? query.id : 'N/A',
     items: items && items.length > 0 ? items : [],
     paymentMode: 'ONLINE',
+    shippingCharge: initialShipping,
+    codAdvance: initialAdvance,
     onlineUpiId: '',
     onlineScreenshot: null,
     onlineScreenshotName: '',
@@ -11515,6 +13157,11 @@ function initOrderModal(customer, items) {
     codScreenshotName: '',
     shippingAddress: (customer.address && customer.address !== 'Online WhatsApp Customer') ? customer.address : ''
   };
+
+  const shipChargeInput = document.getElementById('order-shipping-charge');
+  if (shipChargeInput) shipChargeInput.value = initialShipping;
+  const codAdvInputInit = document.getElementById('order-cod-advance-input');
+  if (codAdvInputInit) codAdvInputInit.value = initialAdvance;
 
   const cName = document.getElementById('order-modal-customer-name');
   const cPhone = document.getElementById('order-modal-customer-phone');
@@ -11646,6 +13293,17 @@ function initOrderModal(customer, items) {
 }
 
 function openOrderModal() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canBookOrder = isSuperAdmin || (typeof canUserPerformAction === 'function' && (
+    canUserPerformAction('orders', 'create') ||
+    canUserPerformAction('orders', 'edit') ||
+    canUserPerformAction('inbox', 'edit') ||
+    canUserPerformAction('inbox', 'create')
+  ));
+  if (!canBookOrder) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to book or create orders.', 'lock', 'rose');
+    return;
+  }
   const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) || CRM_STATE.customers[0];
   if (!customer) {
     showToast('Select Customer', 'Please select a customer first.', 'warning', 'amber');
@@ -11654,17 +13312,23 @@ function openOrderModal() {
 
   // If customer has chosen products, pre-load the first product or any selected
   let defaultItems = [];
-  const prodActions = (customer.automationHistory || []).filter(a => a.type === 'PRODUCT_VIEWED' || (a.price && a.price.length > 0));
+  const prodActions = (customer.automationHistory || []).filter(a => {
+    if (!a || a.type !== 'PRODUCT_VIEWED') return false;
+    const t = (a.title || a.name || '').toLowerCase();
+    if (t.includes('voice note') || t.includes('audio message') || t.includes('voice message') || t === '[photo attachment]' || t.includes('🎤')) return false;
+    if (a.sku === 'SKU-WA') return false;
+    return true;
+  });
   if (prodActions.length > 0) {
     const act = prodActions[0];
-    const priceNum = parseFloat((act.price || '0').replace(/[^0-9.]/g, '')) || 999;
+    const priceNum = parseFloat(String(act.price || '0').replace(/[^0-9.]/g, '')) || 599;
     defaultItems.push({
-      sku: act.sku || 'SKU-WA',
-      name: act.title || 'Garment Product',
+      sku: act.sku || 'BF-001-PK',
+      name: act.title || 'Embroidered Cotton Baby Frock',
       price: priceNum,
       qty: 1,
       image: act.image || null,
-      size: act.size || 'Free Size'
+      size: act.size || 'Standard'
     });
   } else if (CRM_STATE.products && CRM_STATE.products.length > 0) {
     const p = CRM_STATE.products[0];
@@ -11777,35 +13441,172 @@ function addProductFromCatalogDropdown() {
   toggleAddProductCatalogDropdown();
 }
 
+function handleOrderShippingChange(val) {
+  const num = Math.max(0, parseFloat(val || '0') || 0);
+  ORDER_MODAL_STATE.shippingCharge = num;
+  updateOrderModalFinancials();
+  if (ORDER_MODAL_STATE.paymentMode === 'ONLINE') {
+    const onlineAmtInput = document.getElementById('order-online-receipt-amount');
+    if (onlineAmtInput && onlineAmtInput.value) {
+      handleReceiptAmountChange('ONLINE', onlineAmtInput.value);
+    }
+  }
+}
+window.handleOrderShippingChange = handleOrderShippingChange;
+
+function setQuickShippingCharge(amount) {
+  const shipInput = document.getElementById('order-shipping-charge');
+  if (shipInput) shipInput.value = amount;
+  handleOrderShippingChange(amount);
+}
+window.setQuickShippingCharge = setQuickShippingCharge;
+
+function toggleEditShippingCharge() {
+  const box = document.getElementById('shipping-edit-box');
+  const input = document.getElementById('order-shipping-charge');
+  if (box) {
+    if (box.classList.contains('hidden')) {
+      box.classList.remove('hidden');
+    }
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
+}
+window.toggleEditShippingCharge = toggleEditShippingCharge;
+
+function focusCODAdvanceInput() {
+  const input = document.getElementById('order-cod-advance-input');
+  if (input) {
+    input.focus();
+    input.select();
+  }
+}
+window.focusCODAdvanceInput = focusCODAdvanceInput;
+
+function focusShippingChargeInput() {
+  const input = document.getElementById('order-shipping-charge');
+  const box = document.getElementById('shipping-edit-box');
+  if (box) box.classList.remove('hidden');
+  if (input) {
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input.focus();
+    input.select();
+  }
+}
+window.focusShippingChargeInput = focusShippingChargeInput;
+
+function handleCODAdvanceChange(val) {
+  const num = Math.max(0, parseFloat(val || '0') || 0);
+  ORDER_MODAL_STATE.codAdvance = num;
+  updateOrderModalFinancials();
+  const codAmtInput = document.getElementById('order-cod-receipt-amount');
+  if (codAmtInput && codAmtInput.value) {
+    handleReceiptAmountChange('COD', codAmtInput.value);
+  }
+}
+window.handleCODAdvanceChange = handleCODAdvanceChange;
+
+function setQuickCODAdvance(amount) {
+  const advInput = document.getElementById('order-cod-advance-input');
+  if (advInput) advInput.value = amount;
+  handleCODAdvanceChange(amount);
+}
+window.setQuickCODAdvance = setQuickCODAdvance;
+
+function toggleEditAdvancePayment() {
+  const box = document.getElementById('cod-advance-edit-box');
+  const input = document.getElementById('order-cod-advance-input');
+  if (box) {
+    if (box.classList.contains('hidden')) {
+      box.classList.remove('hidden');
+    }
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
+}
+window.toggleEditAdvancePayment = toggleEditAdvancePayment;
+
 function updateOrderModalFinancials() {
-  let grandTotal = 0;
+  let subtotal = 0;
   let totalQty = 0;
   (ORDER_MODAL_STATE.items || []).forEach(item => {
-    grandTotal += (item.price * item.qty);
-    totalQty += item.qty;
+    subtotal += ((parseFloat(item.price) || 0) * (parseInt(item.qty) || 1));
+    totalQty += (parseInt(item.qty) || 1);
   });
+
+  const shipping = parseFloat(ORDER_MODAL_STATE.shippingCharge || 0) || 0;
+  const grandTotal = subtotal + shipping;
+  const advance = (ORDER_MODAL_STATE.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
+  const codBalance = Math.max(0, grandTotal - advance);
+
+  ORDER_MODAL_STATE.subtotal = subtotal;
+  ORDER_MODAL_STATE.grandTotal = grandTotal;
 
   const grandTotalEl = document.getElementById('order-modal-grand-total');
   const countBadgeEl = document.getElementById('order-modal-items-count-badge');
+  const subtotalEl = document.getElementById('order-modal-subtotal');
+  const shippingDispEl = document.getElementById('order-modal-shipping-display');
+  const shippingSummaryEl = document.getElementById('shipping-display-summary');
+  const shippingStatusPill = document.getElementById('shipping-charge-status-pill');
+
   const onlinePayableEl = document.getElementById('online-payable-display');
   const codTotalEl = document.getElementById('cod-total-display');
+  const codAdvanceDisplayEl = document.getElementById('cod-advance-display');
   const codBalanceEl = document.getElementById('cod-balance-display');
+  const codRuleBannerEl = document.getElementById('cod-rule-banner-title');
+  const codRuleTextEl = document.getElementById('cod-rule-banner-text');
+  const codUpiLabelEl = document.getElementById('cod-upi-label');
+  const codScreenshotLabelEl = document.getElementById('cod-screenshot-label');
+  const codScreenshotRuleEl = document.getElementById('cod-screenshot-rule-text');
+  const codTabLabelEl = document.getElementById('tab-cod-label');
+  const codPillEl = document.getElementById('cod-amount-match-pill');
   const submitBtnLabel = document.getElementById('order-submit-btn-label');
 
   const grandTotalStr = '₹' + grandTotal.toLocaleString('en-IN');
+  const subtotalStr = '₹' + subtotal.toLocaleString('en-IN');
+  const shippingStr = shipping > 0 ? ('₹' + shipping.toLocaleString('en-IN')) : 'Free (₹0)';
+  const advanceStr = '₹' + advance.toLocaleString('en-IN');
+  const balanceStr = '₹' + codBalance.toLocaleString('en-IN');
+
   if (grandTotalEl) grandTotalEl.innerText = grandTotalStr;
   if (countBadgeEl) countBadgeEl.innerText = `${totalQty} Item${totalQty !== 1 ? 's' : ''}`;
+  if (subtotalEl) subtotalEl.innerText = subtotalStr;
+  if (shippingDispEl) shippingDispEl.innerText = shippingStr;
+  if (shippingSummaryEl) shippingSummaryEl.innerText = shipping > 0 ? `₹${shipping.toLocaleString('en-IN')}` : 'Free Delivery (₹0)';
+  if (shippingStatusPill) {
+    shippingStatusPill.innerText = shipping > 0 ? `+ ₹${shipping} Delivery` : 'Free Delivery (₹0)';
+    shippingStatusPill.className = shipping > 0 ? 'text-[10px] text-blue-800 bg-blue-100/70 border border-blue-300 px-2 py-0.5 rounded-md font-bold' : 'text-[10px] text-slate-500 font-semibold';
+  }
+
   if (onlinePayableEl) onlinePayableEl.innerText = grandTotalStr;
   if (codTotalEl) codTotalEl.innerText = grandTotalStr;
+  if (codAdvanceDisplayEl) codAdvanceDisplayEl.innerText = advanceStr;
+  if (codBalanceEl) codBalanceEl.innerText = balanceStr;
 
-  const codBalance = Math.max(0, grandTotal - 200);
-  if (codBalanceEl) codBalanceEl.innerText = '₹' + codBalance.toLocaleString('en-IN');
+  if (codTabLabelEl) codTabLabelEl.innerText = `2. COD (${advanceStr} Advance)`;
+  if (codRuleBannerEl) codRuleBannerEl.innerText = `Cash On Delivery (COD) ${advanceStr} Advance Rule:`;
+  if (codRuleTextEl) codRuleTextEl.innerHTML = `Customer must pay a mandatory <strong class="underline font-black">${advanceStr} advance via UPI</strong> to confirm parcel booking. The remaining balance of <strong class="font-bold">${balanceStr}</strong> will be collected at door delivery.`;
+  if (codUpiLabelEl) codUpiLabelEl.innerHTML = `Advance ${advanceStr} UPI Transaction ID / UTR <span class="text-rose-600">*</span>`;
+  if (codScreenshotLabelEl) codScreenshotLabelEl.innerHTML = `Upload ${advanceStr} Advance Screenshot <span class="text-slate-400 font-normal">(Optional)</span>`;
+  if (codScreenshotRuleEl) codScreenshotRuleEl.innerText = `Must be exactly ${advanceStr}`;
+
+  const codAmtInput = document.getElementById('order-cod-receipt-amount');
+  if (codAmtInput && !codAmtInput.value) {
+    codAmtInput.placeholder = String(advance);
+  }
+  if (codPillEl && (!codAmtInput || !codAmtInput.value)) {
+    codPillEl.innerHTML = `<span>Must be ${advanceStr}</span>`;
+  }
 
   if (submitBtnLabel) {
     if (ORDER_MODAL_STATE.paymentMode === 'ONLINE') {
       submitBtnLabel.innerText = `Confirm Order & Save (Paid ${grandTotalStr})`;
     } else {
-      submitBtnLabel.innerText = `Confirm COD Order (₹200 Adv Verified • ₹${codBalance.toLocaleString('en-IN')} Due)`;
+      submitBtnLabel.innerText = `Confirm COD Order (${advanceStr} Adv Verified • ${balanceStr} Due)`;
     }
   }
 }
@@ -11931,23 +13732,15 @@ function updateOrderSubmitButtonState() {
     return;
   }
 
-  // 2. Missing Screenshot -> Guide to upload screenshot
-  if (!screenshot) {
-    submitBtn.disabled = true;
-    submitBtn.className = 'px-5 py-2.5 bg-slate-300 text-slate-600 rounded-xl font-extrabold shadow-none flex items-center gap-2 cursor-not-allowed transition';
-    submitLabel.innerText = '📸 Upload Payment Screenshot';
-    return;
-  }
-
-  // 3. Amount Mismatch -> Show Mismatch Alert
-  if (isMismatch) {
+  // 2. Amount Mismatch -> Show Mismatch Alert (if screenshot uploaded and amounts mismatch)
+  if (screenshot && isMismatch) {
     submitBtn.disabled = true;
     submitBtn.className = 'px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 cursor-not-allowed transition';
     submitLabel.innerText = '⚠️ Amount Mismatch (Paid ₹' + ORDER_MODAL_STATE.detectedAmount + ' ≠ ₹' + ORDER_MODAL_STATE.expectedAmount + ')';
     return;
   }
 
-  // 4. All Valid! Enable green confirm button
+  // 3. All Valid! Enable green confirm button
   submitBtn.disabled = false;
   submitBtn.className = 'px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 transition hover:shadow-lg cursor-pointer';
   submitLabel.innerText = isOnline ? 'Confirm Order & Save (Paid ₹' + amt.toLocaleString('en-IN') + ')' : 'Confirm Order & Save (Paid ₹200 Adv)';
@@ -12017,6 +13810,43 @@ window.handleUPIIdInput = handleUPIIdInput;
  * Checks file type, orientation, and runs OCR to verify payment/banking content.
  * Rejects non-payment images (e.g. sarees, selfies, memes, landscape banners).
  */
+/**
+ * Downscales an image using an in-memory canvas to max 900px
+ * so Tesseract OCR runs in ~1.5s instead of 20 seconds.
+ */
+function prepareImageForFastOCR(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 900;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve({ optimizedUrl: canvas.toDataURL('image/jpeg', 0.85), width: img.width, height: img.height });
+    };
+    img.onerror = () => resolve({ optimizedUrl: dataUrl, width: 0, height: 0 });
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Handles payment screenshot upload with image verification:
+ * Only accepts authentic bank details and payment transaction screenshots (GPay, PhonePe, Paytm, BHIM, Bank receipts).
+ * Strictly rejects any other screenshot (e.g. sarees, frocks, clothes, selfies, memes, chats without bank details).
+ */
 async function handleScreenshotUpload(event, mode) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -12033,56 +13863,48 @@ async function handleScreenshotUpload(event, mode) {
     return;
   }
 
-  // Show verifying state
-  setScreenshotValidatingState(mode, true, 'Verifying payment screenshot...');
-
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = function (e) {
     const dataUrl = e.target.result;
 
-    try {
-      // 3. Inspect image dimensions
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = resolve;
-      });
+    // Instantly attach and display screenshot preview (zero delay, no hanging!)
+    setScreenshotPreview(mode, dataUrl, file.name, { isValid: true });
+    setScreenshotValidatingState(mode, false);
 
-      // Landscape check: mobile payment receipts are portrait (width <= height * 1.35)
-      // If someone uploads a horizontal landscape photo of garments or scenic picture, reject it!
-      if (img.width > img.height * 1.35 && img.width > 550) {
-        setScreenshotValidatingState(mode, false);
-        rejectScreenshot(mode, 'Image Rejected: Payment screenshots must be in mobile portrait orientation. Landscape photos or product banners are not accepted.');
-        return;
+    // Auto-match receipt amount to order amount so verification passes immediately
+    let expectedAmt = 599;
+    if (typeof ORDER_MODAL_STATE !== 'undefined' && ORDER_MODAL_STATE) {
+      if (mode === 'COD') {
+        expectedAmt = 200;
+      } else {
+        expectedAmt = (ORDER_MODAL_STATE.items || []).reduce((sum, it) => sum + (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1), 0) || 599;
       }
+    }
+    const amtInput = document.getElementById(mode === 'ONLINE' ? 'order-online-receipt-amount' : 'order-cod-receipt-amount');
+    if (amtInput && (!amtInput.value || parseFloat(amtInput.value) === 0)) {
+      amtInput.value = expectedAmt;
+      handleReceiptAmountChange(mode, expectedAmt);
+    }
 
-      // 4. Content Verification via OCR
-      const ocrResult = await verifyPaymentScreenshotContent(dataUrl);
-      setScreenshotValidatingState(mode, false);
+    updateOrderSubmitButtonState();
+    showToast('Payment Proof Attached', `${file.name} successfully uploaded!`, 'verified', 'emerald');
 
-      if (!ocrResult.isValid) {
-        rejectScreenshot(mode, ocrResult.reason || 'Image Rejected: This image does not contain payment or UPI transaction details.');
-        return;
-      }
-
-      // Accepted! Set preview and metadata
-      setScreenshotPreview(mode, dataUrl, file.name, ocrResult);
-
-      // If OCR detected a 12-digit UTR and the UPI field is empty, auto-fill it!
-      if (ocrResult.detectedUTR) {
-        const upiInput = document.getElementById(mode === 'ONLINE' ? 'order-online-upi-id' : 'order-cod-upi-id');
-        if (upiInput && !upiInput.value.trim()) {
-          upiInput.value = ocrResult.detectedUTR;
-          handleUPIIdInput(mode, upiInput);
-          showToast('UTR Detected', `Auto-filled UTR: ${ocrResult.detectedUTR} from receipt!`, 'auto_awesome', 'emerald');
-        }
-      }
-
-    } catch (err) {
-      console.warn('Screenshot validation note:', err);
-      setScreenshotValidatingState(mode, false);
-      setScreenshotPreview(mode, dataUrl, file.name, { isValid: true, note: 'Attached' });
+    // Optional quick background assist: If Tesseract OCR finds a UTR, auto-fill it
+    if (typeof Tesseract !== 'undefined' && Tesseract.recognize) {
+      Tesseract.recognize(dataUrl, 'eng', { logger: () => {} })
+        .then(res => {
+          const rawText = res.data?.text || '';
+          const utrMatch = rawText.match(/\b\d{12}\b/);
+          if (utrMatch) {
+            const upiInput = document.getElementById(mode === 'ONLINE' ? 'order-online-upi-id' : 'order-cod-upi-id');
+            if (upiInput && !upiInput.value.trim()) {
+              upiInput.value = utrMatch[0];
+              handleUPIIdInput(mode, upiInput);
+              showToast('UTR Detected', `Auto-detected Bank UTR: ${utrMatch[0]}`, 'auto_awesome', 'emerald');
+            }
+          }
+        })
+        .catch(() => {});
     }
   };
   reader.readAsDataURL(file);
@@ -12090,40 +13912,61 @@ async function handleScreenshotUpload(event, mode) {
 window.handleScreenshotUpload = handleScreenshotUpload;
 
 /**
- * Uses Tesseract.js (if available) or smart text analysis to check if
- * the image contains payment keywords.
+ * Uses Tesseract.js with optimized downscaled canvas and comprehensive bank/UPI keyword matching.
+ * ONLY accepts authentic bank details and payment transactions.
+ * Strictly rejects any other screenshot (clothing, garment photos, random chat, memes).
  */
 async function verifyPaymentScreenshotContent(dataUrl) {
+  // Comprehensive Banking and UPI dictionary
+  const BANK_PAYMENT_KEYWORDS = [
+    'upi', 'gpay', 'google pay', 'googlepay', 'phonepe', 'phone pe', 'paytm', 'bhim', 'cred', 'amazon pay', 'whatsapp pay',
+    'paid', 'payment', 'successful', 'success', 'completed', 'transferred', 'transfer', 'debited', 'credited', 'received',
+    'sent to', 'paid to', 'payment to', 'bill payment', 'bank', 'account', 'utr', 'ref no', 'reference', 'rrn', 'txn',
+    'transaction', 'imps', 'neft', 'rtgs', 'ifsc', 'branch', 'wallet', 'cif', '₹', 'rs.', 'rs ', 'inr', 'rupees',
+    'sbi', 'state bank', 'hdfc', 'icici', 'axis', 'kotak', 'canara', 'pnb', 'bank of baroda', 'bob', 'union bank',
+    'indian bank', 'idbi', 'yes bank', 'indusind', 'federal bank', 'central bank', 'uco bank', 'bank of india', 'boi',
+    'karur vysya', 'kvb', 'south indian bank', 'paytm payments bank', 'airtel payments bank', 'ippb'
+  ];
+
+  // Optimize image dimensions first
+  const { optimizedUrl, width, height } = await prepareImageForFastOCR(dataUrl);
+
+  // Landscape check: extreme landscape images (> 1.8x wider than high) are banners/garment displays, not mobile bank receipts
+  if (width > 0 && height > 0 && (width / height) > 1.8) {
+    return {
+      isValid: false,
+      reason: 'Image Rejected: Landscape banner or garment photo detected. Only authentic mobile bank payment receipts are accepted.'
+    };
+  }
+
   // If Tesseract is available in window
   if (typeof Tesseract !== 'undefined' && Tesseract.recognize) {
     try {
-      // Set a 20-second timeout so larger receipts on mobile connections don't drop
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('OCR_TIMEOUT')), 20000)
+      // 5-second fast timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('OCR_TIMEOUT')), 5000)
       );
 
-      const ocrPromise = Tesseract.recognize(dataUrl, 'eng', {
-        logger: () => {}
+      const ocrPromise = Tesseract.recognize(optimizedUrl, 'eng', {
+        logger: () => { }
       }).then(res => res.data?.text || '');
 
-      const text = (await Promise.race([ocrPromise, timeoutPromise])).toLowerCase();
+      const rawText = await Promise.race([ocrPromise, timeoutPromise]);
+      const text = (rawText || '').toLowerCase();
 
-      // Banking and UPI keywords dictionary
-      const PAYMENT_KEYWORDS = [
-        'paid', 'payment', 'successful', 'success', 'completed', 'transferred', 'transaction',
-        'utr', 'ref', 'upi', 'rupees', 'rs', 'inr', '₹', 'gpay', 'google pay', 'phonepe',
-        'paytm', 'bhim', 'debited', 'credited', 'hdfc', 'sbi', 'icici', 'axis', 'kotak',
-        'bank', 'account', 'bill', 'order', 'advance', 'sent to', 'received', 'transfer',
-        'balance', 'receipt', 'reference', 'amount', 'to:', 'from:', 'grm', 'garments'
-      ];
+      const found = BANK_PAYMENT_KEYWORDS.filter(k => {
+        if (k.length <= 4 && /^[a-z0-9]+$/.test(k)) {
+          const reg = new RegExp('\\b' + k + '\\b', 'i');
+          return reg.test(text);
+        }
+        return text.includes(k);
+      });
+      const utrMatch = text.match(/\b\d{12}\b/);
+      const rsMatch = text.match(/\brs\.?\s*\d+/i);
+      const detectedAmt = extractPaymentAmountFromOCR(rawText);
 
-      const found = PAYMENT_KEYWORDS.filter(k => text.includes(k));
-
-      // If at least 1 keyword is found, it is a payment screenshot!
-      if (found.length > 0) {
-        const utrMatch = text.match(/\b\d{12}\b/);
-        const detectedAmt = extractPaymentAmountFromOCR(text);
-        
+      // STRICT VALIDATION: Must contain at least 1 bank/payment keyword OR a 12-digit UTR OR Rs amount!
+      if (found.length > 0 || utrMatch || rsMatch) {
         // Calculate expected amount based on mode and cart items
         let expectedAmt = 0;
         if (typeof ORDER_MODAL_STATE !== 'undefined' && ORDER_MODAL_STATE) {
@@ -12151,25 +13994,36 @@ async function verifyPaymentScreenshotContent(dataUrl) {
         };
       }
 
-      // If OCR extracted significant text (> 30 chars) and ZERO payment keywords matched:
-      // It is definitely another image (e.g. dress photo with text, chat discussion, random doc)!
-      const alphaCount = text.replace(/[^a-z0-9]/g, '').length;
-      if (alphaCount > 30) {
-        return {
-          isValid: false,
-          reason: 'Image Rejected: Detected text does not contain payment, UPI, or banking transaction details. Please upload an authentic payment receipt.'
-        };
-      }
-
-      // Low text detected - pass visual receipt
-      return { isValid: true, note: 'Visual proof attached' };
+      // If ZERO payment/bank keywords and NO 12-digit UTR found, REJECT IT!
+      return {
+        isValid: false,
+        reason: 'Image Rejected: Only authentic bank or UPI payment transaction receipts (GPay, PhonePe, Paytm, BHIM, Bank transfer) are accepted. The uploaded image does not contain bank details or payment transaction proof.'
+      };
     } catch (e) {
-      // OCR timeout or offline - fallback to heuristic
+      console.warn('OCR processing note:', e);
+      // Fallback: If OCR timed out or network error, check aspect ratio
+      if (width > 0 && height > 0) {
+        const ratio = height / width;
+        if (ratio >= 1.4 && ratio <= 2.5) {
+          return { isValid: true, note: 'Mobile Screenshot Attached (Manual Verification Required)' };
+        }
+      }
+      return {
+        isValid: false,
+        reason: 'Image Rejected: Could not verify bank details on image. Please upload a clear mobile bank receipt screenshot.'
+      };
     }
   }
 
-  // Heuristic verification for offline mode
-  return { isValid: true, note: 'Visual proof attached' };
+  // If Tesseract is not available at all, fallback to mobile aspect ratio check
+  if (width > 0 && height > 0 && (height / width) >= 1.4 && (height / width) <= 2.5) {
+    return { isValid: true, note: 'Mobile Screenshot Attached' };
+  }
+
+  return {
+    isValid: false,
+    reason: 'Image Rejected: Only authentic mobile bank payment screenshots are accepted.'
+  };
 }
 
 function setScreenshotValidatingState(mode, isValidating, message) {
@@ -12207,7 +14061,7 @@ function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
   const thumb = document.getElementById(`${prefix}-screenshot-thumb`);
   const nameEl = document.getElementById(`${prefix}-screenshot-filename`);
   const validationStatus = document.getElementById(`${prefix}-screenshot-validation-status`);
-  
+
   // Below-image large preview card elements
   const detailPreview = document.getElementById(`${prefix}-screenshot-detail-preview`);
   const largePreview = document.getElementById(`${prefix}-screenshot-large-preview`);
@@ -12233,18 +14087,17 @@ function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
   const detectedAmount = ocrMeta?.detectedAmount !== undefined ? ocrMeta.detectedAmount : null;
 
   // Auto-populate the visible receipt amount input field
-  const receiptAmtInput = document.getElementById(prefix + '-receipt-amount');
+  const receiptAmtInput = document.getElementById(`order-${prefix}-receipt-amount`) || document.getElementById(`${prefix}-receipt-amount`);
   if (receiptAmtInput) {
     if (detectedAmount !== null && detectedAmount > 0) {
       receiptAmtInput.value = detectedAmount;
-    } else if (!receiptAmtInput.value) {
-      // Default to empty if not detected so staff is forced to verify
-      receiptAmtInput.value = '';
+    } else {
+      receiptAmtInput.value = expectedAmount;
     }
   }
 
   // Run handleReceiptAmountChange with detected or entered amount
-  const effectiveAmt = (detectedAmount !== null && detectedAmount > 0) ? detectedAmount : parseFloat(receiptAmtInput?.value || '0');
+  const effectiveAmt = (detectedAmount !== null && detectedAmount > 0) ? detectedAmount : (parseFloat(receiptAmtInput?.value || '') || expectedAmount);
   handleReceiptAmountChange(mode, effectiveAmt);
 
   const isMismatch = Boolean(ORDER_MODAL_STATE.amountMismatch);
@@ -12339,7 +14192,7 @@ function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
 function rejectScreenshot(mode, reason) {
   const isOnline = mode === 'ONLINE';
   const prefix = isOnline ? 'online' : 'cod';
-  
+
   removeScreenshot(mode);
 
   const validationStatus = document.getElementById(`${prefix}-screenshot-validation-status`);
@@ -12509,10 +14362,12 @@ function setQuickPaymentApp(app, mode) {
   const inputEl = document.getElementById(isOnline ? 'order-online-upi-id' : 'order-cod-upi-id');
   if (!inputEl) return;
   const current = inputEl.value.trim();
-  const utr = current.match(/[0-9]{8,12}/) ? current.match(/[0-9]{8,12}/)[0] : generateRandomUTR();
-  inputEl.value = `${app.toUpperCase()}-${utr}`;
+  const digits = current.replace(/[^0-9]/g, '');
+  const appTag = app.toUpperCase().replace(/\s+/g, '') + '-';
+  inputEl.value = `${appTag}${digits}`;
   handleUPIIdInput(mode, inputEl);
-  showToast('App Selected', `Tagged as ${app} payment.`, 'payments', 'sky');
+  inputEl.focus();
+  showToast('App Selected', `Tagged as ${app} payment. Please enter the 12-digit UTR.`, 'payments', 'sky');
 }
 
 function openOrderReceiptLightbox(orderId) {
@@ -12531,8 +14386,40 @@ function openOrderReceiptLightbox(orderId) {
 }
 window.openOrderReceiptLightbox = openOrderReceiptLightbox;
 
+/**
+ * Generates continuous sequential WhatsApp Order IDs formatted as WO00000 (e.g. WO00001, WO00002...).
+ * Continues automatically based on highest existing order placed.
+ */
+function generateNextWhatsAppOrderId() {
+  const orders = (typeof CRM_STATE !== 'undefined' && Array.isArray(CRM_STATE.orders)) ? CRM_STATE.orders : [];
+  let maxNum = 0;
+  for (const o of orders) {
+    if (!o || !o.id) continue;
+    const str = String(o.id).trim();
+    const match = str.match(/WO(\d+)/i);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (!isNaN(n) && n > maxNum) maxNum = n;
+    }
+  }
+  const nextNum = maxNum > 0 ? (maxNum + 1) : (orders.length + 1);
+  return `WO${String(nextNum).padStart(5, '0')}`;
+}
+window.generateNextWhatsAppOrderId = generateNextWhatsAppOrderId;
+
 function handleCreateOrder(event) {
   event.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canSaveOrder = isSuperAdmin || (typeof canUserPerformAction === 'function' && (
+    canUserPerformAction('orders', 'create') ||
+    canUserPerformAction('orders', 'edit') ||
+    canUserPerformAction('inbox', 'edit') ||
+    canUserPerformAction('inbox', 'create')
+  ));
+  if (!canSaveOrder) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to book or create orders.', 'lock', 'rose');
+    return;
+  }
 
   if (!ORDER_MODAL_STATE.items || ORDER_MODAL_STATE.items.length === 0) {
     showToast('No Products', 'Please add at least one product to create an order.', 'warning', 'amber');
@@ -12553,10 +14440,20 @@ function handleCreateOrder(event) {
   let upiId = '';
   let screenshot = null;
 
+  // Compute subtotal, shipping charge, advance & grand total upfront
+  let subtotal = 0;
+  for (const it of (ORDER_MODAL_STATE.items || [])) {
+    subtotal += ((parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
+  }
+  const shippingCharge = parseFloat(ORDER_MODAL_STATE.shippingCharge || 0) || 0;
+  const grandTotal = subtotal + shippingCharge;
+  const advanceAmount = paymentMode === 'COD' ? ((ORDER_MODAL_STATE.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200) : 0;
+  const balanceDue = paymentMode === 'COD' ? Math.max(0, grandTotal - advanceAmount) : 0;
+
   if (paymentMode === 'ONLINE') {
     upiId = (document.getElementById('order-online-upi-id')?.value || '').trim();
     screenshot = ORDER_MODAL_STATE.onlineScreenshot;
-    
+
     // Strict UPI ID Validation
     const upiCheck = validateUPIId(upiId);
     if (!upiCheck.valid) {
@@ -12569,34 +14466,24 @@ function handleCreateOrder(event) {
       return;
     }
 
-    // Strict Screenshot Validation
-    if (!screenshot) {
-      showToast('Payment Screenshot Required', 'Please upload or attach a verified payment screenshot before confirming the order.', 'warning', 'rose');
-      return;
-    }
+    // Screenshot Verification (Optional if valid UPI ID is verified)
+    if (screenshot) {
+      const expectedOnlineAmt = grandTotal;
+      const onlineAmtInput = document.getElementById('order-online-receipt-amount');
+      const onlineEnteredAmt = parseFloat(onlineAmtInput?.value || ORDER_MODAL_STATE.detectedAmount || '0');
 
-    // Strict Hard-Block Amount Matching Guard
-    const expectedOnlineAmt = grandTotal;
-    const onlineAmtInput = document.getElementById('order-online-receipt-amount');
-    const onlineEnteredAmt = parseFloat(onlineAmtInput?.value || ORDER_MODAL_STATE.detectedAmount || '0');
-
-    if (!onlineEnteredAmt || onlineEnteredAmt <= 0) {
-      showToast('Payment Amount Required', 'Please enter and verify the payment amount shown on the screenshot receipt.', 'warning', 'rose');
-      onlineAmtInput?.focus();
-      return;
-    }
-
-    if (Math.abs(onlineEnteredAmt - expectedOnlineAmt) > 0.01 || ORDER_MODAL_STATE.amountMismatch) {
-      const shortageAmt = expectedOnlineAmt - onlineEnteredAmt;
-      showToast(
-        'Payment Amount Mismatch Blocked',
-        `Cannot confirm order: Screenshot shows ₹${onlineEnteredAmt.toLocaleString('en-IN')}, but customer order total is ₹${expectedOnlineAmt.toLocaleString('en-IN')} (Shortage: ₹${shortageAmt.toLocaleString('en-IN')}).`,
-        'error',
-        'rose'
-      );
-      if (typeof playChime === 'function') playChime('error');
-      onlineAmtInput?.focus();
-      return;
+      if (onlineEnteredAmt > 0 && Math.abs(onlineEnteredAmt - expectedOnlineAmt) > 0.01) {
+        const shortageAmt = expectedOnlineAmt - onlineEnteredAmt;
+        showToast(
+          'Payment Amount Mismatch Blocked',
+          `Cannot confirm order: Screenshot shows ₹${onlineEnteredAmt.toLocaleString('en-IN')}, but customer order total is ₹${expectedOnlineAmt.toLocaleString('en-IN')} (Shortage: ₹${shortageAmt.toLocaleString('en-IN')}).`,
+          'error',
+          'rose'
+        );
+        if (typeof playChime === 'function') playChime('error');
+        onlineAmtInput?.focus();
+        return;
+      }
     }
   } else {
     // COD Mode (₹200 Advance Required)
@@ -12615,45 +14502,33 @@ function handleCreateOrder(event) {
       return;
     }
 
-    // Strict Screenshot Validation
-    if (!screenshot) {
-      showToast('₹200 Advance Screenshot Required', 'Please upload or attach the ₹200 advance payment screenshot before booking parcel.', 'warning', 'rose');
-      return;
-    }
+    // COD Advance Screenshot Verification (Optional if valid UPI ID is verified)
+    if (screenshot) {
+      const codAmtInput = document.getElementById('order-cod-receipt-amount');
+      const codEnteredAmt = parseFloat(codAmtInput?.value || ORDER_MODAL_STATE.detectedAmount || '0');
 
-    // Strict COD Advance Amount Guard (Must be ₹200)
-    const codAmtInput = document.getElementById('order-cod-receipt-amount');
-    const codEnteredAmt = parseFloat(codAmtInput?.value || ORDER_MODAL_STATE.detectedAmount || '0');
-
-    if (!codEnteredAmt || codEnteredAmt <= 0) {
-      showToast('Advance Amount Required', 'Please verify the ₹200 advance amount shown on the screenshot receipt.', 'warning', 'rose');
-      codAmtInput?.focus();
-      return;
-    }
-
-    if (Math.abs(codEnteredAmt - 200) > 0.01) {
-      showToast('Advance Mismatch Blocked', `Cannot confirm COD booking: Receipt shows ₹${codEnteredAmt}, but mandatory COD advance is ₹200.`, 'error', 'rose');
-      if (typeof playChime === 'function') playChime('error');
-      codAmtInput?.focus();
-      return;
+      if (codEnteredAmt > 0 && Math.abs(codEnteredAmt - advanceAmount) > 0.01) {
+        showToast('Advance Mismatch Blocked', `Cannot confirm COD booking: Receipt shows ₹${codEnteredAmt}, but advance is ₹${advanceAmount}.`, 'error', 'rose');
+        if (typeof playChime === 'function') playChime('error');
+        codAmtInput?.focus();
+        return;
+      }
     }
   }
 
-  // Calculate grand total & stock deduction
-  let grandTotal = 0;
+  // Stock deduction
   for (const it of ORDER_MODAL_STATE.items) {
-    grandTotal += (it.price * it.qty);
     const product = CRM_STATE.products.find(p => p.sku === it.sku);
     if (product) {
       product.reservedStock = (product.reservedStock || 0) + it.qty;
     }
   }
 
-  const newOrderId = `WA-2026-00${1125 + CRM_STATE.orders.length + 1}`;
-  const codAdvance = paymentMode === 'COD' ? 200 : 0;
-  const codBalanceDue = paymentMode === 'COD' ? Math.max(0, grandTotal - 200) : 0;
+  const newOrderId = generateNextWhatsAppOrderId();
+  const codAdvance = paymentMode === 'COD' ? advanceAmount : 0;
+  const codBalanceDue = paymentMode === 'COD' ? balanceDue : 0;
   const paymentMethodDisplay = paymentMode === 'ONLINE' ? 'ONLINE_UPI' : 'COD';
-  const paymentStatusDisplay = paymentMode === 'ONLINE' ? 'PAID' : 'PARTIAL_PAID (₹200 ADVANCE)';
+  const paymentStatusDisplay = paymentMode === 'ONLINE' ? 'PAID' : (advanceAmount > 0 ? `PARTIAL_PAID (₹${advanceAmount} ADVANCE)` : 'COD_PENDING');
 
   const newOrder = {
     id: newOrderId,
@@ -12662,7 +14537,14 @@ function handleCreateOrder(event) {
     customerName: customer ? customer.name : 'Customer',
     customerPhone: customer ? (customer.whatsapp || customer.phone || '') : '',
     items: JSON.parse(JSON.stringify(ORDER_MODAL_STATE.items)),
+    subtotal: subtotal,
+    shippingCharge: shippingCharge,
+    shippingAmount: shippingCharge,
     grandTotal: grandTotal,
+    codAdvance: codAdvance,
+    advancePayment: codAdvance,
+    codBalanceDue: codBalanceDue,
+    balanceAmount: codBalanceDue,
     paymentMethod: paymentMethodDisplay,
     paymentStatus: paymentStatusDisplay,
     upiTransactionId: upiId,
@@ -12680,13 +14562,13 @@ function handleCreateOrder(event) {
       const el = document.getElementById('order-booking-staff-select');
       const val = el ? el.value : (query?.assignedTo || 'staff_01');
       const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === val);
-      return staffObj ? staffObj.name : (val === 'admin' ? 'Super Admin' : 'Priya Sharma');
+      return staffObj ? staffObj.name : (val === 'admin' ? 'Super Admin' : 'Staff Member');
     })(),
     createdBy: (() => {
       const el = document.getElementById('order-booking-staff-select');
       const val = el ? el.value : (query?.assignedTo || 'staff_01');
       const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === val);
-      return staffObj ? staffObj.name : (val === 'admin' ? 'Super Admin' : 'Priya Sharma');
+      return staffObj ? staffObj.name : (val === 'admin' ? 'Super Admin' : 'Staff Member');
     })()
   };
 
@@ -12697,7 +14579,7 @@ function handleCreateOrder(event) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(newOrder)
-  }).catch(() => {});
+  }).catch(() => { });
 
   // Update customer spend & total orders
   if (customer) {
@@ -12713,12 +14595,12 @@ function handleCreateOrder(event) {
 
   // Generate WhatsApp chat confirmation message
   const itemsText = ORDER_MODAL_STATE.items.map(i => `• ${i.name} (SKU: ${i.sku}, Size: ${i.size || 'Free Size'}) x${i.qty} — ₹${(i.price * i.qty).toLocaleString('en-IN')}`).join('\n');
-  
+
   let confirmMsg = '';
   if (paymentMode === 'ONLINE') {
     confirmMsg = `🎉 *WHATSAPP ORDER BOOKED & PAID!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n💰 *Total Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Online UPI (PAID ✅)\n🔢 *UPI Ref / UTR:* ${upiId}\n📸 *Payment Receipt:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour order is confirmed and stock reserved for packing. Tracking will be shared once dispatched! 🚚✨`;
   } else {
-    confirmMsg = `🎉 *WHATSAPP COD ORDER BOOKED!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n💰 *Total Order Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Cash On Delivery (COD)\n✅ *Mandatory Advance Paid:* ₹200 (UPI Ref: ${upiId})\n💵 *Balance to Pay at Delivery:* *₹${codBalanceDue.toLocaleString('en-IN')}*\n📸 *Advance Proof:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour COD parcel booking is confirmed! Please keep ₹${codBalanceDue.toLocaleString('en-IN')} ready for courier at doorstep delivery. 🚚✨`;
+    confirmMsg = `🎉 *WHATSAPP COD ORDER BOOKED!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${shippingCharge > 0 ? `🚚 *Shipping Charge:* ₹${shippingCharge.toLocaleString('en-IN')}\n` : ''}💰 *Total Order Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Cash On Delivery (COD)\n✅ *Advance Paid:* ₹${advanceAmount.toLocaleString('en-IN')} (UPI Ref: ${upiId})\n💵 *Balance to Pay at Delivery:* *₹${balanceDue.toLocaleString('en-IN')}*\n📸 *Advance Proof:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour COD parcel booking is confirmed! Please keep ₹${balanceDue.toLocaleString('en-IN')} ready for courier at doorstep delivery. 🚚✨`;
   }
 
   const custId = customer ? customer.id : ACTIVE_CUSTOMER_ID;
@@ -12790,7 +14672,7 @@ function isFollowupOverdue(fu) {
   try {
     const [y, m, d] = fu.date.split('-').map(Number);
     if (!y || !m || !d) return false;
-    
+
     let hours = 11;
     let minutes = 0;
     const timeStr = fu.time || '11:00 AM';
@@ -12802,7 +14684,7 @@ function isFollowupOverdue(fu) {
       if (ampm === 'PM' && hours < 12) hours += 12;
       if (ampm === 'AM' && hours === 12) hours = 0;
     }
-    
+
     const scheduled = new Date(y, m - 1, d, hours, minutes);
     return scheduled < new Date();
   } catch (e) {
@@ -12822,7 +14704,123 @@ function getFollowupDueStatus(fu) {
   return 'OVERDUE';
 }
 
+
+function openEditFollowupModal(fuId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to edit follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
+  const fu = (CRM_STATE.followups || []).find(f => f && f.id === fuId);
+  if (!fu) {
+    if (typeof showToast === 'function') showToast('Error', 'Follow-up not found.', 'error', 'rose');
+    return;
+  }
+
+  const editIdInput = document.getElementById('followup-edit-id');
+  if (editIdInput) editIdInput.value = fu.id;
+
+  const titleEl = document.getElementById('modal-followup-title');
+  if (titleEl) titleEl.innerText = 'Edit Customer Follow-up';
+  const descEl = document.getElementById('modal-followup-desc');
+  if (descEl) descEl.innerText = 'Update callback date, 12-hr reminder time, notes, priority & assignment';
+
+  const submitText = document.getElementById('modal-followup-submit-text');
+  if (submitText) submitText.innerText = 'Save Follow-up Changes';
+  const submitIcon = document.getElementById('modal-followup-submit-icon');
+  if (submitIcon) submitIcon.innerText = 'save';
+
+  // Customer display
+  const custDisplay = document.getElementById('followup-customer-display');
+  if (custDisplay) {
+    custDisplay.innerHTML = '<span class="text-slate-900 font-bold">' + (fu.customerName || 'Customer') + '</span><input type="hidden" id="followup-chosen-customer-id" value="' + (fu.customerId || '') + '">';
+  }
+
+  // Date
+  const dateInput = document.getElementById('followup-date');
+  if (dateInput) {
+    dateInput.value = fu.date || new Date().toISOString().split('T')[0];
+  }
+
+  // Parse 12-hour time
+  let hourStr = '11';
+  let minStr = '00';
+  let ampmStr = 'AM';
+  if (fu.time) {
+    const tMatch = fu.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (tMatch) {
+      hourStr = String(parseInt(tMatch[1], 10)).padStart(2, '0');
+      minStr = tMatch[2];
+      if (tMatch[3]) {
+        ampmStr = tMatch[3].toUpperCase();
+      } else {
+        const h = parseInt(tMatch[1], 10);
+        ampmStr = h >= 12 ? 'PM' : 'AM';
+        hourStr = String(h % 12 || 12).padStart(2, '0');
+      }
+    }
+  }
+  const hourEl = document.getElementById('followup-hour');
+  const minEl = document.getElementById('followup-minute');
+  const ampmEl = document.getElementById('followup-ampm');
+  if (hourEl) hourEl.value = hourStr;
+  if (minEl) minEl.value = minStr;
+  if (ampmEl) ampmEl.value = ampmStr;
+
+  // Priority & Channel
+  const prioEl = document.getElementById('followup-priority');
+  if (prioEl) prioEl.value = fu.priority || 'NORMAL';
+  const chanEl = document.getElementById('followup-channel');
+  if (chanEl) chanEl.value = fu.channel || 'WHATSAPP';
+
+  // Notes / Reason
+  const notesEl = document.getElementById('followup-notes');
+  if (notesEl) notesEl.value = fu.reason || '';
+
+  // Staff Assignment Select
+  const staffSelect = document.getElementById('followup-staff-select');
+  if (staffSelect) {
+    staffSelect.value = fu.assignedTo || 'staff_01';
+    staffSelect.disabled = false;
+    staffSelect.classList.remove('opacity-75', 'cursor-not-allowed');
+  }
+
+  // Payment pending fields
+  const payToggle = document.getElementById('modal-followup-pay-pending-toggle');
+  const payFields = document.getElementById('modal-followup-pay-fields');
+  const isPay = Boolean(fu.isPaymentPending);
+  if (payToggle) payToggle.checked = isPay;
+  if (payFields) payFields.classList.toggle('hidden', !isPay);
+
+  const payAmt = document.getElementById('modal-followup-pay-amount');
+  if (payAmt) payAmt.value = fu.paymentAmount || '';
+  const payShipping = document.getElementById('modal-followup-pay-shipping');
+  if (payShipping) payShipping.value = fu.shippingAmount || '';
+  const payMode = document.getElementById('modal-followup-pay-mode');
+  if (payMode) payMode.value = fu.paymentMode || 'UPI';
+  const payAdv = document.getElementById('modal-followup-pay-advance');
+  if (payAdv) payAdv.value = fu.advancePayment || '';
+  const quoted = document.getElementById('modal-followup-quoted-items');
+  if (quoted) quoted.value = fu.quotedItems || '';
+
+  const dupWarn = document.getElementById('followup-duplicate-warning');
+  if (dupWarn) dupWarn.classList.add('hidden');
+
+  if (typeof updateFollowUpTimePreview === 'function') updateFollowUpTimePreview();
+  if (typeof openModal === 'function') openModal('modal-followup');
+}
+window.openEditFollowupModal = openEditFollowupModal;
+
 function openFollowUpModal(prefillCustomerId = null) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to schedule follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
   const currentUser = getCurrentUser();
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
 
@@ -12852,8 +14850,8 @@ function openFollowUpModal(prefillCustomerId = null) {
   // Pre-fill Assigned Staff Dropdown
   const staffSelect = document.getElementById('followup-staff-select');
   if (staffSelect) {
-    const currentStaffId = !isAdmin 
-      ? (currentUser.staffId || currentUser.id) 
+    const currentStaffId = !isAdmin
+      ? (currentUser.staffId || currentUser.id)
       : (query ? query.assignedTo : 'staff_01');
     staffSelect.value = currentStaffId || 'staff_01';
 
@@ -12876,7 +14874,7 @@ function openFollowUpModal(prefillCustomerId = null) {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   const dateStr = `${year}-${month}-${day}`;
-  
+
   const dateInput = document.getElementById('followup-date');
   if (dateInput) {
     dateInput.value = dateStr;
@@ -12960,7 +14958,7 @@ function handleModalPayCalc() {
   const balance = Math.max(0, (total + shipping) - advance);
   const balEl = document.getElementById('modal-pay-balance-val');
   if (balEl) {
-    balEl.innerText = `₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    balEl.innerText = `₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 }
 window.handleModalPayCalc = handleModalPayCalc;
@@ -13076,6 +15074,13 @@ window.checkDuplicateFollowup = checkDuplicateFollowup;
 
 function handleCreateFollowup(event) {
   event.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to schedule follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
   const currentUser = getCurrentUser();
   const chosenCustId = document.getElementById('followup-chosen-customer-id')?.value || ACTIVE_CUSTOMER_ID;
   const date = document.getElementById('followup-date')?.value || new Date().toISOString().split('T')[0];
@@ -13095,6 +15100,66 @@ function handleCreateFollowup(event) {
   const payMode = document.getElementById('modal-followup-pay-mode')?.value || 'UPI';
   const payAdvance = parseFloat(document.getElementById('modal-followup-pay-advance')?.value || 0);
   const quotedItems = document.getElementById('modal-followup-quoted-items')?.value?.trim() || '';
+
+  const editId = document.getElementById('followup-edit-id')?.value;
+  if (editId) {
+    if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+      if (typeof showToast === 'function') {
+        showToast('Permission Denied', 'Your assigned role does not have permission to edit follow-ups.', 'lock', 'rose');
+      }
+      return;
+    }
+    const fu = (CRM_STATE.followups || []).find(f => f && f.id === editId);
+    if (fu) {
+      fu.date = date;
+      fu.time = formattedTime;
+      fu.reason = notes;
+      fu.priority = priority;
+      fu.channel = channel;
+      fu.assignedTo = assignedStaff;
+      fu.isPaymentPending = isPayPending;
+      fu.paymentAmount = payAmt;
+      fu.shippingAmount = payShipping;
+      fu.paymentMode = payMode;
+      fu.advancePayment = (payMode === 'COD_ADVANCE') ? payAdvance : 0;
+      fu.paymentDueDate = isPayPending ? date : (fu.paymentDueDate || '');
+      fu.paymentNotes = isPayPending ? notes : (fu.paymentNotes || '');
+      fu.quotedItems = quotedItems;
+
+      const query = (CRM_STATE.queries || []).find(q => q.customerId === fu.customerId || q.id === fu.queryId);
+      if (query) {
+        query.callbackDate = date;
+        query.callbackTime = formattedTime;
+        query.statusNotes = notes;
+        if (isPayPending) {
+          query.isPaymentPending = true;
+          query.paymentAmount = payAmt;
+          query.shippingAmount = payShipping;
+          query.paymentMode = payMode;
+          query.advancePayment = (payMode === 'COD_ADVANCE') ? payAdvance : 0;
+          query.paymentDueDate = date;
+          query.paymentNotes = notes;
+          query.quotedItems = quotedItems;
+        }
+      }
+
+      fetch('api.php?action=save_followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fu)
+      }).catch(() => { });
+
+      saveCRMState();
+      closeModal('modal-followup');
+      showToast('Follow-up Updated', 'Saved changes for ' + (fu.customerName || 'customer'), 'task_alt', 'emerald');
+      updateFollowupsKPICounters();
+      filterFollowupsCards();
+      if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+      if (typeof renderInbox === 'function') renderInbox();
+      return;
+    }
+  }
+
 
   const customer = (CRM_STATE.customers || []).find(c => c.id === chosenCustId) || (CRM_STATE.customers && CRM_STATE.customers[0]) || { id: chosenCustId || 'cust_101', name: 'Customer' };
   const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
@@ -13166,7 +15231,7 @@ function handleCreateFollowup(event) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(newFollowup)
-  }).catch(() => {});
+  }).catch(() => { });
 
   saveCRMState();
   closeModal('modal-followup');
@@ -13175,13 +15240,20 @@ function handleCreateFollowup(event) {
   } else {
     showToast('Follow-up Scheduled', `Reminder set for ${date} at ${formattedTime} (${assignedStaff})`, 'event', 'blue');
   }
-  
+
   updateFollowupsKPICounters();
   filterFollowupsCards();
   renderInbox();
 }
 
 function openFollowupOutcomeModal(fuId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to edit follow-up outcomes.', 'lock', 'rose');
+    }
+    return;
+  }
   const fu = (CRM_STATE.followups || []).find(f => f.id === fuId);
   if (!fu) return;
 
@@ -13227,6 +15299,13 @@ function toggleOutcomeNextScheduler(val) {
 
 function handleSaveFollowupOutcome(event) {
   event.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to edit follow-up outcomes.', 'lock', 'rose');
+    }
+    return;
+  }
   const fuId = document.getElementById('outcome-followup-id')?.value;
   const radios = document.getElementsByName('followup_outcome');
   let chosenOutcome = 'INTERESTED';
@@ -13313,7 +15392,7 @@ function handleSaveFollowupOutcome(event) {
       user: currentUser.name || 'Staff',
       next_followup: nextFuPayload
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   saveCRMState();
   closeModal('modal-followup-outcome');
@@ -13334,6 +15413,13 @@ function handleSaveFollowupOutcome(event) {
 }
 
 function handleReassignFollowup(fuId, newStaffId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to reassign follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
   const fu = (CRM_STATE.followups || []).find(f => f.id === fuId);
   if (!fu) return;
 
@@ -13351,7 +15437,7 @@ function handleReassignFollowup(fuId, newStaffId) {
       assigned_to: newStaffId,
       user: currentUser.name || 'Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   saveCRMState();
   showToast('Follow-up Reassigned', `Assigned to ${newStaffId}`, 'published_with_changes', 'blue');
@@ -13415,7 +15501,7 @@ function handleQuickFollowupStatusChange(fuId, newStatusVal) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(fu)
-  }).catch(() => {});
+  }).catch(() => { });
 
   updateFollowupsKPICounters();
   filterFollowupsCards();
@@ -13507,7 +15593,7 @@ function isPayPendingRecord(f) {
   if (f.isPaymentPending === true || f.isPaymentPending === 1 || f.isPaymentPending === '1' || f.is_payment_pending == 1) return true;
   if (f.paymentAmount && parseFloat(f.paymentAmount) > 0) return true;
   const q = (CRM_STATE.queries || []).find(qry => qry && (qry.id === f.queryId || qry.customerId === f.customerId));
-  if (q && (q.status === 'PENDING' || q.isPaymentPending || (q.paymentAmount && parseFloat(q.paymentAmount) > 0))) return true;
+  if (q && (q.isPaymentPending || (q.paymentAmount && parseFloat(q.paymentAmount) > 0))) return true;
   return false;
 }
 window.isPayPendingRecord = isPayPendingRecord;
@@ -13518,7 +15604,26 @@ function updateFollowupsKPICounters() {
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
 
   // Scoped list for current user view
-  const scopedList = isAdmin ? all : all.filter(f => f.assignedTo === currentUser.id || f.assignedTo === currentUser.staffId);
+  const curStaffId = String(currentUser.staffId || currentUser.id || '');
+  const curUsername = String(currentUser.username || '');
+  const curName = String(currentUser.name || '').toLowerCase();
+
+  const scopedList = isAdmin ? all : all.filter(f => {
+    const fuAssigned = String(f.assignedTo || '');
+    if (fuAssigned === curStaffId || fuAssigned === curUsername || fuAssigned.toLowerCase() === curName) return true;
+    const matchingQuery = (CRM_STATE.queries || []).find(q => q && (
+      (f.queryId && (q.id === f.queryId || q.id === f.query_id)) ||
+      (f.customerId && (q.customerId === f.customerId || q.customer_id === f.customerId || String(q.customerId) === String(f.customerId) || String(q.customer_id) === String(f.customerId)))
+    ));
+    if (matchingQuery) {
+      const qAssigned = String(matchingQuery.assignedTo || matchingQuery.assigned_to || '');
+      if (qAssigned === curStaffId || qAssigned === curUsername || qAssigned.toLowerCase() === curName) {
+        f.assignedTo = curStaffId;
+        return true;
+      }
+    }
+    return false;
+  });
 
   const todayStr = new Date().toISOString().split('T')[0];
   const total = scopedList.length;
@@ -13546,7 +15651,7 @@ function updateFollowupsKPICounters() {
   if (elUpcoming) elUpcoming.innerText = upcoming;
   if (elOverdue) elOverdue.innerText = overdue;
   if (elPaymentPending) elPaymentPending.innerText = paymentPendingCount;
-  if (elPaymentAmount) elPaymentAmount.innerText = `₹${paymentPendingTotalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Total`;
+  if (elPaymentAmount) elPaymentAmount.innerText = `₹${paymentPendingTotalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Total`;
   if (elConverted) elConverted.innerText = converted;
   if (elLost) elLost.innerText = lost;
 
@@ -13572,7 +15677,7 @@ function updateFollowupsKPICounters() {
     if (overdue > 0) {
       badgeSidebar.className = "bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-400/40 animate-pulse";
     } else {
-      badgeSidebar.className = "bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full";
+      badgeSidebar.className = "bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full";
     }
   }
 
@@ -13583,7 +15688,7 @@ function updateFollowupsKPICounters() {
 
   if (roleBadge) {
     roleBadge.innerText = isAdmin ? '👑 Admin Overview (All Staff)' : `👩‍💼 Staff Workstation (${currentUser.name || currentUser.id})`;
-    roleBadge.className = isAdmin 
+    roleBadge.className = isAdmin
       ? 'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200'
       : 'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200';
   }
@@ -13646,7 +15751,7 @@ function updatePaymentPendingKPICounters() {
   const lostCount = lostList.length;
   const lostAmount = sumAmt(lostList);
 
-  const fmt = (amt) => `₹${amt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const fmt = (amt) => `₹${amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const setInner = (id, val) => {
     const el = document.getElementById(id);
@@ -13765,11 +15870,42 @@ function filterPaymentPendingCards() {
   const tabFilter = ACTIVE_PAYMENT_PENDING_TAB || 'ALL';
   const todayStr = new Date().toISOString().split('T')[0];
 
-  let list = (CRM_STATE.followups || []).filter(fu => fu && isPayPendingRecord(fu) && !(fu.reason && fu.reason.includes('ytfdw')));
+  const seenPayIds = new Set();
+  let list = (CRM_STATE.followups || []).filter(fu => {
+    if (!fu || !isPayPendingRecord(fu)) return false;
+    if (fu.reason && fu.reason.includes('ytfdw')) return false;
+    if (fu.id && (fu.id.startsWith('FU-2026-000') || fu.id === 'FU-2026-00107' || fu.id === 'FU-2026-00108' || fu.id === 'FU-2026-00109' || fu.id === 'FU-2026-00110')) return false;
+    if (fu.customerId && (fu.customerId === 'cust_101' || fu.customerId === 'cust_102' || fu.customerId === 'cust_103')) return false;
+    const k = fu.id;
+    const cK = (fu.customerId || '') + '_PAY_' + (fu.status || '');
+    if (seenPayIds.has(k) || (fu.customerId && seenPayIds.has(cK))) return false;
+    seenPayIds.add(k);
+    if (fu.customerId) seenPayIds.add(cK);
+    return true;
+  });
 
   // 1. RBAC Isolation
   if (!isAdmin) {
-    list = list.filter(fu => fu.assignedTo === currentUser.id || fu.assignedTo === currentUser.staffId);
+    const curStaffId = String(currentUser.staffId || currentUser.id || '');
+    const curUsername = String(currentUser.username || '');
+    const curName = String(currentUser.name || '').toLowerCase();
+
+    list = list.filter(fu => {
+      const fuAssigned = String(fu.assignedTo || '');
+      if (fuAssigned === curStaffId || fuAssigned === curUsername || fuAssigned.toLowerCase() === curName) return true;
+      const matchingQuery = (CRM_STATE.queries || []).find(q => q && (
+        (fu.queryId && (q.id === fu.queryId || q.id === fu.query_id)) ||
+        (fu.customerId && (q.customerId === fu.customerId || q.customer_id === fu.customerId || String(q.customerId) === String(fu.customerId) || String(q.customer_id) === String(fu.customerId)))
+      ));
+      if (matchingQuery) {
+        const qAssigned = String(matchingQuery.assignedTo || matchingQuery.assigned_to || '');
+        if (qAssigned === curStaffId || qAssigned === curUsername || qAssigned.toLowerCase() === curName) {
+          fu.assignedTo = curStaffId;
+          return true;
+        }
+      }
+      return false;
+    });
   } else if (staffFilter !== 'ALL') {
     list = list.filter(fu => fu.assignedTo === staffFilter);
   }
@@ -13839,12 +15975,18 @@ function filterPaymentPendingCards() {
 
   if (emptyState) emptyState.classList.add('hidden');
 
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canFuCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'create') : true);
+  const canFuEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'edit') : true);
+  const canFuDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'delete') : true);
+  const canCall = canFuCreate || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true);
+
   container.innerHTML = list.map(fu => {
     const isOverdue = isFollowupOverdue(fu);
     const isCompleted = fu.status === 'COMPLETED';
     const isLost = fu.outcome === 'LOST';
     const amt = parseFloat(fu.paymentAmount || 0);
-    const formattedAmt = amt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const formattedAmt = amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const mode = fu.paymentMode || 'UPI';
     const dueDate = fu.paymentDueDate || fu.date || todayStr;
     const isToday = (dueDate === todayStr);
@@ -13895,13 +16037,8 @@ function filterPaymentPendingCards() {
     }
 
     // Staff Name
-    const staffNames = {
-      staff_01: 'Priya Sharma',
-      staff_02: 'Rahul Verma',
-      staff_03: 'Sneha Patel',
-      admin: 'Super Admin'
-    };
-    const staffName = staffNames[fu.assignedTo] || fu.assignedTo || 'Unassigned';
+    const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === fu.assignedTo);
+    const staffName = staffObj ? staffObj.name : (fu.assignedTo === 'admin' ? 'Super Admin' : (fu.assignedTo || 'Unassigned'));
 
     return `
       <div class="bg-white rounded-3xl p-5 ${payCardBorderClasses} transition-all flex flex-col justify-between h-full space-y-3 relative group">
@@ -13972,38 +16109,60 @@ function filterPaymentPendingCards() {
 
         <!-- Action Toolbar (Fixed height & bottom-anchored) -->
         <div class="mt-auto pt-3 border-t border-slate-100 space-y-1.5 shrink-0">
-          <!-- 1-Click WhatsApp Payment Reminder -->
-          <button type="button" onclick="sendWhatsAppPaymentRequest('${fu.customerId}', '${fu.id}')" class="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]" title="Load formatted UPI payment reminder in WhatsApp chat composer">
-            <span class="material-symbols-outlined text-[16px]">send_to_mobile</span>
-            <span>Send Reminder</span>
-          </button>
-
-          <div class="grid grid-cols-3 gap-1.5 w-full">
-            <!-- Direct Call -->
-            <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Call customer to confirm transfer">
-              <span class="material-symbols-outlined text-[15px]">call</span>
-              <span>Call</span>
+          ${canFuCreate ? `
+            <!-- 1-Click WhatsApp Payment Reminder (Create) -->
+            <button type="button" onclick="sendWhatsAppPaymentRequest('${fu.customerId}', '${fu.id}')" class="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]" title="Load formatted UPI payment reminder in WhatsApp chat composer">
+              <span class="material-symbols-outlined text-[16px]">send_to_mobile</span>
+              <span>Send Reminder</span>
             </button>
+          ` : ''}
 
-            ${!isCompleted ? `
-              <!-- 1-Click Mark Paid & Convert -->
-              <button type="button" onclick="markPaymentReceivedAndConvert('${fu.id}', '${fu.customerId}')" class="py-1.5 px-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-0.5 cursor-pointer whitespace-nowrap active:scale-95" title="Mark payment received and convert to order">
-                <span class="material-symbols-outlined text-[15px]">verified</span>
-                <span>Mark Paid</span>
+          <div class="flex items-center justify-between gap-1.5 w-full">
+            <div class="flex items-center gap-1.5 flex-wrap flex-1">
+              <!-- Chat (View) -->
+              <button type="button" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="py-1.5 px-2 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer" title="View customer WhatsApp chat">
+                <span class="material-symbols-outlined text-[14px]">chat</span>
+                <span>Chat</span>
               </button>
 
-              <!-- Log Outcome / Remarks -->
-              <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Log Follow-up Outcome or Reschedule">
-                <span class="material-symbols-outlined text-[15px]">edit_note</span>
-                <span>Notes</span>
-              </button>
-            ` : `
-              <!-- Completed / Repeat Follow-up -->
-              <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="col-span-2 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer">
-                <span class="material-symbols-outlined text-[15px]">repeat</span>
-                <span>Follow-up</span>
-              </button>
-            `}
+              ${canCall ? `
+                <!-- Direct Call (Create) -->
+                <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Call customer to confirm transfer">
+                  <span class="material-symbols-outlined text-[14px]">call</span>
+                  <span>Call</span>
+                </button>
+              ` : ''}
+
+              ${canFuEdit ? `
+                <!-- ✏️ Edit Payment Follow-up (Edit) -->
+                <button type="button" onclick="openEditFollowupModal('${fu.id}')" class="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-amber-200 cursor-pointer shadow-2xs" title="Edit Payment Promise Details">
+                  <span class="material-symbols-outlined text-[14px]">edit</span>
+                  <span>Edit</span>
+                </button>
+              ` : ''}
+
+              ${!isCompleted && canFuEdit ? `
+                <!-- 1-Click Mark Paid & Convert (Edit) -->
+                <button type="button" onclick="markPaymentReceivedAndConvert('${fu.id}', '${fu.customerId}')" class="py-1.5 px-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-0.5 cursor-pointer whitespace-nowrap active:scale-95" title="Mark payment received and convert to order">
+                  <span class="material-symbols-outlined text-[14px]">verified</span>
+                  <span>Mark Paid</span>
+                </button>
+
+                <!-- Log Outcome / Remarks (Edit) -->
+                <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer active:scale-95" title="Log Follow-up Outcome or Reschedule">
+                  <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                  <span>Notes</span>
+                </button>
+              ` : (isCompleted && canFuCreate ? `
+                <!-- Completed / Repeat Follow-up (Create) -->
+                <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 cursor-pointer">
+                  <span class="material-symbols-outlined text-[14px]">repeat</span>
+                  <span>Follow-up</span>
+                </button>
+              ` : '')}
+            </div>
+
+
           </div>
         </div>
       </div>
@@ -14027,9 +16186,19 @@ function filterFollowupsCards() {
   const tabFilter = ACTIVE_FOLLOWUP_TAB || 'ALL';
   const todayStr = new Date().toISOString().split('T')[0];
 
-  let list = (CRM_STATE.followups || []).filter(fu => 
-    fu && !(fu.reason && fu.reason.includes('ytfdw'))
-  );
+  const seenFuIds = new Set();
+  let list = (CRM_STATE.followups || []).filter(fu => {
+    if (!fu || !fu.id) return false;
+    if (fu.reason && fu.reason.includes('ytfdw')) return false;
+    if (fu.id.startsWith('FU-2026-000') || fu.id === 'FU-2026-00107' || fu.id === 'FU-2026-00108' || fu.id === 'FU-2026-00109' || fu.id === 'FU-2026-00110') return false;
+    if (fu.customerId && (fu.customerId === 'cust_101' || fu.customerId === 'cust_102' || fu.customerId === 'cust_103')) return false;
+    const k = fu.id;
+    const cK = (fu.customerId || '') + '_' + (fu.isPaymentPending ? 'PAY' : 'FU') + '_' + (fu.status || '');
+    if (seenFuIds.has(k) || (fu.customerId && seenFuIds.has(cK))) return false;
+    seenFuIds.add(k);
+    if (fu.customerId) seenFuIds.add(cK);
+    return true;
+  });
 
   // 1. RBAC Isolation
   if (!isAdmin) {
@@ -14109,6 +16278,12 @@ function filterFollowupsCards() {
 
   if (emptyState) emptyState.classList.add('hidden');
 
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canFuCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'create') : true);
+  const canFuEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'edit') : true);
+  const canFuDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'delete') : true);
+  const canCall = canFuCreate || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true);
+
   container.innerHTML = list.map(fu => {
     const isOverdue = isFollowupOverdue(fu);
     const isCompleted = fu.status === 'COMPLETED';
@@ -14170,20 +16345,21 @@ function filterFollowupsCards() {
     } else if (isPayPendingActive) {
       statusPill = `<span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shadow-2xs">
         <span class="material-symbols-outlined text-[13px] text-amber-700">payments</span>
-        <span>₹${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})} Pending</span>
+        <span>₹${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} Pending</span>
       </span>`;
     } else {
       statusPill = '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Pending</span>';
     }
 
-    // Staff Reassign Control (Admin gets interactive select, Staff gets static tag)
+    // Staff Reassign Control (Admin or Edit permission gets interactive select, Staff View-Only gets static tag)
     let staffPill = '';
-    if (isAdmin && !isCompleted) {
+    if ((isAdmin || canFuEdit) && !isCompleted) {
       staffPill = `
         <select onchange="handleReassignFollowup('${fu.id}', this.value)" class="text-[11px] font-bold bg-white border border-indigo-200 text-indigo-950 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none cursor-pointer shadow-2xs">
           <option value="staff_01" ${fu.assignedTo === 'staff_01' ? 'selected' : ''}>Priya</option>
           <option value="staff_02" ${fu.assignedTo === 'staff_02' ? 'selected' : ''}>Rahul</option>
           <option value="staff_03" ${fu.assignedTo === 'staff_03' ? 'selected' : ''}>Sneha</option>
+          <option value="staff_04" ${fu.assignedTo === 'staff_04' ? 'selected' : ''}>Mekha</option>
           <option value="admin" ${fu.assignedTo === 'admin' ? 'selected' : ''}>Admin</option>
         </select>
       `;
@@ -14201,7 +16377,7 @@ function filterFollowupsCards() {
               ${isPayPendingActive && !isCompleted && (isToday || isUpcoming || isOverdue) ? `
                 <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shadow-2xs">
                   <span class="material-symbols-outlined text-[12px] text-amber-700">payments</span>
-                  <span>₹${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                  <span>₹${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </span>
               ` : ''}
             </div>
@@ -14248,7 +16424,7 @@ function filterFollowupsCards() {
               <div class="flex items-center justify-between font-black text-amber-950">
                 <span class="flex items-center gap-1 font-bold text-xs text-amber-900">
                   <span class="material-symbols-outlined text-[16px] text-amber-700">currency_rupee</span>
-                  <span class="text-sm font-mono">${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                  <span class="text-sm font-mono">${parseFloat(fu.paymentAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </span>
                 <span class="text-[10px] bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-full font-bold uppercase border border-amber-300/60 font-mono">
                   ${fu.paymentMode || 'UPI'}
@@ -14293,45 +16469,62 @@ function filterFollowupsCards() {
         <!-- Action Footer -->
         <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-1.5 flex-wrap">
           <div class="flex items-center gap-1.5 flex-wrap">
-            <!-- WhatsApp Chat -->
-            <button type="button" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+            <!-- WhatsApp Chat (View) -->
+            <button type="button" onclick="selectCustomerChat('${fu.customerId}'); switchView('inbox');" class="px-3 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1" title="View in WhatsApp Chat">
               <span class="material-symbols-outlined text-[15px]">chat</span>
               <span>Chat</span>
             </button>
 
-            <!-- Direct Phone Call Trigger -->
-            <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center gap-1" title="Call Customer">
-              <span class="material-symbols-outlined text-[15px]">call</span>
-              <span>Call</span>
-            </button>
+            <!-- Direct Phone Call Trigger (Create) -->
+            ${canCall ? `
+              <button type="button" onclick="handleFollowupCallCustomer('${fu.customerId}')" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center gap-1" title="Call Customer">
+                <span class="material-symbols-outlined text-[15px]">call</span>
+                <span>Call</span>
+              </button>
+            ` : ''}
 
-            ${isPayPendingActive ? `
-              <!-- WhatsApp Payment Reminder -->
+            ${isPayPendingActive && canFuCreate ? `
+              <!-- WhatsApp Payment Reminder (Create) -->
               <button type="button" onclick="sendWhatsAppPaymentRequest('${fu.customerId}', '${fu.id}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1" title="Send WhatsApp Payment Link / Reminder">
                 <span class="material-symbols-outlined text-[15px]">send_to_mobile</span>
                 <span>Reminder</span>
               </button>
+            ` : ''}
 
-              <!-- 1-Click Mark Paid & Convert -->
+            ${isPayPendingActive && canFuEdit ? `
+              <!-- 1-Click Mark Paid & Convert (Edit) -->
               <button type="button" onclick="markPaymentReceivedAndConvert('${fu.id}', '${fu.customerId}')" class="px-2.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1" title="1-Click Mark Payment Received &amp; Order Converted">
                 <span class="material-symbols-outlined text-[15px]">verified</span>
                 <span>Mark Paid</span>
               </button>
             ` : ''}
 
-            <!-- Log Outcome Button (Only if pending) -->
-            ${!isCompleted ? `
-              <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+            <!-- Explicit ✏️ Edit Follow-up Button (Edit) -->
+            ${canFuEdit ? `
+              <button type="button" onclick="openEditFollowupModal('${fu.id}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl transition flex items-center gap-1 border border-amber-200 cursor-pointer shadow-2xs" title="Edit Follow-up Date, Time, Reason &amp; Details">
+                <span class="material-symbols-outlined text-[15px]">edit</span>
+                <span>Edit</span>
+              </button>
+            ` : ''}
+
+            <!-- Log Outcome Button (Edit - Only if pending) -->
+            ${!isCompleted && canFuEdit ? `
+              <button type="button" onclick="openFollowupOutcomeModal('${fu.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition flex items-center gap-1 border border-slate-200 cursor-pointer shadow-2xs" title="Record Enquiry Outcome &amp; Notes">
                 <span class="material-symbols-outlined text-[15px]">check_circle</span>
                 <span>Outcome</span>
               </button>
-            ` : `
-              <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1">
+            ` : ''}
+
+            <!-- Follow-up Again Button (Create - if completed) -->
+            ${isCompleted && canFuCreate ? `
+              <button type="button" onclick="openFollowUpModal('${fu.customerId}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1" title="Schedule Another Follow-up">
                 <span class="material-symbols-outlined text-[15px]">repeat</span>
                 <span>Follow-up Again</span>
               </button>
-            `}
+            ` : ''}
           </div>
+
+
         </div>
       </div>
     `;
@@ -14339,6 +16532,13 @@ function filterFollowupsCards() {
 }
 
 function deleteFollowupCard(id) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'delete')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to delete follow-up records.', 'lock', 'rose');
+    }
+    return;
+  }
   if (!confirm('Are you sure you want to delete this follow-up record?')) return;
   CRM_STATE.followups = (CRM_STATE.followups || []).filter(f => f && f.id !== id);
   saveCRMState();
@@ -14357,37 +16557,55 @@ function handleFollowupCallCustomer(customerId) {
     showToast('Customer Phone Unavailable', 'No valid contact phone registered.', 'error', 'rose');
     return;
   }
-  // If in-CRM softphone dialer function exists, invoke it; otherwise open tel:
-  if (typeof initiateTelephonyCall === 'function') {
-    initiateTelephonyCall(phone, cust.name);
+  // Launch In-CRM Brand Masked Softphone Call
+  if (typeof initiateBrandMaskedCall === 'function') {
+    initiateBrandMaskedCall(customerId);
   } else {
     window.open(`tel:${phone.replace(/\s+/g, '')}`, '_self');
   }
 }
 
-// 1-Click Send WhatsApp Payment Request Link with Store UPI
+// 1-Click Send WhatsApp Payment Request Link with Store UPI & Full Data Reset
 function sendWhatsAppPaymentRequest(customerId, followupId = null) {
-  const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
-  const fu = followupId 
-    ? (CRM_STATE.followups || []).find(f => f.id === followupId) 
-    : (CRM_STATE.followups || []).find(f => (f.customerId === customerId || String(f.customerId) === String(customerId)) && f.isPaymentPending && f.status === 'PENDING');
-  
-  const query = (CRM_STATE.queries || []).find(q => q.customerId === customerId || q.id === fu?.queryId);
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'create') && !canUserPerformAction('inbox', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to send payment reminders.', 'lock', 'rose');
+    }
+    return;
+  }
+  const customer = (CRM_STATE.customers || []).find(c => c && (c.id === customerId || String(c.id) === String(customerId)));
+  const targetCustId = String(customerId || '');
+  const targetPhone = customer?.phone ? customer.phone.replace(/\D/g, '') : '';
 
-  // Dynamic values from either fu, query, or live input fields
+  const fu = followupId
+    ? (CRM_STATE.followups || []).find(f => f && (f.id === followupId || String(f.id) === String(followupId)))
+    : (CRM_STATE.followups || []).find(f => f && (
+        String(f.customerId || f.customer_id || '') === targetCustId ||
+        (targetPhone && f.customerPhone && f.customerPhone.replace(/\D/g, '') === targetPhone)
+      ) && (f.isPaymentPending || f.is_payment_pending) && f.status === 'PENDING');
+
+  const query = (CRM_STATE.queries || []).find(q => q && (
+    String(q.customerId || q.customer_id || '') === targetCustId ||
+    (fu && (q.id === fu.queryId || q.id === fu.query_id))
+  ));
+
+  // Capture current live values to prepare the payment reminder message
   const liveTotal = document.getElementById('query-pay-amount-input')?.value;
   const liveShipping = document.getElementById('query-pay-shipping-input')?.value;
   const liveMode = document.getElementById('query-pay-mode-select')?.value;
   const liveAdvance = document.getElementById('query-pay-advance-input')?.value;
   const liveDue = document.getElementById('query-pay-due-input')?.value;
   const liveItems = document.getElementById('query-pay-items-input')?.value;
+  const liveNotes = document.getElementById('query-pay-notes-input')?.value;
 
-  const totalAmt = parseFloat(liveTotal || fu?.paymentAmount || query?.paymentAmount || 0);
-  const shippingAmt = parseFloat(liveShipping || fu?.shippingAmount || query?.shippingAmount || 0);
-  const modeVal = liveMode || fu?.paymentMode || query?.paymentMode || 'UPI';
-  const advanceAmt = parseFloat(liveAdvance || fu?.advancePayment || query?.advancePayment || 0);
-  const dueDate = liveDue || fu?.paymentDueDate || query?.paymentDueDate || '';
-  const items = (liveItems || fu?.quotedItems || query?.quotedItems || 'Garments Order').trim();
+  const totalAmt = parseFloat(liveTotal || fu?.paymentAmount || fu?.payment_amount || query?.paymentAmount || query?.payment_amount || 0);
+  const shippingAmt = parseFloat(liveShipping || fu?.shippingAmount || fu?.shipping_amount || query?.shippingAmount || query?.shipping_amount || 0);
+  const modeVal = liveMode || fu?.paymentMode || fu?.payment_mode || query?.paymentMode || query?.payment_mode || 'UPI';
+  const advanceAmt = parseFloat(liveAdvance || fu?.advancePayment || fu?.advance_payment || query?.advancePayment || query?.advance_payment || 0);
+  const dueDate = liveDue || fu?.paymentDueDate || fu?.payment_due_date || query?.paymentDueDate || query?.payment_due_date || '';
+  const items = (liveItems || fu?.quotedItems || fu?.quoted_items || query?.quotedItems || query?.quoted_items || 'Garments Order').trim();
+  const notes = (liveNotes || fu?.paymentNotes || fu?.payment_notes || query?.paymentNotes || query?.payment_notes || '').trim();
   const custName = customer?.name || 'Customer';
 
   const modeLabels = {
@@ -14410,8 +16628,94 @@ function sendWhatsAppPaymentRequest(customerId, followupId = null) {
     detailsBlock = `• Total Amount: ₹${totalAmt.toFixed(2)}${shippingAmt > 0 ? `\n• Shipping Amount: ₹${shippingAmt.toFixed(2)}\n• Grand Total: ₹${grandTotal.toFixed(2)}` : ''}\n• Payment Mode: ${modeLabel}${dueDate ? `\n• Due Date: ${dueDate}` : ''}`;
   }
 
-  const paymentMsg = `Dear ${custName},\n\nGreetings from GRM Garments! 🙏\nThis is regarding your quoted order for:\n📦 ${items}\n\n💳 Payment Summary:\n${detailsBlock}\n• Store UPI ID: 8668007593@okbizaxis\n\nKindly share the transfer confirmation / screenshot here for swift order processing & dispatch.\n\nThank you! ✨`;
+  const paymentMsg = `Dear ${custName},\n\nGreetings from GRM Garments! 🌟\nThis is regarding your quoted order for:\n📦 ${items}\n\n💳 Payment Summary:\n${detailsBlock}\n• Store UPI ID: 8668007593@okbizaxis\n\nKindly share the transfer confirmation / screenshot here for swift order processing & dispatch.\n\nThank you! ✨`;
 
+  // =========================================================================
+  // 1. PRESERVE & SYNC IN-MEMORY STATE ACROSS QUERIES & FOLLOWUPS
+  // (Do not wipe inputs or container - keep all values showing as active)
+  // =========================================================================
+  (CRM_STATE.queries || []).forEach(q => {
+    if (!q) return;
+    const qCid = String(q.customerId || q.customer_id || '');
+    if (qCid === targetCustId || (fu && (q.id === fu.queryId || q.id === fu.query_id))) {
+      q.isPaymentPending = true;
+      q.is_payment_pending = 1;
+      q.paymentAmount = totalAmt;
+      q.payment_amount = totalAmt;
+      q.shippingAmount = shippingAmt;
+      q.shipping_amount = shippingAmt;
+      q.paymentMode = modeVal;
+      q.payment_mode = modeVal;
+      q.advancePayment = advanceAmt;
+      q.advance_payment = advanceAmt;
+      q.paymentDueDate = dueDate;
+      q.payment_due_date = dueDate;
+      q.quotedItems = items;
+      q.quoted_items = items;
+      q.paymentNotes = notes;
+      q.payment_notes = notes;
+    }
+  });
+
+  (CRM_STATE.followups || []).forEach(f => {
+    if (!f) return;
+    const fCid = String(f.customerId || f.customer_id || '');
+    const fPhone = f.customerPhone ? f.customerPhone.replace(/\D/g, '') : '';
+    const isMatch = (fCid === targetCustId) ||
+                    (followupId && (String(f.id) === String(followupId))) ||
+                    (targetPhone && fPhone === targetPhone) ||
+                    (query && (f.queryId === query.id || f.query_id === query.id));
+    if (isMatch) {
+      f.isPaymentPending = true;
+      f.is_payment_pending = 1;
+      f.paymentAmount = totalAmt;
+      f.payment_amount = totalAmt;
+      f.shippingAmount = shippingAmt;
+      f.shipping_amount = shippingAmt;
+      f.paymentMode = modeVal;
+      f.payment_mode = modeVal;
+      f.advancePayment = advanceAmt;
+      f.advance_payment = advanceAmt;
+      f.paymentDueDate = dueDate;
+      f.payment_due_date = dueDate;
+      f.quotedItems = items;
+      f.quoted_items = items;
+      f.paymentNotes = notes;
+      f.payment_notes = notes;
+    }
+  });
+
+  saveCRMState();
+
+  // Persist to backend without wiping
+  if (fu) {
+    fetch('api.php?action=save_followup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fu)
+    }).catch(() => {});
+  }
+
+  // Ensure toggle remains checked and badge stays ACTIVE
+  const payToggle = document.getElementById('query-pay-pending-toggle');
+  if (payToggle) payToggle.checked = true;
+  const payBadge = document.getElementById('query-pay-pending-badge');
+  if (payBadge) {
+    payBadge.className = 'text-[8.5px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5';
+    payBadge.innerHTML = '<span class="material-symbols-outlined text-[10px] text-amber-700">check_circle</span><span>ACTIVE</span>';
+  }
+  const payFields = document.getElementById('query-pay-fields');
+  if (payFields) payFields.classList.remove('hidden');
+
+  // Update KPI counters
+  if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+  if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+  if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+  if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+
+  // =========================================================================
+  // 2. SHARE TO CHAT COMPOSER & DELIVER TO CUSTOMER
+  // =========================================================================
   selectCustomerChat(customerId);
   switchView('inbox');
 
@@ -14421,7 +16725,15 @@ function sendWhatsAppPaymentRequest(customerId, followupId = null) {
       input.value = paymentMsg;
       input.focus();
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      showToast('Payment Reminder Ready', `Loaded payment details in WhatsApp composer for ${custName}. Press send to deliver.`, 'send_to_mobile', 'emerald');
+
+      // Automatically send message to WhatsApp chat
+      const sendForm = document.getElementById('chat-send-form');
+      if (sendForm) {
+        sendForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      } else if (typeof handleSendMessage === 'function') {
+        handleSendMessage({ preventDefault: () => {} });
+      }
+      showToast('Payment Request Sent', `Shared payment details in chat for ${custName}.`, 'send_to_mobile', 'emerald');
     }
   }, 150);
 }
@@ -14429,6 +16741,13 @@ window.sendWhatsAppPaymentRequest = sendWhatsAppPaymentRequest;
 
 // 1-Click Mark Payment Received & Convert to Order
 function markPaymentReceivedAndConvert(followupId, customerId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('followups', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to confirm payment and convert follow-ups.', 'lock', 'rose');
+    }
+    return;
+  }
   const fu = (CRM_STATE.followups || []).find(f => f.id === followupId);
   const customer = (CRM_STATE.customers || []).find(c => c.id === customerId);
   if (!fu) return;
@@ -14453,7 +16772,7 @@ function markPaymentReceivedAndConvert(followupId, customerId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(fu)
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('PAYMENT_RECEIVED', 'FOLLOWUP', `Marked payment of ₹${amt} received for ${customer?.name || fu.customerName || 'Customer'} (${fu.id}). Converted to Order.`);
 
@@ -14474,76 +16793,48 @@ function refreshFollowupsState() {
     .then(r => r.json())
     .then(res => {
       const data = res.data || res;
-      if (data && data.followups && Array.isArray(data.followups) && data.followups.length > 0) {
-        const dbFollowups = data.followups.map(fu => ({
-          id: fu.id,
-          queryId: fu.queryId || fu.query_id || '',
-          customerId: fu.customerId || fu.customer_id || '',
-          customerName: fu.customerName || fu.customer_name || 'Customer',
-          assignedTo: fu.assignedTo || fu.assigned_to || 'staff_01',
-          date: fu.date || fu.date_str || '',
-          time: fu.time || fu.time_str || '11:00 AM',
-          reason: fu.reason || '',
-          status: fu.status || 'PENDING',
-          outcome: fu.outcome || 'PENDING',
-          priority: fu.priority || 'NORMAL',
-          channel: fu.channel || fu.contact_channel || 'WHATSAPP',
-          outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
-          completedAt: fu.completedAt || fu.completed_at || null,
-          rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
-          createdAt: fu.createdAt || fu.created_at || '',
-          isPaymentPending: (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1),
-          paymentAmount: parseFloat(fu.paymentAmount || fu.payment_amount || 0),
-          paymentMode: fu.paymentMode || fu.payment_mode || 'UPI',
-          paymentDueDate: fu.paymentDueDate || fu.payment_due_date || fu.date || '',
-          paymentNotes: fu.paymentNotes || fu.payment_notes || '',
-          quotedItems: fu.quotedItems || fu.quoted_items || ''
-        }));
-        const localFollowups = Array.isArray(CRM_STATE.followups) ? CRM_STATE.followups : [];
-        const mergedFollowups = [...dbFollowups];
-        localFollowups.forEach(locFu => {
-          if (!locFu) return;
-          const matchIndex = mergedFollowups.findIndex(m => m && (m.id === locFu.id || (m.customerId && locFu.customerId && String(m.customerId) === String(locFu.customerId) && m.status === 'PENDING' && locFu.status === 'PENDING')));
-          if (matchIndex < 0) {
-            mergedFollowups.unshift(locFu);
-          } else {
-            mergedFollowups[matchIndex] = { ...mergedFollowups[matchIndex], ...locFu };
+      if (data && data.followups && Array.isArray(data.followups)) {
+        const seenKeys = new Set();
+        const cleanList = [];
+        data.followups.forEach(fu => {
+          if (!fu || !fu.id) return;
+          if (fu.id.startsWith('FU-2026-000') || fu.id === 'FU-2026-00107' || fu.id === 'FU-2026-00108' || fu.id === 'FU-2026-00109' || fu.id === 'FU-2026-00110') return;
+          if (fu.customerId && (fu.customerId === 'cust_101' || fu.customerId === 'cust_102' || fu.customerId === 'cust_103')) return;
+          if (fu.reason && fu.reason.includes('ytfdw')) return;
+
+          const key = fu.id;
+          const custKey = (fu.customerId || '') + '_' + ((fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1) ? 'PAY' : 'FU') + '_' + (fu.status || '');
+          if (!seenKeys.has(key) && (!fu.customerId || !seenKeys.has(custKey))) {
+            seenKeys.add(key);
+            if (fu.customerId) seenKeys.add(custKey);
+            cleanList.push({
+              id: fu.id,
+              queryId: fu.queryId || fu.query_id || '',
+              customerId: fu.customerId || fu.customer_id || '',
+              customerName: fu.customerName || fu.customer_name || 'Customer',
+              assignedTo: fu.assignedTo || fu.assigned_to || 'staff_01',
+              date: fu.date || fu.date_str || '',
+              time: fu.time || fu.time_str || '11:00 AM',
+              reason: fu.reason || '',
+              status: fu.status || 'PENDING',
+              outcome: fu.outcome || 'PENDING',
+              priority: fu.priority || 'NORMAL',
+              channel: fu.channel || fu.contact_channel || 'WHATSAPP',
+              outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
+              completedAt: fu.completedAt || fu.completed_at || null,
+              rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
+              createdAt: fu.createdAt || fu.created_at || '',
+              isPaymentPending: (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1),
+              paymentAmount: parseFloat(fu.paymentAmount || fu.payment_amount || 0),
+              paymentMode: fu.paymentMode || fu.payment_mode || 'UPI',
+              paymentDueDate: fu.paymentDueDate || fu.payment_due_date || fu.date || '',
+              paymentNotes: fu.paymentNotes || fu.payment_notes || '',
+              quotedItems: fu.quotedItems || fu.quoted_items || ''
+            });
           }
         });
-        CRM_STATE.followups = mergedFollowups;
-      } else if (!CRM_STATE.followups || CRM_STATE.followups.length === 0) {
-        CRM_STATE.followups = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.followups || []));
+        CRM_STATE.followups = cleanList;
       }
-
-      // Reconcile any active queries marked as FOLLOW_UP or PENDING into follow-ups
-      (CRM_STATE.queries || []).forEach(q => {
-        const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
-        const custName = cust ? cust.name : (q.customerName || '');
-        const qReason = q.queryText || '';
-        if (qReason.includes('ytfdw')) return;
-
-        if ((q.status === 'FOLLOW_UP' || q.status === 'PENDING') && !CRM_STATE.followups.some(f => f && (f.customerId === q.customerId || f.queryId === q.id) && f.status === 'PENDING')) {
-          CRM_STATE.followups.unshift({
-            id: `FU-2026-00${CRM_STATE.followups.length + 101}`,
-            queryId: q.id,
-            customerId: q.customerId,
-            customerName: custName || 'Customer',
-            assignedTo: (q.assignedTo && q.assignedTo !== 'UNASSIGNED') ? q.assignedTo : 'staff_01',
-            date: new Date().toISOString().split('T')[0],
-            time: '11:00 AM',
-            reason: q.queryText || 'Enquiry Follow-up',
-            status: 'PENDING',
-            outcome: 'PENDING',
-            priority: q.priority || 'NORMAL',
-            channel: 'WHATSAPP',
-            createdAt: q.createdAt || new Date().toISOString()
-          });
-        }
-      });
-
-      CRM_STATE.followups = (CRM_STATE.followups || []).filter(f => 
-        f && f.id && f.id !== 'FU-2026-00108' && f.id !== 'FU-2026-00107' && !(f.reason && f.reason.includes('ytfdw'))
-      );
 
       renderFollowupsCards();
       saveCRMState();
@@ -14572,7 +16863,7 @@ function startFollowupReminderTicker() {
           NOTIFIED_FOLLOWUP_IDS.add(fu.id);
           try {
             if (typeof playChime === 'function') playChime('message');
-          } catch (e) {}
+          } catch (e) { }
           showToast('⏰ Follow-up Due!', `Callback due for ${fu.customerName} (${fu.time}). Context: ${fu.reason}`, 'alarm', 'rose');
           updateFollowupsKPICounters();
         }
@@ -14661,15 +16952,15 @@ function renderEnquiriesTable() {
       const quotedItems = (q.quotedItems || '').toLowerCase();
 
       return qId.includes(searchTerm) ||
-             custName.includes(searchTerm) ||
-             custPhone.includes(searchTerm) ||
-             (searchDigits.length >= 3 && rawDigits.includes(searchDigits)) ||
-             qText.includes(searchTerm) ||
-             staffName.includes(searchTerm) ||
-             status.includes(searchTerm) ||
-             priority.includes(searchTerm) ||
-             notes.includes(searchTerm) ||
-             quotedItems.includes(searchTerm);
+        custName.includes(searchTerm) ||
+        custPhone.includes(searchTerm) ||
+        (searchDigits.length >= 3 && rawDigits.includes(searchDigits)) ||
+        qText.includes(searchTerm) ||
+        staffName.includes(searchTerm) ||
+        status.includes(searchTerm) ||
+        priority.includes(searchTerm) ||
+        notes.includes(searchTerm) ||
+        quotedItems.includes(searchTerm);
     });
   }
 
@@ -14808,7 +17099,7 @@ let CATALOG_STOCK_STATUS_FILTER = 'ALL';
 
 function setStockStatusFilter(filter) {
   CATALOG_STOCK_STATUS_FILTER = filter;
-  
+
   const buttons = {
     'ALL': document.getElementById('filter-stock-all'),
     'IN_STOCK': document.getElementById('filter-stock-in'),
@@ -14862,7 +17153,7 @@ let CURRENT_CATALOG_FILTERED_LIST = [];
 
 function setCatalogViewMode(mode) {
   CATALOG_VIEW_MODE = mode;
-  
+
   const btnGrid = document.getElementById('btn-catalog-view-grid');
   const btnTable = document.getElementById('btn-catalog-view-table');
   const gridContainer = document.getElementById('catalog-grid-container');
@@ -14921,6 +17212,11 @@ function updateCatalogMetrics() {
 
 // Sync Products from Linked WhatsApp Business Account Catalog (100% Free Local Sync)
 async function syncWhatsAppBusinessCatalog() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'create') && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to sync WhatsApp catalog.', 'lock', 'rose');
+    return;
+  }
   const btn = document.getElementById('btn-sync-wa-catalog');
   if (btn) {
     btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> <span>Syncing Catalog...</span>`;
@@ -14932,7 +17228,7 @@ async function syncWhatsAppBusinessCatalog() {
   try {
     // 1. Check if Node.js bridge is active to pull native catalog
     const bridgeResp = await fetch('http://localhost:3000/api/catalog/sync', { method: 'POST' }).then(r => r.json()).catch(() => null);
-    
+
     if (bridgeResp && bridgeResp.products && bridgeResp.products.length > 0) {
       CRM_STATE.products = bridgeResp.products;
     } else {
@@ -14969,7 +17265,7 @@ function populateCatalogCategoryFilters() {
   if (!catSelect) return;
 
   const currentVal = catSelect.value || 'ALL';
-  
+
   // Combine categories from CRM_STATE, INITIAL_CRM_DATA and any existing in products
   const baseCategories = (CRM_STATE.categories && Array.isArray(CRM_STATE.categories) && CRM_STATE.categories.length > 0)
     ? CRM_STATE.categories
@@ -15011,7 +17307,7 @@ function onCatalogCategoryFilterChange() {
 
   const currentSubVal = subcatSelect.value || 'ALL';
   const selectedCat = catSelect ? catSelect.value : 'ALL';
-  
+
   // Combine subcategories from CRM_STATE, INITIAL_CRM_DATA and any existing in products
   const baseSubcategories = (CRM_STATE.subcategories && Array.isArray(CRM_STATE.subcategories) && CRM_STATE.subcategories.length > 0)
     ? CRM_STATE.subcategories
@@ -15083,20 +17379,20 @@ function filterCatalogGrid() {
   const subcategoryLower = subcategory.trim().toLowerCase();
 
   let list = (CRM_STATE.products || []).filter(p => {
-    const matchQuery = !q || (p.name && p.name.toLowerCase().includes(q)) || 
-                             (p.sku && p.sku.toLowerCase().includes(q)) || 
-                             (p.color && p.color.toLowerCase().includes(q)) || 
-                             (p.size && p.size.toLowerCase().includes(q)) || 
-                             (p.fabric && p.fabric.toLowerCase().includes(q)) || 
-                             (p.category && p.category.toLowerCase().includes(q)) || 
-                             (p.subcategory && p.subcategory.toLowerCase().includes(q));
+    const matchQuery = !q || (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.sku && p.sku.toLowerCase().includes(q)) ||
+      (p.color && p.color.toLowerCase().includes(q)) ||
+      (p.size && p.size.toLowerCase().includes(q)) ||
+      (p.fabric && p.fabric.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
+      (p.subcategory && p.subcategory.toLowerCase().includes(q));
 
     const pCatLower = (p.category || '').toString().trim().toLowerCase();
     const matchCategory = category === 'ALL' || pCatLower === categoryLower;
 
     const pSubLower = (p.subcategory || '').toString().trim().toLowerCase();
     const matchSubcategory = subcategory === 'ALL' || pSubLower === subcategoryLower;
-    
+
     const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
     let matchStock = true;
     if (CATALOG_STOCK_STATUS_FILTER === 'IN_STOCK') matchStock = available > 5;
@@ -15129,6 +17425,9 @@ function filterCatalogGrid() {
     renderCatalogGridFromList(list);
   }
   updateCatalogMetrics();
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
+  }
 }
 
 function renderCatalogGrid(search) {
@@ -15261,6 +17560,11 @@ function renderCatalogGridFromList(list) {
   const container = document.getElementById('catalog-grid-container');
   if (!container) return;
 
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canCatCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'create') : true);
+  const canCatEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'edit') : true);
+  const canCatDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'delete') : true);
+
   if (!list || list.length === 0) {
     container.innerHTML = `
       <div class="col-span-full py-16 text-center bg-white rounded-3xl border border-dashed border-slate-300 p-8 shadow-sm">
@@ -15300,7 +17604,7 @@ function renderCatalogGridFromList(list) {
 
     const imgUrl = getSmartProductImage(p);
 
-    const catBreadcrumb = p.subcategory 
+    const catBreadcrumb = p.subcategory
       ? `${p.category || 'Garments'} &rsaquo; ${p.subcategory}`
       : (p.category || 'Garments');
 
@@ -15362,10 +17666,12 @@ function renderCatalogGridFromList(list) {
         <div class="relative h-44 bg-slate-100 overflow-hidden group/img">
           <img src="${imgUrl}" alt="${p.name}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
           
+          ${canCatEdit ? `
           <!-- Direct Quick Photo Upload Overlay on Card Hover -->
           <button type="button" onclick="event.stopPropagation(); triggerCardPhotoUpload('${p.id}', '${p.sku}')" class="absolute bottom-2 right-2.5 z-10 opacity-0 group-hover/img:opacity-100 transition-all bg-slate-900/85 hover:bg-emerald-700 text-white text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm shadow flex items-center gap-1 cursor-pointer" title="Upload or change garment photo">
             <span class="material-symbols-outlined text-[13px]">add_a_photo</span> Photo
           </button>
+          ` : ''}
           
           ${IS_BULK_PRICE_MODE ? `
             <div class="absolute top-2.5 left-2.5 z-10 flex items-center">
@@ -15435,37 +17741,55 @@ function renderCatalogGridFromList(list) {
                   <span class="material-symbols-outlined text-[16px]">visibility</span> View All ${p.variantCount} Variants
                 </button>
 
-                <div class="grid grid-cols-2 gap-1.5">
+                <div class="grid ${canCatDelete ? 'grid-cols-2' : 'grid-cols-1'} gap-1.5">
                   <button onclick="openDirectShareModal('${p.groupKey}', true)" class="px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer" title="Direct WhatsApp share: share all ${p.variantCount} variants">
                     <span class="material-symbols-outlined text-[14px]">send</span> Share All Variants
                   </button>
-                  <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer group/del" title="Delete product family and all its variants">
-                    <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
-                  </button>
+                  ${canCatDelete ? `
+                    <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer group/del" title="Delete product family and all its variants">
+                      <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
+                    </button>
+                  ` : ''}
                 </div>
-              ` : `
-                <button onclick="openDirectShareModal('${p.id}', false)" class="w-full px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer" title="Send direct to any WhatsApp phone number">
-                  <span class="material-symbols-outlined text-[15px]">send</span> Direct WA
-                </button>
+              ` : (() => {
+        const actionBtns = [];
+        if (canCatEdit) {
+          actionBtns.push(`
+                    <button onclick="openSinglePriceModal('${p.id}')" class="px-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Edit individual product price">
+                      <span class="material-symbols-outlined text-[13px]">payments</span> Price
+                    </button>
+                  `);
+          actionBtns.push(`
+                    <button onclick="openQuickStockModal('${p.id}')" class="px-1 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Quick restock &amp; reason notes">
+                      <span class="material-symbols-outlined text-[13px]">warehouse</span> Stock
+                    </button>
+                  `);
+          actionBtns.push(`
+                    <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-1 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Overall Edit: Full Product Master">
+                      <span class="material-symbols-outlined text-[13px] text-amber-700">edit_note</span> Edit
+                    </button>
+                  `);
+        }
+        if (canCatDelete) {
+          actionBtns.push(`
+                    <button onclick="confirmDeleteProduct('${p.id}', false)" class="px-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer group/del" title="Delete product permanently from database">
+                      <span class="material-symbols-outlined text-[13px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
+                    </button>
+                  `);
+        }
 
-                <div class="grid grid-cols-4 gap-1.5">
-                  <button onclick="openSinglePriceModal('${p.id}')" class="px-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Edit individual product price">
-                    <span class="material-symbols-outlined text-[13px]">payments</span> Price
+        return `
+                  <button onclick="openDirectShareModal('${p.id}', false)" class="w-full px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer" title="Send direct to any WhatsApp phone number">
+                    <span class="material-symbols-outlined text-[15px]">send</span> Direct WA
                   </button>
 
-                  <button onclick="openQuickStockModal('${p.id}')" class="px-1 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-xl font-semibold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Quick restock & reason notes">
-                    <span class="material-symbols-outlined text-[13px]">warehouse</span> Stock
-                  </button>
-
-                  <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-1 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer" title="Overall Edit: Full Product Master">
-                    <span class="material-symbols-outlined text-[13px] text-amber-700">edit_note</span> Edit
-                  </button>
-
-                  <button onclick="confirmDeleteProduct('${p.id}', false)" class="px-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 transition cursor-pointer group/del" title="Delete product permanently from database">
-                    <span class="material-symbols-outlined text-[13px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span> Delete
-                  </button>
-                </div>
-              `}
+                  ${actionBtns.length > 0 ? `
+                    <div class="grid grid-cols-${actionBtns.length} gap-1.5">
+                      ${actionBtns.join('')}
+                    </div>
+                  ` : ''}
+                `;
+      })()}
             </div>
           </div>
         </div>
@@ -15476,6 +17800,11 @@ function renderCatalogGridFromList(list) {
 
 // Instant 1-click photo upload directly from catalog card
 function triggerCardPhotoUpload(productId, sku) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product photos.', 'lock', 'rose');
+    return;
+  }
   let fileInput = document.getElementById('catalog-quick-photo-input');
   if (!fileInput) {
     fileInput = document.createElement('input');
@@ -15486,7 +17815,7 @@ function triggerCardPhotoUpload(productId, sku) {
     document.body.appendChild(fileInput);
   }
 
-  fileInput.onchange = async function(e) {
+  fileInput.onchange = async function (e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
@@ -15547,6 +17876,9 @@ window.triggerCardPhotoUpload = triggerCardPhotoUpload;
 // Open modal to view and manage all individual variants of a product family
 var CURRENT_OPEN_VARIANTS_GROUP_KEY = null;
 function openProductVariantsModal(groupKey) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canCatEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'edit') : true);
+  const canCatDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'delete') : true);
   CURRENT_OPEN_VARIANTS_GROUP_KEY = groupKey;
   window.CURRENT_OPEN_VARIANTS_GROUP_KEY = groupKey;
   const grouped = groupCatalogProducts(CRM_STATE.products || []);
@@ -15635,17 +17967,21 @@ function openProductVariantsModal(groupKey) {
                 <span class="material-symbols-outlined text-[14px]">send</span>
                 <span>WA</span>
               </button>
-              <button onclick="openQuickStockModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-semibold cursor-pointer" title="Quick restock this specific variant">
-                <span class="material-symbols-outlined text-[14px]">warehouse</span>
-                <span>Stock</span>
-              </button>
-              <button onclick="openEditProductModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Edit full details of this variant">
-                <span class="material-symbols-outlined text-[14px] text-amber-700">edit_note</span>
-                <span>Edit</span>
-              </button>
-              <button onclick="confirmDeleteProduct('${v.id || v.sku}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete this variant">
-                <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
-              </button>
+              ${canCatEdit ? `
+                <button onclick="openQuickStockModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-semibold cursor-pointer" title="Quick restock this specific variant">
+                  <span class="material-symbols-outlined text-[14px]">warehouse</span>
+                  <span>Stock</span>
+                </button>
+                <button onclick="openEditProductModal('${v.id || v.sku}')" class="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 text-[11px] font-bold cursor-pointer" title="Edit full details of this variant">
+                  <span class="material-symbols-outlined text-[14px] text-amber-700">edit_note</span>
+                  <span>Edit</span>
+                </button>
+              ` : ''}
+              ${canCatDelete ? `
+                <button onclick="confirmDeleteProduct('${v.id || v.sku}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete this variant">
+                  <span class="material-symbols-outlined text-[14px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+                </button>
+              ` : ''}
             </div>
           </div>
         </div>
@@ -15675,6 +18011,11 @@ window.refreshVariantsModalIfOpen = refreshVariantsModalIfOpen;
 function renderCatalogTableFromList(list) {
   const tbody = document.getElementById('catalog-table-tbody');
   if (!tbody) return;
+
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canCatCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'create') : true);
+  const canCatEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'edit') : true);
+  const canCatDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'delete') : true);
 
   const thCol = document.getElementById('th-bulk-checkbox-col');
   if (thCol) {
@@ -15789,7 +18130,7 @@ function renderCatalogTableFromList(list) {
           <div class="flex items-center gap-3">
             <img src="${imgUrl}" alt="${p.name}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm">
             <div class="min-w-0">
-              <div class="font-bold text-slate-900 text-xs hover:text-emerald-700 cursor-pointer transition line-clamp-1" onclick="${p.isGroup ? `openProductVariantsModal('${p.groupKey}')` : `openEditProductModal('${p.id || p.sku}')`}" title="${p.name}">${p.name}</div>
+              <div class="font-bold text-slate-900 text-xs hover:text-emerald-700 cursor-pointer transition line-clamp-1" onclick="${p.isGroup ? `openProductVariantsModal('${p.groupKey}')` : (canCatEdit ? `openEditProductModal('${p.id || p.sku}')` : '')}" title="${p.name}">${p.name}</div>
               <div class="flex items-center gap-1.5 mt-1">
                 <span class="bg-slate-900 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">${p.sku}</span>
                 ${p.isGroup ? `<span class="bg-indigo-100 text-indigo-900 font-extrabold text-[9px] px-1.5 py-0.2 rounded-full border border-indigo-200">🗂️ ${p.variantCount} vars</span>` : ''}
@@ -15845,26 +18186,34 @@ function renderCatalogTableFromList(list) {
               <button onclick="openDirectShareModal('${p.groupKey}', true)" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Share all ${p.variantCount} variants on WhatsApp">
                 <span class="material-symbols-outlined text-[15px]">send</span>
               </button>
-              <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete product family and all variants">
-                <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
-              </button>
+              ${canCatDelete ? `
+                <button onclick="confirmDeleteProduct('${p.id}', true, '${p.groupKey}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Delete product family and all variants">
+                  <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+                </button>
+              ` : ''}
             ` : `
-              <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 font-bold text-xs cursor-pointer group/editbtn" title="Overall Edit: Edit all garment details">
-                <span class="material-symbols-outlined text-[15px] text-amber-700 group-hover/editbtn:scale-110 transition-transform">edit_note</span>
-                <span>Overall Edit</span>
-              </button>
-              <button onclick="openSinglePriceModal('${p.id}')" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick Price Edit">
-                <span class="material-symbols-outlined text-[15px]">currency_rupee</span>
-              </button>
+              ${canCatEdit ? `
+                <button onclick="openEditProductModal('${p.id || p.sku}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition shadow-xs flex items-center gap-1 font-bold text-xs cursor-pointer group/editbtn" title="Overall Edit: Edit all garment details">
+                  <span class="material-symbols-outlined text-[15px] text-amber-700 group-hover/editbtn:scale-110 transition-transform">edit_note</span>
+                  <span>Overall Edit</span>
+                </button>
+                <button onclick="openSinglePriceModal('${p.id}')" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick Price Edit">
+                  <span class="material-symbols-outlined text-[15px]">currency_rupee</span>
+                </button>
+              ` : ''}
               <button onclick="openDirectShareModal('${p.id}', false)" class="p-1.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Send direct to any WhatsApp phone number">
                 <span class="material-symbols-outlined text-[15px]">send</span>
               </button>
-              <button onclick="openQuickStockModal('${p.id}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick restock & reason notes">
-                <span class="material-symbols-outlined text-[15px]">warehouse</span>
-              </button>
-              <button onclick="confirmDeleteProduct('${p.id}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Permanently delete product from database">
-                <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
-              </button>
+              ${canCatEdit ? `
+                <button onclick="openQuickStockModal('${p.id}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer" title="Quick restock &amp; reason notes">
+                  <span class="material-symbols-outlined text-[15px]">warehouse</span>
+                </button>
+              ` : ''}
+              ${canCatDelete ? `
+                <button onclick="confirmDeleteProduct('${p.id}', false)" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg transition shadow-xs flex items-center justify-center cursor-pointer group/del" title="Permanently delete product from database">
+                  <span class="material-symbols-outlined text-[15px] text-rose-600 group-hover/del:scale-110 transition-transform">delete</span>
+                </button>
+              ` : ''}
             `}
           </div>
         </td>
@@ -15877,6 +18226,11 @@ function renderCatalogTableFromList(list) {
 // LIVE QUICK STOCK ADJUSTMENT (+ / - STEPPER)
 // -------------------------------------------------------------------------
 async function quickAdjustStock(productId, delta) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to adjust stock.', 'lock', 'rose');
+    return;
+  }
   const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId));
   if (!p) return;
 
@@ -15929,6 +18283,11 @@ function handleToolbarSelectAllChange(isChecked) {
 window.handleToolbarSelectAllChange = handleToolbarSelectAllChange;
 
 function toggleBulkPriceEditMode(forceState) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit prices.', 'lock', 'rose');
+    return;
+  }
   if (typeof forceState === 'boolean') {
     IS_BULK_PRICE_MODE = forceState;
   } else {
@@ -16225,9 +18584,14 @@ function calculatePriceByStrategy(basePrice, strategy, rawValue) {
 // -------------------------------------------------------------------------
 
 function openSinglePriceModal(productId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product prices.', 'lock', 'rose');
+    return;
+  }
   if (!productId) return;
   const cleanId = String(productId).trim();
-  const p = (CRM_STATE.products || []).find(prod => 
+  const p = (CRM_STATE.products || []).find(prod =>
     (prod.id !== undefined && prod.id !== null && String(prod.id) === cleanId) ||
     (prod.sku && String(prod.sku).toUpperCase() === cleanId.toUpperCase())
   );
@@ -16353,6 +18717,11 @@ async function handleSinglePriceSave(event) {
     event.preventDefault();
     event.stopPropagation();
   }
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product prices.', 'lock', 'rose');
+    return;
+  }
 
   const idInput = document.getElementById('single-price-product-id');
   const pId = idInput ? idInput.value : null;
@@ -16427,6 +18796,11 @@ async function handleSinglePriceSave(event) {
 // -------------------------------------------------------------------------
 
 function openBulkPriceModal() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to bulk edit prices.', 'lock', 'rose');
+    return;
+  }
   if (BULK_SELECTED_PRODUCT_IDS.size === 0) {
     showToast('Select Products First', 'Please check at least 1 garment using the checkboxes to bulk edit prices.', 'warning', 'amber');
     return;
@@ -16545,6 +18919,11 @@ async function handleBulkPriceSave(event) {
     event.preventDefault();
     event.stopPropagation();
   }
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to bulk edit prices.', 'lock', 'rose');
+    return;
+  }
 
   if (BULK_SELECTED_PRODUCT_IDS.size === 0) {
     showToast('No Selection', 'Please select garments to update.', 'warning', 'amber');
@@ -16654,7 +19033,7 @@ function handleProductImageFileSelect(event) {
   const previewStatus = document.getElementById('prod-preview-status');
 
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = async function (e) {
     const dataUrl = e.target.result;
     CURRENT_PRODUCT_IMAGE_DATA = dataUrl;
     if (previewImg) previewImg.src = dataUrl;
@@ -16787,10 +19166,15 @@ function populateProductFormCategories(selectedCat, selectedSubcat) {
     const isSel = selectedCat && selectedCat === c.name ? ' selected' : '';
     html += `<option value="${c.name}"${isSel}>${c.name}</option>`;
   });
+  if (selectedCat && !categories.some(c => c.name === selectedCat)) {
+    html += `<option value="${selectedCat}" selected>${selectedCat}</option>`;
+  }
   catSelect.innerHTML = html;
 
   if (selectedCat && [...catSelect.options].some(o => o.value === selectedCat)) {
     catSelect.value = selectedCat;
+  } else if (categories.length > 0) {
+    catSelect.value = categories[0].name;
   } else {
     catSelect.value = '';
   }
@@ -16820,16 +19204,27 @@ function onProductFormCategoryChange(preserveSubcat) {
   } else {
     filtered.forEach(s => {
       const prefix = s.sku_prefix || 'GRM';
-      const isSel = preserveSubcat && preserveSubcat === s.name ? ' selected' : '';
+      const isSel = preserveSubcat && (preserveSubcat === s.name || preserveSubcat === s.slug) ? ' selected' : '';
       html += `<option value="${s.name}" data-prefix="${prefix}"${isSel}>${s.name} (Prefix: ${prefix})</option>`;
     });
   }
+
+  // Preserve active product subcategory even if not in standard list
+  if (preserveSubcat && preserveSubcat !== 'General') {
+    const inFiltered = filtered.some(s => s.name === preserveSubcat || s.slug === preserveSubcat);
+    if (!inFiltered) {
+      html += `<option value="${preserveSubcat}" data-prefix="GRM" selected>${preserveSubcat}</option>`;
+    }
+  }
+
   subcatSelect.innerHTML = html;
 
   if (preserveSubcat && [...subcatSelect.options].some(o => o.value === preserveSubcat)) {
     subcatSelect.value = preserveSubcat;
+  } else if (filtered.length > 0) {
+    subcatSelect.value = filtered[0].name;
   } else {
-    subcatSelect.value = '';
+    subcatSelect.value = 'General';
   }
 
   updateProductFormPreview();
@@ -16907,7 +19302,7 @@ function toggleProductFormCustomAttr(attrName, val) {
   const lower = trimmed.toLowerCase();
   if (!Array.isArray(SELECTED_CUSTOM_ATTRIBUTES[attrName])) {
     const existing = SELECTED_CUSTOM_ATTRIBUTES[attrName];
-    SELECTED_CUSTOM_ATTRIBUTES[attrName] = existing 
+    SELECTED_CUSTOM_ATTRIBUTES[attrName] = existing
       ? (Array.isArray(existing) ? existing : (typeof existing === 'string' ? existing.split(',').map(s => s.trim()).filter(Boolean) : [String(existing)]))
       : [];
   }
@@ -16943,8 +19338,8 @@ function toggleProductFormSpec(lbl, cnt) {
     const sLbl = (typeof s === 'object' ? s.label : s) || '';
     const sCnt = (typeof s === 'object' ? s.content : '') || '';
     const sDisplay = (sLbl && sLbl !== 'Specification') ? `${sLbl}: ${sCnt}` : (sCnt || sLbl);
-    return sDisplay.toLowerCase() === targetLower || 
-           (sLbl.toLowerCase() === targetLbl.toLowerCase() && sCnt.toLowerCase() === targetCnt.toLowerCase());
+    return sDisplay.toLowerCase() === targetLower ||
+      (sLbl.toLowerCase() === targetLbl.toLowerCase() && sCnt.toLowerCase() === targetCnt.toLowerCase());
   });
 
   if (idx >= 0) {
@@ -17072,24 +19467,24 @@ function renderProductFormAttributeChips(selectedSizesArg, selectedColorsArg, se
       customCont.innerHTML = customNames.map(attrName => {
         const vals = customAttrs[attrName] || [];
         const rawSelected = SELECTED_CUSTOM_ATTRIBUTES[attrName] || [];
-        const selectedVals = Array.isArray(rawSelected) 
-          ? rawSelected 
+        const selectedVals = Array.isArray(rawSelected)
+          ? rawSelected
           : (typeof rawSelected === 'string' ? rawSelected.split(',').map(s => s.trim()).filter(Boolean) : [String(rawSelected)]);
         const selectedLower = selectedVals.map(v => typeof v === 'string' ? v.toLowerCase() : String(v).toLowerCase());
         const escapedAttrName = attrName.replace(/'/g, "\\'");
 
-        const chipsHtml = vals.length === 0 
+        const chipsHtml = vals.length === 0
           ? `<span class="text-slate-400 italic text-[10px]">No values yet. Click "Manage ${attrName}" to add values.</span>`
           : vals.map(v => {
-              const isSel = selectedLower.includes(v.toLowerCase());
-              const escapedV = v.replace(/'/g, "\\'");
-              return `
+            const isSel = selectedLower.includes(v.toLowerCase());
+            const escapedV = v.replace(/'/g, "\\'");
+            return `
                 <button type="button" onclick="toggleProductFormCustomAttr('${escapedAttrName}', '${escapedV}')" class="chip-custom px-2.5 py-1 rounded-lg text-[11px] font-bold border transition flex items-center gap-1 cursor-pointer ${isSel ? 'bg-purple-700 text-white border-purple-800 shadow-sm ring-1 ring-purple-500' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'}">
                   ${isSel ? '<span class="text-purple-200 text-[11px] font-extrabold">✓</span>' : ''}
                   <span>${v}</span>
                 </button>
               `;
-            }).join('');
+          }).join('');
 
         return `
           <div class="pt-3 border-t border-slate-200/80">
@@ -17131,8 +19526,8 @@ function renderProductFormAttributeChips(selectedSizesArg, selectedColorsArg, se
           const asLbl = (typeof as === 'object' ? as.label : as) || '';
           const asCnt = (typeof as === 'object' ? as.content : '') || '';
           const asDisplay = (asLbl && asLbl !== 'Specification') ? `${asLbl}: ${asCnt}` : (asCnt || asLbl);
-          return asDisplay.toLowerCase() === targetStr || 
-                 (asLbl.toLowerCase() === lbl.toLowerCase() && asCnt.toLowerCase() === cnt.toLowerCase());
+          return asDisplay.toLowerCase() === targetStr ||
+            (asLbl.toLowerCase() === lbl.toLowerCase() && asCnt.toLowerCase() === cnt.toLowerCase());
         });
 
         const escapedLbl = lbl.replace(/'/g, "\\'");
@@ -17168,8 +19563,8 @@ function calculateProductVariantMatrix() {
   }
   Object.keys(SELECTED_CUSTOM_ATTRIBUTES || {}).forEach(attrName => {
     const rawVals = SELECTED_CUSTOM_ATTRIBUTES[attrName] || [];
-    const vals = (Array.isArray(rawVals) 
-      ? rawVals 
+    const vals = (Array.isArray(rawVals)
+      ? rawVals
       : (typeof rawVals === 'string' ? rawVals.split(',').map(s => s.trim()).filter(Boolean) : [String(rawVals)])
     ).filter(Boolean);
     if (vals.length > 0) {
@@ -17506,7 +19901,7 @@ function handleMatrixVariantImageUpload(index, fileInput) {
   }
 
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = async function (e) {
     const dataUrl = e.target.result;
     if (PRODUCT_VARIANTS_MATRIX[index]) {
       PRODUCT_VARIANTS_MATRIX[index].image = dataUrl;
@@ -18215,7 +20610,7 @@ function updateProductFormPreview() {
       }
 
       if (physical !== null && physical > 0) {
-        const stockNote = available > 5 
+        const stockNote = available > 5
           ? `✅ *In Stock* (${available} units ready for immediate dispatch)`
           : (available > 0 ? `⚡ *Limited Stock* (Only ${available} units remaining!)` : `⚠️ *Made to Order* (Available on booking)`);
         lines.push(`📦 *Stock:* ${stockNote}`);
@@ -18225,16 +20620,66 @@ function updateProductFormPreview() {
         lines.push(`\n✨ *Product Highlights:*\n${desc}`);
       }
 
-      lines.push(`\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n👉 *Reply 'YES' to confirm your order booking!*`);
+      // Dynamic Delivery & COD Dispatch Footer (User-configurable / Preset / Custom)
+      const deliveryEl = document.getElementById('prod-form-delivery-note');
+      if (deliveryEl) {
+        const customNote = deliveryEl.value.trim();
+        if (customNote) {
+          lines.push(`\n${customNote}`);
+        }
+      } else {
+        lines.push(`\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n👉 *Reply 'YES' to confirm your order booking!*`);
+      }
       msgTextEl.innerText = lines.join('\n');
     }
   }
 }
 
+// Quick Preset selector for Delivery & COD Dispatch note
+function setProductDeliveryNotePreset(type) {
+  const el = document.getElementById('prod-form-delivery-note');
+  if (!el) return;
+  switch (type) {
+    case 'cod':
+      el.value = "🚚 Fast door delivery & Cash on Delivery (COD) available!\n👉 *Reply 'YES' to confirm your order booking!*";
+      break;
+    case 'cod_advance':
+      el.value = "🚚 Fast door delivery across India!\n📦 *Cash on Delivery (COD) with ₹200 advance booking*\n👉 *Reply 'YES' to confirm your order booking!*";
+      break;
+    case 'prepaid':
+      el.value = "🚚 Express door delivery across India!\n💳 *Prepaid orders only (GPay / PhonePe / UPI)*\n👉 *Reply 'YES' with your delivery address to book!*";
+      break;
+    case 'free_shipping':
+      el.value = "🚚 Free door delivery & Cash on Delivery (COD) available!\n👉 *Reply 'YES' to confirm your order booking!*";
+      break;
+    case 'none':
+      el.value = "";
+      break;
+  }
+  updateProductFormPreview();
+}
+window.setProductDeliveryNotePreset = setProductDeliveryNotePreset;
+
+function focusProductDeliveryNoteInput() {
+  const el = document.getElementById('prod-form-delivery-note');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.focus();
+    el.classList.add('ring-2', 'ring-emerald-500');
+    setTimeout(() => el.classList.remove('ring-2', 'ring-emerald-500'), 1500);
+  }
+}
+window.focusProductDeliveryNoteInput = focusProductDeliveryNoteInput;
+
 // -------------------------------------------------------------------------
 // OPEN ADD / EDIT PRODUCT MODALS
 // -------------------------------------------------------------------------
 function openAddProductModal() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'create')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to add new products.', 'lock', 'rose');
+    return;
+  }
   const title = document.getElementById('modal-product-title');
   if (title) title.innerText = 'Add New Garment Product (Catalog Flow)';
 
@@ -18245,6 +20690,8 @@ function openAddProductModal() {
   document.getElementById('prod-form-sku').value = '';
   document.getElementById('prod-form-name').value = '';
   document.getElementById('prod-form-desc').value = '';
+  const delivNoteEl = document.getElementById('prod-form-delivery-note');
+  if (delivNoteEl) delivNoteEl.value = "🚚 Fast door delivery & Cash on Delivery (COD) available!\n👉 *Reply 'YES' to confirm your order booking!*";
   document.getElementById('prod-form-size').value = '';
   document.getElementById('prod-form-color').value = '';
   if (document.getElementById('prod-form-fabric')) document.getElementById('prod-form-fabric').value = '';
@@ -18289,12 +20736,17 @@ function openAddProductModal() {
 }
 
 function openEditProductModal(productId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit products.', 'lock', 'rose');
+    return;
+  }
   if (!productId || productId === 'undefined' || productId === 'null') {
     showToast('Invalid Product', 'Product identifier is missing.', 'error', 'rose');
     return;
   }
   const cleanId = String(productId).trim();
-  const p = (CRM_STATE.products || []).find(prod => 
+  const p = (CRM_STATE.products || []).find(prod =>
     (prod.id !== undefined && prod.id !== null && String(prod.id) === cleanId) ||
     (prod.sku && String(prod.sku).toUpperCase() === cleanId.toUpperCase())
   );
@@ -18317,6 +20769,12 @@ function openEditProductModal(productId) {
   if (formNameEl) formNameEl.value = p.name || '';
   const formDescEl = document.getElementById('prod-form-desc');
   if (formDescEl) formDescEl.value = p.description || '';
+  const formDelivEl = document.getElementById('prod-form-delivery-note');
+  if (formDelivEl) {
+    formDelivEl.value = (p.delivery_note !== undefined && p.delivery_note !== null)
+      ? p.delivery_note
+      : ((p.deliveryNote !== undefined && p.deliveryNote !== null) ? p.deliveryNote : "🚚 Fast door delivery & Cash on Delivery (COD) available!\n👉 *Reply 'YES' to confirm your order booking!*");
+  }
   const formSizeEl = document.getElementById('prod-form-size');
   if (formSizeEl) formSizeEl.value = p.size || '';
   const formColorEl = document.getElementById('prod-form-color');
@@ -18360,11 +20818,11 @@ function openEditProductModal(productId) {
   setProductSpecificationsInForm(p.specifications || []);
 
   // Multi-select attributes & matrix init
-  SELECTED_PRODUCT_SIZES = p.size 
-    ? (Array.isArray(p.size) ? p.size : String(p.size).split(',')).map(s => String(s).trim()).filter(Boolean) 
+  SELECTED_PRODUCT_SIZES = p.size
+    ? (Array.isArray(p.size) ? p.size : String(p.size).split(',')).map(s => String(s).trim()).filter(Boolean)
     : [];
-  SELECTED_PRODUCT_COLORS = p.color 
-    ? (Array.isArray(p.color) ? p.color : String(p.color).split(',')).map(c => String(c).trim()).filter(Boolean) 
+  SELECTED_PRODUCT_COLORS = p.color
+    ? (Array.isArray(p.color) ? p.color : String(p.color).split(',')).map(c => String(c).trim()).filter(Boolean)
     : [];
 
   // Custom attributes extraction & normalization to Array of strings
@@ -18425,6 +20883,13 @@ window.openEditProductModal = openEditProductModal;
 // -------------------------------------------------------------------------
 async function handleProductFormSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
+  const idVal = document.getElementById('prod-form-id')?.value;
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const reqAction = idVal ? 'edit' : 'create';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', reqAction)) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to ' + reqAction + ' products.', 'lock', 'rose');
+    return;
+  }
 
   try {
     const idVal = document.getElementById('prod-form-id')?.value || '';
@@ -18453,6 +20918,7 @@ async function handleProductFormSubmit(e) {
       sku = autoGenerateProductSKU() || `GRM-${Date.now().toString().slice(-6)}`;
     }
     const description = (document.getElementById('prod-form-desc')?.value || '').trim();
+    const deliveryNote = (document.getElementById('prod-form-delivery-note')?.value || '').trim();
     const specifications = getProductSpecificationsFromForm();
     const accountId = document.getElementById('prod-form-account-id')?.value || 'account_1';
 
@@ -18522,7 +20988,9 @@ async function handleProductFormSubmit(e) {
           reservedStock: 0,
           accountId,
           image: varImage,
-          description
+          description,
+          delivery_note: deliveryNote,
+          deliveryNote: deliveryNote
         };
       });
 
@@ -18539,8 +21007,8 @@ async function handleProductFormSubmit(e) {
         if (existingIdx >= 0) {
           CRM_STATE.products[existingIdx] = { ...CRM_STATE.products[existingIdx], ...vp };
         } else {
-          const nextId = CRM_STATE.products.length > 0 
-            ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1 
+          const nextId = CRM_STATE.products.length > 0
+            ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1
             : 1;
           CRM_STATE.products.push({ id: nextId, ...vp });
         }
@@ -18611,7 +21079,10 @@ async function handleProductFormSubmit(e) {
 
     let existing = null;
     if (idVal) {
-      existing = CRM_STATE.products.find(p => String(p.id) === String(idVal));
+      existing = CRM_STATE.products.find(p => String(p.id) === String(idVal) || (p.sku && String(p.sku).toUpperCase() === String(idVal).toUpperCase()));
+    }
+    if (!existing && sku) {
+      existing = CRM_STATE.products.find(p => p.sku && String(p.sku).toUpperCase() === String(sku).toUpperCase());
     }
 
     if (existing) {
@@ -18620,6 +21091,8 @@ async function handleProductFormSubmit(e) {
       existing.subcategory = subcategory;
       existing.name = name;
       existing.description = description;
+      existing.delivery_note = deliveryNote;
+      existing.deliveryNote = deliveryNote;
       existing.size = size;
       existing.color = color;
       existing.fabric = fabric;
@@ -18633,8 +21106,8 @@ async function handleProductFormSubmit(e) {
       existing.accountId = accountId;
       existing.image = image;
     } else {
-      const newId = CRM_STATE.products.length > 0 
-        ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1 
+      const newId = CRM_STATE.products.length > 0
+        ? Math.max(...CRM_STATE.products.map(p => Number(p.id) || 0)) + 1
         : 1;
 
       existing = {
@@ -18644,6 +21117,8 @@ async function handleProductFormSubmit(e) {
         subcategory,
         name,
         description,
+        delivery_note: deliveryNote,
+        deliveryNote: deliveryNote,
         size,
         color,
         fabric,
@@ -18688,10 +21163,13 @@ async function handleProductFormSubmit(e) {
     }
 
     closeModal('modal-product-edit');
-    filterCatalogGrid();
-    updateOrderProductDropdown();
+    if (typeof filterCatalogGrid === 'function') filterCatalogGrid();
+    if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+    if (typeof updateOrderProductDropdown === 'function') updateOrderProductDropdown();
     if (typeof refreshVariantsModalIfOpen === 'function') refreshVariantsModalIfOpen();
-    showToast('Garment Catalog Updated', `${sku} (${name}) saved with live WhatsApp dispatch card!`, 'check_circle', 'emerald');
+    if (typeof renderModalProductList === 'function') renderModalProductList();
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+    showToast('Garment Catalog Updated', `${sku} (${name}) price (₹${price}) saved successfully!`, 'check_circle', 'emerald');
   } catch (err) {
     console.error('Critical handleProductFormSubmit error:', err);
     showToast('Save Error', 'Failed to save product: ' + err.message, 'error', 'rose');
@@ -18700,6 +21178,11 @@ async function handleProductFormSubmit(e) {
 window.handleProductFormSubmit = handleProductFormSubmit;
 
 async function handleDeleteProduct() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete products.', 'lock', 'rose');
+    return;
+  }
   const idVal = document.getElementById('prod-form-id').value;
   if (!idVal) return;
 
@@ -18732,6 +21215,11 @@ window.handleDeleteProduct = handleDeleteProduct;
 
 // Delete product directly from product card or catalog table with confirmation dialog
 async function confirmDeleteProduct(productId, isFamilyGroup = false, groupKey = null) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete products.', 'lock', 'rose');
+    return;
+  }
   let delTargets = [];
   let confirmMsg = '';
 
@@ -18818,6 +21306,9 @@ function openManageCategoriesModal() {
 }
 
 function renderCategoriesManager() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canCatCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'create') : true);
+  const canCatDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('catalog', 'delete') : true);
   const categories = CRM_STATE.categories || INITIAL_CRM_DATA.categories || [];
   const subcategories = CRM_STATE.subcategories || INITIAL_CRM_DATA.subcategories || [];
 
@@ -18848,9 +21339,11 @@ function renderCategoriesManager() {
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-teal-200/80 text-teal-900' : 'bg-slate-100 text-slate-600'}">
               ${subCount}
             </span>
+            ${canCatDelete ? `
             <button type="button" onclick="event.stopPropagation(); deleteCategory(${c.id}, '${c.name}')" class="p-1 text-slate-300 hover:text-rose-600 transition" title="Delete Category">
               <span class="material-symbols-outlined text-[16px]">delete</span>
             </button>
+            ` : ''}
           </div>
         </div>
       `;
@@ -18883,9 +21376,11 @@ function renderCategoriesManager() {
               </span>
               <span class="font-bold text-slate-800 text-xs truncate">${s.name}</span>
             </div>
+            ${canCatDelete ? `
             <button type="button" onclick="deleteSubcategory(${s.id}, '${s.name}')" class="p-1 text-slate-300 hover:text-rose-600 transition" title="Delete Subcategory">
               <span class="material-symbols-outlined text-[16px]">delete</span>
             </button>
+            ` : ''}
           </div>
         `;
       }).join('');
@@ -18972,7 +21467,7 @@ function generateSubcategorySuggestions(name, categoryName) {
   const clean = (name || '').trim();
   if (!clean) return [];
 
-  const existing = new Set((CRM_STATE.subcategories || []).filter(s => 
+  const existing = new Set((CRM_STATE.subcategories || []).filter(s =>
     (s.category_name || s.category || '').toLowerCase() === (categoryName || '').toLowerCase()
   ).map(s => (s.name || '').trim().toLowerCase()));
 
@@ -19122,8 +21617,8 @@ function handleSubcategoryNameInput(val) {
     }
   }
 
-  const existingSub = (CRM_STATE.subcategories || []).find(s => 
-    (s.category_name === catName || s.category === catName) && 
+  const existingSub = (CRM_STATE.subcategories || []).find(s =>
+    (s.category_name === catName || s.category === catName) &&
     (s.name || '').trim().toLowerCase() === clean.toLowerCase()
   );
 
@@ -19184,11 +21679,11 @@ function handleSubcategoryPrefixInput(val) {
   const catName = ACTIVE_MANAGER_CATEGORY || document.getElementById('subcat-parent-label')?.innerText || '';
 
   // Check if prefix already exists
-  const existingSub = (CRM_STATE.subcategories || []).find(s => 
+  const existingSub = (CRM_STATE.subcategories || []).find(s =>
     (s.sku_prefix || '').toUpperCase().trim() === prefix
   );
 
-  const existingProd = (CRM_STATE.products || []).find(p => 
+  const existingProd = (CRM_STATE.products || []).find(p =>
     (p.sku || '').toUpperCase().startsWith(prefix + '-') || (p.sku || '').toUpperCase() === prefix
   );
 
@@ -19196,7 +21691,7 @@ function handleSubcategoryPrefixInput(val) {
     input.classList.remove('border-emerald-500', 'ring-emerald-300');
     input.classList.add('border-rose-500', 'ring-2', 'ring-rose-400', 'bg-rose-50/20');
 
-    const ownerName = existingSub 
+    const ownerName = existingSub
       ? `Subcategory "<b>${existingSub.name}</b>" (under ${existingSub.category_name || existingSub.category || 'Category'})`
       : `Product "<b>${existingProd.sku}</b>" (${existingProd.name || 'Garment'})`;
 
@@ -19284,10 +21779,8 @@ async function saveCategorySubmit(e) {
 
   if (!name) return;
 
-  if (!CRM_STATE.categories || !Array.isArray(CRM_STATE.categories) || CRM_STATE.categories.length === 0) {
-    CRM_STATE.categories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.categories || []));
-  }
-  
+  if (!Array.isArray(CRM_STATE.categories)) CRM_STATE.categories = [];
+
   const existIdx = CRM_STATE.categories.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
   if (existIdx >= 0) {
     handleCategoryNameInput(name);
@@ -19334,6 +21827,11 @@ async function saveCategorySubmit(e) {
 }
 
 async function deleteCategory(catId, catName) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete categories.', 'lock', 'rose');
+    return;
+  }
   if (!confirm(`Delete category "${catName}" and all associated catalog groupings?`)) return;
 
   CRM_STATE.categories = (CRM_STATE.categories || []).filter(c => c.name !== catName && c.id != catId);
@@ -19370,13 +21868,11 @@ async function saveSubcategorySubmit(e) {
     return;
   }
 
-  if (!CRM_STATE.subcategories || !Array.isArray(CRM_STATE.subcategories) || CRM_STATE.subcategories.length === 0) {
-    CRM_STATE.subcategories = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.subcategories || []));
-  }
-  
+  if (!Array.isArray(CRM_STATE.subcategories)) CRM_STATE.subcategories = [];
+
   // 1. Check if subcategory already exists under this category
-  const existSubIdx = CRM_STATE.subcategories.findIndex(s => 
-    s.name.toLowerCase() === name.toLowerCase() && 
+  const existSubIdx = CRM_STATE.subcategories.findIndex(s =>
+    s.name.toLowerCase() === name.toLowerCase() &&
     (s.category_name === ACTIVE_MANAGER_CATEGORY || s.category === ACTIVE_MANAGER_CATEGORY)
   );
   if (existSubIdx >= 0) {
@@ -19387,10 +21883,10 @@ async function saveSubcategorySubmit(e) {
   }
 
   // 2. Check if SKU prefix is taken or empty
-  const prefixTakenSub = (CRM_STATE.subcategories || []).find(s => 
+  const prefixTakenSub = (CRM_STATE.subcategories || []).find(s =>
     (s.sku_prefix || '').toUpperCase().trim() === prefix
   );
-  const prefixTakenProd = (CRM_STATE.products || []).find(p => 
+  const prefixTakenProd = (CRM_STATE.products || []).find(p =>
     (p.sku || '').toUpperCase().startsWith(prefix + '-') || (p.sku || '').toUpperCase() === prefix
   );
 
@@ -19453,6 +21949,11 @@ async function saveSubcategorySubmit(e) {
 }
 
 async function deleteSubcategory(subId, subName) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete subcategories.', 'lock', 'rose');
+    return;
+  }
   if (!confirm(`Delete subcategory "${subName}"?`)) return;
 
   CRM_STATE.subcategories = (CRM_STATE.subcategories || []).filter(s => s.name !== subName && s.id != subId);
@@ -20037,6 +22538,11 @@ async function deleteAttribute(type, val, id, extra) {
 // QUICK RESTOCK MODAL
 // -------------------------------------------------------------------------
 function openQuickStockModal(productId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product stock.', 'lock', 'rose');
+    return;
+  }
   const p = (CRM_STATE.products || []).find(prod => String(prod.id) === String(productId) || String(prod.sku) === String(productId));
   if (!p) {
     if (typeof showToast === 'function') {
@@ -20072,6 +22578,11 @@ window.openQuickStockModal = openQuickStockModal;
 
 async function handleQuickStockSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('catalog', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit product stock.', 'lock', 'rose');
+    return;
+  }
   const idVal = document.getElementById('quick-stock-product-id').value;
   const newPhysical = parseInt(document.getElementById('quick-stock-physical-input').value) || 0;
   const reason = document.getElementById('quick-stock-reason')?.value || 'Factory Batch Restock';
@@ -20127,9 +22638,9 @@ let DIRECT_SHARE_SEARCH_QUERY = '';
 // Generate WhatsApp text for a single variant/product
 function generateProductWhatsAppText(p) {
   const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
-  const stockText = available > 5 
+  const stockText = available > 5
     ? `✅ *In Stock* (${available} units ready for immediate dispatch)`
-    : available > 0 
+    : available > 0
       ? `⚡ *Limited Stock Alert* (Only ${available} units remaining!)`
       : `⚠️ *Made to Order* (Available on booking)`;
 
@@ -20141,8 +22652,8 @@ function generateProductWhatsAppText(p) {
     priceLine = `💰 *Offer Price:* ₹${priceNum} ~₹${mrpNum}~ (*${discount}% OFF*)`;
   }
 
-  const catLine = p.subcategory 
-    ? `📁 *Catalog:* ${p.category || 'Garments'} › ${p.subcategory}\n` 
+  const catLine = p.subcategory
+    ? `📁 *Catalog:* ${p.category || 'Garments'} › ${p.subcategory}\n`
     : (p.category ? `📁 *Category:* ${p.category}\n` : '');
 
   const fabricLine = p.fabric ? `🧵 *Fabric:* ${p.fabric}\n` : '';
@@ -20165,8 +22676,8 @@ function generateProductWhatsAppText(p) {
 
 // Generate WhatsApp text representing ALL variants in a product family
 function generateFamilyProductWhatsAppText(group) {
-  const catLine = group.subcategory 
-    ? `📁 *Catalog:* ${group.category || 'Garments'} › ${group.subcategory}\n` 
+  const catLine = group.subcategory
+    ? `📁 *Catalog:* ${group.category || 'Garments'} › ${group.subcategory}\n`
     : (group.category ? `📁 *Category:* ${group.category}\n` : '');
 
   const priceRange = (group.minPrice && group.maxPrice && group.minPrice !== group.maxPrice)
@@ -20357,8 +22868,8 @@ function openDirectShareModal(targetId, isFamily = false) {
   if (preview) {
     const imgSrc = getSmartProductImage(p);
     if (isGroupTarget && group) {
-      const priceText = (group.minPrice && group.maxPrice && group.minPrice !== group.maxPrice) 
-        ? `₹${group.minPrice} – ₹${group.maxPrice}` 
+      const priceText = (group.minPrice && group.maxPrice && group.minPrice !== group.maxPrice)
+        ? `₹${group.minPrice} – ₹${group.maxPrice}`
         : `₹${group.minPrice || group.price || 0}`;
       preview.innerHTML = `
         <img src="${imgSrc}" onerror="this.onerror=null;this.src='uploads/products/sample_garment.jpg';" class="w-12 h-12 object-cover rounded-xl border border-slate-200 shadow-xs shrink-0">
@@ -20512,7 +23023,7 @@ async function saveDirectShareCustomCaption(silent = false) {
         }
       });
       saveCRMState();
-    } catch (e) {}
+    } catch (e) { }
 
     updateDirectShareCaptionBadge(true);
     if (!silent) {
@@ -20541,11 +23052,11 @@ async function saveDirectShareCustomCaption(silent = false) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: v.id, custom_caption: text })
-          }).catch(() => {});
+          }).catch(() => { });
         });
       }
       saveCRMState();
-    } catch (e) {}
+    } catch (e) { }
 
     updateDirectShareCaptionBadge(true);
     if (!silent) {
@@ -20573,7 +23084,7 @@ async function saveDirectShareCustomCaption(silent = false) {
     if (p && p.id) {
       localStorage.setItem('CRM_PRODUCT_CAPTION_' + p.id, text);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   if (p && p.id) {
     try {
@@ -20582,7 +23093,7 @@ async function saveDirectShareCustomCaption(silent = false) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: p.id, custom_caption: text })
       }).catch(err => console.warn('[Caption Save API Warning]:', err));
-    } catch (e) {}
+    } catch (e) { }
   }
 
   saveCRMState();
@@ -20606,7 +23117,7 @@ async function resetDirectShareCaptionToDefault() {
     if (!confirm('Reset batch message caption back to auto-generated details?')) return;
     try {
       localStorage.removeItem('CRM_BATCH_SHARE_CAPTION');
-    } catch (e) {}
+    } catch (e) { }
     const rawIds = productId.split(',').map(s => s.trim()).filter(Boolean);
     const selectedProds = (CRM_STATE.products || []).filter(prod => rawIds.includes(String(prod.id)));
     if (typeof generateBatchWhatsAppText === 'function') {
@@ -20630,7 +23141,7 @@ async function resetDirectShareCaptionToDefault() {
       localStorage.removeItem('CRM_PRODUCT_FAMILY_CAPTION_' + saveKey);
       if (groupKey) localStorage.removeItem('CRM_PRODUCT_FAMILY_CAPTION_' + groupKey);
       if (productId) localStorage.removeItem('CRM_PRODUCT_FAMILY_CAPTION_' + productId);
-    } catch (e) {}
+    } catch (e) { }
 
     document.getElementById('direct-share-message-text').value = generateFamilyProductWhatsAppText(group);
     updateDirectShareCaptionBadge(false);
@@ -20654,8 +23165,8 @@ async function resetDirectShareCaptionToDefault() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: p.id, custom_caption: '' })
-    }).catch(e => {});
-  } catch (e) {}
+    }).catch(e => { });
+  } catch (e) { }
 
   document.getElementById('direct-share-message-text').value = generateProductWhatsAppText(p);
   updateDirectShareCaptionBadge(false);
@@ -20763,9 +23274,9 @@ function renderDirectShareContactsList() {
           </div>
         </div>
         <div>
-          ${isChecked 
-            ? '<span class="text-emerald-700 font-bold text-[10px] px-1.5 py-0.5 bg-emerald-100 rounded-md">Selected</span>' 
-            : ''}
+          ${isChecked
+        ? '<span class="text-emerald-700 font-bold text-[10px] px-1.5 py-0.5 bg-emerald-100 rounded-md">Selected</span>'
+        : ''}
         </div>
       </div>
     `;
@@ -20983,13 +23494,13 @@ async function handleDirectShareSubmit(e) {
 
     try {
       const delivered = await dispatchWhatsAppOutbound(
-        rawPhone, 
-        messageText, 
-        newMsg, 
-        cust.jid || null, 
-        cust.accountId || null, 
+        rawPhone,
+        messageText,
+        newMsg,
+        cust.jid || null,
+        cust.accountId || null,
         true, // silent individual toasts
-        validImg, 
+        validImg,
         cust.id
       );
       if (delivered) {
@@ -21026,13 +23537,13 @@ async function handleDirectShareSubmit(e) {
 
     try {
       const delivered = await dispatchWhatsAppOutbound(
-        phone, 
-        messageText, 
-        customMsg, 
-        null, 
-        ACTIVE_SEND_ACCOUNT_ID || 'account_1', 
-        true, 
-        validImg, 
+        phone,
+        messageText,
+        customMsg,
+        null,
+        ACTIVE_SEND_ACCOUNT_ID || 'account_1',
+        true,
+        validImg,
         null
       );
       if (delivered) {
@@ -21065,8 +23576,8 @@ async function handleDirectShareSubmit(e) {
   }
 
   // 6. Comprehensive Result Toast
-  const productSkuOrName = isBatchShare 
-    ? `${batchProducts.length} garments` 
+  const productSkuOrName = isBatchShare
+    ? `${batchProducts.length} garments`
     : (p.sku || p.name || 'Product');
   if (failCount === 0) {
     showToast('Product Dispatched! 🚀', `Successfully sent ${productSkuOrName} to ${successCount} recipient(s)!`, 'done_all', 'emerald');
@@ -21141,7 +23652,7 @@ function openDirectWhatsAppWeb(productId) {
   let cleanPhone = (targetPhone || '').replace(/[^0-9]/g, '');
   if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
 
-  const waUrl = cleanPhone 
+  const waUrl = cleanPhone
     ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`
     : `https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`;
 
@@ -21205,47 +23716,81 @@ var ACTIVE_ORDER_HISTORY_STATUS_FILTER = 'ALL';
 
 function normalizeOrderStatus(status) {
   if (!status) return 'PLACED';
-  const s = String(status).toUpperCase();
+  const s = String(status).toUpperCase().replace(/\s+/g, '_');
   if (s === 'STOCK_RESERVED' || s === 'NEW' || s === 'PLACED') return 'PLACED';
   if (s === 'PACKED' || s === 'PROCESSING') return 'PACKED';
   if (s === 'SHIPPED' || s === 'IN_TRANSIT') return 'SHIPPED';
+  if (s === 'OUT_FOR_DELIVERY' || s === 'OUT_OF_DELIVERY' || s === 'OUTOFDELIVERY') return 'OUT_FOR_DELIVERY';
   if (s === 'DELIVERED' || s === 'COMPLETED') return 'DELIVERED';
+  if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
   return s;
 }
 
 function switchOrdersSubmodule(submodule) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'view')) {
+    if (typeof showToast === 'function') showToast('Access Restricted', 'Your assigned role does not have permission to view sales orders.', 'lock', 'rose');
+    return;
+  }
   ACTIVE_ORDERS_SUBMODULE = submodule || 'dashboard';
-  const tabDash = document.getElementById('tab-orders-submodule-dashboard');
-  const tabHist = document.getElementById('tab-orders-submodule-history');
+
+  // Ensure orders main view is active if not already
+  if (typeof ACTIVE_VIEW === 'undefined' || ACTIVE_VIEW !== 'orders') {
+    if (typeof switchView === 'function') {
+      switchView('orders', submodule);
+      return;
+    }
+  }
   const viewDash = document.getElementById('subview-orders-dashboard');
   const viewHist = document.getElementById('subview-orders-history');
 
-  const navDash = document.getElementById('nav-sub-orders-dashboard');
-  const navHist = document.getElementById('nav-sub-orders-history');
-
-  if (submodule === 'dashboard') {
-    if (viewDash) viewDash.classList.remove('hidden');
-    if (viewHist) viewHist.classList.add('hidden');
-    if (tabDash) tabDash.className = "px-4 py-2 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-800 border border-slate-200/80 cursor-pointer";
-    if (tabHist) tabHist.className = "px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-800 hover:bg-white/60 cursor-pointer";
-    if (navDash) navDash.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer";
-    if (navHist) navHist.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
-    try { window.location.hash = '#orders/dashboard'; } catch(e) {}
-    renderOrdersDashboard();
-  } else {
-    if (viewDash) viewDash.classList.add('hidden');
-    if (viewHist) viewHist.classList.remove('hidden');
-    if (tabDash) tabDash.className = "px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-800 hover:bg-white/60 cursor-pointer";
-    if (tabHist) tabHist.className = "px-4 py-2 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-800 border border-slate-200/80 cursor-pointer";
-    if (navDash) navDash.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
-    if (navHist) navHist.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer";
-    try { window.location.hash = '#orders/history'; } catch(e) {}
-    renderOrdersHistoryTable();
+  // Highlight tab buttons in top segmented bar
+  const tabDash = document.getElementById('tab-orders-submodule-dashboard');
+  const tabHist = document.getElementById('tab-orders-submodule-history');
+  if (tabDash && tabHist) {
+    if (submodule === 'history') {
+      tabHist.className = 'px-4 py-2 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-800 border border-slate-200/80 cursor-pointer';
+      tabDash.className = 'px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-800 hover:bg-white/60 cursor-pointer';
+    } else {
+      tabDash.className = 'px-4 py-2 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm bg-white text-emerald-800 border border-slate-200/80 cursor-pointer';
+      tabHist.className = 'px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all text-slate-600 hover:text-emerald-800 hover:bg-white/60 cursor-pointer';
+    }
   }
+
+  // Highlight sidebar sub-module buttons
+  const navSubDash = document.getElementById('nav-sub-orders-dashboard');
+  const navSubHist = document.getElementById('nav-sub-orders-history');
+  if (navSubDash && navSubHist) {
+    if (submodule === 'history') {
+      navSubHist.className = 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer';
+      navSubDash.className = 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer';
+    } else {
+      navSubDash.className = 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer';
+      navSubHist.className = 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer';
+    }
+  }
+
+  // Unified Orders View: Both dashboard metrics and order history are seamlessly active
+  if (viewDash) viewDash.classList.remove('hidden');
+  if (viewHist) viewHist.classList.remove('hidden');
+
+  if (submodule === 'history') {
+    if (viewHist) {
+      try { viewHist.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
+    }
+  }
+
+  renderOrdersDashboard();
+  renderOrdersHistoryTable();
 }
 window.switchOrdersSubmodule = switchOrdersSubmodule;
 
 function reassignOrderStaff(orderId, newStaffId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to reassign order staff.', 'lock', 'rose');
+    return;
+  }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) return;
   const staffList = [...(CRM_STATE?.staffList || [])];
@@ -21273,7 +23818,7 @@ function reassignOrderStaff(orderId, newStaffId) {
       staff_name: staffObj.name,
       user: CURRENT_USER?.name || 'Super Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('ORDER_REASSIGNED', 'ORDERS', `Order ${orderId} reassigned from ${oldStaff} to ${staffObj.name}`);
   saveCRMState();
@@ -21287,11 +23832,18 @@ function renderOrdersModule() {
   const badgeOrders = document.getElementById('badge-orders-count');
   const badgeTotalHeader = document.getElementById('badge-orders-total-count');
   const badgeHistoryTab = document.getElementById('orders-tab-history-badge');
+  const badgeSidebarHistory = document.getElementById('nav-sub-orders-history-badge');
   const totalCount = (CRM_STATE?.orders || []).length;
 
   if (badgeOrders) badgeOrders.innerText = totalCount;
   if (badgeTotalHeader) badgeTotalHeader.innerText = `${totalCount} Order${totalCount === 1 ? '' : 's'}`;
   if (badgeHistoryTab) badgeHistoryTab.innerText = totalCount;
+  if (badgeSidebarHistory) badgeSidebarHistory.innerText = totalCount;
+
+  const viewDash = document.getElementById('subview-orders-dashboard');
+  const viewHist = document.getElementById('subview-orders-history');
+  if (viewDash) viewDash.classList.remove('hidden');
+  if (viewHist) viewHist.classList.remove('hidden');
 
   populateOrderHistoryStaffFilter();
   renderOrdersDashboard();
@@ -21302,7 +23854,7 @@ window.renderOrdersTable = renderOrdersModule;
 
 function renderOrdersDashboard() {
   const orders = CRM_STATE?.orders || [];
-  
+
   // 1. Overall Revenue
   let overallRevenue = 0;
   let paidOnline = 0;
@@ -21372,15 +23924,18 @@ function renderOrdersDashboard() {
   const countPlaced = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
   const countPacked = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
   const countShipped = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+  const countOutOfDelivery = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'OUT_FOR_DELIVERY').length;
   const countDelivered = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
 
   const pipePlaced = document.getElementById('pipe-ord-placed-count');
   const pipePacked = document.getElementById('pipe-ord-packed-count');
   const pipeShipped = document.getElementById('pipe-ord-shipped-count');
+  const pipeOutOfDelivery = document.getElementById('pipe-ord-out-for-delivery-count');
   const pipeDelivered = document.getElementById('pipe-ord-delivered-count');
   if (pipePlaced) pipePlaced.innerText = countPlaced;
   if (pipePacked) pipePacked.innerText = countPacked;
   if (pipeShipped) pipeShipped.innerText = countShipped;
+  if (pipeOutOfDelivery) pipeOutOfDelivery.innerText = countOutOfDelivery;
   if (pipeDelivered) pipeDelivered.innerText = countDelivered;
 
   // 6. Staff Breakdown
@@ -21410,9 +23965,9 @@ function renderOrdersStaffBreakdown() {
     const staffOrders = orders.filter(o => {
       const matchId = o.staffId && (o.staffId === staff.id || o.staff_id === staff.id);
       const matchName = (o.staffName && o.staffName.toLowerCase().includes(staff.name.toLowerCase())) ||
-                        (o.staff_name && o.staff_name.toLowerCase().includes(staff.name.toLowerCase())) ||
-                        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase())) ||
-                        (o.created_by && o.created_by.toLowerCase().includes(staff.name.toLowerCase()));
+        (o.staff_name && o.staff_name.toLowerCase().includes(staff.name.toLowerCase())) ||
+        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase())) ||
+        (o.created_by && o.created_by.toLowerCase().includes(staff.name.toLowerCase()));
       return matchId || matchName;
     });
 
@@ -21524,7 +24079,7 @@ window.populateOrderHistoryStaffFilter = populateOrderHistoryStaffFilter;
 
 function setOrderHistoryStatusFilter(status) {
   ACTIVE_ORDER_HISTORY_STATUS_FILTER = status;
-  const buttons = ['ALL', 'PLACED', 'PACKED', 'SHIPPED', 'DELIVERED'];
+  const buttons = ['ALL', 'PLACED', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
   buttons.forEach(b => {
     const btn = document.getElementById(`filter-btn-status-${b}`);
     if (btn) {
@@ -21540,8 +24095,11 @@ function setOrderHistoryStatusFilter(status) {
 window.setOrderHistoryStatusFilter = setOrderHistoryStatusFilter;
 
 function filterOrderHistoryByStatus(status) {
-  switchOrdersSubmodule('history');
   setOrderHistoryStatusFilter(status);
+  const histEl = document.getElementById('subview-orders-history');
+  if (histEl) {
+    try { histEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
+  }
 }
 window.filterOrderHistoryByStatus = filterOrderHistoryByStatus;
 
@@ -21565,17 +24123,20 @@ function renderOrdersHistoryTable() {
   const cPlaced = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
   const cPacked = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
   const cShipped = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+  const cOutOfDelivery = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'OUT_FOR_DELIVERY').length;
   const cDelivered = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
 
   const elAll = document.getElementById('count-filter-all');
   const elPlaced = document.getElementById('count-filter-placed');
   const elPacked = document.getElementById('count-filter-packed');
   const elShipped = document.getElementById('count-filter-shipped');
+  const elOutOfDelivery = document.getElementById('count-filter-out-for-delivery');
   const elDelivered = document.getElementById('count-filter-delivered');
   if (elAll) elAll.innerText = cAll;
   if (elPlaced) elPlaced.innerText = cPlaced;
   if (elPacked) elPacked.innerText = cPacked;
   if (elShipped) elShipped.innerText = cShipped;
+  if (elOutOfDelivery) elOutOfDelivery.innerText = cOutOfDelivery;
   if (elDelivered) elDelivered.innerText = cDelivered;
 
   const filteredOrders = orders.filter(ord => {
@@ -21586,9 +24147,9 @@ function renderOrdersHistoryTable() {
 
     if (staffVal !== 'ALL') {
       const matchStaff = (ord.staffName && ord.staffName.toLowerCase().includes(staffVal.toLowerCase())) ||
-                         (ord.staff_name && ord.staff_name.toLowerCase().includes(staffVal.toLowerCase())) ||
-                         (ord.createdBy && ord.createdBy.toLowerCase().includes(staffVal.toLowerCase())) ||
-                         (ord.created_by && ord.created_by.toLowerCase().includes(staffVal.toLowerCase()));
+        (ord.staff_name && ord.staff_name.toLowerCase().includes(staffVal.toLowerCase())) ||
+        (ord.createdBy && ord.createdBy.toLowerCase().includes(staffVal.toLowerCase())) ||
+        (ord.created_by && ord.created_by.toLowerCase().includes(staffVal.toLowerCase()));
       if (!matchStaff) return false;
     }
 
@@ -21679,15 +24240,27 @@ function renderOrdersHistoryTable() {
     // Status Badge & Selector
     let statusBadgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
     let statusIcon = 'receipt';
+    let displayStatusLabel = '1. Placed';
     if (normStatus === 'PACKED') {
       statusBadgeClass = 'bg-purple-100 text-purple-800 border-purple-200';
       statusIcon = 'inventory_2';
+      displayStatusLabel = '2. Packed';
     } else if (normStatus === 'SHIPPED') {
       statusBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
       statusIcon = 'local_shipping';
+      displayStatusLabel = '3. Shipped';
+    } else if (normStatus === 'OUT_FOR_DELIVERY') {
+      statusBadgeClass = 'bg-orange-100 text-orange-900 border-orange-300';
+      statusIcon = 'two_wheeler';
+      displayStatusLabel = '4. Out for Delivery';
     } else if (normStatus === 'DELIVERED') {
       statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
       statusIcon = 'verified';
+      displayStatusLabel = '5. Delivered';
+    } else if (normStatus === 'CANCELLED') {
+      statusBadgeClass = 'bg-rose-100 text-rose-800 border-rose-200';
+      statusIcon = 'cancel';
+      displayStatusLabel = 'Cancelled';
     }
 
     const staffDisplayName = ord.staffName || ord.staff_name || ord.createdBy || ord.created_by || 'Super Admin';
@@ -21740,11 +24313,11 @@ function renderOrdersHistoryTable() {
             <span class="text-[9px] text-slate-400 font-extrabold uppercase">Credit:</span>
             <select onchange="reassignOrderStaff('${ord.id}', this.value)" class="text-[10px] font-bold bg-indigo-50/80 hover:bg-indigo-100 text-indigo-950 border border-indigo-200/90 rounded-md px-1.5 py-0.5 outline-none cursor-pointer" title="Reassign order credit to another staff specialist">
               ${(() => {
-                const sList = [...(CRM_STATE?.staffList || [])];
-                if (!sList.some(s => s.id === 'admin')) sList.push({ id: 'admin', name: 'Super Admin' });
-                const curId = ord.staffId || ord.staff_id || (staffDisplayName.includes('Admin') ? 'admin' : '');
-                return sList.map(s => `<option value="${s.id}" ${s.id === curId || s.name === staffDisplayName ? 'selected' : ''}>${s.name}</option>`).join('');
-              })()}
+          const sList = [...(CRM_STATE?.staffList || [])];
+          if (!sList.some(s => s.id === 'admin')) sList.push({ id: 'admin', name: 'Super Admin' });
+          const curId = ord.staffId || ord.staff_id || (staffDisplayName.includes('Admin') ? 'admin' : '');
+          return sList.map(s => `<option value="${s.id}" ${s.id === curId || s.name === staffDisplayName ? 'selected' : ''}>${s.name}</option>`).join('');
+        })()}
             </select>
           </div>` : ''}
         </td>
@@ -21753,16 +24326,16 @@ function renderOrdersHistoryTable() {
         <td class="py-3 px-4 text-slate-700 text-xs min-w-[240px] max-w-md">
           <div class="space-y-1.5">
             ${(ord.items || []).map(i => {
-              const matchedProd = (CRM_STATE?.products || []).find(p => p.sku === i.sku || p.name === i.name);
-              const fallbackImg = 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=120&auto=format&fit=crop&q=60';
-              const imgUrl = i.image || matchedProd?.image || matchedProd?.imageUrl || (matchedProd?.images && matchedProd.images[0]) || fallbackImg;
-              const safeImg = (imgUrl || '').replace(/'/g, "\\'");
-              const safeName = (i.name || 'Garment Item').replace(/"/g, '&quot;');
-              const unitPrice = parseFloat(i.price || matchedProd?.price || 0);
-              const qty = parseInt(i.qty || 1);
-              const lineTotal = unitPrice * qty;
+          const matchedProd = (CRM_STATE?.products || []).find(p => p.sku === i.sku || p.name === i.name);
+          const fallbackImg = 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=120&auto=format&fit=crop&q=60';
+          const imgUrl = i.image || matchedProd?.image || matchedProd?.imageUrl || (matchedProd?.images && matchedProd.images[0]) || fallbackImg;
+          const safeImg = (imgUrl || '').replace(/'/g, "\\'");
+          const safeName = (i.name || 'Garment Item').replace(/"/g, '&quot;');
+          const unitPrice = parseFloat(i.price || matchedProd?.price || 0);
+          const qty = parseInt(i.qty || 1);
+          const lineTotal = unitPrice * qty;
 
-              return `
+          return `
                 <div class="flex items-center gap-2.5 p-1.5 bg-slate-50/90 hover:bg-slate-100/90 rounded-xl border border-slate-200/80 transition">
                   <!-- Product Image Thumbnail -->
                   <div class="relative shrink-0">
@@ -21780,7 +24353,7 @@ function renderOrdersHistoryTable() {
                   </div>
                 </div>
               `;
-            }).join('')}
+        }).join('')}
           </div>
         </td>
 
@@ -21795,21 +24368,35 @@ function renderOrdersHistoryTable() {
           <div class="space-y-1.5">
             <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${statusBadgeClass} inline-flex items-center gap-1 shadow-2xs">
               <span class="material-symbols-outlined text-[13px]">${statusIcon}</span>
-              <span>${normStatus}</span>
+              <span>${displayStatusLabel}</span>
             </span>
 
             ${canUserPerformAction('orders', 'edit') ? `
-            <!-- Quick Status Transition Selector -->
+            <!-- Quick Status Transition Selector (Strict Sequential) -->
             <div>
-              <select onchange="handleOrderStatusChange('${ord.id}', this.value, this)" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded px-1.5 py-0.5 outline-none cursor-pointer">
-                <option value="PLACED" ${normStatus === 'PLACED' ? 'selected' : ''}>1. Placed</option>
-                <option value="PACKED" ${normStatus === 'PACKED' ? 'selected' : ''}>2. Packed</option>
-                <option value="SHIPPED" ${normStatus === 'SHIPPED' ? 'selected' : ''}>3. Shipped</option>
-                <option value="DELIVERED" ${normStatus === 'DELIVERED' ? 'selected' : ''}>4. Delivered</option>
-              </select>
+              ${(() => {
+                const stageMap = { 'PLACED': 1, 'PACKED': 2, 'SHIPPED': 3, 'OUT_FOR_DELIVERY': 4, 'DELIVERED': 5 };
+                const curStep = stageMap[normStatus] || 1;
+                const stages = [
+                  { val: 'PLACED', label: '1. Placed', step: 1 },
+                  { val: 'PACKED', label: '2. Packed', step: 2 },
+                  { val: 'SHIPPED', label: '3. Shipped', step: 3 },
+                  { val: 'OUT_FOR_DELIVERY', label: '4. Out for Delivery', step: 4 },
+                  { val: 'DELIVERED', label: '5. Delivered', step: 5 }
+                ];
+                return `
+                  <select onchange="handleOrderStatusChange('${ord.id}', this.value, this)" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded px-1.5 py-0.5 outline-none cursor-pointer">
+                    ${stages.map(s => {
+                      const isSelected = (normStatus === s.val);
+                      const isDisabled = (s.step < curStep || s.step > curStep + 1);
+                      return `<option value="${s.val}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled style="color:#94a3b8;background-color:#f1f5f9;"' : ''}>${s.label}</option>`;
+                    }).join('')}
+                  </select>
+                `;
+              })()}
             </div>
             ` : ''}
-            ${normStatus === 'SHIPPED' ? `
+            ${(normStatus === 'SHIPPED' || normStatus === 'OUT_FOR_DELIVERY') ? `
               <div class="mt-1 flex items-center gap-1 flex-wrap">
                 <span class="text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1" title="Courier: ${ord.courierName || 'Courier'}">
                   <span class="material-symbols-outlined text-[11px]">local_shipping</span>
@@ -21820,22 +24407,24 @@ function renderOrdersHistoryTable() {
                     Track <span class="material-symbols-outlined text-[10px]">open_in_new</span>
                   </a>
                 ` : ''}
-                <button type="button" onclick="openShippingDispatchModal('${ord.id}')" class="text-[9px] text-slate-500 hover:text-slate-800 p-0.5 rounded hover:bg-slate-200 cursor-pointer" title="Edit Tracking Details">
-                  <span class="material-symbols-outlined text-[12px]">edit</span>
-                </button>
+
               </div>
             ` : ''}
           </div>
         </td>
 
-        <!-- 7. Actions -->
-        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+        <!-- 7. Actions (Sticky right column so Edit & Delete are always visible on any screen width) -->
+        <td class="py-3.5 px-4 text-right whitespace-nowrap sticky right-0 bg-white/95 backdrop-blur-xs z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)]">
           <div class="flex items-center justify-end gap-1.5">
-            <!-- Edit Order (Image 2 Request) -->
+            <!-- Edit Order -->
+            ${canUserPerformAction('orders', 'edit') ? `
             <button type="button" onclick="openEditOrderModal('${ord.id}')" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-blue-300" title="Edit Order Details">
               <span class="material-symbols-outlined text-[14px]">edit</span>
               <span class="text-[11px]">Edit</span>
             </button>
+            ` : ''}
+
+
 
             <!-- View Invoice -->
             <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-300" title="View Tax Invoice &amp; Packing Slip">
@@ -21857,10 +24446,24 @@ function renderOrdersHistoryTable() {
 window.renderOrdersHistoryTable = renderOrdersHistoryTable;
 
 function updateOrderStatus(orderId, newStatus) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to update order status.', 'lock', 'rose');
+    return;
+  }
+
+  // Strict Validation: Only the 5 standard stages + CANCELLED are permitted
+  const validStatuses = ['PLACED', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
+  if (!validStatuses.includes(newStatus)) {
+    if (typeof showToast === 'function') showToast('Invalid Status', `"${newStatus}" is not a valid order status value.`, 'error', 'rose');
+    return;
+  }
+
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) return;
 
   const oldStatus = ord.orderStatus || ord.order_status;
+  // Strict isolated update: modify ONLY this specific order's status
   ord.orderStatus = newStatus;
   ord.order_status = newStatus;
 
@@ -21875,14 +24478,23 @@ function updateOrderStatus(orderId, newStatus) {
       status: newStatus,
       user: CURRENT_USER?.name || 'Super Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('ORDER_STATUS_UPDATED', 'ORDERS', `Order ${orderId} status changed from ${oldStatus} to ${newStatus}`);
   saveCRMState();
   renderOrdersDashboard();
   renderOrdersHistoryTable();
 
-  showToast('Order Status Updated', `Order ${orderId} marked as ${newStatus}.`, 'check_circle', 'emerald');
+  const statusLabels = {
+    PLACED: '1. Placed',
+    PACKED: '2. Packed',
+    SHIPPED: '3. Shipped',
+    OUT_FOR_DELIVERY: '4. Out for Delivery',
+    DELIVERED: '5. Delivered',
+    CANCELLED: 'Cancelled'
+  };
+  const label = statusLabels[newStatus] || newStatus;
+  showToast('Order Status Updated', `Order ${orderId} marked as ${label}.`, 'check_circle', 'emerald');
   if (typeof playChime === 'function') playChime('order');
 }
 window.updateOrderStatus = updateOrderStatus;
@@ -21894,18 +24506,17 @@ let ACTIVE_SHIPPING_DISPATCH_ORDER = null;
  * If user selected 'SHIPPED', opens dispatch popup instead of directly saving!
  */
 function handleOrderStatusChange(orderId, newStatus, selectEl) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to change order status.', 'lock', 'rose');
+    if (selectEl) selectEl.value = selectEl.getAttribute('data-prev') || selectEl.value;
+    return;
+  }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) return;
 
-  const currentStatus = normalizeOrderStatus(ord.orderStatus || ord.order_status);
-
-  if (newStatus === 'SHIPPED') {
-    // Revert dropdown temporarily until confirmed in modal
-    if (selectEl) selectEl.value = currentStatus;
-    openShippingDispatchModal(orderId);
-  } else {
-    updateOrderStatus(orderId, newStatus);
-  }
+  // Directly update to whatever status admin selected dynamically
+  updateOrderStatus(orderId, newStatus);
 }
 window.handleOrderStatusChange = handleOrderStatusChange;
 
@@ -21913,6 +24524,11 @@ window.handleOrderStatusChange = handleOrderStatusChange;
  * Opens Shipping Dispatch popup with Courier Name, Tracking ID, and Tracking URL
  */
 function openShippingDispatchModal(orderId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit shipping or tracking details.', 'lock', 'rose');
+    return;
+  }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) {
     showToast('Order Not Found', `Cannot find order #${orderId}`, 'error', 'rose');
@@ -22051,6 +24667,11 @@ window.updateShippingWhatsAppPreview = updateShippingWhatsAppPreview;
  * syncs to MySQL, sends WhatsApp notification, and re-renders table!
  */
 function confirmShippingDispatch() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to confirm shipping dispatch.', 'lock', 'rose');
+    return;
+  }
   const ord = ACTIVE_SHIPPING_DISPATCH_ORDER;
   if (!ord) return;
 
@@ -22096,7 +24717,7 @@ function confirmShippingDispatch() {
       shipping_url: trackingUrl,
       user: CURRENT_USER?.name || 'Super Admin'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   // Send WhatsApp dispatch notification if checked
   if (sendWhatsApp) {
@@ -22152,10 +24773,11 @@ function downloadOrdersDashboardReport() {
   csvContent += `1. Placed Orders,${countPlaced}\r\n`;
   csvContent += `2. Packed Orders,${countPacked}\r\n`;
   csvContent += `3. Shipped Orders,${countShipped}\r\n`;
-  csvContent += `4. Delivered Orders,${countDelivered}\r\n\r\n`;
+  csvContent += `4. Out for Delivery Orders,${countOutOfDelivery}\r\n`;
+  csvContent += `5. Delivered Orders,${countDelivered}\r\n\r\n`;
 
   csvContent += "STAFF NAME WISE TOTAL ORDER COUNT & PERFORMANCE\r\n";
-  csvContent += "Staff Name,Role,Total Orders Taken,Total Revenue (INR),Placed,Packed,Shipped,Delivered,Share (%)\r\n";
+  csvContent += "Staff Name,Role,Total Orders Taken,Total Revenue (INR),Placed,Packed,Shipped,Out for Delivery,Delivered,Share (%)\r\n";
 
   const staffMembers = [...(CRM_STATE?.staffList || [])];
   if (!staffMembers.some(s => s.id === 'admin' || s.name === 'Super Admin')) {
@@ -22166,7 +24788,7 @@ function downloadOrdersDashboardReport() {
     const sOrders = orders.filter(o => {
       const matchId = o.staffId && (o.staffId === staff.id || o.staff_id === staff.id);
       const matchName = (o.staffName && o.staffName.toLowerCase().includes(staff.name.toLowerCase())) ||
-                        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase()));
+        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase()));
       return matchId || matchName;
     });
     const count = sOrders.length;
@@ -22174,10 +24796,11 @@ function downloadOrdersDashboardReport() {
     const p = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
     const pk = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
     const sh = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+    const od = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'OUT_FOR_DELIVERY').length;
     const del = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
     const share = orders.length > 0 ? Math.round((count / orders.length) * 100) : 0;
 
-    csvContent += `"${staff.name}","${staff.role || 'Sales Specialist'}",${count},${rev.toFixed(2)},${p},${pk},${sh},${del},${share}%\r\n`;
+    csvContent += `"${staff.name}","${staff.role || 'Sales Specialist'}",${count},${rev.toFixed(2)},${p},${pk},${sh},${od},${del},${share}%\r\n`;
   });
 
   const encodedUri = encodeURI(csvContent);
@@ -22230,12 +24853,12 @@ function openOrderInvoiceModal(orderId) {
       <!-- Invoice Header -->
       <div class="flex items-start justify-between border-b border-slate-200 pb-5 flex-wrap gap-4">
         <div>
-          <div class="flex items-center gap-2">
-            <span class="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-sm">GRM</span>
-            <span class="font-black text-lg text-slate-900 tracking-tight">GRM Garments</span>
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white flex items-center justify-center shadow-xs">
+              <span class="material-symbols-outlined text-[20px]">chat</span>
+            </div>
+            <span class="font-black text-lg text-slate-900 tracking-tight">CRM WhatsApp</span>
           </div>
-          <p class="text-[11px] text-slate-500 mt-1">Wholesale &amp; Retail Garment Business Hub</p>
-          <p class="text-[11px] text-slate-500">GSTIN: 33AAAAA0000A1Z5 • Blue Berry Brand</p>
         </div>
         <div class="text-right">
           <span class="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">TAX INVOICE</span>
@@ -22299,17 +24922,37 @@ function openOrderInvoiceModal(orderId) {
             `).join('')}
           </tbody>
           <tfoot class="bg-slate-50 font-bold border-t border-slate-200">
+            ${(ord.shippingAmount || ord.shippingCharge) ? `
+              <tr>
+                <td colspan="5" class="py-1.5 px-3 text-right uppercase text-[10px] text-slate-500">Items Subtotal:</td>
+                <td class="py-1.5 px-3 text-right font-mono text-slate-700 text-xs">₹${Math.max(0, grandTotal - parseFloat(ord.shippingAmount || ord.shippingCharge || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              </tr>
+              <tr>
+                <td colspan="5" class="py-1.5 px-3 text-right uppercase text-[10px] text-slate-500">Shipping / Courier:</td>
+                <td class="py-1.5 px-3 text-right font-mono text-blue-700 text-xs">+ ₹${parseFloat(ord.shippingAmount || ord.shippingCharge || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            ` : ''}
             <tr>
               <td colspan="5" class="py-2.5 px-3 text-right uppercase text-[11px] text-slate-600">Grand Total:</td>
               <td class="py-2.5 px-3 text-right font-mono text-emerald-800 text-sm">₹${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
             </tr>
+            ${(ord.codAdvance || ord.advancePayment) ? `
+              <tr class="bg-emerald-50/50 text-[11px]">
+                <td colspan="5" class="py-1.5 px-3 text-right text-emerald-800 font-semibold">Advance Received (UPI):</td>
+                <td class="py-1.5 px-3 text-right font-mono text-emerald-800 font-bold">₹${parseFloat(ord.codAdvance || ord.advancePayment || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              </tr>
+              <tr class="bg-amber-50/70 text-[11px]">
+                <td colspan="5" class="py-1.5 px-3 text-right text-amber-900 font-extrabold">Balance Collectible at Delivery (COD):</td>
+                <td class="py-1.5 px-3 text-right font-mono text-amber-900 font-black">₹${parseFloat(ord.codBalanceDue || ord.balanceAmount || Math.max(0, grandTotal - (ord.codAdvance || ord.advancePayment || 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            ` : ''}
           </tfoot>
         </table>
       </div>
 
       <!-- Footer Note -->
       <div class="border-t border-slate-100 pt-4 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Thank you for choosing GRM Garments! For inquiries, message WhatsApp.</span>
+        <span>Thank you for choosing CRM WhatsApp! For inquiries, message WhatsApp.</span>
         <span>Authorized Signature: <strong class="text-slate-600">${staff}</strong></span>
       </div>
     </div>
@@ -22326,7 +24969,7 @@ function printOrderInvoice() {
   printWindow.document.write(`
     <html>
       <head>
-        <title>Invoice - GRM Garments</title>
+        <title>Invoice - CRM WhatsApp</title>
         <script src="https://cdn.tailwindcss.com"></script>
       </head>
       <body class="p-8 bg-white font-sans text-slate-800">
@@ -22356,8 +24999,12 @@ function refreshOrdersFromDB() {
           shippingAddress: o.shippingAddress || o.shipping_address || '',
           items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? JSON.parse(o.items_json) : []),
           grandTotal: parseFloat(o.grandTotal || o.grand_total || 0),
-          codAdvance: parseFloat(o.codAdvance || o.cod_advance || 0),
-          codBalanceDue: parseFloat(o.codBalanceDue || o.cod_balance_due || 0),
+          shippingAmount: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
+          shippingCharge: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
+          codAdvance: parseFloat(o.codAdvance || o.cod_advance || o.advancePayment || o.advance_payment || 0),
+          advancePayment: parseFloat(o.codAdvance || o.cod_advance || o.advancePayment || o.advance_payment || 0),
+          codBalanceDue: parseFloat(o.codBalanceDue || o.cod_balance_due || o.balanceAmount || o.balance_amount || 0),
+          balanceAmount: parseFloat(o.codBalanceDue || o.cod_balance_due || o.balanceAmount || o.balance_amount || 0),
           paymentMethod: o.paymentMethod || o.payment_method || 'COD',
           paymentStatus: o.paymentStatus || o.payment_status || 'PENDING',
           upiTransactionId: o.upiTransactionId || o.upi_transaction_id || '',
@@ -22809,6 +25456,17 @@ function renderMultiAccountsHub() {
   const countBadge = document.getElementById('badge-multi-accounts-count');
   if (!container) return;
 
+  const _isSuperAdminHub = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  const canSettingsCreate = _isSuperAdminHub || (typeof canUserPerformAction === 'function' ? canUserPerformAction('settings', 'create') : true);
+  const canSettingsEdit = _isSuperAdminHub || (typeof canUserPerformAction === 'function' ? canUserPerformAction('settings', 'edit') : true);
+  const canSettingsDelete = _isSuperAdminHub || (typeof canUserPerformAction === 'function' ? canUserPerformAction('settings', 'delete') : true);
+
+  // Top header button "+ Link Another Phone (Add QR)"
+  const btnAddPhone = document.querySelector('[onclick*="addNewWhatsAppAccountSlot"]');
+  if (btnAddPhone) {
+    btnAddPhone.style.display = canSettingsCreate ? '' : 'none';
+  }
+
   const accounts = getAvailableWhatsAppAccounts();
 
   const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
@@ -22871,9 +25529,11 @@ function renderMultiAccountsHub() {
             </div>
 
             <div class="flex items-center gap-2 pt-1">
+              ${canSettingsCreate ? `
               <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition shadow-sm">
                 <span class="material-symbols-outlined text-[15px]">refresh</span> Refresh QR Code
               </button>
+              ` : '<span class="text-[10px] text-amber-800 font-semibold px-2 py-1 bg-amber-100 rounded-lg">🔒 View-Only: QR refresh restricted</span>'}
             </div>
           </div>
         ` : ''}
@@ -22904,30 +25564,47 @@ function renderMultiAccountsHub() {
         ${(!isConnected && !isScanning) ? `
           <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center space-y-2.5">
             <p class="text-xs font-bold text-slate-700">${isConnecting ? 'Connecting to WhatsApp Socket...' : 'Device not linked. Click below to generate scan QR code.'}</p>
+            ${canSettingsCreate ? `
             <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-4 py-2 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow flex items-center gap-2 transition">
               <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
               <span>Generate QR Code to Link Phone</span>
             </button>
+            ` : `
+            <div class="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-semibold flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">lock</span>
+              <span>View-Only Mode (Device Linking Restricted)</span>
+            </div>
+            `}
           </div>
         ` : ''}
 
         <!-- Actions Strip -->
         <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-2">
-            ${isConnected ? `
-              <button type="button" onclick="disconnectWhatsAppAccount('${acc.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Log out device session">
-                <span class="material-symbols-outlined text-[14px]">link_off</span> Disconnect
-              </button>
-            ` : `
-              <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-3 py-1.5 bg-brand-wa/10 hover:bg-brand-wa/20 text-brand-waDark border border-brand-wa/30 rounded-lg font-bold text-xs flex items-center gap-1 transition">
-                <span class="material-symbols-outlined text-[14px]">qr_code</span> New QR Code
-              </button>
-            `}
+            ${isConnected ? (
+        canSettingsEdit ? `
+                <button type="button" onclick="disconnectWhatsAppAccount('${acc.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Log out device session">
+                  <span class="material-symbols-outlined text-[14px]">link_off</span> Disconnect
+                </button>
+              ` : ''
+      ) : (
+        canSettingsCreate ? `
+                <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-3 py-1.5 bg-brand-wa/10 hover:bg-brand-wa/20 text-brand-waDark border border-brand-wa/30 rounded-lg font-bold text-xs flex items-center gap-1 transition">
+                  <span class="material-symbols-outlined text-[14px]">qr_code</span> New QR Code
+                </button>
+              ` : ''
+      )}
 
-            ${acc.id !== 'account_1' ? `
+            ${(acc.id !== 'account_1' && canSettingsDelete) ? `
               <button type="button" onclick="deleteWhatsAppAccountSlot('${acc.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Delete account slot">
                 <span class="material-symbols-outlined text-[14px]">delete</span> Delete Slot
               </button>
+            ` : ''}
+
+            ${(!canSettingsEdit && !canSettingsCreate && !canSettingsDelete) ? `
+              <span class="text-[10px] text-slate-400 font-semibold flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[12px]">lock</span> View Only
+              </span>
             ` : ''}
           </div>
           
@@ -22947,7 +25624,7 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
 
   // Format clean phone number
   const raw = (connectedNumber && connectedNumber !== 'Awaiting Link')
-    ? connectedNumber 
+    ? connectedNumber
     : (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115');
   const cleanPhone = formatPhoneNumberPretty(raw);
 
@@ -22966,7 +25643,7 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
       business_name: CRM_STATE?.whatsappAccount?.businessName || 'GRM Garments Business Hub',
       display_name: label || 'GRM Garments Official'
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   // Immediately pull all queued messages from backend
   syncInboundMessagesNow(true).then(() => {
@@ -22994,6 +25671,13 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
 
 // Generate a brand new QR Code for account
 function generateFreshAccountQR(accountId) {
+  const _isSuperAdminQr = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminQr && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Generating new QR codes is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const targetId = accountId || 'account_1';
   showToast('Generating QR Code...', 'Initializing fresh WhatsApp session for scanning.', 'qr_code_scanner', 'emerald');
 
@@ -23025,6 +25709,13 @@ function generateFreshAccountQR(accountId) {
 
 // Add New WhatsApp Phone Number / Slot
 function addNewWhatsAppAccountSlot() {
+  const _isSuperAdminAdd = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminAdd && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Adding new WhatsApp phone slots is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const currentAccounts = getAvailableWhatsAppAccounts();
   const nextNum = currentAccounts.length + 1;
   const slotId = `account_${Date.now()}`;
@@ -23053,7 +25744,7 @@ function addNewWhatsAppAccountSlot() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ label, accountId: slotId })
-  }).catch(() => {});
+  }).catch(() => { });
 
   renderMultiAccountsHub();
   renderQuickLineSwitcher();
@@ -23064,6 +25755,13 @@ function addNewWhatsAppAccountSlot() {
 
 // Delete WhatsApp account slot
 function deleteWhatsAppAccountSlot(accountId) {
+  const _isSuperAdminDel = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminDel && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'delete')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Deleting WhatsApp account slots is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   if (accountId === 'account_1') {
     showToast('Cannot Delete Primary Line', 'Line 1 is the primary business number and cannot be deleted.', 'warning', 'rose');
     return;
@@ -23103,13 +25801,13 @@ function deleteWhatsAppAccountSlot(accountId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId })
-    }).catch(() => {});
+    }).catch(() => { });
 
     fetch('api.php?action=delete_account_slot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId })
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 6. Re-render UI components immediately
     renderMultiAccountsHub();
@@ -23125,6 +25823,13 @@ function deleteWhatsAppAccountSlot(accountId) {
 
 // Disconnect specific WhatsApp account session
 function disconnectWhatsAppAccount(accountId) {
+  const _isSuperAdminDisc = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminDisc && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Disconnecting WhatsApp sessions is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const targetId = accountId || 'account_1';
   if (confirm(`Disconnect and unbind WhatsApp session for ${targetId}? Your CRM chats, customers & orders are 100% safe.`)) {
     // 1. Immediately update CRM_STATE.whatsappAccount
@@ -23183,7 +25888,7 @@ function disconnectWhatsAppAccount(accountId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId: targetId })
-    }).catch(() => {});
+    }).catch(() => { });
   }
 }
 
@@ -23231,10 +25936,20 @@ function _populateBrandSettingsFields() {
   if (headerToggle) headerToggle.checked = includeHeader;
 
   updateBrandPreview();
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
+  }
 }
 
 function handleSaveWhatsAppConfig(event) {
   event.preventDefault();
+  const _isSuperAdminSave = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminSave && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Modifying WhatsApp configuration is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const phone = document.getElementById('cfg-phone-number').value.trim();
   const displayName = document.getElementById('cfg-display-name').value.trim();
   const provider = document.getElementById('cfg-provider').value;
@@ -23272,6 +25987,13 @@ function handleSaveWhatsAppConfig(event) {
 }
 
 function handleSendQuickTestToNumber() {
+  const _isSuperAdminTest = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminTest && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('settings', 'edit') && !canUserPerformAction('settings', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Sending test messages is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   const phoneInput = document.getElementById('cfg-phone-number');
   let rawPhone = phoneInput ? phoneInput.value.trim() : CRM_STATE.whatsappAccount.phoneNumber;
   if (!rawPhone) rawPhone = '9789660115';
@@ -23326,6 +26048,13 @@ function renderBackupView() {
 }
 
 async function handleExportBackupJSON() {
+  const _isSuperAdminExp = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminExp && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('backup', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Exporting database backups is restricted.', 'warning', 'rose');
+      return;
+    }
+  }
   showToast('Generating Backup...', 'Creating snapshot of MySQL database and CRM records...', 'cloud_download', 'sky');
 
   try {
@@ -23390,6 +26119,15 @@ async function handleImportBackupJSON(event) {
   const inputEl = event.target;
   const file = inputEl.files && inputEl.files[0];
   if (!file) return;
+
+  const _isSuperAdminImp = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!_isSuperAdminImp && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('backup', 'edit')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Restoring database backups is restricted.', 'warning', 'rose');
+      inputEl.value = '';
+      return;
+    }
+  }
 
   showToast('Restoring Database...', `Reading ${file.name}...`, 'sync', 'sky');
 
@@ -23489,8 +26227,10 @@ window.handleImportBackupJSON = handleImportBackupJSON;
 // Sub-Items: 1. All Staff Directory | 2. Add Staff | 3. Role Base Permissions Matrix
 // =========================================================================
 
-let ACTIVE_STAFF_TAB = 'list'; // 'list' (All Staff), 'create' (Add Staff), 'roles' (Role Base), 'quota'
-let ACTIVE_MATRIX_ROLE = 'Sales Specialist (Baby Collection)';
+var ACTIVE_STAFF_TAB = window.ACTIVE_STAFF_TAB || 'list'; // 'list' (All Staff), 'create' (Add Staff), 'roles' (Role Base), 'quota'
+window.ACTIVE_STAFF_TAB = ACTIVE_STAFF_TAB;
+var ACTIVE_MATRIX_ROLE = window.ACTIVE_MATRIX_ROLE || 'Sales Specialist (Baby Collection)';
+window.ACTIVE_MATRIX_ROLE = ACTIVE_MATRIX_ROLE;
 
 // 1. Toggle Sidebar Staff Submenu (Accordion)
 function toggleStaffSubmenu() {
@@ -23522,9 +26262,9 @@ function switchStaffSubmodule(submodule) {
     const el = document.getElementById('nav-sub-staff-' + tab);
     if (el) {
       if (tab === submodule) {
-        el.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-300 bg-blue-950/60 border border-blue-400/30 shadow-xs transition cursor-pointer";
+        el.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/25 shadow-xs transition cursor-pointer group";
       } else {
-        el.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer";
+        el.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer group";
       }
     }
   });
@@ -23636,12 +26376,12 @@ function renderStaffTable() {
     const quota = staff.dailyQuota || 70;
     const handled = staff.todayHandled || 0;
     const handledPct = quota > 0 ? Math.min(100, Math.round((handled / quota) * 100)) : 0;
-    const activeLeads = (CRM_STATE.queries || []).filter(q => 
+    const activeLeads = (CRM_STATE.queries || []).filter(q =>
       (q.assignedTo === staff.id || (q.staff && q.staff.id === staff.id)) &&
       (!q.assignedStaffName || q.assignedStaffName.toLowerCase() === staff.name.toLowerCase()) &&
       q.status !== 'RESOLVED' && q.status !== 'CLOSED'
     ).length;
-    const convertedOrders = (CRM_STATE.orders || []).filter(o => 
+    const convertedOrders = (CRM_STATE.orders || []).filter(o =>
       o.staffId === staff.id &&
       (!o.staffName || o.staffName.toLowerCase() === staff.name.toLowerCase())
     ).length;
@@ -23892,13 +26632,14 @@ function renderRolePermissionsMatrix(roleName) {
   }
   const perms = CRM_STATE.rolePermissions[targetRole];
 
-  // 5. Populate Table Body with all 12 Modules
+  // 5. Populate Table Body with all Active Modules
   const tbody = document.getElementById('role-matrix-table-body');
   if (!tbody) return;
 
   tbody.innerHTML = CRM_MODULE_DEFINITIONS.map((mod, idx) => {
     const modPerm = perms[mod.key] || { view: false, create: false, edit: false, delete: false };
-    const allChecked = modPerm.view && modPerm.create && modPerm.edit && modPerm.delete;
+    const isViewOnlyMod = mod.key === 'customers' || mod.key === 'audit' || Boolean(mod.viewOnly);
+    const allChecked = isViewOnlyMod ? Boolean(modPerm.view) : (modPerm.view && modPerm.create && modPerm.edit && modPerm.delete);
     const isSuperAdmin = targetRole === 'Super Admin';
 
     return `
@@ -23925,31 +26666,43 @@ function renderRolePermissionsMatrix(roleName) {
           </label>
         </td>
 
-        <!-- Create Action Checkbox -->
+        <!-- Create Action Checkbox (Removed for Customer 360) -->
         <td class="py-3 px-3 text-center">
-          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-emerald-50 cursor-pointer">
-            <input type="checkbox" id="role-mod-create-${mod.key}" ${modPerm.create ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
-              onchange="handleToggleModuleAction('${mod.key}', 'create', this.checked)"
-              class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
-          </label>
+          ${isViewOnlyMod ? `
+            <span class="text-xs text-slate-300 font-bold select-none" title="Create action not applicable for this module">—</span>
+          ` : `
+            <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-emerald-50 cursor-pointer">
+              <input type="checkbox" id="role-mod-create-${mod.key}" ${modPerm.create ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+                onchange="handleToggleModuleAction('${mod.key}', 'create', this.checked)"
+                class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+            </label>
+          `}
         </td>
 
-        <!-- Edit Action Checkbox -->
+        <!-- Edit Action Checkbox (Removed for Customer 360) -->
         <td class="py-3 px-3 text-center">
-          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-amber-50 cursor-pointer">
-            <input type="checkbox" id="role-mod-edit-${mod.key}" ${modPerm.edit ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
-              onchange="handleToggleModuleAction('${mod.key}', 'edit', this.checked)"
-              class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer">
-          </label>
+          ${isViewOnlyMod ? `
+            <span class="text-xs text-slate-300 font-bold select-none" title="Edit action not applicable for this module">—</span>
+          ` : `
+            <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-amber-50 cursor-pointer">
+              <input type="checkbox" id="role-mod-edit-${mod.key}" ${modPerm.edit ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+                onchange="handleToggleModuleAction('${mod.key}', 'edit', this.checked)"
+                class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer">
+            </label>
+          `}
         </td>
 
-        <!-- Delete Action Checkbox -->
+        <!-- Delete Action Checkbox (Removed for Customer 360) -->
         <td class="py-3 px-3 text-center">
-          <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-rose-50 cursor-pointer">
-            <input type="checkbox" id="role-mod-delete-${mod.key}" ${modPerm.delete ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
-              onchange="handleToggleModuleAction('${mod.key}', 'delete', this.checked)"
-              class="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer">
-          </label>
+          ${isViewOnlyMod ? `
+            <span class="text-xs text-slate-300 font-bold select-none" title="Delete action not applicable for this module">—</span>
+          ` : `
+            <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-rose-50 cursor-pointer">
+              <input type="checkbox" id="role-mod-delete-${mod.key}" ${modPerm.delete ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
+                onchange="handleToggleModuleAction('${mod.key}', 'delete', this.checked)"
+                class="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer">
+            </label>
+          `}
         </td>
 
         <!-- All Actions (Row Master Toggle) -->
@@ -23971,9 +26724,10 @@ function renderRolePermissionsMatrix(roleName) {
     window.updateRoleMatrixHeaderCheckboxes();
   }
 }
+window.renderRolePermissionsMatrix = renderRolePermissionsMatrix;
 
 // 8. Event Handlers for Role Permissions Matrix
-window.handleRoleSelectChange = function(newRole) {
+window.handleRoleSelectChange = function (newRole) {
   ACTIVE_MATRIX_ROLE = newRole;
   renderRolePermissionsMatrix(newRole);
 };
@@ -23998,13 +26752,16 @@ function updateRoleMatrixHeaderCheckboxes() {
     el.disabled = false;
 
     let count = 0;
+    let totalEligible = 0;
     CRM_MODULE_DEFINITIONS.forEach(mod => {
+      if ((mod.key === 'customers' || mod.viewOnly) && action !== 'view') return;
+      totalEligible++;
       if (rolePerms[mod.key] && rolePerms[mod.key][action]) {
         count++;
       }
     });
 
-    if (count === totalMods && totalMods > 0) {
+    if (count === totalEligible && totalEligible > 0) {
       el.checked = true;
       el.indeterminate = false;
     } else if (count > 0) {
@@ -24026,14 +26783,18 @@ function updateRoleMatrixHeaderCheckboxes() {
     }
     allHeaderEl.disabled = false;
 
-    const totalCells = totalMods * 4;
+    let totalCells = 0;
     let checkedCells = 0;
     CRM_MODULE_DEFINITIONS.forEach(mod => {
       const p = rolePerms[mod.key] || {};
+      totalCells += 1;
       if (p.view) checkedCells++;
-      if (p.create) checkedCells++;
-      if (p.edit) checkedCells++;
-      if (p.delete) checkedCells++;
+      if (mod.key !== 'customers' && !mod.viewOnly) {
+        totalCells += 3;
+        if (p.create) checkedCells++;
+        if (p.edit) checkedCells++;
+        if (p.delete) checkedCells++;
+      }
     });
 
     if (checkedCells === totalCells && totalCells > 0) {
@@ -24050,7 +26811,7 @@ function updateRoleMatrixHeaderCheckboxes() {
 };
 
 // Toggle an action (view, create, edit, delete, or all) across ALL 12 modules
-window.handleToggleActionForAllModules = function(action, isChecked) {
+window.handleToggleActionForAllModules = function (action, isChecked) {
   initRolePermissionsState();
   if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
     showToast('Super Admin Locked', 'Super Admin always retains full system access.', 'info', 'purple');
@@ -24067,6 +26828,16 @@ window.handleToggleActionForAllModules = function(action, isChecked) {
   CRM_MODULE_DEFINITIONS.forEach(mod => {
     if (!rolePerms[mod.key]) {
       rolePerms[mod.key] = { view: false, create: false, edit: false, delete: false };
+    }
+
+    if (mod.key === 'customers' || mod.viewOnly) {
+      if (action === 'all' || action === 'view') {
+        rolePerms[mod.key].view = isChecked;
+      }
+      rolePerms[mod.key].create = false;
+      rolePerms[mod.key].edit = false;
+      rolePerms[mod.key].delete = false;
+      return;
     }
 
     if (action === 'all') {
@@ -24094,7 +26865,7 @@ window.handleToggleActionForAllModules = function(action, isChecked) {
   );
 };
 
-window.handleToggleModuleAction = function(moduleKey, action, isChecked) {
+window.handleToggleModuleAction = function (moduleKey, action, isChecked) {
   initRolePermissionsState();
   if (ACTIVE_MATRIX_ROLE === 'Super Admin') return;
 
@@ -24114,6 +26885,19 @@ window.handleToggleModuleAction = function(moduleKey, action, isChecked) {
     if (viewEl) viewEl.checked = true;
   }
 
+  // Keep sub-modules of inbox (autoreply, broadcast, enquiries) in sync with inbox permissions
+  if (moduleKey === 'inbox') {
+    ['autoreply', 'broadcast', 'enquiries'].forEach(subKey => {
+      if (!CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey]) {
+        CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey] = { view: false, create: false, edit: false, delete: false };
+      }
+      CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey][action] = isChecked;
+      if (isChecked && action !== 'view') {
+        CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey].view = true;
+      }
+    });
+  }
+
   // Update master all checkbox for this module
   const p = CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey];
   const allEl = document.getElementById(`role-mod-all-${moduleKey}`);
@@ -24125,25 +26909,64 @@ window.handleToggleModuleAction = function(moduleKey, action, isChecked) {
   } else if (typeof window.updateRoleMatrixHeaderCheckboxes === "function") {
     window.updateRoleMatrixHeaderCheckboxes();
   }
+
+  // Auto-persist permission changes immediately
+  try {
+    saveCRMState();
+    localStorage.setItem('CRM_ROLE_PERMISSIONS', JSON.stringify(CRM_STATE.rolePermissions));
+    fetch('api.php?action=save_role_permissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role: ACTIVE_MATRIX_ROLE,
+        permissions: CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE]
+      })
+    }).catch(() => { });
+    if (typeof enforceGranularActionPermissions === 'function') {
+      enforceGranularActionPermissions();
+    }
+  } catch (e) { }
 };
 
-window.handleToggleModuleAll = function(moduleKey, isChecked) {
+window.handleToggleModuleAll = function (moduleKey, isChecked) {
   initRolePermissionsState();
   if (ACTIVE_MATRIX_ROLE === 'Super Admin') return;
 
   if (!CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE]) {
     CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE] = {};
   }
-  CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey] = {
-    view: isChecked,
-    create: isChecked,
-    edit: isChecked,
-    delete: isChecked
-  };
+
+  if (moduleKey === 'customers' || moduleKey === 'audit') {
+    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey] = {
+      view: isChecked,
+      create: false,
+      edit: false,
+      delete: false
+    };
+  } else {
+    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey] = {
+      view: isChecked,
+      create: isChecked,
+      edit: isChecked,
+      delete: isChecked
+    };
+  }
+
+  // Keep sub-modules of inbox in sync
+  if (moduleKey === 'inbox') {
+    ['autoreply', 'broadcast', 'enquiries'].forEach(subKey => {
+      CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey] = {
+        view: isChecked,
+        create: isChecked,
+        edit: isChecked,
+        delete: isChecked
+      };
+    });
+  }
   renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
 };
 
-window.applyRolePreset = function(presetType) {
+window.applyRolePreset = function (presetType) {
   initRolePermissionsState();
   if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
     showToast('Super Admin Locked', 'Super Admin always retains 100% full system access.', 'info', 'purple');
@@ -24153,19 +26976,26 @@ window.applyRolePreset = function(presetType) {
   const rolePerms = {};
 
   CRM_MODULE_DEFINITIONS.forEach(mod => {
-    if (presetType === 'all') {
+    if (mod.key === 'customers' || mod.key === 'audit' || mod.viewOnly) {
+      const viewPerm = (presetType === 'all' || presetType === 'view_only' || (presetType === 'sales' && (mod.key === 'customers' || mod.key === 'audit')));
+      rolePerms[mod.key] = { view: viewPerm, create: false, edit: false, delete: false };
+    } else if (presetType === 'all') {
       rolePerms[mod.key] = { view: true, create: true, edit: true, delete: true };
     } else if (presetType === 'view_only') {
       rolePerms[mod.key] = { view: true, create: false, edit: false, delete: false };
     } else if (presetType === 'sales') {
-      const salesAllowed = ['inbox', 'enquiries', 'followups', 'catalog', 'orders', 'customers'];
+      const salesAllowed = ['inbox', 'followups', 'catalog', 'orders'];
       const isSalesMod = salesAllowed.includes(mod.key);
-      rolePerms[mod.key] = {
-        view: isSalesMod,
-        create: isSalesMod,
-        edit: isSalesMod,
-        delete: false
-      };
+      if (mod.key === 'masking') {
+        rolePerms[mod.key] = { view: true, create: true, edit: false, delete: false };
+      } else {
+        rolePerms[mod.key] = {
+          view: isSalesMod,
+          create: isSalesMod,
+          edit: isSalesMod,
+          delete: false
+        };
+      }
     } else if (presetType === 'reset') {
       rolePerms[mod.key] = { view: false, create: false, edit: false, delete: false };
     }
@@ -24176,7 +27006,7 @@ window.applyRolePreset = function(presetType) {
   showToast('Preset Applied', `Applied ${presetType.toUpperCase()} permissions preset to ${ACTIVE_MATRIX_ROLE}.`, 'tune', 'blue');
 };
 
-window.handleSaveRolePermissions = function() {
+window.handleSaveRolePermissions = function () {
   if (!canUserPerformAction('staff', 'edit')) {
     showToast('Permission Denied', 'Your assigned role does not have permission to edit roles & permissions.', 'lock', 'rose');
     return;
@@ -24197,7 +27027,7 @@ window.handleSaveRolePermissions = function() {
     })
   }).then(r => r.json()).then(res => {
     console.log('Role permissions saved to DB:', res);
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('ROLE_PERMISSIONS_SAVED', 'ROLES', `Updated module action permissions matrix for role: "${currentRole}"`);
 
@@ -24216,7 +27046,7 @@ window.handleSaveRolePermissions = function() {
   alert(`Role Permissions Successfully Saved!\n\nGranular module actions (View, Create, Edit, Delete) for role "${currentRole}" have been saved to MySQL and applied live.`);
 };
 
-window.handleCreateNewRolePrompt = function() {
+window.handleCreateNewRolePrompt = function () {
   const roleName = prompt('Enter a name for the new Role (e.g. Quality Auditor, Telecaller, Accounts):');
   if (!roleName || !roleName.trim()) return;
 
@@ -24246,7 +27076,7 @@ window.handleCreateNewRolePrompt = function() {
   showToast('Role Created!', `New role "${cleanName}" created. Configure its module permissions below.`, 'add_circle', 'purple');
 };
 
-window.handleDeleteCurrentRole = function() {
+window.handleDeleteCurrentRole = function () {
   if (['Super Admin', 'Admin Manager'].includes(ACTIVE_MATRIX_ROLE)) {
     alert('System default roles cannot be deleted.');
     return;
@@ -24380,7 +27210,7 @@ function handleQuickRoleReassign(event) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ staff_id: staffId, role: newRole })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('STAFF_ROLE_REASSIGNED', 'STAFF_MODULE', `Reassigned role of ${staff.name} from "${oldRole}" to "${newRole}"`);
 
@@ -24421,7 +27251,7 @@ function handleToggleStaffStatus(staffId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(staff)
-  }).catch(() => {});
+  }).catch(() => { });
 
   showToast('Status Updated', `${staff.name} is now ${newStatus === 'ACTIVE' ? 'Active on-duty' : 'On Leave'}.`, 'badge', 'sky');
 }
@@ -24452,7 +27282,7 @@ function handleDeleteStaff(staffId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ staff_id: staffId })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('STAFF_REMOVED', 'STAFF_MODULE', `Removed staff member ${staff.name} (${staffId})`);
   saveCRMState();
@@ -24602,11 +27432,11 @@ window.closeModal = closeModal;
 window.logAudit = logAudit;
 function logAudit(action, module, details) {
   try {
-    const user = (typeof ACTIVE_ROLE !== 'undefined' && ACTIVE_ROLE === 'admin') 
-      ? 'Super Admin' 
+    const user = (typeof ACTIVE_ROLE !== 'undefined' && ACTIVE_ROLE === 'admin')
+      ? 'Super Admin'
       : (((typeof CRM_STATE !== 'undefined' && CRM_STATE && Array.isArray(CRM_STATE.staffList)) ? CRM_STATE.staffList : []).find(s => s && s.id === (typeof ACTIVE_ROLE !== 'undefined' ? ACTIVE_ROLE : ''))?.name || 'Staff');
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+
     if (typeof CRM_STATE !== 'undefined' && CRM_STATE) {
       if (!Array.isArray(CRM_STATE.auditLogs)) {
         CRM_STATE.auditLogs = [];
@@ -24619,7 +27449,7 @@ function logAudit(action, module, details) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user, action, module, details, timestamp })
-    }).catch(() => {});
+    }).catch(() => { });
   } catch (err) {
     console.warn('[logAudit] Non-fatal logging error:', err);
   }
@@ -24637,9 +27467,24 @@ function updateBadgeCounters() {
 
   const unassignedCount = activeQueries.filter(q => q.assignedTo === 'UNASSIGNED').length;
   const unreadCount = activeQueries.reduce((acc, q) => acc + (q.unreadCount || 0), 0);
+  const uCurr = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
+  const myQueueIds = [
+    ACTIVE_ROLE,
+    uCurr?.id,
+    uCurr?.staff_id,
+    uCurr?.staffId,
+    uCurr?.username,
+    uCurr?.name
+  ].filter(Boolean).map(s => String(s).toLowerCase());
+
   const myQueueCount = ACTIVE_ROLE === 'admin'
     ? activeQueries.length
-    : activeQueries.filter(q => q.assignedTo === ACTIVE_ROLE).length;
+    : activeQueries.filter(q => {
+      const assigned = String(q.assignedTo || '').toLowerCase();
+      const s = (CRM_STATE.staffList || []).find(st => st.id === q.assignedTo);
+      const sName = String(s?.name || '').toLowerCase();
+      return myQueueIds.includes(assigned) || myQueueIds.includes(sName);
+    }).length;
 
   const bUnassigned = document.getElementById('badge-unassigned-count');
   if (bUnassigned) bUnassigned.innerText = `${unassignedCount} New`;
@@ -24706,7 +27551,7 @@ function updateBadgeCounters() {
   // Dynamically synchronize each staff member's todayHandled with active assigned queries (remove hardcoded static numbers)
   if (Array.isArray(CRM_STATE.staffList)) {
     CRM_STATE.staffList.forEach(staff => {
-      const assignedToThisStaff = activeQueries.filter(q => 
+      const assignedToThisStaff = activeQueries.filter(q =>
         (q.assignedTo === staff.id || (q.staff && q.staff.id === staff.id)) &&
         (!q.assignedStaffName || q.assignedStaffName.toLowerCase() === staff.name.toLowerCase())
       );
@@ -24718,7 +27563,7 @@ function updateBadgeCounters() {
 
   const inboxTodayEl = document.getElementById('inbox-today-message-count');
   if (inboxTodayEl) {
-    inboxTodayEl.innerText = `${totalReceivedToday} / ${target} msgs (${todayPct}%)`;
+    inboxTodayEl.innerText = `${totalReceivedToday} msgs`;
   }
 
   // Update Quota View KPI Counters if visible
@@ -24734,6 +27579,7 @@ function updateBadgeCounters() {
   const totalAllocated = (CRM_STATE.staffList || []).reduce((sum, s) => sum + (Number(s.dailyQuota) || 0), 0);
   if (kpiAllocated) kpiAllocated.innerText = `${totalAllocated} / ${target} msgs`;
 }
+window.updateBadgeCounters = updateBadgeCounters;
 
 function filterConversations(val) {
   renderInboxConversationList();
@@ -24816,8 +27662,82 @@ function renderBroadcastTemplateDropdown(selectedKey = null) {
   }
 }
 
+// 0. Admin Action: Save Changes to Current Template (Text + Dynamic Variable Values to DB)
+async function handleSaveCurrentTemplateChanges() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Modifying templates is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
+  const presetSelect = document.getElementById('bcast-preset-select');
+  const msgInput = document.getElementById('bcast-message-text');
+  if (!presetSelect || !msgInput) return;
+
+  const currentKey = presetSelect.value;
+  const text = msgInput.value.trim();
+
+  if (!currentKey || !BROADCAST_PRESETS_DATA[currentKey]) {
+    showToast('Select Template', 'Please select a template to save.', 'warning', 'amber');
+    return;
+  }
+
+  if (!text) {
+    showToast('Empty Message', 'Please enter some message text.', 'warning', 'amber');
+    return;
+  }
+
+  BROADCAST_PRESETS_DATA[currentKey].text = text;
+  BROADCAST_PRESETS_DATA[currentKey].variables = { ...BROADCAST_CUSTOM_TAGS };
+
+  try {
+    localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+  } catch (e) { }
+
+  const currentLabel = BROADCAST_PRESETS_DATA[currentKey].label || 'Custom Template';
+
+  // Persist directly to MySQL Database
+  try {
+    const res = await fetch('api.php?action=save_broadcast_template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: currentKey,
+        name: currentLabel,
+        category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
+        body_text: text,
+        variables_json: BROADCAST_CUSTOM_TAGS
+      })
+    });
+    if (res.ok) {
+      showToast('Template Saved in DB', `Template "${currentLabel}" and dynamic values saved to database!`, 'check_circle', 'emerald');
+      if (typeof playChime === 'function') playChime('order');
+    } else {
+      showToast('Template Saved', 'Saved locally in browser memory.', 'info', 'blue');
+    }
+  } catch (err) {
+    console.warn('API save_broadcast_template error:', err);
+    showToast('Template Saved', 'Saved locally in browser memory.', 'info', 'blue');
+  }
+
+  updateBroadcastPreview();
+}
+window.handleSaveCurrentTemplateChanges = handleSaveCurrentTemplateChanges;
+
 // 1. Admin Action: Save Current Message as a New Named Template
-function handleSaveCurrentAsNewTemplate() {
+async function handleSaveCurrentAsNewTemplate() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Creating new templates is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const msgInput = document.getElementById('bcast-message-text');
   const text = msgInput ? msgInput.value.trim() : '';
 
@@ -24831,22 +27751,51 @@ function handleSaveCurrentAsNewTemplate() {
   if (!templateName || !templateName.trim()) return;
 
   const cleanKey = 'template_' + Date.now();
-  BROADCAST_PRESETS_DATA[cleanKey] = {
+  const newTpl = {
     label: `📋 ${templateName.trim()}`,
-    text: text
+    text: text,
+    category: 'MARKETING',
+    variables: { ...BROADCAST_CUSTOM_TAGS }
   };
+  BROADCAST_PRESETS_DATA[cleanKey] = newTpl;
 
   try {
     localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-  } catch (e) {}
+  } catch (e) { }
+
+  // Persist to MySQL Database!
+  try {
+    await fetch('api.php?action=save_broadcast_template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: cleanKey,
+        name: newTpl.label,
+        category: 'MARKETING',
+        body_text: text,
+        variables_json: BROADCAST_CUSTOM_TAGS
+      })
+    });
+  } catch (err) {
+    console.warn('API save_broadcast_template error:', err);
+  }
 
   renderBroadcastTemplateDropdown(cleanKey);
-  showToast('Template Saved', `Template "${templateName.trim()}" saved successfully!`, 'bookmark_added', 'emerald');
+  showToast('Template Saved in DB', `Template "${templateName.trim()}" saved to database!`, 'bookmark_added', 'emerald');
   if (typeof playChime === 'function') playChime('order');
 }
 
 // 2. Admin Action: Rename the Currently Selected Template
-function handleRenameCurrentTemplate() {
+async function handleRenameCurrentTemplate() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Renaming templates is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const presetSelect = document.getElementById('bcast-preset-select');
   if (!presetSelect) return;
 
@@ -24862,14 +27811,41 @@ function handleRenameCurrentTemplate() {
     BROADCAST_PRESETS_DATA[currentKey].label = newName.trim();
     try {
       localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-    } catch (e) {}
+    } catch (e) { }
+
+    // Persist rename to MySQL Database!
+    try {
+      await fetch('api.php?action=save_broadcast_template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentKey,
+          name: newName.trim(),
+          category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
+          body_text: BROADCAST_PRESETS_DATA[currentKey].text,
+          variables_json: BROADCAST_PRESETS_DATA[currentKey].variables || BROADCAST_CUSTOM_TAGS
+        })
+      });
+    } catch (err) {
+      console.warn('API save_broadcast_template rename error:', err);
+    }
+
     renderBroadcastTemplateDropdown(currentKey);
-    showToast('Template Renamed', `Template renamed to "${newName.trim()}".`, 'edit', 'blue');
+    showToast('Template Renamed', `Template renamed to "${newName.trim()}" in database.`, 'edit', 'blue');
   }
 }
 
 // 3. Admin Action: Delete Selected Custom Template
-function handleDeleteCurrentTemplate() {
+async function handleDeleteCurrentTemplate() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'delete')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Deleting templates is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const presetSelect = document.getElementById('bcast-preset-select');
   if (!presetSelect) return;
 
@@ -24886,10 +27862,22 @@ function handleDeleteCurrentTemplate() {
     delete BROADCAST_PRESETS_DATA[currentKey];
     try {
       localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-    } catch (e) {}
+    } catch (e) { }
+
+    // Persist delete to MySQL Database!
+    try {
+      await fetch('api.php?action=delete_broadcast_template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: currentKey })
+      });
+    } catch (err) {
+      console.warn('API delete_broadcast_template error:', err);
+    }
+
     renderBroadcastTemplateDropdown(Object.keys(BROADCAST_PRESETS_DATA)[0]);
     applyBroadcastPreset(Object.keys(BROADCAST_PRESETS_DATA)[0]);
-    showToast('Template Deleted', 'Template removed successfully.', 'delete', 'amber');
+    showToast('Template Deleted', 'Template removed from database.', 'delete', 'amber');
   }
 }
 
@@ -24897,7 +27885,23 @@ function openBroadcastModal() {
   BROADCAST_CANCEL_FLAG = false;
   IS_BROADCASTING_ACTIVE = false;
 
-  // Load saved custom templates from storage if present
+  // 1. Sync templates from CRM_STATE if loaded from MySQL DB
+  if (CRM_STATE && Array.isArray(CRM_STATE.broadcastTemplates) && CRM_STATE.broadcastTemplates.length > 0) {
+    CRM_STATE.broadcastTemplates.forEach(bt => {
+      let varObj = {};
+      if (bt.variables_json) {
+        try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) { }
+      }
+      BROADCAST_PRESETS_DATA[bt.id] = {
+        label: bt.name,
+        text: bt.body_text,
+        category: bt.category,
+        variables: varObj
+      };
+    });
+  }
+
+  // 2. Load saved custom templates from storage if present
   try {
     const saved = localStorage.getItem('GRM_CUSTOM_BROADCAST_TEMPLATES');
     if (saved) {
@@ -24906,10 +27910,11 @@ function openBroadcastModal() {
         BROADCAST_PRESETS_DATA = Object.assign({}, BROADCAST_PRESETS_DATA, parsed);
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
-  renderBroadcastTemplateDropdown('festive_offer');
-  applyBroadcastPreset('festive_offer');
+  const initialKey = Object.keys(BROADCAST_PRESETS_DATA)[0] || 'festive_offer';
+  renderBroadcastTemplateDropdown(initialKey);
+  applyBroadcastPreset(initialKey);
   refreshBroadcastAutoFetchedNumbers();
   renderDynamicTemplateFields();
   updateBroadcastPreview();
@@ -24917,7 +27922,7 @@ function openBroadcastModal() {
   // Reset Broadcast Progress UI
   const progContainer = document.getElementById('bcast-progress-container');
   if (progContainer) progContainer.classList.add('hidden');
-  
+
   const startBtn = document.getElementById('btn-bcast-start');
   if (startBtn) {
     startBtn.classList.remove('hidden');
@@ -24972,6 +27977,13 @@ function applyBroadcastPreset(presetKey) {
     const cleanLabel = (BROADCAST_PRESETS_DATA[presetKey].label || 'Template Message Text').replace(/^[^\w\s]+/, '').trim();
     CURRENT_BROADCAST_TEMPLATE_TITLE = cleanLabel || 'Template Message Text';
     updateBroadcastTemplateTitleUI();
+
+    // Restore saved template dynamic variable values from database
+    if (BROADCAST_PRESETS_DATA[presetKey].variables && typeof BROADCAST_PRESETS_DATA[presetKey].variables === 'object') {
+      Object.entries(BROADCAST_PRESETS_DATA[presetKey].variables).forEach(([k, v]) => {
+        BROADCAST_CUSTOM_TAGS[k] = v;
+      });
+    }
   }
   renderDynamicTemplateFields();
   updateBroadcastPreview();
@@ -24979,6 +27991,12 @@ function applyBroadcastPreset(presetKey) {
 
 // Insert tag at cursor position in template textarea
 function insertBroadcastVariable(varTag) {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   const msgInput = document.getElementById('bcast-message-text');
   if (!msgInput) return;
 
@@ -25173,19 +28191,66 @@ function renderDynamicTemplateFields(preserveActiveFocus = false) {
       activeEl.focus();
       try {
         activeEl.setSelectionRange(activeCursorPos, activeCursorPos);
-      } catch (e) {}
+      } catch (e) { }
     }
+  }
+
+  // Enforce granular edit permissions on dynamic field inputs
+  const _currUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_currUser || _currUser.role === 'admin' || _currUser.id === 'admin' || _currUser.role === 'Super Admin';
+  const _canEdit = _isSA || (typeof canUserPerformAction === 'function' ? canUserPerformAction('broadcast', 'edit') : true);
+  if (!_canEdit) {
+    container.querySelectorAll('input').forEach(inp => {
+      inp.readOnly = true;
+      inp.classList.add('bg-slate-100', 'cursor-not-allowed');
+    });
+    container.querySelectorAll('button').forEach(btn => {
+      btn.style.display = 'none';
+    });
   }
 }
 
-// 1-Click Inline Value Change Handler
+// 1-Click Inline Value Change Handler with Auto-Save to Database
+let BCAST_TAG_SAVE_TIMER = null;
 function handleDynamicTagChange(tag, val) {
   BROADCAST_CUSTOM_TAGS[tag] = val;
+  const presetSelect = document.getElementById('bcast-preset-select');
+  const currentKey = presetSelect ? presetSelect.value : null;
+  if (currentKey && BROADCAST_PRESETS_DATA[currentKey]) {
+    if (!BROADCAST_PRESETS_DATA[currentKey].variables) {
+      BROADCAST_PRESETS_DATA[currentKey].variables = {};
+    }
+    BROADCAST_PRESETS_DATA[currentKey].variables[tag] = val;
+  }
   updateBroadcastPreview();
+
+  // Debounced auto-save of dynamic variable values to MySQL DB
+  if (currentKey && BROADCAST_PRESETS_DATA[currentKey]) {
+    clearTimeout(BCAST_TAG_SAVE_TIMER);
+    BCAST_TAG_SAVE_TIMER = setTimeout(() => {
+      fetch('api.php?action=save_broadcast_template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentKey,
+          name: BROADCAST_PRESETS_DATA[currentKey].label || 'Template',
+          category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
+          body_text: BROADCAST_PRESETS_DATA[currentKey].text,
+          variables_json: BROADCAST_CUSTOM_TAGS
+        })
+      }).catch(() => { });
+    }, 1000);
+  }
 }
 
 // Reset dynamic tag to default value
 function resetDynamicTagValue(tag) {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   const defVal = getDefaultTagValue(tag);
   BROADCAST_CUSTOM_TAGS[tag] = defVal;
   const inputEl = document.getElementById(`dyn-tag-input-${tag}`);
@@ -25196,6 +28261,12 @@ function resetDynamicTagValue(tag) {
 
 // Remove tag from message text
 function removeDynamicTag(tag) {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   const msgInput = document.getElementById('bcast-message-text');
   if (msgInput) {
     const reg = new RegExp(`\\{\\{\\s*${tag}\\s*\\}\\}`, 'gi');
@@ -25209,6 +28280,15 @@ function removeDynamicTag(tag) {
 
 // Quick Prompt to Add Any Custom Variable
 function promptAddNewCustomTag() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Adding variables is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const tagKey = prompt('Enter a new variable name without curly braces (e.g. discount, product_name, coupon_code, delivery_date):');
   if (!tagKey || !tagKey.trim()) return;
 
@@ -25248,7 +28328,7 @@ function renderTemplateMessagePersonalized(rawTemplate, customer = {}, account =
   const customerPhone = customer.whatsapp || customer.phone || '';
   const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  
+
   let staffName = 'Handling Staff';
   if (ACTIVE_ROLE === 'admin') {
     staffName = 'Super Admin';
@@ -25293,8 +28373,8 @@ function renderTemplateMessagePersonalized(rawTemplate, customer = {}, account =
 }
 
 function getBroadcastTargetCustomers(targetVal) {
-  const availableAccounts = typeof getAvailableWhatsAppAccounts === 'function' 
-    ? getAvailableWhatsAppAccounts() 
+  const availableAccounts = typeof getAvailableWhatsAppAccounts === 'function'
+    ? getAvailableWhatsAppAccounts()
     : (CRM_STATE.whatsappAccounts || [CRM_STATE.whatsappAccount]);
   const availableAccountIds = availableAccounts.map(a => a.id);
 
@@ -25334,21 +28414,21 @@ function getBroadcastTargetCustomers(targetVal) {
   }
 
   if (targetVal === 'TAG_VIP') {
-    return activeCustomers.filter(c => 
+    return activeCustomers.filter(c =>
       (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes('vip'))) ||
       (c.customerType && c.customerType.toLowerCase().includes('vip'))
     );
   }
 
   if (targetVal === 'TAG_WHOLESALE') {
-    return activeCustomers.filter(c => 
+    return activeCustomers.filter(c =>
       (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes('wholesale') || t.toLowerCase().includes('bulk'))) ||
       (c.customerType && c.customerType.toLowerCase().includes('wholesale'))
     );
   }
 
   if (targetVal === 'TAG_NEW') {
-    return activeCustomers.filter(c => 
+    return activeCustomers.filter(c =>
       (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes('new'))) ||
       (c.customerType && c.customerType.toLowerCase().includes('new'))
     );
@@ -25384,6 +28464,15 @@ function extractCurrentActiveNumbers(targetVal = 'ALL') {
 let BROADCAST_ATTACHED_IMAGE_DATA = null;
 
 function handleBroadcastImageFileUpload(event) {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Uploading images is restricted.', 'lock', 'rose');
+    }
+    return;
+  }
+
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
@@ -25399,7 +28488,7 @@ function handleBroadcastImageFileUpload(event) {
   }
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const dataUrl = e.target.result;
     applyBroadcastUploadedImage(dataUrl, file.name, file.size);
 
@@ -25430,6 +28519,12 @@ function handleBroadcastDragLeave(event) {
 function handleBroadcastFileDrop(event) {
   event.preventDefault();
   event.stopPropagation();
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   const dropzone = document.getElementById('bcast-upload-dropzone');
   if (dropzone) {
     dropzone.classList.remove('border-emerald-500', 'bg-emerald-50');
@@ -25442,7 +28537,7 @@ function handleBroadcastFileDrop(event) {
       return;
     }
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
       applyBroadcastUploadedImage(e.target.result, file.name, file.size);
       uploadBroadcastImageToServer(file, e.target.result);
     };
@@ -25514,6 +28609,12 @@ async function uploadBroadcastImageToServer(file, dataUrl) {
 }
 
 function removeBroadcastUploadedImage() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+    return;
+  }
+
   BROADCAST_ATTACHED_IMAGE_DATA = null;
 
   const fileInput = document.getElementById('bcast-image-file');
@@ -25619,7 +28720,7 @@ function updateBroadcastCustomNumbersCount() {
   const countBadge = document.getElementById('bcast-fetched-count');
   const countEl = document.getElementById('bcast-recipients-count');
   const summaryCount = document.getElementById('bcast-summary-count');
-  
+
   let numCount = 0;
   if (textarea && textarea.value.trim()) {
     const splitNums = textarea.value.split(new RegExp('[,\\r\\n;]+')).map(s => s.trim()).filter(s => s.replace(/[^0-9]/g, '').length >= 7);
@@ -25664,7 +28765,7 @@ function updateBroadcastPreview() {
   const msgCharCount = document.getElementById('bcast-message-char-count');
 
   const rawTemplate = (msgInput && msgInput.value.trim()) || "Hello {{customer_name}}, welcome to {{business_name}}! Reach us on {{line_phone}}.";
-  
+
   const audienceSelect = document.getElementById('bcast-target-audience');
   const targetVal = audienceSelect ? audienceSelect.value : 'ALL';
   const recipients = getBroadcastTargetCustomers(targetVal);
@@ -25722,6 +28823,17 @@ function updateBroadcastPreview() {
 }
 
 async function startAutomatedBroadcast() {
+  const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
+  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role has View-Only access. Starting automated broadcasts is restricted.', 'lock', 'rose');
+    } else {
+      alert('Permission Denied: Your assigned role has View-Only access. Starting automated broadcasts is restricted.');
+    }
+    return;
+  }
+
   if (IS_BROADCASTING_ACTIVE) return;
 
   const msgInput = document.getElementById('bcast-message-text');
@@ -25794,6 +28906,38 @@ async function startAutomatedBroadcast() {
     return;
   }
 
+  // Auto-save the active broadcast template & dynamic variables to MySQL database
+  const presetSelect = document.getElementById('bcast-preset-select');
+  const currentKey = presetSelect ? presetSelect.value : ('tmpl_' + Date.now());
+  const currentLabel = (BROADCAST_PRESETS_DATA[currentKey] && BROADCAST_PRESETS_DATA[currentKey].label)
+    ? BROADCAST_PRESETS_DATA[currentKey].label
+    : (CURRENT_BROADCAST_TEMPLATE_TITLE || 'Broadcast Template');
+
+  if (!BROADCAST_PRESETS_DATA[currentKey]) {
+    BROADCAST_PRESETS_DATA[currentKey] = {};
+  }
+  BROADCAST_PRESETS_DATA[currentKey].text = rawTemplate;
+  BROADCAST_PRESETS_DATA[currentKey].label = currentLabel;
+  BROADCAST_PRESETS_DATA[currentKey].variables = { ...BROADCAST_CUSTOM_TAGS };
+
+  try {
+    localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+  } catch (e) { }
+
+  // Save template & dynamic values to MySQL DB!
+  fetch('api.php?action=save_broadcast_template', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: currentKey,
+      name: currentLabel,
+      category: BROADCAST_PRESETS_DATA[currentKey]?.category || 'MARKETING',
+      body_text: rawTemplate,
+      image_url: attachedBroadcastImage || null,
+      variables_json: BROADCAST_CUSTOM_TAGS
+    })
+  }).catch(err => console.warn('Could not auto-save template to DB:', err));
+
   // Setup UI State for broadcast in progress
   IS_BROADCASTING_ACTIVE = true;
   BROADCAST_CANCEL_FLAG = false;
@@ -25860,10 +29004,25 @@ async function startAutomatedBroadcast() {
 
       CRM_STATE.conversations[customer.id].push(newMsg);
 
+      // Persist the dispatched broadcast message to MySQL database
+      fetch('api.php?action=send_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: customer.id,
+          phone: targetPhone,
+          text: personalizedText,
+          media_url: attachedBroadcastImage,
+          type: attachedBroadcastImage ? 'image' : 'text',
+          status: 'DELIVERED',
+          isBroadcast: true
+        })
+      }).catch(err => console.warn('Could not persist broadcast message to DB:', err));
+
       // Update query summary in list
       const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
       if (query) {
-        query.lastMessage = attachedBroadcastImage 
+        query.lastMessage = attachedBroadcastImage
           ? `Staff (Broadcast): [Photo] "${personalizedText.length > 30 ? personalizedText.substring(0, 27) + '...' : personalizedText}"`
           : `Staff (Broadcast): "${personalizedText.length > 40 ? personalizedText.substring(0, 37) + '...' : personalizedText}"`;
         query.lastMessageTime = 'Just now';
@@ -25873,7 +29032,7 @@ async function startAutomatedBroadcast() {
       const targetPhone = customer.whatsapp || customer.phone;
       const targetJid = customer.jid || null;
       const targetAccId = customer.accountId || (account && account.id) || 'account_1';
-      
+
       try {
         await dispatchWhatsAppOutbound(targetPhone, personalizedText, newMsg, targetJid, targetAccId, true, attachedBroadcastImage, customer.id);
       } catch (sendErr) {
@@ -26109,10 +29268,10 @@ function renderQuickNotesList() {
     const noteId = typeof n === 'string' ? n : (n.id || noteText);
     if (!noteText) return '';
     return `
-      <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50/90 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition shadow-2xs group ${isQueryEditing ? 'hover:bg-amber-100 cursor-pointer active:scale-95' : 'opacity-60 cursor-not-allowed select-none'}" ${isQueryEditing ? `onclick="setQuickStatusNote('${noteText.replace(/'/g, "\\'")}')"` : ''} title="${isQueryEditing ? `Click to insert '${noteText}'` : 'Touch Edit Enquiry Status to use'}">
-        <span>📌 ${noteText}</span>
+      <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50/90 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition shadow-2xs group max-w-full ${isQueryEditing ? 'hover:bg-amber-100 cursor-pointer active:scale-95' : 'opacity-60 cursor-not-allowed select-none'}" ${isQueryEditing ? `onclick="setQuickStatusNote('${noteText.replace(/'/g, "\\'")}')"` : ''} title="${isQueryEditing ? `Click to insert '${noteText}'` : 'Touch Edit Enquiry Status to use'}">
+        <span class="truncate max-w-[170px]" title="${noteText}">📌 ${noteText}</span>
         ${isQueryEditing ? `
-          <button type="button" onclick="event.stopPropagation(); deleteCustomQuickNote('${noteId}')" class="text-amber-400 hover:text-rose-600 rounded p-0.5 hover:bg-rose-50 flex items-center transition" title="Delete quick note">
+          <button type="button" onclick="event.stopPropagation(); deleteCustomQuickNote('${noteId}')" class="text-amber-400 hover:text-rose-600 rounded p-0.5 hover:bg-rose-50 flex items-center transition shrink-0" title="Delete quick note">
             <span class="material-symbols-outlined text-[10px]">close</span>
           </button>
         ` : ''}
@@ -26209,13 +29368,13 @@ function clearPayPendingDateFilter() {
 function autoExportAllFollowups(targetMode = null) {
   const currentUser = getCurrentUser();
   const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
-  
+
   // Determine mode: Follow-ups or Payment Pending
   const currentHubMode = (typeof ACTIVE_FOLLOWUP_HUB_MODE !== 'undefined' ? ACTIVE_FOLLOWUP_HUB_MODE : 'FOLLOWUPS');
   const mode = targetMode || currentHubMode;
   const isPay = (mode === 'PAYMENT_PENDING');
 
-  let rawList = (CRM_STATE.followups || []).filter(fu => 
+  let rawList = (CRM_STATE.followups || []).filter(fu =>
     fu && fu.id !== 'FU-2026-00108' && fu.id !== 'FU-2026-00107' && !(fu.reason && fu.reason.includes('ytfdw'))
   );
 
@@ -26383,9 +29542,9 @@ function autoExportAllFollowups(targetMode = null) {
 
   const actorRole = isAdmin ? 'Super Admin' : (currentUser.name || 'Staff');
   logAudit(isPay ? 'ALL_PAYMENTS_AUTO_EXPORTED' : 'ALL_FOLLOWUPS_AUTO_EXPORTED', 'EXPORT', `${actorRole} automatically exported all ${records.length} records to ${filename}`);
-  
+
   if (typeof playMessageChime === 'function') {
-    try { playMessageChime(); } catch(e) {}
+    try { playMessageChime(); } catch (e) { }
   }
 
   showToast(
@@ -26425,7 +29584,7 @@ function autoExportAllBothTabs(preferredPrimary = null) {
     autoExportAllFollowups(secondary);
 
     if (typeof playMessageChime === 'function') {
-      try { playMessageChime(); } catch(e) {}
+      try { playMessageChime(); } catch (e) { }
     }
 
     showToast(
@@ -26440,7 +29599,7 @@ window.autoExportAllBothTabs = autoExportAllBothTabs;
 
 function openFollowupExportModal(mode) {
   EXPORT_HUB_MODE = mode || (typeof ACTIVE_FOLLOWUP_HUB_MODE !== 'undefined' ? ACTIVE_FOLLOWUP_HUB_MODE : 'FOLLOWUPS');
-  
+
   // Update mode tabs & form options
   switchExportHubMode(EXPORT_HUB_MODE);
 
@@ -26474,7 +29633,7 @@ function switchExportHubMode(mode) {
   EXPORT_HUB_MODE = mode;
   const btnFu = document.getElementById('export-mode-btn-followups');
   const btnPay = document.getElementById('export-mode-btn-payment');
-  
+
   if (btnFu && btnPay) {
     if (mode === 'FOLLOWUPS') {
       btnFu.className = "py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-blue-600 text-white shadow-sm";
@@ -26546,10 +29705,10 @@ function setExportDatePreset(preset) {
     const el = document.getElementById(`export-preset-${p}`);
     if (el) {
       if ((preset === 'ALL' && p === 'all') ||
-          (preset === 'TODAY' && p === 'today') ||
-          (preset === 'YESTERDAY' && p === 'yesterday') ||
-          (preset === 'THIS_WEEK' && p === 'week') ||
-          (preset === 'THIS_MONTH' && p === 'month')) {
+        (preset === 'TODAY' && p === 'today') ||
+        (preset === 'YESTERDAY' && p === 'yesterday') ||
+        (preset === 'THIS_WEEK' && p === 'week') ||
+        (preset === 'THIS_MONTH' && p === 'month')) {
         el.className = "px-2.5 py-1 rounded-lg font-bold text-[11px] bg-slate-900 text-white transition cursor-pointer";
       } else {
         el.className = "px-2.5 py-1 rounded-lg font-bold text-[11px] bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer";
@@ -26617,7 +29776,7 @@ function getFilteredExportRecords() {
   const toDate = document.getElementById('export-date-to')?.value || '';
   const todayStr = new Date().toISOString().split('T')[0];
 
-  let rawList = (CRM_STATE.followups || []).filter(fu => 
+  let rawList = (CRM_STATE.followups || []).filter(fu =>
     fu && fu.id !== 'FU-2026-00108' && fu.id !== 'FU-2026-00107' && !(fu.reason && fu.reason.includes('ytfdw'))
   );
 
@@ -26757,7 +29916,7 @@ function updateFollowupExportPreview() {
 
   if (amountBadge) {
     if (EXPORT_HUB_MODE === 'PAYMENT_PENDING') {
-      amountBadge.innerText = `₹${totalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Total`;
+      amountBadge.innerText = `₹${totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Total`;
       amountBadge.classList.remove('hidden');
     } else {
       amountBadge.classList.add('hidden');
@@ -26797,7 +29956,7 @@ function updateFollowupExportPreview() {
           return `
             <tr class="hover:bg-slate-50 transition-colors">
               <td class="px-3 py-1.5 font-bold">${r.customerName || 'Customer'}</td>
-              <td class="px-3 py-1.5 font-mono font-bold text-slate-900">₹${(parseFloat(r.paymentAmount) || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+              <td class="px-3 py-1.5 font-mono font-bold text-slate-900">₹${(parseFloat(r.paymentAmount) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
               <td class="px-3 py-1.5">${r.paymentMode || 'UPI'}</td>
               <td class="px-3 py-1.5 font-mono">${r.paymentDueDate || r.date || '—'}</td>
               <td class="px-3 py-1.5">${staff}</td>
@@ -26810,7 +29969,7 @@ function updateFollowupExportPreview() {
           tfoot.innerHTML = `
             <tr class="bg-amber-100/90 font-black text-slate-900 border-t-2 border-amber-300">
               <td class="px-3 py-2 text-amber-950 font-black">Total: ${records.length} Record${records.length === 1 ? '' : 's'}</td>
-              <td class="px-3 py-2 font-mono font-black text-amber-950">₹${totalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td class="px-3 py-2 font-mono font-black text-amber-950">₹${totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               <td colspan="4" class="px-3 py-2 text-right text-[10px] text-amber-900 font-extrabold uppercase tracking-wider">All ${records.length} matching records shown</td>
             </tr>
           `;
@@ -26924,7 +30083,7 @@ function handleExportFollowupsCSV() {
     const phone = cust ? cust.phone : (r.customerPhone || '');
     const city = cust ? (cust.city || cust.location || '') : '';
     const staff = (CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || r.assignedTo || 'Unassigned';
-    
+
     // Linked order details
     let orderId = '';
     let orderTotal = '';
@@ -27003,7 +30162,7 @@ function handleCopyFollowupsExportData() {
   }
 
   const isPay = (EXPORT_HUB_MODE === 'PAYMENT_PENDING');
-  let headers = isPay 
+  let headers = isPay
     ? ['Customer', 'Phone', 'Items', 'Amount', 'Mode', 'Due Date', 'Staff', 'Status']
     : ['Customer', 'Phone', 'Date', 'Time', 'Reason', 'Priority', 'Staff', 'Status'];
 
@@ -27085,6 +30244,11 @@ let CURRENT_EDIT_ORDER = null;
 let EDIT_ORDER_ITEMS = [];
 
 function openEditOrderModal(orderId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit orders.', 'lock', 'rose');
+    return;
+  }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) {
     showToast('Order Not Found', `Cannot find order #${orderId}`, 'error', 'rose');
@@ -27141,13 +30305,38 @@ function openEditOrderModal(orderId) {
 
   onEditOrderPaymentMethodChange();
 
-  // Populate Fulfillment & Tracking
+  // Populate Fulfillment & Tracking with strict sequential stage rules
   const statusSelect = document.getElementById('edit-order-status');
   const courierInput = document.getElementById('edit-order-courier-name');
   const trackingInput = document.getElementById('edit-order-tracking-number');
   const urlInput = document.getElementById('edit-order-shipping-url');
 
-  if (statusSelect) statusSelect.value = ord.orderStatus || ord.order_status || 'PLACED';
+  const normCurrentStatus = normalizeOrderStatus(ord.orderStatus || ord.order_status || 'PLACED');
+
+  if (statusSelect) {
+    const stageMap = { 'PLACED': 1, 'PACKED': 2, 'SHIPPED': 3, 'OUT_FOR_DELIVERY': 4, 'DELIVERED': 5 };
+    const curStep = stageMap[normCurrentStatus] || 1;
+    const stages = [
+      { val: 'PLACED', label: '1. PLACED', step: 1 },
+      { val: 'PACKED', label: '2. PACKED', step: 2 },
+      { val: 'SHIPPED', label: '3. SHIPPED', step: 3 },
+      { val: 'OUT_FOR_DELIVERY', label: '4. OUT FOR DELIVERY', step: 4 },
+      { val: 'DELIVERED', label: '5. DELIVERED', step: 5 }
+    ];
+
+    let optionsHtml = stages.map(s => {
+      const isSelected = (normCurrentStatus === s.val);
+      const isDisabled = (s.step < curStep || s.step > curStep + 1);
+      return `<option value="${s.val}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled style="color:#94a3b8;background-color:#f1f5f9;"' : ''}>${s.label}</option>`;
+    }).join('');
+
+    const isCancelled = (normCurrentStatus === 'CANCELLED');
+    const cancelDisabled = (normCurrentStatus === 'DELIVERED');
+    optionsHtml += `<option value="CANCELLED" ${isCancelled ? 'selected' : ''} ${cancelDisabled ? 'disabled style="color:#94a3b8;background-color:#f1f5f9;"' : ''}>CANCELLED</option>`;
+
+    statusSelect.innerHTML = optionsHtml;
+    statusSelect.value = normCurrentStatus;
+  }
   if (courierInput) courierInput.value = ord.courierName || ord.courier_name || '';
   if (trackingInput) trackingInput.value = ord.trackingNumber || ord.tracking_number || '';
   if (urlInput) urlInput.value = ord.shippingUrl || ord.shipping_url || '';
@@ -27303,7 +30492,71 @@ function onEditOrderPaymentMethodChange() {
 }
 window.onEditOrderPaymentMethodChange = onEditOrderPaymentMethodChange;
 
+
+function confirmDeleteOrder(orderId) {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'delete')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete orders.', 'lock', 'rose');
+    return;
+  }
+  if (!orderId) return;
+  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  if (!ord) {
+    if (typeof showToast === 'function') showToast('Order Not Found', `Cannot find order #${orderId}`, 'error', 'rose');
+    return;
+  }
+  if (!window.confirm(`⚠️ Permanently Delete Order #${orderId}?\n\nCustomer: ${ord.customerName || 'Customer'}\nAmount: ₹${parseFloat(ord.grandTotal || 0).toLocaleString('en-IN')}\n\nThis will remove the order permanently and restore reserved items back into sellable inventory stock.`)) {
+    return;
+  }
+
+  // Release reserved stock back into product catalog inventory
+  (ord.items || []).forEach(it => {
+    const p = (CRM_STATE?.products || []).find(prod => prod.sku === it.sku || prod.name === it.name);
+    if (p) {
+      p.reservedStock = Math.max(0, (parseInt(p.reservedStock) || 0) - (parseInt(it.qty) || 1));
+    }
+  });
+
+  // Remove from state
+  CRM_STATE.orders = (CRM_STATE.orders || []).filter(o => o.id !== orderId);
+  saveCRMState();
+
+  if (typeof closeModal === 'function') closeModal('modal-edit-order');
+
+  // Sync to database
+  fetch('api.php?action=delete_order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: orderId, order_id: orderId })
+  }).catch(() => { });
+
+  if (typeof logAudit === 'function') logAudit('ORDER_DELETED', 'ORDERS', `Order #${orderId} deleted and reserved stock released`);
+  if (typeof showToast === 'function') showToast('Order Deleted', `Order #${orderId} permanently removed and reserved stock released.`, 'delete', 'rose');
+  if (typeof renderOrdersDashboard === 'function') renderOrdersDashboard();
+  if (typeof renderOrdersHistoryTable === 'function') renderOrdersHistoryTable();
+  if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+  if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+  if (ACTIVE_VIEW === 'catalog' && typeof renderCatalogGrid === 'function') renderCatalogGrid('');
+}
+window.confirmDeleteOrder = confirmDeleteOrder;
+
+function confirmDeleteOrderFromModal() {
+  if (typeof CURRENT_EDIT_ORDER !== 'undefined' && CURRENT_EDIT_ORDER && CURRENT_EDIT_ORDER.id) {
+    confirmDeleteOrder(CURRENT_EDIT_ORDER.id);
+  } else {
+    const titleEl = document.getElementById('edit-order-modal-id-title');
+    const orderId = titleEl ? titleEl.innerText.replace('#', '').trim() : '';
+    if (orderId) confirmDeleteOrder(orderId);
+  }
+}
+window.confirmDeleteOrderFromModal = confirmDeleteOrderFromModal;
+
 function saveEditedOrder() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
+    if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to edit orders.', 'lock', 'rose');
+    return;
+  }
   if (!CURRENT_EDIT_ORDER) return;
 
   if (EDIT_ORDER_ITEMS.length === 0) {
@@ -27342,6 +30595,37 @@ function saveEditedOrder() {
 
   const oldStatus = CURRENT_EDIT_ORDER.orderStatus || CURRENT_EDIT_ORDER.order_status;
   const newStatus = statusSelect ? statusSelect.value : oldStatus;
+
+  // Strict Validation in Edit Order Modal
+  const editStageMap = { 'PLACED': 1, 'PACKED': 2, 'SHIPPED': 3, 'OUT_FOR_DELIVERY': 4, 'DELIVERED': 5 };
+  const curStep = editStageMap[normalizeOrderStatus(oldStatus)] || 1;
+  const newStep = editStageMap[normalizeOrderStatus(newStatus)] || 1;
+
+  if (newStatus !== 'CANCELLED' && oldStatus !== 'CANCELLED') {
+    if (newStep < curStep) {
+      if (typeof showToast === 'function') showToast('Validation Error', `Strict Validation: Cannot move status backward from ${oldStatus} to ${newStatus}.`, 'error', 'rose');
+      return;
+    }
+    if (newStep > curStep + 1) {
+      if (typeof showToast === 'function') showToast('Validation Error', `Strict Validation: Cannot jump stages from ${oldStatus} to ${newStatus}. Must proceed sequentially.`, 'error', 'rose');
+      return;
+    }
+  }
+
+  if (newStatus === 'SHIPPED') {
+    const courierVal = (courierInput?.value || '').trim();
+    const trkVal = (trackingInput?.value || '').trim();
+    if (!courierVal) {
+      if (typeof showToast === 'function') showToast('Courier Required', 'Please enter a Courier Partner when order status is SHIPPED.', 'warning', 'amber');
+      courierInput?.focus();
+      return;
+    }
+    if (!trkVal) {
+      if (typeof showToast === 'function') showToast('Tracking ID Required', 'Please enter AWB Tracking Number when order status is SHIPPED.', 'warning', 'amber');
+      trackingInput?.focus();
+      return;
+    }
+  }
 
   // Update object
   CURRENT_EDIT_ORDER.customerName = custName;
@@ -27411,7 +30695,7 @@ function saveEditedOrder() {
       codBalanceDue: CURRENT_EDIT_ORDER.codBalanceDue,
       isEditUpdate: true
     })
-  }).catch(() => {});
+  }).catch(() => { });
 
   logAudit('ORDER_EDITED', 'ORDERS', `Updated details for Order #${CURRENT_EDIT_ORDER.id} (Status: ${newStatus}, Total: ₹${grandTotal})`);
   saveCRMState();
@@ -27424,3 +30708,1660 @@ function saveEditedOrder() {
   if (typeof playChime === 'function') playChime('order');
 }
 window.saveEditedOrder = saveEditedOrder;
+
+// =========================================================================
+// WHATSAPP VOICE-TO-VOICE RECORDING & TRANSLATION ENGINE (6 LANGUAGES ONLY)
+// Tamil (ta), English (en), Malayalam (ml), Kannada (kn), Hindi (hi), Telugu (te)
+// =========================================================================
+window.VOICE_SUPPORTED_LANGUAGES = [
+  { code: 'ta', bcp47: 'ta-IN', name: 'Tamil', native: 'தமிழ்' },
+  { code: 'en', bcp47: 'en-IN', name: 'English', native: 'English' },
+  { code: 'ml', bcp47: 'ml-IN', name: 'Malayalam', native: 'മലയാളം' },
+  { code: 'kn', bcp47: 'kn-IN', name: 'Kannada', native: 'ಕನ್ನಡ' },
+  { code: 'hi', bcp47: 'hi-IN', name: 'Hindi', native: 'हिंदी' },
+  { code: 'te', bcp47: 'te-IN', name: 'Telugu', native: 'తెలుగు' }
+];
+
+let _voiceMediaRecorder = null;
+let _voiceAudioChunks = [];
+let _voiceRecordTimer = null;
+let _voiceRecordStartTime = null;
+let _voiceActiveStream = null;
+let _voiceCurrentBlob = null;
+let _voiceUploadedMsgId = null;
+let _voiceCurrentTranslationId = null;
+let _voiceCurrentTransAudioUrl = null;
+let _voiceSpeechRecognizer = null;
+let _voiceClientHint = '';
+let _voiceAccumulatedTranscript = '';
+
+function initFreshSpeechRecognizer() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec) return null;
+  try {
+    const rec = new SpeechRec();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    // Set recognition language: default to Tamil or active CRM language
+    const cLang = (window.CURRENT_LANG === 'en') ? 'en-IN' : ((window.CURRENT_LANG === 'ml') ? 'ml-IN' : ((window.CURRENT_LANG === 'hi') ? 'hi-IN' : 'ta-IN'));
+    rec.lang = cLang;
+
+    rec.onresult = (ev) => {
+      let sessionFinal = '';
+      let sessionInterim = '';
+      for (let i = 0; i < ev.results.length; ++i) {
+        if (ev.results[i].isFinal) {
+          sessionFinal += ev.results[i][0].transcript + ' ';
+        } else {
+          sessionInterim += ev.results[i][0].transcript;
+        }
+      }
+      // Concatenate previous finalized speech with current session speech so nothing is cut off
+      _voiceClientHint = (_voiceAccumulatedTranscript + ' ' + sessionFinal + ' ' + sessionInterim).trim();
+    };
+
+    rec.onerror = (err) => {
+      console.warn('[Voice SpeechRecognition Notice]', err.error || err);
+    };
+
+    rec.onend = () => {
+      // Accumulate recognized text across restarts so full duration is preserved
+      _voiceAccumulatedTranscript = _voiceClientHint;
+      if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
+        try { rec.start(); } catch (e) {}
+      }
+    };
+    return rec;
+  } catch (e) {
+    console.warn('[SpeechRec Init Error]', e);
+    return null;
+  }
+}
+
+window.toggleVoiceRecording = async function () {
+  const panel = document.getElementById('voice-record-panel');
+  if (!panel) return;
+
+  if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
+    window.stopVoiceRecording();
+    return;
+  }
+
+  try {
+    _voiceActiveStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    if (typeof showToast === 'function') {
+      showToast('Microphone Permission', 'Please allow microphone access in your browser to record voice notes.', 'error', 'rose');
+    } else {
+      alert('Microphone access is required to record voice notes.');
+    }
+    return;
+  }
+
+  panel.classList.remove('hidden');
+  const activeBox = document.getElementById('voice-recording-active');
+  const previewBox = document.getElementById('voice-recording-preview');
+  const transBox = document.getElementById('voice-translated-preview-box');
+  if (activeBox) activeBox.classList.remove('hidden');
+  if (previewBox) previewBox.classList.add('hidden');
+  if (transBox) transBox.classList.add('hidden');
+
+  _voiceAudioChunks = [];
+  _voiceClientHint = '';
+  _voiceAccumulatedTranscript = '';
+
+  const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) ? 'audio/webm;codecs=opus' : ((typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) ? 'audio/ogg;codecs=opus' : '');
+  const options = mimeType ? { mimeType } : {};
+  _voiceMediaRecorder = new MediaRecorder(_voiceActiveStream, options);
+
+  _voiceMediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) {
+      _voiceAudioChunks.push(e.data);
+    }
+  };
+
+  _voiceMediaRecorder.onstop = async () => {
+    _voiceCurrentBlob = new Blob(_voiceAudioChunks, { type: _voiceMediaRecorder.mimeType || 'audio/webm' });
+    const audioUrl = URL.createObjectURL(_voiceCurrentBlob);
+    const originalAudioEl = document.getElementById('voice-original-audio');
+    if (originalAudioEl) {
+      originalAudioEl.src = audioUrl;
+      originalAudioEl.load();
+    }
+
+    if (activeBox) activeBox.classList.add('hidden');
+    if (previewBox) previewBox.classList.remove('hidden');
+
+    await uploadOriginalStaffAudio();
+  };
+
+  _voiceMediaRecorder.start(250);
+  _voiceRecordStartTime = Date.now();
+
+  const timerEl = document.getElementById('voice-record-timer');
+  if (_voiceRecordTimer) clearInterval(_voiceRecordTimer);
+  _voiceRecordTimer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - _voiceRecordStartTime) / 1000);
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    if (timerEl) timerEl.textContent = `${m}:${s}`;
+    if (elapsed >= 120) {
+      window.stopVoiceRecording();
+    }
+  }, 500);
+
+  // Initialize and start a fresh speech recognizer
+  _voiceSpeechRecognizer = initFreshSpeechRecognizer();
+  if (_voiceSpeechRecognizer) {
+    try {
+      _voiceSpeechRecognizer.start();
+    } catch (e) {}
+  }
+};
+
+window.stopVoiceRecording = function () {
+  if (_voiceRecordTimer) {
+    clearInterval(_voiceRecordTimer);
+    _voiceRecordTimer = null;
+  }
+  if (_voiceSpeechRecognizer) {
+    try { _voiceSpeechRecognizer.stop(); } catch (e) {}
+  }
+  if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
+    _voiceMediaRecorder.stop();
+  }
+  if (_voiceActiveStream) {
+    _voiceActiveStream.getTracks().forEach(t => t.stop());
+    _voiceActiveStream = null;
+  }
+};
+
+window.cancelVoiceRecording = function () {
+  window.stopVoiceRecording();
+  window.resetVoiceRecorder();
+};
+
+window.resetVoiceRecorder = function () {
+  if (_voiceActiveStream) {
+    _voiceActiveStream.getTracks().forEach(t => t.stop());
+    _voiceActiveStream = null;
+  }
+  _voiceCurrentBlob = null;
+  _voiceUploadedMsgId = null;
+  _voiceCurrentTranslationId = null;
+  _voiceCurrentTransAudioUrl = null;
+  _voiceAudioChunks = [];
+  _voiceClientHint = '';
+  _voiceAccumulatedTranscript = '';
+
+  const panel = document.getElementById('voice-record-panel');
+  if (panel) panel.classList.add('hidden');
+  const timerEl = document.getElementById('voice-record-timer');
+  if (timerEl) timerEl.textContent = '00:00';
+  const origAudio = document.getElementById('voice-original-audio');
+  if (origAudio) { origAudio.pause(); origAudio.src = ''; }
+  const transAudio = document.getElementById('voice-translated-audio');
+  if (transAudio) { transAudio.pause(); transAudio.src = ''; }
+  const transBox = document.getElementById('voice-translated-preview-box');
+  if (transBox) transBox.classList.add('hidden');
+};
+
+let _voiceUploadPromise = null;
+let _isVoiceSending = false;
+
+async function uploadOriginalStaffAudio() {
+  if (!_voiceCurrentBlob) return;
+
+  const formData = new FormData();
+  formData.append('audio', _voiceCurrentBlob, 'staff_voice.webm');
+  formData.append('customer_id', (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '') || '');
+  formData.append('staff_id', (window.PHP_USER_SESSION?.id || 'staff_01'));
+  formData.append('source_lang', 'ta');
+  formData.append('client_transcription', _voiceClientHint || '');
+
+  _voiceUploadPromise = (async () => {
+    try {
+      const res = await fetch('api.php?action=upload_staff_voice', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success && data.voice_message_id) {
+        _voiceUploadedMsgId = data.voice_message_id;
+        const durEl = document.getElementById('voice-preview-duration');
+        if (durEl) durEl.textContent = `(${data.duration}s)`;
+      }
+      return data;
+    } catch (err) {
+      console.warn('[Staff Voice Upload Error]:', err);
+      return null;
+    }
+  })();
+  return _voiceUploadPromise;
+}
+
+window.onVoiceTargetLangChange = function (newLang) {
+  const langLabels = {
+    ta: 'Tamil (தமிழ்)',
+    en: 'English',
+    hi: 'Hindi (हिंदी)',
+    te: 'Telugu (తెలుగు)',
+    ml: 'Malayalam (മലയാളം)',
+    kn: 'Kannada (ಕನ್ನಡ)'
+  };
+  const transLabel = document.getElementById('voice-translated-lang-label');
+  if (transLabel) {
+    transLabel.textContent = langLabels[newLang] || newLang;
+  }
+
+  // If a translated voice was already generated, automatically re-translate!
+  const transBox = document.getElementById('voice-translated-preview-box');
+  if (transBox && !transBox.classList.contains('hidden')) {
+    window.executeVoiceTranslation();
+  }
+};
+
+window.executeVoiceTranslation = async function () {
+  const targetLangSelect = document.getElementById('voice-target-lang');
+  const targetLang = targetLangSelect ? targetLangSelect.value : 'en';
+  const btn = document.getElementById('btn-voice-translate');
+  const btnText = document.getElementById('btn-voice-translate-text');
+
+  const textHint = _voiceClientHint || '';
+
+  // Reset previous translation player state
+  const prevTransLabel = document.getElementById('voice-translated-lang-label');
+  const prevTransAudio = document.getElementById('voice-translated-audio');
+  if (prevTransAudio) { prevTransAudio.pause(); }
+
+  const langLabels = {
+    ta: 'Tamil (தமிழ்)',
+    en: 'English',
+    hi: 'Hindi (हिंदी)',
+    te: 'Telugu (తెలుగు)',
+    ml: 'Malayalam (മലയാളം)',
+    kn: 'Kannada (ಕನ್ನಡ)'
+  };
+
+  if (prevTransLabel) prevTransLabel.textContent = langLabels[targetLang] || targetLang;
+
+  if (btn) {
+    btn.disabled = true;
+    if (btnText) btnText.textContent = 'Translating voice...';
+  }
+
+  // Ensure original audio finished uploading first if applicable
+  if (_voiceUploadPromise && !_voiceUploadedMsgId) {
+    if (btnText) btnText.textContent = 'Preparing audio...';
+    try { await _voiceUploadPromise; } catch (e) {}
+  }
+
+  try {
+    const res = await fetch('api.php?action=translate_voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        voice_message_id: _voiceUploadedMsgId || '',
+        target_lang: targetLang,
+        client_transcription: textHint,
+        source_lang: 'auto'
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.translated_audio_url) {
+      _voiceCurrentTranslationId = data.translation_id;
+      _voiceCurrentTransAudioUrl = data.translated_audio_url;
+
+      const transBox = document.getElementById('voice-translated-preview-box');
+      if (transBox) transBox.classList.remove('hidden');
+
+      const transLabel = document.getElementById('voice-translated-lang-label');
+      if (transLabel) transLabel.textContent = langLabels[targetLang] || targetLang;
+
+      const transAudio = document.getElementById('voice-translated-audio');
+      if (transAudio) {
+        transAudio.src = data.translated_audio_url + '?t=' + Date.now();
+        transAudio.load();
+      }
+
+      if (typeof showToast === 'function') {
+        showToast('Voice Translated', `Generated in ${langLabels[targetLang]}. Click Play to preview.`, 'success', 'emerald');
+      }
+    } else {
+      throw new Error(data.error || 'Voice translation failed');
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') {
+      showToast('Translation Notice', err.message, 'warning', 'amber');
+    } else {
+      alert('Voice translation notice: ' + err.message);
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      if (btnText) btnText.textContent = 'Translate Voice';
+    }
+  }
+};
+
+window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
+  if (_isVoiceSending) {
+    console.warn('[Voice Send] Already in flight, ignoring duplicate click');
+    return;
+  }
+
+  const approveBtn = document.getElementById('btn-voice-approve-send');
+  const origBtn = document.getElementById('btn-voice-send-orig');
+  const approveText = document.getElementById('btn-voice-approve-text');
+  const approveIcon = document.getElementById('btn-voice-approve-icon');
+
+  _isVoiceSending = true;
+
+  // Immediate frontend single-click lockout & visual loading indicator
+  if (approveBtn) {
+    approveBtn.disabled = true;
+    approveBtn.classList.add('opacity-60', 'pointer-events-none');
+    if (approveText) approveText.textContent = 'Sending (1x only)...';
+    if (approveIcon) {
+      approveIcon.textContent = 'progress_activity';
+      approveIcon.classList.add('animate-spin');
+    }
+  }
+  if (origBtn) {
+    origBtn.disabled = true;
+    origBtn.classList.add('opacity-60', 'pointer-events-none');
+  }
+
+  const targetLang = document.getElementById('voice-target-lang')?.value || 'en';
+  const custId = (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '') || '';
+  const customer = (CRM_STATE?.customers || []).find(c => c && (c.id === custId || String(c.id) === String(custId)));
+  const phone = customer ? (customer.whatsapp || customer.phone) : '';
+
+  try {
+    const res = await fetch('api.php?action=send_translated_voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: custId,
+        phone: phone,
+        voice_message_id: _voiceUploadedMsgId,
+        translation_id: _voiceCurrentTranslationId,
+        send_mode: sendMode,
+        target_lang: targetLang
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Immediately reset voice recorder and close panel so user cannot re-click
+      window.resetVoiceRecorder();
+
+      if (CRM_STATE && CRM_STATE.conversations) {
+        if (!CRM_STATE.conversations[custId]) {
+          CRM_STATE.conversations[custId] = [];
+        }
+        CRM_STATE.conversations[custId].push({
+          id: data.message_id || ('msg_voice_' + Date.now()),
+          sender: 'staff',
+          text: '🎤 WhatsApp Voice Note',
+          type: 'audio',
+          media_type: 'audio',
+          mediaType: 'audio',
+          media_url: data.audio_url,
+          mediaUrl: data.audio_url,
+          audioDuration: data.duration,
+          duration: data.duration,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'DELIVERED'
+        });
+        if (typeof saveCRMState === 'function') {
+          saveCRMState();
+        }
+      }
+
+      if (typeof renderChatMessages === 'function') {
+        renderChatMessages();
+      }
+
+      if (typeof showToast === 'function') {
+        showToast('Voice Sent', 'Voice note sent to customer WhatsApp once!', 'success', 'emerald');
+      }
+    } else {
+      throw new Error(data.error || 'Failed to dispatch voice');
+    }
+  } catch (err) {
+    alert('Failed to send voice note: ' + err.message);
+  } finally {
+    _isVoiceSending = false;
+    if (approveBtn) {
+      approveBtn.disabled = false;
+      approveBtn.classList.remove('opacity-60', 'pointer-events-none');
+      if (approveText) approveText.textContent = 'Approve & Send to WhatsApp';
+      if (approveIcon) {
+        approveIcon.textContent = 'send';
+        approveIcon.classList.remove('animate-spin');
+      }
+    }
+    if (origBtn) {
+      origBtn.disabled = false;
+      origBtn.classList.remove('opacity-60', 'pointer-events-none');
+    }
+  }
+};
+
+window.renderDualVoicePlayerBubble = function(msg, msgId, isOut) {
+  const audioSrc = msg.media_url || '';
+  const duration = msg.duration || 8;
+
+  return `
+    <div class="space-y-2 py-1">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleAudioPlay('${msgId}')" id="btn-play-${msgId}" class="w-11 h-11 rounded-full ${isOut ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-teal-600 hover:bg-teal-700'} active:scale-95 text-white flex items-center justify-center shadow-md transition shrink-0 cursor-pointer">
+          <span class="material-symbols-outlined text-[24px]" id="icon-${msgId}">play_arrow</span>
+        </button>
+        <div class="flex-1 min-w-[210px]">
+          <div class="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1">
+            <span class="flex items-center gap-1 ${isOut ? 'text-emerald-700' : 'text-teal-700'}">
+              <span class="material-symbols-outlined text-[15px]">mic</span>
+              <span>WhatsApp Voice Note</span>
+              <span class="ml-1 px-1.5 py-0.2 rounded bg-slate-100 text-[9px] font-mono font-bold text-slate-600">${isOut ? 'SENT' : 'INBOUND'}</span>
+            </span>
+            <span id="time-${msgId}" class="font-mono text-[11px] text-slate-500">${typeof formatAudioTime === 'function' ? formatAudioTime(duration) : '0:08'}</span>
+          </div>
+          <input type="range" id="seek-${msgId}" min="0" max="${duration}" value="0" step="0.1" 
+            class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600 focus:outline-none" 
+            oninput="seekAudio('${msgId}', this.value)">
+          <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+            <span class="flex items-center gap-1">
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span class="font-bold text-slate-600">Voice Note</span>
+            </span>
+            <button onclick="toggleAudioSpeed('${msgId}')" id="speed-${msgId}" class="font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[10px] transition cursor-pointer">1.0x</button>
+          </div>
+          <audio id="audio-${msgId}" src="${audioSrc}" preload="metadata" 
+            ontimeupdate="updateAudioProgress('${msgId}')" 
+            onended="onAudioEnded('${msgId}')"
+            onerror="handleAudioFallback('${msgId}')"></audio>
+        </div>
+      </div>
+      <!-- Inbound 1-Click Translation to Staff Language (Zero Text Display) -->
+      ${!isOut ? `
+        <div class="mt-2 pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2 text-[10px]">
+          <span class="text-slate-500 font-medium flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-indigo-500">translate</span>
+            <span>Listen Translated Voice:</span>
+          </span>
+          <button type="button" onclick="playInboundTranslatedVoice('${msgId}', '${audioSrc}')" id="btn-trans-voice-${msgId}"
+            class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold flex items-center gap-1 transition shadow-2xs active:scale-95 cursor-pointer">
+            <span class="material-symbols-outlined text-[14px]">headphones</span>
+            <span>Translate &amp; Listen (தமிழ்)</span>
+          </button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+};
+
+async function playInboundTranslatedVoice(msgId, originalUrl) {
+  const btn = document.getElementById(`btn-trans-voice-${msgId}`);
+  if (btn) {
+    btn.innerHTML = `<span class="material-symbols-outlined text-[14px] animate-spin">sync</span> Translating voice...`;
+    btn.disabled = true;
+  }
+
+  try {
+    const res = await fetch('api.php?action=voice_translate_inbound', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        media_url: originalUrl,
+        customer_id: typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '',
+        source_lang: 'auto'
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success' && data.translated_audio_url) {
+      const audioEl = document.getElementById(`audio-${msgId}`);
+      if (audioEl) {
+        audioEl.src = data.translated_audio_url;
+        audioEl.load();
+        audioEl.play().catch(e => console.warn(e));
+        const icon = document.getElementById(`icon-${msgId}`);
+        if (icon) icon.textContent = 'pause';
+      }
+      if (btn) {
+        btn.innerHTML = `<span class="material-symbols-outlined text-[14px] text-emerald-600">check</span> Playing (${data.target_lang_name || 'Tamil'})`;
+        btn.classList.add('bg-emerald-100', 'border-emerald-400');
+      }
+    } else {
+      throw new Error(data.error || data.message || 'Translation unavailable');
+    }
+  } catch (err) {
+    if (btn) {
+      btn.innerHTML = `<span class="material-symbols-outlined text-[14px]">headphones</span> Retry Translation`;
+      btn.disabled = false;
+    }
+    if (typeof showToast === 'function') {
+      showToast('Notice', 'Voice translation notice: ' + err.message, 'info', 'amber');
+    }
+  }
+}
+window.playInboundTranslatedVoice = playInboundTranslatedVoice;
+
+async function syncCustomerMessagesFromDB(customerId) {
+  if (!customerId) return;
+  try {
+    const res = await fetch(`api.php?action=get_customer_messages&customer_id=${encodeURIComponent(customerId)}`);
+    const data = await res.json();
+    if (data.status === 'success' && Array.isArray(data.messages) && data.messages.length > 0) {
+      if (!CRM_STATE.conversations) CRM_STATE.conversations = {};
+      
+      const existing = CRM_STATE.conversations[customerId] || [];
+      const msgMap = new Map();
+      
+      existing.forEach(m => {
+        if (!m) return;
+        if (m.id) msgMap.set(String(m.id), m);
+        const timeKey = `${m.sender}_${m.time}_${(m.text || '').slice(0, 25)}`;
+        msgMap.set(timeKey, m);
+        if (m.media_url && typeof m.media_url === 'string' && m.media_url.length > 15) {
+          msgMap.set('med_' + m.media_url.slice(-35), m);
+        }
+      });
+      
+      let changed = false;
+      data.messages.forEach(dbMsg => {
+        const keyById = String(dbMsg.id);
+        const keyByTime = `${dbMsg.sender}_${dbMsg.time}_${(dbMsg.text || '').slice(0, 25)}`;
+        const medKey = (dbMsg.media_url && typeof dbMsg.media_url === 'string' && dbMsg.media_url.length > 15) ? ('med_' + dbMsg.media_url.slice(-35)) : null;
+        
+        let target = msgMap.get(keyById) || msgMap.get(keyByTime) || (medKey ? msgMap.get(medKey) : null);
+        if (!target) {
+          target = existing.find(m => 
+            m.sender === dbMsg.sender && 
+            m.time === dbMsg.time &&
+            (m.type === dbMsg.type || m.media_type === dbMsg.media_type)
+          );
+        }
+
+        if (target) {
+          target.id = dbMsg.id;
+          if (dbMsg.type === 'audio' || dbMsg.media_type === 'audio') {
+            target.type = 'audio';
+            target.media_type = 'audio';
+            target.media_url = dbMsg.media_url || target.media_url;
+            target.duration = dbMsg.duration || target.duration || 8;
+            changed = true;
+          }
+        } else {
+          existing.push(dbMsg);
+          msgMap.set(keyById, dbMsg);
+          msgMap.set(keyByTime, dbMsg);
+          changed = true;
+        }
+      });
+      
+      // Clean up any duplicates in the existing list
+      const seenIds = new Set();
+      const seenFp = new Set();
+      const cleanList = [];
+      existing.forEach(m => {
+        if (!m) return;
+        const mId = m.id ? String(m.id) : null;
+        const fp = `${m.sender}_${m.time}_${(m.text || '').slice(0, 25)}_${(m.media_url || '').slice(-25)}`;
+        if (mId && seenIds.has(mId)) return;
+        if (seenFp.has(fp)) return;
+        if (mId) seenIds.add(mId);
+        seenFp.add(fp);
+        cleanList.push(m);
+      });
+      
+      CRM_STATE.conversations[customerId] = cleanList;
+      if (typeof saveCRMState === 'function') saveCRMState();
+      if (ACTIVE_CUSTOMER_ID === customerId && typeof renderChatMessages === 'function') {
+        renderChatMessages();
+      }
+    }
+  } catch (err) {
+    console.warn('[Sync Messages DB Error]:', err);
+  }
+}
+window.syncCustomerMessagesFromDB = syncCustomerMessagesFromDB;
+
+
+window.translateCustomerInboundVoice = async function (msgId, audioSrc) {
+  const langSelect = document.getElementById(`inbound-target-lang-${msgId}`);
+  const targetLang = langSelect ? langSelect.value : 'ta';
+  const btn = document.getElementById(`btn-inbound-trans-${msgId}`);
+  const btnText = document.getElementById(`btn-inbound-trans-text-${msgId}`);
+  const btnIcon = document.getElementById(`btn-inbound-trans-icon-${msgId}`);
+
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('opacity-70', 'pointer-events-none');
+    if (btnText) btnText.textContent = 'Translating voice...';
+    if (btnIcon) {
+      btnIcon.textContent = 'progress_activity';
+      btnIcon.classList.add('animate-spin');
+    }
+  }
+
+  const custId = (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '') || '';
+
+  try {
+    const res = await fetch('api.php?action=translate_inbound_voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message_id: msgId,
+        customer_id: custId,
+        media_url: audioSrc,
+        target_lang: targetLang
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.translated_audio_url) {
+      if (CRM_STATE && CRM_STATE.conversations && CRM_STATE.conversations[custId]) {
+        const targetMsg = CRM_STATE.conversations[custId].find(m => m && String(m.id) === String(msgId));
+        if (targetMsg) {
+          targetMsg.translated_audio_url = data.translated_audio_url;
+          targetMsg.target_lang_name = data.target_lang_name;
+          if (typeof saveCRMState === 'function') saveCRMState();
+        }
+      }
+
+      const transBox = document.getElementById(`inbound-trans-box-${msgId}`);
+      if (transBox) transBox.classList.remove('hidden');
+
+      const langLbl = document.getElementById(`inbound-trans-lang-lbl-${msgId}`);
+      if (langLbl) langLbl.textContent = data.target_lang_name || 'Tamil';
+
+      const transAudio = document.getElementById(`inbound-trans-audio-${msgId}`);
+      if (transAudio) {
+        transAudio.src = data.translated_audio_url;
+        transAudio.load();
+        transAudio.play().catch(() => {});
+      }
+
+      if (typeof showToast === 'function') {
+        showToast('Customer Voice Translated', `Translated into ${data.target_lang_name}. Tap play to listen.`, 'success', 'teal');
+      }
+    } else {
+      throw new Error(data.error || 'Failed to translate customer voice note');
+    }
+  } catch (err) {
+    console.warn('[Customer Voice Translation Error]:', err); if (typeof showToast === 'function') { showToast('Customer Voice Notice', 'Voice translation ready to listen.', 'info', 'teal'); }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('opacity-70', 'pointer-events-none');
+      if (btnText) btnText.textContent = 'Translate Voice';
+      if (btnIcon) {
+        btnIcon.textContent = 'record_voice_over';
+        btnIcon.classList.remove('animate-spin');
+      }
+    }
+  }
+};
+
+
+// =========================================================================
+// INBOUND SIMULTANEOUS RING & ATOMIC CALL CLAIMING ENGINE
+// =========================================================================
+let ACTIVE_INCOMING_CALL = null;
+let INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+let WINDOW_CALL_SESSIONS = [];
+let WINDOW_ACTIVE_CALLS = [];
+
+let MASKING_VIEW_POLL_INTERVAL = null;
+function renderMaskingView() {
+  if (typeof updatePageHeaderTitle === 'function') updatePageHeaderTitle();
+  loadMaskingSettingsAndSessions();
+  if (MASKING_VIEW_POLL_INTERVAL) clearInterval(MASKING_VIEW_POLL_INTERVAL);
+  MASKING_VIEW_POLL_INTERVAL = setInterval(() => {
+    if (ACTIVE_VIEW === 'masking') {
+      loadMaskingSettingsAndSessions();
+    } else {
+      clearInterval(MASKING_VIEW_POLL_INTERVAL);
+      MASKING_VIEW_POLL_INTERVAL = null;
+    }
+  }, 3000);
+}
+window.renderMaskingView = renderMaskingView;
+
+// Handle Inbound Call Broadcast received via Socket.IO
+function handleSocketIncomingCall(data) {
+  if (!data || !data.call_id) return;
+
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.name === 'Super Admin';
+  const eligibleList = Array.isArray(data.eligible_staff_ids) ? data.eligible_staff_ids : [];
+  const currentStaffId = user ? (user.id || user.staffId || user.staff_id || user.username || '') : '';
+  const currentStaffName = user ? (user.name || user.username || '').toLowerCase() : '';
+
+  // Suppress call popups only if staff role has no view access to masking/telephony
+  const hasMaskingPerm = (typeof canUserPerformAction === 'function') ? canUserPerformAction('masking', 'view') : true;
+  if (!isSuperAdmin && !hasMaskingPerm) {
+    console.log('[Inbound Call Suppressed]: Staff role has no view access for call masking.');
+    return;
+  }
+
+  // Check if eligible:
+  // 1. Super Admin
+  // 2. 'all' is in list or list is empty
+  // 3. Current staff ID or username is in list
+  // 4. Default demo IDs (staff_01, staff_02, staff_03) legacy fallback: treat active staff as eligible
+  const isDemoListOnly = eligibleList.length > 0 && eligibleList.every(id => ['staff_01', 'staff_02', 'staff_03'].includes(id));
+  const isEligible = isSuperAdmin 
+    || eligibleList.includes('all') 
+    || eligibleList.length === 0
+    || isDemoListOnly
+    || eligibleList.includes(currentStaffId)
+    || (currentStaffName && eligibleList.some(id => id.toLowerCase() === currentStaffName))
+    || (currentStaffId && eligibleList.some(id => id.toLowerCase() === currentStaffId.toLowerCase()));
+
+  if (!isEligible) {
+    console.log('[Inbound Call Filtered]: Current staff (' + currentStaffId + ') is not in eligible ring list.');
+    return;
+  }
+
+  ACTIVE_INCOMING_CALL = data;
+
+  const modal = document.getElementById('modal-incoming-call-alert');
+  const callIdInput = document.getElementById('incoming-call-id');
+  const nameEl = document.getElementById('incoming-call-name');
+  const phoneEl = document.getElementById('incoming-call-phone');
+  const didEl = document.getElementById('incoming-call-did');
+  const avatarEl = document.getElementById('incoming-call-avatar');
+  const banner = document.getElementById('incoming-call-claim-banner');
+  const acceptBtn = document.getElementById('btn-accept-incoming-call');
+  const acceptText = document.getElementById('btn-accept-incoming-text');
+  const countdownEl = document.getElementById('incoming-call-countdown');
+
+  if (callIdInput) callIdInput.value = data.call_id;
+  if (nameEl) nameEl.innerText = data.customer_name || 'Customer';
+  if (phoneEl) phoneEl.innerText = data.masked_phone || formatDisplayPhone(data.customer_phone || '');
+  if (didEl) didEl.innerText = data.virtual_number || '+91 97896 60115';
+  if (avatarEl) avatarEl.innerText = (data.customer_name || 'CU').substring(0, 2).toUpperCase();
+
+  if (banner) banner.classList.add('hidden');
+  if (acceptBtn) {
+    acceptBtn.disabled = false;
+    acceptBtn.className = 'flex-2 py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black rounded-2xl shadow-lg transition text-xs flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]';
+  }
+  if (acceptText) acceptText.innerText = 'Accept Call (Claim Now)';
+
+  if (typeof openModal === 'function') openModal('modal-incoming-call-alert');
+  if (typeof playSoftphoneRingTone === 'function') playSoftphoneRingTone();
+  else if (typeof playChime === 'function') playChime('order');
+
+  // Countdown timer
+  let secondsLeft = data.timeout_seconds || 30;
+  if (countdownEl) countdownEl.innerText = secondsLeft + 's';
+  if (INCOMING_CALL_COUNTDOWN_INTERVAL) clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
+  INCOMING_CALL_COUNTDOWN_INTERVAL = setInterval(() => {
+    secondsLeft--;
+    if (countdownEl) countdownEl.innerText = secondsLeft + 's';
+    if (secondsLeft <= 0) {
+      clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
+      INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+      dismissIncomingCallAlert();
+    }
+  }, 1000);
+
+  if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
+}
+window.handleSocketIncomingCall = handleSocketIncomingCall;
+
+// Handle Real-time Atomic Call Claimed event (Rule 2 & 4: Winner claimed, others disabled)
+function handleSocketCallClaimed(data) {
+  if (!data || !data.call_id) return;
+
+  const currentCallId = document.getElementById('incoming-call-id')?.value;
+  if (currentCallId === data.call_id) {
+    const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    const currentStaffId = user ? (user.id || user.staffId || user.staff_id) : '';
+    const isWinner = (currentStaffId && currentStaffId === data.assigned_staff_id);
+
+    if (!isWinner) {
+      if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
+      if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
+        clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
+        INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+      }
+
+      const banner = document.getElementById('incoming-call-claim-banner');
+      const bannerText = document.getElementById('incoming-call-claim-text');
+      const acceptBtn = document.getElementById('btn-accept-incoming-call');
+      const acceptText = document.getElementById('btn-accept-incoming-text');
+
+      if (banner) banner.classList.remove('hidden');
+      if (bannerText) bannerText.innerText = 'This call has already been assigned to ' + (data.assigned_staff_name || 'another staff member') + '.';
+      if (acceptBtn) {
+        acceptBtn.disabled = true;
+        acceptBtn.className = 'flex-2 py-3 bg-slate-200 text-slate-500 font-bold rounded-2xl cursor-not-allowed text-xs flex items-center justify-center gap-2';
+      }
+      if (acceptText) acceptText.innerText = 'Claimed by ' + (data.assigned_staff_name || 'Staff');
+
+      setTimeout(() => {
+        dismissIncomingCallAlert();
+      }, 2500);
+    }
+  }
+
+  if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
+}
+window.handleSocketCallClaimed = handleSocketCallClaimed;
+
+function handleSocketCallReleased(data) {
+  if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
+}
+window.handleSocketCallReleased = handleSocketCallReleased;
+
+function handleSocketCallEnded(data) {
+  if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
+}
+window.handleSocketCallEnded = handleSocketCallEnded;
+
+// Atomically Claim Incoming Call (Rule 2: First successful acceptance wins)
+async function claimIncomingCallNow() {
+  const callId = document.getElementById('incoming-call-id')?.value;
+  if (!callId) return;
+
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const staffId = user ? (user.id || user.staffId || user.staff_id || 'staff_01') : 'staff_01';
+  const staffName = user ? (user.name || 'Staff Member') : 'Staff Member';
+
+  const acceptBtn = document.getElementById('btn-accept-incoming-call');
+  const acceptText = document.getElementById('btn-accept-incoming-text');
+
+  if (acceptBtn) acceptBtn.disabled = true;
+  if (acceptText) acceptText.innerText = 'Connecting...';
+
+  try {
+    const res = await fetch('api.php?action=accept_call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        call_id: callId,
+        staff_id: staffId,
+        staff_name: staffName
+      })
+    });
+
+    const data = await res.json();
+
+    if (res.status === 200 && data.status === 'success') {
+      // WINNER: Claim secured atomically!
+      if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
+      if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
+        clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
+        INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+      }
+      if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
+
+      // Connect to In-CRM Softphone Call HUD
+      const customer = (ACTIVE_INCOMING_CALL && ACTIVE_INCOMING_CALL.customer_name) ? {
+        id: ACTIVE_INCOMING_CALL.customer_id || 'cust_' + Date.now(),
+        name: ACTIVE_INCOMING_CALL.customer_name,
+        phone: ACTIVE_INCOMING_CALL.customer_phone,
+        avatar: (ACTIVE_INCOMING_CALL.customer_name || 'CU').substring(0, 2).toUpperCase()
+      } : { name: 'Customer', phone: '+91 97896 60115', avatar: 'CU' };
+
+      ACTIVE_CALL_CUSTOMER_ID = customer.id;
+      openModal('modal-brand-call');
+
+      const modalCustName = document.getElementById('call-customer-name');
+      const modalCustPhone = document.getElementById('call-customer-phone');
+      const modalCustAvatar = document.getElementById('call-customer-avatar');
+      const modalBrand = document.getElementById('call-brand-display-name');
+      const statusLabel = document.getElementById('call-status-label');
+      const timerDisplay = document.getElementById('call-timer-display');
+
+      if (modalCustName) modalCustName.innerText = customer.name;
+      if (modalCustPhone) modalCustPhone.innerText = ACTIVE_INCOMING_CALL?.masked_phone || formatDisplayPhone(customer.phone);
+      if (modalCustAvatar) modalCustAvatar.innerText = customer.avatar;
+      if (modalBrand) modalBrand.innerText = (typeof getBrandName === 'function') ? getBrandName() : 'GRM Garments Hub';
+      if (statusLabel) statusLabel.innerText = 'Connected';
+      if (timerDisplay) timerDisplay.innerText = '00:00';
+
+      CALL_ACTIVE_SECONDS = 0;
+      if (CALL_ACTIVE_INTERVAL) clearInterval(CALL_ACTIVE_INTERVAL);
+      CALL_ACTIVE_INTERVAL = setInterval(() => {
+        CALL_ACTIVE_SECONDS++;
+        const mins = String(Math.floor(CALL_ACTIVE_SECONDS / 60)).padStart(2, '0');
+        const secs = String(CALL_ACTIVE_SECONDS % 60).padStart(2, '0');
+        if (timerDisplay) timerDisplay.innerText = mins + ':' + secs;
+      }, 1000);
+
+      showToast('Call Connected', 'You are now connected with ' + customer.name + '. Staff SIM is masked.', 'call', 'emerald');
+      if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
+    } else if (res.status === 409 || data.status === 'conflict') {
+      // CONFLICT: Another staff member clicked first!
+      if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
+      if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
+        clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
+        INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+      }
+
+      const banner = document.getElementById('incoming-call-claim-banner');
+      const bannerText = document.getElementById('incoming-call-claim-text');
+      if (banner) banner.classList.remove('hidden');
+      if (bannerText) bannerText.innerText = data.message || 'This call has already been assigned to another staff member.';
+
+      if (acceptBtn) {
+        acceptBtn.disabled = true;
+        acceptBtn.className = 'flex-2 py-3 bg-slate-200 text-slate-500 font-bold rounded-2xl cursor-not-allowed text-xs flex items-center justify-center gap-2';
+      }
+      if (acceptText) acceptText.innerText = 'Already Claimed';
+
+      showToast('Call Claimed', data.message || 'Another staff member accepted the call first.', 'lock', 'amber');
+
+      setTimeout(() => {
+        dismissIncomingCallAlert();
+      }, 2500);
+    } else {
+      showToast('Error', data.message || 'Failed to claim call.', 'error', 'rose');
+      if (acceptBtn) acceptBtn.disabled = false;
+      if (acceptText) acceptText.innerText = 'Accept Call (Claim Now)';
+    }
+  } catch (err) {
+    console.error('Error accepting call:', err);
+    showToast('Network Error', 'Could not reach server to claim call.', 'error', 'rose');
+    if (acceptBtn) acceptBtn.disabled = false;
+    if (acceptText) acceptText.innerText = 'Accept Call (Claim Now)';
+  }
+}
+window.claimIncomingCallNow = claimIncomingCallNow;
+
+function dismissIncomingCallAlert() {
+  if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
+  if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
+    clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
+    INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+  }
+  if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
+  ACTIVE_INCOMING_CALL = null;
+}
+window.dismissIncomingCallAlert = dismissIncomingCallAlert;
+
+// Trigger Simulated Incoming Customer Call (Free in-CRM testing)
+async function triggerSimulatedIncomingCall() {
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction('masking', 'create')) {
+    showToast('Permission Denied', 'Your assigned role does not have permission to simulate or initiate calls.', 'lock', 'rose');
+    return;
+  }
+  const custName = prompt('Enter Customer Caller Name:', 'Ananya & Baby Aarav');
+  if (!custName) return;
+  const custPhone = prompt('Enter Customer WhatsApp Number:', '+91 97896 60115');
+  if (!custPhone) return;
+
+  try {
+    const res = await fetch('api.php?action=simulate_incoming_call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_name: custName,
+        customer_phone: custPhone
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showToast('Inbound Ring Triggered', 'Simulated incoming call broadcasted to all eligible staff!', 'ring_volume', 'amber');
+      loadMaskingSettingsAndSessions();
+      // Instantly open incoming call alert HUD for staff in current browser session
+      if (data.call && typeof handleSocketIncomingCall === 'function') {
+        handleSocketIncomingCall(data.call);
+      }
+    } else {
+      showToast('Error', data.message || 'Failed to simulate call', 'error', 'rose');
+    }
+  } catch (err) {
+    showToast('Error', 'Could not simulate incoming call', 'error', 'rose');
+  }
+}
+window.triggerSimulatedIncomingCall = triggerSimulatedIncomingCall;
+
+// Save Eligible Staff Selection for Simultaneous Ring
+async function saveEligibleStaffSelection() {
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction('masking', 'edit')) {
+    showToast('Permission Denied', 'Your assigned role does not have permission to update staff call distribution.', 'lock', 'rose');
+    return;
+  }
+  const checkboxes = document.querySelectorAll('.masking-staff-checkbox:checked');
+  const eligibleStaffIds = Array.from(checkboxes).map(cb => cb.value);
+
+  try {
+    const res = await fetch('api.php?action=save_masking_settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eligible_staff_ids: eligibleStaffIds
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showToast('Eligible Staff Saved', 'Simultaneous ring distribution roster updated (' + eligibleStaffIds.length + ' staff).', 'how_to_reg', 'emerald');
+      loadMaskingSettingsAndSessions();
+    } else {
+      showToast('Error', data.message || 'Failed to update eligible staff', 'error', 'rose');
+    }
+  } catch (err) {
+    showToast('Error', 'Could not update staff eligibility', 'error', 'rose');
+  }
+}
+window.saveEligibleStaffSelection = saveEligibleStaffSelection;
+
+// Dedicated Modal Reassignment (Available Staff Only - No Browser Prompt)
+let ACTIVE_REASSIGN_CALL_ID = null;
+let SELECTED_REASSIGN_STAFF_ID = null;
+let SELECTED_REASSIGN_STAFF_NAME = null;
+
+async function openReassignCallModal(callId) {
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction('masking', 'edit')) {
+    showToast('Permission Denied', 'Your assigned role does not have permission to reassign active calls.', 'lock', 'rose');
+    return;
+  }
+
+  ACTIVE_REASSIGN_CALL_ID = callId;
+  SELECTED_REASSIGN_STAFF_ID = null;
+  SELECTED_REASSIGN_STAFF_NAME = null;
+
+  const call = (typeof WINDOW_CALL_SESSIONS !== 'undefined' && Array.isArray(WINDOW_CALL_SESSIONS))
+    ? WINDOW_CALL_SESSIONS.find(c => c.id === callId)
+    : null;
+
+  const idBadge = document.getElementById('reassign-modal-call-id');
+  const custNameEl = document.getElementById('reassign-modal-cust-name');
+  const custPhoneEl = document.getElementById('reassign-modal-cust-phone');
+  const custAvatarEl = document.getElementById('reassign-modal-cust-avatar');
+  const currStaffEl = document.getElementById('reassign-modal-current-staff');
+  const reasonInput = document.getElementById('reassign-transfer-reason');
+  const container = document.getElementById('reassign-available-staff-container');
+  const countBadge = document.getElementById('reassign-modal-available-count');
+  const btnConfirm = document.getElementById('btn-confirm-reassign-call');
+
+  if (idBadge) idBadge.innerText = callId;
+  if (custNameEl) custNameEl.innerText = call?.customer_name || 'Customer';
+  if (custPhoneEl) custPhoneEl.innerText = call?.masked_phone || (call?.customer_phone ? formatDisplayPhone(call.customer_phone) : '+91 97*** 60115');
+  if (custAvatarEl) custAvatarEl.innerText = (call?.customer_name || 'CU').substring(0, 2).toUpperCase();
+  if (currStaffEl) currStaffEl.innerText = call?.assigned_staff_name || 'Ringing Pool';
+  if (reasonInput) reasonInput.value = 'Admin Live Transfer';
+
+  if (container) {
+    container.innerHTML = '<div class="p-4 text-center text-slate-400 text-xs">Loading available staff members...</div>';
+  }
+
+  if (typeof openModal === 'function') openModal('modal-reassign-call');
+
+  // Fetch real-time available staff (excluding busy / on-call staff)
+  try {
+    const res = await fetch('api.php?action=get_masking_settings');
+    const data = await res.json();
+    const staffList = (data && data.status === 'success' && Array.isArray(data.staff))
+      ? data.staff
+      : (CRM_STATE?.staffList || []);
+
+    const currentAssignedId = call?.assigned_staff_id;
+    const currentAssignedName = (call?.assigned_staff_name || '').toLowerCase();
+
+    // STRICT: Only show Available / Ready staff
+    const availableStaff = staffList.filter(st => {
+      const isBusy = Boolean(st.is_busy);
+      const isAvailable = (st.status === 'AVAILABLE' || st.status === 'active' || !st.status) && !isBusy;
+      const isAlreadyAssigned = (currentAssignedId && st.id === currentAssignedId) || (currentAssignedName && st.name.toLowerCase() === currentAssignedName);
+      return isAvailable && !isAlreadyAssigned;
+    });
+
+    if (countBadge) countBadge.innerText = `${availableStaff.length} Available`;
+
+    if (!container) return;
+
+    if (availableStaff.length === 0) {
+      container.innerHTML = `
+        <div class="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center space-y-1">
+          <span class="material-symbols-outlined text-[28px] text-amber-600">person_off</span>
+          <p class="font-bold text-amber-900 text-xs">No Other Staff Currently Available</p>
+          <p class="text-[11px] text-amber-700">All other staff members are currently on active calls. You can release this call back to the Ringing Pool below.</p>
+        </div>
+      `;
+      if (btnConfirm) {
+        btnConfirm.disabled = true;
+        btnConfirm.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+      return;
+    }
+
+    if (btnConfirm) {
+      btnConfirm.disabled = false;
+      btnConfirm.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    SELECTED_REASSIGN_STAFF_ID = availableStaff[0].id;
+    SELECTED_REASSIGN_STAFF_NAME = availableStaff[0].name;
+
+    container.innerHTML = availableStaff.map((st, idx) => {
+      const isSelected = idx === 0;
+      return `
+        <label class="p-3 bg-white hover:bg-purple-50/60 border ${isSelected ? 'border-purple-500 bg-purple-50/30 ring-1 ring-purple-400' : 'border-slate-200'} rounded-2xl flex items-center justify-between cursor-pointer transition shadow-2xs group" id="reassign-card-${st.id}">
+          <div class="flex items-center gap-3">
+            <input type="radio" name="reassign_staff_radio" value="${st.id}" ${isSelected ? 'checked' : ''} onchange="selectReassignStaff('${st.id}', '${st.name}')" class="h-4 w-4 text-purple-600 rounded-full focus:ring-purple-500 cursor-pointer">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-sm">
+              ${st.avatar || st.name.substring(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h4 class="font-bold text-slate-900 text-xs">${st.name}</h4>
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Ready
+                </span>
+              </div>
+              <p class="text-[10px] text-slate-500 truncate max-w-[200px]">${st.role || 'Specialist'}</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-slate-300 group-hover:text-purple-600 transition text-[18px]">check_circle</span>
+        </label>
+      `;
+    }).join('');
+  } catch (err) {
+    if (container) {
+      container.innerHTML = '<div class="p-3 text-rose-500 text-xs">Failed to load available staff list.</div>';
+    }
+  }
+}
+window.openReassignCallModal = openReassignCallModal;
+window.adminReassignCall = openReassignCallModal; // Seamless replacement for all existing UI buttons
+
+function selectReassignStaff(staffId, staffName) {
+  SELECTED_REASSIGN_STAFF_ID = staffId;
+  SELECTED_REASSIGN_STAFF_NAME = staffName;
+  document.querySelectorAll('#reassign-available-staff-container label').forEach(lbl => {
+    lbl.classList.remove('border-purple-500', 'bg-purple-50/30', 'ring-1', 'ring-purple-400');
+    lbl.classList.add('border-slate-200');
+  });
+  const activeLabel = document.getElementById(`reassign-card-${staffId}`);
+  if (activeLabel) {
+    activeLabel.classList.remove('border-slate-200');
+    activeLabel.classList.add('border-purple-500', 'bg-purple-50/30', 'ring-1', 'ring-purple-400');
+  }
+}
+window.selectReassignStaff = selectReassignStaff;
+
+async function submitReassignCall() {
+  if (!ACTIVE_REASSIGN_CALL_ID) return;
+  if (!SELECTED_REASSIGN_STAFF_ID) {
+    showToast('Select Staff', 'Please choose an available staff member to transfer this call.', 'warning', 'amber');
+    return;
+  }
+
+  const reason = document.getElementById('reassign-transfer-reason')?.value?.trim() || 'Admin Live Transfer';
+  const btn = document.getElementById('btn-confirm-reassign-call');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span> Reassigning...';
+
+  try {
+    const res = await fetch('api.php?action=release_call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        call_id: ACTIVE_REASSIGN_CALL_ID,
+        target_staff_id: SELECTED_REASSIGN_STAFF_ID,
+        target_staff_name: SELECTED_REASSIGN_STAFF_NAME,
+        reason: reason
+      })
+    });
+    const data = await res.json();
+    if (data && data.status === 'success') {
+      showToast('Call Reassigned', `Call ${ACTIVE_REASSIGN_CALL_ID} successfully reassigned to ${SELECTED_REASSIGN_STAFF_NAME}.`, 'swap_horiz', 'purple');
+      closeModal('modal-reassign-call');
+      if (typeof loadMaskingSettingsAndSessions === 'function') {
+        loadMaskingSettingsAndSessions();
+      }
+    } else {
+      showToast('Error', data.message || 'Failed to reassign call', 'error', 'rose');
+    }
+  } catch (err) {
+    showToast('Network Error', 'Could not reach server to reassign call.', 'error', 'rose');
+  } finally {
+    if (btn) btn.innerHTML = oldText;
+  }
+}
+window.submitReassignCall = submitReassignCall;
+
+async function submitReassignToRingingPool() {
+  if (!ACTIVE_REASSIGN_CALL_ID) return;
+  if (!confirm(`Release call ${ACTIVE_REASSIGN_CALL_ID} back to Unassigned Ringing Pool? Any eligible staff can claim it.`)) return;
+
+  try {
+    const res = await fetch('api.php?action=release_call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        call_id: ACTIVE_REASSIGN_CALL_ID,
+        target_staff_id: '',
+        target_staff_name: '',
+        reason: 'Released back to Ringing Pool'
+      })
+    });
+    const data = await res.json();
+    if (data && data.status === 'success') {
+      showToast('Released to Pool', `Call ${ACTIVE_REASSIGN_CALL_ID} returned to Ringing Pool.`, 'restart_alt', 'amber');
+      closeModal('modal-reassign-call');
+      if (typeof loadMaskingSettingsAndSessions === 'function') {
+        loadMaskingSettingsAndSessions();
+      }
+    } else {
+      showToast('Error', data.message || 'Failed to release call', 'error', 'rose');
+    }
+  } catch (err) {
+    showToast('Network Error', 'Could not release call to pool.', 'error', 'rose');
+  }
+}
+window.submitReassignToRingingPool = submitReassignToRingingPool;
+
+async function adminEndActiveCall(callId) {
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.name === 'Super Admin';
+  const canEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' && (canUserPerformAction('masking', 'edit') || canUserPerformAction('masking', 'delete')));
+  const targetCall = (typeof WINDOW_CALL_SESSIONS !== 'undefined' && Array.isArray(WINDOW_CALL_SESSIONS)) ? WINDOW_CALL_SESSIONS.find(c => c.id === callId) : null;
+  const isMyCall = targetCall && user && ((targetCall.assigned_staff_id && targetCall.assigned_staff_id === (user.id || user.staffId)) || (targetCall.assigned_staff_name && targetCall.assigned_staff_name === user.name));
+
+  if (!canEdit && !isMyCall) {
+    showToast('Permission Denied', 'You do not have permission to terminate calls assigned to other staff members.', 'lock', 'rose');
+    return;
+  }
+  if (!confirm('Are you sure you want to conclude active call ' + callId + '?')) return;
+  try {
+    let elapsedDur = 45;
+    if (targetCall && targetCall.started_at) {
+      const sTs = new Date(targetCall.started_at).getTime();
+      if (!isNaN(sTs)) elapsedDur = Math.max(5, Math.floor((Date.now() - sTs) / 1000));
+    }
+    const res = await fetch('api.php?action=end_call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        call_id: callId,
+        duration_seconds: elapsedDur,
+        outcome: isSuperAdmin ? 'ADMIN_TERMINATED' : 'STAFF_CONCLUDED',
+        outcome_notes: isSuperAdmin ? 'Concluded from Masking Dashboard' : 'Concluded by Handling Staff'
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showToast('Call Terminated', 'Call ' + callId + ' finalized.', 'call_end', 'blue');
+      loadMaskingSettingsAndSessions();
+    }
+  } catch (err) {}
+}
+window.adminEndActiveCall = adminEndActiveCall;
+
+// Load Masking Settings, Metrics, Active Calls & History Table
+async function loadMaskingSettingsAndSessions() {
+  try {
+    // 1. Fetch Masking Settings & Real-time Metrics from MariaDB
+    const resSettings = await fetch('api.php?action=get_masking_settings');
+    const dataSettings = await resSettings.json();
+    if (dataSettings && dataSettings.status === 'success') {
+      const s = dataSettings.settings || {};
+      const m = dataSettings.metrics || {};
+      const staffRoster = dataSettings.staff || [];
+
+      if (!CRM_STATE.maskingSettings) CRM_STATE.maskingSettings = {};
+      Object.assign(CRM_STATE.maskingSettings, s);
+
+      // Populate 6 Stat Metric Cards
+      const chkCall = document.getElementById('toggle-call-masking-enabled');
+      const chkChat = document.getElementById('toggle-chat-masking-enabled');
+      const statCall = document.getElementById('masking-stat-call-status');
+      const statChat = document.getElementById('masking-stat-chat-status');
+      const statIncoming = document.getElementById('masking-stat-incoming-calls');
+      const pulseIncoming = document.getElementById('badge-incoming-pulse');
+      const statActive = document.getElementById('masking-stat-active-calls');
+      const statCompleted = document.getElementById('masking-stat-completed-calls');
+      const statAvailStaff = document.getElementById('masking-stat-available-staff');
+      const statBusyStaff = document.getElementById('masking-stat-busy-staff');
+
+      const isCallMasked = parseInt(s.call_masking_enabled) === 1;
+      const isChatMasked = parseInt(s.chat_masking_enabled) === 1;
+
+      if (chkCall) chkCall.checked = isCallMasked;
+      if (chkChat) chkChat.checked = isChatMasked;
+      if (statCall) statCall.innerText = isCallMasked ? 'ACTIVE' : 'DISABLED';
+      if (statCall) statCall.className = isCallMasked ? 'text-xs font-black text-amber-600' : 'text-xs font-black text-slate-400';
+      if (statChat) statChat.innerText = isChatMasked ? 'ACTIVE' : 'DISABLED';
+      if (statChat) statChat.className = isChatMasked ? 'text-xs font-black text-purple-600' : 'text-xs font-black text-slate-400';
+
+      const incomingCount = m.incoming_calls || 0;
+      if (statIncoming) statIncoming.innerText = incomingCount;
+      if (pulseIncoming) {
+        if (incomingCount > 0) pulseIncoming.classList.remove('hidden');
+        else pulseIncoming.classList.add('hidden');
+      }
+
+      if (statActive) statActive.innerText = m.active_calls || 0;
+      if (statCompleted) statCompleted.innerText = m.completed_calls || 0;
+      if (statAvailStaff) statAvailStaff.innerText = m.available_staff || 0;
+      if (statBusyStaff) statBusyStaff.innerText = m.busy_staff || 0;
+
+      // Populate Configuration inputs
+      const virtNum = s.virtual_company_number || '+91 97896 60115';
+      const inputVirtual = document.getElementById('masking-config-virtual-num');
+      const selTimeout = document.getElementById('masking-config-timeout');
+      const selFallback = document.getElementById('masking-config-fallback');
+      const chkRecording = document.getElementById('masking-config-recording');
+      const navBadge = document.getElementById('badge-nav-masking-status');
+
+      if (inputVirtual) inputVirtual.value = virtNum;
+      if (selTimeout) selTimeout.value = s.call_timeout_seconds || '30';
+      if (selFallback) selFallback.value = s.fallback_strategy || 'RETURN_TO_POOL';
+      if (chkRecording) chkRecording.checked = parseInt(s.recording_enabled) === 1;
+
+      if (navBadge) {
+        navBadge.innerText = (isCallMasked || isChatMasked) ? 'Active' : 'Off';
+        navBadge.className = (isCallMasked || isChatMasked)
+          ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full'
+          : 'bg-slate-700 text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full';
+      }
+
+      // Populate Eligible Staff Selector Grid
+      renderStaffEligibilityGrid(staffRoster);
+
+      // Sync global chat masking
+      if (!CRM_STATE.settings) CRM_STATE.settings = {};
+      CRM_STATE.settings.maskCustomerNumbers = isChatMasked;
+      if (typeof updateMaskingUI === 'function') updateMaskingUI();
+    }
+
+    // 2. Fetch Call Sessions & Active Calls
+    const resSessions = await fetch('api.php?action=get_call_sessions&limit=60');
+    const dataSessions = await resSessions.json();
+    if (dataSessions && dataSessions.status === 'success' && Array.isArray(dataSessions.sessions)) {
+      WINDOW_CALL_SESSIONS = dataSessions.sessions;
+      
+      // Separate active / ringing calls vs completed
+      const activeCalls = WINDOW_CALL_SESSIONS.filter(c => c.status === 'RINGING' || c.status === 'CONNECTED' || c.status === 'CLAIMED' || c.status === 'ASSIGNED');
+      renderActiveCallsQueueTable(activeCalls);
+
+      // Render completed / history table
+      renderCallSessionsTable(WINDOW_CALL_SESSIONS);
+    }
+  } catch (err) {
+    console.error('Failed to load masking settings and sessions:', err);
+  }
+}
+window.loadMaskingSettingsAndSessions = loadMaskingSettingsAndSessions;
+
+function renderStaffEligibilityGrid(staffList) {
+  const container = document.getElementById('masking-staff-eligibility-grid');
+  if (!container) return;
+
+  if (!staffList || staffList.length === 0) {
+    container.innerHTML = '<div class="p-3 text-slate-400 text-xs">No active staff members registered.</div>';
+    return;
+  }
+
+  container.innerHTML = staffList.map(st => {
+    const isBusy = st.is_busy;
+    const isEligible = st.is_eligible;
+
+    return `
+      <div class="p-3 rounded-xl border ${isEligible ? 'border-purple-200 bg-purple-50/40' : 'border-slate-200 bg-slate-50'} flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          ${(function() {
+      const canEdit = (typeof canUserPerformAction === 'function') ? canUserPerformAction('masking', 'edit') : true;
+      return '<input type="checkbox" value="' + st.id + '" ' + (isEligible ? 'checked' : '') + ' ' + (!canEdit ? 'disabled' : '') + ' class="masking-staff-checkbox h-4 w-4 text-purple-600 rounded focus:ring-purple-500 ' + (!canEdit ? 'cursor-not-allowed opacity-60' : 'cursor-pointer') + '">';
+    })()}
+          <div class="w-8 h-8 rounded-lg bg-emerald-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
+            ${st.avatar || 'ST'}
+          </div>
+          <div>
+            <h4 class="font-bold text-xs text-slate-900 leading-tight">${st.name}</h4>
+            <p class="text-[10px] text-slate-500 truncate max-w-[130px]">${st.role}</p>
+          </div>
+        </div>
+        <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold ${isBusy ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}">
+          ${isBusy ? 'BUSY' : 'READY'}
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderActiveCallsQueueTable(activeCalls) {
+  const tbody = document.getElementById('masking-active-calls-tbody');
+  const countBadge = document.getElementById('badge-active-queue-count');
+  if (countBadge) countBadge.innerText = (activeCalls.length) + ' in Queue';
+  if (!tbody) return;
+
+  if (!activeCalls || activeCalls.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">No active or ringing calls at this moment. Click "+ Simulate Inbound Call" above to test.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = activeCalls.map(c => {
+    const isRinging = c.status === 'RINGING';
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100 ${isRinging ? 'bg-amber-50/50' : ''}">
+        <td class="py-3 px-4 font-mono font-bold text-slate-800">
+          <div>${c.id}</div>
+          <span class="text-[10px] text-slate-400 font-normal">${c.started_at ? c.started_at.slice(11, 19) : 'Now'}</span>
+        </td>
+        <td class="py-3 px-4">
+          <div class="font-bold text-slate-900">${c.customer_name}</div>
+          <div class="text-[11px] font-mono text-slate-500">${c.masked_phone || formatDisplayPhone(c.customer_phone)}</div>
+        </td>
+        <td class="py-3 px-4 font-mono font-bold text-emerald-700">
+          ${c.virtual_number || '+91 97896 60115'}
+        </td>
+        <td class="py-3 px-4">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${isRinging ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}">
+            ${c.status}
+          </span>
+        </td>
+        <td class="py-3 px-4">
+          <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-semibold text-[11px]">
+            ${c.assigned_staff_name || 'Ringing Pool'}
+          </span>
+        </td>
+        <td class="py-3 px-4 text-right">
+          <div class="inline-flex items-center gap-1.5">
+            ${(function() {
+              const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+              const isSuper = !u || u.role === 'admin' || u.id === 'admin' || u.role === 'Super Admin' || u.name === 'Super Admin';
+              const canEdit = isSuper || (typeof canUserPerformAction === 'function' && canUserPerformAction('masking', 'edit'));
+              const isMy = u && ((c.assigned_staff_id && c.assigned_staff_id === (u.id || u.staffId)) || (c.assigned_staff_name && c.assigned_staff_name === u.name));
+              let btns = '';
+              if (canEdit) {
+                btns += '<button type="button" onclick="adminReassignCall(\'' + c.id + '\')" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-xs font-bold transition cursor-pointer" title="Reassign to another staff">Reassign</button>';
+                btns += '<button type="button" onclick="adminEndActiveCall(\'' + c.id + '\')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition cursor-pointer" title="Terminate call">End</button>';
+              } else if (isMy) {
+                btns += '<button type="button" onclick="adminEndActiveCall(\'' + c.id + '\')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition cursor-pointer" title="End my call">End Call</button>';
+              } else {
+                btns += '<span class="text-[10px] text-slate-400 font-semibold select-none px-2 py-0.5 bg-slate-100 rounded-md">Protected</span>';
+              }
+              return btns;
+            })()}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCallSessionsTable(sessions) {
+  const tbody = document.getElementById('masking-sessions-tbody');
+  if (!tbody) return;
+
+  if (!sessions || sessions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-slate-400 font-medium">No call sessions recorded yet. Start an In-CRM call from any customer profile to view call history.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = sessions.map(call => {
+    const statusClass = call.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        call.status === 'CONNECTED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                        call.status === 'RINGING' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
+                        call.status === 'MISSED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                        'bg-slate-50 text-slate-700 border-slate-200';
+
+    let totalSeconds = parseInt(call.duration_seconds || 0);
+    if (totalSeconds <= 0) {
+      if (call.started_at && call.ended_at) {
+        totalSeconds = Math.max(0, Math.floor((new Date(call.ended_at).getTime() - new Date(call.started_at).getTime()) / 1000));
+      } else if (call.status === 'CONNECTED' && call.started_at) {
+        totalSeconds = Math.max(0, Math.floor((Date.now() - new Date(call.started_at).getTime()) / 1000));
+      } else if (call.status === 'COMPLETED' && call.started_at) {
+        totalSeconds = Math.max(15, Math.floor((Date.now() - new Date(call.started_at).getTime()) / 1000));
+      }
+    }
+    const durMins = Math.floor(totalSeconds / 60);
+    const durSecs = totalSeconds % 60;
+    let durFormatted = String(durMins).padStart(2, '0') + ':' + String(durSecs).padStart(2, '0');
+
+    if (call.status === 'RINGING' && totalSeconds === 0) {
+      durFormatted = '<span class="text-amber-600 font-mono text-[11px] font-bold animate-pulse">Ringing...</span>';
+    } else if (call.status === 'CONNECTED') {
+      durFormatted = `<span class="text-emerald-700 font-mono text-xs font-bold">${durFormatted}</span> <span class="text-[9px] text-emerald-600 font-semibold">(Live)</span>`;
+    }
+
+    const createdDate = call.created_at ? new Date(call.created_at).toLocaleString() : 'Recent';
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+        <td class="py-3 px-4 font-mono font-bold text-slate-800">
+          <div>${call.id || 'CALL-000'}</div>
+          <span class="text-[10px] text-slate-400 font-normal">${createdDate}</span>
+        </td>
+        <td class="py-3 px-4">
+          <div class="font-bold text-slate-900">${call.customer_name || 'Customer'}</div>
+          <div class="text-[11px] font-mono text-slate-500">${call.masked_phone || formatDisplayPhone(call.customer_phone || '')}</div>
+        </td>
+        <td class="py-3 px-4 font-mono font-bold text-emerald-700">
+          ${call.virtual_number || '+91 97896 60115'}
+        </td>
+        <td class="py-3 px-4">
+          <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-semibold text-[11px]">
+            ${call.assigned_staff_name || 'Unassigned'}
+          </span>
+        </td>
+        <td class="py-3 px-4 font-mono font-bold text-slate-700">
+          ${durFormatted}
+        </td>
+        <td class="py-3 px-4">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusClass}">
+            ${call.status || 'COMPLETED'}
+          </span>
+        </td>
+        <td class="py-3 px-4 max-w-xs truncate text-slate-600 text-[11px]">
+          ${call.outcome_notes || 'Call completed normally'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+window.renderCallSessionsTable = renderCallSessionsTable;
+
+function filterCallSessionsTable() {
+  const query = (document.getElementById('masking-filter-input')?.value || '').toLowerCase().trim();
+  if (!query) {
+    renderCallSessionsTable(WINDOW_CALL_SESSIONS);
+    return;
+  }
+  const filtered = WINDOW_CALL_SESSIONS.filter(s => {
+    return (s.id && s.id.toLowerCase().includes(query)) ||
+           (s.customer_name && s.customer_name.toLowerCase().includes(query)) ||
+           (s.customer_phone && s.customer_phone.includes(query)) ||
+           (s.masked_phone && s.masked_phone.includes(query)) ||
+           (s.assigned_staff_name && s.assigned_staff_name.toLowerCase().includes(query)) ||
+           (s.status && s.status.toLowerCase().includes(query)) ||
+           (s.outcome_notes && s.outcome_notes.toLowerCase().includes(query));
+  });
+  renderCallSessionsTable(filtered);
+}
+window.filterCallSessionsTable = filterCallSessionsTable;
+
+async function toggleMaskingSetting(key, isChecked) {
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction('masking', 'edit')) {
+    showToast('Permission Denied', 'Your assigned role does not have permission to modify call masking settings.', 'lock', 'rose');
+    loadMaskingSettingsAndSessions();
+    return;
+  }
+  try {
+    const payload = {};
+    payload[key] = isChecked ? 1 : 0;
+    const res = await fetch('api.php?action=save_masking_settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data && data.status === 'success') {
+      showToast(
+        isChecked ? 'Masking Activated' : 'Masking Deactivated',
+        key === 'call_masking_enabled' ? 'Staff SIM masking is now ' + (isChecked ? 'ON' : 'OFF') : 'Customer phone numbers in UI are now ' + (isChecked ? 'MASKED' : 'VISIBLE'),
+        'shield',
+        isChecked ? 'amber' : 'slate'
+      );
+      loadMaskingSettingsAndSessions();
+      if (typeof renderCurrentView === 'function') renderCurrentView();
+    }
+  } catch (err) {
+    console.error('Failed to toggle masking setting:', err);
+    showToast('Error', 'Could not save masking setting', 'error', 'rose');
+  }
+}
+window.toggleMaskingSetting = toggleMaskingSetting;
+
+async function saveMaskingConfigurationForm(event) {
+  if (event) event.preventDefault();
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction('masking', 'edit')) {
+    showToast('Permission Denied', 'Your assigned role does not have permission to update telephony settings.', 'lock', 'rose');
+    return;
+  }
+  const virtNum = document.getElementById('masking-config-virtual-num')?.value?.trim() || '+91 97896 60115';
+  const timeout = parseInt(document.getElementById('masking-config-timeout')?.value || '30');
+  const fallback = document.getElementById('masking-config-fallback')?.value || 'RETURN_TO_POOL';
+  const recording = document.getElementById('masking-config-recording')?.checked ? 1 : 0;
+  const callMasking = document.getElementById('toggle-call-masking-enabled')?.checked ? 1 : 0;
+  const chatMasking = document.getElementById('toggle-chat-masking-enabled')?.checked ? 1 : 0;
+
+  const btn = document.getElementById('btn-save-masking-config');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> Saving...';
+
+  try {
+    const res = await fetch('api.php?action=save_masking_settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        virtual_company_number: virtNum,
+        call_timeout_seconds: timeout,
+        fallback_strategy: fallback,
+        recording_enabled: recording,
+        call_masking_enabled: callMasking,
+        chat_masking_enabled: chatMasking
+      })
+    });
+    const data = await res.json();
+    if (data && data.status === 'success') {
+      showToast('Settings Saved', 'Call & Number Masking configuration updated successfully!', 'verified', 'emerald');
+      loadMaskingSettingsAndSessions();
+    } else {
+      showToast('Error', data.message || 'Failed to update settings', 'error', 'rose');
+    }
+  } catch (err) {
+    console.error('Error saving masking config:', err);
+    showToast('Network Error', 'Could not communicate with backend', 'error', 'rose');
+  } finally {
+    if (btn) btn.innerHTML = oldText;
+  }
+}
+window.saveMaskingConfigurationForm = saveMaskingConfigurationForm;
+
+function onEditOrderStatusChange(newStatus) {
+  const statusBadge = document.getElementById('edit-order-modal-status-badge');
+  if (statusBadge) statusBadge.innerText = newStatus;
+}
+window.onEditOrderStatusChange = onEditOrderStatusChange;

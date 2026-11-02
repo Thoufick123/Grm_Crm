@@ -264,7 +264,8 @@ function initializeDatabaseSchema($pdo) {
             'description'    => "ALTER TABLE `products` ADD COLUMN `description` TEXT NULL AFTER `image`",
             'specifications' => "ALTER TABLE `products` ADD COLUMN `specifications` TEXT NULL AFTER `fabric`",
             'custom_caption' => "ALTER TABLE `products` ADD COLUMN `custom_caption` TEXT NULL AFTER `description`",
-            'account_id'     => "ALTER TABLE `products` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1' AFTER `custom_caption`"
+            'delivery_note'  => "ALTER TABLE `products` ADD COLUMN `delivery_note` TEXT NULL AFTER `custom_caption`",
+            'account_id'     => "ALTER TABLE `products` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1' AFTER `delivery_note`"
         ];
         foreach ($colDefs as $cName => $sql) {
             if (!in_array($cName, $existingCols)) {
@@ -300,6 +301,11 @@ function initializeDatabaseSchema($pdo) {
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
+
+    // Auto-heal subcategories with missing category_id by linking with categories table
+    try {
+        $pdo->exec("UPDATE `subcategories` s JOIN `categories` c ON s.category_name = c.name SET s.category_id = c.id WHERE s.category_id IS NULL");
+    } catch (Exception $e) {}
 
     // 6.3 Attributes Table (Sizes, Colors, Fabrics, Specifications)
     $pdo->exec("
@@ -647,13 +653,64 @@ function initializeDatabaseSchema($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
-    // Dynamic Alter for Customers (Email, Gender, Age)
+    // 18. WhatsApp Multilingual Voice Messages Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `voice_messages` (
+            `id` VARCHAR(50) PRIMARY KEY,
+            `conversation_id` VARCHAR(50) NULL,
+            `customer_id` VARCHAR(50) NULL,
+            `staff_id` VARCHAR(50) NULL,
+            `direction` ENUM('INBOUND', 'OUTBOUND') DEFAULT 'OUTBOUND',
+            `original_audio_path` TEXT NULL,
+            `source_language` VARCHAR(20) DEFAULT 'ta',
+            `target_language` VARCHAR(20) DEFAULT 'en',
+            `audio_duration` VARCHAR(20) DEFAULT '0',
+            `processing_status` VARCHAR(50) DEFAULT 'downloaded',
+            `whatsapp_message_id` VARCHAR(100) NULL,
+            `delivery_status` VARCHAR(50) DEFAULT 'PENDING',
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX(`customer_id`),
+            INDEX(`conversation_id`),
+            INDEX(`processing_status`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 19. WhatsApp Voice Translations Table (STT -> Translate -> TTS Audio Pipeline)
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `voice_translations` (
+            `id` VARCHAR(50) PRIMARY KEY,
+            `voice_message_id` VARCHAR(50) NOT NULL,
+            `translated_audio_path` TEXT NOT NULL,
+            `audio_format` VARCHAR(20) DEFAULT 'ogg',
+            `audio_duration` VARCHAR(20) DEFAULT '0',
+            `translation_status` VARCHAR(50) DEFAULT 'COMPLETED',
+            `intermediate_source_text` TEXT NULL,
+            `intermediate_translated_text` TEXT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX(`voice_message_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // Dynamic Alter for Users (preferred_language and status)
+    try {
+        $existingUserCols = $pdo->query("SHOW COLUMNS FROM `users`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('preferred_language', $existingUserCols)) {
+            $pdo->exec("ALTER TABLE `users` ADD COLUMN `preferred_language` VARCHAR(20) DEFAULT 'ta' AFTER `status`");
+        }
+        $pdo->exec("ALTER TABLE `users` MODIFY COLUMN `status` VARCHAR(50) DEFAULT 'ACTIVE'");
+    } catch (Exception $e) {
+        error_log("Users migration note: " . $e->getMessage());
+    }
+
+    // Dynamic Alter for Customers (Email, Gender, Age, tags_json)
     try {
         $existingCustCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN);
         $custExtraCols = [
-            'email'  => "ALTER TABLE `customers` ADD COLUMN `email` VARCHAR(100) NULL AFTER `whatsapp`",
-            'gender' => "ALTER TABLE `customers` ADD COLUMN `gender` VARCHAR(20) NULL AFTER `email`",
-            'age'    => "ALTER TABLE `customers` ADD COLUMN `age` VARCHAR(20) NULL AFTER `gender`"
+            'email'     => "ALTER TABLE `customers` ADD COLUMN `email` VARCHAR(100) NULL AFTER `whatsapp`",
+            'gender'    => "ALTER TABLE `customers` ADD COLUMN `gender` VARCHAR(20) NULL AFTER `email`",
+            'age'       => "ALTER TABLE `customers` ADD COLUMN `age` VARCHAR(20) NULL AFTER `gender`",
+            'tags_json' => "ALTER TABLE `customers` ADD COLUMN `tags_json` TEXT NULL AFTER `tags`"
         ];
         foreach ($custExtraCols as $cName => $sql) {
             if (!in_array($cName, $existingCustCols)) {
@@ -664,13 +721,52 @@ function initializeDatabaseSchema($pdo) {
         error_log("Customer extra columns migration note: " . $e->getMessage());
     }
 
-    // Dynamic Alter for Audit Logs (IP Address)
+    // Dynamic Alter for Broadcast Templates (variables_json)
+    try {
+        $existingBtCols = $pdo->query("SHOW COLUMNS FROM `broadcast_templates`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('variables_json', $existingBtCols)) {
+            $pdo->exec("ALTER TABLE `broadcast_templates` ADD COLUMN `variables_json` JSON NULL AFTER `body_text`");
+        }
+    } catch (Exception $e) {
+        error_log("Broadcast templates migration note: " . $e->getMessage());
+    }
+
+    // Dynamic Alter for Audit Logs (Dual Schema: actor, action_type, category, description, ip_address)
     try {
         $existingAuditCols = $pdo->query("SHOW COLUMNS FROM `audit_logs`")->fetchAll(PDO::FETCH_COLUMN);
-        if (!in_array('ip_address', $existingAuditCols)) {
-            $pdo->exec("ALTER TABLE `audit_logs` ADD COLUMN `ip_address` VARCHAR(50) NULL AFTER `timestamp_str`");
+        $auditColDefs = [
+            'actor'        => "ALTER TABLE `audit_logs` ADD COLUMN `actor` VARCHAR(100) NULL AFTER `user`",
+            'action_type'  => "ALTER TABLE `audit_logs` ADD COLUMN `action_type` VARCHAR(100) NULL AFTER `action`",
+            'category'     => "ALTER TABLE `audit_logs` ADD COLUMN `category` VARCHAR(100) NULL AFTER `module`",
+            'description'  => "ALTER TABLE `audit_logs` ADD COLUMN `description` TEXT NULL AFTER `details`",
+            'ip_address'   => "ALTER TABLE `audit_logs` ADD COLUMN `ip_address` VARCHAR(50) NULL AFTER `timestamp_str`"
+        ];
+        foreach ($auditColDefs as $cName => $sql) {
+            if (!in_array($cName, $existingAuditCols)) {
+                $pdo->exec($sql);
+            }
         }
-    } catch (Exception $e) {}
+        $pdo->exec("ALTER TABLE `audit_logs` MODIFY COLUMN `user` VARCHAR(100) NULL");
+        $pdo->exec("ALTER TABLE `audit_logs` MODIFY COLUMN `action` VARCHAR(100) NULL");
+        $pdo->exec("ALTER TABLE `audit_logs` MODIFY COLUMN `module` VARCHAR(100) NULL");
+        $pdo->exec("ALTER TABLE `audit_logs` MODIFY COLUMN `details` TEXT NULL");
+    } catch (Exception $e) {
+        error_log("Audit logs migration note: " . $e->getMessage());
+    }
+
+    // Dynamic Alter for Messages (direction, message_text)
+    try {
+        $existingMsgCols = $pdo->query("SHOW COLUMNS FROM `messages`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('direction', $existingMsgCols)) {
+            $pdo->exec("ALTER TABLE `messages` ADD COLUMN `direction` ENUM('inbound', 'outbound') DEFAULT 'inbound' AFTER `sender`");
+        }
+        if (!in_array('message_text', $existingMsgCols)) {
+            $pdo->exec("ALTER TABLE `messages` ADD COLUMN `message_text` TEXT NULL AFTER `text`");
+        }
+        $pdo->exec("ALTER TABLE `messages` MODIFY COLUMN `text` TEXT NULL");
+    } catch (Exception $e) {
+        error_log("Messages migration note: " . $e->getMessage());
+    }
 
     // Auto-sync existing DND entries into dnd_records if empty
     try {
@@ -702,27 +798,31 @@ function initializeDatabaseSchema($pdo) {
 }
 
 function seedDefaultDataIfEmpty($pdo) {
-    // Check if users exist
-    $count = $pdo->query("SELECT COUNT(*) FROM `users`")->fetchColumn();
-    if ($count == 0) {
+    if (!$pdo) return;
+
+    // 1. Ensure Super Admin user exists so login is never locked out
+    $adminCount = $pdo->query("SELECT COUNT(*) FROM `users` WHERE `id` = 'admin' OR `username` = 'admin'")->fetchColumn();
+    if ($adminCount == 0) {
         $stmt = $pdo->prepare("
-            INSERT INTO `users` (`id`, `username`, `password`, `name`, `role`, `email`, `phone`, `specialization`, `avatar`, `status`, `active_queries`, `converted`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO `users` (`id`, `username`, `password`, `name`, `role`, `email`, `phone`, `specialization`, `avatar`, `status`, `preferred_language`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-
-        $defaultUsers = [
-            ['admin', 'admin', password_hash('admin123', PASSWORD_BCRYPT), 'Super Admin', 'Admin Manager (Full Control)', 'admin@grmgarments.com', '+91 97896 60115', 'Full Control', 'SA', 'ACTIVE', 0, 0],
-            ['staff_01', 'priya', password_hash('staff123', PASSWORD_BCRYPT), 'Priya Sharma', 'Sales Specialist (Baby Collection)', 'priya@grmgarments.com', '+91 98765 43211', 'Baby Collection', 'PS', 'ACTIVE', 3, 14],
-            ['staff_02', 'rahul', password_hash('staff123', PASSWORD_BCRYPT), 'Rahul Verma', 'Enquiry Specialist (Maternity & Kids)', 'rahul@grmgarments.com', '+91 98765 43212', 'Maternity & Kids', 'RV', 'ACTIVE', 2, 9],
-            ['staff_03', 'sneha', password_hash('staff123', PASSWORD_BCRYPT), 'Sneha Patel', 'Order Fulfillment & Support', 'sneha@grmgarments.com', '+91 98765 43213', 'Order Support', 'SP', 'ACTIVE', 1, 11]
-        ];
-
-        foreach ($defaultUsers as $u) {
-            $stmt->execute($u);
-        }
+        $stmt->execute([
+            'admin',
+            'admin',
+            password_hash('admin123', PASSWORD_BCRYPT),
+            'Super Admin',
+            'Admin Manager (Full Control)',
+            'admin@grmgarments.com',
+            '+91 97896 60115',
+            'Full Control',
+            'SA',
+            'ACTIVE',
+            'ta'
+        ]);
     }
 
-    // Check WhatsApp accounts
+    // 2. Primary WhatsApp Account Slot (clean configuration)
     $waCount = $pdo->query("SELECT COUNT(*) FROM `whatsapp_accounts`")->fetchColumn();
     if ($waCount == 0) {
         $stmt = $pdo->prepare("
@@ -730,356 +830,16 @@ function seedDefaultDataIfEmpty($pdo) {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
-            'account_1', 'GRM Garments Business Hub', 'GRM Garments Official', 'Blue Berry 💙', '+91 98765 43210', '109823471928374', '982374619283745', 'META_CLOUD_API', 'CONNECTED', 'http://localhost:8080/webhook.php'
-        ]);
-        $stmt->execute([
-            'account_2', 'Blue Berry Maternity & Kids', 'Blue Berry Customer Care', 'Blue Berry 💙', '+91 97896 60115', '109823471928375', '982374619283746', 'META_CLOUD_API', 'CONNECTED', 'http://localhost:8080/webhook.php'
+            'account_1', 'GRM Garments Business Hub', 'GRM Garments Official', 'Blue Berry 💙', '+91 97896 60115', '109823471928374', '982374619283745', 'META_CLOUD_API', 'CONNECTED', 'http://localhost:8080/webhook.php'
         ]);
     }
 
-
-
-    // Check Customers
-    $cCount = $pdo->query("SELECT COUNT(*) FROM `customers`")->fetchColumn();
-    if ($cCount == 0) {
-        $stmt = $pdo->prepare("
-            INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `address`, `city`, `customer_type`, `tags`, `total_orders`, `total_spend`, `avatar`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-
-        $defaultCustomers = [
-            ['cust_101', 'CUST-2026-0089', 'Priya Sundaram', '+91 98765 43210', '+91 98765 43210', 'No. 45, 2nd Main Road, Gandhinagar, Adyar, Chennai - 600020', 'Chennai', 'Repeat Customer', '["Baby Collection","Repeat Buyer","COD"]', 8, 12450.00, 'PS'],
-            ['cust_102', 'CUST-2026-0092', 'Ananya Sharma', '+91 98450 11223', '+91 98450 11223', 'Flat 402, Green Glen Layout, Bellandur, Bengaluru - 560103', 'Bengaluru', 'VIP Customer', '["Maternity","VIP","Prepaid"]', 3, 7800.00, 'AS'],
-            ['cust_103', 'CUST-2026-0104', 'Kavitha Ramachandran', '+91 97890 55441', '+91 97890 55441', '12/B, Anna Nagar West, Madurai - 625020', 'Madurai', 'New WhatsApp Customer', '["New Lead","Kids Wear"]', 0, 0.00, 'KR']
-        ];
-
-        foreach ($defaultCustomers as $c) {
-            $stmt->execute($c);
-        }
-    }
-
-    // Check Queries
-    $qCount = $pdo->query("SELECT COUNT(*) FROM `queries`")->fetchColumn();
-    if ($qCount == 0) {
-        $stmt = $pdo->prepare("
-            INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `product_sku`, `unread_count`, `last_message`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-
-        $defaultQueries = [
-            ['Q-2026-001245', 'cust_101', 'staff_01', 'ASSIGNED', 'HIGH', 'Baby Frock BF-001 Pink 2-3 Years available?', 'BF-001-PK', 1, 'Customer: "2–3 years. Pink colour. How much is it?"'],
-            ['Q-2026-001246', 'cust_102', 'UNASSIGNED', 'NEW', 'URGENT', 'Can you share photos and colors of Maternity feeding gown?', 'MD-102-BL', 2, 'Customer: "Please share latest photos of maternity gown MD-102"'],
-            ['Q-2026-001247', 'cust_103', 'UNASSIGNED', 'NEW', 'NORMAL', 'Do you deliver to Madurai? What are the COD charges?', null, 1, 'Customer: "Hi, do you provide cash on delivery to Madurai?"']
-        ];
-
-        foreach ($defaultQueries as $q) {
-            $stmt->execute($q);
-        }
-    }
-
-    // Check Categories
-    $catCount = $pdo->query("SELECT COUNT(*) FROM `categories`")->fetchColumn();
-    if ($catCount == 0) {
-        $cStmt = $pdo->prepare("
-            INSERT INTO `categories` (`name`, `slug`, `icon`, `description`, `display_order`)
-            VALUES (?, ?, ?, ?, ?)
-        ");
-
-        $defaultCats = [
-            ['Baby Collection', 'baby_collection', 'child_care', 'Pure cotton frocks, rompers & soft babywear (0–3 Years)', 1],
-            ['Maternity & Feeding', 'maternity_wear', 'pregnant_woman', 'Feeding kurtis, maxi gowns & maternity comfort dresses', 2],
-            ['Newborn Essentials', 'newborn_care', 'crib', '5-piece organic gift sets, swaddle wraps & rompers', 3],
-            ['Kids Everyday Wear', 'kids_wear', 'styler', 'Cotton T-shirt packs, dungarees & nightwear (4–8 Years)', 4],
-            ['Girls Festive & Ethnic', 'girls_festive', 'celebration', 'Silk lehenga choli, handcrafted pattu pavadai sets', 5],
-            ['Wholesale & Bulk Bundles', 'wholesale_bulk', 'inventory', 'Factory wholesale bundles (Erode/Tirupur manufacturing)', 6]
-        ];
-
-        foreach ($defaultCats as $c) {
-            $cStmt->execute($c);
-        }
-    }
-
-    // Check Subcategories
-    $subCount = $pdo->query("SELECT COUNT(*) FROM `subcategories`")->fetchColumn();
-    if ($subCount == 0) {
-        $sStmt = $pdo->prepare("
-            INSERT INTO `subcategories` (`category_name`, `name`, `slug`, `sku_prefix`)
-            VALUES (?, ?, ?, ?)
-        ");
-
-        $defaultSubs = [
-            ['Baby Collection', 'Baby Frocks (Embroidered Cotton)', 'baby_frocks', 'BF'],
-            ['Baby Collection', 'Cotton Newborn Rompers', 'cotton_rompers', 'BR'],
-            ['Baby Collection', '2-Piece Tops & Bloomers Set', 'baby_sets', 'BS'],
-            ['Maternity & Feeding', 'Feeding Kurtis & Anarkalis', 'feeding_kurtis', 'FK'],
-            ['Maternity & Feeding', 'Maternity Maxi Feeding Gowns', 'maxi_gowns', 'MD'],
-            ['Maternity & Feeding', 'Maternity Comfort Pants', 'maternity_bottoms', 'MP'],
-            ['Newborn Essentials', '5-Piece Organic Romper Gift Sets', 'gift_sets', 'BB'],
-            ['Newborn Essentials', 'Muslin Swaddle Wraps', 'swaddles', 'SW'],
-            ['Newborn Essentials', 'Booties, Mittens & Cap Sets', 'mittens_caps', 'MC'],
-            ['Kids Everyday Wear', 'Cotton T-Shirt Packs (Pack of 3)', 'tshirts_pack', 'KD'],
-            ['Kids Everyday Wear', 'Denim & Cotton Dungarees', 'dungarees', 'DG'],
-            ['Kids Everyday Wear', 'Nightwear Pajama Sets', 'nightwear', 'NW'],
-            ['Girls Festive & Ethnic', 'Festive Silk Lehenga Choli', 'lehenga_choli', 'GL'],
-            ['Girls Festive & Ethnic', 'Handcrafted Silk Pattu Pavadai', 'pattu_pavadai', 'VIP'],
-            ['Girls Festive & Ethnic', 'Party Wear Anarkalis', 'anarkali_ethnic', 'AK'],
-            ['Wholesale & Bulk Bundles', '25-Pc Assorted Frock Bundles', 'frock_bundles', 'WS-F'],
-            ['Wholesale & Bulk Bundles', '50-Pc Rompers Bulk Box', 'romper_boxes', 'WS-R'],
-            ['Wholesale & Bulk Bundles', 'Mixed Garment Lots', 'mixed_lots', 'WS-M']
-        ];
-
-        foreach ($defaultSubs as $s) {
-            $sStmt->execute($s);
-        }
-    }
-
-    // Check Attributes
-    $attrCount = $pdo->query("SELECT COUNT(*) FROM `attributes`")->fetchColumn();
-    if ($attrCount == 0) {
-        $aStmt = $pdo->prepare("
-            INSERT INTO `attributes` (`type`, `value`, `extra`)
-            VALUES (?, ?, ?)
-        ");
-
-        $defaultAttrs = [
-            // Sizes
-            ['size', '0-6 Months', 'Newborn'],
-            ['size', '6-12 Months', 'Infant'],
-            ['size', '1-2 Years', 'Toddler'],
-            ['size', '2-3 Years', 'Toddler'],
-            ['size', '3-4 Years', 'Kids'],
-            ['size', '4-5 Years', 'Kids'],
-            ['size', '6-7 Years', 'Pre-Teen'],
-            ['size', 'S', 'Standard'],
-            ['size', 'M', 'Standard'],
-            ['size', 'L', 'Standard'],
-            ['size', 'XL', 'Plus'],
-            ['size', 'XXL', 'Plus'],
-            ['size', 'Free Size', 'Universal'],
-            ['size', 'Assorted Bulk Lot', 'Wholesale'],
-            // Colors
-            ['color', 'Pink', '#f472b6'],
-            ['color', 'Sunshine Yellow', '#facc15'],
-            ['color', 'Sky Blue', '#38bdf8'],
-            ['color', 'Mint Green', '#4ade80'],
-            ['color', 'Blush Pink', '#fb7185'],
-            ['color', 'Ruby Red & Gold', '#dc2626'],
-            ['color', 'Emerald Green & Gold', '#059669'],
-            ['color', 'Pure White', '#ffffff'],
-            ['color', 'Multi Pastel', '#c084fc'],
-            ['color', 'Navy Blue', '#1e3a8a'],
-            ['color', 'Royal Maroon', '#881337'],
-            // Fabrics
-            ['fabric', '100% Pure Organic Cotton', 'Natural'],
-            ['fabric', 'Soft Breathable Hosiery', 'Stretch'],
-            ['fabric', 'Handcrafted Kanjivaram Silk', 'Festive Silk'],
-            ['fabric', 'Rayon Slub Feeding Cotton', 'Soft Drapery'],
-            ['fabric', 'Pure Cotton Muslin', 'Lightweight'],
-            ['fabric', 'Rich Art Silk & Zari', 'Ethnic'],
-            ['fabric', 'Combed Cotton Knit', 'Casual']
-        ];
-
-        foreach ($defaultAttrs as $a) {
-            $aStmt->execute($a);
-        }
-    }
-
-    // Check Products
-    $pCount = $pdo->query("SELECT COUNT(*) FROM `products`")->fetchColumn();
-    if ($pCount == 0) {
-        $pStmt = $pdo->prepare("
-            INSERT INTO `products` (`sku`, `name`, `category`, `subcategory`, `size`, `color`, `fabric`, `specifications`, `price`, `mrp`, `physical_stock`, `reserved_stock`, `image`, `description`, `account_id`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-
-        $defaultProducts = [
-            [
-                'BF-001-PK', 'Embroidered Cotton Baby Frock', 'Baby Collection', 'Baby Frocks (Embroidered Cotton)', '2–3 Years', 'Pink', '100% Breathable Combed Cotton',
-                json_encode([['label' => 'Sleeve Length', 'content' => 'Full Sleeve'], ['label' => 'Occasion', 'content' => 'Festive Wear']]),
-                599.00, 799.00, 12, 0, 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=800&auto=format&fit=crop&q=80',
-                '100% Breathable Combed Cotton with fine needle embroidery. Soft inner lining, skin-friendly for babies.', 'account_1'
-            ],
-            [
-                'BF-001-YL', 'Sunshine Flared Baby Frock', 'Baby Collection', 'Baby Frocks (Embroidered Cotton)', '1–2 Years', 'Sunshine Yellow', '100% Combed Cotton',
-                json_encode([['label' => 'Occasion', 'content' => 'Daily & Casual Wear'], ['label' => 'Fit', 'content' => 'Regular Flared']]),
-                599.00, 799.00, 8, 0, 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=800&auto=format&fit=crop&q=80',
-                'Bright festive yellow frock with contrast floral yoke and flared hem.', 'account_1'
-            ],
-            [
-                'MD-102-BL', 'Pure Cotton Tiered Feeding Gown', 'Maternity & Feeding', 'Maternity Maxi Feeding Gowns', 'L / XL', 'Sky Blue', 'Pure Mulmul Cotton',
-                json_encode([['label' => 'Feeding Access', 'content' => 'Concealed Double Zips'], ['label' => 'Pattern', 'content' => 'Tiered Flared']]),
-                1299.00, 1699.00, 10, 0, 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=800&auto=format&fit=crop&q=80',
-                'Concealed double invisible feeding zips. 100% pure premium mulmul cotton, ultra-comfortable.', 'account_2'
-            ]
-        ];
-
-        foreach ($defaultProducts as $dp) {
-            $pStmt->execute($dp);
-        }
-    }
-
-    // Check Follow-ups
-    $fCount = $pdo->query("SELECT COUNT(*) FROM `followups`")->fetchColumn();
-    if ($fCount == 0) {
-        $today = date('Y-m-d');
-        $tomorrow = date('Y-m-d', strtotime('+1 day'));
-        $yesterday = date('Y-m-d', strtotime('-1 day'));
-
-        $stmt = $pdo->prepare("
-            INSERT INTO `followups` (`id`, `query_id`, `customer_id`, `customer_name`, `assigned_to`, `date_str`, `time_str`, `reason`, `status`, `outcome`, `priority`, `contact_channel`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-
-        $defaultFollowups = [
-            ['FU-2026-0001', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', 'staff_01', $today, '11:30 AM', 'Customer asked to confirm pure cotton frock BF-001 pink size availability for 2-year-old before ordering.', 'PENDING', 'PENDING', 'HIGH', 'WHATSAPP'],
-            ['FU-2026-0002', 'Q-2026-001246', 'cust_102', 'Ananya Sharma', 'staff_02', $today, '04:00 PM', 'Call to discuss feeding gown MD-102 fabric details & COD shipping options to Bengaluru.', 'PENDING', 'PENDING', 'URGENT', 'CALL'],
-            ['FU-2026-0003', 'Q-2026-001247', 'cust_103', 'Kavitha Ramachandran', 'staff_03', $yesterday, '10:00 AM', 'Follow up regarding wholesale 25-piece bulk frock lot inquiry and payment quotation.', 'PENDING', 'PENDING', 'NORMAL', 'CALL'],
-            ['FU-2026-0004', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', 'staff_01', $tomorrow, '02:30 PM', 'Check if customer received catalog photos of newborn gift sets.', 'PENDING', 'PENDING', 'NORMAL', 'WHATSAPP'],
-        ];
-
-        foreach ($defaultFollowups as $fu) {
-            $stmt->execute($fu);
-        }
-    }
-
-    // Check Orders
-    $oCount = $pdo->query("SELECT COUNT(*) FROM `orders`")->fetchColumn();
-    if ($oCount == 0) {
-        $now = time();
-        $stmt = $pdo->prepare("
-            INSERT INTO `orders` (
-                `id`, `query_id`, `customer_id`, `customer_name`, `customer_phone`, `shipping_address`,
-                `items_json`, `grand_total`, `cod_advance`, `cod_balance_due`, `payment_method`,
-                `payment_status`, `upi_transaction_id`, `order_status`, `staff_id`, `staff_name`,
-                `created_by`, `tracking_number`, `courier_name`, `created_at`
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-
-        $defaultOrders = [
-            [
-                'WA-2026-001126', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', '+91 98765 43210',
-                'No. 45, 2nd Main Road, Gandhinagar, Adyar, Chennai - 600020',
-                json_encode([
-                    ['name' => 'Embroidered Cotton Baby Frock', 'sku' => 'BF-001-PK', 'size' => '2–3 Years', 'qty' => 2, 'price' => 599.00]
-                ]),
-                1198.00, 0.00, 0.00, 'ONLINE_UPI', 'PAID', 'UPI-982347192837', 'PLACED',
-                'staff_01', 'Priya Sharma', 'Priya Sharma', null, null, date('Y-m-d H:i:s', $now - 3600)
-            ],
-            [
-                'WA-2026-001127', 'Q-2026-001246', 'cust_102', 'Ananya Sharma', '+91 98450 11223',
-                'Flat 402, Green Glen Layout, Bellandur, Bengaluru - 560103',
-                json_encode([
-                    ['name' => 'Pure Cotton Tiered Feeding Gown', 'sku' => 'MD-102-BL', 'size' => 'L / XL', 'qty' => 1, 'price' => 1299.00],
-                    ['name' => 'Sunshine Flared Baby Frock', 'sku' => 'BF-001-YL', 'size' => '1–2 Years', 'qty' => 1, 'price' => 599.00]
-                ]),
-                1898.00, 200.00, 1698.00, 'COD', 'PARTIAL_PAID (₹200 ADVANCE)', 'UPI-819283719283', 'PACKED',
-                'staff_02', 'Rahul Verma', 'Rahul Verma', null, 'Delhivery Express', date('Y-m-d H:i:s', $now - 86400)
-            ],
-            [
-                'WA-2026-001128', 'Q-2026-001247', 'cust_103', 'Kavitha Ramachandran', '+91 97890 55441',
-                '12/B, Anna Nagar West, Madurai - 625020',
-                json_encode([
-                    ['name' => 'Embroidered Cotton Baby Frock', 'sku' => 'BF-001-PK', 'size' => '1–2 Years', 'qty' => 3, 'price' => 599.00]
-                ]),
-                1797.00, 0.00, 0.00, 'ONLINE_UPI', 'PAID', 'UPI-762910481920', 'SHIPPED',
-                'staff_01', 'Priya Sharma', 'Priya Sharma', 'BLUEDART-882937102', 'BlueDart Courier', date('Y-m-d H:i:s', $now - (86400 * 3))
-            ],
-            [
-                'WA-2026-001129', 'Q-2026-1008', 'cust_7338965560', 'SugunaMani', '+91 73389 65560',
-                '14/2 Cross Cut Road, Gandhipuram, Coimbatore - 641012',
-                json_encode([
-                    ['name' => 'Sunshine Flared Baby Frock', 'sku' => 'BF-001-YL', 'size' => '2–3 Years', 'qty' => 1, 'price' => 599.00],
-                    ['name' => 'Festive Silk Baby Set', 'sku' => 'FS-301-GD', 'size' => '1–2 Years', 'qty' => 1, 'price' => 899.00]
-                ]),
-                1498.00, 200.00, 1298.00, 'COD', 'PARTIAL_PAID (₹200 ADVANCE)', 'UPI-652918273918', 'SHIPPED',
-                'staff_02', 'Rahul Verma', 'Rahul Verma', 'DTDC-9928172635', 'DTDC Express', date('Y-m-d H:i:s', $now - (86400 * 5))
-            ],
-            [
-                'WA-2026-001130', 'Q-2026-001245', 'cust_101', 'Priya Sundaram', '+91 98765 43210',
-                'No. 45, 2nd Main Road, Gandhinagar, Adyar, Chennai - 600020',
-                json_encode([
-                    ['name' => '5-Piece Organic Newborn Gift Set', 'sku' => 'NB-201-WT', 'size' => '0–6 Months', 'qty' => 2, 'price' => 799.00]
-                ]),
-                1598.00, 0.00, 0.00, 'ONLINE_UPI', 'PAID', 'UPI-541928374829', 'DELIVERED',
-                'staff_03', 'Sneha Patel', 'Sneha Patel', 'ST-TRACK-88291029', 'Speed Post India', date('Y-m-d H:i:s', $now - (86400 * 12))
-            ],
-            [
-                'WA-2026-001131', 'Q-2026-001246', 'cust_102', 'Ananya Sharma', '+91 98450 11223',
-                'Flat 402, Green Glen Layout, Bellandur, Bengaluru - 560103',
-                json_encode([
-                    ['name' => 'Pure Cotton Tiered Feeding Gown', 'sku' => 'MD-102-BL', 'size' => 'L / XL', 'qty' => 1, 'price' => 1299.00]
-                ]),
-                1299.00, 0.00, 0.00, 'ONLINE_UPI', 'PAID', 'UPI-432819283746', 'DELIVERED',
-                'staff_01', 'Priya Sharma', 'Priya Sharma', 'BLUEDART-772910283', 'BlueDart Courier', date('Y-m-d H:i:s', $now - (86400 * 18))
-            ]
-        ];
-
-        foreach ($defaultOrders as $ord) {
-            $stmt->execute($ord);
-        }
-    }
-
-    // Check Auto-Reply Rules
-    $arCount = $pdo->query("SELECT COUNT(*) FROM `auto_reply_rules`")->fetchColumn();
-    if ($arCount == 0) {
-        $arStmt = $pdo->prepare("
-            INSERT INTO `auto_reply_rules` (`id`, `name`, `keywords`, `action_type`, `category_id`, `reply_text`, `enabled`, `auto_send`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $defaultRules = [
-            [
-                'rule_greet', 'Welcome Greeting', json_encode(['hi', 'hello', 'vanakkam', 'namaste']),
-                'custom_text', null, 'Hello! Welcome to GRM Garments & Blue Berry Kids. How can our sales team assist you today?', 1, 1
-            ],
-            [
-                'rule_catalog', 'Catalog Request', json_encode(['catalog', 'price list', 'frock collection', 'photos']),
-                'custom_text', 'baby_collection', 'Here is our latest pure cotton Baby & Maternity wear catalog with live stock availability!', 1, 1
-            ],
-            [
-                'rule_cod', 'COD & Delivery Terms', json_encode(['cod', 'cash on delivery', 'shipping charges', 'courier']),
-                'custom_text', null, 'Yes! We offer fast Doorstep Delivery with Cash on Delivery (COD) across India. Standard delivery takes 2–4 business days.', 1, 1
-            ]
-        ];
-        foreach ($defaultRules as $r) {
-            $arStmt->execute($r);
-        }
-    }
-
-    // Check Broadcast Templates
-    $btCount = $pdo->query("SELECT COUNT(*) FROM `broadcast_templates`")->fetchColumn();
-    if ($btCount == 0) {
-        $btStmt = $pdo->prepare("
-            INSERT INTO `broadcast_templates` (`id`, `name`, `category`, `body_text`, `image_url`, `button_type`, `button_text`, `button_url`, `status`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $defaultTemplates = [
-            [
-                'tmpl_festive_offer', 'Diwali & Festive Pure Silk Offer', 'FESTIVE_MARKETING',
-                "🎉 Exclusive Festive Offer!\nPure silk handcrafted pattu pavadai and baby frocks are now available at factory-direct prices.\nOrder today to get fast priority dispatch!",
-                'https://images.unsplash.com/photo-1596870230751-ebdfce98ec42?w=800', 'URL', 'View Festive Catalog', 'http://localhost:8000/#catalog', 'ACTIVE'
-            ],
-            [
-                'tmpl_maternity_arrival', 'New Maternity Feeding Gowns Restocked', 'PRODUCT_LAUNCH',
-                "✨ Feeding Gowns Restocked!\n100% breathable mulmul cotton with concealed dual invisible zips.\nAvailable in sizes M, L, XL, and XXL with COD support.",
-                'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=800', 'URL', 'Shop Maternity Wear', 'http://localhost:8000/#catalog', 'ACTIVE'
-            ],
-            [
-                'tmpl_order_confirm', 'Order Dispatch & Tracking Alert', 'UTILITY_TRACKING',
-                "📦 Your GRM Garments order has been dispatched via express courier!\nYour tracking number and parcel details will be updated here shortly.",
-                null, 'URL', 'Track Order', 'http://localhost:8000/#orders', 'ACTIVE'
-            ]
-        ];
-        foreach ($defaultTemplates as $t) {
-            $btStmt->execute($t);
-        }
-    }
-
-    // Check Call Masking Settings Seed
+    // 3. Primary Call Masking Setting Default
     $maskCount = $pdo->query("SELECT COUNT(*) FROM `masking_settings`")->fetchColumn();
     if ($maskCount == 0) {
         $pdo->exec("
             INSERT INTO `masking_settings` (`id`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `updated_by`)
-            VALUES (1, 1, 1, 30, 'RETURN_TO_POOL', '+91 8000 123 456', 'staff_01,staff_02,staff_03', 1, 'Super Admin');
+            VALUES (1, 1, 1, 30, 'RETURN_TO_POOL', '+91 97896 60115', 'admin', 1, 'Super Admin');
         ");
     }
 }
