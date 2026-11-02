@@ -87,6 +87,32 @@ class AudioConversionService {
 
     /**
      * Estimate audio duration in seconds
+    /**
+     * Executes FFmpeg command reliably across Windows and Linux (handles paths with spaces)
+     */
+    private function executeFFmpegCmd($args) {
+        if (!$this->ffmpegPath) return null;
+        $desc = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w']
+        ];
+        $cmd = '"' . $this->ffmpegPath . '" ' . $args;
+        $proc = @proc_open($cmd, $desc, $pipes);
+        if (is_resource($proc)) {
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[0]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($proc);
+            return $stdout . "\n" . $stderr;
+        }
+        return null;
+    }
+
+    /**
+     * Estimate audio duration in seconds
      */
     public function estimateAudioDuration($filePath, $quickOnly = false) {
         if (!file_exists($filePath)) return 5.0;
@@ -101,8 +127,7 @@ class AudioConversionService {
 
         // If FFmpeg available, get precise duration
         if ($this->ffmpegPath) {
-            $cmd = escapeshellcmd($this->ffmpegPath) . " -i " . escapeshellarg($filePath) . " 2>&1";
-            $output = @shell_exec($cmd);
+            $output = $this->executeFFmpegCmd('-i "' . $filePath . '"');
             if ($output && preg_match('/Duration: (\\d{2}):(\\d{2}):(\\d{2}\\.\\d{2})/', $output, $m)) {
                 $hours = (float)$m[1];
                 $mins = (float)$m[2];
@@ -129,8 +154,7 @@ class AudioConversionService {
 
         if ($this->ffmpegPath) {
             $targetPath = preg_replace('/\.[^.]+$/', '.ogg', $sourcePath);
-            $cmd = escapeshellcmd($this->ffmpegPath) . " -y -i " . escapeshellarg($sourcePath) . " -c:a libopus -b:a 32k -ar 48000 -ac 1 " . escapeshellarg($targetPath) . " 2>&1";
-            $output = @shell_exec($cmd);
+            $output = $this->executeFFmpegCmd('-y -i "' . $sourcePath . '" -c:a libopus -b:a 32k -ar 48000 -ac 1 "' . $targetPath . '"');
             if ($output && preg_match('/Duration: (\\d{2}):(\\d{2}):(\\d{2}\\.\\d{2})/', $output, $m)) {
                 $hours = (float)$m[1];
                 $mins = (float)$m[2];

@@ -103,12 +103,12 @@ class SpeechRecognitionService {
             return $this->transcribeWithGoogleCloud($audioFilePath, $expectedLanguage, $googleKey);
         }
 
-        // 4. Natural Inbound Customer Voice Note Interpretation when external API keys are not yet in .env
+        // 4. Return empty text if no API key is configured and no speech recognized
         return [
-            'text' => 'வணக்கம், உங்கள் தயாரிப்புகளின் விலை விவரங்கள் மற்றும் அளவுகளை அறிய விரும்புகிறேன்.',
+            'text' => '',
             'language' => self::normalizeLangCode($expectedLanguage ?: 'ta'),
-            'confidence' => 0.90,
-            'provider' => 'INBOUND_VOICE_ENGINE'
+            'confidence' => 0.0,
+            'provider' => 'NONE'
         ];
     }
 

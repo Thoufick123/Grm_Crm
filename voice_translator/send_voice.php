@@ -23,6 +23,9 @@ try {
 
     // Fetch voice details
     $audioUrl = $input['audio_url'] ?? '';
+    if (!empty($audioUrl)) {
+        $audioUrl = preg_replace('/\?.*$/', '', $audioUrl);
+    }
     $duration = $input['duration'] ?? 10;
     $targetLang = $input['target_lang'] ?? 'en';
 
@@ -31,23 +34,23 @@ try {
             $tStmt = $pdo->prepare("SELECT * FROM `voice_translations` WHERE `id` = ? LIMIT 1");
             $tStmt->execute([$translationId]);
             $trans = $tStmt->fetch(PDO::FETCH_ASSOC);
-            if ($trans) {
-                $audioUrl = $trans['translated_audio_path'];
+            if ($trans && !empty($trans['translated_audio_path'])) {
+                $audioUrl = preg_replace('/\?.*$/', '', $trans['translated_audio_path']);
                 $duration = $trans['audio_duration'] ?: $duration;
             }
         } elseif ($sendMode === 'original') {
             $mStmt = $pdo->prepare("SELECT * FROM `voice_messages` WHERE `id` = ? LIMIT 1");
             $mStmt->execute([$voiceMsgId]);
             $vm = $mStmt->fetch(PDO::FETCH_ASSOC);
-            if ($vm) {
-                $audioUrl = $vm['original_audio_path'];
+            if ($vm && !empty($vm['original_audio_path'])) {
+                $audioUrl = preg_replace('/\?.*$/', '', $vm['original_audio_path']);
                 $duration = $vm['audio_duration'] ?: $duration;
             }
         }
     }
 
     if (empty($audioUrl)) {
-        throw new Exception("No audio file found to send.");
+        throw new Exception($sendMode === 'translated' ? "No translated voice audio found. Please click 'Translate Voice' before sending." : "No audio recording found to send.");
     }
 
     // 1. Strict Server-Side Deduplication & Idempotency Protection

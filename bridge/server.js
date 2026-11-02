@@ -536,7 +536,8 @@ async function getAudioBuffer(url) {
             return Buffer.from(base64Data, 'base64');
         }
         if (typeof url === 'string') {
-            const cleanPath = url.replace(/^[/\\]+/, '').replace(/\//g, path.sep);
+            const rawUrl = url.split('?')[0];
+            const cleanPath = rawUrl.replace(/^[/\\]+/, '').replace(/\//g, path.sep);
             const candidates = [
                 path.resolve(__dirname, '..', cleanPath),
                 path.resolve(__dirname, cleanPath),

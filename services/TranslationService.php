@@ -38,42 +38,62 @@ class TranslationService {
         }
 
         $encodedText = urlencode($text);
-        $url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl={$sourceLang}&tl={$targetLang}&dt=t&q={$encodedText}";
+        
+        // 1. Primary: Google Dictionary / Chrome Extension Client (Fast, avoids 429 rate limits)
+        $endpoints = [
+            "https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl={$sourceLang}&tl={$targetLang}&dt=t&q={$encodedText}",
+            "https://api.mymemory.translated.net/get?q={$encodedText}&langpair=" . ($sourceLang === 'auto' ? 'en' : $sourceLang) . "|{$targetLang}",
+            "https://translate.googleapis.com/translate_a/single?client=gtx&sl={$sourceLang}&tl={$targetLang}&dt=t&q={$encodedText}"
+        ];
 
-        $response = null;
-        if (function_exists('curl_init')) {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 4);
-            curl_setopt($ch, CURLOPT_TCP_NODELAY, 1);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
-            $response = curl_exec($ch);
-            curl_close($ch);
-        } else {
-            $ctx = stream_context_create(['http' => ['timeout' => 4, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
-            $response = @file_get_contents($url, false, $ctx);
-        }
+        foreach ($endpoints as $url) {
+            $response = null;
+            if (function_exists('curl_init')) {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+                curl_setopt($ch, CURLOPT_TCP_NODELAY, 1);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+                $response = curl_exec($ch);
+                $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                if ($code !== 200) {
+                    $response = null;
+                }
+            } else {
+                $ctx = stream_context_create(['http' => ['timeout' => 5, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
+                $response = @file_get_contents($url, false, $ctx);
+            }
 
-        if ($response) {
-            $data = json_decode($response, true);
-            if (is_array($data) && isset($data[0]) && is_array($data[0])) {
-                $translatedText = '';
-                foreach ($data[0] as $segment) {
-                    if (isset($segment[0])) {
-                        $translatedText .= $segment[0];
+            if ($response) {
+                // Check if Google array format
+                $data = json_decode($response, true);
+                if (is_array($data) && isset($data[0]) && is_array($data[0])) {
+                    $translatedText = '';
+                    foreach ($data[0] as $segment) {
+                        if (isset($segment[0])) {
+                            $translatedText .= $segment[0];
+                        }
+                    }
+                    if (!empty(trim($translatedText))) {
+                        return trim($translatedText);
                     }
                 }
-                if (!empty(trim($translatedText))) {
-                    return trim($translatedText);
+                // Check if MyMemory response format
+                if (is_array($data) && !empty($data['responseData']['translatedText'])) {
+                    $myMemText = trim($data['responseData']['translatedText']);
+                    if (!empty($myMemText) && stripos($myMemText, 'MYMEMORY WARNING') === false) {
+                        return $myMemText;
+                    }
                 }
             }
         }
 
-        // If Google endpoint failed or timed out, return original text safely
+        // If all endpoints failed or timed out, return original text safely
         return $text;
     }
 }

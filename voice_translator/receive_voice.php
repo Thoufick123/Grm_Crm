@@ -85,8 +85,8 @@ try {
     $sourceText = $sttResult['text'];
 
     if (empty(trim($sourceText))) {
-        $sourceText = "வணக்கம் GRM Garments, உங்கள் குரல் பதிவு பெறப்பட்டது.";
-        $detectedSource = "ta";
+        $sourceText = "Customer voice note received.";
+        $detectedSource = "en";
     }
 
     $translatedText = $transService->translateText($sourceText, $targetLang, $detectedSource);

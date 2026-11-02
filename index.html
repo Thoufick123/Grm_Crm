@@ -755,6 +755,38 @@
       line-height: 1.4;
     }
 
+    #bcast-preview-image-container {
+      height: 9rem;
+      max-height: 9rem;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(100, 116, 139, 0.7) rgba(226, 232, 240, 0.65);
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      padding: 0;
+    }
+    #bcast-preview-image-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    #bcast-preview-image-container::-webkit-scrollbar-track {
+      background: rgba(226, 232, 240, 0.65);
+      border-radius: 9999px;
+    }
+    #bcast-preview-image-container::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.7);
+      border-radius: 9999px;
+    }
+    #bcast-preview-image-container img {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      background: #f8fafc;
+      min-height: 100%;
+    }
+
     /* Right Panel Layout & Dropdown Safeguards */
     #phone-switcher-dropdown {
       z-index: 100 !important;
@@ -913,31 +945,31 @@
         </div>
       </button>
 
-      <!-- WHATSAPP ORDERS MODULE WITH SUBMODULES -->
+      <!-- WHATSAPP MODULE: DASHBOARD & ORDERS SEPARATED SINGLE -->
       <div id="nav-orders-group" class="space-y-1">
-        <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+        <!-- 1. WhatsApp Dashboard (Standalone Single Module) -->
+        <button type="button" onclick="switchOrdersSubmodule('dashboard')" id="nav-orders-dashboard"
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">analytics</span>
+            <span class="font-bold">WhatsApp Dashboard</span>
+          </div>
+          <span id="badge-orders-dash-active" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">Live</span>
+        </button>
+
+        <!-- 2. WhatsApp Orders (Standalone Single Module) -->
+        <button type="button" onclick="switchOrdersSubmodule('history')" id="nav-orders"
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-[20px] text-lime-400 group-hover:scale-110 transition">shopping_bag</span>
             <span class="font-bold" data-i18n="nav.orders">WhatsApp Orders</span>
           </div>
           <span id="badge-orders-count" class="bg-lime-500/20 text-lime-300 border border-lime-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
         </button>
-        <!-- Sub-modules in Sidebar -->
-        <div id="nav-orders-submodules" class="pl-7 pr-1 space-y-1">
-          <button type="button" onclick="switchOrdersSubmodule('dashboard')" id="nav-sub-orders-dashboard" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/25 transition cursor-pointer group">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">analytics</span>
-              <span>1. Order Dashboard</span>
-            </div>
-          </button>
-          <button type="button" onclick="switchOrdersSubmodule('history')" id="nav-sub-orders-history" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer group">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">receipt_long</span>
-              <span>2. Order History</span>
-            </div>
-            <span id="nav-sub-orders-history-badge" class="text-[9px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full font-bold border border-emerald-500/30">0</span>
-          </button>
-        </div>
+        <!-- Backward-compatibility elements for legacy queries -->
+        <span id="nav-sub-orders-dashboard" class="hidden"></span>
+        <span id="nav-sub-orders-history" class="hidden"></span>
+        <span id="nav-sub-orders-history-badge" class="hidden"></span>
       </div>
 
       <button onclick="switchView('customers')" id="nav-customers"
@@ -1454,24 +1486,46 @@
                 </button>
               </div>
 
-              <!-- Voice Recording & Preview Panel (Multilingual Voice-to-Voice Translator) -->
+              <!-- Voice Record Panel -->
               <div id="voice-record-panel" class="hidden mb-2.5 p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border border-emerald-300 rounded-2xl shadow-sm transition-all duration-300">
                 <!-- 1. Live Recording State -->
-                <div id="voice-recording-active" class="flex items-center justify-between gap-3">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="relative flex h-3.5 w-3.5 shrink-0">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-600"></span>
-                    </span>
-                    <span class="text-xs font-bold text-slate-800">Recording Voice Note...</span>
-                    <span id="voice-record-timer" class="font-mono text-xs font-extrabold text-rose-600 bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200">00:00</span>
+                <div id="voice-recording-active" class="space-y-2">
+                  <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span class="relative flex h-3.5 w-3.5 shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-600"></span>
+                      </span>
+                      <span class="text-xs font-bold text-slate-800">Recording Voice Note...</span>
+                      <span id="voice-record-timer" class="font-mono text-xs font-extrabold text-rose-600 bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200">00:00</span>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                      <!-- Spoken language selection -->
+                      <div class="flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                        <span>Speaking in:</span>
+                        <select id="voice-source-lang" onchange="onVoiceSourceLangChange(this.value)" class="bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-800 focus:outline-none">
+                          <option value="ta-IN" selected>தமிழ் (Tamil)</option>
+                          <option value="en-IN">English (India)</option>
+                          <option value="hi-IN">हिंदी (Hindi)</option>
+                          <option value="te-IN">తెలుగు (Telugu)</option>
+                          <option value="ml-IN">മലയാളം (Malayalam)</option>
+                          <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
+                        </select>
+                      </div>
+
+                      <button type="button" onclick="cancelVoiceRecording()" class="px-2.5 py-1 text-slate-500 hover:text-rose-700 hover:bg-rose-100 text-xs font-bold rounded-lg transition" title="Discard">Cancel</button>
+                      <button type="button" onclick="stopVoiceRecording()" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow transition flex items-center gap-1 active:scale-95 cursor-pointer">
+                        <span class="material-symbols-outlined text-[16px]">stop</span>
+                        <span>Stop</span>
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex items-center gap-2 shrink-0">
-                    <button type="button" onclick="cancelVoiceRecording()" class="px-2.5 py-1 text-slate-500 hover:text-rose-700 hover:bg-rose-100 text-xs font-bold rounded-lg transition" title="Discard">Cancel</button>
-                    <button type="button" onclick="stopVoiceRecording()" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow transition flex items-center gap-1 active:scale-95 cursor-pointer">
-                      <span class="material-symbols-outlined text-[16px]">stop</span>
-                      <span>Stop</span>
-                    </button>
+
+                  <!-- Real-time Live Speech Transcript Indicator -->
+                  <div class="text-xs font-medium text-slate-700 bg-white/80 p-2 rounded-xl border border-emerald-200 min-h-[30px] flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px] text-emerald-600 animate-pulse">hearing</span>
+                    <span id="voice-live-transcript-text" class="text-slate-600 truncate">Listening for speech... Speak clearly</span>
                   </div>
                 </div>
 
@@ -1493,7 +1547,18 @@
                     <span class="text-[10px] font-bold text-slate-500 uppercase shrink-0">Original:</span>
                     <audio id="voice-original-audio" controls class="w-full h-8 outline-none"></audio>
                   </div>
-                  
+
+                  <!-- Editable Source Transcript Review Area -->
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                      <span class="flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px] text-emerald-600">speech_to_text</span>
+                        <span>Your Speech (Review / Edit):</span>
+                      </span>
+                      <span class="text-[10px] text-slate-400 font-normal">Edit or add words before translating</span>
+                    </div>
+                    <textarea id="voice-source-text" rows="2" class="w-full text-xs p-2 bg-white border border-slate-300 rounded-xl focus:ring-1 focus:ring-emerald-500 focus:outline-none text-slate-800 font-medium" placeholder="Recognized speech will appear here..."></textarea>
+                  </div>
 
                   <!-- Target Language Selection (Strictly 6 Languages) & Translation Action -->
                   <div class="flex items-center justify-between gap-2 flex-wrap pt-0.5">
@@ -1512,13 +1577,13 @@
                       </select>
                     </div>
 
-                    <button type="button" id="btn-voice-translate" onclick="executeVoiceTranslation()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
+                    <button type="button" id="btn-voice-translate" onclick="executeVoiceTranslation()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
                       <span class="material-symbols-outlined text-[15px]">auto_awesome</span>
                       <span id="btn-voice-translate-text">Translate Voice</span>
                     </button>
                   </div>
 
-                  <!-- Translated Audio Player (Visible after translation) -->
+                  <!-- Translated Audio Player & Text (Visible after translation) -->
                   <div id="voice-translated-preview-box" class="hidden bg-emerald-100/70 p-2.5 rounded-xl border border-emerald-300 space-y-2">
                     <div class="flex items-center justify-between text-xs font-bold text-emerald-900">
                       <span class="flex items-center gap-1">
@@ -1527,6 +1592,10 @@
                       </span>
                       <span class="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded font-mono font-bold">Ready</span>
                     </div>
+
+                    <!-- Translated Text Display -->
+                    <div id="voice-translated-text-box" class="text-xs p-2 bg-white/90 border border-emerald-200 rounded-xl text-slate-800 font-medium select-text hidden"></div>
+
                     <audio id="voice-translated-audio" controls class="w-full h-8 outline-none"></audio>
                     <div class="flex items-center justify-end gap-2 pt-1">
                       <button type="button" id="btn-voice-send-orig" onclick="dispatchTranslatedVoice('original')" class="px-3 py-1.5 bg-white hover:bg-slate-100 active:scale-95 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 transition cursor-pointer" title="Send original audio instead">Send Original</button>
@@ -1752,12 +1821,6 @@
                   <select id="edit-rule-category"
                     class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-wa focus:outline-none transition">
                     <option value="">-- None (Text Message Only) --</option>
-                    <option value="2">🤰 Category 2: Maternity &amp; Feeding Wear (₹1,299)</option>
-                    <option value="1">👗 Category 1: Baby Collection 0–3 Years (₹599)</option>
-                    <option value="3">🎁 Category 3: Newborn Gift Sets 0–6 Months (₹799)</option>
-                    <option value="4">👕 Category 4: Kids Everyday Wear 4–5 Years (₹450)</option>
-                    <option value="5">📦 Category 5: Wholesale &amp; Bulk Bundles (₹7,200)</option>
-                    <option value="6">🥻 Category 6: Festive &amp; VIP Silk Sets (₹899)</option>
                   </select>
                 </div>
               </div>
@@ -2144,9 +2207,9 @@
                       <div
                         class="self-end max-w-[85%] bg-[#d9fdd3] p-2.5 rounded-2xl rounded-tr-xs shadow-xs text-slate-900 space-y-1.5 border border-emerald-200/60">
                         <div id="bcast-preview-image-container"
-                          class="hidden rounded-lg overflow-hidden max-h-36 bg-slate-100">
+                          class="hidden rounded-lg bg-slate-100">
                           <img id="bcast-preview-image" src="" alt="Broadcast Banner"
-                            class="w-full h-full object-cover">
+                            class="w-full h-auto object-contain block">
                         </div>
                         <p id="bcast-phone-preview-text"
                           class="text-xs whitespace-pre-line leading-relaxed text-slate-800 font-sans"></p>
@@ -2766,14 +2829,14 @@
             <!-- Left: Title & Live Badge -->
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
-                <span class="material-symbols-outlined text-[22px] sm:text-[24px]">shopping_bag</span>
+                <span id="orders-hub-icon" class="material-symbols-outlined text-[22px] sm:text-[24px]">analytics</span>
               </div>
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">WhatsApp Sales &amp; Orders Hub</h2>
+                  <h2 id="orders-hub-title" class="text-base sm:text-lg font-black text-slate-900 tracking-tight">WhatsApp Sales Dashboard</h2>
                   <span id="badge-orders-total-count" class="bg-emerald-50 text-emerald-800 text-[11px] px-2.5 py-0.5 rounded-full font-bold font-mono border border-emerald-200/80">0 Orders</span>
                 </div>
-                <p class="text-xs text-slate-500">Real-time revenue analytics, staff sales tracking, and 4-stage fulfillment</p>
+                <p id="orders-hub-subtitle" class="text-xs text-slate-500">Real-time revenue analytics, staff sales tracking, and 5-stage fulfillment</p>
               </div>
             </div>
 
@@ -3038,7 +3101,7 @@
           <!-- ======================================================== -->
           <!-- SUB-MODULE 2: ORDER HISTORY                              -->
           <!-- ======================================================== -->
-          <div id="subview-orders-history" class="space-y-4">
+          <div id="subview-orders-history" class="space-y-4 hidden">
             
             <!-- Filters & Search Toolbar -->
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -4266,6 +4329,7 @@
             </div>
 
           </div>
+        </div>
       </section>
       <section id="view-settings" class="h-full overflow-y-auto p-6 hidden">
         <div class="max-w-4xl mx-auto space-y-6">
@@ -9335,7 +9399,7 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=18.6"></script>
+  <script src="crm_app.js?v=18.7"></script>
 </body>
 
 </html>

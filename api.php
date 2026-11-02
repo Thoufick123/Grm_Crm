@@ -494,6 +494,11 @@ if ($action === 'get_state' || $action === 'get_all') {
                 if (!empty($r['keywords']) && is_string($r['keywords'])) {
                     $r['keywords'] = json_decode($r['keywords'], true) ?: [$r['keywords']];
                 }
+                $r['actionType'] = $r['action_type'] ?? ($r['actionType'] ?? 'custom_text');
+                $r['categoryId'] = $r['category_id'] ?? ($r['categoryId'] ?? null);
+                $r['replyText'] = $r['reply_text'] ?? ($r['replyText'] ?? '');
+                $r['enabled'] = isset($r['enabled']) ? (bool)$r['enabled'] : true;
+                $r['autoSend'] = isset($r['auto_send']) ? (bool)$r['auto_send'] : true;
             }
         } catch (Exception $e) {}
 
@@ -874,10 +879,37 @@ if ($action === 'get_autoreply') {
 }
 
 if ($action === 'get_autoreply_rules') {
-    $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    $rules = [];
+    if ($pdo) {
+        try {
+            $stmt = $pdo->query("SELECT * FROM `auto_reply_rules` ORDER BY `created_at` ASC");
+            $dbRules = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($dbRules)) {
+                foreach ($dbRules as $r) {
+                    $kws = $r['keywords'] ?? '[]';
+                    if (is_string($kws)) {
+                        $kws = json_decode($kws, true) ?: [$kws];
+                    }
+                    $rules[] = [
+                        'id' => $r['id'],
+                        'name' => $r['name'],
+                        'keywords' => $kws,
+                        'actionType' => $r['action_type'] ?? 'custom_text',
+                        'action_type' => $r['action_type'] ?? 'custom_text',
+                        'categoryId' => $r['category_id'] ?? null,
+                        'category_id' => $r['category_id'] ?? null,
+                        'replyText' => $r['reply_text'] ?? '',
+                        'reply_text' => $r['reply_text'] ?? '',
+                        'enabled' => isset($r['enabled']) ? (bool)$r['enabled'] : true,
+                        'autoSend' => isset($r['auto_send']) ? (bool)$r['auto_send'] : true
+                    ];
+                }
+            }
+        } catch (Exception $e) {}
+    }
     echo json_encode([
         "status" => "success",
-        "rules" => $currentConfig['autoReplyRules'] ?? []
+        "rules" => $rules
     ]);
     exit;
 }

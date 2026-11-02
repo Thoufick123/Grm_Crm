@@ -628,6 +628,8 @@ function enforceGranularActionPermissions() {
   if (navOrdersGroup) navOrdersGroup.style.display = canOrderView ? '' : 'none';
   const navOrders = document.getElementById('nav-orders');
   if (navOrders) navOrders.style.display = canOrderView ? '' : 'none';
+  const navOrdersDash = document.getElementById('nav-orders-dashboard');
+  if (navOrdersDash) navOrdersDash.style.display = canOrderView ? '' : 'none';
   const navOrdersSub = document.getElementById('nav-orders-submodules');
   if (navOrdersSub && !canOrderView) navOrdersSub.style.display = 'none';
 
@@ -2772,8 +2774,8 @@ function initCRMState() {
         };
       }
 
-      if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
-        CRM_STATE.autoReplyRules = getDefaultAutoReplyRules();
+      if (!Array.isArray(CRM_STATE.autoReplyRules)) {
+        CRM_STATE.autoReplyRules = [];
       }
 
       if (Array.isArray(CRM_STATE.staffList)) {
@@ -2804,8 +2806,8 @@ function initCRMState() {
         messageTemplate: getDefaultStockAutoReplyTemplate()
       };
     }
-    if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
-      CRM_STATE.autoReplyRules = getDefaultAutoReplyRules();
+    if (!Array.isArray(CRM_STATE.autoReplyRules)) {
+      CRM_STATE.autoReplyRules = [];
     }
     saveCRMState();
   }
@@ -2814,7 +2816,7 @@ function initCRMState() {
   fetch('api.php?action=get_autoreply_rules')
     .then(r => r.json())
     .then(res => {
-      if (res && res.status === 'success' && Array.isArray(res.rules) && res.rules.length > 0) {
+      if (res && res.status === 'success' && Array.isArray(res.rules)) {
         CRM_STATE.autoReplyRules = res.rules;
         saveCRMState();
         if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
@@ -3642,8 +3644,12 @@ function updatePageHeaderTitle() {
       sub: t('header.sub.catalog', 'Live available stock calculator and 1-click WhatsApp card sharing')
     },
     orders: {
-      title: t('header.title.orders', 'WhatsApp Sales Orders & Reservations'),
-      sub: t('header.sub.orders', 'Direct orders booked from WhatsApp chats with reserved inventory')
+      title: (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' && ACTIVE_ORDERS_SUBMODULE === 'history')
+        ? t('header.title.orders_history', 'WhatsApp Sales Orders & Management')
+        : t('header.title.orders_dashboard', 'WhatsApp Sales & Orders Dashboard'),
+      sub: (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' && ACTIVE_ORDERS_SUBMODULE === 'history')
+        ? t('header.sub.orders_history', 'Direct orders booked from WhatsApp chats with search, status filters & delivery tracking')
+        : t('header.sub.orders_dashboard', 'Real-time revenue analytics, staff sales tracking, and 5-stage fulfillment pipeline')
     },
     followups: {
       title: t('header.title.followups', 'Customer Follow-up Scheduler'),
@@ -3756,6 +3762,18 @@ function switchView(viewName, subName) {
       }
     }
   });
+
+  // Handle standalone WhatsApp Dashboard & WhatsApp Orders sidebar styling
+  const navDashStand = document.getElementById('nav-orders-dashboard');
+  const navOrdersStand = document.getElementById('nav-orders');
+  const canViewOrders = (typeof canUserPerformAction === 'function') ? canUserPerformAction('orders', 'view') : true;
+  if (navDashStand) navDashStand.style.display = canViewOrders ? '' : 'none';
+  if (navOrdersStand) navOrdersStand.style.display = canViewOrders ? '' : 'none';
+
+  if (viewName !== 'orders') {
+    if (navDashStand) navDashStand.className = "w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group" + (canViewOrders ? '' : ' hidden');
+    if (navOrdersStand) navOrdersStand.className = "w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group" + (canViewOrders ? '' : ' hidden');
+  }
 
   // Handle WhatsApp Inbox dropdown menu active / inactive state
   const inboxSubMenu = document.getElementById('inbox-submodules-menu');
@@ -8866,33 +8884,37 @@ function renderCustomer360Panel() {
           return `
                       <div class="bg-white border border-slate-200/90 p-2.5 rounded-xl text-xs space-y-1.5 shadow-2xs transition ${idx === 0 ? 'ring-1.5 ring-blue-400/80 bg-gradient-to-br from-blue-50/20 via-white to-slate-50/40' : 'hover:border-slate-300'}">
                         
-                        <!-- ROW 1: CURRENT STATUS AND CALLBACK DATE -->
-                        <div class="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50/90 border border-slate-200/70">
-                          <div class="flex items-center gap-1 min-w-0">
+                        <!-- ROW 1: STATUS BADGE & CALLBACK SCHEDULE (TWIN BADGES MATCHING USER IMAGE) -->
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <!-- STATUS BADGE -->
+                          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50/70 border border-blue-200/80 shadow-2xs">
                             <div class="flex items-center gap-1 text-slate-500 font-bold text-[9.5px] uppercase shrink-0">
                               <span class="material-symbols-outlined text-[13px] text-indigo-600">swap_horiz</span>
-                              <span>Status:</span>
+                              <span>STATUS:</span>
                             </div>
                             <div class="font-bold text-slate-800 text-[10px] truncate">
-                              <span class="text-blue-700 text-[10px] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md font-extrabold shadow-2xs inline-flex items-center gap-1">
+                              <span class="text-blue-700 text-[10px] bg-white border border-blue-200 px-2 py-0.5 rounded-md font-extrabold shadow-2xs inline-flex items-center gap-1 truncate max-w-[100px]">
                                 ${isRescheduled ? '🗓️ Follow-up Rescheduled' : getStatusPrettyLabel(item.to || query.status)}
                               </span>
                             </div>
                           </div>
 
-                          <div class="flex items-center gap-1 shrink-0">
-                            ${effectiveDate ? `
-                              <div class="flex items-center gap-1 text-[10px] font-mono text-blue-900 bg-blue-50/90 border border-blue-200 px-2 py-0.5 rounded-md shadow-2xs">
-                                <span class="material-symbols-outlined text-[12px] text-blue-600">calendar_month</span>
-                                <span class="text-[9px] font-bold text-blue-950 uppercase tracking-tight">Callback:</span>
-                                <strong class="font-extrabold">${effectiveDate}</strong>
-                              </div>
-                            ` : `
-                              <div class="flex items-center gap-1 text-[9px] font-mono text-slate-400 bg-slate-100/80 px-1.5 py-0.5 rounded-md">
-                                <span class="material-symbols-outlined text-[11px] text-slate-400">event_busy</span>
-                                <span>No Callback</span>
-                              </div>
-                            `}
+                          <!-- CALLBACK BADGE -->
+                          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50/70 border border-blue-200/80 shadow-2xs">
+                            <div class="flex items-center gap-1 text-blue-950 font-bold text-[9.5px] uppercase tracking-wide whitespace-nowrap shrink-0">
+                              <span class="material-symbols-outlined text-[14px] text-blue-600 shrink-0">calendar_month</span>
+                              <span>CALLBACK:</span>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                              ${effectiveDate ? `
+                                <div class="text-[10px] font-mono font-extrabold text-blue-900 whitespace-nowrap">
+                                  <span>${effectiveDate}</span>
+                                  ${effectiveTime ? `<span class="text-blue-700 ml-0.5">(${effectiveTime})</span>` : ''}
+                                </div>
+                              ` : `
+                                <span class="text-[9.5px] font-mono text-slate-400 italic whitespace-nowrap">None</span>
+                              `}
+                            </div>
                           </div>
                         </div>
 
@@ -9815,12 +9837,14 @@ async function handleSendMessage(event) {
 
   CRM_STATE.conversations[ACTIVE_CUSTOMER_ID].push(newMsg);
 
-  // Update query last message & status to REPLIED
+  // Update query last message & status to REPLIED (skip status mutation if sharing payment request so status remains still same)
   const query = CRM_STATE.queries.find(q => q.customerId === ACTIVE_CUSTOMER_ID);
   if (query) {
     query.lastMessage = attachedMedia ? `Staff: [Photo] "${rawText.substring(0, 30)}"` : `Staff: "${rawText.substring(0, 40)}..."`;
-    if (query.status === 'NEW' || query.status === 'ASSIGNED') {
-      query.status = 'REPLIED';
+    if (!window.__IS_SHARING_PAYMENT) {
+      if (query.status === 'NEW' || query.status === 'ASSIGNED') {
+        query.status = 'REPLIED';
+      }
     }
   }
 
@@ -9874,29 +9898,36 @@ Hello *{customer_name}*! 👋 Welcome to our store.
 
 // Dynamically aggregates live stock in ultra-compact format without Read More truncation
 function generateLiveCategoryStockText(rawPhone) {
-  const categories = [
-    { num: '1️⃣', name: 'Baby Collection (0–3Y)', key: 'Baby Collection' },
-    { num: '2️⃣', name: 'Maternity & Feeding', key: 'Maternity' },
-    { num: '3️⃣', name: 'Newborn Gift Sets (0–6M)', key: 'Newborn' },
-    { num: '4️⃣', name: 'Kids Daily Wear (4–5Y)', key: 'Kids' },
-    { num: '5️⃣', name: 'Wholesale Bundles', key: 'Wholesale' },
-    { num: '6️⃣', name: 'Festive Silk Sets', key: 'Festive' }
-  ];
+  const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+  const cats = Array.isArray(CRM_STATE?.categories) && CRM_STATE.categories.length > 0
+    ? CRM_STATE.categories
+    : [
+        { id: '1', name: 'Kids', icon: '👗' }
+      ];
 
   let text = '';
-  categories.forEach(cat => {
-    const prods = (CRM_STATE.products || []).filter(p => (p.category || '').toLowerCase().includes(cat.key.toLowerCase()));
+  cats.forEach((cat, idx) => {
+    const num = numberEmojis[idx] || `${idx + 1}️⃣`;
+    const catName = cat.name || `Category ${idx + 1}`;
+    const prods = (CRM_STATE.products || []).filter(p =>
+      String(p.category_id || p.categoryId) === String(cat.id) ||
+      (p.category || '').toLowerCase().includes(catName.toLowerCase())
+    );
     let priceInfo = '';
     if (prods.length > 0) {
-      const prices = prods.map(p => p.price).filter(Boolean);
-      const minP = Math.min(...prices);
-      const maxP = Math.max(...prices);
-      priceInfo = minP === maxP ? `₹${minP}` : `₹${minP} - ₹${maxP}`;
+      const prices = prods.map(p => Number(p.price) || 0).filter(p => p > 0);
+      if (prices.length > 0) {
+        const minP = Math.min(...prices);
+        const maxP = Math.max(...prices);
+        priceInfo = minP === maxP ? `₹${minP.toLocaleString('en-IN')}` : `₹${minP.toLocaleString('en-IN')} - ₹${maxP.toLocaleString('en-IN')}`;
+      } else {
+        priceInfo = '₹499';
+      }
     } else {
       priceInfo = '₹499';
     }
 
-    text += `${cat.num} ${cat.name} — *${priceInfo}*\n`;
+    text += `${num} ${cat.icon ? cat.icon + ' ' : ''}${catName} — *${priceInfo}*\n`;
   });
 
   return text.trim();
@@ -10233,13 +10264,15 @@ function renderAutoReplyRulesList() {
     return;
   }
 
-  const categoryLabels = {
-    '1': '👗 Baby Collection (0-3Y)',
-    '2': '🤰 Maternity & Feeding Wear',
-    '3': '🎁 Newborn Gift Sets (0-6M)',
-    '4': '👕 Kids Everyday (4-5Y)',
-    '5': '📦 Wholesale & Bulk Bundles',
-    '6': '🥻 Festive & VIP Silk Sets'
+  const allCategories = Array.isArray(CRM_STATE?.categories) ? CRM_STATE.categories : [];
+  const getDynamicCatLabel = (catId) => {
+    if (!catId) return null;
+    const cat = allCategories.find(c => String(c.id) === String(catId) || String(c.name).toLowerCase() === String(catId).toLowerCase());
+    if (cat) {
+      const icon = cat.icon || '📁';
+      return `${icon} ${cat.name}`;
+    }
+    return `Category #${catId}`;
   };
 
   const isSuperAdminAr = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
@@ -10250,12 +10283,14 @@ function renderAutoReplyRulesList() {
   container.innerHTML = list.map(rule => {
     const isEnabled = rule.enabled !== false;
     const keywords = Array.isArray(rule.keywords) ? rule.keywords : (rule.keywords || '').split(',');
-    const catLabel = rule.categoryId ? (categoryLabels[rule.categoryId] || `Category #${rule.categoryId}`) : null;
+    const catId = rule.categoryId || rule.category_id;
+    const catLabel = catId ? getDynamicCatLabel(catId) : null;
 
+    const actType = rule.actionType || rule.action_type || 'custom_text';
     let actionBadgeHtml = '';
-    if (rule.actionType === 'category_and_text') {
+    if (actType === 'category_and_text') {
       actionBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Category + Custom Text</span>`;
-    } else if (rule.actionType === 'category_reply') {
+    } else if (actType === 'category_reply') {
       actionBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">Category Stock</span>`;
     } else {
       actionBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Custom Answer</span>`;
@@ -10340,6 +10375,17 @@ function openRuleEditor(ruleId = null) {
 
   if (!card) return;
 
+  // Dynamically populate Category dropdown from real CRM_STATE.categories
+  if (catSelect) {
+    let catOptions = '<option value="">-- None (Text Message Only) --</option>';
+    const categories = Array.isArray(CRM_STATE?.categories) ? CRM_STATE.categories : [];
+    categories.forEach(c => {
+      const icon = c.icon || '📁';
+      catOptions += `<option value="${c.id}">${icon} ${c.name}</option>`;
+    });
+    catSelect.innerHTML = catOptions;
+  }
+
   if (ruleId) {
     const rule = (CRM_STATE?.autoReplyRules || []).find(r => r.id === ruleId);
     if (!rule) return;
@@ -10347,9 +10393,9 @@ function openRuleEditor(ruleId = null) {
     if (idInput) idInput.value = rule.id;
     if (nameInput) nameInput.value = rule.name || '';
     if (kwsInput) kwsInput.value = Array.isArray(rule.keywords) ? rule.keywords.join(', ') : (rule.keywords || '');
-    if (actionSelect) actionSelect.value = rule.actionType || 'category_and_text';
-    if (catSelect) catSelect.value = rule.categoryId || '2';
-    if (textInput) textInput.value = rule.replyText || '';
+    if (actionSelect) actionSelect.value = rule.actionType || rule.action_type || 'category_and_text';
+    if (catSelect) catSelect.value = String(rule.categoryId || rule.category_id || '');
+    if (textInput) textInput.value = rule.replyText || rule.reply_text || '';
     if (enabledInput) enabledInput.checked = rule.enabled !== false;
   } else {
     if (titleEl) titleEl.innerText = "Add New Pre-Set Question & Auto-Reply Template";
@@ -10450,8 +10496,11 @@ function saveRuleFromEditor() {
         name,
         keywords,
         actionType,
+        action_type: actionType,
         categoryId,
+        category_id: categoryId,
         replyText,
+        reply_text: replyText,
         enabled,
         autoSend: true
       };
@@ -10463,8 +10512,11 @@ function saveRuleFromEditor() {
       name,
       keywords,
       actionType,
+      action_type: actionType,
       categoryId,
+      category_id: categoryId,
       replyText,
+      reply_text: replyText,
       enabled,
       autoSend: true
     });
@@ -16715,9 +16767,19 @@ function sendWhatsAppPaymentRequest(customerId, followupId = null) {
 
   // =========================================================================
   // 2. SHARE TO CHAT COMPOSER & DELIVER TO CUSTOMER
+  // (Preserve current customer query status untouched - status remains still same)
   // =========================================================================
+  const originalStatus = query?.status;
+  const originalStatusSelectVal = document.getElementById('query-status-select')?.value;
+  window.__IS_SHARING_PAYMENT = true;
+
   selectCustomerChat(customerId);
   switchView('inbox');
+
+  const immediateStatusSelect = document.getElementById('query-status-select');
+  if (immediateStatusSelect && (originalStatusSelectVal || originalStatus)) {
+    immediateStatusSelect.value = originalStatusSelectVal || originalStatus;
+  }
 
   setTimeout(() => {
     const input = document.getElementById('chat-input-text');
@@ -16733,7 +16795,21 @@ function sendWhatsAppPaymentRequest(customerId, followupId = null) {
       } else if (typeof handleSendMessage === 'function') {
         handleSendMessage({ preventDefault: () => {} });
       }
+
+      // Preserve status completely unchanged as requested ("status still same")
+      if (query && originalStatus) {
+        query.status = originalStatus;
+        saveCRMState();
+      }
+      const statusSelect = document.getElementById('query-status-select');
+      if (statusSelect && (originalStatusSelectVal || originalStatus)) {
+        statusSelect.value = originalStatusSelectVal || originalStatus;
+      }
+      window.__IS_SHARING_PAYMENT = false;
+
       showToast('Payment Request Sent', `Shared payment details in chat for ${custName}.`, 'send_to_mobile', 'emerald');
+    } else {
+      window.__IS_SHARING_PAYMENT = false;
     }
   }, 150);
 }
@@ -23741,6 +23817,14 @@ function switchOrdersSubmodule(submodule) {
       return;
     }
   }
+
+  // Update URL hash cleanly
+  try {
+    if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', '#orders/' + ACTIVE_ORDERS_SUBMODULE);
+    }
+  } catch (e) { }
+
   const viewDash = document.getElementById('subview-orders-dashboard');
   const viewHist = document.getElementById('subview-orders-history');
 
@@ -23757,31 +23841,46 @@ function switchOrdersSubmodule(submodule) {
     }
   }
 
-  // Highlight sidebar sub-module buttons
-  const navSubDash = document.getElementById('nav-sub-orders-dashboard');
-  const navSubHist = document.getElementById('nav-sub-orders-history');
-  if (navSubDash && navSubHist) {
+  // Highlight standalone sidebar items: WhatsApp Dashboard vs WhatsApp Orders
+  const navDash = document.getElementById('nav-orders-dashboard');
+  const navOrders = document.getElementById('nav-orders');
+  if (navDash && navOrders) {
     if (submodule === 'history') {
-      navSubHist.className = 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer';
-      navSubDash.className = 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer';
+      navOrders.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm";
+      navDash.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group";
     } else {
-      navSubDash.className = 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 transition cursor-pointer';
-      navSubHist.className = 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-surface-sidebarActive transition cursor-pointer';
+      navDash.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm";
+      navOrders.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group";
     }
   }
 
-  // Unified Orders View: Both dashboard metrics and order history are seamlessly active
-  if (viewDash) viewDash.classList.remove('hidden');
-  if (viewHist) viewHist.classList.remove('hidden');
-
+  // Update header text dynamically
+  const headerIcon = document.getElementById('orders-hub-icon');
+  const headerTitle = document.getElementById('orders-hub-title');
+  const headerSubtitle = document.getElementById('orders-hub-subtitle');
   if (submodule === 'history') {
-    if (viewHist) {
-      try { viewHist.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
-    }
+    if (headerIcon) headerIcon.innerText = 'receipt_long';
+    if (headerTitle) headerTitle.innerText = "WhatsApp Sales Orders & Management";
+    if (headerSubtitle) headerSubtitle.innerText = "Direct orders booked from WhatsApp chats with search, status filters & delivery tracking";
+  } else {
+    if (headerIcon) headerIcon.innerText = 'analytics';
+    if (headerTitle) headerTitle.innerText = "WhatsApp Sales Dashboard";
+    if (headerSubtitle) headerSubtitle.innerText = "Real-time revenue analytics, staff sales tracking, and 5-stage fulfillment pipeline";
   }
 
-  renderOrdersDashboard();
-  renderOrdersHistoryTable();
+  if (typeof updatePageHeaderTitle === 'function') updatePageHeaderTitle();
+
+  // Strictly SEPARATED SINGLE SCREENS: Show ONLY the active screen
+  if (submodule === 'history') {
+    if (viewDash) viewDash.classList.add('hidden');
+    if (viewHist) viewHist.classList.remove('hidden');
+    populateOrderHistoryStaffFilter();
+    renderOrdersHistoryTable();
+  } else {
+    if (viewHist) viewHist.classList.add('hidden');
+    if (viewDash) viewDash.classList.remove('hidden');
+    renderOrdersDashboard();
+  }
 }
 window.switchOrdersSubmodule = switchOrdersSubmodule;
 
@@ -23840,14 +23939,8 @@ function renderOrdersModule() {
   if (badgeHistoryTab) badgeHistoryTab.innerText = totalCount;
   if (badgeSidebarHistory) badgeSidebarHistory.innerText = totalCount;
 
-  const viewDash = document.getElementById('subview-orders-dashboard');
-  const viewHist = document.getElementById('subview-orders-history');
-  if (viewDash) viewDash.classList.remove('hidden');
-  if (viewHist) viewHist.classList.remove('hidden');
-
   populateOrderHistoryStaffFilter();
-  renderOrdersDashboard();
-  renderOrdersHistoryTable();
+  switchOrdersSubmodule(ACTIVE_ORDERS_SUBMODULE || 'dashboard');
 }
 window.renderOrdersModule = renderOrdersModule;
 window.renderOrdersTable = renderOrdersModule;
@@ -24095,11 +24188,8 @@ function setOrderHistoryStatusFilter(status) {
 window.setOrderHistoryStatusFilter = setOrderHistoryStatusFilter;
 
 function filterOrderHistoryByStatus(status) {
+  switchOrdersSubmodule('history');
   setOrderHistoryStatusFilter(status);
-  const histEl = document.getElementById('subview-orders-history');
-  if (histEl) {
-    try { histEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
-  }
 }
 window.filterOrderHistoryByStatus = filterOrderHistoryByStatus;
 
@@ -24514,6 +24604,12 @@ function handleOrderStatusChange(orderId, newStatus, selectEl) {
   }
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
   if (!ord) return;
+
+  if (newStatus === 'SHIPPED') {
+    // Intercept 3. Shipped to open the Shipping Dispatch Modal for entering Courier & Tracking Details
+    openShippingDispatchModal(orderId);
+    return;
+  }
 
   // Directly update to whatever status admin selected dynamically
   updateOrderStatus(orderId, newStatus);
@@ -30729,13 +30825,30 @@ let _voiceRecordStartTime = null;
 let _voiceActiveStream = null;
 let _voiceCurrentBlob = null;
 let _voiceUploadedMsgId = null;
+let _voiceUploadedAudioUrl = null;
 let _voiceCurrentTranslationId = null;
 let _voiceCurrentTransAudioUrl = null;
 let _voiceSpeechRecognizer = null;
 let _voiceClientHint = '';
-let _voiceAccumulatedTranscript = '';
+let _voiceFinalTranscript = '';
+let _voiceInterimTranscript = '';
+let _voiceIsRecording = false;
 
-function initFreshSpeechRecognizer() {
+function getSelectedSourceLang() {
+  const el = document.getElementById('voice-source-lang');
+  return el ? el.value : 'ta-IN';
+}
+
+window.onVoiceSourceLangChange = function (newLang) {
+  if (_voiceIsRecording) {
+    // Gracefully restart recognizer with new language without interrupting audio recording
+    if (_voiceSpeechRecognizer) {
+      try { _voiceSpeechRecognizer.stop(); } catch (e) {}
+    }
+  }
+};
+
+function startFreshSpeechRecognizer() {
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRec) return null;
   try {
@@ -30743,33 +30856,43 @@ function initFreshSpeechRecognizer() {
     rec.continuous = true;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
-    // Set recognition language: default to Tamil or active CRM language
-    const cLang = (window.CURRENT_LANG === 'en') ? 'en-IN' : ((window.CURRENT_LANG === 'ml') ? 'ml-IN' : ((window.CURRENT_LANG === 'hi') ? 'hi-IN' : 'ta-IN'));
-    rec.lang = cLang;
+    rec.lang = getSelectedSourceLang();
 
     rec.onresult = (ev) => {
-      let sessionFinal = '';
-      let sessionInterim = '';
-      for (let i = 0; i < ev.results.length; ++i) {
+      let interim = '';
+      for (let i = ev.resultIndex; i < ev.results.length; ++i) {
         if (ev.results[i].isFinal) {
-          sessionFinal += ev.results[i][0].transcript + ' ';
+          _voiceFinalTranscript += ev.results[i][0].transcript + ' ';
         } else {
-          sessionInterim += ev.results[i][0].transcript;
+          interim += ev.results[i][0].transcript;
         }
       }
-      // Concatenate previous finalized speech with current session speech so nothing is cut off
-      _voiceClientHint = (_voiceAccumulatedTranscript + ' ' + sessionFinal + ' ' + sessionInterim).trim();
+      _voiceInterimTranscript = interim;
+      const combined = (_voiceFinalTranscript + ' ' + _voiceInterimTranscript).trim();
+      _voiceClientHint = combined;
+
+      // Update real-time live transcript preview in active recording banner
+      const liveTextEl = document.getElementById('voice-live-transcript-text');
+      if (liveTextEl) {
+        liveTextEl.textContent = combined || 'Listening... Speak clearly';
+      }
     };
 
     rec.onerror = (err) => {
-      console.warn('[Voice SpeechRecognition Notice]', err.error || err);
+      console.warn('[Voice SpeechRecognition Notice]:', err.error || err);
     };
 
     rec.onend = () => {
-      // Accumulate recognized text across restarts so full duration is preserved
-      _voiceAccumulatedTranscript = _voiceClientHint;
-      if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
-        try { rec.start(); } catch (e) {}
+      // Seamless auto-restart on pauses so speech is NEVER cut off mid-sentence
+      if (_voiceIsRecording) {
+        setTimeout(() => {
+          if (_voiceIsRecording) {
+            _voiceSpeechRecognizer = startFreshSpeechRecognizer();
+            if (_voiceSpeechRecognizer) {
+              try { _voiceSpeechRecognizer.start(); } catch (e) {}
+            }
+          }
+        }, 120);
       }
     };
     return rec;
@@ -30783,7 +30906,7 @@ window.toggleVoiceRecording = async function () {
   const panel = document.getElementById('voice-record-panel');
   if (!panel) return;
 
-  if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
+  if (_voiceIsRecording || (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording')) {
     window.stopVoiceRecording();
     return;
   }
@@ -30807,9 +30930,15 @@ window.toggleVoiceRecording = async function () {
   if (previewBox) previewBox.classList.add('hidden');
   if (transBox) transBox.classList.add('hidden');
 
+  // Reset transcripts
   _voiceAudioChunks = [];
   _voiceClientHint = '';
-  _voiceAccumulatedTranscript = '';
+  _voiceFinalTranscript = '';
+  _voiceInterimTranscript = '';
+  _voiceIsRecording = true;
+
+  const liveTextEl = document.getElementById('voice-live-transcript-text');
+  if (liveTextEl) liveTextEl.textContent = 'Listening... Speak clearly';
 
   const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) ? 'audio/webm;codecs=opus' : ((typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) ? 'audio/ogg;codecs=opus' : '');
   const options = mimeType ? { mimeType } : {};
@@ -30833,6 +30962,12 @@ window.toggleVoiceRecording = async function () {
     if (activeBox) activeBox.classList.add('hidden');
     if (previewBox) previewBox.classList.remove('hidden');
 
+    // Populate review & edit text box with fully captured transcript
+    const sourceTextEl = document.getElementById('voice-source-text');
+    if (sourceTextEl) {
+      sourceTextEl.value = _voiceClientHint || '';
+    }
+
     await uploadOriginalStaffAudio();
   };
 
@@ -30851,8 +30986,8 @@ window.toggleVoiceRecording = async function () {
     }
   }, 500);
 
-  // Initialize and start a fresh speech recognizer
-  _voiceSpeechRecognizer = initFreshSpeechRecognizer();
+  // Initialize and start continuous speech recognizer
+  _voiceSpeechRecognizer = startFreshSpeechRecognizer();
   if (_voiceSpeechRecognizer) {
     try {
       _voiceSpeechRecognizer.start();
@@ -30861,6 +30996,7 @@ window.toggleVoiceRecording = async function () {
 };
 
 window.stopVoiceRecording = function () {
+  _voiceIsRecording = false;
   if (_voiceRecordTimer) {
     clearInterval(_voiceRecordTimer);
     _voiceRecordTimer = null;
@@ -30878,22 +31014,26 @@ window.stopVoiceRecording = function () {
 };
 
 window.cancelVoiceRecording = function () {
+  _voiceIsRecording = false;
   window.stopVoiceRecording();
   window.resetVoiceRecorder();
 };
 
 window.resetVoiceRecorder = function () {
+  _voiceIsRecording = false;
   if (_voiceActiveStream) {
     _voiceActiveStream.getTracks().forEach(t => t.stop());
     _voiceActiveStream = null;
   }
   _voiceCurrentBlob = null;
   _voiceUploadedMsgId = null;
+  _voiceUploadedAudioUrl = null;
   _voiceCurrentTranslationId = null;
   _voiceCurrentTransAudioUrl = null;
   _voiceAudioChunks = [];
   _voiceClientHint = '';
-  _voiceAccumulatedTranscript = '';
+  _voiceFinalTranscript = '';
+  _voiceInterimTranscript = '';
 
   const panel = document.getElementById('voice-record-panel');
   if (panel) panel.classList.add('hidden');
@@ -30905,6 +31045,10 @@ window.resetVoiceRecorder = function () {
   if (transAudio) { transAudio.pause(); transAudio.src = ''; }
   const transBox = document.getElementById('voice-translated-preview-box');
   if (transBox) transBox.classList.add('hidden');
+  const sourceTextEl = document.getElementById('voice-source-text');
+  if (sourceTextEl) sourceTextEl.value = '';
+  const transTextBox = document.getElementById('voice-translated-text-box');
+  if (transTextBox) { transTextBox.textContent = ''; transTextBox.classList.add('hidden'); }
 };
 
 let _voiceUploadPromise = null;
@@ -30913,12 +31057,15 @@ let _isVoiceSending = false;
 async function uploadOriginalStaffAudio() {
   if (!_voiceCurrentBlob) return;
 
+  const sourceLang = (getSelectedSourceLang().split('-')[0]) || 'ta';
+  const sourceText = document.getElementById('voice-source-text')?.value?.trim() || _voiceClientHint || '';
+
   const formData = new FormData();
   formData.append('audio', _voiceCurrentBlob, 'staff_voice.webm');
   formData.append('customer_id', (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '') || '');
   formData.append('staff_id', (window.PHP_USER_SESSION?.id || 'staff_01'));
-  formData.append('source_lang', 'ta');
-  formData.append('client_transcription', _voiceClientHint || '');
+  formData.append('source_lang', sourceLang);
+  formData.append('client_transcription', sourceText);
 
   _voiceUploadPromise = (async () => {
     try {
@@ -30929,6 +31076,7 @@ async function uploadOriginalStaffAudio() {
       const data = await res.json();
       if (data.success && data.voice_message_id) {
         _voiceUploadedMsgId = data.voice_message_id;
+        _voiceUploadedAudioUrl = data.audio_url;
         const durEl = document.getElementById('voice-preview-duration');
         if (durEl) durEl.textContent = `(${data.duration}s)`;
       }
@@ -30968,7 +31116,16 @@ window.executeVoiceTranslation = async function () {
   const btn = document.getElementById('btn-voice-translate');
   const btnText = document.getElementById('btn-voice-translate-text');
 
-  const textHint = _voiceClientHint || '';
+  // Grab the full, reviewable source text from the textarea or fallback to recorded hint
+  const sourceText = document.getElementById('voice-source-text')?.value?.trim() || _voiceClientHint || '';
+  if (!sourceText) {
+    if (typeof showToast === 'function') {
+      showToast('No Speech Detected', 'Please speak into your microphone or type your message in the review box.', 'warning', 'amber');
+    } else {
+      alert('Please speak clearly into your microphone or type your message in the text box before translating.');
+    }
+    return;
+  }
 
   // Reset previous translation player state
   const prevTransLabel = document.getElementById('voice-translated-lang-label');
@@ -30997,15 +31154,18 @@ window.executeVoiceTranslation = async function () {
     try { await _voiceUploadPromise; } catch (e) {}
   }
 
+  const sourceLang = (getSelectedSourceLang().split('-')[0]) || 'auto';
+
   try {
     const res = await fetch('api.php?action=translate_voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         voice_message_id: _voiceUploadedMsgId || '',
+        audio_path: _voiceUploadedAudioUrl || '',
         target_lang: targetLang,
-        client_transcription: textHint,
-        source_lang: 'auto'
+        client_transcription: sourceText,
+        source_lang: sourceLang
       })
     });
     const data = await res.json();
@@ -31018,6 +31178,13 @@ window.executeVoiceTranslation = async function () {
 
       const transLabel = document.getElementById('voice-translated-lang-label');
       if (transLabel) transLabel.textContent = langLabels[targetLang] || targetLang;
+
+      // Display translated text preview
+      const transTextBox = document.getElementById('voice-translated-text-box');
+      if (transTextBox) {
+        transTextBox.textContent = `"${data.translated_text || ''}"`;
+        transTextBox.classList.remove('hidden');
+      }
 
       const transAudio = document.getElementById('voice-translated-audio');
       if (transAudio) {
@@ -31087,6 +31254,7 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
         phone: phone,
         voice_message_id: _voiceUploadedMsgId,
         translation_id: _voiceCurrentTranslationId,
+        audio_url: sendMode === 'translated' ? _voiceCurrentTransAudioUrl : _voiceUploadedAudioUrl,
         send_mode: sendMode,
         target_lang: targetLang
       })

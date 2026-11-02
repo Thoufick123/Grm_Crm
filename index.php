@@ -62,6 +62,10 @@ if ($pdo) {
 // Load the complete HTML application from index.html (single source of truth for full UI, sidebar, headers & modals)
 $html = file_get_contents(__DIR__ . '/index.html');
 
+// Cache bust crm_app.js dynamically so browser always gets latest version without caching
+$jsVer = file_exists(__DIR__ . '/crm_app.js') ? filemtime(__DIR__ . '/crm_app.js') : time();
+$html = preg_replace('/crm_app\.js(\?v=[^\"]*)?/', 'crm_app.js?v=' . $jsVer, $html);
+
 // Inject the server-side authentication session script into <head>
 $sessionScript = '<script>
   window.PHP_USER_SESSION = ' . json_encode($currentUser) . ';

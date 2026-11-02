@@ -57,8 +57,7 @@ try {
     }
 
     if (empty(trim($sourceText))) {
-        $sourceText = "வணக்கம் GRM Garments, உங்கள் குரல் பதிவு பெறப்பட்டது.";
-        $detectedSource = "ta";
+        throw new Exception("No speech detected. Please speak clearly into your microphone or type your message in the review box before translating.");
     }
 
     // 2. Machine Translation (strictly within the 6 languages)
@@ -115,7 +114,9 @@ try {
         'translated_audio_url' => $ttsResult['relative_url'],
         'duration' => $transDuration,
         'source_lang' => $detectedSource,
-        'target_lang' => $cleanTarget
+        'target_lang' => $cleanTarget,
+        'source_text' => $sourceText,
+        'translated_text' => $translatedText
     ]);
 } catch (Exception $e) {
     http_response_code(500);
