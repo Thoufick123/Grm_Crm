@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: grm-whatsapp-bridge
+    runtime: node
+    rootDir: bridge
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: CRM_URL
+        value: https://maroon-partridge-532881.hostingerhostingsite.com
+      - key: NODE_ENV
+        value: production

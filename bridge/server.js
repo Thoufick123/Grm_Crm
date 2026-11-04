@@ -47,7 +47,7 @@ process.on('unhandledRejection', (reason, promise) => {
     console.warn('[Bridge Safe Catch - unhandledRejection]:', reason?.message || reason);
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const SESSIONS_BASE_DIR = path.join(__dirname, 'auth_sessions');
 
 // Ensure sessions directory exists
@@ -665,71 +665,68 @@ function broadcastAccountsUpdate() {
 }
 
 // Forward inbound WhatsApp call to CRM PHP API
-function forwardCallToCRM(data) {
+async function forwardCallToCRM(data) {
     try {
-        const postData = JSON.stringify(data);
-        const sendToPort = (port) => {
+        // Forward to live CRM (e.g. Hostinger or custom CRM_URL)
+        if (typeof fetch === 'function') {
+            fetch(`${CRM_BASE_URL}/api.php?action=simulate_incoming_call`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).catch(() => {});
+        }
+        // Also support local port 8000 if developing locally
+        if (process.env.NODE_ENV !== 'production') {
+            const postData = JSON.stringify(data);
             const req = http.request({
                 hostname: 'localhost',
-                port: port,
+                port: 8000,
                 path: '/api.php?action=simulate_incoming_call',
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Content-Length': Buffer.byteLength(postData)
                 }
-            }, (res) => {
-                res.on('data', () => { });
-            });
-
-            req.on('error', (e) => {
-                if (port === 8000) {
-                    sendToPort(8080);
-                }
-            });
-
+            }, () => {});
+            req.on('error', () => {});
             req.write(postData);
             req.end();
-        };
-
-        sendToPort(8000);
+        }
     } catch (e) {
         console.error('Error forwarding incoming call to CRM:', e.message);
     }
 }
 
 // Forward inbound WhatsApp message to CRM PHP API for persistent file storage
-function forwardToCRM(data) {
+const CRM_BASE_URL = (process.env.CRM_URL || 'https://maroon-partridge-532881.hostingerhostingsite.com').replace(/\/+$/, '');
+
+async function forwardToCRM(data) {
     try {
-        const postData = JSON.stringify(data);
-        const sendToPort = (port) => {
+        // Forward to live CRM (e.g. Hostinger or custom CRM_URL)
+        if (typeof fetch === 'function') {
+            fetch(`${CRM_BASE_URL}/api.php?action=receive_message`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).catch(() => {});
+        }
+        // Also support local port 8000 if developing locally
+        if (process.env.NODE_ENV !== 'production') {
+            const postData = JSON.stringify(data);
             const req = http.request({
                 hostname: 'localhost',
-                port: port,
+                port: 8000,
                 path: '/api.php?action=receive_message',
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Content-Length': Buffer.byteLength(postData)
                 }
-            }, (res) => {
-                res.on('data', () => { });
-            });
-
-            req.on('error', (e) => {
-                if (port === 8000) {
-                    // Try fallback port 8080 if 8000 fails
-                    sendToPort(8080);
-                } else {
-                    console.error('[Forward Error]:', e.message);
-                }
-            });
-
+            }, () => {});
+            req.on('error', () => {});
             req.write(postData);
             req.end();
-        };
-
-        sendToPort(8000);
+        }
     } catch (e) {
         console.error('Error forwarding message to CRM:', e.message);
     }
@@ -1890,6 +1887,15 @@ app.get('/api/status', (req, res) => {
         connected_number: primary.connected_number,
         connected_name: primary.connected_name,
         accounts: summary,
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get('/', (req, res) => {
+    res.json({
+        status: 'UP',
+        service: 'GRM_WHATSAPP_BAILEYS_BRIDGE',
+        uptime: Math.floor(process.uptime()),
         timestamp: new Date().toISOString()
     });
 });

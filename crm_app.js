@@ -1720,7 +1720,7 @@ function initiateBrandMaskedCall(customerId) {
   });
 
   // Inform Bridge Server
-  fetch('http://localhost:3000/api/calls/initiate', {
+  fetch(`${getBridgeBaseUrl()}/api/calls/initiate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1982,6 +1982,18 @@ function renderCurrentView() {
 
 
 // Initialize Realtime WebSocket (Socket.IO) Connection
+// Dynamic Bridge URL Resolver (supports local and Render deployment)
+function getBridgeBaseUrl() {
+  if (typeof window !== 'undefined' && window.BRIDGE_URL) return window.BRIDGE_URL;
+  const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_BRIDGE_URL') : null;
+  if (stored) return stored.replace(/\/+$/, '');
+  if (typeof CRM_STATE !== 'undefined' && CRM_STATE?.settings?.bridgeUrl) {
+    return CRM_STATE.settings.bridgeUrl.replace(/\/+$/, '');
+  }
+  return 'http://localhost:3000';
+}
+window.getBridgeBaseUrl = getBridgeBaseUrl;
+
 function initSocketIO() {
   if (typeof io === 'undefined') {
     console.warn('Socket.IO client library not loaded, using fallback sync');
@@ -1989,7 +2001,13 @@ function initSocketIO() {
   }
 
   try {
-    SOCKET_IO = io('http://localhost:3000', {
+    const bridgeUrl = getBridgeBaseUrl();
+    // On remote hosting, skip localhost:3000 if not configured to prevent mixed content warnings
+    if ((bridgeUrl === 'http://localhost:3000') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      console.log('ℹ️ [Bridge]: Set localStorage.setItem("GRM_BRIDGE_URL", "https://your-bridge.onrender.com") to connect Render WebSocket');
+      return;
+    }
+    SOCKET_IO = io(bridgeUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -2001,7 +2019,7 @@ function initSocketIO() {
       showToast('WebSocket Connected', 'Live WhatsApp synchronization active', 'bolt', 'emerald');
 
       // 1. Fetch latest rules
-      fetch('http://localhost:3000/api/autoreply/rules')
+      fetch(`${getBridgeBaseUrl()}/api/autoreply/rules`)
         .then(r => r.json())
         .then(data => {
           if (data && Array.isArray(data.rules) && data.rules.length > 0) {
@@ -2014,7 +2032,7 @@ function initSocketIO() {
         }).catch(() => { });
 
       // 2. Fetch live Auto-Reply master status from Bridge
-      fetch('http://localhost:3000/api/autoreply/status')
+      fetch(`${getBridgeBaseUrl()}/api/autoreply/status`)
         .then(r => r.json())
         .then(data => {
           if (data && typeof data.enabled === 'boolean') {
@@ -2889,7 +2907,7 @@ function initCRMState() {
     .catch(() => { });
 
   // Load brand name & tagline from bridge config file (so UI shows live saved brand)
-  fetch('http://localhost:3000/api/brand/config')
+  fetch(`${getBridgeBaseUrl()}/api/brand/config`)
     .then(r => r.json())
     .then(res => {
       if (res.status === 'success') {
@@ -9545,7 +9563,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
 
   // 2. HTTP Fallback to Node.js Bridge
   try {
-    let resp = await fetch('http://localhost:3000/api/send', {
+    let resp = await fetch(`${getBridgeBaseUrl()}/api/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -10542,7 +10560,7 @@ function syncAutoReplyRulesToBackend() {
   }
 
   // 2. Direct REST POST to Node Bridge (Port 3000)
-  fetch('http://localhost:3000/api/autoreply/rules', {
+  fetch(`${getBridgeBaseUrl()}/api/autoreply/rules`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rules: rules })
@@ -11018,7 +11036,7 @@ function toggleAutoReplyMaster(enabled) {
   }
 
   // 2. Direct HTTP POST to Node Baileys bridge REST endpoint (Port 3000)
-  fetch('http://localhost:3000/api/autoreply/toggle', {
+  fetch(`${getBridgeBaseUrl()}/api/autoreply/toggle`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enabled: boolState })
@@ -11080,7 +11098,7 @@ function saveAutoReplySettings() {
   }
 
   // 2. Direct HTTP POST to Node Baileys bridge
-  fetch('http://localhost:3000/api/autoreply/toggle', {
+  fetch(`${getBridgeBaseUrl()}/api/autoreply/toggle`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enabled: isEnabled })
@@ -11273,7 +11291,7 @@ function saveBrandSettings() {
   }
 
   // Push to Baileys bridge: updates BRAND_NAME in-memory + persists to config + updates WA profile
-  fetch('http://localhost:3000/api/accounts/update_profile', {
+  fetch(`${getBridgeBaseUrl()}/api/accounts/update_profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ brandName, brandTagline })
@@ -17371,7 +17389,7 @@ async function syncWhatsAppBusinessCatalog() {
 
   try {
     // 1. Check if Node.js bridge is active to pull native catalog
-    const bridgeResp = await fetch('http://localhost:3000/api/catalog/sync', { method: 'POST' }).then(r => r.json()).catch(() => null);
+    const bridgeResp = await fetch(`${getBridgeBaseUrl()}/api/catalog/sync`, { method: 'POST' }).then(r => r.json()).catch(() => null);
 
     if (bridgeResp && bridgeResp.products && bridgeResp.products.length > 0) {
       CRM_STATE.products = bridgeResp.products;
@@ -25571,7 +25589,7 @@ function updateQRBridgeUI(res) {
 
 // Poll Bridge Server on http://localhost:3000/api/qr/status
 function fetchQRBridgeStatus() {
-  fetch('http://localhost:3000/api/qr/status')
+  fetch(`${getBridgeBaseUrl()}/api/qr/status`)
     .then(r => r.json())
     .then(res => {
       if (res.status === 'success' && Array.isArray(res.accounts)) {
@@ -25618,7 +25636,7 @@ function fetchQRBridgeStatus() {
 }
 
 function refreshQRCodeBridge() {
-  fetch('http://localhost:3000/api/accounts/refresh_qr', {
+  fetch(`${getBridgeBaseUrl()}/api/accounts/refresh_qr`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accountId: 'account_1' })
@@ -25879,7 +25897,7 @@ function generateFreshAccountQR(accountId) {
     }
   }
 
-  fetch('http://localhost:3000/api/accounts/refresh_qr', {
+  fetch(`${getBridgeBaseUrl()}/api/accounts/refresh_qr`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accountId: targetId })
@@ -25928,7 +25946,7 @@ function addNewWhatsAppAccountSlot() {
   saveCRMState();
 
   // Also notify bridge server if running
-  fetch('http://localhost:3000/api/accounts/add', {
+  fetch(`${getBridgeBaseUrl()}/api/accounts/add`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ label, accountId: slotId })
@@ -25985,7 +26003,7 @@ function deleteWhatsAppAccountSlot(accountId) {
     saveCRMState();
 
     // 5. Send delete request to bridge server & backend API (non-blocking)
-    fetch('http://localhost:3000/api/accounts/delete', {
+    fetch(`${getBridgeBaseUrl()}/api/accounts/delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId })
@@ -26055,7 +26073,7 @@ function disconnectWhatsAppAccount(accountId) {
     renderPhoneSwitcherDropdown();
 
     // 5. Send disconnect request to Baileys bridge
-    fetch('http://localhost:3000/api/accounts/disconnect', {
+    fetch(`${getBridgeBaseUrl()}/api/accounts/disconnect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId: targetId })
@@ -26089,7 +26107,7 @@ function renderWhatsAppSettings() {
   fetchQRBridgeStatus();
 
   // Fetch the latest brand config from the bridge config file first, then populate
-  fetch('http://localhost:3000/api/brand/config')
+  fetch(`${getBridgeBaseUrl()}/api/brand/config`)
     .then(r => r.json())
     .then(res => {
       if (res.status === 'success') {
