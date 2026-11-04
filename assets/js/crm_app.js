@@ -4931,15 +4931,7 @@ function renderChatHeader() {
 
     <!-- Actions & Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
-      ${isUnassigned ? '' : `
-        <div class="hidden lg:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0" title="${t('chat.staff', 'Staff:')} ${staff ? staff.name : t('common.assigned', 'Assigned')}">
-          <span class="text-slate-500 hidden xl:inline">${t('chat.staff', 'Staff:')}</span>
-          <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : t('chat.staff_label', 'Staff')}</span>
-          ${ACTIVE_ROLE === 'admin' ? `
-            <button onclick="openStaffAssignModal('${query ? query.id : ''}')" class="text-brand-wa hover:underline font-bold text-[10px] ml-0.5 cursor-pointer">${t('common.reassign', 'Reassign')}</button>
-          ` : ''}
-        </div>
-      `}
+      
       
       <!-- BRAND-MASKED WHATSAPP CALL BUTTON -->
       <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="${t('customer.call_via', 'Call via')} ${getBrandName()}">
