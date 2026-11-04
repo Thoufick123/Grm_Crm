@@ -23947,6 +23947,28 @@ function renderOrdersModule() {
 window.renderOrdersModule = renderOrdersModule;
 window.renderOrdersTable = renderOrdersModule;
 
+function updateOrdersPipelineUI() {
+  const orders = CRM_STATE?.orders || [];
+  const countPlaced = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
+  const countPacked = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
+  const countShipped = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+  const countOutOfDelivery = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'OUT_FOR_DELIVERY').length;
+  const countDelivered = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
+
+  updateOrdersPipelineUI();
+  const pipePlaced = document.getElementById('pipe-ord-placed-count');
+  const pipePacked = document.getElementById('pipe-ord-packed-count');
+  const pipeShipped = document.getElementById('pipe-ord-shipped-count');
+  const pipeOutOfDelivery = document.getElementById('pipe-ord-out-for-delivery-count');
+  const pipeDelivered = document.getElementById('pipe-ord-delivered-count');
+  if (pipePlaced) pipePlaced.innerText = countPlaced;
+  if (pipePacked) pipePacked.innerText = countPacked;
+  if (pipeShipped) pipeShipped.innerText = countShipped;
+  if (pipeOutOfDelivery) pipeOutOfDelivery.innerText = countOutOfDelivery;
+  if (pipeDelivered) pipeDelivered.innerText = countDelivered;
+}
+window.updateOrdersPipelineUI = updateOrdersPipelineUI;
+
 function renderOrdersDashboard() {
   const orders = CRM_STATE?.orders || [];
 
@@ -24201,6 +24223,7 @@ function filterOrdersHistoryTable() {
 window.filterOrdersHistoryTable = filterOrdersHistoryTable;
 
 function renderOrdersHistoryTable() {
+  if (typeof updateOrdersPipelineUI === 'function') updateOrdersPipelineUI();
   const tbody = document.getElementById('orders-table-body');
   if (!tbody) return;
 
