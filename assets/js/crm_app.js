@@ -3648,9 +3648,7 @@ function updatePageHeaderTitle() {
       title: (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' && ACTIVE_ORDERS_SUBMODULE === 'history')
         ? t('header.title.orders_history', 'WhatsApp Sales Orders & Management')
         : t('header.title.orders_dashboard', 'WhatsApp Sales & Orders Dashboard'),
-      sub: (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' && ACTIVE_ORDERS_SUBMODULE === 'history')
-        ? t('header.sub.orders_history', 'Direct orders booked from WhatsApp chats with search, status filters & delivery tracking')
-        : t('header.sub.orders_dashboard', 'Real-time revenue analytics, staff sales tracking, and order performance')
+      sub: ''
     },
     followups: {
       title: t('header.title.followups', 'Customer Follow-up Scheduler'),
@@ -23897,11 +23895,11 @@ function switchOrdersSubmodule(submodule) {
   if (submodule === 'history') {
     if (headerIcon) headerIcon.innerText = 'receipt_long';
     if (headerTitle) headerTitle.innerText = "WhatsApp Sales Orders & Management";
-    if (headerSubtitle) headerSubtitle.innerText = "Direct orders booked from WhatsApp chats with search, status filters & delivery tracking";
+    if (headerSubtitle) headerSubtitle.innerText = "";
   } else {
     if (headerIcon) headerIcon.innerText = 'analytics';
     if (headerTitle) headerTitle.innerText = "WhatsApp Sales Dashboard";
-    if (headerSubtitle) headerSubtitle.innerText = "Real-time revenue analytics, staff sales tracking, and 5-stage fulfillment pipeline";
+    if (headerSubtitle) headerSubtitle.innerText = "";
   }
 
   if (typeof updatePageHeaderTitle === 'function') updatePageHeaderTitle();
@@ -23989,7 +23987,6 @@ function updateOrdersPipelineUI() {
   const countOutOfDelivery = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'OUT_FOR_DELIVERY').length;
   const countDelivered = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
 
-  updateOrdersPipelineUI();
   const pipePlaced = document.getElementById('pipe-ord-placed-count');
   const pipePacked = document.getElementById('pipe-ord-packed-count');
   const pipeShipped = document.getElementById('pipe-ord-shipped-count');
@@ -24127,10 +24124,11 @@ function renderOrdersStaffBreakdown() {
     const placed = staffOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
     const packed = staffOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
     const shipped = staffOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+    const outOfDelivery = staffOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'OUT_FOR_DELIVERY').length;
     const delivered = staffOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
     const sharePercent = totalOrdersCount > 0 ? Math.round((count / totalOrdersCount) * 100) : 0;
 
-    return { staff, count, revenue, placed, packed, shipped, delivered, sharePercent };
+    return { staff, count, revenue, placed, packed, shipped, outOfDelivery, delivered, sharePercent };
   });
 
   staffStats.sort((a, b) => b.count - a.count);
@@ -24183,6 +24181,7 @@ function renderOrdersStaffBreakdown() {
             <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200" title="Placed">${item.placed} Placed</span>
             <span class="px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200" title="Packed">${item.packed} Packed</span>
             <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200" title="Shipped">${item.shipped} Shipped</span>
+            <span class="px-1.5 py-0.5 rounded bg-orange-50 text-orange-800 border border-orange-200" title="Out for Delivery">${item.outOfDelivery} Out for Delivery</span>
             <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200" title="Delivered">${item.delivered} Delivered</span>
           </div>
         </td>
