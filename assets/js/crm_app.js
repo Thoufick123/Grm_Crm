@@ -4932,7 +4932,12 @@ function renderChatHeader() {
     <!-- Actions & Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
       
-      
+      <!-- INCOMING WHATSAPP CALL FLOW SIMULATION (TEST INBOUND CALL MASKING) -->
+      <button type="button" onclick="triggerIncomingCallForActiveCustomer('${customer.id}')" class="p-1.5 sm:px-2 sm:py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1 shrink-0 cursor-pointer" title="Simulate Customer Calling into WhatsApp Inbox with Call Masking">
+        <span class="material-symbols-outlined text-[15px] text-amber-600 animate-pulse">ring_volume</span>
+        <span class="hidden xl:inline text-[11px]">Incoming Call</span>
+      </button>
+
       <!-- BRAND-MASKED WHATSAPP CALL BUTTON -->
       <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="${t('customer.call_via', 'Call via')} ${getBrandName()}">
         <span class="material-symbols-outlined text-[15px]">call</span>
@@ -31830,15 +31835,32 @@ async function claimIncomingCallNow() {
       }
       if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
 
-      // Connect to In-CRM Softphone Call HUD
-      const customer = (ACTIVE_INCOMING_CALL && ACTIVE_INCOMING_CALL.customer_name) ? {
-        id: ACTIVE_INCOMING_CALL.customer_id || 'cust_' + Date.now(),
+      // Connect to In-CRM Softphone Call HUD & Switch Active Customer
+      let matchedCust = null;
+      if (ACTIVE_INCOMING_CALL?.customer_id) {
+        matchedCust = (CRM_STATE?.customers || []).find(c => c && String(c.id) === String(ACTIVE_INCOMING_CALL.customer_id));
+      }
+      if (!matchedCust && ACTIVE_INCOMING_CALL?.customer_phone) {
+        const d1 = String(ACTIVE_INCOMING_CALL.customer_phone).replace(/\D/g, '');
+        matchedCust = (CRM_STATE?.customers || []).find(c => {
+          const d2 = String(c.whatsapp || c.phone || '').replace(/\D/g, '');
+          return d1 && d2 && (d1 === d2 || d1.endsWith(d2) || d2.endsWith(d1));
+        });
+      }
+
+      const customer = matchedCust || ((ACTIVE_INCOMING_CALL && ACTIVE_INCOMING_CALL.customer_name) ? {
+        id: ACTIVE_INCOMING_CALL.customer_id || ('cust_' + Date.now()),
         name: ACTIVE_INCOMING_CALL.customer_name,
         phone: ACTIVE_INCOMING_CALL.customer_phone,
         avatar: (ACTIVE_INCOMING_CALL.customer_name || 'CU').substring(0, 2).toUpperCase()
-      } : { name: 'Customer', phone: '+91 97896 60115', avatar: 'CU' };
+      } : { name: 'Customer', phone: '+91 97896 60115', avatar: 'CU' });
 
       ACTIVE_CALL_CUSTOMER_ID = customer.id;
+
+      // Automatically switch to customer in WhatsApp Inbox if not active
+      if (typeof switchCustomerChat === 'function' && customer.id) {
+        switchCustomerChat(customer.id);
+      }
       openModal('modal-brand-call');
 
       const modalCustName = document.getElementById('call-customer-name');
@@ -32792,3 +32814,61 @@ function exportDashboardSummary(btnEl) {
   }
 }
 window.exportDashboardSummary = exportDashboardSummary;
+
+
+// =========================================================================
+// INBOUND WHATSAPP CALL MASKING ENGINE FOR WHATSAPP INBOX
+// =========================================================================
+async function triggerIncomingCallForActiveCustomer(customerId) {
+  const custId = customerId || ACTIVE_CUSTOMER_ID;
+  const customer = (CRM_STATE?.customers || []).find(c => c && (c.id === custId || String(c.id) === String(custId)));
+  if (!customer) {
+    if (typeof showToast === 'function') showToast('Customer Not Found', 'Please select a customer first.', 'warning', 'amber');
+    return;
+  }
+
+  const rawPhone = customer.whatsapp || customer.phone || '+91 97896 60115';
+  const custName = customer.name || 'Customer';
+  const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
+  const maskedPhone = (cleanDigits.length >= 10)
+    ? '+91 ' + cleanDigits.slice(-10, -8) + '*** ***' + cleanDigits.slice(-2)
+    : (typeof formatDisplayPhone === 'function' ? formatDisplayPhone(rawPhone, customer.id) : rawPhone);
+
+  const virtualNum = (CRM_STATE?.maskingSettings?.virtual_company_number || '+91 97896 60115');
+  const callId = 'CALL-' + Math.floor(1000 + Math.random() * 9000);
+
+  const callData = {
+    call_id: callId,
+    id: callId,
+    customer_id: customer.id,
+    customer_name: custName,
+    customer_phone: rawPhone,
+    masked_phone: maskedPhone,
+    virtual_number: virtualNum,
+    status: 'RINGING',
+    started_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    timeout_seconds: 30
+  };
+
+  try {
+    fetch('api.php?action=simulate_incoming_call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_name: custName,
+        customer_phone: rawPhone,
+        customer_id: customer.id
+      })
+    }).catch(() => {});
+  } catch (err) {}
+
+  if (typeof showToast === 'function') {
+    showToast('Incoming WhatsApp Call', `${custName} (${maskedPhone}) is calling official WhatsApp line...`, 'ring_volume', 'amber');
+  }
+
+  // Trigger real-time Inbound Ring Alert HUD
+  if (typeof handleSocketIncomingCall === 'function') {
+    handleSocketIncomingCall(callData);
+  }
+}
+window.triggerIncomingCallForActiveCustomer = triggerIncomingCallForActiveCustomer;
