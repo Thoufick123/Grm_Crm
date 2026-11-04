@@ -761,6 +761,7 @@ if ($action === 'get_config') {
             "status" => "CONNECTED"
         ];
     }
+    $configData['bridge_url'] = defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000';
     echo json_encode(["status" => "success", "data" => $configData]);
     exit;
 }
@@ -3758,7 +3759,7 @@ if ($action === 'restore_db') {
 // CALL & NUMBER MASKING TELEPHONY ENGINE (MYSQL PERSISTENCE & ATOMIC DISPATCH)
 // =========================================================================
 function notifySocketBridge($event, $data = []) {
-    $bridgeUrl = 'http://localhost:3000/api/calls/event';
+    $bridgeUrl = (defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000') . '/api/calls/event';
     $payload = json_encode(['event' => $event, 'data' => $data]);
     $ch = @curl_init($bridgeUrl);
     if ($ch) {

@@ -2896,12 +2896,21 @@ function initCRMState() {
   fetch('api.php?action=get_config')
     .then(r => r.json())
     .then(res => {
-      if (res.status === 'success' && res.data && res.data.phone_number) {
-        CRM_STATE.whatsappAccount.phoneNumber = formatPhoneNumberPretty(res.data.phone_number);
-        CRM_STATE.whatsappAccount.businessName = res.data.business_name || CRM_STATE.whatsappAccount.businessName;
-        CRM_STATE.whatsappAccount.displayName = res.data.display_name || CRM_STATE.whatsappAccount.displayName;
-        updateConfiguredPhoneDisplays();
-        saveCRMState();
+      if (res.status === 'success' && res.data) {
+        if (res.data.phone_number) {
+          CRM_STATE.whatsappAccount.phoneNumber = formatPhoneNumberPretty(res.data.phone_number);
+          CRM_STATE.whatsappAccount.businessName = res.data.business_name || CRM_STATE.whatsappAccount.businessName;
+          CRM_STATE.whatsappAccount.displayName = res.data.display_name || CRM_STATE.whatsappAccount.displayName;
+          updateConfiguredPhoneDisplays();
+          saveCRMState();
+        }
+        if (res.data.bridge_url && !localStorage.getItem('GRM_BRIDGE_URL')) {
+          window.BRIDGE_URL = res.data.bridge_url;
+          if ((!SOCKET_IO || !SOCKET_IO.connected) && res.data.bridge_url !== 'http://localhost:3000') {
+            initSocketIO();
+            fetchQRBridgeStatus();
+          }
+        }
       }
     })
     .catch(() => { });
