@@ -2904,8 +2904,13 @@ function initCRMState() {
           updateConfiguredPhoneDisplays();
           saveCRMState();
         }
-        if (res.data.bridge_url && !localStorage.getItem('GRM_BRIDGE_URL')) {
+        if (res.data.bridge_url) {
           window.BRIDGE_URL = res.data.bridge_url;
+          try { localStorage.setItem('GRM_BRIDGE_URL', res.data.bridge_url); } catch(e) {}
+          if (CRM_STATE) {
+            if (!CRM_STATE.settings) CRM_STATE.settings = {};
+            CRM_STATE.settings.bridgeUrl = res.data.bridge_url;
+          }
           if ((!SOCKET_IO || !SOCKET_IO.connected) && res.data.bridge_url !== 'http://localhost:3000') {
             initSocketIO();
             fetchQRBridgeStatus();
@@ -25598,7 +25603,11 @@ function updateQRBridgeUI(res) {
 
 // Poll Bridge Server on http://localhost:3000/api/qr/status
 function fetchQRBridgeStatus() {
-  fetch(`${getBridgeBaseUrl()}/api/qr/status`)
+  const bUrl = getBridgeBaseUrl();
+  if (bUrl === 'http://localhost:3000' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return;
+  }
+  fetch(`${bUrl}/api/qr/status`)
     .then(r => r.json())
     .then(res => {
       if (res.status === 'success' && Array.isArray(res.accounts)) {

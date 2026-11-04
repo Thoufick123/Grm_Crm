@@ -66,8 +66,13 @@ $html = file_get_contents(__DIR__ . '/index.html');
 $jsVer = file_exists(__DIR__ . '/crm_app.js') ? filemtime(__DIR__ . '/crm_app.js') : time();
 $html = preg_replace('/crm_app\.js(\?v=[^\"]*)?/', 'crm_app.js?v=' . $jsVer, $html);
 
-// Inject the server-side authentication session script into <head>
+// Inject the server-side authentication session script and bridge URL into <head>
+$bridgeUrl = defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000';
 $sessionScript = '<script>
+  window.BRIDGE_URL = ' . json_encode($bridgeUrl) . ';
+  try {
+    localStorage.setItem("GRM_BRIDGE_URL", ' . json_encode($bridgeUrl) . ');
+  } catch(e) {}
   window.PHP_USER_SESSION = ' . json_encode($currentUser) . ';
   try {
     localStorage.setItem("GRM_CRM_SESSION", JSON.stringify(window.PHP_USER_SESSION));
