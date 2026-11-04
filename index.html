@@ -2534,13 +2534,9 @@
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-xl font-bold text-slate-900">Garment Inventory &amp; Live WhatsApp Sharing</h2>
-                <span
-                  class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-300">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Auto-Sync
-                </span>
+                
               </div>
-              <p class="text-xs text-slate-500 mt-1">Adjust warehouse physical stock live, track order reservations, and
-                dispatch instant WhatsApp product cards</p>
+              
             </div>
 
             <div class="flex items-center gap-2 flex-wrap">
@@ -3395,17 +3391,7 @@
                     </button>
                   </div>
 
-                  <!-- Order Picker (Sort Order) -->
-                  <select id="followup-filter-sort-order" onchange="filterFollowupsCards()"
-                    class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition shrink-0"
-                    title="Order Picker (Sort Order)">
-                    <option value="DUE_ASC">📅 Due Date (Closest First)</option>
-                    <option value="DUE_DESC">📅 Due Date (Latest First)</option>
-                    <option value="NEWEST">⏱️ Created (Newest First)</option>
-                    <option value="OLDEST">⏱️ Created (Oldest First)</option>
-                    <option value="PRIORITY">🔥 Priority (High First)</option>
-                    <option value="NAME_ASC">👤 Customer (A to Z)</option>
-                  </select>
+                  
 
                   <!-- Staff Filter -->
                   <div id="followup-staff-filter-container" class="shrink-0">
@@ -3417,14 +3403,7 @@
                     </select>
                   </div>
 
-                  <!-- Channel Filter -->
-                  <select id="followup-filter-channel" onchange="filterFollowupsCards()"
-                    class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition shrink-0">
-                    <option value="ALL">All Channels</option>
-                    <option value="WHATSAPP">💬 WhatsApp Chat</option>
-                    <option value="CALL">📞 Phone Call</option>
-                    <option value="STORE_VISIT">🏬 Store Visit</option>
-                  </select>
+                  
 
                   <!-- Direct 1-Click Export All (Follow-ups First + Payment Pending Included) -->
                   <button type="button" onclick="autoExportAllBothTabs('FOLLOWUPS')" id="btn-fu-quick-export-all"
@@ -6806,14 +6785,7 @@
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <!-- Sort Order Dropdown -->
-            <div>
-              <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sort Order (Order Picker)</span>
-              <select id="export-sort-order" onchange="updateFollowupExportPreview()"
-                class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <!-- Populated dynamically based on Follow-up vs Payment mode -->
-              </select>
-            </div>
+            
 
             <!-- Status / Outcome Filter -->
             <div>
@@ -6894,13 +6866,7 @@
         </button>
 
         <div class="flex items-center gap-2">
-          <!-- Copy to Clipboard -->
-          <button type="button" onclick="handleCopyFollowupsExportData()"
-            class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer"
-            title="Copy Tab-Separated Data to Clipboard (Paste into Excel/Google Sheets)">
-            <span class="material-symbols-outlined text-[17px]">content_copy</span>
-            <span>Copy</span>
-          </button>
+          
 
           <!-- Download CSV / Excel -->
           <button type="button" onclick="handleExportFollowupsCSV()"

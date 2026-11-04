@@ -16192,13 +16192,7 @@ function filterPaymentPendingCards() {
                 </button>
               ` : ''}
 
-              ${canFuEdit ? `
-                <!-- ✏️ Edit Payment Follow-up (Edit) -->
-                <button type="button" onclick="openEditFollowupModal('${fu.id}')" class="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-amber-200 cursor-pointer shadow-2xs" title="Edit Payment Promise Details">
-                  <span class="material-symbols-outlined text-[14px]">edit</span>
-                  <span>Edit</span>
-                </button>
-              ` : ''}
+              
 
               ${!isCompleted && canFuEdit ? `
                 <!-- 1-Click Mark Paid & Convert (Edit) -->
@@ -16558,13 +16552,7 @@ function filterFollowupsCards() {
               </button>
             ` : ''}
 
-            <!-- Explicit ✏️ Edit Follow-up Button (Edit) -->
-            ${canFuEdit ? `
-              <button type="button" onclick="openEditFollowupModal('${fu.id}')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl transition flex items-center gap-1 border border-amber-200 cursor-pointer shadow-2xs" title="Edit Follow-up Date, Time, Reason &amp; Details">
-                <span class="material-symbols-outlined text-[15px]">edit</span>
-                <span>Edit</span>
-              </button>
-            ` : ''}
+            
 
             <!-- Log Outcome Button (Edit - Only if pending) -->
             ${!isCompleted && canFuEdit ? `
