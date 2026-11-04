@@ -24562,7 +24562,7 @@ function renderOrdersHistoryTable() {
         </td>
 
         <!-- 7. Actions (Sticky right column so Edit & Delete are always visible on any screen width) -->
-        <td class="py-3.5 px-4 text-right whitespace-nowrap sticky right-0 bg-white/95 backdrop-blur-xs z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)]">
+        <td class="py-3.5 px-4 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1.5">
             <!-- Edit Order -->
             ${canUserPerformAction('orders', 'edit') ? `
