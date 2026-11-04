@@ -3650,7 +3650,7 @@ function updatePageHeaderTitle() {
         : t('header.title.orders_dashboard', 'WhatsApp Sales & Orders Dashboard'),
       sub: (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' && ACTIVE_ORDERS_SUBMODULE === 'history')
         ? t('header.sub.orders_history', 'Direct orders booked from WhatsApp chats with search, status filters & delivery tracking')
-        : t('header.sub.orders_dashboard', 'Real-time revenue analytics, staff sales tracking, and 5-stage fulfillment pipeline')
+        : t('header.sub.orders_dashboard', 'Real-time revenue analytics, staff sales tracking, and order performance')
     },
     followups: {
       title: t('header.title.followups', 'Customer Follow-up Scheduler'),
@@ -29116,7 +29116,7 @@ async function startAutomatedBroadcast() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer_id: customer.id,
-          phone: targetPhone,
+          phone: customer.whatsapp || customer.phone,
           text: personalizedText,
           media_url: attachedBroadcastImage,
           type: attachedBroadcastImage ? 'image' : 'text',
