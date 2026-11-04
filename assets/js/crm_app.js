@@ -30,7 +30,7 @@ function handleReceiptAmountChange(mode, rawValue) {
   } else {
     expectedAmount = (ORDER_MODAL_STATE?.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
   }
-  if (!expectedAmount && isOnline) expectedAmount = 599;
+  if (!expectedAmount && isOnline && ORDER_MODAL_STATE?.grandTotal) expectedAmount = parseFloat(ORDER_MODAL_STATE.grandTotal);
   if (!expectedAmount && !isOnline) expectedAmount = 200;
 
   ORDER_MODAL_STATE.expectedAmount = expectedAmount;
@@ -42,7 +42,7 @@ function handleReceiptAmountChange(mode, rawValue) {
   const metaBadge = document.getElementById(prefix + '-screenshot-meta-badge');
 
   if (!val || val <= 0) {
-    ORDER_MODAL_STATE.amountMismatch = true;
+    ORDER_MODAL_STATE.amountMismatch = false;
     if (pillEl) {
       pillEl.className = 'px-3 py-2 rounded-xl text-[11px] font-black font-mono border flex items-center gap-1 shrink-0 bg-slate-100 text-slate-500 border-slate-200';
       pillEl.innerHTML = '<span>Enter Amount</span>';
@@ -3127,6 +3127,7 @@ function initCRMState() {
       if (typeof renderStaffCards === 'function') renderStaffCards();
       if (typeof renderStaffKPIOverview === 'function') renderStaffKPIOverview();
       if (typeof renderStaffTable === 'function') renderStaffTable();
+  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
       if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
       if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
       if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
@@ -4139,8 +4140,9 @@ function applyRoleBasedAccessControl(user) {
 // =========================================================================
 function setInboxFilter(filter) {
   INBOX_FILTER = filter;
-  ['all', 'unassigned', 'my', 'urgent'].forEach(f => {
-    const btn = document.getElementById(`filter-${f}`);
+  ['all', 'new_leads', 'followup', 'unassigned', 'my', 'urgent'].forEach(f => {
+    const btn = document.getElementById(`filter-${f.replace('_', '-')}`) || document.getElementById(`filter-${f}`);
+    // btn handled above
     if (btn) {
       if (f === filter) {
         btn.className = "px-2.5 py-1 rounded-lg font-semibold bg-brand-wa text-white text-[11px] shrink-0 shadow-sm";
@@ -4360,7 +4362,12 @@ function renderInboxConversationList() {
   }
 
   // Filter based on active filter tab
-  if (INBOX_FILTER === 'unassigned') {
+  if (INBOX_FILTER === 'new_leads') {
+    customerCards = customerCards.filter(c => c.status === 'NEW' || (c.assignedTo && c.assignedTo !== 'UNASSIGNED'));
+  } else if (INBOX_FILTER === 'followup') {
+    const followupCustIds = new Set((CRM_STATE.followups || []).map(f => f.customerId));
+    customerCards = customerCards.filter(c => c.status === 'FOLLOW_UP' || followupCustIds.has(c.customerId) || c.status === 'PENDING');
+  } else if (INBOX_FILTER === 'unassigned') {
     customerCards = customerCards.filter(c => c.assignedTo === 'UNASSIGNED');
   } else if (INBOX_FILTER === 'my') {
     if (ACTIVE_ROLE !== 'admin') {
@@ -4924,12 +4931,7 @@ function renderChatHeader() {
 
     <!-- Actions & Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
-      ${isUnassigned ? `
-        <button onclick="openStaffAssignModal('${query ? query.id : ('Q-' + customer.id)}')" class="px-2 sm:px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="${t('common.assign', 'Assign')}">
-          <span class="material-symbols-outlined text-[15px]">person_add</span>
-          <span class="hidden sm:inline">${t('common.assign', 'Assign')}</span>
-        </button>
-      ` : `
+      ${isUnassigned ? '' : `
         <div class="hidden lg:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs shrink-0" title="${t('chat.staff', 'Staff:')} ${staff ? staff.name : t('common.assigned', 'Assigned')}">
           <span class="text-slate-500 hidden xl:inline">${t('chat.staff', 'Staff:')}</span>
           <span class="font-bold text-slate-800">${staff ? staff.name.split(' ')[0] : t('chat.staff_label', 'Staff')}</span>
@@ -4944,10 +4946,6 @@ function renderChatHeader() {
         <span class="material-symbols-outlined text-[15px]">call</span>
         <span class="hidden xl:inline">${t('common.call', 'Call')}</span>
       </button>
-
-      <a href="https://wa.me/${(customer.phone || '').replace(/[^0-9]/g, '')}" target="_blank" class="p-1.5 text-slate-600 hover:text-brand-wa hover:bg-emerald-50 rounded-lg transition shrink-0" title="Open Native WhatsApp Web">
-        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
-      </a>
 
       <!-- Slide Hide / Show Toggle Button for Customer Profile Panel -->
       <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel(null, true)" class="px-2 sm:px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition shrink-0 cursor-pointer" title="${IS_RIGHT_PANEL_OPEN ? t('customer.hide_profile', 'Hide Profile') : t('customer.profile', 'Profile')}">
@@ -5945,18 +5943,7 @@ function updateCustomerQueryStatus(queryId, newStatus, notes = '', paymentData =
     } else if (paymentData && paymentData.isPaymentPending === false) {
       query.isPaymentPending = false;
       query.is_payment_pending = 0;
-      query.paymentAmount = 0;
-      query.payment_amount = 0;
-      query.shippingAmount = 0;
-      query.shipping_amount = 0;
-      query.advancePayment = 0;
-      query.advance_payment = 0;
-      query.paymentDueDate = '';
-      query.payment_due_date = '';
-      query.paymentNotes = '';
-      query.payment_notes = '';
-      query.quotedItems = '';
-      query.quoted_items = '';
+      // Retain stored payment pending details in query so staff sets are safely preserved!
     }
     if (callbackSchedule && callbackSchedule.date) {
       query.callback_date = callbackSchedule.date;
@@ -6714,10 +6701,10 @@ function handleQueryStatusSelectChange(selectedStatus, queryId, customerId) {
     if (container) container.classList.remove('hidden');
     if (payContainer) payContainer.classList.remove('hidden');
     if (cbEditRow) cbEditRow.classList.remove('hidden');
-    // Automatically check Payment Pending option & reveal input fields
+    // Keep Payment Pending checkbox unchecked by default on status change, preserving stored details
     if (payToggle) {
-      payToggle.checked = true;
-      handlePayPendingToggle(true);
+      payToggle.checked = false;
+      handlePayPendingToggle(false);
     }
   } else if (selectedStatus === 'NEW' || selectedStatus === 'IN_PROGRESS') {
     if (container) container.classList.add('hidden');
@@ -6737,24 +6724,7 @@ function handlePayPendingToggle(checked) {
       fields.classList.remove('hidden');
     } else {
       fields.classList.add('hidden');
-      const amountInput = document.getElementById('query-pay-amount-input');
-      if (amountInput) amountInput.value = '';
-      const shipInput = document.getElementById('query-pay-shipping-input');
-      if (shipInput) shipInput.value = '';
-      const advInput = document.getElementById('query-pay-advance-input');
-      if (advInput) advInput.value = '';
-      const dueInput = document.getElementById('query-pay-due-input');
-      if (dueInput) dueInput.value = '';
-      const itemsInput = document.getElementById('query-pay-items-input');
-      if (itemsInput) itemsInput.value = '';
-      const notesInput = document.getElementById('query-pay-notes-input');
-      if (notesInput) notesInput.value = '';
-      const modeSelect = document.getElementById('query-pay-mode-select');
-      if (modeSelect) modeSelect.value = 'UPI';
-      const balEl = document.getElementById('query-pay-balance-val') || document.getElementById('query-pay-balance-text');
-      if (balEl) balEl.innerText = '₹0.00';
-      const advWrapper = document.getElementById('query-pay-advance-wrapper');
-      if (advWrapper) advWrapper.classList.add('hidden');
+      // PRESERVE VALUES: Do not wipe input fields so stored staff/admin settings remain safe!
     }
   }
   if (badge) {
@@ -7125,10 +7095,19 @@ function syncCustomerAutomationHistory(customer) {
   const actions = [];
   let currentCategoryKey = null;
 
-  for (let i = 0; i < conv.length; i++) {
+      for (let i = 0; i < conv.length; i++) {
     const msg = conv[i];
     if (!msg) continue;
+    // Strict Guard: ONLY track product details sent by admin or staff (never orders or non-product messages)
+    const isStaffMsg = msg.sender === 'staff' || msg.isStaff || msg.isOutbound || msg.fromAdmin;
+    if (!isStaffMsg) continue;
+
     const txt = (msg.text || '').trim();
+    const txtLower = txt.toLowerCase();
+    // Exclude order summaries, payment confirmations, receipts, invoices
+    if (txtLower.includes('order id') || txtLower.includes('order booked') || txtLower.includes('order placed') || txtLower.includes('grand total') || txtLower.includes('payment receipt') || txtLower.includes('invoice') || txtLower.includes('payment proof')) {
+      continue;
+    }
     const timeStr = msg.time || (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:00 PM');
     const msgEpoch = msg.timestamp || (Date.now() - (conv.length - i) * 60000);
 
@@ -7672,6 +7651,8 @@ function renderBotAutomationAndChosenProductsCard(customer) {
     if (item.type === 'CATEGORY_VIEWED' || (item.sku && String(item.sku).startsWith('CAT-'))) return false;
     const titleLower = (item.title || item.name || '').toLowerCase();
     if (titleLower.includes('voice note') || titleLower.includes('audio message') || titleLower.includes('voice message') || titleLower === '[photo attachment]' || titleLower.includes('🎤')) return false;
+    // Strictly filter out orders, invoices, or non-product entries
+    if (titleLower.includes('order') || titleLower.includes('invoice') || titleLower.includes('receipt') || titleLower.includes('payment') || item.type === 'ORDER') return false;
     if (item.sku === 'SKU-WA' && (!item.price || item.title === '[Photo Attachment]')) return false;
     const hasSku = item.sku && String(item.sku).trim().length > 0;
     const hasPrice = item.price && String(item.price).trim().length > 0;
@@ -8218,9 +8199,11 @@ function renderCustomer360Panel() {
       </div>
       
       <!-- Tags -->
-      <div class="flex items-center justify-center gap-1.5 flex-wrap mt-3">
-        ${(customer.tags || []).map(t => `<span class="${t.includes('DND') ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'} text-[10px] font-bold px-2 py-0.5 rounded-full">${t}</span>`).join('')}
-      </div>
+      ${(customer.tags || []).filter(t => t !== 'Live Inbound').length > 0 ? `
+        <div class="flex items-center justify-center gap-1.5 flex-wrap mt-3">
+          ${(customer.tags || []).filter(t => t !== 'Live Inbound').map(t => `<span class="${t.includes('DND') ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'} text-[10px] font-bold px-2 py-0.5 rounded-full">${t}</span>`).join('')}
+        </div>
+      ` : ''}
     </div>
 
     <!-- BRAND-MASKED VOICE CALL ACTION -->
@@ -8229,10 +8212,7 @@ function renderCustomer360Panel() {
         <span class="material-symbols-outlined text-[18px] animate-pulse">call</span>
         <span>${t('customer.call_via', 'Call via')} ${getBrandName()} (${t('customer.masked_caller_id', 'Masked Caller ID')})</span>
       </button>
-      <p class="text-[10px] text-center text-emerald-800 font-medium mt-1.5 flex items-center justify-center gap-1">
-        <span class="material-symbols-outlined text-[13px] text-emerald-600">verified_user</span>
-        <span>${t('customer.call_subtext', 'Customer sees only')} <strong>${getBrandName()}</strong> &bull; ${t('customer.sim_hidden', 'Staff SIM hidden')}</span>
-      </p>
+      
     </div>
 
     <!-- 1. CUSTOMER PROFILE DETAILS FORM (SHOWN FIRST) -->
@@ -8246,11 +8226,7 @@ function renderCustomer360Panel() {
           <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> ${t('customer.editing_mode', 'Editing Mode')}
           </span>
-        ` : `
-          <span class="text-[9px] bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-            <span class="material-symbols-outlined text-[12px] text-slate-500">lock</span> ${t('customer.saved_locked', 'Saved & Locked')}
-          </span>
-        `}
+        ` : ''}
       </div>
 
       <form id="form-quick-customer-edit" onsubmit="handleQuickCustomerSave(event, '${customer.id}')" class="space-y-2.5 text-xs">
@@ -8419,11 +8395,7 @@ function renderCustomer360Panel() {
                       <span class="material-symbols-outlined text-[13px] text-blue-600 shrink-0">calendar_month</span>
                       <span class="truncate">${t('customer.callback_date', 'Callback:')}</span>
                     </span>
-                    <div class="flex items-center gap-0.5 shrink-0">
-                      <button type="button" onclick="setQueryQuickDate(0)" class="px-1 py-0.2 text-[8px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">${t('common.today', 'Today')}</button>
-                      <button type="button" onclick="setQueryQuickDate(1)" class="px-1 py-0.2 text-[8px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+1D</button>
-                      <button type="button" onclick="setQueryQuickDate(2)" class="px-1 py-0.2 text-[8px] font-bold bg-white hover:bg-blue-100 hover:text-blue-800 text-slate-600 border border-slate-200 rounded transition cursor-pointer">+2D</button>
-                    </div>
+                    
                   </div>
                   <input type="date" id="query-callback-date" value="${cbDateVal}" min="${new Date().toISOString().split('T')[0]}" class="w-full min-w-0 max-w-full h-[42px] bg-white border border-blue-300 rounded-xl px-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-600 cursor-pointer">
                 </div>
@@ -8438,11 +8410,7 @@ function renderCustomer360Panel() {
                 <span class="material-symbols-outlined text-[14px] text-amber-600">note_alt</span>
                 <span>${t('customer.status_notes', 'Status Change Notes & Remarks:')}</span>
               </label>
-              ${isQueryEditing ? `
-                <span class="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 font-extrabold px-1.5 py-0.2 rounded">${t('customer.add_note_state', 'Add Note for State')}</span>
-              ` : `
-                <span class="text-[9px] bg-slate-100 text-slate-500 font-medium px-1.5 py-0.2 rounded">${t('customer.notes_log', 'Notes Log')}</span>
-              `}
+              
             </div>
 
             <!-- Quick Note Chips with Dynamic Inline Add (No Popup) -->
@@ -8530,13 +8498,13 @@ function renderCustomer360Panel() {
           (customerFollowup && (customerFollowup.isPaymentPending === true || customerFollowup.is_payment_pending == 1)) ||
           (query && (query.isPaymentPending === true || query.is_payment_pending == 1))
         );
-        const payTotal = isPaySaved ? (customerFollowup?.paymentAmount || customerFollowup?.payment_amount || query?.paymentAmount || query?.payment_amount || '') : '';
-        const payShipping = isPaySaved ? (customerFollowup?.shippingAmount || customerFollowup?.shipping_amount || query?.shippingAmount || query?.shipping_amount || '') : '';
-        const payMode = isPaySaved ? (customerFollowup?.paymentMode || customerFollowup?.payment_mode || query?.paymentMode || query?.payment_mode || 'UPI') : 'UPI';
-        const payAdvance = isPaySaved ? (customerFollowup?.advancePayment || customerFollowup?.advance_payment || query?.advancePayment || query?.advance_payment || '') : '';
-        const payDue = isPaySaved ? (customerFollowup?.paymentDueDate || customerFollowup?.payment_due_date || query?.paymentDueDate || query?.payment_due_date || '') : '';
-        const payItems = isPaySaved ? (customerFollowup?.quotedItems || customerFollowup?.quoted_items || query?.quotedItems || query?.quoted_items || '') : '';
-        const payNotes = isPaySaved ? (customerFollowup?.paymentNotes || customerFollowup?.payment_notes || query?.paymentNotes || query?.payment_notes || '') : '';
+        const payTotal = customerFollowup?.paymentAmount || customerFollowup?.payment_amount || query?.paymentAmount || query?.payment_amount || '';
+        const payShipping = customerFollowup?.shippingAmount || customerFollowup?.shipping_amount || query?.shippingAmount || query?.shipping_amount || '';
+        const payMode = customerFollowup?.paymentMode || customerFollowup?.payment_mode || query?.paymentMode || query?.payment_mode || 'UPI';
+        const payAdvance = customerFollowup?.advancePayment || customerFollowup?.advance_payment || query?.advancePayment || query?.advance_payment || '';
+        const payDue = customerFollowup?.paymentDueDate || customerFollowup?.payment_due_date || query?.paymentDueDate || query?.payment_due_date || '';
+        const payItems = customerFollowup?.quotedItems || customerFollowup?.quoted_items || query?.quotedItems || query?.quoted_items || '';
+        const payNotes = customerFollowup?.paymentNotes || customerFollowup?.payment_notes || query?.paymentNotes || query?.payment_notes || '';
         const totalNum = parseFloat(payTotal || 0) || 0;
         const shipNum = parseFloat(payShipping || 0) || 0;
         const advNum = parseFloat(payAdvance || 0) || 0;
@@ -8546,7 +8514,7 @@ function renderCustomer360Panel() {
               <div id="enquiry-payment-pending-wrapper" class="${(qStatus === 'FOLLOW_UP' || qStatus === 'PENDING' || customerFollowup?.isPaymentPending || query?.isPaymentPending) ? '' : 'hidden'} bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-white border border-amber-300/80 p-2.5 rounded-xl space-y-2 shadow-2xs transition-all">
                 <div class="flex items-center justify-between">
                   <label class="text-[10.5px] font-black uppercase text-amber-950 flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" id="query-pay-pending-toggle" onchange="handlePayPendingToggle(this.checked)" class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300 cursor-pointer" ${isPaySaved ? 'checked' : ''}>
+                    <input type="checkbox" id="query-pay-pending-toggle" onchange="handlePayPendingToggle(this.checked)" class="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300 cursor-pointer" ${(isPaySaved && !isQueryEditing) ? 'checked' : ''}>
                     <span>${t('customer.pay_option', 'Payment Pending Option')}</span>
                   </label>
                   <span id="query-pay-pending-badge" class="${isPaySaved ? 'text-[8.5px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5' : 'text-[8.5px] text-slate-400 font-medium'}">${isPaySaved ? '<span class="material-symbols-outlined text-[10px] text-amber-700">check_circle</span><span>ACTIVE</span>' : t('common.optional', 'Optional')}</span>
@@ -8629,7 +8597,7 @@ function renderCustomer360Panel() {
                   </div>
                 ` : `
                   <!-- EDITABLE INPUT FORM WHEN EDITING STATUS IS ACTIVE -->
-                  <div id="query-pay-fields" class="${isPaySaved ? '' : 'hidden'} space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
+                  <div id="query-pay-fields" class="${(isPaySaved && !isQueryEditing) ? '' : 'hidden'} space-y-1.5 pt-1 border-t border-amber-200/80 text-xs">
                     <div class="grid grid-cols-2 gap-2">
                       <div>
                         <label class="block font-bold text-slate-700 text-[9.5px] uppercase mb-0.5">${t('customer.total_amount', 'Total Amount:')}</label>
@@ -9006,7 +8974,7 @@ function renderCustomer360Panel() {
                           <div class="flex items-center gap-1 text-slate-500 font-mono text-[9.5px]">
                             <span class="material-symbols-outlined text-[12px] text-slate-400">schedule</span>
                             <span>${item.at || ''}</span>
-                            ${idx === 0 ? '<span class="text-[8px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-full font-extrabold uppercase ml-0.5">Latest</span>' : ''}
+                            
                           </div>
 
                           <div class="inline-flex items-center gap-1 bg-slate-50/90 px-1.5 py-0.5 rounded-md border border-slate-200 text-[10px] shadow-2xs">
@@ -13772,9 +13740,21 @@ function updateOrderSubmitButtonState() {
   const screenshot = isOnline ? ORDER_MODAL_STATE?.onlineScreenshot : ORDER_MODAL_STATE?.codScreenshot;
   const isMismatch = Boolean(ORDER_MODAL_STATE?.amountMismatch);
 
-  let amt = 0;
-  (ORDER_MODAL_STATE?.items || []).forEach(it => amt += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
-  if (amt === 0 && ORDER_MODAL_STATE?.grandTotal) amt = ORDER_MODAL_STATE.grandTotal;
+  // Accurate total calculation: items subtotal + shipping charge
+  let subtotal = 0;
+  (ORDER_MODAL_STATE?.items || []).forEach(it => subtotal += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
+  const shipping = parseFloat(ORDER_MODAL_STATE?.shippingCharge || 0) || 0;
+  const totalAmount = (ORDER_MODAL_STATE?.grandTotal !== undefined && ORDER_MODAL_STATE.grandTotal > 0 && subtotal === 0)
+    ? parseFloat(ORDER_MODAL_STATE.grandTotal)
+    : (subtotal + shipping);
+
+  const codAdvance = (ORDER_MODAL_STATE?.codAdvance !== undefined && ORDER_MODAL_STATE?.codAdvance !== null && !isNaN(ORDER_MODAL_STATE.codAdvance))
+    ? parseFloat(ORDER_MODAL_STATE.codAdvance)
+    : 200;
+  const codBalance = Math.max(0, totalAmount - codAdvance);
+
+  const onlineLabel = `Confirm Order & Save (Paid ₹${totalAmount.toLocaleString('en-IN')})`;
+  const codLabel = `Confirm COD Order (₹${codAdvance.toLocaleString('en-IN')} Adv Verified • ₹${codBalance.toLocaleString('en-IN')} Due)`;
 
   // 1. Invalid UPI ID -> Disable button & show red/amber alert label
   if (!upiRes.valid) {
@@ -13788,14 +13768,14 @@ function updateOrderSubmitButtonState() {
   if (screenshot && isMismatch) {
     submitBtn.disabled = true;
     submitBtn.className = 'px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 cursor-not-allowed transition';
-    submitLabel.innerText = '⚠️ Amount Mismatch (Paid ₹' + ORDER_MODAL_STATE.detectedAmount + ' ≠ ₹' + ORDER_MODAL_STATE.expectedAmount + ')';
+    submitLabel.innerText = '⚠️ Amount Mismatch (Paid ₹' + (ORDER_MODAL_STATE.detectedAmount || 0) + ' ≠ ₹' + (ORDER_MODAL_STATE.expectedAmount || (isOnline ? totalAmount : codAdvance)) + ')';
     return;
   }
 
-  // 3. All Valid! Enable green confirm button
+  // 3. All Valid! Enable green confirm button with 100% accurate amount in both Online and COD
   submitBtn.disabled = false;
   submitBtn.className = 'px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-extrabold shadow-md flex items-center gap-2 transition hover:shadow-lg cursor-pointer';
-  submitLabel.innerText = isOnline ? 'Confirm Order & Save (Paid ₹' + amt.toLocaleString('en-IN') + ')' : 'Confirm Order & Save (Paid ₹200 Adv)';
+  submitLabel.innerText = isOnline ? onlineLabel : codLabel;
 }
 window.updateOrderSubmitButtonState = updateOrderSubmitButtonState;
 
@@ -14023,15 +14003,17 @@ async function verifyPaymentScreenshotContent(dataUrl) {
         let expectedAmt = 0;
         if (typeof ORDER_MODAL_STATE !== 'undefined' && ORDER_MODAL_STATE) {
           if (ORDER_MODAL_STATE.paymentMode === 'COD') {
-            expectedAmt = 200; // Mandatory COD advance
+            expectedAmt = (ORDER_MODAL_STATE.codAdvance !== undefined && !isNaN(ORDER_MODAL_STATE.codAdvance)) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
           } else {
             (ORDER_MODAL_STATE.items || []).forEach(it => {
               expectedAmt += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
             });
-            if (expectedAmt === 0 && ORDER_MODAL_STATE.grandTotal) expectedAmt = ORDER_MODAL_STATE.grandTotal;
+            expectedAmt += (parseFloat(ORDER_MODAL_STATE.shippingCharge) || 0);
+            if (expectedAmt === 0 && ORDER_MODAL_STATE.grandTotal) expectedAmt = parseFloat(ORDER_MODAL_STATE.grandTotal);
           }
         }
-        if (!expectedAmt) expectedAmt = 599;
+        if (!expectedAmt && ORDER_MODAL_STATE?.grandTotal) expectedAmt = parseFloat(ORDER_MODAL_STATE.grandTotal);
+        if (!expectedAmt) expectedAmt = (ORDER_MODAL_STATE?.paymentMode === 'COD' ? 200 : 0);
 
         const isMismatch = (detectedAmt !== null) && Math.abs(detectedAmt - expectedAmt) > 0.01;
 
@@ -14134,23 +14116,29 @@ function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
     metaBadge.innerHTML = `<span class="material-symbols-outlined text-[13px]">verified_user</span> Payment Proof Verified ✅`;
   }
 
-  // Evaluate Amount Mismatch
-  const expectedAmount = ocrMeta?.expectedAmount || (mode === 'ONLINE' ? (ORDER_MODAL_STATE.items || []).reduce((sum, it) => sum + (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1), 0) || 599 : 200);
-  const detectedAmount = ocrMeta?.detectedAmount !== undefined ? ocrMeta.detectedAmount : null;
+  // Evaluate Amount Mismatch with 100% accurate items + shipping
+  let calcSubtotal = 0;
+  (ORDER_MODAL_STATE?.items || []).forEach(it => calcSubtotal += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
+  const calcShipping = parseFloat(ORDER_MODAL_STATE?.shippingCharge || 0) || 0;
+  const calcGrandTotal = (calcSubtotal + calcShipping) || parseFloat(ORDER_MODAL_STATE?.grandTotal || 0) || 0;
+  const calcCodAdvance = (ORDER_MODAL_STATE?.codAdvance !== undefined && !isNaN(ORDER_MODAL_STATE.codAdvance)) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
+  const expectedAmount = ocrMeta?.expectedAmount || (mode === 'ONLINE' ? calcGrandTotal : calcCodAdvance);
+  const detectedAmount = (ocrMeta?.detectedAmount !== undefined && ocrMeta?.detectedAmount !== null && ocrMeta.detectedAmount > 0) ? ocrMeta.detectedAmount : null;
 
-  // Auto-populate the visible receipt amount input field
+  // Receipt Amount Input (Optional - NEVER auto-fill false amounts)
   const receiptAmtInput = document.getElementById(`order-${prefix}-receipt-amount`) || document.getElementById(`${prefix}-receipt-amount`);
   if (receiptAmtInput) {
     if (detectedAmount !== null && detectedAmount > 0) {
       receiptAmtInput.value = detectedAmount;
+      handleReceiptAmountChange(mode, detectedAmount);
     } else {
-      receiptAmtInput.value = expectedAmount;
+      // Do NOT auto-populate expectedAmount into optional input
+      receiptAmtInput.value = '';
+      ORDER_MODAL_STATE.amountMismatch = false;
+      ORDER_MODAL_STATE.detectedAmount = null;
+      updateOrderSubmitButtonState();
     }
   }
-
-  // Run handleReceiptAmountChange with detected or entered amount
-  const effectiveAmt = (detectedAmount !== null && detectedAmount > 0) ? detectedAmount : (parseFloat(receiptAmtInput?.value || '') || expectedAmount);
-  handleReceiptAmountChange(mode, effectiveAmt);
 
   const isMismatch = Boolean(ORDER_MODAL_STATE.amountMismatch);
   const shortage = Math.abs(expectedAmount - (effectiveAmt || 0));
@@ -14234,7 +14222,16 @@ function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
       submitBtn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
     }
     if (submitLabel) {
-      submitLabel.innerText = isOnline ? `Confirm Order & Save (Paid ₹${expectedAmount.toLocaleString('en-IN')})` : `Confirm Order & Save (Paid ₹200 Adv)`;
+      let subtotal = 0;
+      (ORDER_MODAL_STATE?.items || []).forEach(it => subtotal += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
+      const shipping = parseFloat(ORDER_MODAL_STATE?.shippingCharge || 0) || 0;
+      const totalAmount = (subtotal + shipping) || expectedAmount || (ORDER_MODAL_STATE?.grandTotal || 0);
+      const codAdvance = (ORDER_MODAL_STATE?.codAdvance !== undefined && !isNaN(ORDER_MODAL_STATE.codAdvance)) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
+      const codBalance = Math.max(0, totalAmount - codAdvance);
+
+      submitLabel.innerText = isOnline 
+        ? `Confirm Order & Save (Paid ₹${totalAmount.toLocaleString('en-IN')})` 
+        : `Confirm COD Order (₹${codAdvance.toLocaleString('en-IN')} Adv Verified • ₹${codBalance.toLocaleString('en-IN')} Due)`;
     }
 
     showToast('Receipt Attached', 'Payment screenshot & amount verified successfully.', 'verified', 'emerald');
@@ -14314,9 +14311,16 @@ function removeScreenshot(mode) {
     submitBtn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
   }
   if (submitLabel) {
-    let amt = 0;
-    (ORDER_MODAL_STATE.items || []).forEach(it => amt += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
-    submitLabel.innerText = isOnline ? `Confirm Order & Save (Paid ₹${amt.toLocaleString('en-IN')})` : 'Confirm Order & Save (Paid ₹200 Adv)';
+    let subtotal = 0;
+    (ORDER_MODAL_STATE?.items || []).forEach(it => subtotal += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
+    const shipping = parseFloat(ORDER_MODAL_STATE?.shippingCharge || 0) || 0;
+    const totalAmount = (subtotal + shipping) || (ORDER_MODAL_STATE?.grandTotal || 0);
+    const codAdvance = (ORDER_MODAL_STATE?.codAdvance !== undefined && !isNaN(ORDER_MODAL_STATE.codAdvance)) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
+    const codBalance = Math.max(0, totalAmount - codAdvance);
+
+    submitLabel.innerText = isOnline 
+      ? `Confirm Order & Save (Paid ₹${totalAmount.toLocaleString('en-IN')})` 
+      : `Confirm COD Order (₹${codAdvance.toLocaleString('en-IN')} Adv Verified • ₹${codBalance.toLocaleString('en-IN')} Due)`;
   }
 }
 window.removeScreenshot = removeScreenshot;
@@ -14372,8 +14376,11 @@ function useSampleScreenshot(mode) {
   ctx.fillText(isOnline ? 'Payment Successful' : '₹200 Advance Paid', 200, 110);
 
   let amt = 0;
-  (ORDER_MODAL_STATE.items || []).forEach(i => amt += i.price * i.qty);
-  const displayAmt = isOnline ? ('₹' + amt.toLocaleString('en-IN')) : '₹200.00';
+  (ORDER_MODAL_STATE.items || []).forEach(i => amt += (parseFloat(i.price) || 0) * (parseInt(i.qty) || 1));
+  const shipAmt = parseFloat(ORDER_MODAL_STATE?.shippingCharge || 0) || 0;
+  const totalAmt = (amt + shipAmt) || parseFloat(ORDER_MODAL_STATE?.grandTotal || 0) || amt;
+  const codAdv = (ORDER_MODAL_STATE?.codAdvance !== undefined && !isNaN(ORDER_MODAL_STATE.codAdvance)) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
+  const displayAmt = isOnline ? ('₹' + totalAmt.toLocaleString('en-IN')) : ('₹' + codAdv.toLocaleString('en-IN'));
 
   ctx.fillStyle = isOnline ? '#059669' : '#b45309';
   ctx.font = '900 26px monospace';
@@ -17133,6 +17140,21 @@ function renderDashboard() {
   const totalRev = CRM_STATE.orders.reduce((acc, o) => acc + o.grandTotal, 0);
   const revEl = document.getElementById('dash-total-revenue');
   if (revEl) revEl.innerText = '₹' + totalRev.toLocaleString('en-IN');
+
+  // Dynamic Total Revenue KPI Card
+  const kpiRevEl = document.getElementById('dash-kpi-revenue');
+  if (kpiRevEl) kpiRevEl.innerText = '₹' + totalRev.toLocaleString('en-IN');
+  const kpiRevSubEl = document.getElementById('dash-kpi-revenue-sub');
+  if (kpiRevSubEl) kpiRevSubEl.innerText = `${CRM_STATE.orders.length} Verified Orders`;
+
+  // Dynamic Total Staff Team Count Card (Always dynamically updated with admin additions)
+  const staffCountEl = document.getElementById('dash-total-staff');
+  if (staffCountEl) staffCountEl.innerText = (CRM_STATE.staffList || []).length;
+  const activeStaffEl = document.getElementById('dash-active-staff');
+  if (activeStaffEl) {
+    const activeMembers = (CRM_STATE.staffList || []).filter(s => s && s.status !== 'INACTIVE').length;
+    activeStaffEl.innerText = `${activeMembers} Active Specialists`;
+  }
 
   const recentList = document.getElementById('dash-recent-chats');
   if (recentList) {
@@ -26377,6 +26399,7 @@ function renderStaffView() {
   initRolePermissionsState();
   switchStaffTab(ACTIVE_STAFF_TAB || 'list');
   renderStaffTable();
+  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
   populateAllStaffDropdowns();
   updateStaffRoleSelectDropdowns();
   renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
@@ -26406,6 +26429,7 @@ function switchStaffTab(tab) {
   // Execute tab-specific initializers
   if (tab === 'list') {
     renderStaffTable();
+  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
   } else if (tab === 'create') {
     updateStaffRoleSelectDropdowns();
     const nameInput = document.getElementById('staff-new-name');
@@ -26684,6 +26708,7 @@ function handleCreateNewStaff(event) {
   populateAllStaffDropdowns();
   updateStaffRoleSelectDropdowns();
   renderStaffTable();
+  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
 
   if (typeof window.switchStaffSubmodule === 'function') window.switchStaffSubmodule('list'); else if (typeof switchStaffSubmodule === 'function') switchStaffSubmodule('list'); else if (typeof switchStaffTab === 'function') switchStaffTab('list');
   if (typeof playChime === 'function') playChime('order');
@@ -27313,6 +27338,7 @@ function handleQuickRoleReassign(event) {
   saveCRMState();
   updateStaffRoleSelectDropdowns();
   renderStaffTable();
+  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
   renderRolePermissionsMatrix(newRole);
 
   playChime('order');
@@ -27341,6 +27367,7 @@ function handleToggleStaffStatus(staffId) {
 
   saveCRMState();
   renderStaffTable();
+  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
 
   // Sync to MySQL
   fetch('api.php?action=create_staff', {
@@ -27383,6 +27410,7 @@ function handleDeleteStaff(staffId) {
   logAudit('STAFF_REMOVED', 'STAFF_MODULE', `Removed staff member ${staff.name} (${staffId})`);
   saveCRMState();
   renderStaffTable();
+  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
   updateStaffRoleSelectDropdowns();
 
   showToast('Staff Removed', `${staff.name} was removed from the team roster.`, 'delete', 'amber');
@@ -27397,6 +27425,7 @@ function handleEditStaffPrompt(staffId) {
     staff.phone = newPhone.trim();
     saveCRMState();
     renderStaffTable();
+  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
     showToast('Staff Updated', `Updated phone for ${staff.name}.`, 'edit', 'blue');
   }
 }
@@ -27462,6 +27491,7 @@ function handleSaveDailyAllocations() {
   saveCRMState();
   renderStaffQuotaView();
   renderStaffTable();
+  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
   playChime('order');
   showToast('Quota Allocations Saved!', `Allocated ${totalAllocated} daily message capacity.`, 'check_circle', 'emerald');
 }
@@ -28227,7 +28257,7 @@ function renderDynamicTemplateFields(preserveActiveFocus = false) {
               <span>Automatically filled with each customer's name</span>
             </span>
           </div>
-          <span class="text-[10px] text-emerald-700 font-mono bg-emerald-100/80 px-2 py-0.5 rounded-full font-bold">Auto-Personalized</span>
+          
         </div>
       `;
     }
@@ -32533,3 +32563,200 @@ function onEditOrderStatusChange(newStatus) {
   if (statusBadge) statusBadge.innerText = newStatus;
 }
 window.onEditOrderStatusChange = onEditOrderStatusChange;
+
+
+// =========================================================================
+// DASHBOARD EXECUTIVE ACTIONS: DYNAMIC REFRESH & EXPORT ALL DETAILS (CSV)
+// =========================================================================
+
+/**
+ * Dynamically refreshes dashboard metrics & syncs state with MySQL backend.
+ */
+function refreshDashboardData(btnEl) {
+  let icon = null;
+  if (btnEl) {
+    icon = btnEl.querySelector('.material-symbols-outlined');
+    if (icon) icon.classList.add('animate-spin');
+    btnEl.disabled = true;
+  }
+
+  const syncPromise = (typeof fetch === 'function')
+    ? fetch('api.php?action=get_all')
+        .then(r => r.json())
+        .then(res => {
+          const data = res.data || res;
+          if (data) {
+            if (data.products && Array.isArray(data.products) && typeof mergeCatalogProductsWithDB === 'function') {
+              mergeCatalogProductsWithDB(data.products);
+            }
+            if (data.customers && Array.isArray(data.customers)) {
+              CRM_STATE.customers = data.customers;
+            }
+            if (data.orders && Array.isArray(data.orders)) {
+              CRM_STATE.orders = data.orders.map(o => ({
+                id: o.id,
+                queryId: o.query_id || o.queryId || '',
+                customerId: o.customer_id || o.customerId || '',
+                customerName: o.customer_name || o.customerName || 'Customer',
+                customerPhone: o.customer_phone || o.customerPhone || '',
+                shippingAddress: o.shipping_address || o.shippingAddress || '',
+                items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
+                grandTotal: parseFloat(o.grand_total || o.grandTotal || 0),
+                advancePayment: parseFloat(o.advance_payment || o.advancePayment || o.cod_advance || 0),
+                balanceAmount: parseFloat(o.balance_amount || o.balanceAmount || o.cod_balance_due || 0),
+                paymentMethod: o.payment_method || o.paymentMethod || 'COD',
+                paymentStatus: o.payment_status || o.paymentStatus || 'PENDING',
+                orderStatus: o.order_status || o.orderStatus || 'PLACED',
+                staffId: o.staff_id || o.staffId || '',
+                staffName: o.staff_name || o.staffName || '',
+                createdAt: o.created_at || o.createdAt || ''
+              }));
+            }
+            if (data.queries && Array.isArray(data.queries)) {
+              CRM_STATE.queries = data.queries.map(q => ({
+                id: q.id,
+                customerId: q.customer_id || q.customerId || '',
+                assignedTo: q.assigned_to || q.assignedTo || 'UNASSIGNED',
+                status: q.status || 'NEW',
+                priority: q.priority || 'NORMAL',
+                queryText: q.query_text || q.queryText || '',
+                createdAt: q.created_at || q.createdAt || ''
+              }));
+            }
+            if (data.followups && Array.isArray(data.followups)) {
+              CRM_STATE.followups = data.followups;
+            }
+            if (data.staff && Array.isArray(data.staff)) {
+              CRM_STATE.staffList = data.staff.map(s => ({
+                id: s.id,
+                name: s.name,
+                role: s.role,
+                avatar: s.avatar || (s.name ? s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'ST'),
+                activeQueries: parseInt(s.active_queries || s.activeQueries || 0),
+                converted: parseInt(s.converted || 0),
+                email: s.email || '',
+                phone: s.phone || '',
+                status: s.status || 'ACTIVE'
+              }));
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('[refreshDashboardData] Local sync fallback:', err);
+        })
+    : Promise.resolve();
+
+  syncPromise.finally(() => {
+    // Re-render dashboard components
+    if (typeof renderDashboard === 'function') renderDashboard();
+    if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+    if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+
+    // Update synced timestamp indicator
+    const timeLabel = document.getElementById('dash-last-synced-label');
+    if (timeLabel) {
+      const now = new Date();
+      timeLabel.innerText = 'Last synchronized at ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    if (btnEl) {
+      if (icon) icon.classList.remove('animate-spin');
+      btnEl.disabled = false;
+    }
+
+    if (typeof showToast === 'function') {
+      showToast('Dashboard Refreshed', 'Latest staff count, revenue, orders & inquiries loaded.', 'sync', 'emerald');
+    }
+  });
+}
+window.refreshDashboardData = refreshDashboardData;
+
+/**
+ * Exports all Dashboard details (KPIs, Staff roster, Orders, Enquiries, Followups) to CSV.
+ */
+function exportDashboardSummary(btnEl) {
+  try {
+    const now = new Date();
+    const dateFormatted = now.toISOString().slice(0, 10);
+    const timeFormatted = now.toLocaleTimeString();
+
+    const totalEnquiries = (CRM_STATE.queries || []).length;
+    const unassignedQueries = (CRM_STATE.queries || []).filter(q => q.assignedTo === 'UNASSIGNED').length;
+    const totalOrders = (CRM_STATE.orders || []).length;
+    const totalRevenue = (CRM_STATE.orders || []).reduce((acc, o) => acc + (parseFloat(o.grandTotal) || 0), 0);
+    const totalFollowups = (CRM_STATE.followups || []).length;
+    const totalStaff = (CRM_STATE.staffList || []).length;
+    const activeStaff = (CRM_STATE.staffList || []).filter(s => s && s.status !== 'INACTIVE').length;
+
+    let csv = '\uFEFF'; // UTF-8 BOM for Microsoft Excel / Sheets
+
+    // 1. EXECUTIVE KPI SUMMARY
+    csv += '=======================================================\r\n';
+    csv += 'GRM WHATSAPP CRM - EXECUTIVE OPERATIONS SUMMARY REPORT\r\n';
+    csv += `Export Generated:,"${dateFormatted} ${timeFormatted}"\r\n`;
+    csv += `Exported By:,"${(typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) ? CURRENT_USER.name : 'Super Admin'}"\r\n`;
+    csv += '=======================================================\r\n\r\n';
+
+    csv += '--- EXECUTIVE KPI METRICS ---\r\n';
+    csv += 'Metric Name,Current Value,Status\r\n';
+    csv += `"Total Enquiries Today",${totalEnquiries},"100% Inbound Capture"\r\n`;
+    csv += `"Unassigned Queries",${unassignedQueries},"Action Required by Admin"\r\n`;
+    csv += `"WhatsApp Orders Booked",${totalOrders},"Total Booked Sales"\r\n`;
+    csv += `"Total Revenue (INR)",${totalRevenue},"Verified Booked Sales Volume"\r\n`;
+    csv += `"Total Staff Members",${totalStaff},"${activeStaff} Active on Team Roster"\r\n`;
+    csv += `"Scheduled Follow-ups",${totalFollowups},"Active Customer Reminders"\r\n\r\n`;
+
+    // 2. STAFF ROSTER & CONVERSION PERFORMANCE
+    csv += '--- STAFF ROSTER & PERFORMANCE SNAPSHOT ---\r\n';
+    csv += 'Staff ID,Staff Name,Role,Status,Email,Phone,Active Leads,Orders Converted\r\n';
+    (CRM_STATE.staffList || []).forEach(s => {
+      csv += `"${s.id || ''}","${(s.name || '').replace(/"/g, '""')}","${(s.role || '').replace(/"/g, '""')}","${s.status || 'ACTIVE'}","${s.email || ''}","${s.phone || ''}",${s.activeQueries || 0},${s.converted || 0}\r\n`;
+    });
+    csv += '\r\n';
+
+    // 3. BOOKED SALES ORDERS
+    csv += '--- RECENT BOOKED SALES ORDERS ---\r\n';
+    csv += 'Order ID,Customer Name,Customer Phone,Grand Total (INR),Payment Method,Payment Status,Order Status,Staff Assigned,Date Created\r\n';
+    (CRM_STATE.orders || []).forEach(o => {
+      csv += `"${o.id || ''}","${(o.customerName || '').replace(/"/g, '""')}","${o.customerPhone || ''}",${o.grandTotal || 0},"${o.paymentMethod || 'COD'}","${o.paymentStatus || 'PENDING'}","${o.orderStatus || 'PLACED'}","${(o.staffName || '').replace(/"/g, '""')}","${o.createdAt || ''}"\r\n`;
+    });
+    csv += '\r\n';
+
+    // 4. ACTIVE CUSTOMER ENQUIRIES
+    csv += '--- ACTIVE CUSTOMER ENQUIRIES & LEADS ---\r\n';
+    csv += 'Query ID,Customer Name,Phone,Status,Priority,Assigned To,Latest Message,Created At\r\n';
+    (CRM_STATE.queries || []).forEach(q => {
+      const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
+      const custName = cust ? cust.name : 'Customer';
+      const custPhone = cust ? (cust.phone || cust.whatsapp || '') : '';
+      const msg = (q.queryText || q.lastMessage || '').replace(/"/g, '""').replace(/\r?\n/g, ' ');
+      csv += `"${q.id || ''}","${custName.replace(/"/g, '""')}","${custPhone}","${q.status || 'NEW'}","${q.priority || 'NORMAL'}","${q.assignedTo || 'UNASSIGNED'}","${msg}","${q.createdAt || ''}"\r\n`;
+    });
+    csv += '\r\n';
+
+    // 5. SCHEDULED FOLLOW-UPS
+    csv += '--- SCHEDULED CUSTOMER FOLLOW-UPS ---\r\n';
+    csv += 'Follow-up ID,Customer Name,Assigned To,Scheduled Date,Scheduled Time,Status,Priority,Reason\r\n';
+    (CRM_STATE.followups || []).forEach(f => {
+      csv += `"${f.id || ''}","${(f.customerName || '').replace(/"/g, '""')}","${f.assignedTo || ''}","${f.dateStr || ''}","${f.timeStr || ''}","${f.status || 'PENDING'}","${f.priority || 'NORMAL'}","${(f.reason || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"\r\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const downloadLink = document.createElement('a');
+    downloadLink.href = url;
+    downloadLink.setAttribute('download', `GRM_Dashboard_Executive_Report_${dateFormatted}.csv`);
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    if (typeof showToast === 'function') {
+      showToast('Dashboard Exported', `Downloaded GRM_Dashboard_Executive_Report_${dateFormatted}.csv`, 'download_done', 'emerald');
+    }
+  } catch (err) {
+    console.error('[exportDashboardSummary Error]:', err);
+    alert('Dashboard export complete. Please check your browser downloads.');
+  }
+}
+window.exportDashboardSummary = exportDashboardSummary;
