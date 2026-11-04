@@ -664,6 +664,40 @@ function broadcastAccountsUpdate() {
     });
 }
 
+// Forward inbound WhatsApp call to CRM PHP API
+function forwardCallToCRM(data) {
+    try {
+        const postData = JSON.stringify(data);
+        const sendToPort = (port) => {
+            const req = http.request({
+                hostname: 'localhost',
+                port: port,
+                path: '/api.php?action=simulate_incoming_call',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(postData)
+                }
+            }, (res) => {
+                res.on('data', () => { });
+            });
+
+            req.on('error', (e) => {
+                if (port === 8000) {
+                    sendToPort(8080);
+                }
+            });
+
+            req.write(postData);
+            req.end();
+        };
+
+        sendToPort(8000);
+    } catch (e) {
+        console.error('Error forwarding incoming call to CRM:', e.message);
+    }
+}
+
 // Forward inbound WhatsApp message to CRM PHP API for persistent file storage
 function forwardToCRM(data) {
     try {
@@ -875,6 +909,48 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                 console.log(`[QR Bridge - ${accountId}] Connected Successfully: ${accountObj.connectedNumber} (${accountObj.connectedName})`);
                 broadcastAccountsUpdate();
+            }
+        });
+
+        // Listen for Real Inbound Customer WhatsApp Calls on this Account
+        sock.ev.on('call', async (callEvents) => {
+            for (const call of callEvents) {
+                console.log(`📞 [QR Bridge - ${accountId}] Baileys Inbound WhatsApp Call:`, call);
+                if (call.status === 'offer') {
+                    const rawJid = call.from || '';
+                    const callerDigits = rawJid.replace(/[^0-9]/g, '');
+                    const callerPhone = callerDigits ? ('+' + callerDigits) : '+91 97896 60115';
+                    const callId = call.id || ('CALL-' + Math.floor(1000 + Math.random() * 9000));
+                    
+                    let customerName = 'WhatsApp Caller';
+                    let customerId = 'cust_' + (callerDigits.slice(-10) || Date.now());
+
+                    const cleanDigits = callerPhone.replace(/[^0-9]/g, '');
+                    const maskedPhone = (cleanDigits.length >= 10)
+                        ? '+91 ' + cleanDigits.slice(-10, -8) + '*** ***' + cleanDigits.slice(-2)
+                        : callerPhone;
+
+                    const callData = {
+                        call_id: callId,
+                        id: callId,
+                        customer_id: customerId,
+                        customer_name: customerName,
+                        customer_phone: callerPhone,
+                        masked_phone: maskedPhone,
+                        virtual_number: accountObj.connectedNumber || '+91 95009 04638',
+                        status: 'RINGING',
+                        is_video: Boolean(call.isVideo),
+                        started_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                        timeout_seconds: 30,
+                        eligible_staff_ids: ['all', 'admin', 'staff_01', 'staff_02', 'staff_03']
+                    };
+
+                    // Broadcast via Socket.IO
+                    io.emit('call:incoming', callData);
+
+                    // Forward to CRM PHP API
+                    forwardCallToCRM(callData);
+                }
             }
         });
 

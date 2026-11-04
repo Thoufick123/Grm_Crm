@@ -3893,15 +3893,32 @@ if ($action === 'save_masking_settings' && $_SERVER['REQUEST_METHOD'] === 'POST'
 
 if ($action === 'get_incoming_calls') {
     header('Content-Type: application/json');
+    $calls = [];
     try {
-        if (!$pdo) throw new Exception("Database connection unavailable");
-        $stmt = $pdo->query("SELECT * FROM `call_sessions` WHERE `status` = 'RINGING' ORDER BY `created_at` DESC LIMIT 10");
-        $calls = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode(["status" => "success", "incoming_calls" => $calls]);
-    } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        if ($pdo) {
+            $stmt = $pdo->query("SELECT * FROM `call_sessions` WHERE `status` = 'RINGING' ORDER BY `started_at` DESC LIMIT 10");
+            $calls = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    } catch (Exception $e) {}
+
+    // Fallback and augment with live_incoming_calls.json
+    $callsFile = __DIR__ . '/live_incoming_calls.json';
+    if (file_exists($callsFile)) {
+        $fileCalls = json_decode(file_get_contents($callsFile), true) ?: [];
+        $validFileCalls = array_values(array_filter($fileCalls, function($c) {
+            $t = isset($c['started_at']) ? strtotime($c['started_at']) : time();
+            return (time() - $t) < 45 && ($c['status'] ?? '') === 'RINGING';
+        }));
+        foreach ($validFileCalls as $fc) {
+            $found = false;
+            foreach ($calls as $c) {
+                if ($c['id'] === $fc['id']) { $found = true; break; }
+            }
+            if (!$found) $calls[] = $fc;
+        }
     }
+
+    echo json_encode(["status" => "success", "incoming_calls" => $calls]);
     exit;
 }
 
@@ -4161,9 +4178,10 @@ if ($action === 'simulate_incoming_call' && $_SERVER['REQUEST_METHOD'] === 'POST
     
     try {
         if (!$pdo) throw new Exception("Database connection unavailable");
-        $callId = 'CALL-' . rand(1000, 9999);
+        $callId = !empty($data['call_id']) ? trim($data['call_id']) : ('CALL-' . rand(1000, 9999));
         $custName = trim($data['customer_name'] ?? 'Ananya & Baby Aarav');
         $rawPhone = trim($data['customer_phone'] ?? '+91 97896 60115');
+        $customerId = $data['customer_id'] ?? null;
         
         $cleanDigits = preg_replace('/[^0-9]/', '', $rawPhone);
         $maskedPhone = (strlen($cleanDigits) >= 10) 

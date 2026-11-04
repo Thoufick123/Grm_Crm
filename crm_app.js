@@ -2371,6 +2371,39 @@ function ingestInboundMessage(payload, suppressChime = false) {
   }
 }
 
+// Background & Immediate REST incoming call polling loop
+let LAST_PROCESSED_RINGING_CALL_ID = null;
+
+function syncIncomingCallsNow() {
+  fetch('api.php?action=get_incoming_calls')
+    .then(r => r.json())
+    .then(res => {
+      if (res && res.status === 'success' && Array.isArray(res.incoming_calls) && res.incoming_calls.length > 0) {
+        const ringingCall = res.incoming_calls.find(c => c.status === 'RINGING');
+        if (ringingCall) {
+          const callId = ringingCall.call_id || ringingCall.id;
+          if (callId !== LAST_PROCESSED_RINGING_CALL_ID) {
+            const currentModalId = document.getElementById('incoming-call-id')?.value;
+            const modalEl = document.getElementById('modal-incoming-call-alert');
+            const isModalVisible = modalEl && !modalEl.classList.contains('hidden');
+
+            if (currentModalId === callId && isModalVisible) return;
+
+            LAST_PROCESSED_RINGING_CALL_ID = callId;
+            ringingCall.call_id = callId;
+            if (!ringingCall.eligible_staff_ids) {
+              ringingCall.eligible_staff_ids = ['all', 'admin', 'staff_01', 'staff_02', 'staff_03'];
+            }
+            if (typeof handleSocketIncomingCall === 'function') {
+              handleSocketIncomingCall(ringingCall);
+            }
+          }
+        }
+      }
+    })
+    .catch(() => {});
+}
+
 // Background & Immediate REST message polling loop
 function syncInboundMessagesNow(isInitial = false) {
   const since = isInitial ? 0 : LAST_POLL_EPOCH;
@@ -2397,6 +2430,7 @@ function startRealtimeMessageSync() {
   // 2. Continuous background sync every 2 seconds
   setInterval(() => {
     syncInboundMessagesNow(false);
+    syncIncomingCallsNow();
   }, 2000);
 }
 
@@ -32846,7 +32880,8 @@ async function triggerIncomingCallForActiveCustomer(customerId) {
     virtual_number: virtualNum,
     status: 'RINGING',
     started_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    timeout_seconds: 30
+    timeout_seconds: 30,
+    eligible_staff_ids: ['all', 'admin', 'staff_01', 'staff_02', 'staff_03']
   };
 
   try {
