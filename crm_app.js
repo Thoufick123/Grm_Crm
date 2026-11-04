@@ -30970,14 +30970,23 @@ let _voiceFinalTranscript = '';
 let _voiceInterimTranscript = '';
 let _voiceIsRecording = false;
 
+let _voicePreviousSessionsTranscript = '';
+
 function getSelectedSourceLang() {
   const el = document.getElementById('voice-source-lang');
-  return el ? el.value : 'ta-IN';
+  if (el && el.value) return el.value;
+  try {
+    const saved = localStorage.getItem('GRM_STAFF_VOICE_LANG');
+    if (saved) return saved;
+  } catch (e) {}
+  return 'en-IN';
 }
 
 window.onVoiceSourceLangChange = function (newLang) {
+  try {
+    localStorage.setItem('GRM_STAFF_VOICE_LANG', newLang);
+  } catch (e) {}
   if (_voiceIsRecording) {
-    // Gracefully restart recognizer with new language without interrupting audio recording
     if (_voiceSpeechRecognizer) {
       try { _voiceSpeechRecognizer.stop(); } catch (e) {}
     }
@@ -30994,23 +31003,31 @@ function startFreshSpeechRecognizer() {
     rec.maxAlternatives = 1;
     rec.lang = getSelectedSourceLang();
 
+    let sessionFinal = '';
+
     rec.onresult = (ev) => {
       let interim = '';
-      for (let i = ev.resultIndex; i < ev.results.length; ++i) {
+      sessionFinal = '';
+      for (let i = 0; i < ev.results.length; ++i) {
         if (ev.results[i].isFinal) {
-          _voiceFinalTranscript += ev.results[i][0].transcript + ' ';
+          sessionFinal += ev.results[i][0].transcript + ' ';
         } else {
           interim += ev.results[i][0].transcript;
         }
       }
       _voiceInterimTranscript = interim;
-      const combined = (_voiceFinalTranscript + ' ' + _voiceInterimTranscript).trim();
+      _voiceFinalTranscript = (_voicePreviousSessionsTranscript + ' ' + sessionFinal).trim();
+      const combined = (_voiceFinalTranscript + (interim ? ' ' + interim : '')).trim();
       _voiceClientHint = combined;
 
-      // Update real-time live transcript preview in active recording banner
       const liveTextEl = document.getElementById('voice-live-transcript-text');
       if (liveTextEl) {
         liveTextEl.textContent = combined || 'Listening... Speak clearly';
+      }
+
+      const srcEl = document.getElementById('voice-source-text');
+      if (srcEl && (!_voiceIsRecording || !srcEl.value || srcEl.value === 'Listening... Speak clearly')) {
+        srcEl.value = combined;
       }
     };
 
@@ -31019,7 +31036,8 @@ function startFreshSpeechRecognizer() {
     };
 
     rec.onend = () => {
-      // Seamless auto-restart on pauses so speech is NEVER cut off mid-sentence
+      _voicePreviousSessionsTranscript = (_voicePreviousSessionsTranscript + ' ' + sessionFinal).trim();
+      sessionFinal = '';
       if (_voiceIsRecording) {
         setTimeout(() => {
           if (_voiceIsRecording) {
@@ -31028,7 +31046,7 @@ function startFreshSpeechRecognizer() {
               try { _voiceSpeechRecognizer.start(); } catch (e) {}
             }
           }
-        }, 120);
+        }, 80);
       }
     };
     return rec;
@@ -31045,6 +31063,21 @@ window.toggleVoiceRecording = async function () {
   if (_voiceIsRecording || (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording')) {
     window.stopVoiceRecording();
     return;
+  }
+
+  const sourceLangSelect = document.getElementById('voice-source-lang');
+  if (sourceLangSelect) {
+    try {
+      const savedLang = localStorage.getItem('GRM_STAFF_VOICE_LANG');
+      if (savedLang) sourceLangSelect.value = savedLang;
+    } catch (e) {}
+  }
+
+  const targetLangSelect = document.getElementById('voice-target-lang');
+  if (targetLangSelect) {
+    if (typeof REPLY_TRANSLATE_LANG !== 'undefined' && REPLY_TRANSLATE_LANG) {
+      targetLangSelect.value = REPLY_TRANSLATE_LANG;
+    }
   }
 
   try {
@@ -31066,11 +31099,11 @@ window.toggleVoiceRecording = async function () {
   if (previewBox) previewBox.classList.add('hidden');
   if (transBox) transBox.classList.add('hidden');
 
-  // Reset transcripts
   _voiceAudioChunks = [];
   _voiceClientHint = '';
   _voiceFinalTranscript = '';
   _voiceInterimTranscript = '';
+  _voicePreviousSessionsTranscript = '';
   _voiceIsRecording = true;
 
   const liveTextEl = document.getElementById('voice-live-transcript-text');
@@ -31098,7 +31131,6 @@ window.toggleVoiceRecording = async function () {
     if (activeBox) activeBox.classList.add('hidden');
     if (previewBox) previewBox.classList.remove('hidden');
 
-    // Populate review & edit text box with fully captured transcript
     const sourceTextEl = document.getElementById('voice-source-text');
     if (sourceTextEl) {
       sourceTextEl.value = _voiceClientHint || '';
@@ -31122,7 +31154,6 @@ window.toggleVoiceRecording = async function () {
     }
   }, 500);
 
-  // Initialize and start continuous speech recognizer
   _voiceSpeechRecognizer = startFreshSpeechRecognizer();
   if (_voiceSpeechRecognizer) {
     try {
@@ -31132,21 +31163,37 @@ window.toggleVoiceRecording = async function () {
 };
 
 window.stopVoiceRecording = function () {
+  if (!_voiceIsRecording) return;
   _voiceIsRecording = false;
+
   if (_voiceRecordTimer) {
     clearInterval(_voiceRecordTimer);
     _voiceRecordTimer = null;
   }
+
+  if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
+    try { _voiceMediaRecorder.requestData(); } catch (e) {}
+    _voiceMediaRecorder.stop();
+  }
+
   if (_voiceSpeechRecognizer) {
     try { _voiceSpeechRecognizer.stop(); } catch (e) {}
   }
-  if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
-    _voiceMediaRecorder.stop();
-  }
-  if (_voiceActiveStream) {
-    _voiceActiveStream.getTracks().forEach(t => t.stop());
-    _voiceActiveStream = null;
-  }
+
+  setTimeout(() => {
+    if (_voiceActiveStream) {
+      _voiceActiveStream.getTracks().forEach(t => t.stop());
+      _voiceActiveStream = null;
+    }
+    const finalTranscript = (_voiceClientHint || _voiceFinalTranscript || _voiceInterimTranscript || '').trim();
+    if (finalTranscript) {
+      _voiceClientHint = finalTranscript;
+      const srcEl = document.getElementById('voice-source-text');
+      if (srcEl && (!srcEl.value || srcEl.value.trim() === '')) {
+        srcEl.value = finalTranscript;
+      }
+    }
+  }, 350);
 };
 
 window.cancelVoiceRecording = function () {
@@ -31154,7 +31201,6 @@ window.cancelVoiceRecording = function () {
   window.stopVoiceRecording();
   window.resetVoiceRecorder();
 };
-
 window.resetVoiceRecorder = function () {
   _voiceIsRecording = false;
   if (_voiceActiveStream) {

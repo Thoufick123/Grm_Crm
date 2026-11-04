@@ -1498,13 +1498,13 @@
                     <div class="flex items-center gap-2 shrink-0">
                       <!-- Spoken language selection -->
                       <div class="flex items-center gap-1 text-[11px] font-bold text-slate-600">
-                        <span>Speaking in:</span>
-                        <select id="voice-source-lang" onchange="onVoiceSourceLangChange(this.value)" class="bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-800 focus:outline-none">
-                          <option value="ta-IN" selected>தமிழ் (Tamil)</option>
-                          <option value="en-IN">English (India)</option>
+                        <span class="flex items-center gap-1 text-slate-700 font-extrabold"><span class="material-symbols-outlined text-[14px] text-emerald-600">record_voice_over</span>Staff Speaks:</span>
+                        <select id="voice-source-lang" onchange="onVoiceSourceLangChange(this.value)" class="bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+                          <option value="en-IN" selected>English (India)</option>
+                          <option value="ta-IN">தமிழ் (Tamil)</option>
+                          <option value="ml-IN">മലയാളം (Malayalam)</option>
                           <option value="hi-IN">हिंदी (Hindi)</option>
                           <option value="te-IN">తెలుగు (Telugu)</option>
-                          <option value="ml-IN">മലയാളം (Malayalam)</option>
                           <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
                         </select>
                       </div>
@@ -1560,14 +1560,14 @@
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span class="text-[11px] font-bold text-slate-700 shrink-0 flex items-center gap-1">
                         <span class="material-symbols-outlined text-[14px] text-indigo-600">translate</span>
-                        Translate To:
+                        Translate for Customer to:
                       </span>
-                      <select id="voice-target-lang" onchange="onVoiceTargetLangChange(this.value)" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:outline-none shadow-2xs">
-                        <option value="ta">தமிழ் (Tamil)</option>
+                      <select id="voice-target-lang" onchange="onVoiceTargetLangChange(this.value)" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:outline-none shadow-2xs cursor-pointer">
                         <option value="en" selected>English</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
                         <option value="hi">हिंदी (Hindi)</option>
                         <option value="te">తెలుగు (Telugu)</option>
-                        <option value="ml">മലയാളം (Malayalam)</option>
                         <option value="kn">ಕನ್ನಡ (Kannada)</option>
                       </select>
                     </div>

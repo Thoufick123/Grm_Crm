@@ -88,7 +88,8 @@ class TextToSpeechService {
                 curl_setopt($ch, CURLOPT_TIMEOUT, 8);
                 curl_setopt($ch, CURLOPT_TCP_NODELAY, 1);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Referer: https://translate.google.com/']);
                 $chunkAudio = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);

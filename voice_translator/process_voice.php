@@ -61,7 +61,8 @@ try {
     }
 
     // 2. Machine Translation (strictly within the 6 languages)
-    $translatedText = $transService->translateText($sourceText, $cleanTarget, 'auto');
+    $cleanSource = !empty($detectedSource) ? $detectedSource : (!empty($sourceLang) ? $sourceLang : 'auto');
+    $translatedText = $transService->translateText($sourceText, $cleanTarget, $cleanSource);
 
     // 3. TTS: Voice Audio Generation
     $ttsResult = $ttsService->generateSpeech($translatedText, $cleanTarget);

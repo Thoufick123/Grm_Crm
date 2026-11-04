@@ -50,6 +50,7 @@ if (isset($_GET['action'])) {
 // ULTRA-FAST ON-DEMAND TRANSLATION (0ms overhead, runs before DB/Sessions)
 // =========================================================================
 if (isset($_GET['action']) && $_GET['action'] === 'translate_text') {
+    require_once __DIR__ . '/services/TranslationService.php';
     $rawInput = file_get_contents('php://input');
     $input = json_decode($rawInput, true) ?? [];
     $text = trim($input['text'] ?? $_GET['text'] ?? '');
@@ -74,37 +75,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'translate_text') {
         $targetLang = 'ta';
     }
 
-    $encodedText = urlencode($text);
-    $url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl={$sourceLang}&tl={$targetLang}&dt=t&q={$encodedText}";
-
-    $translatedText = '';
-    $detectedSource = '';
-
-    if (function_exists('curl_init')) {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 4);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
-        $response = curl_exec($ch);
-        curl_close($ch);
-    } else {
-        $ctx = stream_context_create(['http' => ['timeout' => 4, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
-        $response = @file_get_contents($url, false, $ctx);
-    }
-
-    if ($response) {
-        $data = json_decode($response, true);
-        if (is_array($data) && isset($data[0]) && is_array($data[0])) {
-            foreach ($data[0] as $segment) {
-                if (isset($segment[0])) {
-                    $translatedText .= $segment[0];
-                }
-            }
-            $detectedSource = $data[2] ?? '';
-        }
-    }
+    $transService = new TranslationService();
+    $translatedText = $transService->translateText($text, $targetLang, $sourceLang);
 
     if (empty($translatedText)) {
         echo json_encode(['success' => false, 'error' => 'Translation failed']);
@@ -117,7 +89,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'translate_text') {
         'translated' => $translatedText,
         'target_lang' => $targetLang,
         'target_label' => $supportedLangs[$targetLang],
-        'detected_source' => $detectedSource
+        'detected_source' => $sourceLang
     ]);
     exit;
 }
