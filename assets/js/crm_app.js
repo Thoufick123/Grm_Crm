@@ -14567,11 +14567,33 @@ function handleCreateOrder(event) {
     }
   }
 
-  // Stock deduction
+  // Stock deduction based on admin ordered quantity
   for (const it of ORDER_MODAL_STATE.items) {
-    const product = CRM_STATE.products.find(p => p.sku === it.sku);
+    const orderedQty = parseInt(it.qty) || 1;
+    const product = (CRM_STATE.products || []).find(p => (p && (p.sku === it.sku || p.id === it.id)));
     if (product) {
-      product.reservedStock = (product.reservedStock || 0) + it.qty;
+      // 1. Decrease physical physicalStock directly based on count entered
+      const currentPhysical = parseInt(product.physicalStock !== undefined ? product.physicalStock : (product.physical_stock || 0)) || 0;
+      product.physicalStock = Math.max(0, currentPhysical - orderedQty);
+      product.physical_stock = product.physicalStock;
+
+      // 2. Clear out or balance reserved stock for this fulfilled purchase
+      if (product.reservedStock) {
+        product.reservedStock = Math.max(0, (parseInt(product.reservedStock) || 0) - orderedQty);
+        product.reserved_stock = product.reservedStock;
+      }
+
+      // 3. Persist decreased stock to MySQL Database backend live
+      fetch('api.php?action=update_stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: product.id,
+          sku: product.sku,
+          physical_stock: product.physicalStock,
+          reserved_stock: product.reservedStock || 0
+        })
+      }).catch(err => console.warn('Could not sync decreased stock to DB:', err));
     }
   }
 
@@ -14704,6 +14726,13 @@ function handleCreateOrder(event) {
 
   renderInbox();
   renderOrdersTable();
+
+  // Instant reactive UI sync across Live Stock & Sharing and Chat product modules
+  if (typeof renderCatalogGrid === 'function') renderCatalogGrid('');
+  if (typeof updateCatalogMetrics === 'function') updateCatalogMetrics();
+  if (typeof renderModalProductList === 'function') renderModalProductList();
+  if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+  if (typeof updateOrdersPipelineUI === 'function') updateOrdersPipelineUI();
 }
 
 // =========================================================================
