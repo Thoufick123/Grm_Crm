@@ -9183,15 +9183,15 @@ function renderCustomer360Panel() {
         </div>
       </div>
 
-      <!-- Metrics Cards (Total Orders & Lifetime Spend - Shown Last) -->
+      <!-- Metrics Cards (Total Orders & Lifetime Spend - Net Sellable Style) -->
       <div class="grid grid-cols-2 gap-2.5">
-        <div class="bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200/80 text-center shadow-2xs">
+        <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-2.5 rounded-xl border border-emerald-200 text-center shadow-2xs">
           <span class="text-[10px] uppercase font-bold text-emerald-800">Total Orders</span>
-          <p class="text-base font-extrabold text-emerald-950 mt-0.5">${customer.totalOrders || 0} Orders</p>
+          <p class="text-base font-extrabold text-emerald-800 mt-0.5">${customer.totalOrders || 0} Orders</p>
         </div>
-        <div class="bg-blue-50/80 p-2.5 rounded-xl border border-blue-200/80 text-center shadow-2xs">
-          <span class="text-[10px] uppercase font-bold text-blue-800">Lifetime Spend</span>
-          <p class="text-base font-extrabold text-blue-950 font-mono mt-0.5">₹${(customer.totalSpend || 0).toLocaleString('en-IN')}</p>
+        <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-2.5 rounded-xl border border-emerald-200 text-center shadow-2xs">
+          <span class="text-[10px] uppercase font-bold text-emerald-800">Lifetime Spend</span>
+          <p class="text-base font-extrabold text-emerald-800 font-mono mt-0.5">₹${(customer.totalSpend || 0).toLocaleString('en-IN')}</p>
         </div>
       </div>
 
@@ -25614,9 +25614,9 @@ function renderAnalyticsView() {
             <span class="text-[10px] text-slate-400 font-bold uppercase">Leads Converted</span>
             <p class="text-xl font-bold text-emerald-800 mt-0.5">${s.converted}</p>
           </div>
-          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <span class="text-[10px] text-slate-400 font-bold uppercase">Sales Revenue</span>
-            <p class="text-xl font-bold text-slate-900 font-mono mt-0.5">₹${revenue.toLocaleString('en-IN')}</p>
+          <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-3 rounded-xl border border-emerald-200">
+            <span class="text-[10px] text-emerald-800 font-bold uppercase">Sales Revenue</span>
+            <p class="text-xl font-bold text-emerald-800 font-mono mt-0.5">₹${revenue.toLocaleString('en-IN')}</p>
           </div>
         </div>
       </div>
