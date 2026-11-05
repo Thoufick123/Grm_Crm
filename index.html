@@ -1066,6 +1066,17 @@
           </div>
           <span id="badge-orders-count" class="bg-lime-500/20 text-lime-300 border border-lime-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
         </button>
+
+        <!-- 3. Packing Slip & Labels (Placed below WhatsApp Orders) -->
+        <button type="button" onclick="switchView('packing-slip-config')" id="nav-packing-slip-config"
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav"
+          title="Customize Packing Slip & Shipping Label Template">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">local_shipping</span>
+            <span class="font-bold">Packing Slip</span>
+          </div>
+          <span class="material-symbols-outlined text-[14px] text-teal-400">tune</span>
+        </button>
         <!-- Backward-compatibility elements for legacy queries -->
         <span id="nav-sub-orders-dashboard" class="hidden"></span>
         <span id="nav-sub-orders-history" class="hidden"></span>
@@ -1115,17 +1126,6 @@
           <span class="font-bold" data-i18n="nav.backup">Data Backup & Restore</span>
         </div>
         <span class="material-symbols-outlined text-[14px] text-cyan-400">download</span>
-      </button>
-
-      <!-- PACKING SLIP CONFIG MODULE -->
-      <button onclick="switchView('packing-slip-config')" id="nav-packing-slip-config"
-        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav"
-        title="Customize Packing Slip & Shipping Label Template">
-        <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">local_shipping</span>
-          <span class="font-bold">Packing Slip Config</span>
-        </div>
-        <span class="material-symbols-outlined text-[14px] text-teal-400">tune</span>
       </button>
 
       <!-- CALL & NUMBER MASKING MODULE -->
