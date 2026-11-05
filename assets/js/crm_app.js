@@ -3750,7 +3750,7 @@ function updatePageHeaderTitle() {
     },
     catalog: {
       title: t('header.title.catalog', 'Garment Product Catalog & Live Stock'),
-      sub: t('header.sub.catalog', 'Live available stock calculator and 1-click WhatsApp card sharing')
+      sub: ''
     },
     orders: {
       title: (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' && ACTIVE_ORDERS_SUBMODULE === 'history')
