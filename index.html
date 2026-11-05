@@ -3081,90 +3081,100 @@
 
               <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 <!-- 1. Placed -->
-                <div onclick="filterOrderHistoryByStatus('PLACED')" class="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 hover:border-blue-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                <div onclick="filterOrderHistoryByStatus('PLACED')" class="bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-4 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
-                    <span class="text-xs font-black text-blue-900 flex items-center gap-1.5">
+                    <span class="text-xs font-black text-blue-900 flex items-center gap-1.5 uppercase tracking-wider">
                       <span class="w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-blue-300/50"></span>
                       1. Placed
                     </span>
-                    <span class="material-symbols-outlined text-blue-500 group-hover:scale-110 transition-transform text-[22px]">receipt_long</span>
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center border border-blue-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                      <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+                    </div>
                   </div>
                   <div class="my-2">
-                    <p id="pipe-ord-placed-count" class="text-3xl font-black text-blue-700 font-mono tracking-tight">0</p>
+                    <p id="pipe-ord-placed-count" class="text-2xl sm:text-3xl font-black text-blue-700 font-mono tracking-tight">0</p>
                   </div>
-                  <div class="flex items-center justify-between pt-2 border-t border-blue-200/60 text-[10px]">
+                  <div class="flex items-center justify-between pt-1.5 border-t border-blue-100/80 text-[10px]">
                     <span class="text-blue-700 font-semibold">Booked &amp; Reserved</span>
                     <span class="text-blue-600 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
                   </div>
                 </div>
 
                 <!-- 2. Packed -->
-                <div onclick="filterOrderHistoryByStatus('PACKED')" class="p-3.5 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100/60 hover:border-purple-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                <div onclick="filterOrderHistoryByStatus('PACKED')" class="bg-gradient-to-br from-purple-50/70 via-white to-purple-50/30 p-4 rounded-2xl border border-purple-200 hover:border-purple-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
-                    <span class="text-xs font-black text-purple-900 flex items-center gap-1.5">
+                    <span class="text-xs font-black text-purple-900 flex items-center gap-1.5 uppercase tracking-wider">
                       <span class="w-2.5 h-2.5 rounded-full bg-purple-600 ring-2 ring-purple-300/50"></span>
                       2. Packed
                     </span>
-                    <span class="material-symbols-outlined text-purple-500 group-hover:scale-110 transition-transform text-[22px]">inventory_2</span>
+                    <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center border border-purple-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                      <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+                    </div>
                   </div>
                   <div class="my-2">
-                    <p id="pipe-ord-packed-count" class="text-3xl font-black text-purple-700 font-mono tracking-tight">0</p>
+                    <p id="pipe-ord-packed-count" class="text-2xl sm:text-3xl font-black text-purple-700 font-mono tracking-tight">0</p>
                   </div>
-                  <div class="flex items-center justify-between pt-2 border-t border-purple-200/60 text-[10px]">
+                  <div class="flex items-center justify-between pt-1.5 border-t border-purple-100/80 text-[10px]">
                     <span class="text-purple-700 font-semibold">Ready for Dispatch</span>
                     <span class="text-purple-600 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
                   </div>
                 </div>
 
                 <!-- 3. Shipped -->
-                <div onclick="filterOrderHistoryByStatus('SHIPPED')" class="p-3.5 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/60 hover:border-amber-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                <div onclick="filterOrderHistoryByStatus('SHIPPED')" class="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-4 rounded-2xl border border-amber-200 hover:border-amber-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
-                    <span class="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                    <span class="text-xs font-black text-amber-900 flex items-center gap-1.5 uppercase tracking-wider">
                       <span class="w-2.5 h-2.5 rounded-full bg-amber-600 ring-2 ring-amber-300/50"></span>
                       3. Shipped
                     </span>
-                    <span class="material-symbols-outlined text-amber-500 group-hover:scale-110 transition-transform text-[22px]">local_shipping</span>
+                    <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                      <span class="material-symbols-outlined text-[20px]">local_shipping</span>
+                    </div>
                   </div>
                   <div class="my-2">
-                    <p id="pipe-ord-shipped-count" class="text-3xl font-black text-amber-700 font-mono tracking-tight">0</p>
+                    <p id="pipe-ord-shipped-count" class="text-2xl sm:text-3xl font-black text-amber-700 font-mono tracking-tight">0</p>
                   </div>
-                  <div class="flex items-center justify-between pt-2 border-t border-amber-200/60 text-[10px]">
+                  <div class="flex items-center justify-between pt-1.5 border-t border-amber-100/80 text-[10px]">
                     <span class="text-amber-800 font-semibold">In Transit / Courier</span>
                     <span class="text-amber-700 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
                   </div>
                 </div>
 
                 <!-- 4. Out for Delivery -->
-                <div onclick="filterOrderHistoryByStatus('OUT_FOR_DELIVERY')" class="p-3.5 rounded-xl border border-orange-200 bg-orange-50/50 hover:bg-orange-100/60 hover:border-orange-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                <div onclick="filterOrderHistoryByStatus('OUT_FOR_DELIVERY')" class="bg-gradient-to-br from-orange-50/70 via-white to-orange-50/30 p-4 rounded-2xl border border-orange-200 hover:border-orange-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
-                    <span class="text-xs font-black text-orange-900 flex items-center gap-1.5">
+                    <span class="text-xs font-black text-orange-900 flex items-center gap-1.5 uppercase tracking-wider">
                       <span class="w-2.5 h-2.5 rounded-full bg-orange-600 ring-2 ring-orange-300/50"></span>
                       4. Out for Delivery
                     </span>
-                    <span class="material-symbols-outlined text-orange-500 group-hover:scale-110 transition-transform text-[22px]">two_wheeler</span>
+                    <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center border border-orange-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                      <span class="material-symbols-outlined text-[20px]">two_wheeler</span>
+                    </div>
                   </div>
                   <div class="my-2">
-                    <p id="pipe-ord-out-for-delivery-count" class="text-3xl font-black text-orange-700 font-mono tracking-tight">0</p>
+                    <p id="pipe-ord-out-for-delivery-count" class="text-2xl sm:text-3xl font-black text-orange-700 font-mono tracking-tight">0</p>
                   </div>
-                  <div class="flex items-center justify-between pt-2 border-t border-orange-200/60 text-[10px]">
+                  <div class="flex items-center justify-between pt-1.5 border-t border-orange-100/80 text-[10px]">
                     <span class="text-orange-800 font-semibold">With Courier Rider</span>
                     <span class="text-orange-700 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
                   </div>
                 </div>
 
                 <!-- 5. Delivered -->
-                <div onclick="filterOrderHistoryByStatus('DELIVERED')" class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 hover:border-emerald-300 transition-all cursor-pointer group flex flex-col justify-between relative shadow-2xs hover:shadow-xs">
+                <div onclick="filterOrderHistoryByStatus('DELIVERED')" class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
-                    <span class="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                    <span class="text-xs font-black text-emerald-900 flex items-center gap-1.5 uppercase tracking-wider">
                       <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 ring-2 ring-emerald-300/50"></span>
                       5. Delivered
                     </span>
-                    <span class="material-symbols-outlined text-emerald-500 group-hover:scale-110 transition-transform text-[22px]">verified</span>
+                    <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                      <span class="material-symbols-outlined text-[20px]">verified</span>
+                    </div>
                   </div>
                   <div class="my-2">
-                    <p id="pipe-ord-delivered-count" class="text-3xl font-black text-emerald-700 font-mono tracking-tight">0</p>
+                    <p id="pipe-ord-delivered-count" class="text-2xl sm:text-3xl font-black text-emerald-700 font-mono tracking-tight">0</p>
                   </div>
-                  <div class="flex items-center justify-between pt-2 border-t border-emerald-200/60 text-[10px]">
+                  <div class="flex items-center justify-between pt-1.5 border-t border-emerald-100/80 text-[10px]">
                     <span class="text-emerald-800 font-semibold">Handed to Customer</span>
                     <span class="text-emerald-700 font-bold group-hover:translate-x-0.5 transition-transform flex items-center">View &rarr;</span>
                   </div>
@@ -3303,87 +3313,107 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
               <!-- Total (Orange) -->
               <div onclick="setFollowupTabFilter('ALL')" id="kpi-card-all"
-                class="bg-gradient-to-br from-orange-50 to-orange-100/50 p-3.5 rounded-2xl border-2 border-orange-300 hover:border-orange-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-orange-950 uppercase tracking-wider flex items-center justify-between">
-                  <span>Total</span>
-                  <span class="material-symbols-outlined text-[16px] text-orange-600">stacked_bar_chart</span>
-                </span>
-                <p id="kpi-fu-total" class="text-2xl font-black text-orange-500 mt-2 font-mono">0</p>
-                <span class="text-[10px] text-orange-600 font-medium mt-0.5">All customer records</span>
+                class="bg-gradient-to-br from-orange-50/70 via-white to-orange-50/30 p-4 rounded-2xl border border-orange-200 hover:border-orange-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-orange-800 uppercase tracking-wider">Total</span>
+                  <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center border border-orange-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">stacked_bar_chart</span>
+                  </div>
+                </div>
+                <p id="kpi-fu-total" class="text-2xl font-black text-orange-600 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-orange-100/80">
+                  <span class="text-[10px] text-orange-700 font-semibold">All customer records</span>
+                </div>
               </div>
 
               <!-- Today (Blue) -->
               <div onclick="setFollowupTabFilter('TODAY')" id="kpi-card-today"
-                class="bg-gradient-to-br from-blue-50 to-blue-100/50 p-3.5 rounded-2xl border-2 border-blue-200 hover:border-blue-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-blue-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Today's Due</span>
-                  <span class="material-symbols-outlined text-[16px] text-blue-600">today</span>
-                </span>
-                <p id="kpi-fu-today" class="text-2xl font-black text-blue-950 mt-2 font-mono">0</p>
-                <span class="text-[10px] text-blue-600 font-medium mt-0.5">Scheduled for today</span>
+                class="bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-4 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Today's Due</span>
+                  <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center border border-blue-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">today</span>
+                  </div>
+                </div>
+                <p id="kpi-fu-today" class="text-2xl font-black text-blue-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-blue-100/80">
+                  <span class="text-[10px] text-blue-700 font-semibold">Scheduled for today</span>
+                </div>
               </div>
 
               <!-- Upcoming (Purple) -->
               <div onclick="setFollowupTabFilter('UPCOMING')" id="kpi-card-upcoming"
-                class="bg-gradient-to-br from-purple-50 to-purple-100/50 p-3.5 rounded-2xl border-2 border-purple-200 hover:border-purple-400 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-purple-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Upcoming</span>
-                  <span class="material-symbols-outlined text-[16px] text-purple-600">upcoming</span>
-                </span>
-                <p id="kpi-fu-upcoming" class="text-2xl font-black text-purple-950 mt-2 font-mono">0</p>
-                <span class="text-[10px] text-purple-600 font-medium mt-0.5">Future dates</span>
+                class="bg-gradient-to-br from-purple-50/70 via-white to-purple-50/30 p-4 rounded-2xl border border-purple-200 hover:border-purple-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-purple-800 uppercase tracking-wider">Upcoming</span>
+                  <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center border border-purple-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">upcoming</span>
+                  </div>
+                </div>
+                <p id="kpi-fu-upcoming" class="text-2xl font-black text-purple-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-purple-100/80">
+                  <span class="text-[10px] text-purple-700 font-semibold">Future dates</span>
+                </div>
               </div>
 
               <!-- Overdue (Rose/Red) -->
               <div onclick="setFollowupTabFilter('OVERDUE')" id="kpi-card-overdue"
-                class="bg-gradient-to-br from-rose-50 to-rose-100/50 p-3.5 rounded-2xl border-2 border-rose-300 hover:border-rose-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-rose-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Overdue</span>
-                  <span class="material-symbols-outlined text-[16px] text-rose-600 animate-pulse">warning</span>
-                </span>
-                <p id="kpi-fu-overdue" class="text-2xl font-black text-rose-950 mt-2 font-mono">0</p>
-                <span class="text-[10px] text-rose-700 font-bold mt-0.5">Immediate action</span>
+                class="bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-4 rounded-2xl border border-rose-200 hover:border-rose-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-rose-800 uppercase tracking-wider">Overdue</span>
+                  <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center border border-rose-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px] animate-pulse">warning</span>
+                  </div>
+                </div>
+                <p id="kpi-fu-overdue" class="text-2xl font-black text-rose-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-rose-100/80">
+                  <span class="text-[10px] text-rose-700 font-bold">Immediate action</span>
+                </div>
               </div>
 
               <!-- Payment Pending (Amber) -->
               <div onclick="setFollowupTabFilter('PAYMENT_PENDING')" id="kpi-card-payment-pending"
-                class="bg-gradient-to-br from-amber-50 to-amber-100/50 p-3.5 rounded-2xl border-2 border-amber-300 hover:border-amber-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-amber-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Payment Pending</span>
-                  <span class="material-symbols-outlined text-[16px] text-amber-600">payments</span>
-                </span>
-                <p id="kpi-fu-payment-pending" class="text-2xl font-black text-amber-950 mt-2 font-mono">0</p>
-                <span id="kpi-fu-payment-amount"
-                  class="text-[10px] text-amber-800 font-bold mt-0.5 font-mono truncate">₹0.00 Total</span>
+                class="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-4 rounded-2xl border border-amber-200 hover:border-amber-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Payment Pending</span>
+                  <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">payments</span>
+                  </div>
+                </div>
+                <p id="kpi-fu-payment-pending" class="text-2xl font-black text-amber-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-amber-100/80">
+                  <span id="kpi-fu-payment-amount" class="text-[10px] text-amber-800 font-bold font-mono truncate">₹0.00 Total</span>
+                </div>
               </div>
 
               <!-- Converted (Emerald) -->
               <div onclick="setFollowupTabFilter('COMPLETED')" id="kpi-card-converted"
-                class="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-3.5 rounded-2xl border-2 border-emerald-300 hover:border-emerald-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-emerald-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Converted</span>
-                  <span class="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
-                </span>
-                <p id="kpi-fu-converted" class="text-2xl font-black text-emerald-950 mt-2 font-mono">0</p>
-                <span class="text-[10px] text-emerald-700 font-medium mt-0.5">Orders booked</span>
+                class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Converted</span>
+                  <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">verified</span>
+                  </div>
+                </div>
+                <p id="kpi-fu-converted" class="text-2xl font-black text-emerald-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-emerald-100/80">
+                  <span class="text-[10px] text-emerald-700 font-semibold">Orders booked</span>
+                </div>
               </div>
 
               <!-- Lost (Slate) -->
               <div onclick="setFollowupTabFilter('LOST')" id="kpi-card-lost"
-                class="bg-gradient-to-br from-slate-100 to-slate-200/50 p-3.5 rounded-2xl border-2 border-slate-300 hover:border-slate-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Lost</span>
-                  <span class="material-symbols-outlined text-[16px] text-slate-500">cancel</span>
-                </span>
-                <p id="kpi-fu-lost" class="text-2xl font-black text-slate-900 mt-2 font-mono">0</p>
-                <span class="text-[10px] text-slate-600 font-medium mt-0.5">Cancelled / Closed</span>
+                class="bg-gradient-to-br from-slate-50/70 via-white to-slate-50/30 p-4 rounded-2xl border border-slate-200 hover:border-slate-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Lost</span>
+                  <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">cancel</span>
+                  </div>
+                </div>
+                <p id="kpi-fu-lost" class="text-2xl font-black text-slate-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-slate-100/80">
+                  <span class="text-[10px] text-slate-600 font-semibold">Cancelled / Closed</span>
+                </div>
               </div>
             </div>
 
@@ -3511,80 +3541,92 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <!-- Total Payment Records (Amber / Gold) -->
               <div onclick="setPaymentPendingTabFilter('ALL')" id="kpi-paycard-all"
-                class="bg-gradient-to-br from-amber-50 to-amber-100/50 p-3.5 rounded-2xl border-2 border-amber-300 hover:border-amber-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-amber-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Total Records</span>
-                  <span class="material-symbols-outlined text-[16px] text-amber-600">payments</span>
-                </span>
-                <p id="kpi-pay-total-count" class="text-2xl font-black text-amber-950 mt-2 font-mono">0</p>
-                <span id="kpi-pay-total-amount"
-                  class="text-[10px] text-amber-800 font-bold mt-0.5 font-mono truncate">₹0.00 Total</span>
+                class="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-4 rounded-2xl border border-amber-200 hover:border-amber-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Total Records</span>
+                  <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">payments</span>
+                  </div>
+                </div>
+                <p id="kpi-pay-total-count" class="text-2xl font-black text-amber-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-amber-100/80">
+                  <span id="kpi-pay-total-amount" class="text-[10px] text-amber-800 font-bold font-mono truncate">₹0.00 Total</span>
+                </div>
               </div>
 
               <!-- Today's Due (Sky / Cyan Blue - Distinct from Amber!) -->
               <div onclick="setPaymentPendingTabFilter('TODAY')" id="kpi-paycard-today"
-                class="bg-gradient-to-br from-sky-50 to-sky-100/50 p-3.5 rounded-2xl border-2 border-sky-300 hover:border-sky-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-sky-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Today's Due</span>
-                  <span class="material-symbols-outlined text-[16px] text-sky-600">today</span>
-                </span>
-                <p id="kpi-pay-today-count" class="text-2xl font-black text-sky-950 mt-2 font-mono">0</p>
-                <span id="kpi-pay-today-amount"
-                  class="text-[10px] text-sky-700 font-bold mt-0.5 font-mono truncate">₹0.00 Due</span>
+                class="bg-gradient-to-br from-sky-50/70 via-white to-sky-50/30 p-4 rounded-2xl border border-sky-200 hover:border-sky-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-sky-800 uppercase tracking-wider">Today's Due</span>
+                  <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center border border-sky-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">today</span>
+                  </div>
+                </div>
+                <p id="kpi-pay-today-count" class="text-2xl font-black text-sky-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-sky-100/80">
+                  <span id="kpi-pay-today-amount" class="text-[10px] text-sky-700 font-bold font-mono truncate">₹0.00 Due</span>
+                </div>
               </div>
 
               <!-- Upcoming (Purple / Violet) -->
               <div onclick="setPaymentPendingTabFilter('UPCOMING')" id="kpi-paycard-upcoming"
-                class="bg-gradient-to-br from-purple-50 to-purple-100/50 p-3.5 rounded-2xl border-2 border-purple-300 hover:border-purple-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-purple-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Upcoming</span>
-                  <span class="material-symbols-outlined text-[16px] text-purple-600">upcoming</span>
-                </span>
-                <p id="kpi-pay-upcoming-count" class="text-2xl font-black text-purple-950 mt-2 font-mono">0</p>
-                <span id="kpi-pay-upcoming-amount"
-                  class="text-[10px] text-purple-700 font-bold mt-0.5 font-mono truncate">₹0.00 Promised</span>
+                class="bg-gradient-to-br from-purple-50/70 via-white to-purple-50/30 p-4 rounded-2xl border border-purple-200 hover:border-purple-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-purple-800 uppercase tracking-wider">Upcoming</span>
+                  <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center border border-purple-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">upcoming</span>
+                  </div>
+                </div>
+                <p id="kpi-pay-upcoming-count" class="text-2xl font-black text-purple-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-purple-100/80">
+                  <span id="kpi-pay-upcoming-amount" class="text-[10px] text-purple-700 font-bold font-mono truncate">₹0.00 Promised</span>
+                </div>
               </div>
 
               <!-- Overdue (Rose / Crimson) -->
               <div onclick="setPaymentPendingTabFilter('OVERDUE')" id="kpi-paycard-overdue"
-                class="bg-gradient-to-br from-rose-50 to-rose-100/50 p-3.5 rounded-2xl border-2 border-rose-300 hover:border-rose-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-rose-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Overdue</span>
-                  <span class="material-symbols-outlined text-[16px] text-rose-600 animate-pulse">warning</span>
-                </span>
-                <p id="kpi-pay-overdue-count" class="text-2xl font-black text-rose-950 mt-2 font-mono">0</p>
-                <span id="kpi-pay-overdue-amount"
-                  class="text-[10px] text-rose-700 font-bold mt-0.5 font-mono truncate">₹0.00 Overdue</span>
+                class="bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-4 rounded-2xl border border-rose-200 hover:border-rose-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-rose-800 uppercase tracking-wider">Overdue</span>
+                  <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center border border-rose-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px] animate-pulse">warning</span>
+                  </div>
+                </div>
+                <p id="kpi-pay-overdue-count" class="text-2xl font-black text-rose-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-rose-100/80">
+                  <span id="kpi-pay-overdue-amount" class="text-[10px] text-rose-700 font-bold font-mono truncate">₹0.00 Overdue</span>
+                </div>
               </div>
 
               <!-- Paid & Converted (Emerald / Mint Green) -->
               <div onclick="setPaymentPendingTabFilter('COMPLETED')" id="kpi-paycard-converted"
-                class="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-3.5 rounded-2xl border-2 border-emerald-300 hover:border-emerald-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-emerald-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Paid &amp; Converted</span>
-                  <span class="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
-                </span>
-                <p id="kpi-pay-converted-count" class="text-2xl font-black text-emerald-950 mt-2 font-mono">0</p>
-                <span id="kpi-pay-converted-amount"
-                  class="text-[10px] text-emerald-700 font-bold mt-0.5 font-mono truncate">₹0.00 Collected</span>
+                class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Paid &amp; Converted</span>
+                  <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">verified</span>
+                  </div>
+                </div>
+                <p id="kpi-pay-converted-count" class="text-2xl font-black text-emerald-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-emerald-100/80">
+                  <span id="kpi-pay-converted-amount" class="text-[10px] text-emerald-700 font-bold font-mono truncate">₹0.00 Collected</span>
+                </div>
               </div>
 
               <!-- Cancelled / Lost (Slate / Charcoal) -->
               <div onclick="setPaymentPendingTabFilter('LOST')" id="kpi-paycard-lost"
-                class="bg-gradient-to-br from-slate-100 to-slate-200/50 p-3.5 rounded-2xl border-2 border-slate-300 hover:border-slate-500 shadow-sm cursor-pointer transition flex flex-col justify-between">
-                <span
-                  class="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Cancelled</span>
-                  <span class="material-symbols-outlined text-[16px] text-slate-500">cancel</span>
-                </span>
-                <p id="kpi-pay-lost-count" class="text-2xl font-black text-slate-900 mt-2 font-mono">0</p>
-                <span id="kpi-pay-lost-amount"
-                  class="text-[10px] text-slate-600 font-medium mt-0.5 font-mono truncate">₹0.00 Cancelled</span>
+                class="bg-gradient-to-br from-slate-50/70 via-white to-slate-50/30 p-4 rounded-2xl border border-slate-200 hover:border-slate-400 hover:shadow-md shadow-sm cursor-pointer transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Cancelled</span>
+                  <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">cancel</span>
+                  </div>
+                </div>
+                <p id="kpi-pay-lost-count" class="text-2xl font-black text-slate-700 mt-2 font-mono tracking-tight">0</p>
+                <div class="mt-1.5 pt-1.5 border-t border-slate-100/80">
+                  <span id="kpi-pay-lost-amount" class="text-[10px] text-slate-600 font-medium font-mono truncate">₹0.00 Cancelled</span>
+                </div>
               </div>
             </div>
 
