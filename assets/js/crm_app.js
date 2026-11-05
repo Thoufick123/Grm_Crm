@@ -3787,11 +3787,11 @@ function updatePageHeaderTitle() {
     },
     customers: {
       title: t('header.title.customers', 'Customer 360 & Tag Directory'),
-      sub: t('header.sub.customers', 'Profiles, purchase history, and communication preferences')
+      sub: ''
     },
     dnd: {
       title: t('header.title.dnd', 'DND & Opt-Out Customer Hub'),
-      sub: t('header.sub.dnd', 'Customers who requested not to receive garment product offers or messages')
+      sub: ''
     },
     staff: {
       title: t('header.title.staff', 'Staff & Team Management Hub'),
