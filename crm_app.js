@@ -25068,45 +25068,110 @@ function confirmShippingDispatch() {
 }
 window.confirmShippingDispatch = confirmShippingDispatch;
 
+// Robust CSV download helper using Blob and UTF-8 BOM
+function downloadOrdersCSVBlob(filename, csvContent) {
+  try {
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => {
+      try { URL.revokeObjectURL(url); } catch (e) {}
+    }, 1500);
+    return true;
+  } catch (err) {
+    console.error('Blob download failed, using fallback:', err);
+    try {
+      const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", filename);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return true;
+    } catch (e2) {
+      console.error('Download fallback failed:', e2);
+      return false;
+    }
+  }
+}
+
+// 1. WhatsApp Sales & Orders Dashboard Full Report
 function downloadOrdersDashboardReport() {
+  // If user is currently viewing the Orders History submodule, intelligently route to Orders History CSV
+  const isHistoryView = (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' && ACTIVE_ORDERS_SUBMODULE === 'history') ||
+    (window.location.hash && window.location.hash.includes('history')) ||
+    (document.getElementById('subview-orders-history') && !document.getElementById('subview-orders-history').classList.contains('hidden'));
+  if (isHistoryView) {
+    return downloadOrdersHistoryCSV();
+  }
+
   const orders = CRM_STATE?.orders || [];
   let overallRevenue = 0;
-  orders.forEach(o => { overallRevenue += (parseFloat(o.grandTotal || o.grand_total) || 0); });
+  let paidOnlineTotal = 0;
+  let codDueTotal = 0;
+
+  orders.forEach(o => {
+    const total = parseFloat(o.grandTotal || o.grand_total) || 0;
+    overallRevenue += total;
+    const isCod = o.paymentMethod === 'COD' || o.payment_method === 'COD';
+    if (isCod) {
+      const codAdv = parseFloat(o.codAdvance || o.cod_advance) || 200;
+      const codDue = o.codBalanceDue !== undefined ? parseFloat(o.codBalanceDue) : Math.max(0, total - codAdv);
+      paidOnlineTotal += codAdv;
+      codDueTotal += codDue;
+    } else {
+      paidOnlineTotal += total;
+    }
+  });
 
   const countPlaced = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
   const countPacked = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
   const countShipped = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+  const countOutOfDelivery = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'OUT_FOR_DELIVERY').length;
   const countDelivered = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
 
-  let csvContent = "data:text/csv;charset=utf-8,";
+  let csvContent = "";
   csvContent += "GRM GARMENTS - WHATSAPP SALES & ORDER DASHBOARD REPORT\r\n";
-  csvContent += `Generated On: ${new Date().toLocaleString()}\r\n\r\n`;
+  csvContent += "Generated On:,\"" + new Date().toLocaleString() + "\"\r\n\r\n";
 
   csvContent += "EXECUTIVE REVENUE SUMMARY\r\n";
-  csvContent += `Total Orders Booked,${orders.length}\r\n`;
-  csvContent += `Overall Gross Revenue (INR),Rs ${overallRevenue.toFixed(2)}\r\n`;
-  csvContent += `Average Order Value (AOV),Rs ${orders.length > 0 ? (overallRevenue / orders.length).toFixed(2) : 0}\r\n\r\n`;
+  csvContent += "Total Orders Booked," + orders.length + "\r\n";
+  csvContent += "Overall Gross Revenue (INR),Rs " + overallRevenue.toFixed(2) + "\r\n";
+  csvContent += "Paid Online Collected (INR),Rs " + paidOnlineTotal.toFixed(2) + "\r\n";
+  csvContent += "COD Balance Due (INR),Rs " + codDueTotal.toFixed(2) + "\r\n";
+  csvContent += "Average Order Value (AOV),Rs " + (orders.length > 0 ? (overallRevenue / orders.length).toFixed(2) : '0.00') + "\r\n\r\n";
 
-  csvContent += "ORDER FULFILLMENT PIPELINE\r\n";
-  csvContent += `1. Placed Orders,${countPlaced}\r\n`;
-  csvContent += `2. Packed Orders,${countPacked}\r\n`;
-  csvContent += `3. Shipped Orders,${countShipped}\r\n`;
-  csvContent += `4. Out for Delivery Orders,${countOutOfDelivery}\r\n`;
-  csvContent += `5. Delivered Orders,${countDelivered}\r\n\r\n`;
+  csvContent += "ORDER FULFILLMENT PIPELINE STATUS\r\n";
+  csvContent += "1. Placed (Booked & Reserved)," + countPlaced + "\r\n";
+  csvContent += "2. Packed (Ready for Dispatch)," + countPacked + "\r\n";
+  csvContent += "3. Shipped (In Transit / Courier)," + countShipped + "\r\n";
+  csvContent += "4. Out for Delivery (With Rider)," + countOutOfDelivery + "\r\n";
+  csvContent += "5. Delivered (Handed to Customer)," + countDelivered + "\r\n\r\n";
 
   csvContent += "STAFF NAME WISE TOTAL ORDER COUNT & PERFORMANCE\r\n";
-  csvContent += "Staff Name,Role,Total Orders Taken,Total Revenue (INR),Placed,Packed,Shipped,Out for Delivery,Delivered,Share (%)\r\n";
+  csvContent += "Staff Member,Role / Department,Orders Booked,Total Revenue (INR),Placed,Packed,Shipped,Out for Delivery,Delivered,Share of Orders (%)\r\n";
 
   const staffMembers = [...(CRM_STATE?.staffList || [])];
   if (!staffMembers.some(s => s.id === 'admin' || s.name === 'Super Admin')) {
-    staffMembers.push({ id: 'admin', name: 'Super Admin', role: 'Admin Manager' });
+    staffMembers.push({ id: 'admin', name: 'Super Admin', role: 'Admin Manager (Full System)' });
   }
 
   staffMembers.forEach(staff => {
     const sOrders = orders.filter(o => {
       const matchId = o.staffId && (o.staffId === staff.id || o.staff_id === staff.id);
       const matchName = (o.staffName && o.staffName.toLowerCase().includes(staff.name.toLowerCase())) ||
-        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase()));
+        (o.staff_name && o.staff_name.toLowerCase().includes(staff.name.toLowerCase())) ||
+        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase())) ||
+        (o.created_by && o.created_by.toLowerCase().includes(staff.name.toLowerCase()));
       return matchId || matchName;
     });
     const count = sOrders.length;
@@ -25118,40 +25183,134 @@ function downloadOrdersDashboardReport() {
     const del = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
     const share = orders.length > 0 ? Math.round((count / orders.length) * 100) : 0;
 
-    csvContent += `"${staff.name}","${staff.role || 'Sales Specialist'}",${count},${rev.toFixed(2)},${p},${pk},${sh},${od},${del},${share}%\r\n`;
+    csvContent += "\"" + (staff.name || '').replace(/"/g, '""') + "\",\"" + (staff.role || 'Sales Specialist').replace(/"/g, '""') + "\"," + count + "," + rev.toFixed(2) + "," + p + "," + pk + "," + sh + "," + od + "," + del + "," + share + "%\r\n";
   });
 
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `GRM_Order_Dashboard_Report_${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  showToast('Report Downloaded', 'Executive order dashboard report saved.', 'download', 'emerald');
+  const filename = "GRM_WhatsApp_Sales_Dashboard_Report_" + new Date().toISOString().split('T')[0] + ".csv";
+  downloadOrdersCSVBlob(filename, csvContent);
+  if (typeof showToast === 'function') {
+    showToast('Report Downloaded', 'Executive order dashboard report saved.', 'download', 'emerald');
+  }
 }
 window.downloadOrdersDashboardReport = downloadOrdersDashboardReport;
-window.downloadStaffOrdersReport = downloadOrdersDashboardReport;
 
-function downloadOrdersHistoryCSV() {
+// 2. Staff Sales Performance & Order Volume Dedicated Breakdown Export
+function downloadStaffOrdersReport() {
   const orders = CRM_STATE?.orders || [];
-  let csvContent = "data:text/csv;charset=utf-8,";
-  csvContent += "Order ID,Booking Date,Customer Name,Phone,Shipping Address,Handling Staff,Ordered Items,Total Amount (INR),Payment Method,Payment Status,Transaction UTR,Order Status\r\n";
+  const staffMembers = [...(CRM_STATE?.staffList || [])];
+  if (!staffMembers.some(s => s.id === 'admin' || s.name === 'Super Admin')) {
+    staffMembers.push({ id: 'admin', name: 'Super Admin', role: 'Admin Manager (Full System)' });
+  }
 
-  orders.forEach(o => {
-    const itemsStr = (o.items || []).map(i => `${i.name} (x${i.qty || 1}) [${i.sku || ''}]`).join('; ');
-    const staff = o.staffName || o.staff_name || o.createdBy || o.created_by || 'Super Admin';
-    csvContent += `"${o.id}","${o.createdAt || ''}","${o.customerName || ''}","${o.customerPhone || ''}","${(o.shippingAddress || '').replace(/"/g, '""')}","${staff}","${itemsStr.replace(/"/g, '""')}",${parseFloat(o.grandTotal || o.grand_total || 0).toFixed(2)},"${o.paymentMethod || 'COD'}","${o.paymentStatus || ''}","${o.upiTransactionId || ''}","${normalizeOrderStatus(o.orderStatus || o.order_status)}"\r\n`;
+  let csvContent = "";
+  csvContent += "GRM GARMENTS - STAFF SALES PERFORMANCE & ORDER VOLUME BREAKDOWN\r\n";
+  csvContent += "Generated On:,\"" + new Date().toLocaleString() + "\"\r\n";
+  csvContent += "Total Orders Booked:," + orders.length + "\r\n\r\n";
+
+  csvContent += "Staff Member,Role / Department,Orders Booked,Total Revenue (INR),Average Order Value (INR),Placed,Packed,Shipped,Out for Delivery,Delivered,Share of Orders (%),Performance Rating\r\n";
+
+  staffMembers.forEach(staff => {
+    const sOrders = orders.filter(o => {
+      const matchId = o.staffId && (o.staffId === staff.id || o.staff_id === staff.id);
+      const matchName = (o.staffName && o.staffName.toLowerCase().includes(staff.name.toLowerCase())) ||
+        (o.staff_name && o.staff_name.toLowerCase().includes(staff.name.toLowerCase())) ||
+        (o.createdBy && o.createdBy.toLowerCase().includes(staff.name.toLowerCase())) ||
+        (o.created_by && o.created_by.toLowerCase().includes(staff.name.toLowerCase()));
+      return matchId || matchName;
+    });
+    const count = sOrders.length;
+    const rev = sOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal || o.grand_total) || 0), 0);
+    const aov = count > 0 ? (rev / count).toFixed(2) : '0.00';
+    const p = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
+    const pk = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
+    const sh = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
+    const od = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'OUT_FOR_DELIVERY').length;
+    const del = sOrders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
+    const share = orders.length > 0 ? Math.round((count / orders.length) * 100) : 0;
+    const rating = count >= 10 ? 'Top Performer' : (count > 0 ? 'Active Specialist' : 'No Orders Yet');
+
+    csvContent += "\"" + (staff.name || '').replace(/"/g, '""') + "\",\"" + (staff.role || 'Sales Specialist').replace(/"/g, '""') + "\"," + count + "," + rev.toFixed(2) + "," + aov + "," + p + "," + pk + "," + sh + "," + od + "," + del + "," + share + "%,\"" + rating + "\"\r\n";
   });
 
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `GRM_Orders_History_${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  showToast('Order History Exported', `${orders.length} orders downloaded as CSV.`, 'download', 'emerald');
+  const filename = "GRM_Staff_Sales_Breakdown_" + new Date().toISOString().split('T')[0] + ".csv";
+  downloadOrdersCSVBlob(filename, csvContent);
+  if (typeof showToast === 'function') {
+    showToast('Staff Breakdown Downloaded', staffMembers.length + ' staff member records exported.', 'download', 'emerald');
+  }
+}
+window.downloadStaffOrdersReport = downloadStaffOrdersReport;
+
+// 3. Orders History & Management CSV Export
+function downloadOrdersHistoryCSV() {
+  const allOrders = CRM_STATE?.orders || [];
+  
+  // Check if filters are active in DOM or state
+  const staffFilter = document.getElementById('order-history-staff-filter')?.value || 'ALL';
+  const searchInput = (document.getElementById('order-history-search')?.value || '').toLowerCase().trim();
+  const statusFilter = (typeof ACTIVE_ORDER_HISTORY_STATUS_FILTER !== 'undefined') ? ACTIVE_ORDER_HISTORY_STATUS_FILTER : 'ALL';
+
+  let orders = allOrders;
+  if (statusFilter !== 'ALL') {
+    orders = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === statusFilter);
+  }
+  if (staffFilter !== 'ALL') {
+    orders = orders.filter(o => {
+      const matchId = o.staffId && (o.staffId === staffFilter || o.staff_id === staffFilter);
+      const matchName = (o.staffName && o.staffName.toLowerCase() === staffFilter.toLowerCase()) ||
+        (o.staff_name && o.staff_name.toLowerCase() === staffFilter.toLowerCase()) ||
+        (o.createdBy && o.createdBy.toLowerCase() === staffFilter.toLowerCase()) ||
+        (o.created_by && o.created_by.toLowerCase() === staffFilter.toLowerCase());
+      return matchId || matchName;
+    });
+  }
+  if (searchInput) {
+    orders = orders.filter(o => {
+      const target = [
+        o.id,
+        o.customerName,
+        o.customerPhone,
+        o.staffName,
+        o.createdBy,
+        o.shippingAddress,
+        o.upiTransactionId,
+        (o.items || []).map(i => i.name).join(' ')
+      ].join(' ').toLowerCase();
+      return target.includes(searchInput);
+    });
+  }
+
+  // If filtered set is empty but total orders exist, export all orders
+  if (orders.length === 0 && allOrders.length > 0) {
+    orders = allOrders;
+  }
+
+  let csvContent = "";
+  csvContent += "Order ID,Booking Date,Customer Name,Phone,Shipping Address,Handling Staff,Ordered Items,Total Amount (INR),Advance Paid (INR),COD Due (INR),Payment Method,Payment Status,Transaction UTR,Order Status\r\n";
+
+  orders.forEach(o => {
+    const itemsStr = (o.items || []).map(i => (i.name || i.title || 'Garment') + " (x" + (i.qty || 1) + ") [" + (i.sku || '') + "]").join('; ');
+    const staff = o.staffName || o.staff_name || o.createdBy || o.created_by || 'Super Admin';
+    const amount = parseFloat(o.grandTotal || o.grand_total || 0);
+    const isCod = o.paymentMethod === 'COD' || o.payment_method === 'COD';
+    const codAdv = isCod ? (parseFloat(o.codAdvance || o.cod_advance) || 200) : amount;
+    const codDue = isCod ? (o.codBalanceDue !== undefined ? parseFloat(o.codBalanceDue) : Math.max(0, amount - codAdv)) : 0;
+    const dateStr = o.createdAt || o.created_at || '';
+    const nameStr = (o.customerName || o.customer_name || '').replace(/"/g, '""');
+    const phoneStr = (o.customerPhone || o.customer_phone || '').replace(/"/g, '""');
+    const addressStr = (o.shippingAddress || o.shipping_address || '').replace(/"/g, '""');
+    const payMethod = o.paymentMethod || o.payment_method || 'COD';
+    const payStatus = o.paymentStatus || o.payment_status || 'PENDING';
+    const utr = o.upiTransactionId || o.upi_transaction_id || o.utr || '';
+    const status = normalizeOrderStatus(o.orderStatus || o.order_status || 'PLACED');
+
+    csvContent += "\"" + o.id + "\",\"" + dateStr + "\",\"" + nameStr + "\",\"" + phoneStr + "\",\"" + addressStr + "\",\"" + staff.replace(/"/g, '""') + "\",\"" + itemsStr.replace(/"/g, '""') + "\"," + amount.toFixed(2) + "," + codAdv.toFixed(2) + "," + codDue.toFixed(2) + ",\"" + payMethod + "\",\"" + payStatus + "\",\"" + utr + "\",\"" + status + "\"\r\n";
+  });
+
+  const filename = "GRM_Orders_History_" + (statusFilter !== 'ALL' ? statusFilter.toLowerCase() + "_" : '') + new Date().toISOString().split('T')[0] + ".csv";
+  downloadOrdersCSVBlob(filename, csvContent);
+  if (typeof showToast === 'function') {
+    showToast('Order History Exported', orders.length + ' order records downloaded as CSV.', 'download', 'emerald');
+  }
 }
 window.downloadOrdersHistoryCSV = downloadOrdersHistoryCSV;
 
