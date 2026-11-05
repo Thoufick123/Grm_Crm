@@ -2107,8 +2107,9 @@ if (($action === 'upload_product_image' || $action === 'upload_media' || $action
 
         if (move_uploaded_file($file['tmp_name'], $targetPath)) {
             $url = 'uploads/' . $folderName . '/' . $fileName;
-            $appUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : 'http://localhost:8080';
-            $absoluteUrl = $appUrl . '/' . $url;
+            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
+            $absoluteUrl = $scheme . '://' . $host . '/' . $url;
             echo json_encode([
                 "status" => "success", 
                 "url" => $url, 
@@ -2135,8 +2136,9 @@ if (($action === 'upload_product_image' || $action === 'upload_media' || $action
                 $fileName = 'img_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
                 file_put_contents($uploadDir . $fileName, $data);
                 $url = 'uploads/' . $folderName . '/' . $fileName;
-                $appUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : 'http://localhost:8080';
-                $absoluteUrl = $appUrl . '/' . $url;
+                $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
+            $absoluteUrl = $scheme . '://' . $host . '/' . $url;
                 echo json_encode([
                     "status" => "success", 
                     "url" => $url, 

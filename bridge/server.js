@@ -487,20 +487,34 @@ async function getImageBuffer(url) {
             return Buffer.from(base64Data, 'base64');
         }
 
-        // 2. Local relative path or root path
+        // 2. Direct local file resolution for any URL or path containing uploads/
         if (typeof url === 'string') {
-            const cleanPath = url.replace(/^[/\\]+/, '').replace(/\//g, path.sep);
+            const lowerUrl = url.toLowerCase();
+            const uploadIdx = lowerUrl.indexOf('uploads');
+            if (uploadIdx !== -1) {
+                const relPath = url.substring(uploadIdx).split('?')[0].replace(/\//g, path.sep);
+                const candidates = [
+                    path.resolve(__dirname, '..', relPath),
+                    path.resolve(__dirname, relPath),
+                    path.resolve(process.cwd(), relPath),
+                    path.resolve(process.cwd(), '..', relPath)
+                ];
+                for (const c of candidates) {
+                    if (fs.existsSync(c) && fs.statSync(c).isFile()) {
+                        return fs.readFileSync(c);
+                    }
+                }
+            }
+        }
+
+        // 3. General local relative path or root path
+        if (typeof url === 'string') {
+            const cleanPath = url.replace(/^[\/\\]+/, '').replace(/\//g, path.sep);
             const candidates = [
                 path.resolve(__dirname, '..', cleanPath),
                 path.resolve(__dirname, cleanPath),
-                path.resolve('d:/CRM whatsapp/crm-app', cleanPath)
+                path.resolve(process.cwd(), cleanPath)
             ];
-            // If it's a URL like http://localhost/crm-app/uploads/products/xyz.jpg
-            if (url.includes('/uploads/products/')) {
-                const fileName = path.basename(url.split('?')[0]);
-                candidates.unshift(path.resolve(__dirname, '..', 'uploads', 'products', fileName));
-            }
-
             for (const candidate of candidates) {
                 if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
                     return fs.readFileSync(candidate);
@@ -508,7 +522,7 @@ async function getImageBuffer(url) {
             }
         }
 
-        // 3. Online Web URL (http / https)
+        // 4. Online Web URL (http / https)
         if (typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))) {
             if (typeof fetch === 'function') {
                 const res = await fetch(url, {

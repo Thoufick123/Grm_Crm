@@ -3161,6 +3161,7 @@ function initCRMState() {
               label: bt.name,
               text: bt.body_text,
               category: bt.category,
+              image_url: bt.image_url || null,
               variables: varObj
             };
           }
@@ -28028,6 +28029,9 @@ async function handleSaveCurrentTemplateChanges() {
     localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
   } catch (e) { }
 
+  const attachedImg = document.getElementById('bcast-image-url')?.value?.trim() || (BROADCAST_ATTACHED_IMAGE_DATA ? BROADCAST_ATTACHED_IMAGE_DATA.src : null);
+  BROADCAST_PRESETS_DATA[currentKey].image_url = attachedImg || null;
+
   const currentLabel = BROADCAST_PRESETS_DATA[currentKey].label || 'Custom Template';
 
   // Persist directly to MySQL Database
@@ -28040,6 +28044,7 @@ async function handleSaveCurrentTemplateChanges() {
         name: currentLabel,
         category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
         body_text: text,
+        image_url: attachedImg || null,
         variables_json: BROADCAST_CUSTOM_TAGS
       })
     });
@@ -28059,7 +28064,8 @@ async function handleSaveCurrentTemplateChanges() {
 window.handleSaveCurrentTemplateChanges = handleSaveCurrentTemplateChanges;
 
 // 1. Admin Action: Save Current Message as a New Named Template
-async function handleSaveCurrentAsNewTemplate() {
+// 1. Admin Action: Save Current Message as a New Named Template (Modern Pop Up)
+function handleSaveCurrentAsNewTemplate() {
   const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
   const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
   if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'create')) {
@@ -28071,21 +28077,53 @@ async function handleSaveCurrentAsNewTemplate() {
 
   const msgInput = document.getElementById('bcast-message-text');
   const text = msgInput ? msgInput.value.trim() : '';
-
   if (!text) {
-    alert('Please enter some message text before saving as a template.');
+    if (typeof showToast === 'function') {
+      showToast('Empty Message', 'Please enter some message text before saving as a template.', 'warning', 'amber');
+    } else {
+      alert('Please enter some message text before saving as a template.');
+    }
     if (msgInput) msgInput.focus();
     return;
   }
 
-  const templateName = prompt('Enter a name / title for this new template (e.g. "Diwali 20% Sale Announcement"):');
-  if (!templateName || !templateName.trim()) return;
+  const inputEl = document.getElementById('modal-bcast-new-input');
+  if (inputEl) inputEl.value = '';
+  if (typeof openModal === 'function') {
+    openModal('modal-broadcast-template-new');
+    setTimeout(() => { if (inputEl) inputEl.focus(); }, 60);
+  } else {
+    const templateName = prompt('Enter a name / title for this new template:');
+    if (templateName && templateName.trim()) {
+      if (inputEl) inputEl.value = templateName.trim();
+      confirmSaveCurrentAsNewTemplate();
+    }
+  }
+}
+window.handleSaveCurrentAsNewTemplate = handleSaveCurrentAsNewTemplate;
+
+async function confirmSaveCurrentAsNewTemplate() {
+  const inputEl = document.getElementById('modal-bcast-new-input');
+  const templateName = inputEl ? inputEl.value.trim() : '';
+  if (!templateName) {
+    if (typeof showToast === 'function') {
+      showToast('Name Required', 'Please enter a name for the new template.', 'warning', 'amber');
+    } else {
+      alert('Please enter a name for the new template.');
+    }
+    return;
+  }
+
+  const msgInput = document.getElementById('bcast-message-text');
+  const text = msgInput ? msgInput.value.trim() : '';
+  const attachedImg = document.getElementById('bcast-image-url')?.value?.trim() || (BROADCAST_ATTACHED_IMAGE_DATA ? BROADCAST_ATTACHED_IMAGE_DATA.src : null);
 
   const cleanKey = 'template_' + Date.now();
   const newTpl = {
-    label: `📋 ${templateName.trim()}`,
+    label: `📋 ${templateName}`,
     text: text,
     category: 'MARKETING',
+    image_url: attachedImg || null,
     variables: { ...BROADCAST_CUSTOM_TAGS }
   };
   BROADCAST_PRESETS_DATA[cleanKey] = newTpl;
@@ -28104,6 +28142,7 @@ async function handleSaveCurrentAsNewTemplate() {
         name: newTpl.label,
         category: 'MARKETING',
         body_text: text,
+        image_url: attachedImg || null,
         variables_json: BROADCAST_CUSTOM_TAGS
       })
     });
@@ -28112,12 +28151,16 @@ async function handleSaveCurrentAsNewTemplate() {
   }
 
   renderBroadcastTemplateDropdown(cleanKey);
-  showToast('Template Saved in DB', `Template "${templateName.trim()}" saved to database!`, 'bookmark_added', 'emerald');
+  applyBroadcastPreset(cleanKey);
+  if (typeof closeModal === 'function') closeModal('modal-broadcast-template-new');
+  if (typeof showToast === 'function') {
+    showToast('Template Saved in DB', `Template "${templateName}" saved to database!`, 'bookmark_added', 'emerald');
+  }
   if (typeof playChime === 'function') playChime('order');
 }
-
-// 2. Admin Action: Rename the Currently Selected Template
-async function handleRenameCurrentTemplate() {
+window.confirmSaveCurrentAsNewTemplate = confirmSaveCurrentAsNewTemplate;
+// 2. Admin Action: Rename the Currently Selected Template (Modern Pop Up)
+function handleRenameCurrentTemplate() {
   const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
   const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
   if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
@@ -28132,41 +28175,83 @@ async function handleRenameCurrentTemplate() {
 
   const currentKey = presetSelect.value;
   if (!currentKey || !BROADCAST_PRESETS_DATA[currentKey]) {
-    alert('Please select a template to rename.');
+    if (typeof showToast === 'function') {
+      showToast('Select Template', 'Please select a template to rename.', 'warning', 'amber');
+    } else {
+      alert('Please select a template to rename.');
+    }
     return;
   }
 
   const currentLabel = BROADCAST_PRESETS_DATA[currentKey].label || '';
-  const newName = prompt(`Rename template "${currentLabel}":`, currentLabel);
-  if (newName && newName.trim()) {
-    BROADCAST_PRESETS_DATA[currentKey].label = newName.trim();
-    try {
-      localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-    } catch (e) { }
+  const inputEl = document.getElementById('modal-bcast-rename-input');
+  if (inputEl) inputEl.value = currentLabel;
 
-    // Persist rename to MySQL Database!
-    try {
-      await fetch('api.php?action=save_broadcast_template', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: currentKey,
-          name: newName.trim(),
-          category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
-          body_text: BROADCAST_PRESETS_DATA[currentKey].text,
-          variables_json: BROADCAST_PRESETS_DATA[currentKey].variables || BROADCAST_CUSTOM_TAGS
-        })
-      });
-    } catch (err) {
-      console.warn('API save_broadcast_template rename error:', err);
+  if (typeof openModal === 'function') {
+    openModal('modal-broadcast-template-rename');
+    setTimeout(() => { if (inputEl) { inputEl.focus(); inputEl.select(); } }, 60);
+  } else {
+    const newName = prompt(`Rename template "${currentLabel}":`, currentLabel);
+    if (newName && newName.trim()) {
+      if (inputEl) inputEl.value = newName.trim();
+      confirmRenameBroadcastTemplate();
     }
-
-    renderBroadcastTemplateDropdown(currentKey);
-    showToast('Template Renamed', `Template renamed to "${newName.trim()}" in database.`, 'edit', 'blue');
   }
 }
+window.handleRenameCurrentTemplate = handleRenameCurrentTemplate;
 
-// 3. Admin Action: Delete Selected Custom Template
+async function confirmRenameBroadcastTemplate() {
+  const presetSelect = document.getElementById('bcast-preset-select');
+  if (!presetSelect) return;
+
+  const currentKey = presetSelect.value;
+  if (!currentKey || !BROADCAST_PRESETS_DATA[currentKey]) return;
+
+  const inputEl = document.getElementById('modal-bcast-rename-input');
+  const newName = inputEl ? inputEl.value.trim() : '';
+  if (!newName) {
+    if (typeof showToast === 'function') {
+      showToast('Name Required', 'Please enter a valid template name.', 'warning', 'amber');
+    } else {
+      alert('Please enter a valid template name.');
+    }
+    return;
+  }
+
+  BROADCAST_PRESETS_DATA[currentKey].label = newName;
+  CURRENT_BROADCAST_TEMPLATE_TITLE = newName.replace(/^[^\w\s]+/, '').trim() || newName;
+  updateBroadcastTemplateTitleUI();
+
+  try {
+    localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+  } catch (e) { }
+
+  // Persist rename to MySQL Database!
+  try {
+    await fetch('api.php?action=save_broadcast_template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: currentKey,
+        name: newName,
+        category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
+        body_text: BROADCAST_PRESETS_DATA[currentKey].text,
+        image_url: BROADCAST_PRESETS_DATA[currentKey].image_url || null,
+        variables_json: BROADCAST_PRESETS_DATA[currentKey].variables || BROADCAST_CUSTOM_TAGS
+      })
+    });
+  } catch (err) {
+    console.warn('API save_broadcast_template rename error:', err);
+  }
+
+  renderBroadcastTemplateDropdown(currentKey);
+  if (typeof closeModal === 'function') closeModal('modal-broadcast-template-rename');
+  if (typeof showToast === 'function') {
+    showToast('Template Renamed', `Template renamed to "${newName}" in database.`, 'edit', 'blue');
+  }
+  if (typeof playChime === 'function') playChime('order');
+}
+window.confirmRenameBroadcastTemplate = confirmRenameBroadcastTemplate;
 async function handleDeleteCurrentTemplate() {
   const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
   const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
@@ -28227,6 +28312,7 @@ function openBroadcastModal() {
         label: bt.name,
         text: bt.body_text,
         category: bt.category,
+        image_url: bt.image_url || null,
         variables: varObj
       };
     });
@@ -28314,6 +28400,14 @@ function applyBroadcastPreset(presetKey) {
       Object.entries(BROADCAST_PRESETS_DATA[presetKey].variables).forEach(([k, v]) => {
         BROADCAST_CUSTOM_TAGS[k] = v;
       });
+    }
+
+    // Restore saved template image into preview & mockup!
+    const tplImage = BROADCAST_PRESETS_DATA[presetKey].image_url;
+    if (tplImage) {
+      applyBroadcastUploadedImage(tplImage, 'template_banner.jpg', 0, true);
+    } else {
+      removeBroadcastUploadedImage(true);
     }
   }
   renderDynamicTemplateFields();
@@ -28567,7 +28661,8 @@ function handleDynamicTagChange(tag, val) {
           name: BROADCAST_PRESETS_DATA[currentKey].label || 'Template',
           category: BROADCAST_PRESETS_DATA[currentKey].category || 'MARKETING',
           body_text: BROADCAST_PRESETS_DATA[currentKey].text,
-          variables_json: BROADCAST_CUSTOM_TAGS
+          variables_json: BROADCAST_CUSTOM_TAGS,
+          image_url: BROADCAST_PRESETS_DATA[currentKey].image_url || null
         })
       }).catch(() => { });
     }, 1000);
@@ -28610,6 +28705,7 @@ function removeDynamicTag(tag) {
 }
 
 // Quick Prompt to Add Any Custom Variable
+// Quick Prompt to Add Any Custom Variable (Modern Pop Up)
 function promptAddNewCustomTag() {
   const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
   const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
@@ -28620,28 +28716,70 @@ function promptAddNewCustomTag() {
     return;
   }
 
-  const tagKey = prompt('Enter a new variable name without curly braces (e.g. discount, product_name, coupon_code, delivery_date):');
-  if (!tagKey || !tagKey.trim()) return;
+  const nameEl = document.getElementById('modal-bcast-var-name');
+  const valEl = document.getElementById('modal-bcast-var-val');
+  if (nameEl) nameEl.value = '';
+  if (valEl) valEl.value = '';
 
-  const cleanKey = tagKey.trim().toLowerCase().replace(/^\{\{|\}\}$/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-  if (!cleanKey) {
-    alert('Invalid variable name. Please use letters and numbers only.');
+  if (typeof openModal === 'function') {
+    openModal('modal-broadcast-add-variable');
+    setTimeout(() => { if (nameEl) nameEl.focus(); }, 60);
+  } else {
+    const tagKey = prompt('Enter a new variable name without curly braces (e.g. discount, product_name):');
+    if (tagKey && tagKey.trim()) {
+      const cleanKey = tagKey.trim().toLowerCase().replace(/^{{|}}$/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      if (cleanKey) {
+        const defaultVal = BROADCAST_CUSTOM_TAGS[cleanKey] || 'SPECIAL VALUE';
+        const tagVal = prompt(`Enter value for {{${cleanKey}}}:`, defaultVal);
+        if (tagVal !== null) {
+          BROADCAST_CUSTOM_TAGS[cleanKey] = tagVal.trim();
+          insertBroadcastVariable(`{{${cleanKey}}}`);
+          renderDynamicTemplateFields();
+          updateBroadcastPreview();
+        }
+      }
+    }
+  }
+}
+window.promptAddNewCustomTag = promptAddNewCustomTag;
+
+function confirmAddNewCustomTag() {
+  const nameEl = document.getElementById('modal-bcast-var-name');
+  const valEl = document.getElementById('modal-bcast-var-val');
+  const rawKey = nameEl ? nameEl.value.trim() : '';
+  const rawVal = valEl ? valEl.value.trim() : '';
+
+  if (!rawKey) {
+    if (typeof showToast === 'function') {
+      showToast('Name Required', 'Please enter a variable name.', 'warning', 'amber');
+    } else {
+      alert('Please enter a variable name.');
+    }
     return;
   }
 
-  const defaultVal = BROADCAST_CUSTOM_TAGS[cleanKey] || 'SPECIAL VALUE';
-  const tagVal = prompt(`Enter value for {{${cleanKey}}}:`, defaultVal);
-  if (tagVal === null) return;
+  const cleanKey = rawKey.toLowerCase().replace(/^{{|}}$/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  if (!cleanKey) {
+    if (typeof showToast === 'function') {
+      showToast('Invalid Name', 'Please use letters and numbers only.', 'warning', 'rose');
+    } else {
+      alert('Invalid variable name. Please use letters and numbers only.');
+    }
+    return;
+  }
 
-  BROADCAST_CUSTOM_TAGS[cleanKey] = tagVal.trim();
+  BROADCAST_CUSTOM_TAGS[cleanKey] = rawVal || 'SPECIAL VALUE';
   insertBroadcastVariable(`{{${cleanKey}}}`);
   renderDynamicTemplateFields();
   updateBroadcastPreview();
-  showToast('Variable Added', `Tag {{${cleanKey}}} added and set to "${tagVal.trim()}".`, 'tune', 'emerald');
+
+  if (typeof closeModal === 'function') closeModal('modal-broadcast-add-variable');
+  if (typeof showToast === 'function') {
+    showToast('Variable Added', `Tag {{${cleanKey}}} added and set to "${rawVal || 'SPECIAL VALUE'}".`, 'tune', 'emerald');
+  }
   if (typeof playChime === 'function') playChime('order');
 }
-
-// Compatibility alias for any legacy tray calls
+window.confirmAddNewCustomTag = confirmAddNewCustomTag;
 function renderCustomTagsTray() {
   renderDynamicTemplateFields();
 }
@@ -28876,7 +29014,7 @@ function handleBroadcastFileDrop(event) {
   }
 }
 
-function applyBroadcastUploadedImage(imgSrc, fileName = 'uploaded_image.jpg', fileSize = 0) {
+function applyBroadcastUploadedImage(imgSrc, fileName = 'uploaded_image.jpg', fileSize = 0, silent = false) {
   BROADCAST_ATTACHED_IMAGE_DATA = { src: imgSrc, name: fileName, size: fileSize };
 
   const hiddenUrl = document.getElementById('bcast-image-url');
@@ -28900,7 +29038,7 @@ function applyBroadcastUploadedImage(imgSrc, fileName = 'uploaded_image.jpg', fi
   const sizeEl = document.getElementById('bcast-upload-filesize');
   if (sizeEl) {
     const kb = (fileSize / 1024).toFixed(1);
-    sizeEl.innerText = `${kb} KB • Ready for WhatsApp`;
+    sizeEl.innerText = fileSize > 0 ? `${kb} KB • Ready for WhatsApp` : 'Banner Photo • Live in Preview';
   }
 
   // Update Smartphone Live Mockup
@@ -28911,7 +29049,7 @@ function applyBroadcastUploadedImage(imgSrc, fileName = 'uploaded_image.jpg', fi
     phoneImgContainer.classList.remove('hidden');
   }
 
-  if (typeof showToast === 'function') {
+  if (!silent && typeof showToast === 'function') {
     showToast('Photo Attached', `Image "${fileName}" attached to broadcast!`, 'photo_camera', 'emerald');
   }
 }
@@ -28939,10 +29077,10 @@ async function uploadBroadcastImageToServer(file, dataUrl) {
   }
 }
 
-function removeBroadcastUploadedImage() {
+function removeBroadcastUploadedImage(silent = false) {
   const _user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
   const _isSA = !_user || _user.role === 'admin' || _user.id === 'admin' || _user.role === 'Super Admin';
-  if (!_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
+  if (!silent && !_isSA && typeof canUserPerformAction === 'function' && !canUserPerformAction('broadcast', 'edit')) {
     return;
   }
 
@@ -28974,7 +29112,7 @@ function removeBroadcastUploadedImage() {
     phoneImgContainer.classList.add('hidden');
   }
 
-  if (typeof showToast === 'function') {
+  if (!silent && typeof showToast === 'function') {
     showToast('Image Removed', 'Broadcast photo attachment removed.', 'delete', 'amber');
   }
 }
@@ -29132,7 +29270,7 @@ function updateBroadcastPreview() {
   }
 
   // Sync Phone Mockup Image if attached
-  const attachedImgUrl = document.getElementById('bcast-image-url')?.value?.trim();
+  const attachedImgUrl = document.getElementById('bcast-image-url')?.value?.trim() || (BROADCAST_ATTACHED_IMAGE_DATA ? BROADCAST_ATTACHED_IMAGE_DATA.src : null);
   const phoneImgContainer = document.getElementById('bcast-preview-image-container');
   const phoneImg = document.getElementById('bcast-preview-image');
   if (phoneImgContainer && phoneImg) {
