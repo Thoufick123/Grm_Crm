@@ -141,7 +141,7 @@
             dashboard: { title: 'WhatsApp Dashboard', sub: '' },
             catalog: { title: 'Garment Product Catalog & Live Stock', sub: 'Live available stock calculator and 1-click WhatsApp card sharing' },
             orders: { title: 'WhatsApp Sales Orders & Reservations', sub: '' },
-            followups: { title: 'Customer Follow-up Scheduler', sub: 'Automated reminders to prevent lost customer enquiries' },
+            followups: { title: 'Customer Follow-up Scheduler', sub: '' },
             customers: { title: 'Customer 360 & Tag Directory', sub: 'Profiles, purchase history, and communication preferences' },
             dnd: { title: 'DND & Opt-Out Customer Hub', sub: 'Customers who requested not to receive garment product offers or messages' },
             staff: { title: 'Staff & Team Management Hub', sub: 'Onboard team members, assign operational roles & permissions, and monitor workloads' },
@@ -156,7 +156,14 @@
             var pt = document.getElementById('page-title');
             var ps = document.getElementById('page-subtitle');
             if (pt && titles[targetView]) pt.innerText = titles[targetView].title;
-            if (ps && titles[targetView]) ps.innerText = titles[targetView].sub;
+            if (ps && titles[targetView]) {
+              ps.innerText = titles[targetView].sub || '';
+              if (!titles[targetView].sub) {
+                ps.classList.add('hidden');
+              } else {
+                ps.classList.remove('hidden');
+              }
+            }
           };
 
           if (document.readyState === 'loading') {
@@ -3594,17 +3601,6 @@
                     </button>
                   </div>
 
-                  <!-- Order Picker (Sort Order) -->
-                  <select id="pay-pending-filter-sort-order" onchange="filterPaymentPendingCards()"
-                    class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition shrink-0"
-                    title="Order Picker (Sort Order)">
-                    <option value="DUE_ASC">📅 Due Date (Closest First)</option>
-                    <option value="DUE_DESC">📅 Due Date (Latest First)</option>
-                    <option value="AMOUNT_DESC">💰 Amount (Highest First)</option>
-                    <option value="AMOUNT_ASC">💰 Amount (Lowest First)</option>
-                    <option value="NEWEST">⏱️ Created (Newest First)</option>
-                    <option value="NAME_ASC">👤 Customer (A to Z)</option>
-                  </select>
 
                   <!-- Staff Filter -->
                   <div id="pay-pending-staff-filter-container" class="shrink-0">

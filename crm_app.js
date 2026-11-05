@@ -3760,7 +3760,7 @@ function updatePageHeaderTitle() {
     },
     followups: {
       title: t('header.title.followups', 'Customer Follow-up Scheduler'),
-      sub: t('header.sub.followups', 'Automated reminders to prevent lost customer enquiries')
+      sub: ''
     },
     customers: {
       title: t('header.title.customers', 'Customer 360 & Tag Directory'),
