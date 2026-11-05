@@ -127,8 +127,29 @@ function getDBConnection() {
                 );
             }
 
-            // 3. Ensure tables and default seeds exist
-            initializeDatabaseSchema($pdo);
+            // 3. Ensure tables and default seeds exist ONLY IF NOT ALREADY INITIALIZED
+            // Running 47 DDL CREATE TABLE queries on every HTTP request creates massive table lock contention and socket exhaustion.
+            static $schemaChecked = false;
+            if (!$schemaChecked) {
+                $needSchemaInit = false;
+                if (isset($_GET['init_schema']) || isset($_GET['migrate'])) {
+                    $needSchemaInit = true;
+                } else {
+                    try {
+                        $checkUsers = $pdo->query("SHOW TABLES LIKE 'users'")->fetch();
+                        if (!$checkUsers) {
+                            $needSchemaInit = true;
+                        }
+                    } catch (Exception $e) {
+                        $needSchemaInit = true;
+                    }
+                }
+
+                if ($needSchemaInit) {
+                    initializeDatabaseSchema($pdo);
+                }
+                $schemaChecked = true;
+            }
 
             return $pdo;
         } catch (PDOException $e) {

@@ -2467,11 +2467,12 @@ function startRealtimeMessageSync() {
   // 1. Initial immediate sync
   syncInboundMessagesNow(true);
 
-  // 2. Continuous background sync every 2 seconds
+  // 2. Continuous background sync with tab visibility check (avoids lag when tab is idle)
   setInterval(() => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     syncInboundMessagesNow(false);
     syncIncomingCallsNow();
-  }, 2000);
+  }, 2500);
 }
 
 // Inbound Simulator Modal Controllers
@@ -2942,10 +2943,13 @@ function initCRMState() {
     })
     .catch(() => { });
 
-  // Load brand name & tagline from bridge config file (so UI shows live saved brand)
-  fetch(`${getBridgeBaseUrl()}/api/brand/config`)
+  // Load brand name & tagline from bridge config file with fast 1200ms timeout
+  const brandAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const brandTimer = brandAbort ? setTimeout(() => brandAbort.abort(), 1200) : null;
+  fetch(`${getBridgeBaseUrl()}/api/brand/config`, brandAbort ? { signal: brandAbort.signal } : {})
     .then(r => r.json())
     .then(res => {
+      if (brandTimer) clearTimeout(brandTimer);
       if (res.status === 'success') {
         if (!CRM_STATE.brandSettings) CRM_STATE.brandSettings = {};
         if (res.brand_name) CRM_STATE.brandSettings.brandName = res.brand_name;
@@ -2958,7 +2962,9 @@ function initCRMState() {
         if (typeof updateBrandPreview === 'function') updateBrandPreview();
       }
     })
-    .catch(() => { }); // Bridge may not be running — fail silently
+    .catch(() => {
+      if (brandTimer) clearTimeout(brandTimer);
+    }); // Bridge may not be running — fail silently without hanging
 
 
   // Asynchronously synchronize entire CRM database state dynamically from MySQL
@@ -14103,7 +14109,31 @@ window.handleScreenshotUpload = handleScreenshotUpload;
  * ONLY accepts authentic bank details and payment transactions.
  * Strictly rejects any other screenshot (clothing, garment photos, random chat, memes).
  */
+function loadTesseractEngineIfNeeded() {
+  if (typeof Tesseract !== 'undefined' && Tesseract.recognize) {
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    const existing = document.getElementById('tesseract-ocr-script');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true));
+      existing.addEventListener('error', () => resolve(false));
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'tesseract-ocr-script';
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+}
+window.loadTesseractEngineIfNeeded = loadTesseractEngineIfNeeded;
+
 async function verifyPaymentScreenshotContent(dataUrl) {
+  if (typeof Tesseract === 'undefined' || !Tesseract.recognize) {
+    try { await loadTesseractEngineIfNeeded(); } catch (e) {}
+  }
   // Comprehensive Banking and UPI dictionary
   const BANK_PAYMENT_KEYWORDS = [
     'upi', 'gpay', 'google pay', 'googlepay', 'phonepe', 'phone pe', 'paytm', 'bhim', 'cred', 'amazon pay', 'whatsapp pay',
