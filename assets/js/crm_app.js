@@ -3954,7 +3954,18 @@ function switchView(viewName, subName) {
     renderOrdersModule();
   }
   if (viewName === 'followups') renderFollowupsCards();
-  if (viewName === 'customers') renderCustomersGrid();
+  if (viewName === 'customers') {
+    if (subName && typeof switchCustomerSubmodule === 'function') {
+      switchCustomerSubmodule(subName);
+    } else {
+      const currentSub = (typeof ACTIVE_CUSTOMERS_SUBMODULE !== 'undefined') ? ACTIVE_CUSTOMERS_SUBMODULE : 'list';
+      if (typeof switchCustomerSubmodule === 'function') {
+        switchCustomerSubmodule(currentSub);
+      } else {
+        renderCustomersGrid();
+      }
+    }
+  }
   if (viewName === 'dnd') renderDndModule();
   if (viewName === 'staff') {
     if (subName && typeof switchStaffTab === 'function') switchStaffTab(subName);
@@ -3987,6 +3998,8 @@ window.addEventListener('hashchange', () => {
     } else if (mainHash === 'inbox' && subHash && subHash !== (typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' ? ACTIVE_INBOX_SUBMODULE : 'chats')) {
       needsSwitch = true;
     } else if (mainHash === 'staff' && subHash && subHash !== (typeof ACTIVE_STAFF_TAB !== 'undefined' ? ACTIVE_STAFF_TAB : 'list')) {
+      needsSwitch = true;
+    } else if (mainHash === 'customers' && subHash && subHash !== (typeof ACTIVE_CUSTOMERS_SUBMODULE !== 'undefined' ? ACTIVE_CUSTOMERS_SUBMODULE : 'list')) {
       needsSwitch = true;
     }
     if (needsSwitch) {
@@ -4288,6 +4301,8 @@ function applyRoleBasedAccessControl(user) {
     targetSubmodule = (typeof ACTIVE_INBOX_SUBMODULE !== 'undefined') ? ACTIVE_INBOX_SUBMODULE : (localStorage.getItem('GRM_CRM_ACTIVE_INBOX_SUBMODULE') || 'chats');
   } else if (ACTIVE_VIEW === 'staff') {
     targetSubmodule = (typeof ACTIVE_STAFF_TAB !== 'undefined') ? ACTIVE_STAFF_TAB : (localStorage.getItem('GRM_CRM_ACTIVE_STAFF_TAB') || 'list');
+  } else if (ACTIVE_VIEW === 'customers') {
+    targetSubmodule = (typeof ACTIVE_CUSTOMERS_SUBMODULE !== 'undefined') ? ACTIVE_CUSTOMERS_SUBMODULE : (localStorage.getItem('GRM_CRM_ACTIVE_CUSTOMERS_SUBMODULE') || 'list');
   }
 
   switchView(ACTIVE_VIEW, targetSubmodule);
@@ -26904,6 +26919,358 @@ function exportAllCustomerDetails() {
   if (typeof playChime === 'function') playChime('order');
 }
 window.exportAllCustomerDetails = exportAllCustomerDetails;
+
+// =========================================================================
+// CUSTOMER REQUIREMENTS TRACKER (Customer 360 Submodule)
+// =========================================================================
+var ACTIVE_CUSTOMERS_SUBMODULE = (function() {
+  try {
+    const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+    if (rawHash.startsWith('customers/')) {
+      const sub = rawHash.split('/')[1];
+      if (sub === 'list' || sub === 'requirements') return sub;
+    }
+    const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_CUSTOMERS_SUBMODULE') : null;
+    if (stored === 'list' || stored === 'requirements') return stored;
+  } catch (e) { }
+  return 'list';
+})();
+window.ACTIVE_CUSTOMERS_SUBMODULE = ACTIVE_CUSTOMERS_SUBMODULE;
+
+var CUSTOMER_REQUIREMENTS_CACHE = [];
+var CUSTOMER_REQ_SEARCH_QUERY = '';
+var CUSTOMER_REQ_STATUS_FILTER = 'ALL';
+
+function switchCustomerSubmodule(tab = 'list') {
+  if (tab !== 'list' && tab !== 'requirements') tab = 'list';
+  ACTIVE_CUSTOMERS_SUBMODULE = tab;
+  window.ACTIVE_CUSTOMERS_SUBMODULE = tab;
+
+  try {
+    localStorage.setItem('GRM_CRM_ACTIVE_CUSTOMERS_SUBMODULE', tab);
+    if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', '#customers/' + tab);
+    }
+  } catch (e) {}
+
+  const tabBtnList = document.getElementById('tab-btn-customer-list');
+  const tabBtnReq = document.getElementById('tab-btn-customer-requirements');
+  const subviewList = document.getElementById('subview-customers-list');
+  const subviewReq = document.getElementById('subview-customers-requirements');
+
+  if (tab === 'list') {
+    if (tabBtnList) {
+      tabBtnList.className = 'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-brand-wa text-white shadow-sm cursor-pointer';
+    }
+    if (tabBtnReq) {
+      tabBtnReq.className = 'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80 cursor-pointer';
+    }
+    if (subviewList) subviewList.classList.remove('hidden');
+    if (subviewReq) subviewReq.classList.add('hidden');
+    renderCustomersGrid();
+  } else {
+    if (tabBtnList) {
+      tabBtnList.className = 'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80 cursor-pointer';
+    }
+    if (tabBtnReq) {
+      tabBtnReq.className = 'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-brand-wa text-white shadow-sm cursor-pointer';
+    }
+    if (subviewList) subviewList.classList.add('hidden');
+    if (subviewReq) subviewReq.classList.remove('hidden');
+    loadCustomerRequirements();
+  }
+}
+window.switchCustomerSubmodule = switchCustomerSubmodule;
+
+async function loadCustomerRequirements() {
+  try {
+    const res = await fetch('api.php?action=get_customer_requirements');
+    const result = await res.json();
+    if (result && result.status === 'success' && Array.isArray(result.data)) {
+      CUSTOMER_REQUIREMENTS_CACHE = result.data;
+      updateCustomerRequirementsCountBadge(result.data.length);
+      renderCustomerRequirementsTable();
+    } else {
+      console.warn('Failed to load customer requirements:', result);
+      renderCustomerRequirementsTable();
+    }
+  } catch (err) {
+    console.error('Error fetching customer requirements:', err);
+    renderCustomerRequirementsTable();
+  }
+}
+window.loadCustomerRequirements = loadCustomerRequirements;
+
+function updateCustomerRequirementsCountBadge(count) {
+  const badge1 = document.getElementById('customer-requirements-count-badge');
+  const badge2 = document.getElementById('cust-req-header-badge');
+  if (badge1) badge1.textContent = count;
+  if (badge2) badge2.textContent = count + ' ' + (count === 1 ? 'Requirement' : 'Requirements');
+}
+
+function handleCustomerReqSearch(query) {
+  CUSTOMER_REQ_SEARCH_QUERY = (query || '').toLowerCase().trim();
+  renderCustomerRequirementsTable();
+}
+window.handleCustomerReqSearch = handleCustomerReqSearch;
+
+function filterCustomerRequirements(status) {
+  CUSTOMER_REQ_STATUS_FILTER = status || 'ALL';
+  renderCustomerRequirementsTable();
+}
+window.filterCustomerRequirements = filterCustomerRequirements;
+
+function renderCustomerRequirementsTable() {
+  const tbody = document.getElementById('customer-requirements-table-body');
+  if (!tbody) return;
+
+  const filtered = CUSTOMER_REQUIREMENTS_CACHE.filter(item => {
+    if (CUSTOMER_REQ_STATUS_FILTER !== 'ALL' && item.status !== CUSTOMER_REQ_STATUS_FILTER) {
+      return false;
+    }
+    if (CUSTOMER_REQ_SEARCH_QUERY) {
+      const q = CUSTOMER_REQ_SEARCH_QUERY;
+      const name = (item.customer_name || '').toLowerCase();
+      const phone = (item.phone || '').toLowerCase();
+      const email = (item.email || '').toLowerCase();
+      const dress = (item.dress || '').toLowerCase();
+      const req = (item.dress_requirement || '').toLowerCase();
+      if (!name.includes(q) && !phone.includes(q) && !email.includes(q) && !dress.includes(q) && !req.includes(q)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  updateCustomerRequirementsCountBadge(CUSTOMER_REQUIREMENTS_CACHE.length);
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="py-12 text-center text-slate-400">
+          <div class="flex flex-col items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-[40px] text-slate-300">inventory_2</span>
+            <p class="font-bold text-slate-700 text-sm">No Customer Requirements Found</p>
+            <p class="text-xs text-slate-400 max-w-sm">No custom dress requirements recorded yet or matching your filter criteria. Click "Add Requirement" to create one.</p>
+            <button 
+              type="button" 
+              onclick="openAddRequirementModal()" 
+              class="mt-2 px-3.5 py-1.5 bg-brand-wa hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">add_circle</span>
+              <span>Add New Requirement</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(req => {
+    const formattedDate = req.created_at ? new Date(req.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+    const safeName = (typeof escapeHtml === 'function') ? escapeHtml(req.customer_name || '') : (req.customer_name || '');
+    const safePhone = (typeof escapeHtml === 'function') ? escapeHtml(req.phone || '') : (req.phone || '');
+    const safeEmail = (typeof escapeHtml === 'function') ? escapeHtml(req.email || '') : (req.email || '');
+    const safeDress = (typeof escapeHtml === 'function') ? escapeHtml(req.dress || '') : (req.dress || '');
+    const safeReq = (typeof escapeHtml === 'function') ? escapeHtml(req.dress_requirement || '') : (req.dress_requirement || '');
+
+    return `
+      <tr class="hover:bg-slate-50/80 transition-colors">
+        <td class="py-3.5 px-4 font-mono font-bold text-slate-500">#REQ-${String(req.id).padStart(4, '0')}</td>
+        <td class="py-3.5 px-4">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs uppercase shrink-0">
+              ${safeName.substring(0, 2) || 'CR'}
+            </div>
+            <div>
+              <div class="font-bold text-slate-900">${safeName}</div>
+              <div class="text-[11px] text-slate-500 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px] text-emerald-600">call</span>
+                <span>${safePhone}</span>
+                ${safeEmail ? '<span class="text-slate-300">•</span><span class="text-slate-400">' + safeEmail + '</span>' : ''}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td class="py-3.5 px-4">
+          <span class="font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60 inline-flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[15px] text-slate-600">checkroom</span>
+            ${safeDress}
+          </span>
+        </td>
+        <td class="py-3.5 px-4 max-w-xs">
+          <p class="text-slate-700 whitespace-pre-line text-xs font-medium leading-relaxed bg-slate-50/50 p-2 rounded-xl border border-slate-100">${safeReq}</p>
+        </td>
+        <td class="py-3.5 px-4">
+          <select 
+            onchange="updateCustomerRequirementStatus(${req.id}, this.value)" 
+            class="text-[11px] font-bold py-1 px-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-brand-wa cursor-pointer">
+            <option value="PENDING" ${req.status === 'PENDING' ? 'selected' : ''}>Pending</option>
+            <option value="SOURCING" ${req.status === 'SOURCING' ? 'selected' : ''}>Sourcing</option>
+            <option value="QUOTED" ${req.status === 'QUOTED' ? 'selected' : ''}>Quoted</option>
+            <option value="FULFILLED" ${req.status === 'FULFILLED' ? 'selected' : ''}>Fulfilled</option>
+            <option value="CANCELLED" ${req.status === 'CANCELLED' ? 'selected' : ''}>Cancelled</option>
+          </select>
+        </td>
+        <td class="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">${formattedDate}</td>
+        <td class="py-3.5 px-4 text-right">
+          <button 
+            type="button" 
+            onclick="deleteCustomerRequirement(${req.id})" 
+            title="Delete Requirement" 
+            class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">delete</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+window.renderCustomerRequirementsTable = renderCustomerRequirementsTable;
+
+function openAddRequirementModal() {
+  const modal = document.getElementById('modal-add-customer-requirement');
+  if (!modal) return;
+  const form = document.getElementById('form-add-customer-requirement');
+  if (form) form.reset();
+  modal.classList.remove('hidden');
+}
+window.openAddRequirementModal = openAddRequirementModal;
+
+function closeAddRequirementModal() {
+  const modal = document.getElementById('modal-add-customer-requirement');
+  if (modal) modal.classList.add('hidden');
+}
+window.closeAddRequirementModal = closeAddRequirementModal;
+
+async function submitCustomerRequirementForm(event) {
+  if (event) event.preventDefault();
+  const form = document.getElementById('form-add-customer-requirement');
+  if (!form) return;
+
+  const submitBtn = document.getElementById('req-submit-btn');
+  const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Saving...</span>';
+  }
+
+  const payload = {
+    customer_name: (document.getElementById('req-customer-name')?.value || '').trim(),
+    phone: (document.getElementById('req-customer-phone')?.value || '').trim(),
+    email: (document.getElementById('req-customer-email')?.value || '').trim(),
+    dress: (document.getElementById('req-dress-name')?.value || '').trim(),
+    dress_requirement: (document.getElementById('req-dress-details')?.value || '').trim(),
+    status: document.getElementById('req-status')?.value || 'PENDING'
+  };
+
+  if (!payload.customer_name || !payload.phone || !payload.dress || !payload.dress_requirement) {
+    if (typeof showToast === 'function') {
+      showToast('Missing Fields', 'Please fill in Customer Name, Phone No, Dress, and Dress Requirement.', 'warning', 'amber');
+    } else {
+      alert('Please fill in Customer Name, Phone No, Dress, and Dress Requirement.');
+    }
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnHtml;
+    }
+    return;
+  }
+
+  try {
+    const res = await fetch('api.php?action=add_customer_requirement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+
+    if (result && result.status === 'success') {
+      if (typeof showToast === 'function') {
+        showToast('Requirement Saved', 'Customer requirement successfully saved to database.', 'check_circle', 'emerald');
+      }
+      closeAddRequirementModal();
+      form.reset();
+      await loadCustomerRequirements();
+    } else {
+      if (typeof showToast === 'function') {
+        showToast('Error', result.message || 'Failed to save requirement', 'error', 'rose');
+      } else {
+        alert(result.message || 'Failed to save requirement');
+      }
+    }
+  } catch (err) {
+    console.error('Error saving customer requirement:', err);
+    if (typeof showToast === 'function') {
+      showToast('Network Error', 'Failed to save requirement. Please try again.', 'error', 'rose');
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnHtml;
+    }
+  }
+}
+window.submitCustomerRequirementForm = submitCustomerRequirementForm;
+
+async function updateCustomerRequirementStatus(id, newStatus) {
+  try {
+    const res = await fetch('api.php?action=update_customer_requirement_status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status: newStatus })
+    });
+    const result = await res.json();
+    if (result && result.status === 'success') {
+      if (typeof showToast === 'function') {
+        showToast('Status Updated', 'Requirement status changed to ' + newStatus, 'check_circle', 'emerald');
+      }
+      const item = CUSTOMER_REQUIREMENTS_CACHE.find(r => Number(r.id) === Number(id));
+      if (item) item.status = newStatus;
+    } else {
+      if (typeof showToast === 'function') {
+        showToast('Error', result.message || 'Failed to update status', 'error', 'rose');
+      }
+      await loadCustomerRequirements();
+    }
+  } catch (err) {
+    console.error('Error updating requirement status:', err);
+    if (typeof showToast === 'function') {
+      showToast('Error', 'Failed to update status', 'error', 'rose');
+    }
+  }
+}
+window.updateCustomerRequirementStatus = updateCustomerRequirementStatus;
+
+async function deleteCustomerRequirement(id) {
+  if (!confirm('Are you sure you want to delete this customer requirement?')) return;
+  try {
+    const res = await fetch('api.php?action=delete_customer_requirement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    const result = await res.json();
+    if (result && result.status === 'success') {
+      if (typeof showToast === 'function') {
+        showToast('Deleted', 'Requirement deleted successfully', 'delete', 'slate');
+      }
+      CUSTOMER_REQUIREMENTS_CACHE = CUSTOMER_REQUIREMENTS_CACHE.filter(r => Number(r.id) !== Number(id));
+      renderCustomerRequirementsTable();
+    } else {
+      if (typeof showToast === 'function') {
+        showToast('Error', result.message || 'Failed to delete requirement', 'error', 'rose');
+      }
+    }
+  } catch (err) {
+    console.error('Error deleting requirement:', err);
+    if (typeof showToast === 'function') {
+      showToast('Error', 'Failed to delete requirement', 'error', 'rose');
+    }
+  }
+}
+window.deleteCustomerRequirement = deleteCustomerRequirement;
+
 
 
 function renderAuditTable() {

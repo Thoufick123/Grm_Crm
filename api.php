@@ -1077,6 +1077,190 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // =========================================================================
+// CUSTOMER REQUIREMENTS MODULE (Customer 360 Submodule)
+// =========================================================================
+if ($action === 'get_customer_requirements') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+    try {
+        $statusFilter = trim($_GET['status'] ?? '');
+        $search = trim($_GET['search'] ?? '');
+        
+        $sql = "SELECT * FROM `customer_requirements` WHERE 1=1";
+        $params = [];
+        
+        if (!empty($statusFilter) && $statusFilter !== 'ALL') {
+            $sql .= " AND `status` = ?";
+            $params[] = $statusFilter;
+        }
+        if (!empty($search)) {
+            $sql .= " AND (`customer_name` LIKE ? OR `phone` LIKE ? OR `email` LIKE ? OR `dress` LIKE ? OR `dress_requirement` LIKE ?)";
+            $searchTerm = "%$search%";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        $sql .= " ORDER BY `created_at` DESC";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $requirements = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            "status" => "success",
+            "data" => $requirements,
+            "total" => count($requirements)
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'add_customer_requirement' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true) ?: $_POST;
+
+    $customerName = trim($data['customer_name'] ?? ($data['name'] ?? ''));
+    $phone = trim($data['phone'] ?? ($data['phone_no'] ?? ''));
+    $email = trim($data['email'] ?? '');
+    $dress = trim($data['dress'] ?? '');
+    $dressRequirement = trim($data['dress_requirement'] ?? ($data['requirement'] ?? ''));
+    $status = trim($data['status'] ?? 'PENDING');
+    $createdBy = trim($data['created_by'] ?? 'Super Admin');
+
+    if (empty($customerName) || empty($phone) || empty($dress) || empty($dressRequirement)) {
+        http_response_code(400);
+        echo json_encode([
+            "status" => "error",
+            "message" => "Customer Name, Phone No, Dress, and Dress Requirement are required."
+        ]);
+        exit;
+    }
+
+    $validStatuses = ['PENDING', 'SOURCING', 'QUOTED', 'FULFILLED', 'CANCELLED'];
+    if (!in_array($status, $validStatuses)) {
+        $status = 'PENDING';
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO `customer_requirements` 
+                (`customer_name`, `phone`, `email`, `dress`, `dress_requirement`, `status`, `created_by`, `created_at`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $stmt->execute([
+            $customerName,
+            $phone,
+            $email ?: null,
+            $dress,
+            $dressRequirement,
+            $status,
+            $createdBy
+        ]);
+        $newId = (int)$pdo->lastInsertId();
+
+        $fetchStmt = $pdo->prepare("SELECT * FROM `customer_requirements` WHERE `id` = ?");
+        $fetchStmt->execute([$newId]);
+        $createdRecord = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Customer requirement saved successfully",
+            "id" => $newId,
+            "data" => $createdRecord
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'update_customer_requirement_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true) ?: $_POST;
+
+    $id = (int)($data['id'] ?? 0);
+    $status = trim($data['status'] ?? '');
+    $validStatuses = ['PENDING', 'SOURCING', 'QUOTED', 'FULFILLED', 'CANCELLED'];
+
+    if ($id <= 0 || !in_array($status, $validStatuses)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Valid ID and status are required"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE `customer_requirements` SET `status` = ?, `updated_at` = NOW() WHERE `id` = ?");
+        $stmt->execute([$status, $id]);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Customer requirement status updated to $status",
+            "id" => $id,
+            "new_status" => $status
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'delete_customer_requirement' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true) ?: $_POST;
+
+    $id = (int)($data['id'] ?? 0);
+    if ($id <= 0) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Valid ID is required"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM `customer_requirements` WHERE `id` = ?");
+        $stmt->execute([$id]);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Customer requirement deleted successfully",
+            "id" => $id
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+// =========================================================================
 // 4. SEND OUTBOUND WHATSAPP MESSAGE TO CUSTOMER (Via Baileys Bridge)
 // =========================================================================
 if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {

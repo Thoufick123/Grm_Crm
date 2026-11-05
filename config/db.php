@@ -145,6 +145,29 @@ function getDBConnection() {
                     }
                 }
 
+
+                // Ensure customer_requirements table exists
+                try {
+                    $checkReq = $pdo->query("SHOW TABLES LIKE 'customer_requirements'")->fetch();
+                    if (!$checkReq) {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS `customer_requirements` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `customer_name` VARCHAR(150) NOT NULL,
+                                `phone` VARCHAR(50) NOT NULL,
+                                `email` VARCHAR(150) NULL,
+                                `dress` VARCHAR(150) NOT NULL,
+                                `dress_requirement` TEXT NOT NULL,
+                                `status` ENUM('PENDING', 'SOURCING', 'QUOTED', 'FULFILLED', 'CANCELLED') DEFAULT 'PENDING',
+                                `created_by` VARCHAR(100) DEFAULT 'Super Admin',
+                                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                INDEX (`phone`),
+                                INDEX (`status`)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+                    }
+                } catch (Exception $e) {}
                 if ($needSchemaInit) {
                     initializeDatabaseSchema($pdo);
                 }
@@ -197,6 +220,24 @@ function initializeDatabaseSchema($pdo) {
             `status` VARCHAR(50) DEFAULT 'CONNECTED',
             `webhook_url` VARCHAR(255) NULL,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 3b. Customer Requirements Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `customer_requirements` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `customer_name` VARCHAR(150) NOT NULL,
+            `phone` VARCHAR(50) NOT NULL,
+            `email` VARCHAR(150) NULL,
+            `dress` VARCHAR(150) NOT NULL,
+            `dress_requirement` TEXT NOT NULL,
+            `status` ENUM('PENDING', 'SOURCING', 'QUOTED', 'FULFILLED', 'CANCELLED') DEFAULT 'PENDING',
+            `created_by` VARCHAR(100) DEFAULT 'Super Admin',
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX (`phone`),
+            INDEX (`status`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
