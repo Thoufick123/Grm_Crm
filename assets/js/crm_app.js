@@ -27093,23 +27093,13 @@ function renderCustomerRequirementsTable() {
         </td>
         <td class="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">${formattedDate}</td>
         <td class="py-3.5 px-4 text-right">
-          <div class="inline-flex items-center gap-1.5 justify-end">
-            <button 
-              type="button" 
-              onclick="openEditRequirementModal(${req.id})" 
-              title="Edit Details" 
-              class="px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl transition-all cursor-pointer flex items-center gap-1 border border-slate-200/80">
-              <span class="material-symbols-outlined text-[15px]">edit</span>
-              <span>Edit</span>
-            </button>
-            <button 
-              type="button" 
-              onclick="deleteCustomerRequirement(${req.id})" 
-              title="Delete Requirement" 
-              class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer">
-              <span class="material-symbols-outlined text-[18px]">delete</span>
-            </button>
-          </div>
+          <button 
+            type="button" 
+            onclick="openEditRequirementModal(${req.id})" 
+            title="Edit Requirement" 
+            class="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center">
+            <span class="material-symbols-outlined text-[18px]">edit</span>
+          </button>
         </td>
       </tr>
     `;
