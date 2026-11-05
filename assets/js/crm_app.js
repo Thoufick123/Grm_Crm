@@ -25490,7 +25490,7 @@ const CRM_PACKING_SLIP_DEFAULT_CONFIG = {
   // Text Content
   returnPolicy: "7 Days Easy Exchange on unworn garments with original tags intact. Please keep parcel packaging for returns.",
   handlingNotes: "Fragile Apparel & Premium Fabrics - Handle With Care & Protect From Moisture",
-  thankYouText: ""
+  thankYouText: "Thank you for shopping with GRM Garments! WhatsApp helpline: +91 99435 57998"
 };
 
 function getPackingSlipConfig() {
@@ -26151,6 +26151,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
       <div class="p-2 rounded border border-slate-200 bg-slate-50/70 text-[9px] text-slate-600 ${notesJustify} space-y-1 mb-2">
         ${c.returnPolicy ? `<div class="font-medium whitespace-pre-line leading-tight text-slate-700"><strong>Return Policy:</strong> ${c.returnPolicy}</div>` : ''}
         ${c.handlingNotes ? `<div class="font-semibold text-amber-900 leading-tight">⚠️ ${c.handlingNotes}</div>` : ''}
+        ${c.thankYouText ? `<div class="font-bold text-slate-800">${c.thankYouText}</div>` : ''}
       </div>
     `;
   }
