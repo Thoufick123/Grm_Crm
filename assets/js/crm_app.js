@@ -25765,6 +25765,50 @@ function renderPackingSlipConfigPage() {
 }
 window.renderPackingSlipConfigPage = renderPackingSlipConfigPage;
 
+// Standard Code 39 Vector SVG Barcode Generator (High-Density, Crisp Thermal Print Compatible)
+function generateBarcodeSvg(value) {
+  var text = String(value || 'WO-00081').trim().toUpperCase();
+  var code39Patterns = {
+    '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
+    '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
+    '8': '100100100', '9': '001100100', 'A': '100001001', 'B': '001001001',
+    'C': '101001000', 'D': '000011001', 'E': '100011000', 'F': '001011000',
+    'G': '000001101', 'H': '100001100', 'I': '001001100', 'J': '000011100',
+    'K': '100000011', 'L': '001000011', 'M': '101000010', 'N': '000010011',
+    'O': '100010010', 'P': '001010010', 'Q': '000000111', 'R': '100000110',
+    'S': '001000110', 'T': '000010110', 'U': '110000001', 'V': '011000001',
+    'W': '111000000', 'X': '010010001', 'Y': '110010000', 'Z': '011010000',
+    '-': '010000101', '.': '110000100', ' ': '011000100', '*': '010010100'
+  };
+  var clean = text.replace(/[^0-9A-Z\-\.\ ]/g, '') || 'ORDER';
+  var fullText = '*' + clean + '*';
+  var x = 4;
+  var narrowWidth = 1.6;
+  var wideWidth = 3.8;
+  var barHeight = 38;
+  var rects = [];
+  for (var i = 0; i < fullText.length; i++) {
+    var char = fullText[i];
+    var pattern = code39Patterns[char] || code39Patterns['*'];
+    for (var p = 0; p < 9; p++) {
+      var isBar = (p % 2 === 0);
+      var isWide = pattern[p] === '1';
+      var width = isWide ? wideWidth : narrowWidth;
+      if (isBar) {
+        rects.push('<rect x="' + x.toFixed(1) + '" y="0" width="' + width.toFixed(1) + '" height="' + barHeight + '" fill="#0f172a" />');
+      }
+      x += width;
+    }
+    x += narrowWidth;
+  }
+  var totalWidth = Math.ceil(x + 4);
+  return '<div class="w-full flex items-center justify-center overflow-hidden py-0.5">' +
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + totalWidth + ' ' + barHeight + '" class="h-9 w-auto max-w-[280px]" style="shape-rendering: crispEdges;" preserveAspectRatio="xMidYMid meet">' +
+    rects.join('') +
+    '</svg></div>';
+}
+window.generateBarcodeSvg = generateBarcodeSvg;
+
 // Generates the dynamic HTML of a packing slip based on admin positions & toggles
 function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   if (!order) return '';
@@ -25885,14 +25929,11 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
 
   let barcodeBoxContentHtml = '';
   if (showBarcodeLines) {
-    barcodeBoxContentHtml += `
-      <div class="font-mono text-[9px] tracking-[6px] font-bold text-slate-800 scale-y-125 mb-0.5 select-none overflow-hidden">
-        |||| | ||||| || |||||| | ||| |||| | |||||| |||
-      </div>`;
+    barcodeBoxContentHtml += generateBarcodeSvg(order.id || 'WO-00081');
   }
   if (showOrderId) {
     barcodeBoxContentHtml += `
-      <span class="font-mono font-bold text-[11px] text-slate-900 tracking-wider">*${order.id || 'WO-00081'}*</span>`;
+      <span class="font-mono font-bold text-[11px] text-slate-950 tracking-[3px] mt-1 select-all">*${order.id || 'WO-00081'}*</span>`;
   }
   if (showBarcodeCourier) {
     barcodeBoxContentHtml += `
@@ -25908,7 +25949,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   }
 
   const barcodeHtml = barcodeBoxContentHtml ? `
-    <div class="flex flex-col items-center justify-center py-1.5 px-2 bg-slate-50 border border-slate-300 rounded-lg text-center mb-2.5">
+    <div class="flex flex-col items-center justify-center py-2 px-3 bg-white border border-slate-300 rounded-lg text-center mb-2.5 shadow-2xs">
       ${barcodeBoxContentHtml}
     </div>` : '';
 
