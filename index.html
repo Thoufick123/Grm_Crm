@@ -149,7 +149,8 @@
             analytics: { title: 'Staff Performance Analytics & KPIs', sub: 'Factual metrics on response times, volume handled, and conversions' },
             settings: { title: 'WhatsApp Business Settings & Phone Configuration', sub: 'Set your primary WhatsApp Business number for dynamic live message routing' },
             backup: { title: 'Data Backup & Recovery Hub', sub: 'Full database snapshot export, restore, and zero-data-loss protection (Section 53)' },
-            masking: { title: 'Call & Number Masking Control Hub', sub: 'Lead data privacy, In-CRM WebRTC softphone & virtual brand caller ID configuration' }
+            masking: { title: 'Call & Number Masking Control Hub', sub: 'Lead data privacy, In-CRM WebRTC softphone & virtual brand caller ID configuration' },
+            'packing-slip-config': { title: 'Packing Slip & Label Configuration', sub: 'Customize brand logo, GST, positions, notes, and thermal/standard print templates' }
           };
 
           var updateHeaderEarly = function () {
@@ -852,6 +853,59 @@
       max-width: 100% !important;
       min-width: 0 !important;
     }
+  
+    /* Dedicated Print Styling for Packing Slips & Thermal Labels */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #packing-slip-printable-container,
+      #packing-slip-printable-container * {
+        visibility: visible !important;
+      }
+      #packing-slip-printable-container {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+      }
+      .packing-slip-page {
+        page-break-after: always !important;
+        break-after: page !important;
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        margin: 0 0 20px 0 !important;
+        padding: 14px !important;
+        background: white !important;
+      }
+      .packing-slip-page.packing-slip-100x100 {
+        width: 98mm !important;
+        max-width: 98mm !important;
+        min-height: 98mm !important;
+        padding: 8px !important;
+        font-size: 10px !important;
+      }
+      .packing-slip-page.packing-slip-4x6 {
+        width: 100mm !important;
+        max-width: 100mm !important;
+      }
+      .packing-slip-page.packing-slip-a5 {
+        width: 140mm !important;
+        max-width: 140mm !important;
+      }
+      .packing-slip-page.packing-slip-a4 {
+        width: 195mm !important;
+        max-width: 195mm !important;
+      }
+      .packing-slip-page:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
+    }
+  
   </style>
 </head>
 
@@ -1061,6 +1115,17 @@
           <span class="font-bold" data-i18n="nav.backup">Data Backup & Restore</span>
         </div>
         <span class="material-symbols-outlined text-[14px] text-cyan-400">download</span>
+      </button>
+
+      <!-- PACKING SLIP CONFIG MODULE -->
+      <button onclick="switchView('packing-slip-config')" id="nav-packing-slip-config"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav"
+        title="Customize Packing Slip & Shipping Label Template">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">local_shipping</span>
+          <span class="font-bold">Packing Slip Config</span>
+        </div>
+        <span class="material-symbols-outlined text-[14px] text-teal-400">tune</span>
       </button>
 
       <!-- CALL & NUMBER MASKING MODULE -->
@@ -3241,6 +3306,10 @@
                   <span class="material-symbols-outlined text-[16px]">download</span>
                   <span>Export CSV</span>
                 </button>
+                <button type="button" onclick="openBatchPackingSlipsModal()" class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95" title="Print Packing Slips for all current filtered orders">
+                  <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                  <span>Packing Slips (<span id="batch-slips-count">0</span>)</span>
+                </button>
               </div>
             </div>
 
@@ -5161,6 +5230,392 @@
         </div>
       </section>
 
+      <!-- ======================================================== -->
+      <!-- VIEW: PACKING SLIP & SHIPPING LABEL CONFIGURATION        -->
+      <!-- ======================================================== -->
+      <section id="view-packing-slip-config" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-5">
+
+          <!-- 1. Header Banner with Action Buttons -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                <span class="material-symbols-outlined text-[24px]">local_shipping</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">Packing Slip &amp; Shipping Label Configuration</h2>
+                  <span class="bg-teal-50 text-teal-800 text-[11px] px-2.5 py-0.5 rounded-full font-bold border border-teal-200/80">Dynamic Template</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Customize brand logo, GST, positions (top, bottom, left, right), customer address formatting, and notes</p>
+              </div>
+            </div>
+
+            <!-- Top Actions -->
+            <div class="flex items-center gap-2.5 self-start lg:self-center shrink-0 flex-wrap">
+              <button type="button" onclick="resetPackingSlipConfigToDefault()" class="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95">
+                <span class="material-symbols-outlined text-[17px]">restart_alt</span>
+                <span>Reset Defaults</span>
+              </button>
+              <button type="button" onclick="saveCurrentPackingSlipConfig()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95">
+                <span class="material-symbols-outlined text-[17px]">save</span>
+                <span>Save Configuration</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Main Two-Column Layout: Left Controls (7 cols) + Right Live Preview (5 cols) -->
+          <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+
+            <!-- LEFT COLUMN: Form Controls & Position Selectors (7 cols) -->
+            <div class="xl:col-span-7 space-y-4">
+
+              <!-- Card 1: Brand & Sender Identity -->
+              <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <span class="material-symbols-outlined text-teal-600 text-[18px]">storefront</span>
+                    <span>1. Company &amp; Sender Details</span>
+                  </h3>
+                  <span class="text-[11px] text-slate-400">Printed as "Dispatch / From"</span>
+                </div>
+
+                <!-- Logo Uploader & Preview -->
+                <div class="space-y-2">
+                  <label class="block text-xs font-bold text-slate-700">Company Logo (Optional)</label>
+                  <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                    <div id="psc-logo-preview-box" class="w-16 h-16 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                      <span id="psc-logo-placeholder-icon" class="material-symbols-outlined text-slate-400 text-[24px]">image</span>
+                      <img id="psc-logo-preview-img" src="" alt="Brand Logo" class="w-full h-full object-contain hidden">
+                    </div>
+                    <div class="flex-1 space-y-1.5">
+                      <input type="file" id="psc-logo-file-input" accept="image/*" onchange="handlePackingSlipLogoUpload(event)" class="text-xs text-slate-600 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer">
+                      <div class="flex items-center gap-2">
+                        <button type="button" onclick="removePackingSlipLogo()" id="psc-btn-remove-logo" class="text-[11px] text-rose-600 hover:underline font-bold hidden cursor-pointer flex items-center gap-0.5">
+                          <span class="material-symbols-outlined text-[13px]">delete</span>
+                          <span>Remove Logo</span>
+                        </button>
+                        <span class="text-[10px] text-slate-400">PNG, JPG or SVG (Transparent recommended)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                  <!-- Brand Name -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Our Brand / Store Name</label>
+                    <input type="text" id="psc-brand-name" oninput="onPackingSlipConfigFieldChange()" placeholder="e.g. GRM Garments" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  </div>
+
+                  <!-- GST No -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">GSTIN / Tax Registration No</label>
+                    <input type="text" id="psc-gst-no" oninput="onPackingSlipConfigFieldChange()" placeholder="e.g. 33AAAAA0000A1Z5" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none uppercase">
+                  </div>
+
+                  <!-- Phone / WhatsApp -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Contact Phone / WhatsApp Helpline</label>
+                    <input type="text" id="psc-phone" oninput="onPackingSlipConfigFieldChange()" placeholder="e.g. +91 99435 57998" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  </div>
+
+                  <!-- Support Email / Website -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Support Email / Website</label>
+                    <input type="text" id="psc-email" oninput="onPackingSlipConfigFieldChange()" placeholder="e.g. support@grmgarments.com" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  </div>
+
+                  <!-- Default Shipping Partner -->
+                  <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Default Shipping Partner / Courier</span>
+                      <span class="text-[10px] text-teal-600 font-bold">Courier Name</span>
+                    </label>
+                    <input type="text" id="psc-default-courier" oninput="onPackingSlipConfigFieldChange()" placeholder="e.g. Delhivery / ST Courier / DTDC / Blue Dart" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  </div>
+                </div>
+
+                <!-- Sender Warehouse Dispatch Address -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Dispatch / Return Warehouse Address</label>
+                  <textarea id="psc-sender-address" oninput="onPackingSlipConfigFieldChange()" rows="2" placeholder="Full address of the dispatch warehouse / store..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none leading-relaxed"></textarea>
+                </div>
+              </div>
+
+              <!-- Card 2: Field Positions & Dynamic Layout Controls (Requested by User) -->
+              <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <span class="material-symbols-outlined text-teal-600 text-[18px]">dashboard_customize</span>
+                    <span>2. Field Positions &amp; Dynamic Layout Customizer</span>
+                  </h3>
+                  <span class="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Interactive</span>
+                </div>
+                <p class="text-xs text-slate-500">Change positions (Top, Bottom, Left, Right) to match your thermal courier labels or A4/A5 stationery:</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <!-- Logo Position -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Logo Position:</span>
+                      <span class="text-[10px] text-teal-600 font-bold">Top Header</span>
+                    </label>
+                    <select id="psc-logo-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                      <option value="left">Left Aligned</option>
+                      <option value="center">Center Aligned</option>
+                      <option value="right">Right Aligned</option>
+                    </select>
+                  </div>
+
+                  <!-- Header Brand Layout -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Brand Header Alignment:</span>
+                      <span class="text-[10px] text-teal-600 font-bold">Header Text</span>
+                    </label>
+                    <select id="psc-header-align" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                      <option value="left">Left Aligned</option>
+                      <option value="center">Center Aligned</option>
+                      <option value="right">Right Aligned</option>
+                    </select>
+                  </div>
+
+                  <!-- Sender Details Position -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Sender (From) Block Position:</span>
+                      <span class="text-[10px] text-amber-700 font-bold">Dispatch Box</span>
+                    </label>
+                    <select id="psc-sender-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                      <option value="left">Left Column</option>
+                      <option value="right">Right Column</option>
+                      <option value="top">Top (Full Width)</option>
+                      <option value="bottom">Bottom (Below Items)</option>
+                    </select>
+                  </div>
+
+                  <!-- Customer Details Position -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Customer (Ship-To) Block Position:</span>
+                      <span class="text-[10px] text-blue-700 font-bold">Delivery Box</span>
+                    </label>
+                    <select id="psc-customer-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                      <option value="right">Right Column (Recommended)</option>
+                      <option value="left">Left Column</option>
+                      <option value="top">Top (Full Width)</option>
+                    </select>
+                  </div>
+
+                  <!-- Order Meta Position -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Order &amp; Payment Meta Position:</span>
+                      <span class="text-[10px] text-purple-700 font-bold">Badge Bar</span>
+                    </label>
+                    <select id="psc-meta-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                      <option value="above">Above Items Table</option>
+                      <option value="below">Below Items Table</option>
+                    </select>
+                  </div>
+
+                  <!-- Notes & Policies Position -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Notes &amp; Policies Position:</span>
+                      <span class="text-[10px] text-slate-600 font-bold">Instructions</span>
+                    </label>
+                    <select id="psc-notes-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                      <option value="bottom">Bottom (Footer)</option>
+                      <option value="top">Top (Below Header)</option>
+                    </select>
+                  </div>
+
+                  <!-- Shipping Partner Position -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Shipping Partner Position:</span>
+                      <span class="text-[10px] text-amber-700 font-bold">Courier Placement</span>
+                    </label>
+                    <select id="psc-courier-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                      <option value="barcode">With Barcode &amp; AWB (Recommended)</option>
+                      <option value="header">Top Header Badge</option>
+                      <option value="meta">Inside Order Meta Bar</option>
+                      <option value="customer">Inside Ship-To Card</option>
+                      <option value="bottom">Bottom (Above Sign)</option>
+                    </select>
+                  </div>
+
+                  <!-- Paper Size Format -->
+                  <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Standard Paper &amp; Print Size:</span>
+                      <span class="text-[10px] text-emerald-700 font-bold">Thermal or Sheet</span>
+                    </label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-teal-50/50 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50">
+                        <input type="radio" name="psc-paper-format" value="thermal_4x6" onchange="onPackingSlipConfigFieldChange()" checked class="text-teal-600">
+                        <div>
+                          <div class="text-xs font-bold text-slate-800">4" x 6" Thermal</div>
+                          <div class="text-[10px] text-slate-500">Standard Courier Label</div>
+                        </div>
+                      </label>
+                      <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-teal-50/50 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50">
+                        <input type="radio" name="psc-paper-format" value="thermal_100x100" onchange="onPackingSlipConfigFieldChange()" class="text-teal-600">
+                        <div>
+                          <div class="text-xs font-bold text-slate-800">100 * 100 mm</div>
+                          <div class="text-[10px] text-slate-500">Square Thermal Label</div>
+                        </div>
+                      </label>
+                      <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-teal-50/50 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50">
+                        <input type="radio" name="psc-paper-format" value="standard_a5" onchange="onPackingSlipConfigFieldChange()" class="text-teal-600">
+                        <div>
+                          <div class="text-xs font-bold text-slate-800">A5 Dispatch</div>
+                          <div class="text-[10px] text-slate-500">Half-Page Sheet</div>
+                        </div>
+                      </label>
+                      <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-teal-50/50 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50">
+                        <input type="radio" name="psc-paper-format" value="standard_a4" onchange="onPackingSlipConfigFieldChange()" class="text-teal-600">
+                        <div>
+                          <div class="text-xs font-bold text-slate-800">A4 Full Page</div>
+                          <div class="text-[10px] text-slate-500">Full Packing Invoice</div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 3: Visibility & Display Toggles -->
+              <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <span class="material-symbols-outlined text-teal-600 text-[18px]">visibility</span>
+                    <span>3. Elements Display &amp; Visibility</span>
+                  </h3>
+                  <span class="text-[11px] text-slate-400">Toggle on/off</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 text-xs text-slate-700">
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-logo" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Brand Logo</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-gst" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">GST Number</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-phone" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Helpline / Phone</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-email" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Support Email</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-sender-address" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Sender Address</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-customer-phone" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Customer Phone</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-customer-address" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Customer Address</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-courier" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Shipping Partner</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-items" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Products / Items</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-item-prices" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Item Prices / Total</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-barcode" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Order Barcode</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-payment-mode" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Payment / COD Due</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-notes" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Notes &amp; Policies</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Card 4: Policies, Instructions & Notes -->
+              <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs space-y-3.5">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <span class="material-symbols-outlined text-teal-600 text-[18px]">notes</span>
+                    <span>4. Notes, Care Instructions &amp; Policies</span>
+                  </h3>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Return / Exchange Policy Note</label>
+                  <textarea id="psc-return-policy" oninput="onPackingSlipConfigFieldChange()" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none leading-relaxed"></textarea>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Handling / Fragile Instructions</label>
+                  <input type="text" id="psc-handling-notes" oninput="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Footer Greeting / Social Note</label>
+                  <input type="text" id="psc-thank-you" oninput="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                </div>
+              </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Interactive Live Visual Preview (5 cols, Sticky) -->
+            <div class="xl:col-span-5 sticky top-4 space-y-3">
+              <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Live Packing Slip Preview</h3>
+                  </div>
+                  <span id="psc-preview-format-tag" class="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-md">4" x 6" Thermal</span>
+                </div>
+
+                <p class="text-[11px] text-slate-500">Updates dynamically as you edit logo, texts, or field positions (Left, Right, Top, Bottom):</p>
+
+                <!-- Slip Preview Sheet -->
+                <div class="bg-slate-100/70 p-3 sm:p-4 rounded-xl border border-slate-200 overflow-x-auto flex justify-center">
+                  <div id="psc-live-preview-sheet" class="bg-white shadow-md border border-slate-300 p-4 rounded-lg w-full max-w-[390px] text-slate-800 transition-all duration-200">
+                    <!-- Injected dynamically by JS -->
+                  </div>
+                </div>
+
+                <!-- Preview Actions -->
+                <div class="flex items-center justify-between pt-1">
+                  <span class="text-[11px] text-slate-400">Sample Order Preview</span>
+                  <button type="button" onclick="testPrintPreviewPackingSlip()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95">
+                    <span class="material-symbols-outlined text-[15px]">print</span>
+                    <span>Test Print</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
 </main>
   </div>
 
@@ -5980,6 +6435,62 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DYNAMIC DISPATCH PACKING SLIP & SHIPPING LABEL -->
+  <div id="modal-order-packing-slip" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-400">
+            <span class="material-symbols-outlined text-[24px]">local_shipping</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-extrabold text-base tracking-tight" id="packing-slip-modal-title">Dispatch Packing Slip</h3>
+              <span id="packing-slip-badge-count" class="bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">1 Order</span>
+            </div>
+            <p class="text-xs text-teal-200/80" id="packing-slip-modal-subtitle">Courier shipping label &amp; item verification slip</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Format Switcher -->
+          <div class="hidden sm:flex items-center bg-white/10 rounded-xl p-0.5 text-xs text-slate-300">
+            <button type="button" onclick="setPackingSlipModalPaperFormat('thermal_4x6')" id="btn-format-4x6" class="px-2.5 py-1 rounded-lg font-bold transition bg-white text-slate-900 shadow-xs cursor-pointer">4"x6" Label</button>
+            <button type="button" onclick="setPackingSlipModalPaperFormat('thermal_100x100')" id="btn-format-100x100" class="px-2.5 py-1 rounded-lg font-bold transition hover:text-white cursor-pointer">100*100mm</button>
+            <button type="button" onclick="setPackingSlipModalPaperFormat('standard_a5')" id="btn-format-a5" class="px-2.5 py-1 rounded-lg font-bold transition hover:text-white cursor-pointer">A5 Sheet</button>
+          </div>
+
+          <button type="button" onclick="closeModal('modal-order-packing-slip')" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Printable Container -->
+      <div id="packing-slip-printable-container" class="p-4 sm:p-6 overflow-y-auto space-y-6 text-xs text-slate-800 bg-slate-50/50 flex flex-col items-center">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="p-4 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
+        <button type="button" onclick="closeModal('modal-order-packing-slip')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition text-xs cursor-pointer">
+          Close
+        </button>
+        <div class="flex items-center gap-2.5">
+          <button type="button" onclick="switchView('packing-slip-config'); closeModal('modal-order-packing-slip');" class="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-bold transition text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs">
+            <span class="material-symbols-outlined text-[15px]">tune</span>
+            <span class="hidden sm:inline">Customize Positions</span>
+          </button>
+          <button type="button" onclick="printPackingSlipDocument()" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold transition text-xs flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95">
+            <span class="material-symbols-outlined text-[16px]">print</span>
+            <span>Print Slip(s)</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

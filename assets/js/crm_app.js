@@ -346,7 +346,8 @@ const CRM_MODULE_DEFINITIONS = [
   { key: 'audit', name: 'System Audit Trail & Security Logs', desc: 'Tamper-proof event logs, security & staff actions', icon: 'history', viewOnly: true },
   { key: 'settings', name: 'WhatsApp Business Settings', desc: 'Business phone slots, Webhook routing & Softphone config', icon: 'settings' },
   { key: 'backup', name: 'Data Backup & Recovery Hub', desc: 'Full MySQL database snapshot export and zero-loss restore', icon: 'backup' },
-  { key: 'masking', name: 'Call & Number Masking', desc: 'In-CRM softphone dialer, lead privacy protection & virtual DID caller ID', icon: 'phone_locked' }
+  { key: 'masking', name: 'Call & Number Masking', desc: 'In-CRM softphone dialer, lead privacy protection & virtual DID caller ID', icon: 'phone_locked' },
+  { key: 'packing-slip-config', name: 'Packing Slip & Label Settings', desc: 'Customizable packing slip template, logo uploader & position layout', icon: 'local_shipping' }
 ];
 window.CRM_MODULE_DEFINITIONS = CRM_MODULE_DEFINITIONS;
 
@@ -365,7 +366,8 @@ const DEFAULT_ROLE_PERMISSIONS = {
     audit: { view: true, create: false, edit: false, delete: false },
     settings: { view: true, create: true, edit: true, delete: true },
     backup: { view: true, create: true, edit: true, delete: true },
-    masking: { view: true, create: true, edit: true, delete: true }
+    masking: { view: true, create: true, edit: true, delete: true },
+    'packing-slip-config': { view: true, create: true, edit: true, delete: true }
   },
   'Admin Manager': {
     dashboard: { view: true, create: true, edit: true, delete: true },
@@ -3808,6 +3810,10 @@ function updatePageHeaderTitle() {
     masking: {
       title: t('header.title.masking', 'Call & Number Masking Control Hub'),
       sub: t('header.sub.masking', 'Lead data privacy, In-CRM WebRTC softphone & virtual brand caller ID configuration')
+    },
+    'packing-slip-config': {
+      title: 'Packing Slip & Label Configuration',
+      sub: 'Customize brand logo, GST, positions, notes, and thermal/standard print templates'
     }
   };
 
@@ -3863,7 +3869,7 @@ function switchView(viewName, subName) {
       window.history.replaceState(null, '', targetHash);
     }
   } catch (e) { }
-  const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking'];
+  const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
 
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
@@ -3949,6 +3955,9 @@ function switchView(viewName, subName) {
   if (viewName === 'analytics') renderAnalyticsView();
   if (viewName === 'settings') renderWhatsAppSettings();
   if (viewName === 'masking') renderMaskingView();
+  if (viewName === 'packing-slip-config') {
+    if (typeof renderPackingSlipConfigPage === 'function') renderPackingSlipConfigPage();
+  }
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
   }
@@ -24529,6 +24538,9 @@ function renderOrdersHistoryTable() {
   if (elOutOfDelivery) elOutOfDelivery.innerText = cOutOfDelivery;
   if (elDelivered) elDelivered.innerText = cDelivered;
 
+  const elBatchSlips = document.getElementById('batch-slips-count');
+  if (elBatchSlips) elBatchSlips.innerText = orders.length;
+
   const filteredOrders = orders.filter(ord => {
     const status = normalizeOrderStatus(ord.orderStatus || ord.order_status);
     if (ACTIVE_ORDER_HISTORY_STATUS_FILTER !== 'ALL' && status !== ACTIVE_ORDER_HISTORY_STATUS_FILTER) {
@@ -24815,6 +24827,12 @@ function renderOrdersHistoryTable() {
             ` : ''}
 
 
+
+            <!-- View Packing Slip -->
+            <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-teal-300" title="View &amp; Print Packing Slip">
+              <span class="material-symbols-outlined text-[14px]">local_shipping</span>
+              <span class="text-[11px]">Slip</span>
+            </button>
 
             <!-- View Invoice -->
             <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-300" title="View Tax Invoice &amp; Packing Slip">
@@ -25398,6 +25416,758 @@ function downloadOrdersHistoryCSV() {
   }
 }
 window.downloadOrdersHistoryCSV = downloadOrdersHistoryCSV;
+
+// =========================================================================
+// PACKING SLIP & SHIPPING LABEL ENGINE (DYNAMIC POSITIONS & PRINT)
+// =========================================================================
+const CRM_PACKING_SLIP_DEFAULT_CONFIG = {
+  brandName: "GRM Garments",
+  gstNo: "33AAAAA0000A1Z5",
+  phone: "+91 99435 57998",
+  senderAddress: "GRM Garments Warehouse, 123 Textile Market, Tirupur, Tamil Nadu - 641602",
+  email: "support@grmgarments.com",
+  defaultCourier: "Delhivery Surface",
+  logoDataUrl: "",
+
+  // Position & Layout Controls (Top, Bottom, Left, Right)
+  logoPosition: "left",       // "left" | "center" | "right"
+  headerAlign: "left",        // "left" | "center" | "right"
+  senderPosition: "left",     // "left" | "right" | "top" | "bottom"
+  customerPosition: "right",  // "right" | "left" | "top"
+  metaPosition: "above",      // "above" | "below"
+  courierPosition: "barcode", // "barcode" | "header" | "meta" | "customer" | "bottom"
+  notesPosition: "bottom",    // "bottom" | "top"
+  paperFormat: "thermal_4x6", // "thermal_4x6" | "thermal_100x100" | "standard_a5" | "standard_a4"
+
+  // Visibility Toggles
+  showLogo: true,
+  showBrandName: true,
+  showGst: true,
+  showPhone: true,
+  showEmail: true,
+  showSenderAddress: true,
+  showCustomerPhone: true,
+  showCustomerAddress: true,
+  showCourier: true,
+  showItems: true,
+  showItemPrices: true,
+  showBarcode: true,
+  showPaymentMode: true,
+  showNotes: true,
+
+  // Text Content
+  returnPolicy: "7 Days Easy Exchange on unworn garments with original tags intact. Please keep parcel packaging for returns.",
+  handlingNotes: "Fragile Apparel & Premium Fabrics - Handle With Care & Protect From Moisture",
+  thankYouText: "Thank you for shopping with GRM Garments! WhatsApp helpline: +91 99435 57998"
+};
+
+function getPackingSlipConfig() {
+  try {
+    const saved = localStorage.getItem('GRM_PACKING_SLIP_CONFIG');
+    if (saved) {
+      return Object.assign({}, CRM_PACKING_SLIP_DEFAULT_CONFIG, JSON.parse(saved));
+    }
+  } catch (e) {
+    console.warn('Error reading packing slip config:', e);
+  }
+  return Object.assign({}, CRM_PACKING_SLIP_DEFAULT_CONFIG);
+}
+window.getPackingSlipConfig = getPackingSlipConfig;
+
+function savePackingSlipConfig(cfg) {
+  try {
+    localStorage.setItem('GRM_PACKING_SLIP_CONFIG', JSON.stringify(cfg));
+    return true;
+  } catch (e) {
+    console.error('Failed to save packing slip config to localStorage:', e);
+    return false;
+  }
+}
+window.savePackingSlipConfig = savePackingSlipConfig;
+
+function getSamplePackingSlipOrder() {
+  const existingOrders = CRM_STATE?.orders || [];
+  if (existingOrders.length > 0) {
+    return existingOrders[0];
+  }
+  return {
+    id: "WO-00081",
+    createdAt: "2026-11-04 11:21:10",
+    customerName: "Suguna Velmurugan",
+    customerPhone: "+91 73389 65568",
+    shippingAddress: "Door No. 42/B, Anna Nagar 2nd Street, Near Bus Stand, Tirupur, Tamil Nadu - 641602",
+    staffName: "Super Admin",
+    paymentMethod: "ONLINE_UPI",
+    paymentStatus: "PAID",
+    grandTotal: 699,
+    upiTransactionId: "PHONEPE-234567890",
+    orderStatus: "SHIPPED",
+    courierName: "Delhivery Surface",
+    trackingNumber: "dtr12344",
+    items: [
+      { name: "Baby Collection (0-3Y) Pure Cotton Frock", sku: "BF-001-YL", qty: 1, price: 599, size: "1-2Y", color: "Yellow" },
+      { name: "Organic Baby Bibs Set (Pack of 2)", sku: "BB-ORG-02", qty: 1, price: 100, size: "Free", color: "Pastel" }
+    ]
+  };
+}
+
+function handlePackingSlipLogoUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('File Too Large', 'Please upload a logo image smaller than 2MB.', 'warning', 'amber');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const dataUrl = e.target.result;
+    const imgEl = document.getElementById('psc-logo-preview-img');
+    const placeholder = document.getElementById('psc-logo-placeholder-icon');
+    const removeBtn = document.getElementById('psc-btn-remove-logo');
+    if (imgEl) {
+      imgEl.src = dataUrl;
+      imgEl.classList.remove('hidden');
+    }
+    if (placeholder) placeholder.classList.add('hidden');
+    if (removeBtn) removeBtn.classList.remove('hidden');
+
+    const cfg = getPackingSlipConfig();
+    cfg.logoDataUrl = dataUrl;
+    savePackingSlipConfig(cfg);
+    updatePackingSlipLivePreview();
+    showToast('Logo Uploaded', 'Company logo updated and saved.', 'image', 'emerald');
+  };
+  reader.readAsDataURL(file);
+}
+window.handlePackingSlipLogoUpload = handlePackingSlipLogoUpload;
+
+function removePackingSlipLogo() {
+  const imgEl = document.getElementById('psc-logo-preview-img');
+  const placeholder = document.getElementById('psc-logo-placeholder-icon');
+  const removeBtn = document.getElementById('psc-btn-remove-logo');
+  const fileInput = document.getElementById('psc-logo-file-input');
+
+  if (imgEl) {
+    imgEl.src = '';
+    imgEl.classList.add('hidden');
+  }
+  if (placeholder) placeholder.classList.remove('hidden');
+  if (removeBtn) removeBtn.classList.add('hidden');
+  if (fileInput) fileInput.value = '';
+
+  const cfg = getPackingSlipConfig();
+  cfg.logoDataUrl = '';
+  savePackingSlipConfig(cfg);
+  updatePackingSlipLivePreview();
+  showToast('Logo Removed', 'Logo removed from packing slip.', 'delete', 'slate');
+}
+window.removePackingSlipLogo = removePackingSlipLogo;
+
+function readCurrentPackingSlipForm() {
+  const getVal = (id, def = '') => {
+    const el = document.getElementById(id);
+    return el ? el.value : def;
+  };
+  const getChecked = (id, def = true) => {
+    const el = document.getElementById(id);
+    return el ? el.checked : def;
+  };
+  const getRadioVal = (name, def = 'thermal_4x6') => {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : def;
+  };
+
+  const currentCfg = getPackingSlipConfig();
+
+  return {
+    brandName: getVal('psc-brand-name', currentCfg.brandName),
+    gstNo: getVal('psc-gst-no', currentCfg.gstNo),
+    phone: getVal('psc-phone', currentCfg.phone),
+    senderAddress: getVal('psc-sender-address', currentCfg.senderAddress),
+    email: getVal('psc-email', currentCfg.email),
+    defaultCourier: getVal('psc-default-courier', currentCfg.defaultCourier || 'Delhivery Surface'),
+    logoDataUrl: currentCfg.logoDataUrl || '',
+
+    // Position & Layout Controls
+    logoPosition: getVal('psc-logo-position', currentCfg.logoPosition),
+    headerAlign: getVal('psc-header-align', currentCfg.headerAlign),
+    senderPosition: getVal('psc-sender-position', currentCfg.senderPosition),
+    customerPosition: getVal('psc-customer-position', currentCfg.customerPosition),
+    metaPosition: getVal('psc-meta-position', currentCfg.metaPosition),
+    courierPosition: getVal('psc-courier-position', currentCfg.courierPosition || 'barcode'),
+    notesPosition: getVal('psc-notes-position', currentCfg.notesPosition),
+    paperFormat: getRadioVal('psc-paper-format', currentCfg.paperFormat),
+
+    // Visibility Toggles
+    showLogo: getChecked('psc-show-logo', currentCfg.showLogo),
+    showBrandName: true,
+    showGst: getChecked('psc-show-gst', currentCfg.showGst),
+    showPhone: getChecked('psc-show-phone', currentCfg.showPhone),
+    showEmail: getChecked('psc-show-email', currentCfg.showEmail),
+    showSenderAddress: getChecked('psc-show-sender-address', currentCfg.showSenderAddress),
+    showCustomerPhone: getChecked('psc-show-customer-phone', currentCfg.showCustomerPhone),
+    showCustomerAddress: getChecked('psc-show-customer-address', currentCfg.showCustomerAddress),
+    showCourier: getChecked('psc-show-courier', currentCfg.showCourier),
+    showItems: getChecked('psc-show-items', currentCfg.showItems),
+    showItemPrices: getChecked('psc-show-item-prices', currentCfg.showItemPrices),
+    showBarcode: getChecked('psc-show-barcode', currentCfg.showBarcode),
+    showPaymentMode: getChecked('psc-show-payment-mode', currentCfg.showPaymentMode),
+    showNotes: getChecked('psc-show-notes', currentCfg.showNotes),
+
+    // Text Content
+    returnPolicy: getVal('psc-return-policy', currentCfg.returnPolicy),
+    handlingNotes: getVal('psc-handling-notes', currentCfg.handlingNotes),
+    thankYouText: getVal('psc-thank-you', currentCfg.thankYouText)
+  };
+}
+
+function onPackingSlipConfigFieldChange() {
+  updatePackingSlipLivePreview();
+}
+window.onPackingSlipConfigFieldChange = onPackingSlipConfigFieldChange;
+
+function saveCurrentPackingSlipConfig() {
+  const formCfg = readCurrentPackingSlipForm();
+  savePackingSlipConfig(formCfg);
+  updatePackingSlipLivePreview();
+  showToast('Settings Saved', 'Packing slip positions & custom layout saved successfully.', 'check_circle', 'emerald');
+}
+window.saveCurrentPackingSlipConfig = saveCurrentPackingSlipConfig;
+
+function resetPackingSlipConfigToDefault() {
+  if (!confirm('Reset all packing slip field positions, sender details, and notes back to defaults?')) return;
+  savePackingSlipConfig(CRM_PACKING_SLIP_DEFAULT_CONFIG);
+  renderPackingSlipConfigPage();
+  showToast('Reset Complete', 'Packing slip configuration restored to defaults.', 'restart_alt', 'slate');
+}
+window.resetPackingSlipConfigToDefault = resetPackingSlipConfigToDefault;
+
+function renderPackingSlipConfigPage() {
+  const cfg = getPackingSlipConfig();
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val !== undefined ? val : '';
+  };
+  const setChecked = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.checked = Boolean(val);
+  };
+  const setRadio = (name, val) => {
+    const el = document.querySelector(`input[name="${name}"][value="${val}"]`);
+    if (el) el.checked = true;
+  };
+
+  setVal('psc-brand-name', cfg.brandName);
+  setVal('psc-gst-no', cfg.gstNo);
+  setVal('psc-phone', cfg.phone);
+  setVal('psc-sender-address', cfg.senderAddress);
+  setVal('psc-email', cfg.email);
+  setVal('psc-default-courier', cfg.defaultCourier || 'Delhivery Surface');
+
+  setVal('psc-logo-position', cfg.logoPosition || 'left');
+  setVal('psc-header-align', cfg.headerAlign || 'left');
+  setVal('psc-sender-position', cfg.senderPosition || 'left');
+  setVal('psc-customer-position', cfg.customerPosition || 'right');
+  setVal('psc-meta-position', cfg.metaPosition || 'above');
+  setVal('psc-courier-position', cfg.courierPosition || 'barcode');
+  setVal('psc-notes-position', cfg.notesPosition || 'bottom');
+  setRadio('psc-paper-format', cfg.paperFormat || 'thermal_4x6');
+
+  setChecked('psc-show-logo', cfg.showLogo);
+  setChecked('psc-show-gst', cfg.showGst);
+  setChecked('psc-show-phone', cfg.showPhone);
+  setChecked('psc-show-email', cfg.showEmail);
+  setChecked('psc-show-sender-address', cfg.showSenderAddress);
+  setChecked('psc-show-customer-phone', cfg.showCustomerPhone);
+  setChecked('psc-show-customer-address', cfg.showCustomerAddress);
+  setChecked('psc-show-courier', cfg.showCourier !== false);
+  setChecked('psc-show-items', cfg.showItems !== false);
+  setChecked('psc-show-item-prices', cfg.showItemPrices);
+  setChecked('psc-show-barcode', cfg.showBarcode);
+  setChecked('psc-show-payment-mode', cfg.showPaymentMode);
+  setChecked('psc-show-notes', cfg.showNotes);
+
+  setVal('psc-return-policy', cfg.returnPolicy);
+  setVal('psc-handling-notes', cfg.handlingNotes);
+  setVal('psc-thank-you', cfg.thankYouText);
+
+  // Logo Preview
+  const imgEl = document.getElementById('psc-logo-preview-img');
+  const placeholder = document.getElementById('psc-logo-placeholder-icon');
+  const removeBtn = document.getElementById('psc-btn-remove-logo');
+  if (cfg.logoDataUrl) {
+    if (imgEl) {
+      imgEl.src = cfg.logoDataUrl;
+      imgEl.classList.remove('hidden');
+    }
+    if (placeholder) placeholder.classList.add('hidden');
+    if (removeBtn) removeBtn.classList.remove('hidden');
+  } else {
+    if (imgEl) {
+      imgEl.src = '';
+      imgEl.classList.add('hidden');
+    }
+    if (placeholder) placeholder.classList.remove('hidden');
+    if (removeBtn) removeBtn.classList.add('hidden');
+  }
+
+  updatePackingSlipLivePreview();
+}
+window.renderPackingSlipConfigPage = renderPackingSlipConfigPage;
+
+// Generates the dynamic HTML of a packing slip based on admin positions & toggles
+function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
+  if (!order) return '';
+  const c = cfg || getPackingSlipConfig();
+
+  const grandTotal = parseFloat(order.grandTotal || order.grand_total || 0);
+  const isCod = order.paymentMethod === 'COD' || order.payment_method === 'COD';
+  const codAdv = parseFloat(order.codAdvance || order.cod_advance || 200);
+  const codDue = order.codBalanceDue !== undefined ? parseFloat(order.codBalanceDue) : Math.max(0, grandTotal - codAdv);
+  const staff = order.staffName || order.staff_name || order.createdBy || 'Super Admin';
+  const tracking = order.trackingNumber || order.tracking_number || order.courierDocket || '';
+  const dateStr = order.createdAt || order.created_at || new Date().toLocaleString();
+  const courierName = order.courierName || order.courier_name || order.shippingPartner || order.shipping_partner || c.defaultCourier || 'Delhivery Surface';
+  const showCourier = c.showCourier !== false && Boolean(courierName);
+
+  // 1. Logo Block
+  let logoHtml = '';
+  if (c.showLogo && c.logoDataUrl) {
+    logoHtml = `<img src="${c.logoDataUrl}" alt="Logo" class="max-h-12 max-w-[130px] object-contain">`;
+  } else if (c.showLogo) {
+    logoHtml = `
+      <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-sm tracking-tight shrink-0 shadow-2xs">
+        ${(c.brandName || 'GRM').substring(0, 3).toUpperCase()}
+      </div>`;
+  }
+
+  // Logo alignment class
+  const logoJustifyClass = c.logoPosition === 'center' ? 'justify-center' : (c.logoPosition === 'right' ? 'justify-end' : 'justify-start');
+  const headerTextJustifyClass = c.headerAlign === 'center' ? 'text-center' : (c.headerAlign === 'right' ? 'text-right' : 'text-left');
+
+  // Header Courier Badge (if position is header)
+  const headerCourierHtml = showCourier && c.courierPosition === 'header' ? `
+    <div class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-50 border border-teal-200 text-teal-800 text-[10px] font-bold">
+      <span class="material-symbols-outlined text-[12px]">local_shipping</span>
+      <span>Courier: ${courierName}</span>
+    </div>` : '';
+
+  // Header Section
+  const headerHtml = `
+    <div class="border-b-2 border-slate-900 pb-2.5 mb-2.5">
+      <div class="flex items-center ${logoJustifyClass} mb-1.5">
+        ${logoHtml}
+      </div>
+      <div class="${headerTextJustifyClass} space-y-0.5">
+        <h1 class="font-black text-base uppercase tracking-tight text-slate-900">${c.brandName || 'GRM GARMENTS'}</h1>
+        ${c.showGst && c.gstNo ? `<div class="text-[10px] font-mono font-bold text-slate-600">GSTIN: ${c.gstNo}</div>` : ''}
+        ${c.showPhone && c.phone ? `<div class="text-[10px] text-slate-600 font-semibold">Helpline: ${c.phone}</div>` : ''}
+        ${c.showEmail && c.email ? `<div class="text-[10px] text-slate-500">${c.email}</div>` : ''}
+        ${headerCourierHtml}
+      </div>
+    </div>
+  `;
+
+  // 2. Barcode Simulator & Order Meta
+  const barcodeNumber = (order.id || 'WO-00081').replace(/[^a-zA-Z0-9]/g, '');
+  const barcodeCourierHtml = showCourier && (c.courierPosition === 'barcode' || !c.courierPosition) ? `
+    <div class="mt-1 flex items-center justify-center gap-1.5 flex-wrap">
+      <span class="inline-flex items-center gap-1 bg-slate-200 text-slate-800 text-[9px] font-bold px-1.5 py-0.5 rounded">
+        <span class="material-symbols-outlined text-[11px]">local_shipping</span>
+        <span>${courierName}</span>
+      </span>
+      ${tracking ? `<span class="text-[9px] text-slate-700 font-mono font-bold">AWB: ${tracking}</span>` : ''}
+    </div>` : (tracking ? `<span class="text-[9px] text-slate-500 font-mono">AWB: ${tracking}</span>` : '');
+
+  const barcodeHtml = c.showBarcode ? `
+    <div class="flex flex-col items-center justify-center py-1.5 px-2 bg-slate-50 border border-slate-300 rounded-lg text-center mb-2.5">
+      <div class="font-mono text-[9px] tracking-[6px] font-bold text-slate-800 scale-y-125 mb-0.5 select-none overflow-hidden">
+        |||| | ||||| || |||||| | ||| |||| | |||||| |||
+      </div>
+      <span class="font-mono font-bold text-[11px] text-slate-900 tracking-wider">*${order.id || 'WO-00081'}*</span>
+      ${barcodeCourierHtml}
+    </div>` : '';
+
+  // 3. Sender Block
+  const senderHtml = c.showSenderAddress ? `
+    <div class="p-2.5 rounded-lg border border-slate-300 bg-slate-50/70 text-[11px] space-y-1 flex-1">
+      <div class="text-[9px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-1 border-b border-slate-200 pb-0.5">
+        <span class="material-symbols-outlined text-[13px]">warehouse</span>
+        <span>DISPATCH / RETURN TO:</span>
+      </div>
+      <div class="font-bold text-slate-900">${c.brandName || 'GRM Garments Warehouse'}</div>
+      <div class="text-slate-700 whitespace-pre-line text-[10px] leading-tight">${c.senderAddress || 'Warehouse Address'}</div>
+      ${c.showPhone && c.phone ? `<div class="text-[10px] font-mono text-slate-700">Phone: ${c.phone}</div>` : ''}
+    </div>
+  ` : '';
+
+  // 4. Customer (Ship-To) Block
+  const customerCourierBadge = showCourier && c.courierPosition === 'customer' ? `
+    <div class="mt-1 pt-1 border-t border-slate-200 text-[10px] text-slate-700 font-semibold flex items-center justify-between">
+      <span>Courier Partner:</span>
+      <span class="font-bold text-slate-900">${courierName}</span>
+    </div>` : '';
+
+  const customerHtml = `
+    <div class="p-2.5 rounded-lg border-2 border-slate-900 bg-white text-[11px] space-y-1 flex-1 shadow-2xs">
+      <div class="text-[9px] font-black uppercase text-blue-900 tracking-wider flex items-center justify-between border-b border-slate-200 pb-0.5">
+        <span class="flex items-center gap-1">
+          <span class="material-symbols-outlined text-[13px]">local_shipping</span>
+          <span>SHIP TO (CUSTOMER):</span>
+        </span>
+        <span class="font-bold text-slate-500 text-[9px]">PRIORITY</span>
+      </div>
+      <div class="font-extrabold text-sm text-slate-950 uppercase">${order.customerName || 'Customer'}</div>
+      ${c.showCustomerPhone && order.customerPhone ? `<div class="font-mono font-bold text-slate-900 text-xs">📞 ${order.customerPhone}</div>` : ''}
+      ${c.showCustomerAddress ? `<div class="text-slate-800 text-[10px] leading-tight font-medium whitespace-pre-line">${order.shippingAddress || 'Store Pickup / Direct WhatsApp'}</div>` : ''}
+      ${customerCourierBadge}
+    </div>
+  `;
+
+  // Addresses Container positioned based on senderPosition and customerPosition
+  let addressesLayoutHtml = '';
+  if (c.senderPosition === 'top') {
+    addressesLayoutHtml = `<div class="space-y-2 mb-2.5">${senderHtml}${customerHtml}</div>`;
+  } else if (c.customerPosition === 'top') {
+    addressesLayoutHtml = `<div class="space-y-2 mb-2.5">${customerHtml}${senderHtml}</div>`;
+  } else if (c.senderPosition === 'right' && c.customerPosition === 'left') {
+    addressesLayoutHtml = `<div class="grid grid-cols-2 gap-2 mb-2.5">${customerHtml}${senderHtml}</div>`;
+  } else {
+    // Default: Sender on Left, Customer on Right
+    addressesLayoutHtml = `<div class="grid grid-cols-2 gap-2 mb-2.5">${senderHtml}${customerHtml}</div>`;
+  }
+
+  // 5. Order & Payment Meta Badge
+  let metaHtml = '';
+  if (c.showPaymentMode) {
+    const metaCourierBadge = showCourier && c.courierPosition === 'meta' ? `
+      <span>&bull;</span>
+      <span class="text-teal-900 font-bold inline-flex items-center gap-0.5">
+        <span class="material-symbols-outlined text-[11px]">local_shipping</span>
+        <span>${courierName}</span>
+      </span>` : '';
+
+    metaHtml = `
+      <div class="flex items-center justify-between p-2 rounded-lg border border-slate-300 bg-slate-100/80 text-[10px] font-bold text-slate-800 mb-2.5 flex-wrap gap-1">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span>Date: ${dateStr.split(' ')[0]}</span>
+          <span>&bull;</span>
+          <span>Staff: ${staff}</span>
+          ${metaCourierBadge}
+        </div>
+        <div class="flex items-center gap-1.5">
+          ${isCod ? `
+            <span class="bg-amber-200 text-amber-950 px-2 py-0.5 rounded font-black text-[11px] border border-amber-300">
+              COD COLLECT: ₹${codDue.toLocaleString('en-IN')}
+            </span>` : `
+            <span class="bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded font-black text-[11px] border border-emerald-300">
+              PREPAID (ONLINE UPI)
+            </span>`}
+        </div>
+      </div>
+    `;
+  }
+
+  // 6. Ordered Items Table
+  const items = order.items || [];
+  let itemsRowsHtml = '';
+  let totalQty = 0;
+
+  if (items.length > 0) {
+    itemsRowsHtml = items.map((item, idx) => {
+      const qty = parseInt(item.qty || 1);
+      totalQty += qty;
+      const price = parseFloat(item.price || 0);
+      return `
+        <tr class="border-b border-slate-200">
+          <td class="py-1 px-1.5 text-center font-mono">${idx + 1}</td>
+          <td class="py-1 px-1.5 font-bold text-slate-900">
+            ${item.name || item.title || 'Garment'}
+            ${item.sku ? `<span class="block text-[9px] font-mono text-slate-500 font-normal">[${item.sku}] ${item.size ? '• ' + item.size : ''}</span>` : ''}
+          </td>
+          <td class="py-1 px-1.5 text-center font-mono font-bold">${qty}</td>
+          ${c.showItemPrices ? `<td class="py-1 px-1.5 text-right font-mono font-semibold">₹${(price * qty).toFixed(2)}</td>` : ''}
+          <td class="py-1 px-1.5 text-center font-mono text-[10px] text-slate-400">[ &nbsp; ]</td>
+        </tr>
+      `;
+    }).join('');
+  } else {
+    totalQty = 1;
+    itemsRowsHtml = `
+      <tr class="border-b border-slate-200">
+        <td class="py-1 px-1.5 text-center font-mono">1</td>
+        <td class="py-1 px-1.5 font-bold text-slate-900">Garment Order Package</td>
+        <td class="py-1 px-1.5 text-center font-mono font-bold">1</td>
+        ${c.showItemPrices ? `<td class="py-1 px-1.5 text-right font-mono font-semibold">₹${grandTotal.toFixed(2)}</td>` : ''}
+        <td class="py-1 px-1.5 text-center font-mono text-[10px] text-slate-400">[ &nbsp; ]</td>
+      </tr>
+    `;
+  }
+
+  const itemsTableHtml = (c.showItems !== false) ? `
+    <div class="mb-2.5">
+      <div class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center justify-between">
+        <span>Items to Verify &amp; Pack (${totalQty} Total Items):</span>
+        <span class="text-[8px] font-normal text-slate-400">Packer Sign / Stamp Required</span>
+      </div>
+      <table class="w-full text-left text-[10px] border border-slate-300 rounded overflow-hidden">
+        <thead class="bg-slate-200/80 text-slate-800 font-bold uppercase text-[9px]">
+          <tr>
+            <th class="py-1 px-1.5 w-6 text-center">#</th>
+            <th class="py-1 px-1.5">Item Description</th>
+            <th class="py-1 px-1.5 w-10 text-center">Qty</th>
+            ${c.showItemPrices ? `<th class="py-1 px-1.5 w-16 text-right">Amount</th>` : ''}
+            <th class="py-1 px-1.5 w-8 text-center">Check</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          ${itemsRowsHtml}
+        </tbody>
+        <tfoot class="bg-slate-100 font-bold border-t border-slate-300">
+          <tr>
+            <td colspan="2" class="py-1 px-1.5 text-right uppercase text-[9px]">Total Quantity:</td>
+            <td class="py-1 px-1.5 text-center font-mono font-black">${totalQty}</td>
+            ${c.showItemPrices ? `<td class="py-1 px-1.5 text-right font-mono font-black">₹${grandTotal.toFixed(2)}</td>` : ''}
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  ` : '';
+
+  // 7. Notes & Policies
+  let notesHtml = '';
+  if (c.showNotes) {
+    const notesJustify = c.notesAlignment === 'center' ? 'text-center' : (c.notesAlignment === 'right' ? 'text-right' : 'text-left');
+    notesHtml = `
+      <div class="p-2 rounded border border-slate-200 bg-slate-50/70 text-[9px] text-slate-600 ${notesJustify} space-y-1 mb-2">
+        ${c.returnPolicy ? `<div class="font-medium whitespace-pre-line leading-tight text-slate-700"><strong>Return Policy:</strong> ${c.returnPolicy}</div>` : ''}
+        ${c.handlingNotes ? `<div class="font-semibold text-amber-900 leading-tight">⚠️ ${c.handlingNotes}</div>` : ''}
+        ${c.thankYouText ? `<div class="font-bold text-slate-800 pt-0.5 border-t border-slate-200/80">${c.thankYouText}</div>` : ''}
+      </div>
+    `;
+  }
+
+  // 8. Bottom Courier Badge (if position is bottom)
+  const bottomCourierHtml = showCourier && c.courierPosition === 'bottom' ? `
+    <div class="p-1.5 rounded bg-slate-100 border border-slate-200 text-[9px] font-bold text-slate-800 text-center mb-2 flex items-center justify-center gap-1.5">
+      <span class="material-symbols-outlined text-[13px] text-teal-700">local_shipping</span>
+      <span>Shipping Partner: ${courierName}</span>
+      ${tracking ? `<span class="font-mono text-slate-500 font-bold">| AWB: ${tracking}</span>` : ''}
+    </div>` : '';
+
+  // Assemble based on admin positions
+  let bodyContentHtml = '';
+
+  // Order Meta placement
+  if (c.metaPosition === 'above') {
+    bodyContentHtml += metaHtml;
+  }
+
+  // Notes placement if top
+  if (c.notesPosition === 'top') {
+    bodyContentHtml += notesHtml;
+  }
+
+  // Addresses
+  bodyContentHtml += addressesLayoutHtml;
+
+  // Order Meta placement if below addresses
+  if (c.metaPosition === 'below') {
+    bodyContentHtml += metaHtml;
+  }
+
+  // Items Table
+  bodyContentHtml += itemsTableHtml;
+
+  // Notes placement if bottom (default)
+  if (c.notesPosition === 'bottom') {
+    bodyContentHtml += notesHtml;
+  }
+
+  // Bottom Courier placement
+  if (bottomCourierHtml) {
+    bodyContentHtml += bottomCourierHtml;
+  }
+
+  // Verification & Sign box
+  const packerSignHtml = `
+    <div class="pt-2 border-t border-dashed border-slate-300 flex items-center justify-between text-[9px] text-slate-500">
+      <div>Packing Slip ID: ${order.id}</div>
+      <div>Packed By: _______________</div>
+      <div>Date: _______________</div>
+    </div>
+  `;
+
+  // Standard Container styling based on paper format
+  let formatWidthClass = 'max-w-[380px] packing-slip-4x6';
+  if (c.paperFormat === 'thermal_100x100') {
+    formatWidthClass = 'max-w-[340px] packing-slip-100x100 text-[11px] p-2.5';
+  } else if (c.paperFormat === 'standard_a5') {
+    formatWidthClass = 'max-w-[500px] packing-slip-a5';
+  } else if (c.paperFormat === 'standard_a4') {
+    formatWidthClass = 'max-w-[700px] packing-slip-a4';
+  }
+
+  return `
+    <div class="packing-slip-page ${formatWidthClass} w-full bg-white p-3.5 text-slate-900 border border-slate-400 rounded-lg shadow-sm font-sans mb-4">
+      ${headerHtml}
+      ${barcodeHtml}
+      ${bodyContentHtml}
+      ${packerSignHtml}
+    </div>
+  `;
+}
+window.generateOrderPackingSlipHtml = generateOrderPackingSlipHtml;
+
+function updatePackingSlipLivePreview() {
+  const previewSheet = document.getElementById('psc-live-preview-sheet');
+  if (!previewSheet) return;
+
+  const currentCfg = readCurrentPackingSlipForm();
+  const sampleOrder = getSamplePackingSlipOrder();
+
+  const previewHtml = generateOrderPackingSlipHtml(sampleOrder, currentCfg, true);
+  previewSheet.innerHTML = previewHtml;
+
+  const tag = document.getElementById('psc-preview-format-tag');
+  if (tag) {
+    let tagText = '4" x 6" Thermal Label';
+    if (currentCfg.paperFormat === 'thermal_100x100') tagText = '100 * 100 mm Square Label';
+    else if (currentCfg.paperFormat === 'standard_a5') tagText = 'A5 Dispatch Sheet';
+    else if (currentCfg.paperFormat === 'standard_a4') tagText = 'A4 Full Page';
+    tag.innerText = tagText;
+  }
+}
+window.updatePackingSlipLivePreview = updatePackingSlipLivePreview;
+
+function testPrintPreviewPackingSlip() {
+  const currentCfg = readCurrentPackingSlipForm();
+  const sampleOrder = getSamplePackingSlipOrder();
+  openPackingSlipModalWithContent([sampleOrder], currentCfg, 'Sample Packing Slip Preview');
+}
+window.testPrintPreviewPackingSlip = testPrintPreviewPackingSlip;
+
+// Opens packing slip modal for a single order
+function openOrderPackingSlipModal(orderId) {
+  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  if (!ord) {
+    showToast('Order Not Found', 'Could not locate order ' + orderId, 'error', 'rose');
+    return;
+  }
+  const cfg = getPackingSlipConfig();
+  openPackingSlipModalWithContent([ord], cfg, `Packing Slip: ${ord.id}`);
+}
+window.openOrderPackingSlipModal = openOrderPackingSlipModal;
+
+// Opens batch packing slip modal for all currently filtered orders
+function openBatchPackingSlipsModal() {
+  const orders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
+
+  // Filter if stage or staff or search active
+  const searchInput = (document.getElementById('order-history-search')?.value || '').toLowerCase().trim();
+  const staffFilter = document.getElementById('order-history-staff-filter')?.value || 'ALL';
+  const statusFilter = (typeof ACTIVE_ORDER_HISTORY_STATUS_FILTER !== 'undefined') ? ACTIVE_ORDER_HISTORY_STATUS_FILTER : 'ALL';
+
+  let filtered = orders;
+  if (statusFilter !== 'ALL') {
+    filtered = filtered.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === statusFilter);
+  }
+  if (staffFilter !== 'ALL') {
+    filtered = filtered.filter(o => {
+      const matchId = o.staffId && (o.staffId === staffFilter || o.staff_id === staffFilter);
+      const matchName = (o.staffName && o.staffName.toLowerCase() === staffFilter.toLowerCase()) ||
+        (o.createdBy && o.createdBy.toLowerCase() === staffFilter.toLowerCase());
+      return matchId || matchName;
+    });
+  }
+  if (searchInput) {
+    filtered = filtered.filter(o => {
+      return (o.id && o.id.toLowerCase().includes(searchInput)) ||
+        (o.customerName && o.customerName.toLowerCase().includes(searchInput)) ||
+        (o.customerPhone && o.customerPhone.includes(searchInput));
+    });
+  }
+
+  if (filtered.length === 0) {
+    filtered = orders;
+  }
+
+  if (filtered.length === 0) {
+    showToast('No Orders', 'No orders available to generate packing slips.', 'warning', 'amber');
+    return;
+  }
+
+  const cfg = getPackingSlipConfig();
+  openPackingSlipModalWithContent(filtered, cfg, `Batch Packing Slips (${filtered.length} Orders)`);
+}
+window.openBatchPackingSlipsModal = openBatchPackingSlipsModal;
+
+function openPackingSlipModalWithContent(ordersList, cfg, titleText) {
+  const container = document.getElementById('packing-slip-printable-container');
+  const titleEl = document.getElementById('packing-slip-modal-title');
+  const countBadge = document.getElementById('packing-slip-badge-count');
+  const modal = document.getElementById('modal-order-packing-slip');
+
+  if (!container || !modal) return;
+
+  if (titleEl) titleEl.innerText = titleText || 'Dispatch Packing Slip';
+  if (countBadge) countBadge.innerText = ordersList.length + ' Order' + (ordersList.length === 1 ? '' : 's');
+
+  const slipsHtml = ordersList.map(ord => generateOrderPackingSlipHtml(ord, cfg)).join('');
+  container.innerHTML = slipsHtml;
+
+  modal.classList.remove('hidden');
+}
+
+function setPackingSlipModalPaperFormat(fmt) {
+  const cfg = getPackingSlipConfig();
+  cfg.paperFormat = fmt;
+  savePackingSlipConfig(cfg);
+
+  const btn4x6 = document.getElementById('btn-format-4x6');
+  const btn100 = document.getElementById('btn-format-100x100');
+  const btnA5 = document.getElementById('btn-format-a5');
+
+  [btn4x6, btn100, btnA5].forEach(b => {
+    if (b) b.className = 'px-2.5 py-1 rounded-lg font-bold transition hover:text-white cursor-pointer';
+  });
+
+  if (fmt === 'thermal_4x6' && btn4x6) {
+    btn4x6.className = 'px-2.5 py-1 rounded-lg font-bold transition bg-white text-slate-900 shadow-xs cursor-pointer';
+  } else if (fmt === 'thermal_100x100' && btn100) {
+    btn100.className = 'px-2.5 py-1 rounded-lg font-bold transition bg-white text-slate-900 shadow-xs cursor-pointer';
+  } else if (fmt === 'standard_a5' && btnA5) {
+    btnA5.className = 'px-2.5 py-1 rounded-lg font-bold transition bg-white text-slate-900 shadow-xs cursor-pointer';
+  }
+
+  // Re-generate slips currently in modal
+  const container = document.getElementById('packing-slip-printable-container');
+  if (container) {
+    const slipPages = container.querySelectorAll('.packing-slip-page');
+    slipPages.forEach(el => {
+      el.classList.remove('max-w-[340px]', 'max-w-[380px]', 'max-w-[500px]', 'max-w-[700px]', 'packing-slip-100x100', 'packing-slip-4x6', 'packing-slip-a5', 'packing-slip-a4');
+      if (fmt === 'thermal_100x100') {
+        el.classList.add('max-w-[340px]', 'packing-slip-100x100');
+      } else if (fmt === 'standard_a5') {
+        el.classList.add('max-w-[500px]', 'packing-slip-a5');
+      } else if (fmt === 'standard_a4') {
+        el.classList.add('max-w-[700px]', 'packing-slip-a4');
+      } else {
+        el.classList.add('max-w-[380px]', 'packing-slip-4x6');
+      }
+    });
+  }
+}
+window.setPackingSlipModalPaperFormat = setPackingSlipModalPaperFormat;
+
+function printPackingSlipDocument() {
+  window.print();
+}
+window.printPackingSlipDocument = printPackingSlipDocument;
 
 function openOrderInvoiceModal(orderId) {
   const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
