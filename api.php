@@ -3786,7 +3786,7 @@ if ($action === 'get_masking_settings') {
 
         // Live Call Metrics
         $metrics = [
-            "incoming_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` = 'RINGING'")->fetchColumn(),
+            "incoming_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` = 'RINGING' AND `started_at` >= DATE_SUB(NOW(), INTERVAL 35 SECOND)")->fetchColumn(),
             "active_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` IN ('CONNECTED', 'CLAIMED', 'ASSIGNED')")->fetchColumn(),
             "completed_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` = 'COMPLETED'")->fetchColumn(),
             "missed_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` IN ('MISSED', 'TIMEOUT', 'REJECTED')")->fetchColumn(),
@@ -3897,7 +3897,24 @@ if ($action === 'get_incoming_calls') {
     $calls = [];
     try {
         if ($pdo) {
-            $stmt = $pdo->query("SELECT * FROM `call_sessions` WHERE `status` = 'RINGING' ORDER BY `started_at` DESC LIMIT 10");
+            // 1. Auto-expire any stale calls (> 35 seconds old) from RINGING to MISSED
+            $pdo->query("
+                UPDATE `call_sessions`
+                SET `status` = 'MISSED',
+                    `outcome` = 'MISSED',
+                    `ended_at` = IFNULL(`ended_at`, NOW())
+                WHERE `status` = 'RINGING' 
+                  AND (TIMESTAMPDIFF(SECOND, `started_at`, NOW()) > 35 OR `started_at` < DATE_SUB(NOW(), INTERVAL 35 SECOND))
+            ");
+
+            // 2. Only return genuine fresh ringing calls within the last 35 seconds
+            $stmt = $pdo->query("
+                SELECT * FROM `call_sessions` 
+                WHERE `status` = 'RINGING' 
+                  AND TIMESTAMPDIFF(SECOND, `started_at`, NOW()) <= 35
+                ORDER BY `started_at` DESC 
+                LIMIT 5
+            ");
             $calls = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
     } catch (Exception $e) {}
@@ -3908,7 +3925,7 @@ if ($action === 'get_incoming_calls') {
         $fileCalls = json_decode(file_get_contents($callsFile), true) ?: [];
         $validFileCalls = array_values(array_filter($fileCalls, function($c) {
             $t = isset($c['started_at']) ? strtotime($c['started_at']) : time();
-            return (time() - $t) < 45 && ($c['status'] ?? '') === 'RINGING';
+            return (time() - $t) < 35 && ($c['status'] ?? '') === 'RINGING';
         }));
         foreach ($validFileCalls as $fc) {
             $found = false;
@@ -3920,6 +3937,28 @@ if ($action === 'get_incoming_calls') {
     }
 
     echo json_encode(["status" => "success", "incoming_calls" => $calls]);
+    exit;
+}
+
+// DISMISS / DECLINE CALL (Marks ringing call as MISSED so it stops ringing for all users)
+if ($action === 'dismiss_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?? [];
+    $callId = trim($data['call_id'] ?? '');
+
+    if (!empty($callId) && $pdo) {
+        try {
+            $pdo->prepare("
+                UPDATE `call_sessions`
+                SET `status` = 'MISSED',
+                    `outcome` = 'MISSED',
+                    `ended_at` = IFNULL(`ended_at`, NOW())
+                WHERE `id` = ? AND `status` = 'RINGING'
+            ")->execute([$callId]);
+        } catch (Exception $e) {}
+    }
+    echo json_encode(["status" => "success", "message" => "Call dismissed"]);
     exit;
 }
 

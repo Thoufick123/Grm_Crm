@@ -2396,6 +2396,14 @@ function ingestInboundMessage(payload, suppressChime = false) {
 
 // Background & Immediate REST incoming call polling loop
 let LAST_PROCESSED_RINGING_CALL_ID = null;
+if (!window.DISMISSED_CALL_IDS) {
+  try {
+    const saved = sessionStorage.getItem('GRM_DISMISSED_CALL_IDS');
+    window.DISMISSED_CALL_IDS = new Set(saved ? JSON.parse(saved) : []);
+  } catch (e) {
+    window.DISMISSED_CALL_IDS = new Set();
+  }
+}
 
 function syncIncomingCallsNow() {
   fetch('api.php?action=get_incoming_calls')
@@ -2405,6 +2413,16 @@ function syncIncomingCallsNow() {
         const ringingCall = res.incoming_calls.find(c => c.status === 'RINGING');
         if (ringingCall) {
           const callId = ringingCall.call_id || ringingCall.id;
+          if (!callId) return;
+
+          // Never pop up stale calls older than 35 seconds
+          const startedAt = ringingCall.started_at ? new Date(ringingCall.started_at.replace(' ', 'T')).getTime() : Date.now();
+          const ageSec = Math.floor((Date.now() - startedAt) / 1000);
+          if (ageSec > 35) return;
+
+          // Never pop up a call already dismissed or claimed in this session
+          if (window.DISMISSED_CALL_IDS && window.DISMISSED_CALL_IDS.has(callId)) return;
+
           if (callId !== LAST_PROCESSED_RINGING_CALL_ID) {
             const currentModalId = document.getElementById('incoming-call-id')?.value;
             const modalEl = document.getElementById('modal-incoming-call-alert');
@@ -2414,9 +2432,6 @@ function syncIncomingCallsNow() {
 
             LAST_PROCESSED_RINGING_CALL_ID = callId;
             ringingCall.call_id = callId;
-            if (!ringingCall.eligible_staff_ids) {
-              ringingCall.eligible_staff_ids = ['all', 'admin', 'staff_01', 'staff_02', 'staff_03'];
-            }
             if (typeof handleSocketIncomingCall === 'function') {
               handleSocketIncomingCall(ringingCall);
             }
@@ -32017,29 +32032,37 @@ window.renderMaskingView = renderMaskingView;
 function handleSocketIncomingCall(data) {
   if (!data || !data.call_id) return;
 
+  // 1. Ignore if dismissed or stale (> 35s)
+  if (window.DISMISSED_CALL_IDS && window.DISMISSED_CALL_IDS.has(data.call_id)) return;
+  const startedAt = data.started_at ? new Date(data.started_at.replace(' ', 'T')).getTime() : Date.now();
+  if (Math.floor((Date.now() - startedAt) / 1000) > 35) return;
+
   const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
   const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.name === 'Super Admin';
   const eligibleList = Array.isArray(data.eligible_staff_ids) ? data.eligible_staff_ids : [];
   const currentStaffId = user ? (user.id || user.staffId || user.staff_id || user.username || '') : '';
   const currentStaffName = user ? (user.name || user.username || '').toLowerCase() : '';
 
-  // Suppress call popups only if staff role has no view access to masking/telephony
+  // 2. Specific Staff Routing: If the call has an assigned staff member, only ring for that staff member (and Super Admin)
+  if (data.assigned_staff_id) {
+    const isTargetStaff = currentStaffId && (currentStaffId === data.assigned_staff_id || currentStaffName === String(data.assigned_staff_name || '').toLowerCase());
+    if (!isTargetStaff && !isSuperAdmin) {
+      console.log('[Inbound Call Filtered]: Call assigned to ' + data.assigned_staff_id + ', not current staff (' + currentStaffId + ').');
+      return;
+    }
+  }
+
+  // 3. Suppress call popups only if staff role has no view access to masking/telephony
   const hasMaskingPerm = (typeof canUserPerformAction === 'function') ? canUserPerformAction('masking', 'view') : true;
   if (!isSuperAdmin && !hasMaskingPerm) {
     console.log('[Inbound Call Suppressed]: Staff role has no view access for call masking.');
     return;
   }
 
-  // Check if eligible:
-  // 1. Super Admin
-  // 2. 'all' is in list or list is empty
-  // 3. Current staff ID or username is in list
-  // 4. Default demo IDs (staff_01, staff_02, staff_03) legacy fallback: treat active staff as eligible
-  const isDemoListOnly = eligibleList.length > 0 && eligibleList.every(id => ['staff_01', 'staff_02', 'staff_03'].includes(id));
+  // 4. Check eligibility list
   const isEligible = isSuperAdmin 
     || eligibleList.includes('all') 
-    || eligibleList.length === 0
-    || isDemoListOnly
+    || (eligibleList.length === 0 && !data.assigned_staff_id)
     || eligibleList.includes(currentStaffId)
     || (currentStaffName && eligibleList.some(id => id.toLowerCase() === currentStaffName))
     || (currentStaffId && eligibleList.some(id => id.toLowerCase() === currentStaffId.toLowerCase()));
@@ -32280,6 +32303,21 @@ function dismissIncomingCallAlert() {
   if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
     clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
     INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+  }
+  const callId = ACTIVE_INCOMING_CALL?.call_id || ACTIVE_INCOMING_CALL?.id || document.getElementById('incoming-call-id')?.value;
+  if (callId) {
+    if (!window.DISMISSED_CALL_IDS) window.DISMISSED_CALL_IDS = new Set();
+    window.DISMISSED_CALL_IDS.add(callId);
+    try {
+      sessionStorage.setItem('GRM_DISMISSED_CALL_IDS', JSON.stringify([...window.DISMISSED_CALL_IDS]));
+    } catch (e) {}
+
+    // Notify backend to mark call as missed so it stops ringing for all users
+    fetch('api.php?action=dismiss_call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ call_id: callId })
+    }).catch(() => {});
   }
   if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
   ACTIVE_INCOMING_CALL = null;
