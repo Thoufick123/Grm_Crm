@@ -25490,7 +25490,7 @@ const CRM_PACKING_SLIP_DEFAULT_CONFIG = {
   // Text Content
   returnPolicy: "7 Days Easy Exchange on unworn garments with original tags intact. Please keep parcel packaging for returns.",
   handlingNotes: "Fragile Apparel & Premium Fabrics - Handle With Care & Protect From Moisture",
-  thankYouText: "Thank you for shopping with GRM Garments! WhatsApp helpline: +91 99435 57998"
+  thankYouText: ""
 };
 
 function getPackingSlipConfig() {
@@ -25955,7 +25955,16 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   const barcodeNumber = (order.id || 'WO-00081').replace(/[^a-zA-Z0-9]/g, '');
   const showBarcodeLines = c.showBarcode !== false;
   const showOrderId = c.showOrderId !== false;
-  const showBarcodeCourier = showCourier && (c.courierPosition === 'barcode' || !c.courierPosition);
+  const isBarcodeCourier = c.courierPosition === 'barcode' || !c.courierPosition ||
+    ['right', 'left', 'center', 'stacked_left', 'stacked_center', 'stacked_right'].includes(c.courierPosition);
+  const showBarcodeCourier = showCourier && isBarcodeCourier;
+
+  let courierAlignClass = 'justify-center';
+  if (c.courierPosition === 'left' || c.courierPosition === 'stacked_left') {
+    courierAlignClass = 'justify-start';
+  } else if (c.courierPosition === 'right' || c.courierPosition === 'stacked_right') {
+    courierAlignClass = 'justify-end';
+  }
 
   let barcodeBoxContentHtml = '';
   if (showBarcodeLines) {
@@ -25967,7 +25976,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   }
   if (showBarcodeCourier) {
     barcodeBoxContentHtml += `
-      <div class="${(showBarcodeLines || showOrderId) ? 'mt-1' : ''} flex items-center justify-center gap-1.5 flex-wrap">
+      <div class="${(showBarcodeLines || showOrderId) ? 'mt-1' : ''} flex items-center ${courierAlignClass} gap-1.5 flex-wrap w-full">
         <span class="inline-flex items-center gap-1 bg-slate-200 text-slate-800 text-[9px] font-bold px-1.5 py-0.5 rounded">
           <span class="material-symbols-outlined text-[11px]">local_shipping</span>
           <span>${courierName}</span>
@@ -25975,8 +25984,15 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
       </div>`;
   }
 
+  let barcodeAlignClass = 'items-center text-center justify-center';
+  if (c.barcodePosition === 'left' || c.barcodePosition === 'stacked_left') {
+    barcodeAlignClass = 'items-start text-left justify-start';
+  } else if (c.barcodePosition === 'right' || c.barcodePosition === 'stacked_right') {
+    barcodeAlignClass = 'items-end text-right justify-end';
+  }
+
   const barcodeHtml = barcodeBoxContentHtml ? `
-    <div class="flex flex-col items-center justify-center py-2 px-3 bg-white border border-slate-300 rounded-lg text-center mb-2.5 shadow-2xs">
+    <div class="flex flex-col ${barcodeAlignClass} py-2 px-3 bg-white border border-slate-300 rounded-lg mb-2.5 shadow-2xs">
       ${barcodeBoxContentHtml}
     </div>` : '';
 
@@ -26135,7 +26151,6 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
       <div class="p-2 rounded border border-slate-200 bg-slate-50/70 text-[9px] text-slate-600 ${notesJustify} space-y-1 mb-2">
         ${c.returnPolicy ? `<div class="font-medium whitespace-pre-line leading-tight text-slate-700"><strong>Return Policy:</strong> ${c.returnPolicy}</div>` : ''}
         ${c.handlingNotes ? `<div class="font-semibold text-amber-900 leading-tight">⚠️ ${c.handlingNotes}</div>` : ''}
-        ${c.thankYouText ? `<div class="font-bold text-slate-800 pt-0.5 border-t border-slate-200/80">${c.thankYouText}</div>` : ''}
       </div>
     `;
   }
