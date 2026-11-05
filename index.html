@@ -2116,7 +2116,8 @@
 
                 <!-- 4. Target Audience & Recipient Numbers -->
                 <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                  <!-- Row 1: Two buttons (Target Audience & Estimated Recipients) -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                     <div>
                       <label class="block font-bold text-slate-800 text-xs mb-1">Target Audience:</label>
                       <select id="bcast-target-audience" onchange="updateBroadcastTargetCount()"
@@ -2138,7 +2139,7 @@
                     <div>
                       <label class="block font-bold text-slate-800 text-xs mb-1">Estimated Recipients:</label>
                       <div
-                        class="p-1.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between">
+                        class="p-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between">
                         <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
                           <span class="material-symbols-outlined text-[16px] text-emerald-600">groups</span>
                           <span id="bcast-auto-target-count">Loading...</span>
@@ -2148,19 +2149,20 @@
                           Selected</span>
                       </div>
                     </div>
+                  </div>
 
-                    <div>
-                      <label class="block font-bold text-slate-800 text-xs mb-1 flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[14px] text-teal-600">timer</span>
-                        <span>Safe Delay:</span>
-                      </label>
-                      <select id="bcast-delay-select"
-                        class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-1 focus:ring-emerald-500">
-                        <option value="1500" selected>⚡ Instant Safe (1.5s)</option>
-                        <option value="3000">🛡️ Anti-Ban (3s)</option>
-                        <option value="5000">🐢 Safe Relaxed (5s)</option>
-                      </select>
-                    </div>
+                  <!-- Row 2: Next row another button (Safe Delay) -->
+                  <div>
+                    <label class="block font-bold text-slate-800 text-xs mb-1 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px] text-teal-600">timer</span>
+                      <span>Safe Delay:</span>
+                    </label>
+                    <select id="bcast-delay-select"
+                      class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-1 focus:ring-emerald-500">
+                      <option value="1500" selected>⚡ Instant Safe (1.5s delay)</option>
+                      <option value="3000">🛡️ Recommended Anti-Ban (3s delay)</option>
+                      <option value="5000">🐢 Safe Relaxed (5s delay)</option>
+                    </select>
                   </div>
 
                   <!-- Collapsible Custom Numbers -->
