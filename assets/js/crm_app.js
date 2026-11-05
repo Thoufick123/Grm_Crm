@@ -1712,19 +1712,19 @@ function initiateBrandMaskedCall(customerId) {
       staff_name: staffName
     })
   })
-  .then(r => r.json())
-  .then(data => {
-    if (data && data.status === 'success' && data.call) {
-      ACTIVE_CURRENT_CALL_SESSION_ID = data.call.id || data.call.call_id;
-      console.log('📞 [Outbound Call Registered in Call Masking Hub]:', ACTIVE_CURRENT_CALL_SESSION_ID);
-      if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
-        loadMaskingSettingsAndSessions();
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.status === 'success' && data.call) {
+        ACTIVE_CURRENT_CALL_SESSION_ID = data.call.id || data.call.call_id;
+        console.log('📞 [Outbound Call Registered in Call Masking Hub]:', ACTIVE_CURRENT_CALL_SESSION_ID);
+        if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
+          loadMaskingSettingsAndSessions();
+        }
       }
-    }
-  })
-  .catch(err => {
-    console.warn('Could not register outbound call session:', err);
-  });
+    })
+    .catch(err => {
+      console.warn('Could not register outbound call session:', err);
+    });
 
   // Inform Bridge Server
   fetch(`${getBridgeBaseUrl()}/api/calls/initiate`, {
@@ -1861,8 +1861,8 @@ function endBrandMaskedCall(saveOutcome = false) {
         if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
           loadMaskingSettingsAndSessions();
         }
-      }).catch(() => {});
-    } catch (e) {}
+      }).catch(() => { });
+    } catch (e) { }
   }
 
   if (customer) {
@@ -1922,8 +1922,8 @@ function endBrandMaskedCall(saveOutcome = false) {
           if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
             loadMaskingSettingsAndSessions();
           }
-        }).catch(() => {});
-      } catch (e) {}
+        }).catch(() => { });
+      } catch (e) { }
     }
   }
 
@@ -2441,7 +2441,7 @@ function syncIncomingCallsNow() {
         }
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 }
 
 // Background & Immediate REST message polling loop
@@ -2796,7 +2796,7 @@ function initCRMState() {
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed) && parsed.length > 0) c.automationHistory = parsed;
               }
-            } catch (e) {}
+            } catch (e) { }
           }
           if (Array.isArray(c.automationHistory)) {
             c.automationHistory = c.automationHistory.filter(a => {
@@ -2929,7 +2929,7 @@ function initCRMState() {
         }
         if (res.data.bridge_url) {
           window.BRIDGE_URL = res.data.bridge_url;
-          try { localStorage.setItem('GRM_BRIDGE_URL', res.data.bridge_url); } catch(e) {}
+          try { localStorage.setItem('GRM_BRIDGE_URL', res.data.bridge_url); } catch (e) { }
           if (CRM_STATE) {
             if (!CRM_STATE.settings) CRM_STATE.settings = {};
             CRM_STATE.settings.bridgeUrl = res.data.bridge_url;
@@ -2995,7 +2995,7 @@ function initCRMState() {
         CRM_STATE.customers = data.customers.map(c => {
           const cleanPhone = (c.phone || c.whatsapp || '').replace(/\D/g, '');
           const existingCust = (CRM_STATE.customers || []).find(ec => ec && (ec.id === c.id || (cleanPhone.length >= 10 && (ec.phone || ec.whatsapp || '').replace(/\D/g, '').endsWith(cleanPhone.slice(-10)))));
-          
+
           let existingHistory = (existingCust && Array.isArray(existingCust.automationHistory) && existingCust.automationHistory.length > 0)
             ? existingCust.automationHistory
             : (Array.isArray(c.automationHistory) ? c.automationHistory : []);
@@ -3006,7 +3006,7 @@ function initCRMState() {
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed) && parsed.length > 0) existingHistory = parsed;
               }
-            } catch (e) {}
+            } catch (e) { }
           }
           let existingNotes = (existingCust && Array.isArray(existingCust.adminNotes)) ? existingCust.adminNotes : [];
 
@@ -3234,7 +3234,7 @@ function initCRMState() {
       if (typeof renderStaffCards === 'function') renderStaffCards();
       if (typeof renderStaffKPIOverview === 'function') renderStaffKPIOverview();
       if (typeof renderStaffTable === 'function') renderStaffTable();
-  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
+      if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
       if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
       if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
       if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
@@ -5264,11 +5264,11 @@ function renderChatMessages() {
     const msgId = msg.id || ('msg-' + idx + '-' + (msg.timestamp || Date.now()));
     const isOut = msg.sender === 'staff';
     const rawMedia = String(msg.media_url || msg.mediaUrl || msg.audio_url || '');
-    const isAudio = msg.type === 'audio' || 
-                    msg.media_type === 'audio' || 
-                    msg.mediaType === 'audio' || 
-                    (rawMedia && (rawMedia.includes('audio') || rawMedia.startsWith('data:audio') || rawMedia.includes('.ogg') || rawMedia.includes('.mp3') || rawMedia.includes('.m4a') || rawMedia.includes('.webm') || rawMedia.includes('/voice/'))) || 
-                    (msg.text && (msg.text.includes('Voice Note') || msg.text.includes('Voice Message') || msg.text.includes('Audio Message') || msg.text.includes('🎤')));
+    const isAudio = msg.type === 'audio' ||
+      msg.media_type === 'audio' ||
+      msg.mediaType === 'audio' ||
+      (rawMedia && (rawMedia.includes('audio') || rawMedia.startsWith('data:audio') || rawMedia.includes('.ogg') || rawMedia.includes('.mp3') || rawMedia.includes('.m4a') || rawMedia.includes('.webm') || rawMedia.includes('/voice/'))) ||
+      (msg.text && (msg.text.includes('Voice Note') || msg.text.includes('Voice Message') || msg.text.includes('Audio Message') || msg.text.includes('🎤')));
     const isImage = !isAudio && (msg.type === 'image' || msg.media_type === 'image' || msg.mediaType === 'image' || (rawMedia && (rawMedia.startsWith('data:image') || rawMedia.includes('http') || rawMedia.includes('.png') || rawMedia.includes('.jpg') || rawMedia.includes('.jpeg') || rawMedia.includes('blob:'))));
     const duration = parseFloat(msg.duration || msg.audioDuration || msg.audio_duration || 8);
 
@@ -7244,7 +7244,7 @@ function syncCustomerAutomationHistory(customer) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) customer.automationHistory = parsed;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   let conv = CRM_STATE?.conversations?.[customer.id] || [];
@@ -7265,7 +7265,7 @@ function syncCustomerAutomationHistory(customer) {
   const actions = [];
   let currentCategoryKey = null;
 
-      for (let i = 0; i < conv.length; i++) {
+  for (let i = 0; i < conv.length; i++) {
     const msg = conv[i];
     if (!msg) continue;
     // Strict Guard: ONLY track product details sent by admin or staff (never orders or non-product messages)
@@ -7532,7 +7532,7 @@ function syncCustomerAutomationHistory(customer) {
     if (customer.id) {
       localStorage.setItem('GRM_TRACKED_PRODUCTS_' + customer.id, JSON.stringify(customer.automationHistory));
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 window.GRM_BOT_CATALOG = GRM_BOT_CATALOG;
 window.syncCustomerAutomationHistory = syncCustomerAutomationHistory;
@@ -7811,7 +7811,7 @@ function renderBotAutomationAndChosenProductsCard(customer) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) customer.automationHistory = parsed;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
   const allCustomerActions = Array.isArray(customer.automationHistory) ? [...customer.automationHistory] : [];
 
@@ -10049,8 +10049,8 @@ function generateLiveCategoryStockText(rawPhone) {
   const cats = Array.isArray(CRM_STATE?.categories) && CRM_STATE.categories.length > 0
     ? CRM_STATE.categories
     : [
-        { id: '1', name: 'Kids', icon: '👗' }
-      ];
+      { id: '1', name: 'Kids', icon: '👗' }
+    ];
 
   let text = '';
   cats.forEach((cat, idx) => {
@@ -14102,7 +14102,7 @@ async function handleScreenshotUpload(event, mode) {
 
     // Optional quick background assist: If Tesseract OCR finds a UTR, auto-fill it
     if (typeof Tesseract !== 'undefined' && Tesseract.recognize) {
-      Tesseract.recognize(dataUrl, 'eng', { logger: () => {} })
+      Tesseract.recognize(dataUrl, 'eng', { logger: () => { } })
         .then(res => {
           const rawText = res.data?.text || '';
           const utrMatch = rawText.match(/\b\d{12}\b/);
@@ -14115,7 +14115,7 @@ async function handleScreenshotUpload(event, mode) {
             }
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   };
   reader.readAsDataURL(file);
@@ -14150,7 +14150,7 @@ window.loadTesseractEngineIfNeeded = loadTesseractEngineIfNeeded;
 
 async function verifyPaymentScreenshotContent(dataUrl) {
   if (typeof Tesseract === 'undefined' || !Tesseract.recognize) {
-    try { await loadTesseractEngineIfNeeded(); } catch (e) {}
+    try { await loadTesseractEngineIfNeeded(); } catch (e) { }
   }
   // Comprehensive Banking and UPI dictionary
   const BANK_PAYMENT_KEYWORDS = [
@@ -14432,8 +14432,8 @@ function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
       const codAdvance = (ORDER_MODAL_STATE?.codAdvance !== undefined && !isNaN(ORDER_MODAL_STATE.codAdvance)) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
       const codBalance = Math.max(0, totalAmount - codAdvance);
 
-      submitLabel.innerText = isOnline 
-        ? `Confirm Order & Save (Paid ₹${totalAmount.toLocaleString('en-IN')})` 
+      submitLabel.innerText = isOnline
+        ? `Confirm Order & Save (Paid ₹${totalAmount.toLocaleString('en-IN')})`
         : `Confirm COD Order (₹${codAdvance.toLocaleString('en-IN')} Adv Verified • ₹${codBalance.toLocaleString('en-IN')} Due)`;
     }
 
@@ -14521,8 +14521,8 @@ function removeScreenshot(mode) {
     const codAdvance = (ORDER_MODAL_STATE?.codAdvance !== undefined && !isNaN(ORDER_MODAL_STATE.codAdvance)) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
     const codBalance = Math.max(0, totalAmount - codAdvance);
 
-    submitLabel.innerText = isOnline 
-      ? `Confirm Order & Save (Paid ₹${totalAmount.toLocaleString('en-IN')})` 
+    submitLabel.innerText = isOnline
+      ? `Confirm Order & Save (Paid ₹${totalAmount.toLocaleString('en-IN')})`
       : `Confirm COD Order (₹${codAdvance.toLocaleString('en-IN')} Adv Verified • ₹${codBalance.toLocaleString('en-IN')} Due)`;
   }
 }
@@ -16860,9 +16860,9 @@ function sendWhatsAppPaymentRequest(customerId, followupId = null) {
   const fu = followupId
     ? (CRM_STATE.followups || []).find(f => f && (f.id === followupId || String(f.id) === String(followupId)))
     : (CRM_STATE.followups || []).find(f => f && (
-        String(f.customerId || f.customer_id || '') === targetCustId ||
-        (targetPhone && f.customerPhone && f.customerPhone.replace(/\D/g, '') === targetPhone)
-      ) && (f.isPaymentPending || f.is_payment_pending) && f.status === 'PENDING');
+      String(f.customerId || f.customer_id || '') === targetCustId ||
+      (targetPhone && f.customerPhone && f.customerPhone.replace(/\D/g, '') === targetPhone)
+    ) && (f.isPaymentPending || f.is_payment_pending) && f.status === 'PENDING');
 
   const query = (CRM_STATE.queries || []).find(q => q && (
     String(q.customerId || q.customer_id || '') === targetCustId ||
@@ -16941,9 +16941,9 @@ function sendWhatsAppPaymentRequest(customerId, followupId = null) {
     const fCid = String(f.customerId || f.customer_id || '');
     const fPhone = f.customerPhone ? f.customerPhone.replace(/\D/g, '') : '';
     const isMatch = (fCid === targetCustId) ||
-                    (followupId && (String(f.id) === String(followupId))) ||
-                    (targetPhone && fPhone === targetPhone) ||
-                    (query && (f.queryId === query.id || f.query_id === query.id));
+      (followupId && (String(f.id) === String(followupId))) ||
+      (targetPhone && fPhone === targetPhone) ||
+      (query && (f.queryId === query.id || f.query_id === query.id));
     if (isMatch) {
       f.isPaymentPending = true;
       f.is_payment_pending = 1;
@@ -16972,7 +16972,7 @@ function sendWhatsAppPaymentRequest(customerId, followupId = null) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(fu)
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   // Ensure toggle remains checked and badge stays ACTIVE
@@ -17020,7 +17020,7 @@ function sendWhatsAppPaymentRequest(customerId, followupId = null) {
       if (sendForm) {
         sendForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
       } else if (typeof handleSendMessage === 'function') {
-        handleSendMessage({ preventDefault: () => {} });
+        handleSendMessage({ preventDefault: () => { } });
       }
 
       // Preserve status completely unchanged as requested ("status still same")
@@ -18616,7 +18616,7 @@ function toggleBulkPriceEditMode(forceState) {
   const tbBtn = document.getElementById('btn-toolbar-bulk-price');
   const tbSelBtn = document.getElementById('btn-toolbar-bulk-select');
   const bar = document.getElementById('catalog-bulk-price-bar');
-    const thCol = document.getElementById('th-bulk-checkbox-col');
+  const thCol = document.getElementById('th-bulk-checkbox-col');
 
   if (IS_BULK_PRICE_MODE) {
     if (btn) {
@@ -24825,25 +24825,25 @@ function renderOrdersHistoryTable() {
             <!-- Quick Status Transition Selector (Strict Sequential) -->
             <div>
               ${(() => {
-                const stageMap = { 'PLACED': 1, 'PACKED': 2, 'SHIPPED': 3, 'OUT_FOR_DELIVERY': 4, 'DELIVERED': 5 };
-                const curStep = stageMap[normStatus] || 1;
-                const stages = [
-                  { val: 'PLACED', label: '1. Placed', step: 1 },
-                  { val: 'PACKED', label: '2. Packed', step: 2 },
-                  { val: 'SHIPPED', label: '3. Shipped', step: 3 },
-                  { val: 'OUT_FOR_DELIVERY', label: '4. Out for Delivery', step: 4 },
-                  { val: 'DELIVERED', label: '5. Delivered', step: 5 }
-                ];
-                return `
+          const stageMap = { 'PLACED': 1, 'PACKED': 2, 'SHIPPED': 3, 'OUT_FOR_DELIVERY': 4, 'DELIVERED': 5 };
+          const curStep = stageMap[normStatus] || 1;
+          const stages = [
+            { val: 'PLACED', label: '1. Placed', step: 1 },
+            { val: 'PACKED', label: '2. Packed', step: 2 },
+            { val: 'SHIPPED', label: '3. Shipped', step: 3 },
+            { val: 'OUT_FOR_DELIVERY', label: '4. Out for Delivery', step: 4 },
+            { val: 'DELIVERED', label: '5. Delivered', step: 5 }
+          ];
+          return `
                   <select onchange="handleOrderStatusChange('${ord.id}', this.value, this)" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded px-1.5 py-0.5 outline-none cursor-pointer">
                     ${stages.map(s => {
-                      const isSelected = (normStatus === s.val);
-                      const isDisabled = (s.step < curStep || s.step > curStep + 1);
-                      return `<option value="${s.val}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled style="color:#94a3b8;background-color:#f1f5f9;"' : ''}>${s.label}</option>`;
-                    }).join('')}
+            const isSelected = (normStatus === s.val);
+            const isDisabled = (s.step < curStep || s.step > curStep + 1);
+            return `<option value="${s.val}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled style="color:#94a3b8;background-color:#f1f5f9;"' : ''}>${s.label}</option>`;
+          }).join('')}
                   </select>
                 `;
-              })()}
+        })()}
             </div>
             ` : ''}
             ${(normStatus === 'SHIPPED' || normStatus === 'OUT_FOR_DELIVERY') ? `
@@ -25226,7 +25226,7 @@ function downloadOrdersCSVBlob(filename, csvContent) {
     link.click();
     document.body.removeChild(link);
     setTimeout(() => {
-      try { URL.revokeObjectURL(url); } catch (e) {}
+      try { URL.revokeObjectURL(url); } catch (e) { }
     }, 1500);
     return true;
   } catch (err) {
@@ -25393,7 +25393,7 @@ function downloadOrdersHistoryCSV() {
   const fromVal = document.getElementById('orders-filter-date-from')?.value || '';
   const toVal = document.getElementById('orders-filter-date-to')?.value || '';
   const allOrders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
-  
+
   // Check if filters are active in DOM or state
   const staffFilter = document.getElementById('order-history-staff-filter')?.value || 'ALL';
   const searchInput = (document.getElementById('order-history-search')?.value || '').toLowerCase().trim();
@@ -25909,7 +25909,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   const isCol2Logo = c.logoPosition === 'single_col2' || c.headerAlign === 'left';
   const isCenterInline = c.logoPosition === 'single_center' || c.headerAlign === 'center';
   const isStacked = c.logoPosition === 'left' || c.logoPosition === 'center' || c.logoPosition === 'right' ||
-                    c.headerAlign === 'stacked_left' || c.headerAlign === 'stacked_center' || c.headerAlign === 'stacked_right';
+    c.headerAlign === 'stacked_left' || c.headerAlign === 'stacked_center' || c.headerAlign === 'stacked_right';
 
   if (!isStacked && isCol1Logo) {
     // Single Row: Column 1 Left (Logo), Column 2 Right (Brand)
@@ -25954,9 +25954,9 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   } else {
     // Stacked Rows: Logo on row 1, Brand on row 2
     const logoStackedJustify = (c.logoPosition === 'center' || c.headerAlign === 'stacked_center') ? 'justify-center' :
-                               ((c.logoPosition === 'right' || c.headerAlign === 'stacked_right') ? 'justify-end' : 'justify-start');
+      ((c.logoPosition === 'right' || c.headerAlign === 'stacked_right') ? 'justify-end' : 'justify-start');
     const brandStackedText = (c.headerAlign === 'stacked_center' || c.headerAlign === 'center') ? 'text-center' :
-                             ((c.headerAlign === 'stacked_right' || c.headerAlign === 'right') ? 'text-right' : 'text-left');
+      ((c.headerAlign === 'stacked_right' || c.headerAlign === 'right') ? 'text-right' : 'text-left');
     headerHtml = `
       <div class="border-b-2 border-slate-900 pb-2 mb-2">
         <div class="flex items-center ${logoStackedJustify} mb-1.5">
@@ -25981,8 +25981,8 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
 
   const courierPill = showBarcodeCourier ? `
     <span class="inline-flex items-center gap-1.5 text-slate-800 text-[11px] font-medium shrink-0">
-      <span class="material-symbols-outlined text-[13px] text-slate-500">local_shipping</span>
-      <span>Default Shipping Partner / Courier: <strong class="font-bold text-slate-950">${courierName}</strong></span>
+      <span class="material-symbols-outlined text-[13px] text-slate-500"><strong class="font-bold text-slate-950">local_shipping
+      ${courierName}</strong></span>
     </span>` : '';
 
   const orderIdSpan = showOrderId ? `
@@ -26016,7 +26016,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
           </div>`;
       } else if (c.courierPosition.startsWith('stacked') || c.barcodePosition.startsWith('stacked')) {
         const align = (c.barcodePosition === 'stacked_left' || c.courierPosition === 'stacked_left') ? 'items-start text-left' :
-                      (c.barcodePosition === 'stacked_right' || c.courierPosition === 'stacked_right') ? 'items-end text-right' : 'items-center text-center';
+          (c.barcodePosition === 'stacked_right' || c.courierPosition === 'stacked_right') ? 'items-end text-right' : 'items-center text-center';
         barcodeBoxContentHtml = `
           <div class="flex flex-col ${align} gap-1 w-full">
             <div>${orderIdSpan}</div>
@@ -26055,7 +26055,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
           </div>`;
       } else if (c.courierPosition.startsWith('stacked') || c.barcodePosition.startsWith('stacked')) {
         const align = (c.barcodePosition === 'stacked_left' || c.courierPosition === 'stacked_left') ? 'items-start text-left' :
-                      (c.barcodePosition === 'stacked_right' || c.courierPosition === 'stacked_right') ? 'items-end text-right' : 'items-center text-center';
+          (c.barcodePosition === 'stacked_right' || c.courierPosition === 'stacked_right') ? 'items-end text-right' : 'items-center text-center';
         metaRowHtml = `
           <div class="flex flex-col ${align} gap-1 w-full mt-1.5">
             <div>${orderIdSpan}</div>
@@ -26925,7 +26925,7 @@ window.exportAllCustomerDetails = exportAllCustomerDetails;
 // =========================================================================
 // CUSTOMER REQUIREMENTS TRACKER (Customer 360 Submodule)
 // =========================================================================
-var ACTIVE_CUSTOMERS_SUBMODULE = (function() {
+var ACTIVE_CUSTOMERS_SUBMODULE = (function () {
   try {
     const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
     if (rawHash.startsWith('customers/')) {
@@ -26952,7 +26952,7 @@ function switchCustomerSubmodule(tab = 'list') {
     if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
       window.history.replaceState(null, '', '#customers/' + tab);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   const tabBtnList = document.getElementById('tab-btn-customer-list');
   const tabBtnReq = document.getElementById('tab-btn-customer-requirements');
@@ -27095,13 +27095,22 @@ function renderCustomerRequirementsTable() {
         </td>
         <td class="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">${formattedDate}</td>
         <td class="py-3.5 px-4 text-right">
-          <button 
-            type="button" 
-            onclick="openEditRequirementModal(${req.id})" 
-            title="Edit Requirement" 
-            class="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center">
-            <span class="material-symbols-outlined text-[18px]">edit</span>
-          </button>
+          <div class="inline-flex items-center gap-1.5 justify-end">
+            <button 
+              type="button" 
+              onclick="openEditRequirementModal(${req.id})" 
+              title="Edit Requirement" 
+              class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center">
+              <span class="material-symbols-outlined text-[18px]">edit</span>
+            </button>
+            <button 
+              type="button" 
+              onclick="deleteCustomerRequirement(${req.id})" 
+              title="Delete Requirement" 
+              class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center">
+              <span class="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -28356,7 +28365,7 @@ function switchStaffTab(tab) {
   // Execute tab-specific initializers
   if (tab === 'list') {
     renderStaffTable();
-  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
+    if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
   } else if (tab === 'create') {
     updateStaffRoleSelectDropdowns();
     const nameInput = document.getElementById('staff-new-name');
@@ -29352,7 +29361,7 @@ function handleEditStaffPrompt(staffId) {
     staff.phone = newPhone.trim();
     saveCRMState();
     renderStaffTable();
-  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
+    if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
     showToast('Staff Updated', `Updated phone for ${staff.name}.`, 'edit', 'blue');
   }
 }
@@ -32936,17 +32945,17 @@ function getSelectedSourceLang() {
   try {
     const saved = localStorage.getItem('GRM_STAFF_VOICE_LANG');
     if (saved) return saved;
-  } catch (e) {}
+  } catch (e) { }
   return 'en-IN';
 }
 
 window.onVoiceSourceLangChange = function (newLang) {
   try {
     localStorage.setItem('GRM_STAFF_VOICE_LANG', newLang);
-  } catch (e) {}
+  } catch (e) { }
   if (_voiceIsRecording) {
     if (_voiceSpeechRecognizer) {
-      try { _voiceSpeechRecognizer.stop(); } catch (e) {}
+      try { _voiceSpeechRecognizer.stop(); } catch (e) { }
     }
   }
 };
@@ -33001,7 +33010,7 @@ function startFreshSpeechRecognizer() {
           if (_voiceIsRecording) {
             _voiceSpeechRecognizer = startFreshSpeechRecognizer();
             if (_voiceSpeechRecognizer) {
-              try { _voiceSpeechRecognizer.start(); } catch (e) {}
+              try { _voiceSpeechRecognizer.start(); } catch (e) { }
             }
           }
         }, 80);
@@ -33028,7 +33037,7 @@ window.toggleVoiceRecording = async function () {
     try {
       const savedLang = localStorage.getItem('GRM_STAFF_VOICE_LANG');
       if (savedLang) sourceLangSelect.value = savedLang;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   const targetLangSelect = document.getElementById('voice-target-lang');
@@ -33116,7 +33125,7 @@ window.toggleVoiceRecording = async function () {
   if (_voiceSpeechRecognizer) {
     try {
       _voiceSpeechRecognizer.start();
-    } catch (e) {}
+    } catch (e) { }
   }
 };
 
@@ -33130,12 +33139,12 @@ window.stopVoiceRecording = function () {
   }
 
   if (_voiceMediaRecorder && _voiceMediaRecorder.state === 'recording') {
-    try { _voiceMediaRecorder.requestData(); } catch (e) {}
+    try { _voiceMediaRecorder.requestData(); } catch (e) { }
     _voiceMediaRecorder.stop();
   }
 
   if (_voiceSpeechRecognizer) {
-    try { _voiceSpeechRecognizer.stop(); } catch (e) {}
+    try { _voiceSpeechRecognizer.stop(); } catch (e) { }
   }
 
   setTimeout(() => {
@@ -33291,7 +33300,7 @@ window.executeVoiceTranslation = async function () {
   // Ensure original audio finished uploading first if applicable
   if (_voiceUploadPromise && !_voiceUploadedMsgId) {
     if (btnText) btnText.textContent = 'Preparing audio...';
-    try { await _voiceUploadPromise; } catch (e) {}
+    try { await _voiceUploadPromise; } catch (e) { }
   }
 
   const sourceLang = (getSelectedSourceLang().split('-')[0]) || 'auto';
@@ -33457,7 +33466,7 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
   }
 };
 
-window.renderDualVoicePlayerBubble = function(msg, msgId, isOut) {
+window.renderDualVoicePlayerBubble = function (msg, msgId, isOut) {
   const audioSrc = msg.media_url || '';
   const duration = msg.duration || 8;
 
@@ -33563,10 +33572,10 @@ async function syncCustomerMessagesFromDB(customerId) {
     const data = await res.json();
     if (data.status === 'success' && Array.isArray(data.messages) && data.messages.length > 0) {
       if (!CRM_STATE.conversations) CRM_STATE.conversations = {};
-      
+
       const existing = CRM_STATE.conversations[customerId] || [];
       const msgMap = new Map();
-      
+
       existing.forEach(m => {
         if (!m) return;
         if (m.id) msgMap.set(String(m.id), m);
@@ -33576,17 +33585,17 @@ async function syncCustomerMessagesFromDB(customerId) {
           msgMap.set('med_' + m.media_url.slice(-35), m);
         }
       });
-      
+
       let changed = false;
       data.messages.forEach(dbMsg => {
         const keyById = String(dbMsg.id);
         const keyByTime = `${dbMsg.sender}_${dbMsg.time}_${(dbMsg.text || '').slice(0, 25)}`;
         const medKey = (dbMsg.media_url && typeof dbMsg.media_url === 'string' && dbMsg.media_url.length > 15) ? ('med_' + dbMsg.media_url.slice(-35)) : null;
-        
+
         let target = msgMap.get(keyById) || msgMap.get(keyByTime) || (medKey ? msgMap.get(medKey) : null);
         if (!target) {
-          target = existing.find(m => 
-            m.sender === dbMsg.sender && 
+          target = existing.find(m =>
+            m.sender === dbMsg.sender &&
             m.time === dbMsg.time &&
             (m.type === dbMsg.type || m.media_type === dbMsg.media_type)
           );
@@ -33608,7 +33617,7 @@ async function syncCustomerMessagesFromDB(customerId) {
           changed = true;
         }
       });
-      
+
       // Clean up any duplicates in the existing list
       const seenIds = new Set();
       const seenFp = new Set();
@@ -33623,7 +33632,7 @@ async function syncCustomerMessagesFromDB(customerId) {
         seenFp.add(fp);
         cleanList.push(m);
       });
-      
+
       CRM_STATE.conversations[customerId] = cleanList;
       if (typeof saveCRMState === 'function') saveCRMState();
       if (ACTIVE_CUSTOMER_ID === customerId && typeof renderChatMessages === 'function') {
@@ -33688,7 +33697,7 @@ window.translateCustomerInboundVoice = async function (msgId, audioSrc) {
       if (transAudio) {
         transAudio.src = data.translated_audio_url;
         transAudio.load();
-        transAudio.play().catch(() => {});
+        transAudio.play().catch(() => { });
       }
 
       if (typeof showToast === 'function') {
@@ -33769,8 +33778,8 @@ function handleSocketIncomingCall(data) {
   }
 
   // 4. Check eligibility list
-  const isEligible = isSuperAdmin 
-    || eligibleList.includes('all') 
+  const isEligible = isSuperAdmin
+    || eligibleList.includes('all')
     || (eligibleList.length === 0 && !data.assigned_staff_id)
     || eligibleList.includes(currentStaffId)
     || (currentStaffName && eligibleList.some(id => id.toLowerCase() === currentStaffName))
@@ -34019,14 +34028,14 @@ function dismissIncomingCallAlert() {
     window.DISMISSED_CALL_IDS.add(callId);
     try {
       sessionStorage.setItem('GRM_DISMISSED_CALL_IDS', JSON.stringify([...window.DISMISSED_CALL_IDS]));
-    } catch (e) {}
+    } catch (e) { }
 
     // Notify backend to mark call as missed so it stops ringing for all users
     fetch('api.php?action=dismiss_call', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ call_id: callId })
-    }).catch(() => {});
+    }).catch(() => { });
   }
   if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
   ACTIVE_INCOMING_CALL = null;
@@ -34341,7 +34350,7 @@ async function adminEndActiveCall(callId) {
       showToast('Call Terminated', 'Call ' + callId + ' finalized.', 'call_end', 'blue');
       loadMaskingSettingsAndSessions();
     }
-  } catch (err) {}
+  } catch (err) { }
 }
 window.adminEndActiveCall = adminEndActiveCall;
 
@@ -34427,7 +34436,7 @@ async function loadMaskingSettingsAndSessions() {
     const dataSessions = await resSessions.json();
     if (dataSessions && dataSessions.status === 'success' && Array.isArray(dataSessions.sessions)) {
       WINDOW_CALL_SESSIONS = dataSessions.sessions;
-      
+
       // Separate active / ringing calls vs completed
       const activeCalls = WINDOW_CALL_SESSIONS.filter(c => c.status === 'RINGING' || c.status === 'CONNECTED' || c.status === 'CLAIMED' || c.status === 'ASSIGNED');
       renderActiveCallsQueueTable(activeCalls);
@@ -34457,10 +34466,10 @@ function renderStaffEligibilityGrid(staffList) {
     return `
       <div class="p-3 rounded-xl border ${isEligible ? 'border-purple-200 bg-purple-50/40' : 'border-slate-200 bg-slate-50'} flex items-center justify-between">
         <div class="flex items-center gap-2.5">
-          ${(function() {
-      const canEdit = (typeof canUserPerformAction === 'function') ? canUserPerformAction('masking', 'edit') : true;
-      return '<input type="checkbox" value="' + st.id + '" ' + (isEligible ? 'checked' : '') + ' ' + (!canEdit ? 'disabled' : '') + ' class="masking-staff-checkbox h-4 w-4 text-purple-600 rounded focus:ring-purple-500 ' + (!canEdit ? 'cursor-not-allowed opacity-60' : 'cursor-pointer') + '">';
-    })()}
+          ${(function () {
+        const canEdit = (typeof canUserPerformAction === 'function') ? canUserPerformAction('masking', 'edit') : true;
+        return '<input type="checkbox" value="' + st.id + '" ' + (isEligible ? 'checked' : '') + ' ' + (!canEdit ? 'disabled' : '') + ' class="masking-staff-checkbox h-4 w-4 text-purple-600 rounded focus:ring-purple-500 ' + (!canEdit ? 'cursor-not-allowed opacity-60' : 'cursor-pointer') + '">';
+      })()}
           <div class="w-8 h-8 rounded-lg bg-emerald-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
             ${st.avatar || 'ST'}
           </div>
@@ -34515,22 +34524,22 @@ function renderActiveCallsQueueTable(activeCalls) {
         </td>
         <td class="py-3 px-4 text-right">
           <div class="inline-flex items-center gap-1.5">
-            ${(function() {
-              const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
-              const isSuper = !u || u.role === 'admin' || u.id === 'admin' || u.role === 'Super Admin' || u.name === 'Super Admin';
-              const canEdit = isSuper || (typeof canUserPerformAction === 'function' && canUserPerformAction('masking', 'edit'));
-              const isMy = u && ((c.assigned_staff_id && c.assigned_staff_id === (u.id || u.staffId)) || (c.assigned_staff_name && c.assigned_staff_name === u.name));
-              let btns = '';
-              if (canEdit) {
-                btns += '<button type="button" onclick="adminReassignCall(\'' + c.id + '\')" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-xs font-bold transition cursor-pointer" title="Reassign to another staff">Reassign</button>';
-                btns += '<button type="button" onclick="adminEndActiveCall(\'' + c.id + '\')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition cursor-pointer" title="Terminate call">End</button>';
-              } else if (isMy) {
-                btns += '<button type="button" onclick="adminEndActiveCall(\'' + c.id + '\')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition cursor-pointer" title="End my call">End Call</button>';
-              } else {
-                btns += '<span class="text-[10px] text-slate-400 font-semibold select-none px-2 py-0.5 bg-slate-100 rounded-md">Protected</span>';
-              }
-              return btns;
-            })()}
+            ${(function () {
+        const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+        const isSuper = !u || u.role === 'admin' || u.id === 'admin' || u.role === 'Super Admin' || u.name === 'Super Admin';
+        const canEdit = isSuper || (typeof canUserPerformAction === 'function' && canUserPerformAction('masking', 'edit'));
+        const isMy = u && ((c.assigned_staff_id && c.assigned_staff_id === (u.id || u.staffId)) || (c.assigned_staff_name && c.assigned_staff_name === u.name));
+        let btns = '';
+        if (canEdit) {
+          btns += '<button type="button" onclick="adminReassignCall(\'' + c.id + '\')" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-xs font-bold transition cursor-pointer" title="Reassign to another staff">Reassign</button>';
+          btns += '<button type="button" onclick="adminEndActiveCall(\'' + c.id + '\')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition cursor-pointer" title="Terminate call">End</button>';
+        } else if (isMy) {
+          btns += '<button type="button" onclick="adminEndActiveCall(\'' + c.id + '\')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition cursor-pointer" title="End my call">End Call</button>';
+        } else {
+          btns += '<span class="text-[10px] text-slate-400 font-semibold select-none px-2 py-0.5 bg-slate-100 rounded-md">Protected</span>';
+        }
+        return btns;
+      })()}
           </div>
         </td>
       </tr>
@@ -34549,10 +34558,10 @@ function renderCallSessionsTable(sessions) {
 
   tbody.innerHTML = sessions.map(call => {
     const statusClass = call.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        call.status === 'CONNECTED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                        call.status === 'RINGING' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
-                        call.status === 'MISSED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                        'bg-slate-50 text-slate-700 border-slate-200';
+      call.status === 'CONNECTED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+        call.status === 'RINGING' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
+          call.status === 'MISSED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+            'bg-slate-50 text-slate-700 border-slate-200';
 
     let totalSeconds = parseInt(call.duration_seconds || 0);
     if (totalSeconds <= 0) {
@@ -34619,12 +34628,12 @@ function filterCallSessionsTable() {
   }
   const filtered = WINDOW_CALL_SESSIONS.filter(s => {
     return (s.id && s.id.toLowerCase().includes(query)) ||
-           (s.customer_name && s.customer_name.toLowerCase().includes(query)) ||
-           (s.customer_phone && s.customer_phone.includes(query)) ||
-           (s.masked_phone && s.masked_phone.includes(query)) ||
-           (s.assigned_staff_name && s.assigned_staff_name.toLowerCase().includes(query)) ||
-           (s.status && s.status.toLowerCase().includes(query)) ||
-           (s.outcome_notes && s.outcome_notes.toLowerCase().includes(query));
+      (s.customer_name && s.customer_name.toLowerCase().includes(query)) ||
+      (s.customer_phone && s.customer_phone.includes(query)) ||
+      (s.masked_phone && s.masked_phone.includes(query)) ||
+      (s.assigned_staff_name && s.assigned_staff_name.toLowerCase().includes(query)) ||
+      (s.status && s.status.toLowerCase().includes(query)) ||
+      (s.outcome_notes && s.outcome_notes.toLowerCase().includes(query));
   });
   renderCallSessionsTable(filtered);
 }
@@ -34732,68 +34741,68 @@ function refreshDashboardData(btnEl) {
 
   const syncPromise = (typeof fetch === 'function')
     ? fetch('api.php?action=get_all')
-        .then(r => r.json())
-        .then(res => {
-          const data = res.data || res;
-          if (data) {
-            if (data.products && Array.isArray(data.products) && typeof mergeCatalogProductsWithDB === 'function') {
-              mergeCatalogProductsWithDB(data.products);
-            }
-            if (data.customers && Array.isArray(data.customers)) {
-              CRM_STATE.customers = data.customers;
-            }
-            if (data.orders && Array.isArray(data.orders)) {
-              CRM_STATE.orders = data.orders.map(o => ({
-                id: o.id,
-                queryId: o.query_id || o.queryId || '',
-                customerId: o.customer_id || o.customerId || '',
-                customerName: o.customer_name || o.customerName || 'Customer',
-                customerPhone: o.customer_phone || o.customerPhone || '',
-                shippingAddress: o.shipping_address || o.shippingAddress || '',
-                items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
-                grandTotal: parseFloat(o.grand_total || o.grandTotal || 0),
-                advancePayment: parseFloat(o.advance_payment || o.advancePayment || o.cod_advance || 0),
-                balanceAmount: parseFloat(o.balance_amount || o.balanceAmount || o.cod_balance_due || 0),
-                paymentMethod: o.payment_method || o.paymentMethod || 'COD',
-                paymentStatus: o.payment_status || o.paymentStatus || 'PENDING',
-                orderStatus: o.order_status || o.orderStatus || 'PLACED',
-                staffId: o.staff_id || o.staffId || '',
-                staffName: o.staff_name || o.staffName || '',
-                createdAt: o.created_at || o.createdAt || ''
-              }));
-            }
-            if (data.queries && Array.isArray(data.queries)) {
-              CRM_STATE.queries = data.queries.map(q => ({
-                id: q.id,
-                customerId: q.customer_id || q.customerId || '',
-                assignedTo: q.assigned_to || q.assignedTo || 'UNASSIGNED',
-                status: q.status || 'NEW',
-                priority: q.priority || 'NORMAL',
-                queryText: q.query_text || q.queryText || '',
-                createdAt: q.created_at || q.createdAt || ''
-              }));
-            }
-            if (data.followups && Array.isArray(data.followups)) {
-              CRM_STATE.followups = data.followups;
-            }
-            if (data.staff && Array.isArray(data.staff)) {
-              CRM_STATE.staffList = data.staff.map(s => ({
-                id: s.id,
-                name: s.name,
-                role: s.role,
-                avatar: s.avatar || (s.name ? s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'ST'),
-                activeQueries: parseInt(s.active_queries || s.activeQueries || 0),
-                converted: parseInt(s.converted || 0),
-                email: s.email || '',
-                phone: s.phone || '',
-                status: s.status || 'ACTIVE'
-              }));
-            }
+      .then(r => r.json())
+      .then(res => {
+        const data = res.data || res;
+        if (data) {
+          if (data.products && Array.isArray(data.products) && typeof mergeCatalogProductsWithDB === 'function') {
+            mergeCatalogProductsWithDB(data.products);
           }
-        })
-        .catch(err => {
-          console.warn('[refreshDashboardData] Local sync fallback:', err);
-        })
+          if (data.customers && Array.isArray(data.customers)) {
+            CRM_STATE.customers = data.customers;
+          }
+          if (data.orders && Array.isArray(data.orders)) {
+            CRM_STATE.orders = data.orders.map(o => ({
+              id: o.id,
+              queryId: o.query_id || o.queryId || '',
+              customerId: o.customer_id || o.customerId || '',
+              customerName: o.customer_name || o.customerName || 'Customer',
+              customerPhone: o.customer_phone || o.customerPhone || '',
+              shippingAddress: o.shipping_address || o.shippingAddress || '',
+              items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
+              grandTotal: parseFloat(o.grand_total || o.grandTotal || 0),
+              advancePayment: parseFloat(o.advance_payment || o.advancePayment || o.cod_advance || 0),
+              balanceAmount: parseFloat(o.balance_amount || o.balanceAmount || o.cod_balance_due || 0),
+              paymentMethod: o.payment_method || o.paymentMethod || 'COD',
+              paymentStatus: o.payment_status || o.paymentStatus || 'PENDING',
+              orderStatus: o.order_status || o.orderStatus || 'PLACED',
+              staffId: o.staff_id || o.staffId || '',
+              staffName: o.staff_name || o.staffName || '',
+              createdAt: o.created_at || o.createdAt || ''
+            }));
+          }
+          if (data.queries && Array.isArray(data.queries)) {
+            CRM_STATE.queries = data.queries.map(q => ({
+              id: q.id,
+              customerId: q.customer_id || q.customerId || '',
+              assignedTo: q.assigned_to || q.assignedTo || 'UNASSIGNED',
+              status: q.status || 'NEW',
+              priority: q.priority || 'NORMAL',
+              queryText: q.query_text || q.queryText || '',
+              createdAt: q.created_at || q.createdAt || ''
+            }));
+          }
+          if (data.followups && Array.isArray(data.followups)) {
+            CRM_STATE.followups = data.followups;
+          }
+          if (data.staff && Array.isArray(data.staff)) {
+            CRM_STATE.staffList = data.staff.map(s => ({
+              id: s.id,
+              name: s.name,
+              role: s.role,
+              avatar: s.avatar || (s.name ? s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'ST'),
+              activeQueries: parseInt(s.active_queries || s.activeQueries || 0),
+              converted: parseInt(s.converted || 0),
+              email: s.email || '',
+              phone: s.phone || '',
+              status: s.status || 'ACTIVE'
+            }));
+          }
+        }
+      })
+      .catch(err => {
+        console.warn('[refreshDashboardData] Local sync fallback:', err);
+      })
     : Promise.resolve();
 
   syncPromise.finally(() => {
@@ -34956,8 +34965,8 @@ async function triggerIncomingCallForActiveCustomer(customerId) {
         customer_phone: rawPhone,
         customer_id: customer.id
       })
-    }).catch(() => {});
-  } catch (err) {}
+    }).catch(() => { });
+  } catch (err) { }
 
   if (typeof showToast === 'function') {
     showToast('Incoming WhatsApp Call', `${custName} (${maskedPhone}) is calling official WhatsApp line...`, 'ring_volume', 'amber');

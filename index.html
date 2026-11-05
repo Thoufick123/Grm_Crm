@@ -150,7 +150,7 @@
             settings: { title: 'WhatsApp Business Settings & Phone Configuration', sub: 'Set your primary WhatsApp Business number for dynamic live message routing' },
             backup: { title: 'Data Backup & Recovery Hub', sub: 'Full database snapshot export, restore, and zero-data-loss protection (Section 53)' },
             masking: { title: 'Call & Number Masking Control Hub', sub: 'Lead data privacy, In-CRM WebRTC softphone & virtual brand caller ID configuration' },
-            'packing-slip-config': { title: 'Packing Slip & Label Configuration', sub: 'Customize brand logo, GST, positions, notes, and thermal/standard print templates' }
+            'packing-slip-config': { title: 'Packing Slip & Label Configuration', sub: '' }
           };
 
           var updateHeaderEarly = function () {
@@ -5336,11 +5336,7 @@
                 <span class="material-symbols-outlined text-[24px]">local_shipping</span>
               </div>
               <div>
-                <div class="flex items-center gap-2">
-                  <h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">Packing Slip &amp; Shipping Label Configuration</h2>
-                  <span class="bg-teal-50 text-teal-800 text-[11px] px-2.5 py-0.5 rounded-full font-bold border border-teal-200/80">Dynamic Template</span>
-                </div>
-                <p class="text-xs text-slate-500 mt-0.5">Customize brand logo, GST, positions (top, bottom, left, right), customer address formatting, and notes</p>
+                <h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">Packing Slip &amp; Shipping Label Configuration</h2>
               </div>
             </div>
 
@@ -5691,16 +5687,6 @@
                     <span class="material-symbols-outlined text-teal-600 text-[18px]">notes</span>
                     <span>4. Notes, Care Instructions &amp; Policies</span>
                   </h3>
-                </div>
-
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1">Return / Exchange Policy Note</label>
-                  <textarea id="psc-return-policy" oninput="onPackingSlipConfigFieldChange()" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none leading-relaxed"></textarea>
-                </div>
-
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1">Handling / Fragile Instructions</label>
-                  <input type="text" id="psc-handling-notes" oninput="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
                 </div>
 
                 <div>
@@ -10340,7 +10326,7 @@
   <!-- Tesseract OCR engine is lazy-loaded on-demand when payment screenshots are verified -->
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=19.4"></script>
+  <script src="crm_app.js?v=19.5"></script>
 </body>
 
 </html>
