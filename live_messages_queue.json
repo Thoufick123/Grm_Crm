@@ -2022,5 +2022,41 @@
         "source": "REAL_WHATSAPP_LIVE",
         "timestamp_epoch": 1793858679,
         "received_at": "11:34 AM"
+    },
+    {
+        "id": "3A899E4DB505FA82A6A0",
+        "message_uid": "3A899E4DB505FA82A6A0",
+        "sender_name": "🔥Mathivanan Velmurugesan",
+        "sender_phone": "+91 85087 56894",
+        "sender_jid": "60481779851452@lid",
+        "message_text": "Ok ma",
+        "type": "text",
+        "media_url": null,
+        "duration": 0,
+        "account_id": "account_2",
+        "received_on_number": "+917338965560",
+        "priority": "HIGH",
+        "assigned_to": "UNASSIGNED",
+        "source": "REAL_WHATSAPP_LIVE",
+        "timestamp_epoch": 1793859560,
+        "received_at": "11:49 AM"
+    },
+    {
+        "id": "3EB06611C9DD9C20E97DB0",
+        "message_uid": "3EB06611C9DD9C20E97DB0",
+        "sender_name": "Bot (Auto-Reply)",
+        "sender_phone": "+91 85087 56894",
+        "sender_jid": "918508756894@s.whatsapp.net",
+        "message_text": "✨ *Primary WhatsApp* ✨\nHello *🔥Mathivanan*! 👋 Welcome to our store.\n\n👗 *Ready-Stock Collections:*\n1️⃣ Baby Collection (0–3Y) — *₹599*\n2️⃣ Maternity & Feeding — *₹1,299*\n3️⃣ Newborn Gift Sets (0–6M) — *₹799*\n4️⃣ Kids Daily Wear (4–5Y) — *₹450*\n5️⃣ Wholesale Bundles — *₹7,200*\n6️⃣ Festive Silk Sets — *₹899*\n\n💬 *Reply with 1 to 6* to see photos & sizes!",
+        "type": "text",
+        "media_url": null,
+        "duration": null,
+        "account_id": "account_2",
+        "received_on_number": "+91 97896 60115",
+        "priority": "HIGH",
+        "assigned_to": "UNASSIGNED",
+        "source": "REAL_WHATSAPP_LIVE",
+        "timestamp_epoch": 1793859561,
+        "received_at": "11:49 AM"
     }
 ]

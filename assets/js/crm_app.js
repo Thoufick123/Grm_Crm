@@ -18544,8 +18544,7 @@ function toggleBulkPriceEditMode(forceState) {
   const tbBtn = document.getElementById('btn-toolbar-bulk-price');
   const tbSelBtn = document.getElementById('btn-toolbar-bulk-select');
   const bar = document.getElementById('catalog-bulk-price-bar');
-  const dock = document.getElementById('catalog-bulk-floating-dock');
-  const thCol = document.getElementById('th-bulk-checkbox-col');
+    const thCol = document.getElementById('th-bulk-checkbox-col');
 
   if (IS_BULK_PRICE_MODE) {
     if (btn) {
@@ -18563,7 +18562,6 @@ function toggleBulkPriceEditMode(forceState) {
       tbSelBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">check_box</span> <span id="btn-toolbar-bulk-select-text">Selecting Active</span>`;
     }
     if (bar) bar.classList.remove('hidden');
-    if (dock) dock.classList.remove('hidden');
     if (thCol && CATALOG_VIEW_MODE === 'table') thCol.classList.remove('hidden');
     showToast('Selection Checkboxes Active', 'Select garments to Share on WhatsApp or Edit Prices.', 'checklist', 'emerald');
   } else {
@@ -18588,7 +18586,6 @@ function toggleBulkPriceEditMode(forceState) {
       tbCheck.indeterminate = false;
     }
     if (bar) bar.classList.add('hidden');
-    if (dock) dock.classList.add('hidden');
     if (thCol) thCol.classList.add('hidden');
   }
 
