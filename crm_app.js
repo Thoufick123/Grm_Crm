@@ -24123,6 +24123,84 @@ function reassignOrderStaff(orderId, newStaffId) {
 }
 window.reassignOrderStaff = reassignOrderStaff;
 
+// Date Range Filtering Engine for Orders Module & Exports
+function isOrderWithinDateRange(order, fromDateStr, toDateStr) {
+  if (!fromDateStr && !toDateStr) return true;
+  const dStr = order.createdAt || order.created_at;
+  if (!dStr) return true;
+  const d = new Date(dStr);
+  if (isNaN(d.getTime())) return true;
+
+  if (fromDateStr) {
+    const fromDate = new Date(fromDateStr + 'T00:00:00');
+    if (d < fromDate) return false;
+  }
+  if (toDateStr) {
+    const toDate = new Date(toDateStr + 'T23:59:59.999');
+    if (d > toDate) return false;
+  }
+  return true;
+}
+window.isOrderWithinDateRange = isOrderWithinDateRange;
+
+function getOrdersDateFilteredList() {
+  const allOrders = CRM_STATE?.orders || [];
+  const fromVal = document.getElementById('orders-filter-date-from')?.value || '';
+  const toVal = document.getElementById('orders-filter-date-to')?.value || '';
+  if (!fromVal && !toVal) return allOrders;
+  return allOrders.filter(o => isOrderWithinDateRange(o, fromVal, toVal));
+}
+window.getOrdersDateFilteredList = getOrdersDateFilteredList;
+
+function onOrdersDateFilterChange() {
+  const fromVal = document.getElementById('orders-filter-date-from')?.value || '';
+  const toVal = document.getElementById('orders-filter-date-to')?.value || '';
+  const clearBtn = document.getElementById('btn-clear-orders-date');
+  if (clearBtn) {
+    if (fromVal || toVal) {
+      clearBtn.classList.remove('hidden');
+    } else {
+      clearBtn.classList.add('hidden');
+    }
+  }
+
+  // Update badge in header if date filter active
+  const badgeTotalHeader = document.getElementById('badge-orders-total-count');
+  const filtered = getOrdersDateFilteredList();
+  if (badgeTotalHeader) {
+    badgeTotalHeader.innerText = (fromVal || toVal)
+      ? filtered.length + ' Filtered Orders'
+      : (CRM_STATE?.orders || []).length + ' Orders';
+  }
+
+  renderOrdersDashboard();
+  renderOrdersHistoryTable();
+  if (typeof updateOrdersPipelineUI === 'function') updateOrdersPipelineUI();
+}
+window.onOrdersDateFilterChange = onOrdersDateFilterChange;
+
+function clearOrdersDateFilter() {
+  const fromInput = document.getElementById('orders-filter-date-from');
+  const toInput = document.getElementById('orders-filter-date-to');
+  const clearBtn = document.getElementById('btn-clear-orders-date');
+  if (fromInput) fromInput.value = '';
+  if (toInput) toInput.value = '';
+  if (clearBtn) clearBtn.classList.add('hidden');
+
+  const badgeTotalHeader = document.getElementById('badge-orders-total-count');
+  if (badgeTotalHeader) {
+    badgeTotalHeader.innerText = (CRM_STATE?.orders || []).length + ' Orders';
+  }
+
+  renderOrdersDashboard();
+  renderOrdersHistoryTable();
+  if (typeof updateOrdersPipelineUI === 'function') updateOrdersPipelineUI();
+  if (typeof showToast === 'function') {
+    showToast('Date Filter Reset', 'Showing all orders.', 'event_busy', 'slate');
+  }
+}
+window.clearOrdersDateFilter = clearOrdersDateFilter;
+
 function renderOrdersModule() {
   const badgeOrders = document.getElementById('badge-orders-count');
   const badgeTotalHeader = document.getElementById('badge-orders-total-count');
@@ -24144,7 +24222,7 @@ window.renderOrdersModule = renderOrdersModule;
 window.renderOrdersTable = renderOrdersModule;
 
 function updateOrdersPipelineUI() {
-  const orders = CRM_STATE?.orders || [];
+  const orders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
   const countPlaced = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
   const countPacked = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
   const countShipped = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
@@ -24165,7 +24243,7 @@ function updateOrdersPipelineUI() {
 window.updateOrdersPipelineUI = updateOrdersPipelineUI;
 
 function renderOrdersDashboard() {
-  const orders = CRM_STATE?.orders || [];
+  const orders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
 
   // 1. Overall Revenue
   let overallRevenue = 0;
@@ -24259,7 +24337,7 @@ function renderOrdersStaffBreakdown() {
   const tbody = document.getElementById('orders-staff-breakdown-body');
   if (!tbody) return;
 
-  const orders = CRM_STATE?.orders || [];
+  const orders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
   const totalOrdersCount = orders.length;
 
   const staffMembers = [...(CRM_STATE?.staffList || [])];
@@ -24424,7 +24502,7 @@ function renderOrdersHistoryTable() {
   const tbody = document.getElementById('orders-table-body');
   if (!tbody) return;
 
-  const orders = CRM_STATE?.orders || [];
+  const orders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
   const searchInput = document.getElementById('order-history-search');
   const searchVal = (searchInput ? searchInput.value : '').toLowerCase().trim();
   const staffFilter = document.getElementById('order-history-staff-filter');
@@ -25114,7 +25192,10 @@ function downloadOrdersDashboardReport() {
     return downloadOrdersHistoryCSV();
   }
 
-  const orders = CRM_STATE?.orders || [];
+  const fromVal = document.getElementById('orders-filter-date-from')?.value || '';
+  const toVal = document.getElementById('orders-filter-date-to')?.value || '';
+  const orders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
+
   let overallRevenue = 0;
   let paidOnlineTotal = 0;
   let codDueTotal = 0;
@@ -25133,15 +25214,13 @@ function downloadOrdersDashboardReport() {
     }
   });
 
-  const countPlaced = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PLACED').length;
-  const countPacked = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'PACKED').length;
-  const countShipped = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'SHIPPED').length;
-  const countOutOfDelivery = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'OUT_FOR_DELIVERY').length;
-  const countDelivered = orders.filter(o => normalizeOrderStatus(o.orderStatus || o.order_status) === 'DELIVERED').length;
-
   let csvContent = "";
   csvContent += "GRM GARMENTS - WHATSAPP SALES & ORDER DASHBOARD REPORT\r\n";
-  csvContent += "Generated On:,\"" + new Date().toLocaleString() + "\"\r\n\r\n";
+  csvContent += "Generated On:,\"" + new Date().toLocaleString() + "\"\r\n";
+  if (fromVal || toVal) {
+    csvContent += "Date Range Filter:,\"" + (fromVal ? ("From " + fromVal) : "Up to") + (toVal ? (" To " + toVal) : "") + "\"\r\n";
+  }
+  csvContent += "\r\n";
 
   csvContent += "EXECUTIVE REVENUE SUMMARY\r\n";
   csvContent += "Total Orders Booked," + orders.length + "\r\n";
@@ -25150,12 +25229,7 @@ function downloadOrdersDashboardReport() {
   csvContent += "COD Balance Due (INR),Rs " + codDueTotal.toFixed(2) + "\r\n";
   csvContent += "Average Order Value (AOV),Rs " + (orders.length > 0 ? (overallRevenue / orders.length).toFixed(2) : '0.00') + "\r\n\r\n";
 
-  csvContent += "ORDER FULFILLMENT PIPELINE STATUS\r\n";
-  csvContent += "1. Placed (Booked & Reserved)," + countPlaced + "\r\n";
-  csvContent += "2. Packed (Ready for Dispatch)," + countPacked + "\r\n";
-  csvContent += "3. Shipped (In Transit / Courier)," + countShipped + "\r\n";
-  csvContent += "4. Out for Delivery (With Rider)," + countOutOfDelivery + "\r\n";
-  csvContent += "5. Delivered (Handed to Customer)," + countDelivered + "\r\n\r\n";
+  // Note: ORDER FULFILLMENT PIPELINE STATUS removed from dashboard export as requested
 
   csvContent += "STAFF NAME WISE TOTAL ORDER COUNT & PERFORMANCE\r\n";
   csvContent += "Staff Member,Role / Department,Orders Booked,Total Revenue (INR),Placed,Packed,Shipped,Out for Delivery,Delivered,Share of Orders (%)\r\n";
@@ -25186,17 +25260,21 @@ function downloadOrdersDashboardReport() {
     csvContent += "\"" + (staff.name || '').replace(/"/g, '""') + "\",\"" + (staff.role || 'Sales Specialist').replace(/"/g, '""') + "\"," + count + "," + rev.toFixed(2) + "," + p + "," + pk + "," + sh + "," + od + "," + del + "," + share + "%\r\n";
   });
 
-  const filename = "GRM_WhatsApp_Sales_Dashboard_Report_" + new Date().toISOString().split('T')[0] + ".csv";
+  const dateSuffix = (fromVal && toVal) ? ("_" + fromVal + "_to_" + toVal) : ("_" + new Date().toISOString().split('T')[0]);
+  const filename = "GRM_WhatsApp_Sales_Dashboard_Report" + dateSuffix + ".csv";
   downloadOrdersCSVBlob(filename, csvContent);
   if (typeof showToast === 'function') {
-    showToast('Report Downloaded', 'Executive order dashboard report saved.', 'download', 'emerald');
+    showToast('Report Downloaded', orders.length + ' orders exported' + (fromVal || toVal ? ' for chosen date range.' : '.'), 'download', 'emerald');
   }
 }
 window.downloadOrdersDashboardReport = downloadOrdersDashboardReport;
 
 // 2. Staff Sales Performance & Order Volume Dedicated Breakdown Export
 function downloadStaffOrdersReport() {
-  const orders = CRM_STATE?.orders || [];
+  const fromVal = document.getElementById('orders-filter-date-from')?.value || '';
+  const toVal = document.getElementById('orders-filter-date-to')?.value || '';
+  const orders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
+
   const staffMembers = [...(CRM_STATE?.staffList || [])];
   if (!staffMembers.some(s => s.id === 'admin' || s.name === 'Super Admin')) {
     staffMembers.push({ id: 'admin', name: 'Super Admin', role: 'Admin Manager (Full System)' });
@@ -25205,6 +25283,9 @@ function downloadStaffOrdersReport() {
   let csvContent = "";
   csvContent += "GRM GARMENTS - STAFF SALES PERFORMANCE & ORDER VOLUME BREAKDOWN\r\n";
   csvContent += "Generated On:,\"" + new Date().toLocaleString() + "\"\r\n";
+  if (fromVal || toVal) {
+    csvContent += "Date Range Filter:,\"" + (fromVal ? ("From " + fromVal) : "Up to") + (toVal ? (" To " + toVal) : "") + "\"\r\n";
+  }
   csvContent += "Total Orders Booked:," + orders.length + "\r\n\r\n";
 
   csvContent += "Staff Member,Role / Department,Orders Booked,Total Revenue (INR),Average Order Value (INR),Placed,Packed,Shipped,Out for Delivery,Delivered,Share of Orders (%),Performance Rating\r\n";
@@ -25232,17 +25313,20 @@ function downloadStaffOrdersReport() {
     csvContent += "\"" + (staff.name || '').replace(/"/g, '""') + "\",\"" + (staff.role || 'Sales Specialist').replace(/"/g, '""') + "\"," + count + "," + rev.toFixed(2) + "," + aov + "," + p + "," + pk + "," + sh + "," + od + "," + del + "," + share + "%,\"" + rating + "\"\r\n";
   });
 
-  const filename = "GRM_Staff_Sales_Breakdown_" + new Date().toISOString().split('T')[0] + ".csv";
+  const dateSuffix = (fromVal && toVal) ? ("_" + fromVal + "_to_" + toVal) : ("_" + new Date().toISOString().split('T')[0]);
+  const filename = "GRM_Staff_Sales_Breakdown" + dateSuffix + ".csv";
   downloadOrdersCSVBlob(filename, csvContent);
   if (typeof showToast === 'function') {
-    showToast('Staff Breakdown Downloaded', staffMembers.length + ' staff member records exported.', 'download', 'emerald');
+    showToast('Staff Breakdown Downloaded', staffMembers.length + ' staff member records exported' + (fromVal || toVal ? ' for chosen date range.' : '.'), 'download', 'emerald');
   }
 }
 window.downloadStaffOrdersReport = downloadStaffOrdersReport;
 
 // 3. Orders History & Management CSV Export
 function downloadOrdersHistoryCSV() {
-  const allOrders = CRM_STATE?.orders || [];
+  const fromVal = document.getElementById('orders-filter-date-from')?.value || '';
+  const toVal = document.getElementById('orders-filter-date-to')?.value || '';
+  const allOrders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
   
   // Check if filters are active in DOM or state
   const staffFilter = document.getElementById('order-history-staff-filter')?.value || 'ALL';
@@ -25279,7 +25363,7 @@ function downloadOrdersHistoryCSV() {
     });
   }
 
-  // If filtered set is empty but total orders exist, export all orders
+  // If filtered set is empty but total orders exist in chosen date range, export all in date range
   if (orders.length === 0 && allOrders.length > 0) {
     orders = allOrders;
   }
@@ -25306,10 +25390,11 @@ function downloadOrdersHistoryCSV() {
     csvContent += "\"" + o.id + "\",\"" + dateStr + "\",\"" + nameStr + "\",\"" + phoneStr + "\",\"" + addressStr + "\",\"" + staff.replace(/"/g, '""') + "\",\"" + itemsStr.replace(/"/g, '""') + "\"," + amount.toFixed(2) + "," + codAdv.toFixed(2) + "," + codDue.toFixed(2) + ",\"" + payMethod + "\",\"" + payStatus + "\",\"" + utr + "\",\"" + status + "\"\r\n";
   });
 
-  const filename = "GRM_Orders_History_" + (statusFilter !== 'ALL' ? statusFilter.toLowerCase() + "_" : '') + new Date().toISOString().split('T')[0] + ".csv";
+  const dateSuffix = (fromVal && toVal) ? ("_" + fromVal + "_to_" + toVal) : ("_" + new Date().toISOString().split('T')[0]);
+  const filename = "GRM_Orders_History_" + (statusFilter !== 'ALL' ? statusFilter.toLowerCase() + "_" : '') + dateSuffix + ".csv";
   downloadOrdersCSVBlob(filename, csvContent);
   if (typeof showToast === 'function') {
-    showToast('Order History Exported', orders.length + ' order records downloaded as CSV.', 'download', 'emerald');
+    showToast('Order History Exported', orders.length + ' order records downloaded' + (fromVal || toVal ? ' for chosen date range.' : '.'), 'download', 'emerald');
   }
 }
 window.downloadOrdersHistoryCSV = downloadOrdersHistoryCSV;

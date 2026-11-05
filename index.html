@@ -2930,8 +2930,25 @@
             </div>
 
 
-            <!-- Right: Action Buttons -->
-            <div class="flex items-center gap-2 self-start lg:self-center shrink-0">
+            <!-- Right: Action Buttons with Date Range Filter -->
+            <div class="flex items-center gap-2 self-start lg:self-center shrink-0 flex-wrap">
+
+              <!-- Date Range Filter: From & To -->
+              <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 shadow-2xs" title="Filter orders by date range">
+                <span class="material-symbols-outlined text-emerald-600 text-[17px]">calendar_month</span>
+                <div class="flex items-center gap-1">
+                  <span class="text-[10px] font-extrabold text-slate-500 uppercase">From:</span>
+                  <input type="date" id="orders-filter-date-from" onchange="onOrdersDateFilterChange()" class="bg-transparent font-bold text-slate-800 text-xs focus:outline-none cursor-pointer" title="Select start date">
+                </div>
+                <span class="text-slate-300">|</span>
+                <div class="flex items-center gap-1">
+                  <span class="text-[10px] font-extrabold text-slate-500 uppercase">To:</span>
+                  <input type="date" id="orders-filter-date-to" onchange="onOrdersDateFilterChange()" class="bg-transparent font-bold text-slate-800 text-xs focus:outline-none cursor-pointer" title="Select end date">
+                </div>
+                <button type="button" onclick="clearOrdersDateFilter()" id="btn-clear-orders-date" class="hidden text-slate-400 hover:text-rose-500 transition cursor-pointer p-0.5 ml-0.5" title="Clear Date Filter">
+                  <span class="material-symbols-outlined text-[15px]">cancel</span>
+                </button>
+              </div>
 
               <!-- Download Report -->
               <button type="button" onclick="downloadOrdersDashboardReport()" class="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95" title="Download Excel/CSV Report">
