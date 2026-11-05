@@ -25541,7 +25541,7 @@ function getSamplePackingSlipOrder() {
     return existingOrders[0];
   }
   return {
-    id: "WO-00081",
+    id: "WO00001",
     createdAt: "2026-11-04 11:21:10",
     customerName: "Suguna Velmurugan",
     customerPhone: "+91 73389 65568",
@@ -25977,14 +25977,16 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
     ['right', 'left', 'center', 'stacked_left', 'stacked_center', 'stacked_right'].includes(c.courierPosition);
   const showBarcodeCourier = showCourier && isBarcodeCourier;
 
+  const cleanOrderId = (order.id || 'WO00001').replace(/^\*+|\*+$/g, '').trim();
+
   const courierPill = showBarcodeCourier ? `
-    <span class="inline-flex items-center gap-1 bg-slate-200 text-slate-800 text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0">
-      <span class="material-symbols-outlined text-[11px]">local_shipping</span>
-      <span>${courierName}</span>
+    <span class="inline-flex items-center gap-1.5 text-slate-800 text-[11px] font-medium shrink-0">
+      <span class="material-symbols-outlined text-[13px] text-slate-500">local_shipping</span>
+      <span>Default Shipping Partner / Courier: <strong class="font-bold text-slate-950">${courierName}</strong></span>
     </span>` : '';
 
   const orderIdSpan = showOrderId ? `
-    <span class="font-mono font-bold text-[11px] text-slate-950 tracking-[3px] select-all shrink-0">*${order.id || 'WO-00081'}*</span>` : '';
+    <span class="font-mono font-bold text-xs text-slate-950 tracking-normal select-all shrink-0">${cleanOrderId}</span>` : '';
 
   const barcodeSvgHtml = showBarcodeLines ? generateBarcodeSvg(order.id || 'WO-00081') : '';
 
