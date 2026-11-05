@@ -25942,10 +25942,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
           <span class="material-symbols-outlined text-[11px]">local_shipping</span>
           <span>${courierName}</span>
         </span>
-        ${tracking ? `<span class="text-[9px] text-slate-700 font-mono font-bold">AWB: ${tracking}</span>` : ''}
       </div>`;
-  } else if (tracking && (showBarcodeLines || showOrderId)) {
-    barcodeBoxContentHtml += `<span class="text-[9px] text-slate-500 font-mono">AWB: ${tracking}</span>`;
   }
 
   const barcodeHtml = barcodeBoxContentHtml ? `
@@ -26118,7 +26115,6 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
     <div class="p-1.5 rounded bg-slate-100 border border-slate-200 text-[9px] font-bold text-slate-800 text-center mb-2 flex items-center justify-center gap-1.5">
       <span class="material-symbols-outlined text-[13px] text-teal-700">local_shipping</span>
       <span>Shipping Partner: ${courierName}</span>
-      ${tracking ? `<span class="font-mono text-slate-500 font-bold">| AWB: ${tracking}</span>` : ''}
     </div>` : '';
 
   // Assemble based on admin positions
@@ -26171,13 +26167,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   }
 
   // Verification & Sign box
-  const packerSignHtml = `
-    <div class="pt-2 border-t border-dashed border-slate-300 flex items-center justify-between text-[9px] text-slate-500">
-      <div>Packing Slip ID: ${order.id}</div>
-      <div>Packed By: _______________</div>
-      <div>Date: _______________</div>
-    </div>
-  `;
+  const packerSignHtml = '';
 
   // Standard Container styling based on paper format
   let formatWidthClass = 'max-w-[380px] packing-slip-4x6';
