@@ -25980,9 +25980,9 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   const cleanOrderId = (order.id || 'WO00001').replace(/^\*+|\*+$/g, '').trim();
 
   const courierPill = showBarcodeCourier ? `
-    <span class="inline-flex items-center gap-1.5 text-slate-800 text-[11px] font-medium shrink-0">
-      <span class="material-symbols-outlined text-[13px] text-slate-500"><strong class="font-bold text-slate-950">local_shipping
-      ${courierName}</strong></span>
+    <span class="inline-flex items-center gap-1.5 text-slate-900 text-xs font-bold shrink-0">
+      <span class="material-symbols-outlined text-[14px] text-slate-600">local_shipping</span>
+      <span>${courierName}</span>
     </span>` : '';
 
   const orderIdSpan = showOrderId ? `
