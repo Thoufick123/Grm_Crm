@@ -3545,7 +3545,8 @@ function updateConfiguredPhoneDisplays() {
 
   const pageSub = document.querySelector('#page-subtitle');
   if (pageSub && ACTIVE_VIEW === 'inbox') {
-    pageSub.innerText = `Live chats for ${phone} • Active line conversation management & order booking`;
+    pageSub.innerText = '';
+    pageSub.classList.add('hidden');
   }
 }
 
@@ -3624,13 +3625,19 @@ function switchInboxSubmodule(submodule) {
     if (tabChat) tabChat.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer";
     if (navSubChat) navSubChat.className = activeSubNavClass;
     if (pTitle) pTitle.innerText = t('header.title.inbox_chats', 'WhatsApp Inbox & Customer Queue');
-    if (pSub) pSub.innerText = t('header.sub.inbox_chats', `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`);
+    if (pSub) {
+      pSub.innerText = '';
+      pSub.classList.add('hidden');
+    }
   } else if (submodule === 'autoreply') {
     if (autoSub) autoSub.classList.remove('hidden');
     if (tabAuto) tabAuto.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-teal-600 to-emerald-600 text-white cursor-pointer";
     if (navSubAuto) navSubAuto.className = activeSubNavClass;
     if (pTitle) pTitle.innerText = t('header.title.inbox_autoreply', 'WhatsApp Inbox — Pre-Set Templates & Auto-Reply Hub');
-    if (pSub) pSub.innerText = t('header.sub.inbox_autoreply', 'Configure automated responses, stock catalog links, trigger keywords & smart question answering');
+    if (pSub) {
+      pSub.innerText = '';
+      pSub.classList.add('hidden');
+    }
 
     if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
     if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
@@ -3641,7 +3648,10 @@ function switchInboxSubmodule(submodule) {
     if (tabBcast) tabBcast.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white cursor-pointer";
     if (navSubBcast) navSubBcast.className = activeSubNavClass;
     if (pTitle) pTitle.innerText = t('header.title.inbox_broadcast', 'WhatsApp Inbox — Automated Template Broadcast');
-    if (pSub) pSub.innerText = t('header.sub.inbox_broadcast', 'Send personalized promotional templates & announcements to customer chats with variable tags');
+    if (pSub) {
+      pSub.innerText = '';
+      pSub.classList.add('hidden');
+    }
 
     if (typeof renderBroadcastTemplateDropdown === 'function') renderBroadcastTemplateDropdown('festive_offer');
     if (typeof applyBroadcastPreset === 'function') applyBroadcastPreset('festive_offer');
@@ -3727,7 +3737,7 @@ function updatePageHeaderTitle() {
   const titles = {
     inbox: {
       title: t('header.title.inbox', 'WhatsApp Inbox & Customer Queue'),
-      sub: t('header.sub.inbox', `Live chats for ${CRM_STATE?.whatsappAccount?.phoneNumber || 'Business WhatsApp'} with instant staff assignment & order booking`)
+      sub: ''
     },
     enquiries: {
       title: t('header.title.enquiries', 'Customer Enquiries & Staff Assignment Hub'),
@@ -3791,18 +3801,22 @@ function updatePageHeaderTitle() {
     titleContainer.classList.remove('hidden');
   }
   if (liveQueuePill) {
-    if (viewName === 'inbox') {
-      liveQueuePill.classList.remove('hidden');
-    } else {
-      liveQueuePill.classList.add('hidden');
-    }
+    liveQueuePill.classList.add('hidden');
+    liveQueuePill.style.display = 'none';
   }
 
   if (titles[viewName]) {
     const pTitle = document.getElementById('page-title');
     const pSub = document.getElementById('page-subtitle');
     if (pTitle) pTitle.innerText = titles[viewName].title;
-    if (pSub) pSub.innerText = titles[viewName].sub;
+    if (pSub) {
+      pSub.innerText = titles[viewName].sub || '';
+      if (!titles[viewName].sub) {
+        pSub.classList.add('hidden');
+      } else {
+        pSub.classList.remove('hidden');
+      }
+    }
   }
 }
 window.updatePageHeaderTitle = updatePageHeaderTitle;
