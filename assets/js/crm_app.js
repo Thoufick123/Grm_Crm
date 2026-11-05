@@ -26939,7 +26939,6 @@ window.ACTIVE_CUSTOMERS_SUBMODULE = ACTIVE_CUSTOMERS_SUBMODULE;
 
 var CUSTOMER_REQUIREMENTS_CACHE = [];
 var CUSTOMER_REQ_SEARCH_QUERY = '';
-var CUSTOMER_REQ_STATUS_FILTER = 'ALL';
 
 function switchCustomerSubmodule(tab = 'list') {
   if (tab !== 'list' && tab !== 'requirements') tab = 'list';
@@ -27014,20 +27013,11 @@ function handleCustomerReqSearch(query) {
 }
 window.handleCustomerReqSearch = handleCustomerReqSearch;
 
-function filterCustomerRequirements(status) {
-  CUSTOMER_REQ_STATUS_FILTER = status || 'ALL';
-  renderCustomerRequirementsTable();
-}
-window.filterCustomerRequirements = filterCustomerRequirements;
-
 function renderCustomerRequirementsTable() {
   const tbody = document.getElementById('customer-requirements-table-body');
   if (!tbody) return;
 
-  const filtered = CUSTOMER_REQUIREMENTS_CACHE.filter(item => {
-    if (CUSTOMER_REQ_STATUS_FILTER !== 'ALL' && item.status !== CUSTOMER_REQ_STATUS_FILTER) {
-      return false;
-    }
+  const filtered = (CUSTOMER_REQUIREMENTS_CACHE || []).filter(item => {
     if (CUSTOMER_REQ_SEARCH_QUERY) {
       const q = CUSTOMER_REQ_SEARCH_QUERY;
       const name = (item.customer_name || '').toLowerCase();
@@ -27047,11 +27037,11 @@ function renderCustomerRequirementsTable() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="py-12 text-center text-slate-400">
+        <td colspan="6" class="py-12 text-center text-slate-400">
           <div class="flex flex-col items-center justify-center gap-2">
             <span class="material-symbols-outlined text-[40px] text-slate-300">inventory_2</span>
             <p class="font-bold text-slate-700 text-sm">No Customer Requirements Found</p>
-            <p class="text-xs text-slate-400 max-w-sm">No custom dress requirements recorded yet or matching your filter criteria. Click "Add Requirement" to create one.</p>
+            <p class="text-xs text-slate-400 max-w-sm">No custom dress requirements recorded yet or matching your search. Click "Add Requirement" to create one.</p>
             <button 
               type="button" 
               onclick="openAddRequirementModal()" 
@@ -27101,26 +27091,25 @@ function renderCustomerRequirementsTable() {
         <td class="py-3.5 px-4 max-w-xs">
           <p class="text-slate-700 whitespace-pre-line text-xs font-medium leading-relaxed bg-slate-50/50 p-2 rounded-xl border border-slate-100">${safeReq}</p>
         </td>
-        <td class="py-3.5 px-4">
-          <select 
-            onchange="updateCustomerRequirementStatus(${req.id}, this.value)" 
-            class="text-[11px] font-bold py-1 px-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-brand-wa cursor-pointer">
-            <option value="PENDING" ${req.status === 'PENDING' ? 'selected' : ''}>Pending</option>
-            <option value="SOURCING" ${req.status === 'SOURCING' ? 'selected' : ''}>Sourcing</option>
-            <option value="QUOTED" ${req.status === 'QUOTED' ? 'selected' : ''}>Quoted</option>
-            <option value="FULFILLED" ${req.status === 'FULFILLED' ? 'selected' : ''}>Fulfilled</option>
-            <option value="CANCELLED" ${req.status === 'CANCELLED' ? 'selected' : ''}>Cancelled</option>
-          </select>
-        </td>
         <td class="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">${formattedDate}</td>
         <td class="py-3.5 px-4 text-right">
-          <button 
-            type="button" 
-            onclick="deleteCustomerRequirement(${req.id})" 
-            title="Delete Requirement" 
-            class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer">
-            <span class="material-symbols-outlined text-[18px]">delete</span>
-          </button>
+          <div class="inline-flex items-center gap-1.5 justify-end">
+            <button 
+              type="button" 
+              onclick="openEditRequirementModal(${req.id})" 
+              title="Edit Details" 
+              class="px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl transition-all cursor-pointer flex items-center gap-1 border border-slate-200/80">
+              <span class="material-symbols-outlined text-[15px]">edit</span>
+              <span>Edit</span>
+            </button>
+            <button 
+              type="button" 
+              onclick="deleteCustomerRequirement(${req.id})" 
+              title="Delete Requirement" 
+              class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -27133,26 +27122,89 @@ function openAddRequirementModal() {
   if (!modal) return;
   const form = document.getElementById('form-add-customer-requirement');
   if (form) form.reset();
+
+  const reqIdInput = document.getElementById('req-id');
+  if (reqIdInput) reqIdInput.value = '';
+
+  const titleEl = document.getElementById('req-modal-title');
+  if (titleEl) titleEl.textContent = 'Add Customer Requirement';
+
+  const subtitleEl = document.getElementById('req-modal-subtitle');
+  if (subtitleEl) subtitleEl.textContent = 'Save custom dress specifications & sizing requests';
+
+  const btnText = document.getElementById('req-submit-btn-text');
+  if (btnText) btnText.textContent = 'Save Requirement';
+
   modal.classList.remove('hidden');
 }
 window.openAddRequirementModal = openAddRequirementModal;
 
+function openEditRequirementModal(id) {
+  const modal = document.getElementById('modal-add-customer-requirement');
+  if (!modal) return;
+
+  const item = (CUSTOMER_REQUIREMENTS_CACHE || []).find(r => Number(r.id) === Number(id));
+  if (!item) {
+    if (typeof showToast === 'function') {
+      showToast('Not Found', 'Could not find requirement record to edit.', 'warning', 'amber');
+    }
+    return;
+  }
+
+  const reqIdInput = document.getElementById('req-id');
+  if (reqIdInput) reqIdInput.value = item.id;
+
+  const nameInput = document.getElementById('req-customer-name');
+  if (nameInput) nameInput.value = item.customer_name || '';
+
+  const phoneInput = document.getElementById('req-customer-phone');
+  if (phoneInput) phoneInput.value = item.phone || '';
+
+  const emailInput = document.getElementById('req-customer-email');
+  if (emailInput) emailInput.value = item.email || '';
+
+  const dressInput = document.getElementById('req-dress-name');
+  if (dressInput) dressInput.value = item.dress || '';
+
+  const detailsInput = document.getElementById('req-dress-details');
+  if (detailsInput) detailsInput.value = item.dress_requirement || '';
+
+  const titleEl = document.getElementById('req-modal-title');
+  if (titleEl) titleEl.textContent = 'Edit Customer Requirement';
+
+  const subtitleEl = document.getElementById('req-modal-subtitle');
+  if (subtitleEl) subtitleEl.textContent = 'Modify customer dress specifications & requirements';
+
+  const btnText = document.getElementById('req-submit-btn-text');
+  if (btnText) btnText.textContent = 'Update Details';
+
+  modal.classList.remove('hidden');
+}
+window.openEditRequirementModal = openEditRequirementModal;
+
 function closeAddRequirementModal() {
   const modal = document.getElementById('modal-add-customer-requirement');
   if (modal) modal.classList.add('hidden');
+  const reqIdInput = document.getElementById('req-id');
+  if (reqIdInput) reqIdInput.value = '';
 }
 window.closeAddRequirementModal = closeAddRequirementModal;
 
 async function submitCustomerRequirementForm(event) {
-  if (event) event.preventDefault();
+  if (event) {
+    event.preventDefault();
+    if (event.stopPropagation) event.stopPropagation();
+  }
   const form = document.getElementById('form-add-customer-requirement');
-  if (!form) return;
+  if (!form) return false;
 
   const submitBtn = document.getElementById('req-submit-btn');
-  const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+  const btnTextEl = document.getElementById('req-submit-btn-text');
+  const isEditing = !!(document.getElementById('req-id')?.value);
+
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Saving...</span>';
+    if (btnTextEl) btnTextEl.textContent = isEditing ? 'Updating...' : 'Saving...';
   }
 
   const payload = {
@@ -27161,8 +27213,13 @@ async function submitCustomerRequirementForm(event) {
     email: (document.getElementById('req-customer-email')?.value || '').trim(),
     dress: (document.getElementById('req-dress-name')?.value || '').trim(),
     dress_requirement: (document.getElementById('req-dress-details')?.value || '').trim(),
-    status: document.getElementById('req-status')?.value || 'PENDING'
+    status: 'PENDING'
   };
+
+  const reqId = document.getElementById('req-id')?.value;
+  if (reqId) {
+    payload.id = parseInt(reqId, 10);
+  }
 
   if (!payload.customer_name || !payload.phone || !payload.dress || !payload.dress_requirement) {
     if (typeof showToast === 'function') {
@@ -27172,13 +27229,15 @@ async function submitCustomerRequirementForm(event) {
     }
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = originalBtnHtml;
+      if (btnTextEl) btnTextEl.textContent = isEditing ? 'Update Details' : 'Save Requirement';
     }
-    return;
+    return false;
   }
 
+  const targetAction = isEditing ? 'update_customer_requirement' : 'add_customer_requirement';
+
   try {
-    const res = await fetch('api.php?action=add_customer_requirement', {
+    const res = await fetch(`api.php?action=${targetAction}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -27186,11 +27245,13 @@ async function submitCustomerRequirementForm(event) {
     const result = await res.json();
 
     if (result && result.status === 'success') {
+      const msg = isEditing ? 'Customer requirement updated successfully.' : 'Customer requirement saved to database.';
       if (typeof showToast === 'function') {
-        showToast('Requirement Saved', 'Customer requirement successfully saved to database.', 'check_circle', 'emerald');
+        showToast('Success', msg, 'check_circle', 'emerald');
       }
       closeAddRequirementModal();
       form.reset();
+      if (document.getElementById('req-id')) document.getElementById('req-id').value = '';
       await loadCustomerRequirements();
     } else {
       if (typeof showToast === 'function') {
@@ -27202,45 +27263,17 @@ async function submitCustomerRequirementForm(event) {
   } catch (err) {
     console.error('Error saving customer requirement:', err);
     if (typeof showToast === 'function') {
-      showToast('Network Error', 'Failed to save requirement. Please try again.', 'error', 'rose');
+      showToast('Network Error', 'Failed to communicate with server. Please try again.', 'error', 'rose');
     }
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = originalBtnHtml;
+      if (btnTextEl) btnTextEl.textContent = isEditing ? 'Update Details' : 'Save Requirement';
     }
   }
+  return false;
 }
 window.submitCustomerRequirementForm = submitCustomerRequirementForm;
-
-async function updateCustomerRequirementStatus(id, newStatus) {
-  try {
-    const res = await fetch('api.php?action=update_customer_requirement_status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status: newStatus })
-    });
-    const result = await res.json();
-    if (result && result.status === 'success') {
-      if (typeof showToast === 'function') {
-        showToast('Status Updated', 'Requirement status changed to ' + newStatus, 'check_circle', 'emerald');
-      }
-      const item = CUSTOMER_REQUIREMENTS_CACHE.find(r => Number(r.id) === Number(id));
-      if (item) item.status = newStatus;
-    } else {
-      if (typeof showToast === 'function') {
-        showToast('Error', result.message || 'Failed to update status', 'error', 'rose');
-      }
-      await loadCustomerRequirements();
-    }
-  } catch (err) {
-    console.error('Error updating requirement status:', err);
-    if (typeof showToast === 'function') {
-      showToast('Error', 'Failed to update status', 'error', 'rose');
-    }
-  }
-}
-window.updateCustomerRequirementStatus = updateCustomerRequirementStatus;
 
 async function deleteCustomerRequirement(id) {
   if (!confirm('Are you sure you want to delete this customer requirement?')) return;

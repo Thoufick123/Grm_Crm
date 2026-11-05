@@ -3930,19 +3930,6 @@
               </div>
 
               <div class="flex items-center gap-2.5 w-full md:w-auto">
-                <!-- Status Filter Dropdown -->
-                <select 
-                  id="customer-req-status-filter" 
-                  onchange="filterCustomerRequirements(this.value)"
-                  class="px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-wa cursor-pointer text-slate-700">
-                  <option value="ALL">All Statuses</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="SOURCING">Sourcing</option>
-                  <option value="QUOTED">Quoted</option>
-                  <option value="FULFILLED">Fulfilled</option>
-                  <option value="CANCELLED">Cancelled</option>
-                </select>
-
                 <!-- Search Input -->
                 <div class="relative flex-1 md:w-64">
                   <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
@@ -3976,7 +3963,6 @@
                       <th class="py-3.5 px-4">Customer Details</th>
                       <th class="py-3.5 px-4">Dress</th>
                       <th class="py-3.5 px-4">Dress Requirement &amp; Specs</th>
-                      <th class="py-3.5 px-4">Status</th>
                       <th class="py-3.5 px-4">Date</th>
                       <th class="py-3.5 px-4 text-right">Actions</th>
                     </tr>
@@ -10164,8 +10150,8 @@
             <span class="material-symbols-outlined text-[20px]">assignment_add</span>
           </div>
           <div>
-            <h3 class="text-sm font-bold tracking-wide">Add Customer Requirement</h3>
-            <p class="text-[11px] text-slate-300">Save custom dress specifications &amp; sizing requests</p>
+            <h3 id="req-modal-title" class="text-sm font-bold tracking-wide">Add Customer Requirement</h3>
+            <p id="req-modal-subtitle" class="text-[11px] text-slate-300">Save custom dress specifications &amp; sizing requests</p>
           </div>
         </div>
         <button 
@@ -10178,6 +10164,7 @@
 
       <!-- Modal Body Form -->
       <form id="form-add-customer-requirement" onsubmit="submitCustomerRequirementForm(event)" class="p-6 space-y-4">
+        <input type="hidden" id="req-id" name="id" value="" />
         <!-- Customer Name -->
         <div>
           <label for="req-customer-name" class="block text-xs font-bold text-slate-700 mb-1">
@@ -10265,23 +10252,6 @@
           </div>
         </div>
 
-        <!-- Status -->
-        <div>
-          <label for="req-status" class="block text-xs font-bold text-slate-700 mb-1">
-            Initial Status
-          </label>
-          <select 
-            id="req-status" 
-            name="status" 
-            class="w-full px-3 py-2.5 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-wa cursor-pointer">
-            <option value="PENDING">Pending (New Request)</option>
-            <option value="SOURCING">Sourcing (Checking Stock / Vendor)</option>
-            <option value="QUOTED">Quoted (Price Sent to Customer)</option>
-            <option value="FULFILLED">Fulfilled (Delivered)</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
-        </div>
-
         <!-- Action Buttons -->
         <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
           <button 
@@ -10295,7 +10265,7 @@
             id="req-submit-btn" 
             class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer">
             <span class="material-symbols-outlined text-[18px]">save</span>
-            <span>Save Requirement</span>
+            <span id="req-submit-btn-text">Save Requirement</span>
           </button>
         </div>
       </form>
@@ -10370,7 +10340,7 @@
   <!-- Tesseract OCR engine is lazy-loaded on-demand when payment screenshots are verified -->
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=18.7"></script>
+  <script src="crm_app.js?v=19.2"></script>
 </body>
 
 </html>

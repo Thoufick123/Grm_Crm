@@ -1190,6 +1190,64 @@ if ($action === 'add_customer_requirement' && $_SERVER['REQUEST_METHOD'] === 'PO
     }
 }
 
+if ($action === 'update_customer_requirement' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true) ?: $_POST;
+
+    $id = (int)($data['id'] ?? 0);
+    $customerName = trim($data['customer_name'] ?? ($data['name'] ?? ''));
+    $phone = trim($data['phone'] ?? ($data['phone_no'] ?? ''));
+    $email = trim($data['email'] ?? '');
+    $dress = trim($data['dress'] ?? '');
+    $dressRequirement = trim($data['dress_requirement'] ?? ($data['requirement'] ?? ''));
+
+    if ($id <= 0 || empty($customerName) || empty($phone) || empty($dress) || empty($dressRequirement)) {
+        http_response_code(400);
+        echo json_encode([
+            "status" => "error",
+            "message" => "Valid ID, Customer Name, Phone No, Dress, and Dress Requirement are required."
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE `customer_requirements` 
+            SET `customer_name` = ?, `phone` = ?, `email` = ?, `dress` = ?, `dress_requirement` = ?, `updated_at` = NOW()
+            WHERE `id` = ?
+        ");
+        $stmt->execute([
+            $customerName,
+            $phone,
+            $email ?: null,
+            $dress,
+            $dressRequirement,
+            $id
+        ]);
+
+        $fetchStmt = $pdo->prepare("SELECT * FROM `customer_requirements` WHERE `id` = ?");
+        $fetchStmt->execute([$id]);
+        $updatedRecord = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Customer requirement updated successfully",
+            "id" => $id,
+            "data" => $updatedRecord
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
 if ($action === 'update_customer_requirement_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$pdo) {
         http_response_code(500);
