@@ -138,7 +138,7 @@
           var titles = {
             inbox: { title: 'WhatsApp Inbox & Customer Queue', sub: 'Live conversation management with instant staff assignment & order booking' },
             enquiries: { title: 'Customer Enquiries & Staff Assignment Hub', sub: 'Admin control room to distribute new customer leads to staff' },
-            dashboard: { title: 'WhatsApp Operations Dashboard', sub: 'Real-time overview of inquiries, active sessions, and communication health' },
+            dashboard: { title: 'WhatsApp Dashboard', sub: '' },
             catalog: { title: 'Garment Product Catalog & Live Stock', sub: 'Live available stock calculator and 1-click WhatsApp card sharing' },
             orders: { title: 'WhatsApp Sales Orders & Reservations', sub: '' },
             followups: { title: 'Customer Follow-up Scheduler', sub: 'Automated reminders to prevent lost customer enquiries' },
@@ -2410,7 +2410,7 @@
                     <span>Live</span>
                   </span>
                 </div>
-                <p class="text-xs text-slate-500 mt-0.5" id="dash-last-synced-label">Real-time overview of staff, revenue, leads, and orders</p>
+                <p class="text-xs text-slate-500 mt-0.5" id="dash-last-synced-label"></p>
               </div>
             </div>
             <div class="flex items-center gap-2 self-end sm:self-auto">
@@ -2432,32 +2432,32 @@
             </div>
           </div>
 
-          <!-- 6 Main KPI Cards: Enquiries, Unassigned, Orders, Revenue, Staff, Followups -->
+          <!-- 6 Main KPI Cards: Distinct thematic colors for each metric card -->
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            <!-- Card 1: Total Enquiries Today -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <!-- Card 1: Total Enquiries (Teal) -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 hover:border-teal-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="dash.total_enquiries">Total Enquiries</p>
+                  <p class="text-[10px] font-bold text-teal-700 uppercase tracking-wider" data-i18n="dash.total_enquiries">Total Enquiries</p>
                   <h3 id="dash-total-queries" class="text-2xl font-black text-slate-900 mt-1">12</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 shadow-2xs">
                   <span class="material-symbols-outlined text-[22px]">chat</span>
                 </div>
               </div>
-              <div class="mt-3 text-[11px] flex items-center text-emerald-600 font-semibold truncate">
+              <div class="mt-3 text-[11px] flex items-center text-teal-600 font-semibold truncate">
                 <span class="material-symbols-outlined text-[15px] mr-1">trending_up</span> <span data-i18n="dash.inbound_capture">100% Capture</span>
               </div>
             </div>
 
-            <!-- Card 2: Unassigned Queries -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <!-- Card 2: Unassigned Queries (Amber) -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 hover:border-amber-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="dash.unassigned_queries">Unassigned Queries</p>
+                  <p class="text-[10px] font-bold text-amber-700 uppercase tracking-wider" data-i18n="dash.unassigned_queries">Unassigned Queries</p>
                   <h3 id="dash-unassigned-queries" class="text-2xl font-black text-amber-600 mt-1">2</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 shadow-2xs">
                   <span class="material-symbols-outlined text-[22px]">person_add</span>
                 </div>
               </div>
@@ -2466,41 +2466,41 @@
               </div>
             </div>
 
-            <!-- Card 3: WhatsApp Orders Booked -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <!-- Card 3: WhatsApp Orders Booked (Emerald) -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 hover:border-emerald-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="dash.orders_booked">Orders Booked</p>
+                  <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider" data-i18n="dash.orders_booked">Orders Booked</p>
                   <h3 id="dash-total-orders" class="text-2xl font-black text-emerald-700 mt-1">5</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
                   <span class="material-symbols-outlined text-[22px]">shopping_bag</span>
                 </div>
               </div>
-              <div class="mt-3 text-[11px] flex items-center text-slate-600 font-semibold truncate">
-                <span class="text-emerald-600 font-bold mr-1" id="dash-total-revenue">₹18,450</span> <span data-i18n="dash.total_sales">Sales</span>
+              <div class="mt-3 text-[11px] flex items-center text-emerald-700 font-semibold truncate">
+                <span class="font-bold mr-1" id="dash-total-revenue">₹18,450</span> <span data-i18n="dash.total_sales">Sales</span>
               </div>
             </div>
 
-            <!-- Card 4: Dedicated Total Revenue Card (NEW) -->
-            <div class="bg-white p-4 rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-white via-white to-emerald-50/30 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <!-- Card 4: Dedicated Total Revenue Card (Royal Purple / Violet) -->
+            <div class="bg-white p-4 rounded-2xl border border-purple-200/90 bg-gradient-to-br from-white via-white to-purple-50/40 hover:border-purple-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Total Revenue</p>
-                  <h3 id="dash-kpi-revenue" class="text-2xl font-black text-emerald-800 mt-1">₹0</h3>
+                  <p class="text-[10px] font-bold text-purple-700 uppercase tracking-wider">Total Revenue</p>
+                  <h3 id="dash-kpi-revenue" class="text-2xl font-black text-purple-950 mt-1">₹0</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-500/30 shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-sm shadow-purple-500/30 shrink-0">
                   <span class="material-symbols-outlined text-[22px]">payments</span>
                 </div>
               </div>
-              <div class="mt-3 text-[11px] flex items-center text-emerald-700 font-semibold truncate">
-                <span class="material-symbols-outlined text-[15px] mr-1 text-emerald-600">verified</span>
+              <div class="mt-3 text-[11px] flex items-center text-purple-700 font-semibold truncate">
+                <span class="material-symbols-outlined text-[15px] mr-1 text-purple-600">verified</span>
                 <span id="dash-kpi-revenue-sub">Verified Sales</span>
               </div>
             </div>
 
-            <!-- Card 5: Total Staff Team Card (NEW - Dynamic with live Admin additions) -->
-            <div class="bg-white p-4 rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-white via-white to-indigo-50/30 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <!-- Card 5: Total Staff Team Card (Indigo) -->
+            <div class="bg-white p-4 rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-white via-white to-indigo-50/30 hover:border-indigo-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Total Staff Team</p>
@@ -2516,18 +2516,18 @@
               </div>
             </div>
 
-            <!-- Card 6: Follow-ups Scheduled -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <!-- Card 6: Follow-ups Scheduled (Sky Blue) -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 hover:border-sky-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="dash.followups_scheduled">Follow-ups</p>
-                  <h3 id="dash-total-followups" class="text-2xl font-black text-blue-600 mt-1">3</h3>
+                  <p class="text-[10px] font-bold text-sky-700 uppercase tracking-wider" data-i18n="dash.followups_scheduled">Follow-ups</p>
+                  <h3 id="dash-total-followups" class="text-2xl font-black text-sky-700 mt-1">3</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 shadow-2xs">
                   <span class="material-symbols-outlined text-[22px]">schedule</span>
                 </div>
               </div>
-              <div class="mt-3 text-[11px] flex items-center text-blue-600 font-semibold truncate">
+              <div class="mt-3 text-[11px] flex items-center text-sky-700 font-semibold truncate">
                 <span class="material-symbols-outlined text-[15px] mr-1">notifications_active</span> <span data-i18n="dash.automated_reminders">Active Reminders</span>
               </div>
             </div>

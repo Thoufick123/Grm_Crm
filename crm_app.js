@@ -3734,8 +3734,8 @@ function updatePageHeaderTitle() {
       sub: t('header.sub.enquiries', 'Admin control room to distribute new customer leads to staff')
     },
     dashboard: {
-      title: t('header.title.dashboard', 'WhatsApp Operations Dashboard'),
-      sub: t('header.sub.dashboard', 'Real-time overview of inquiries, active sessions, and communication health')
+      title: t('header.title.dashboard', 'WhatsApp Dashboard'),
+      sub: ''
     },
     catalog: {
       title: t('header.title.catalog', 'Garment Product Catalog & Live Stock'),
