@@ -25625,6 +25625,38 @@ function readCurrentPackingSlipForm() {
   };
 }
 
+function onPackingSlipLogoPosChange() {
+  const logoEl = document.getElementById('psc-logo-position');
+  const headerAlignEl = document.getElementById('psc-header-align');
+  if (logoEl && headerAlignEl) {
+    const val = logoEl.value;
+    if (val === 'single_col1') headerAlignEl.value = 'right';
+    else if (val === 'single_col2') headerAlignEl.value = 'left';
+    else if (val === 'single_center') headerAlignEl.value = 'center';
+    else if (val === 'left') headerAlignEl.value = 'stacked_left';
+    else if (val === 'center') headerAlignEl.value = 'stacked_center';
+    else if (val === 'right') headerAlignEl.value = 'stacked_right';
+  }
+  onPackingSlipConfigFieldChange();
+}
+window.onPackingSlipLogoPosChange = onPackingSlipLogoPosChange;
+
+function onPackingSlipHeaderAlignChange() {
+  const logoEl = document.getElementById('psc-logo-position');
+  const headerAlignEl = document.getElementById('psc-header-align');
+  if (logoEl && headerAlignEl) {
+    const val = headerAlignEl.value;
+    if (val === 'right') logoEl.value = 'single_col1';
+    else if (val === 'left') logoEl.value = 'single_col2';
+    else if (val === 'center') logoEl.value = 'single_center';
+    else if (val === 'stacked_left') logoEl.value = 'left';
+    else if (val === 'stacked_center') logoEl.value = 'center';
+    else if (val === 'stacked_right') logoEl.value = 'right';
+  }
+  onPackingSlipConfigFieldChange();
+}
+window.onPackingSlipHeaderAlignChange = onPackingSlipHeaderAlignChange;
+
 function onPackingSlipConfigFieldChange() {
   updatePackingSlipLivePreview();
 }
@@ -25670,7 +25702,15 @@ function renderPackingSlipConfigPage() {
   setVal('psc-default-courier', cfg.defaultCourier || 'Delhivery Surface');
 
   setVal('psc-logo-position', cfg.logoPosition || 'single_col1');
-  setVal('psc-header-align', cfg.headerAlign || 'left');
+  let currentHeaderAlign = cfg.headerAlign || 'right';
+  if (cfg.logoPosition === 'single_col1' && (currentHeaderAlign === 'left' || currentHeaderAlign === 'right')) {
+    currentHeaderAlign = 'right';
+  } else if (cfg.logoPosition === 'single_col2' && (currentHeaderAlign === 'left' || currentHeaderAlign === 'right')) {
+    currentHeaderAlign = 'left';
+  } else if (cfg.logoPosition === 'left' && currentHeaderAlign === 'left') {
+    currentHeaderAlign = 'stacked_left';
+  }
+  setVal('psc-header-align', currentHeaderAlign);
   setVal('psc-sender-position', cfg.senderPosition || 'left');
   setVal('psc-customer-position', cfg.customerPosition || 'right');
   setVal('psc-meta-position', cfg.metaPosition || 'above');
@@ -25770,23 +25810,29 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
 
   // Header Layout: Single Row (Col 1 Logo / Col 2 Brand OR Col 1 Brand / Col 2 Logo OR Center Inline) VS Stacked Rows
   let headerHtml = '';
-  if (c.logoPosition === 'single_col1') {
+  const isCol1Logo = c.logoPosition === 'single_col1' || c.headerAlign === 'right';
+  const isCol2Logo = c.logoPosition === 'single_col2' || c.headerAlign === 'left';
+  const isCenterInline = c.logoPosition === 'single_center' || c.headerAlign === 'center';
+  const isStacked = c.logoPosition === 'left' || c.logoPosition === 'center' || c.logoPosition === 'right' ||
+                    c.headerAlign === 'stacked_left' || c.headerAlign === 'stacked_center' || c.headerAlign === 'stacked_right';
+
+  if (!isStacked && isCol1Logo) {
     // Single Row: Column 1 Left (Logo), Column 2 Right (Brand)
     headerHtml = `
       <div class="border-b-2 border-slate-900 pb-2 mb-2 flex items-center justify-between gap-3">
         <div class="shrink-0 flex items-center">
           ${logoHtml}
         </div>
-        <div class="${headerTextJustifyClass || 'text-right'} flex-1 space-y-0.5">
+        <div class="text-right flex-1 space-y-0.5">
           ${brandInfoHtml}
         </div>
       </div>
     `;
-  } else if (c.logoPosition === 'single_col2') {
+  } else if (!isStacked && isCol2Logo) {
     // Single Row: Column 1 Left (Brand), Column 2 Right (Logo)
     headerHtml = `
       <div class="border-b-2 border-slate-900 pb-2 mb-2 flex items-center justify-between gap-3">
-        <div class="${headerTextJustifyClass || 'text-left'} flex-1 space-y-0.5">
+        <div class="text-left flex-1 space-y-0.5">
           ${brandInfoHtml}
         </div>
         <div class="shrink-0 flex items-center justify-end">
@@ -25794,7 +25840,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
         </div>
       </div>
     `;
-  } else if (c.logoPosition === 'single_center') {
+  } else if (!isStacked && isCenterInline) {
     // Single Row: Center Inline (Logo and Brand Side-by-Side)
     headerHtml = `
       <div class="border-b-2 border-slate-900 pb-2 mb-2 flex flex-col items-center justify-center text-center">
@@ -25812,12 +25858,16 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
     `;
   } else {
     // Stacked Rows: Logo on row 1, Brand on row 2
+    const logoStackedJustify = (c.logoPosition === 'center' || c.headerAlign === 'stacked_center') ? 'justify-center' :
+                               ((c.logoPosition === 'right' || c.headerAlign === 'stacked_right') ? 'justify-end' : 'justify-start');
+    const brandStackedText = (c.headerAlign === 'stacked_center' || c.headerAlign === 'center') ? 'text-center' :
+                             ((c.headerAlign === 'stacked_right' || c.headerAlign === 'right') ? 'text-right' : 'text-left');
     headerHtml = `
       <div class="border-b-2 border-slate-900 pb-2 mb-2">
-        <div class="flex items-center ${logoJustifyClass} mb-1.5">
+        <div class="flex items-center ${logoStackedJustify} mb-1.5">
           ${logoHtml}
         </div>
-        <div class="${headerTextJustifyClass} space-y-0.5">
+        <div class="${brandStackedText} space-y-0.5">
           ${brandInfoHtml}
         </div>
       </div>
@@ -25897,14 +25947,14 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
 
   // Addresses Container positioned based on senderPosition and customerPosition
   let addressesLayoutHtml = '';
-  if (c.senderPosition === 'top') {
+  if (c.senderPosition === 'top' || c.customerPosition === 'bottom') {
     addressesLayoutHtml = `<div class="space-y-2 mb-2.5">${senderHtml}${customerHtml}</div>`;
-  } else if (c.customerPosition === 'top') {
+  } else if (c.customerPosition === 'top' || c.senderPosition === 'bottom') {
     addressesLayoutHtml = `<div class="space-y-2 mb-2.5">${customerHtml}${senderHtml}</div>`;
-  } else if (c.senderPosition === 'right' && c.customerPosition === 'left') {
+  } else if (c.senderPosition === 'right' || c.customerPosition === 'left') {
     addressesLayoutHtml = `<div class="grid grid-cols-2 gap-2 mb-2.5">${customerHtml}${senderHtml}</div>`;
   } else {
-    // Default: Sender on Left, Customer on Right
+    // Default: Sender on Left (Column 1), Customer on Right (Column 2)
     addressesLayoutHtml = `<div class="grid grid-cols-2 gap-2 mb-2.5">${senderHtml}${customerHtml}</div>`;
   }
 
@@ -26030,8 +26080,8 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   // Assemble based on admin positions
   let bodyContentHtml = '';
 
-  // Order Meta placement
-  if (c.metaPosition === 'above') {
+  // Order Meta placement if top
+  if (c.metaPosition === 'top') {
     bodyContentHtml += metaHtml;
   }
 
@@ -26040,10 +26090,15 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
     bodyContentHtml += notesHtml;
   }
 
+  // Order Meta placement if above items table / addresses
+  if (c.metaPosition === 'above') {
+    bodyContentHtml += metaHtml;
+  }
+
   // Addresses
   bodyContentHtml += addressesLayoutHtml;
 
-  // Order Meta placement if below addresses
+  // Order Meta placement if below items / addresses
   if (c.metaPosition === 'below') {
     bodyContentHtml += metaHtml;
   }
@@ -26051,9 +26106,19 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   // Items Table
   bodyContentHtml += itemsTableHtml;
 
-  // Notes placement if bottom (default)
-  if (c.notesPosition === 'bottom') {
+  // Notes placement if below items table
+  if (c.notesPosition === 'below_items') {
     bodyContentHtml += notesHtml;
+  }
+
+  // Notes placement if bottom (default)
+  if (c.notesPosition === 'bottom' || c.notesPosition === 'stacked_bottom') {
+    bodyContentHtml += notesHtml;
+  }
+
+  // Order Meta placement if bottom
+  if (c.metaPosition === 'bottom') {
+    bodyContentHtml += metaHtml;
   }
 
   // Bottom Courier placement

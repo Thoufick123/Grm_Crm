@@ -5361,7 +5361,7 @@
                       <span>Logo Position &amp; Header Row:</span>
                       <span class="text-[10px] text-teal-600 font-bold">Single Row / Columns</span>
                     </label>
-                    <select id="psc-logo-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                    <select id="psc-logo-position" onchange="onPackingSlipLogoPosChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
                       <option value="single_col1">Single Row: Column 1 Left (Logo Left, Brand Right)</option>
                       <option value="single_col2">Single Row: Column 2 Right (Brand Left, Logo Right)</option>
                       <option value="single_center">Single Row: Center Inline (Logo &amp; Brand Side-by-Side)</option>
@@ -5374,13 +5374,16 @@
                   <!-- Header Brand Layout -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
-                      <span>Brand Header Alignment:</span>
-                      <span class="text-[10px] text-teal-600 font-bold">Header Text</span>
+                      <span>Brand Header Position &amp; Row:</span>
+                      <span class="text-[10px] text-teal-600 font-bold">Single Row / Columns</span>
                     </label>
-                    <select id="psc-header-align" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="left">Left Aligned</option>
-                      <option value="center">Center Aligned</option>
-                      <option value="right">Right Aligned</option>
+                    <select id="psc-header-align" onchange="onPackingSlipHeaderAlignChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
+                      <option value="right">Single Row: Column 2 Right (Brand Right, Logo Left)</option>
+                      <option value="left">Single Row: Column 1 Left (Brand Left, Logo Right)</option>
+                      <option value="center">Single Row: Center Inline (Logo &amp; Brand Side-by-Side)</option>
+                      <option value="stacked_left">Stacked: Column 1 (Brand Below Logo - Left)</option>
+                      <option value="stacked_center">Stacked: Center (Brand Below Logo - Center)</option>
+                      <option value="stacked_right">Stacked: Column 2 (Brand Below Logo - Right)</option>
                     </select>
                   </div>
 
@@ -5391,10 +5394,11 @@
                       <span class="text-[10px] text-amber-700 font-bold">Dispatch Box</span>
                     </label>
                     <select id="psc-sender-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="left">Column 1 (Left Column)</option>
-                      <option value="right">Column 2 (Right Column)</option>
-                      <option value="top">Single Row: Top (Full Width)</option>
-                      <option value="bottom">Single Row: Bottom (Below Items)</option>
+                      <option value="left">Single Row: Column 1 Left (Sender Left, Customer Right)</option>
+                      <option value="right">Single Row: Column 2 Right (Customer Left, Sender Right)</option>
+                      <option value="center">Single Row: Center (Full Width Inline)</option>
+                      <option value="top">Stacked: Full Width Top (Above Customer Box)</option>
+                      <option value="bottom">Stacked: Full Width Bottom (Below Items Table)</option>
                     </select>
                   </div>
 
@@ -5405,9 +5409,11 @@
                       <span class="text-[10px] text-blue-700 font-bold">Delivery Box</span>
                     </label>
                     <select id="psc-customer-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="right">Column 2 (Right Column - Recommended)</option>
-                      <option value="left">Column 1 (Left Column)</option>
-                      <option value="top">Single Row: Top (Full Width)</option>
+                      <option value="right">Single Row: Column 2 Right (Customer Right - Recommended)</option>
+                      <option value="left">Single Row: Column 1 Left (Customer Left, Sender Right)</option>
+                      <option value="center">Single Row: Center (Full Width Inline)</option>
+                      <option value="top">Stacked: Full Width Top (Above Sender Box)</option>
+                      <option value="bottom">Stacked: Full Width Bottom (Below Items Table)</option>
                     </select>
                   </div>
 
@@ -5418,8 +5424,10 @@
                       <span class="text-[10px] text-purple-700 font-bold">Badge Bar</span>
                     </label>
                     <select id="psc-meta-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="above">Above Items Table</option>
-                      <option value="below">Below Items Table</option>
+                      <option value="above">Single Row: Above Items Table (Full Width)</option>
+                      <option value="below">Single Row: Below Items Table (Full Width)</option>
+                      <option value="top">Stacked: Top (Immediately Below Header)</option>
+                      <option value="bottom">Stacked: Bottom (Above Packer Signature)</option>
                     </select>
                   </div>
 
@@ -5430,8 +5438,10 @@
                       <span class="text-[10px] text-slate-600 font-bold">Instructions</span>
                     </label>
                     <select id="psc-notes-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="bottom">Bottom (Footer)</option>
-                      <option value="top">Top (Below Header)</option>
+                      <option value="bottom">Single Row: Bottom (Footer - Recommended)</option>
+                      <option value="top">Single Row: Top (Below Header)</option>
+                      <option value="below_items">Single Row: Below Items Table</option>
+                      <option value="stacked_bottom">Stacked: Bottom (Above Packer Signature)</option>
                     </select>
                   </div>
 
@@ -5442,11 +5452,11 @@
                       <span class="text-[10px] text-amber-700 font-bold">Courier Placement</span>
                     </label>
                     <select id="psc-courier-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="barcode">With Barcode &amp; AWB (Recommended)</option>
-                      <option value="header">Top Header Badge</option>
-                      <option value="meta">Inside Order Meta Bar</option>
-                      <option value="customer">Inside Ship-To Card</option>
-                      <option value="bottom">Bottom (Above Sign)</option>
+                      <option value="barcode">Single Row: With Barcode &amp; AWB (Recommended)</option>
+                      <option value="header">Single Row: Top Header Badge</option>
+                      <option value="meta">Single Row: Inside Order Meta Bar</option>
+                      <option value="customer">Single Row: Inside Ship-To Card</option>
+                      <option value="bottom">Stacked: Bottom (Above Packer Signature)</option>
                     </select>
                   </div>
 
