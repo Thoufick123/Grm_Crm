@@ -5503,6 +5503,10 @@
                     <span class="font-semibold">Brand Logo</span>
                   </label>
                   <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-brand-name" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Brand Name</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
                     <input type="checkbox" id="psc-show-gst" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
                     <span class="font-semibold">GST Number</span>
                   </label>
@@ -5527,6 +5531,14 @@
                     <span class="font-semibold">Customer Address</span>
                   </label>
                   <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-barcode" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Barcode (Lines)</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                    <input type="checkbox" id="psc-show-order-id" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
+                    <span class="font-semibold">Order Name / ID</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
                     <input type="checkbox" id="psc-show-courier" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
                     <span class="font-semibold">Shipping Partner</span>
                   </label>
@@ -5537,10 +5549,6 @@
                   <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
                     <input type="checkbox" id="psc-show-item-prices" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
                     <span class="font-semibold">Item Prices / Total</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
-                    <input type="checkbox" id="psc-show-barcode" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">
-                    <span class="font-semibold">Order Barcode</span>
                   </label>
                   <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
                     <input type="checkbox" id="psc-show-payment-mode" onchange="onPackingSlipConfigFieldChange()" checked class="rounded text-teal-600">

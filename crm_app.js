@@ -25449,9 +25449,10 @@ const CRM_PACKING_SLIP_DEFAULT_CONFIG = {
   showCustomerPhone: true,
   showCustomerAddress: true,
   showCourier: true,
+  showBarcode: true,
+  showOrderId: true,
   showItems: true,
   showItemPrices: true,
-  showBarcode: true,
   showPaymentMode: true,
   showNotes: true,
 
@@ -25602,17 +25603,18 @@ function readCurrentPackingSlipForm() {
 
     // Visibility Toggles
     showLogo: getChecked('psc-show-logo', currentCfg.showLogo),
-    showBrandName: true,
+    showBrandName: getChecked('psc-show-brand-name', currentCfg.showBrandName !== false),
     showGst: getChecked('psc-show-gst', currentCfg.showGst),
     showPhone: getChecked('psc-show-phone', currentCfg.showPhone),
     showEmail: getChecked('psc-show-email', currentCfg.showEmail),
     showSenderAddress: getChecked('psc-show-sender-address', currentCfg.showSenderAddress),
     showCustomerPhone: getChecked('psc-show-customer-phone', currentCfg.showCustomerPhone),
     showCustomerAddress: getChecked('psc-show-customer-address', currentCfg.showCustomerAddress),
-    showCourier: getChecked('psc-show-courier', currentCfg.showCourier),
-    showItems: getChecked('psc-show-items', currentCfg.showItems),
+    showCourier: getChecked('psc-show-courier', currentCfg.showCourier !== false),
+    showBarcode: getChecked('psc-show-barcode', currentCfg.showBarcode !== false),
+    showOrderId: getChecked('psc-show-order-id', currentCfg.showOrderId !== false),
+    showItems: getChecked('psc-show-items', currentCfg.showItems !== false),
     showItemPrices: getChecked('psc-show-item-prices', currentCfg.showItemPrices),
-    showBarcode: getChecked('psc-show-barcode', currentCfg.showBarcode),
     showPaymentMode: getChecked('psc-show-payment-mode', currentCfg.showPaymentMode),
     showNotes: getChecked('psc-show-notes', currentCfg.showNotes),
 
@@ -25677,6 +25679,7 @@ function renderPackingSlipConfigPage() {
   setRadio('psc-paper-format', cfg.paperFormat || 'thermal_4x6');
 
   setChecked('psc-show-logo', cfg.showLogo);
+  setChecked('psc-show-brand-name', cfg.showBrandName !== false);
   setChecked('psc-show-gst', cfg.showGst);
   setChecked('psc-show-phone', cfg.showPhone);
   setChecked('psc-show-email', cfg.showEmail);
@@ -25684,9 +25687,10 @@ function renderPackingSlipConfigPage() {
   setChecked('psc-show-customer-phone', cfg.showCustomerPhone);
   setChecked('psc-show-customer-address', cfg.showCustomerAddress);
   setChecked('psc-show-courier', cfg.showCourier !== false);
+  setChecked('psc-show-barcode', cfg.showBarcode !== false);
+  setChecked('psc-show-order-id', cfg.showOrderId !== false);
   setChecked('psc-show-items', cfg.showItems !== false);
   setChecked('psc-show-item-prices', cfg.showItemPrices);
-  setChecked('psc-show-barcode', cfg.showBarcode);
   setChecked('psc-show-payment-mode', cfg.showPaymentMode);
   setChecked('psc-show-notes', cfg.showNotes);
 
@@ -25762,7 +25766,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
         ${logoHtml}
       </div>
       <div class="${headerTextJustifyClass} space-y-0.5">
-        <h1 class="font-black text-base uppercase tracking-tight text-slate-900">${c.brandName || 'GRM GARMENTS'}</h1>
+        ${c.showBrandName !== false ? `<h1 class="font-black text-base uppercase tracking-tight text-slate-900">${c.brandName || 'GRM GARMENTS'}</h1>` : ''}
         ${c.showGst && c.gstNo ? `<div class="text-[10px] font-mono font-bold text-slate-600">GSTIN: ${c.gstNo}</div>` : ''}
         ${c.showPhone && c.phone ? `<div class="text-[10px] text-slate-600 font-semibold">Helpline: ${c.phone}</div>` : ''}
         ${c.showEmail && c.email ? `<div class="text-[10px] text-slate-500">${c.email}</div>` : ''}
@@ -25771,24 +25775,39 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
     </div>
   `;
 
-  // 2. Barcode Simulator & Order Meta
+  // 2. Barcode Simulator & Order Meta (Split for Barcode, Order Name/ID, and Shipping Partner)
   const barcodeNumber = (order.id || 'WO-00081').replace(/[^a-zA-Z0-9]/g, '');
-  const barcodeCourierHtml = showCourier && (c.courierPosition === 'barcode' || !c.courierPosition) ? `
-    <div class="mt-1 flex items-center justify-center gap-1.5 flex-wrap">
-      <span class="inline-flex items-center gap-1 bg-slate-200 text-slate-800 text-[9px] font-bold px-1.5 py-0.5 rounded">
-        <span class="material-symbols-outlined text-[11px]">local_shipping</span>
-        <span>${courierName}</span>
-      </span>
-      ${tracking ? `<span class="text-[9px] text-slate-700 font-mono font-bold">AWB: ${tracking}</span>` : ''}
-    </div>` : (tracking ? `<span class="text-[9px] text-slate-500 font-mono">AWB: ${tracking}</span>` : '');
+  const showBarcodeLines = c.showBarcode !== false;
+  const showOrderId = c.showOrderId !== false;
+  const showBarcodeCourier = showCourier && (c.courierPosition === 'barcode' || !c.courierPosition);
 
-  const barcodeHtml = c.showBarcode ? `
-    <div class="flex flex-col items-center justify-center py-1.5 px-2 bg-slate-50 border border-slate-300 rounded-lg text-center mb-2.5">
+  let barcodeBoxContentHtml = '';
+  if (showBarcodeLines) {
+    barcodeBoxContentHtml += `
       <div class="font-mono text-[9px] tracking-[6px] font-bold text-slate-800 scale-y-125 mb-0.5 select-none overflow-hidden">
         |||| | ||||| || |||||| | ||| |||| | |||||| |||
-      </div>
-      <span class="font-mono font-bold text-[11px] text-slate-900 tracking-wider">*${order.id || 'WO-00081'}*</span>
-      ${barcodeCourierHtml}
+      </div>`;
+  }
+  if (showOrderId) {
+    barcodeBoxContentHtml += `
+      <span class="font-mono font-bold text-[11px] text-slate-900 tracking-wider">*${order.id || 'WO-00081'}*</span>`;
+  }
+  if (showBarcodeCourier) {
+    barcodeBoxContentHtml += `
+      <div class="${(showBarcodeLines || showOrderId) ? 'mt-1' : ''} flex items-center justify-center gap-1.5 flex-wrap">
+        <span class="inline-flex items-center gap-1 bg-slate-200 text-slate-800 text-[9px] font-bold px-1.5 py-0.5 rounded">
+          <span class="material-symbols-outlined text-[11px]">local_shipping</span>
+          <span>${courierName}</span>
+        </span>
+        ${tracking ? `<span class="text-[9px] text-slate-700 font-mono font-bold">AWB: ${tracking}</span>` : ''}
+      </div>`;
+  } else if (tracking && (showBarcodeLines || showOrderId)) {
+    barcodeBoxContentHtml += `<span class="text-[9px] text-slate-500 font-mono">AWB: ${tracking}</span>`;
+  }
+
+  const barcodeHtml = barcodeBoxContentHtml ? `
+    <div class="flex flex-col items-center justify-center py-1.5 px-2 bg-slate-50 border border-slate-300 rounded-lg text-center mb-2.5">
+      ${barcodeBoxContentHtml}
     </div>` : '';
 
   // 3. Sender Block
