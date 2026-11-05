@@ -5358,13 +5358,16 @@
                   <!-- Logo Position -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
-                      <span>Logo Position:</span>
-                      <span class="text-[10px] text-teal-600 font-bold">Top Header</span>
+                      <span>Logo Position &amp; Header Row:</span>
+                      <span class="text-[10px] text-teal-600 font-bold">Single Row / Columns</span>
                     </label>
                     <select id="psc-logo-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="left">Left Aligned</option>
-                      <option value="center">Center Aligned</option>
-                      <option value="right">Right Aligned</option>
+                      <option value="single_col1">Single Row: Column 1 Left (Logo Left, Brand Right)</option>
+                      <option value="single_col2">Single Row: Column 2 Right (Brand Left, Logo Right)</option>
+                      <option value="single_center">Single Row: Center Inline (Logo &amp; Brand Side-by-Side)</option>
+                      <option value="left">Stacked: Column 1 (Logo on Top Left)</option>
+                      <option value="center">Stacked: Center (Logo on Top Center)</option>
+                      <option value="right">Stacked: Column 2 (Logo on Top Right)</option>
                     </select>
                   </div>
 
@@ -5388,10 +5391,10 @@
                       <span class="text-[10px] text-amber-700 font-bold">Dispatch Box</span>
                     </label>
                     <select id="psc-sender-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="left">Left Column</option>
-                      <option value="right">Right Column</option>
-                      <option value="top">Top (Full Width)</option>
-                      <option value="bottom">Bottom (Below Items)</option>
+                      <option value="left">Column 1 (Left Column)</option>
+                      <option value="right">Column 2 (Right Column)</option>
+                      <option value="top">Single Row: Top (Full Width)</option>
+                      <option value="bottom">Single Row: Bottom (Below Items)</option>
                     </select>
                   </div>
 
@@ -5402,9 +5405,9 @@
                       <span class="text-[10px] text-blue-700 font-bold">Delivery Box</span>
                     </label>
                     <select id="psc-customer-position" onchange="onPackingSlipConfigFieldChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="right">Right Column (Recommended)</option>
-                      <option value="left">Left Column</option>
-                      <option value="top">Top (Full Width)</option>
+                      <option value="right">Column 2 (Right Column - Recommended)</option>
+                      <option value="left">Column 1 (Left Column)</option>
+                      <option value="top">Single Row: Top (Full Width)</option>
                     </select>
                   </div>
 

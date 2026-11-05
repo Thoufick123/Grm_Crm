@@ -25430,7 +25430,7 @@ const CRM_PACKING_SLIP_DEFAULT_CONFIG = {
   logoDataUrl: "",
 
   // Position & Layout Controls (Top, Bottom, Left, Right)
-  logoPosition: "left",       // "left" | "center" | "right"
+  logoPosition: "single_col1", // "single_col1" | "single_col2" | "single_center" | "left" | "center" | "right"
   headerAlign: "left",        // "left" | "center" | "right"
   senderPosition: "left",     // "left" | "right" | "top" | "bottom"
   customerPosition: "right",  // "right" | "left" | "top"
@@ -25669,7 +25669,7 @@ function renderPackingSlipConfigPage() {
   setVal('psc-email', cfg.email);
   setVal('psc-default-courier', cfg.defaultCourier || 'Delhivery Surface');
 
-  setVal('psc-logo-position', cfg.logoPosition || 'left');
+  setVal('psc-logo-position', cfg.logoPosition || 'single_col1');
   setVal('psc-header-align', cfg.headerAlign || 'left');
   setVal('psc-sender-position', cfg.senderPosition || 'left');
   setVal('psc-customer-position', cfg.customerPosition || 'right');
@@ -25759,21 +25759,70 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
       <span>Courier: ${courierName}</span>
     </div>` : '';
 
-  // Header Section
-  const headerHtml = `
-    <div class="border-b-2 border-slate-900 pb-2.5 mb-2.5">
-      <div class="flex items-center ${logoJustifyClass} mb-1.5">
-        ${logoHtml}
-      </div>
-      <div class="${headerTextJustifyClass} space-y-0.5">
-        ${c.showBrandName !== false ? `<h1 class="font-black text-base uppercase tracking-tight text-slate-900">${c.brandName || 'GRM GARMENTS'}</h1>` : ''}
-        ${c.showGst && c.gstNo ? `<div class="text-[10px] font-mono font-bold text-slate-600">GSTIN: ${c.gstNo}</div>` : ''}
-        ${c.showPhone && c.phone ? `<div class="text-[10px] text-slate-600 font-semibold">Helpline: ${c.phone}</div>` : ''}
-        ${c.showEmail && c.email ? `<div class="text-[10px] text-slate-500">${c.email}</div>` : ''}
-        ${headerCourierHtml}
-      </div>
-    </div>
+  // Common Brand Details Block
+  const brandInfoHtml = `
+    ${c.showBrandName !== false ? `<h1 class="font-black text-base uppercase tracking-tight text-slate-900 leading-tight">${c.brandName || 'GRM GARMENTS'}</h1>` : ''}
+    ${c.showGst && c.gstNo ? `<div class="text-[10px] font-mono font-bold text-slate-600">GSTIN: ${c.gstNo}</div>` : ''}
+    ${c.showPhone && c.phone ? `<div class="text-[10px] text-slate-600 font-semibold">Helpline: ${c.phone}</div>` : ''}
+    ${c.showEmail && c.email ? `<div class="text-[10px] text-slate-500">${c.email}</div>` : ''}
+    ${headerCourierHtml}
   `;
+
+  // Header Layout: Single Row (Col 1 Logo / Col 2 Brand OR Col 1 Brand / Col 2 Logo OR Center Inline) VS Stacked Rows
+  let headerHtml = '';
+  if (c.logoPosition === 'single_col1') {
+    // Single Row: Column 1 Left (Logo), Column 2 Right (Brand)
+    headerHtml = `
+      <div class="border-b-2 border-slate-900 pb-2 mb-2 flex items-center justify-between gap-3">
+        <div class="shrink-0 flex items-center">
+          ${logoHtml}
+        </div>
+        <div class="${headerTextJustifyClass || 'text-right'} flex-1 space-y-0.5">
+          ${brandInfoHtml}
+        </div>
+      </div>
+    `;
+  } else if (c.logoPosition === 'single_col2') {
+    // Single Row: Column 1 Left (Brand), Column 2 Right (Logo)
+    headerHtml = `
+      <div class="border-b-2 border-slate-900 pb-2 mb-2 flex items-center justify-between gap-3">
+        <div class="${headerTextJustifyClass || 'text-left'} flex-1 space-y-0.5">
+          ${brandInfoHtml}
+        </div>
+        <div class="shrink-0 flex items-center justify-end">
+          ${logoHtml}
+        </div>
+      </div>
+    `;
+  } else if (c.logoPosition === 'single_center') {
+    // Single Row: Center Inline (Logo and Brand Side-by-Side)
+    headerHtml = `
+      <div class="border-b-2 border-slate-900 pb-2 mb-2 flex flex-col items-center justify-center text-center">
+        <div class="flex items-center justify-center gap-2.5 mb-1 flex-wrap">
+          ${logoHtml}
+          ${c.showBrandName !== false ? `<h1 class="font-black text-base uppercase tracking-tight text-slate-900">${c.brandName || 'GRM GARMENTS'}</h1>` : ''}
+        </div>
+        <div class="space-y-0.5 text-center">
+          ${c.showGst && c.gstNo ? `<div class="text-[10px] font-mono font-bold text-slate-600">GSTIN: ${c.gstNo}</div>` : ''}
+          ${c.showPhone && c.phone ? `<div class="text-[10px] text-slate-600 font-semibold">Helpline: ${c.phone}</div>` : ''}
+          ${c.showEmail && c.email ? `<div class="text-[10px] text-slate-500">${c.email}</div>` : ''}
+          ${headerCourierHtml}
+        </div>
+      </div>
+    `;
+  } else {
+    // Stacked Rows: Logo on row 1, Brand on row 2
+    headerHtml = `
+      <div class="border-b-2 border-slate-900 pb-2 mb-2">
+        <div class="flex items-center ${logoJustifyClass} mb-1.5">
+          ${logoHtml}
+        </div>
+        <div class="${headerTextJustifyClass} space-y-0.5">
+          ${brandInfoHtml}
+        </div>
+      </div>
+    `;
+  }
 
   // 2. Barcode Simulator & Order Meta (Split for Barcode, Order Name/ID, and Shipping Partner)
   const barcodeNumber = (order.id || 'WO-00081').replace(/[^a-zA-Z0-9]/g, '');
