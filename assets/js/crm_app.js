@@ -25436,6 +25436,7 @@ const CRM_PACKING_SLIP_DEFAULT_CONFIG = {
   customerPosition: "right",  // "right" | "left" | "top"
   metaPosition: "above",      // "above" | "below"
   courierPosition: "barcode", // "barcode" | "header" | "meta" | "customer" | "bottom"
+  barcodePosition: "center",  // "center" | "top" | "meta" | "customer" | "bottom"
   notesPosition: "bottom",    // "bottom" | "top"
   paperFormat: "thermal_4x6", // "thermal_4x6" | "thermal_100x100" | "standard_a5" | "standard_a4"
 
@@ -25598,6 +25599,7 @@ function readCurrentPackingSlipForm() {
     customerPosition: getVal('psc-customer-position', currentCfg.customerPosition),
     metaPosition: getVal('psc-meta-position', currentCfg.metaPosition),
     courierPosition: getVal('psc-courier-position', currentCfg.courierPosition || 'barcode'),
+    barcodePosition: getVal('psc-barcode-position', currentCfg.barcodePosition || 'center'),
     notesPosition: getVal('psc-notes-position', currentCfg.notesPosition),
     paperFormat: getRadioVal('psc-paper-format', currentCfg.paperFormat),
 
@@ -25715,6 +25717,7 @@ function renderPackingSlipConfigPage() {
   setVal('psc-customer-position', cfg.customerPosition || 'right');
   setVal('psc-meta-position', cfg.metaPosition || 'above');
   setVal('psc-courier-position', cfg.courierPosition || 'barcode');
+  setVal('psc-barcode-position', cfg.barcodePosition || 'center');
   setVal('psc-notes-position', cfg.notesPosition || 'bottom');
   setRadio('psc-paper-format', cfg.paperFormat || 'thermal_4x6');
 
@@ -26145,11 +26148,26 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
     formatWidthClass = 'max-w-[700px] packing-slip-a4';
   }
 
+  // Place barcodeHtml based on c.barcodePosition
+  let topBarcodeHtml = '';
+  let bottomBarcodeHtml = '';
+
+  if (c.barcodePosition === 'bottom') {
+    bottomBarcodeHtml = barcodeHtml;
+  } else if (c.barcodePosition === 'meta') {
+    // Inject into bodyContent before or after meta
+    bottomBarcodeHtml = barcodeHtml;
+  } else {
+    // Default: 'center' or 'top' below header
+    topBarcodeHtml = barcodeHtml;
+  }
+
   return `
     <div class="packing-slip-page ${formatWidthClass} w-full bg-white p-3.5 text-slate-900 border border-slate-400 rounded-lg shadow-sm font-sans mb-4">
       ${headerHtml}
-      ${barcodeHtml}
+      ${topBarcodeHtml}
       ${bodyContentHtml}
+      ${bottomBarcodeHtml}
       ${packerSignHtml}
     </div>
   `;
