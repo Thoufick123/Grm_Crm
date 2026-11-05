@@ -25951,7 +25951,7 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
     `;
   }
 
-  // 2. Barcode Simulator & Order Meta (Split for Barcode, Order Name/ID, and Shipping Partner)
+  // 2. Barcode Simulator & Order Meta (Dynamic Single Row / Columns / Stacked Placement)
   const barcodeNumber = (order.id || 'WO-00081').replace(/[^a-zA-Z0-9]/g, '');
   const showBarcodeLines = c.showBarcode !== false;
   const showOrderId = c.showOrderId !== false;
@@ -25959,43 +25959,115 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
     ['right', 'left', 'center', 'stacked_left', 'stacked_center', 'stacked_right'].includes(c.courierPosition);
   const showBarcodeCourier = showCourier && isBarcodeCourier;
 
-  let courierAlignClass = 'justify-center';
-  if (c.courierPosition === 'left' || c.courierPosition === 'stacked_left') {
-    courierAlignClass = 'justify-start';
-  } else if (c.courierPosition === 'right' || c.courierPosition === 'stacked_right') {
-    courierAlignClass = 'justify-end';
-  }
+  const courierPill = showBarcodeCourier ? `
+    <span class="inline-flex items-center gap-1 bg-slate-200 text-slate-800 text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0">
+      <span class="material-symbols-outlined text-[11px]">local_shipping</span>
+      <span>${courierName}</span>
+    </span>` : '';
+
+  const orderIdSpan = showOrderId ? `
+    <span class="font-mono font-bold text-[11px] text-slate-950 tracking-[3px] select-all shrink-0">*${order.id || 'WO-00081'}*</span>` : '';
+
+  const barcodeSvgHtml = showBarcodeLines ? generateBarcodeSvg(order.id || 'WO-00081') : '';
+
+  const isCourierLeft = c.courierPosition === 'left' || c.courierPosition === 'single_col1';
+  const isCourierRight = c.courierPosition === 'right' || c.courierPosition === 'single_col2';
+  const isBarcodeLeft = c.barcodePosition === 'left' || c.barcodePosition === 'single_col1';
+  const isBarcodeRight = c.barcodePosition === 'right' || c.barcodePosition === 'single_col2';
 
   let barcodeBoxContentHtml = '';
-  if (showBarcodeLines) {
-    barcodeBoxContentHtml += generateBarcodeSvg(order.id || 'WO-00081');
-  }
-  if (showOrderId) {
-    barcodeBoxContentHtml += `
-      <span class="font-mono font-bold text-[11px] text-slate-950 tracking-[3px] mt-1 select-all">*${order.id || 'WO-00081'}*</span>`;
-  }
-  if (showBarcodeCourier) {
-    barcodeBoxContentHtml += `
-      <div class="${(showBarcodeLines || showOrderId) ? 'mt-1' : ''} flex items-center ${courierAlignClass} gap-1.5 flex-wrap w-full">
-        <span class="inline-flex items-center gap-1 bg-slate-200 text-slate-800 text-[9px] font-bold px-1.5 py-0.5 rounded">
-          <span class="material-symbols-outlined text-[11px]">local_shipping</span>
-          <span>${courierName}</span>
-        </span>
+
+  if (!showBarcodeLines && (showOrderId || showBarcodeCourier)) {
+    // Pure Single Row when only Order ID and/or Shipping Partner are displayed
+    if (showOrderId && showBarcodeCourier) {
+      if (isCourierLeft && isBarcodeRight) {
+        // Shipping partner on Column 1 Left, Order ID on Column 2 Right (Single Row)
+        barcodeBoxContentHtml = `
+          <div class="flex items-center justify-between w-full">
+            <div>${courierPill}</div>
+            <div>${orderIdSpan}</div>
+          </div>`;
+      } else if (isBarcodeLeft && isCourierRight) {
+        // Order ID on Column 1 Left, Shipping partner on Column 2 Right (Single Row)
+        barcodeBoxContentHtml = `
+          <div class="flex items-center justify-between w-full">
+            <div>${orderIdSpan}</div>
+            <div>${courierPill}</div>
+          </div>`;
+      } else if (c.courierPosition.startsWith('stacked') || c.barcodePosition.startsWith('stacked')) {
+        const align = (c.barcodePosition === 'stacked_left' || c.courierPosition === 'stacked_left') ? 'items-start text-left' :
+                      (c.barcodePosition === 'stacked_right' || c.courierPosition === 'stacked_right') ? 'items-end text-right' : 'items-center text-center';
+        barcodeBoxContentHtml = `
+          <div class="flex flex-col ${align} gap-1 w-full">
+            <div>${orderIdSpan}</div>
+            <div>${courierPill}</div>
+          </div>`;
+      } else {
+        // Single Row Center Inline side-by-side
+        barcodeBoxContentHtml = `
+          <div class="flex items-center justify-center gap-3 w-full">
+            ${courierPill}
+            ${orderIdSpan}
+          </div>`;
+      }
+    } else if (showOrderId) {
+      const align = isBarcodeLeft ? 'justify-start' : (isBarcodeRight ? 'justify-end' : 'justify-center');
+      barcodeBoxContentHtml = `<div class="flex items-center ${align} w-full">${orderIdSpan}</div>`;
+    } else if (showBarcodeCourier) {
+      const align = isCourierLeft ? 'justify-start' : (isCourierRight ? 'justify-end' : 'justify-center');
+      barcodeBoxContentHtml = `<div class="flex items-center ${align} w-full">${courierPill}</div>`;
+    }
+  } else if (showBarcodeLines || showOrderId || showBarcodeCourier) {
+    // When Barcode Lines SVG is also enabled alongside Order ID / Courier
+    let metaRowHtml = '';
+    if (showOrderId && showBarcodeCourier) {
+      if (isCourierLeft && isBarcodeRight) {
+        metaRowHtml = `
+          <div class="flex items-center justify-between w-full mt-1.5">
+            <div>${courierPill}</div>
+            <div>${orderIdSpan}</div>
+          </div>`;
+      } else if (isBarcodeLeft && isCourierRight) {
+        metaRowHtml = `
+          <div class="flex items-center justify-between w-full mt-1.5">
+            <div>${orderIdSpan}</div>
+            <div>${courierPill}</div>
+          </div>`;
+      } else if (c.courierPosition.startsWith('stacked') || c.barcodePosition.startsWith('stacked')) {
+        const align = (c.barcodePosition === 'stacked_left' || c.courierPosition === 'stacked_left') ? 'items-start text-left' :
+                      (c.barcodePosition === 'stacked_right' || c.courierPosition === 'stacked_right') ? 'items-end text-right' : 'items-center text-center';
+        metaRowHtml = `
+          <div class="flex flex-col ${align} gap-1 w-full mt-1.5">
+            <div>${orderIdSpan}</div>
+            <div>${courierPill}</div>
+          </div>`;
+      } else {
+        metaRowHtml = `
+          <div class="flex items-center justify-center gap-3 w-full mt-1.5">
+            ${courierPill}
+            ${orderIdSpan}
+          </div>`;
+      }
+    } else if (showOrderId) {
+      const align = isBarcodeLeft ? 'justify-start' : (isBarcodeRight ? 'justify-end' : 'justify-center');
+      metaRowHtml = `<div class="flex items-center ${align} w-full mt-1">${orderIdSpan}</div>`;
+    } else if (showBarcodeCourier) {
+      const align = isCourierLeft ? 'justify-start' : (isCourierRight ? 'justify-end' : 'justify-center');
+      metaRowHtml = `<div class="flex items-center ${align} w-full mt-1">${courierPill}</div>`;
+    }
+
+    const barcodeAlign = isBarcodeLeft ? 'items-start' : (isBarcodeRight ? 'items-end' : 'items-center');
+    barcodeBoxContentHtml = `
+      <div class="flex flex-col ${barcodeAlign} w-full">
+        ${barcodeSvgHtml}
+        ${metaRowHtml}
       </div>`;
   }
 
-  let barcodeAlignClass = 'items-center text-center justify-center';
-  if (c.barcodePosition === 'left' || c.barcodePosition === 'stacked_left') {
-    barcodeAlignClass = 'items-start text-left justify-start';
-  } else if (c.barcodePosition === 'right' || c.barcodePosition === 'stacked_right') {
-    barcodeAlignClass = 'items-end text-right justify-end';
-  }
-
   const barcodeHtml = barcodeBoxContentHtml ? `
-    <div class="flex flex-col ${barcodeAlignClass} py-2 px-3 bg-white border border-slate-300 rounded-lg mb-2.5 shadow-2xs">
+    <div class="w-full py-2 px-3 bg-white border border-slate-300 rounded-lg mb-2.5 shadow-2xs">
       ${barcodeBoxContentHtml}
     </div>` : '';
-
   // 3. Sender Block
   const senderHtml = c.showSenderAddress ? `
     <div class="p-2.5 rounded-lg border border-slate-300 bg-slate-50/70 text-[11px] space-y-1 flex-1">
