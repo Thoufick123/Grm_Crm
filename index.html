@@ -93,8 +93,11 @@
     (function () {
       try {
         var validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking'];
-        var hash = (window.location.hash || '').replace('#', '').trim().toLowerCase();
-        var targetView = (hash && validViews.includes(hash)) ? hash : null;
+        var rawHash = (window.location.hash || '').replace('#', '').trim().toLowerCase();
+        var hashParts = rawHash.split('/');
+        var mainHash = hashParts[0];
+        var subHash = hashParts[1] || '';
+        var targetView = (mainHash && validViews.includes(mainHash)) ? mainHash : null;
         if (!targetView) {
           var stored = localStorage.getItem('GRM_CRM_ACTIVE_VIEW');
           if (stored && validViews.includes(stored)) {
@@ -105,6 +108,13 @@
         window.INITIAL_SHIELD_TARGET_VIEW = targetView;
         window.ACTIVE_VIEW = targetView;
 
+        // Resolve active target nav button ID (handles standalone WhatsApp Dashboard vs Orders)
+        var targetNavId = targetView;
+        if (targetView === 'orders') {
+          var ordersSub = subHash || localStorage.getItem('GRM_CRM_ACTIVE_ORDERS_SUBMODULE') || 'dashboard';
+          targetNavId = (ordersSub === 'dashboard') ? 'orders-dashboard' : 'orders';
+        }
+
         if (targetView !== 'inbox') {
           var style = document.createElement('style');
           style.id = 'instant-view-shield';
@@ -112,8 +122,17 @@
             #view-inbox { display: none !important; }
             #nav-inbox { background-color: transparent !important; color: #cbd5e1 !important; font-weight: 500 !important; box-shadow: none !important; }
             #view-` + targetView + ` { display: block !important; }
-            #nav-` + targetView + ` { background-color: #00a884 !important; color: #ffffff !important; font-weight: 600 !important; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
+            #nav-` + targetNavId + ` { background-color: #00a884 !important; color: #ffffff !important; font-weight: 600 !important; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
           `;
+          if (targetView === 'orders') {
+            var isOrdersHist = (subHash === 'history' || localStorage.getItem('GRM_CRM_ACTIVE_ORDERS_SUBMODULE') === 'history');
+            if (isOrdersHist) {
+              style.innerHTML += `
+                #subview-orders-dashboard { display: none !important; }
+                #subview-orders-history { display: block !important; }
+              `;
+            }
+          }
           document.head.appendChild(style);
 
           var titles = {

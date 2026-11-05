@@ -333,6 +333,8 @@ window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
 // ROLE-BASED ACCESS CONTROL (RBAC) & PERMISSION DEFINITIONS
 // =========================================================================
 const CRM_MODULE_DEFINITIONS = [
+  { key: 'dashboard', name: 'Operations Dashboard', desc: 'Real-time overview of inquiries and sales health', icon: 'dashboard' },
+  { key: 'enquiries', name: 'Customer Enquiries Hub', desc: 'Admin lead assignment control room', icon: 'assignment' },
   { key: 'inbox', name: 'WhatsApp Inbox & Live Chat', desc: 'Realtime chats, inbound stream, templates & photo sending', icon: 'chat' },
   { key: 'followups', name: 'Customer Follow-up Scheduler', desc: 'Callback calendar, payment promises & reminders', icon: 'schedule' },
   { key: 'catalog', name: 'Live Stock & Garment Catalog', desc: 'Inventory stock, pricing, image library & 1-click sharing', icon: 'inventory_2' },
@@ -350,6 +352,7 @@ window.CRM_MODULE_DEFINITIONS = CRM_MODULE_DEFINITIONS;
 
 const DEFAULT_ROLE_PERMISSIONS = {
   'Super Admin': {
+    dashboard: { view: true, create: true, edit: true, delete: true },
     inbox: { view: true, create: true, edit: true, delete: true },
     enquiries: { view: true, create: true, edit: true, delete: true },
     followups: { view: true, create: true, edit: true, delete: true },
@@ -365,6 +368,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     masking: { view: true, create: true, edit: true, delete: true }
   },
   'Admin Manager': {
+    dashboard: { view: true, create: true, edit: true, delete: true },
     inbox: { view: true, create: true, edit: true, delete: true },
     enquiries: { view: true, create: true, edit: true, delete: true },
     followups: { view: true, create: true, edit: true, delete: true },
@@ -1369,9 +1373,10 @@ function getCurrentUser() {
 function getPersistedActiveView() {
   try {
     const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking'];
-    const hash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
-    if (hash && validViews.includes(hash)) {
-      return hash;
+    const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+    const mainHash = rawHash.split('/')[0];
+    if (mainHash && validViews.includes(mainHash)) {
+      return mainHash;
     }
     const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_VIEW') : null;
     if (stored && validViews.includes(stored)) {
@@ -3185,7 +3190,19 @@ function initCRMState() {
       if (typeof populateProductFormCategories === 'function') populateProductFormCategories();
       if (ACTIVE_VIEW === 'catalog' && typeof filterCatalogGrid === 'function') filterCatalogGrid();
       if (typeof updateOrderProductDropdown === 'function') updateOrderProductDropdown();
-      if (typeof renderOrdersModule === 'function') renderOrdersModule();
+      if (ACTIVE_VIEW === 'orders') {
+        if (typeof renderOrdersModule === 'function') renderOrdersModule();
+      } else {
+        const badgeOrders = document.getElementById('badge-orders-count');
+        const badgeTotalHeader = document.getElementById('badge-orders-total-count');
+        const badgeHistoryTab = document.getElementById('orders-tab-history-badge');
+        const badgeSidebarHistory = document.getElementById('nav-sub-orders-history-badge');
+        const totalCount = (CRM_STATE?.orders || []).length;
+        if (badgeOrders) badgeOrders.innerText = totalCount;
+        if (badgeTotalHeader) badgeTotalHeader.innerText = `${totalCount} Order${totalCount === 1 ? '' : 's'}`;
+        if (badgeHistoryTab) badgeHistoryTab.innerText = totalCount;
+        if (badgeSidebarHistory) badgeSidebarHistory.innerText = totalCount;
+      }
       if (typeof renderCustomersGrid === 'function') renderCustomersGrid();
       if (typeof renderCustomersTable === 'function') renderCustomersTable();
       if (typeof renderInbox === 'function') renderInbox();
@@ -3538,10 +3555,24 @@ function updateConfiguredPhoneDisplays() {
 // =========================================================================
 // 1. NAVIGATION & VIEW SWITCHER (RBAC ENFORCED)
 // =========================================================================
-var ACTIVE_INBOX_SUBMODULE = 'chats';
+var ACTIVE_INBOX_SUBMODULE = (function () {
+  try {
+    const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+    if (rawHash.startsWith('inbox/')) {
+      const sub = rawHash.split('/')[1];
+      if (sub === 'chats' || sub === 'autoreply' || sub === 'broadcast') return sub;
+    }
+    const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_INBOX_SUBMODULE') : null;
+    if (stored === 'chats' || stored === 'autoreply' || stored === 'broadcast') return stored;
+  } catch (e) { }
+  return 'chats';
+})();
 
 function switchInboxSubmodule(submodule) {
   ACTIVE_INBOX_SUBMODULE = submodule || 'chats';
+  try {
+    localStorage.setItem('GRM_CRM_ACTIVE_INBOX_SUBMODULE', ACTIVE_INBOX_SUBMODULE);
+  } catch (e) { }
 
   const chatSub = document.getElementById('submodule-inbox-chats');
   const autoSub = document.getElementById('submodule-inbox-autoreply');
@@ -3898,7 +3929,7 @@ window.addEventListener('hashchange', () => {
   const hashParts = rawHash.split('/');
   const mainHash = hashParts[0];
   const subHash = hashParts[1];
-  const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup'];
+  const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking'];
   if (mainHash && validViews.includes(mainHash)) {
     let needsSwitch = false;
     if (mainHash !== ACTIVE_VIEW) {
@@ -3906,6 +3937,8 @@ window.addEventListener('hashchange', () => {
     } else if (mainHash === 'orders' && subHash && subHash !== (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' ? ACTIVE_ORDERS_SUBMODULE : 'dashboard')) {
       needsSwitch = true;
     } else if (mainHash === 'inbox' && subHash && subHash !== (typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' ? ACTIVE_INBOX_SUBMODULE : 'chats')) {
+      needsSwitch = true;
+    } else if (mainHash === 'staff' && subHash && subHash !== (typeof ACTIVE_STAFF_TAB !== 'undefined' ? ACTIVE_STAFF_TAB : 'list')) {
       needsSwitch = true;
     }
     if (needsSwitch) {
@@ -4196,7 +4229,20 @@ function applyRoleBasedAccessControl(user) {
     ACTIVE_VIEW = firstAllowed ? firstAllowed.key : 'inbox';
   }
 
-  switchView(ACTIVE_VIEW);
+  // Restore exact persisted submodule on refresh (e.g. orders/history vs orders/dashboard, inbox/autoreply, staff/roles)
+  let targetSubmodule = null;
+  const currentHashParts = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase().split('/') : [];
+  if (currentHashParts[0] === ACTIVE_VIEW && currentHashParts[1]) {
+    targetSubmodule = currentHashParts[1];
+  } else if (ACTIVE_VIEW === 'orders') {
+    targetSubmodule = (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined') ? ACTIVE_ORDERS_SUBMODULE : (localStorage.getItem('GRM_CRM_ACTIVE_ORDERS_SUBMODULE') || 'dashboard');
+  } else if (ACTIVE_VIEW === 'inbox') {
+    targetSubmodule = (typeof ACTIVE_INBOX_SUBMODULE !== 'undefined') ? ACTIVE_INBOX_SUBMODULE : (localStorage.getItem('GRM_CRM_ACTIVE_INBOX_SUBMODULE') || 'chats');
+  } else if (ACTIVE_VIEW === 'staff') {
+    targetSubmodule = (typeof ACTIVE_STAFF_TAB !== 'undefined') ? ACTIVE_STAFF_TAB : (localStorage.getItem('GRM_CRM_ACTIVE_STAFF_TAB') || 'list');
+  }
+
+  switchView(ACTIVE_VIEW, targetSubmodule);
 }
 
 // =========================================================================
@@ -23896,7 +23942,18 @@ async function refreshCatalogStockFromAPI() {
 // 8. WHATSAPP ORDERS ENGINE: ORDER DASHBOARD & ORDER HISTORY (SUBMODULES)
 // =========================================================================
 
-var ACTIVE_ORDERS_SUBMODULE = 'dashboard';
+var ACTIVE_ORDERS_SUBMODULE = (function () {
+  try {
+    const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+    if (rawHash.startsWith('orders/')) {
+      const sub = rawHash.split('/')[1];
+      if (sub === 'history' || sub === 'dashboard') return sub;
+    }
+    const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_ORDERS_SUBMODULE') : null;
+    if (stored === 'history' || stored === 'dashboard') return stored;
+  } catch (e) { }
+  return 'dashboard';
+})();
 var ACTIVE_ORDER_HISTORY_STATUS_FILTER = 'ALL';
 
 function normalizeOrderStatus(status) {
@@ -23918,6 +23975,9 @@ function switchOrdersSubmodule(submodule) {
     return;
   }
   ACTIVE_ORDERS_SUBMODULE = submodule || 'dashboard';
+  try {
+    localStorage.setItem('GRM_CRM_ACTIVE_ORDERS_SUBMODULE', ACTIVE_ORDERS_SUBMODULE);
+  } catch (e) { }
 
   // Ensure orders main view is active if not already
   if (typeof ACTIVE_VIEW === 'undefined' || ACTIVE_VIEW !== 'orders') {
@@ -24049,7 +24109,9 @@ function renderOrdersModule() {
   if (badgeSidebarHistory) badgeSidebarHistory.innerText = totalCount;
 
   populateOrderHistoryStaffFilter();
-  switchOrdersSubmodule(ACTIVE_ORDERS_SUBMODULE || 'dashboard');
+  if (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'orders') {
+    switchOrdersSubmodule(ACTIVE_ORDERS_SUBMODULE || 'dashboard');
+  }
 }
 window.renderOrdersModule = renderOrdersModule;
 window.renderOrdersTable = renderOrdersModule;
@@ -26460,7 +26522,18 @@ window.handleImportBackupJSON = handleImportBackupJSON;
 // Sub-Items: 1. All Staff Directory | 2. Add Staff | 3. Role Base Permissions Matrix
 // =========================================================================
 
-var ACTIVE_STAFF_TAB = window.ACTIVE_STAFF_TAB || 'list'; // 'list' (All Staff), 'create' (Add Staff), 'roles' (Role Base), 'quota'
+var ACTIVE_STAFF_TAB = (function () {
+  try {
+    const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+    if (rawHash.startsWith('staff/')) {
+      const sub = rawHash.split('/')[1];
+      if (sub === 'list' || sub === 'create' || sub === 'roles') return sub;
+    }
+    const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_STAFF_TAB') : null;
+    if (stored === 'list' || stored === 'create' || stored === 'roles') return stored;
+  } catch (e) { }
+  return window.ACTIVE_STAFF_TAB || 'list';
+})(); // 'list' (All Staff), 'create' (Add Staff), 'roles' (Role Base), 'quota'
 window.ACTIVE_STAFF_TAB = ACTIVE_STAFF_TAB;
 var ACTIVE_MATRIX_ROLE = window.ACTIVE_MATRIX_ROLE || 'Sales Specialist (Baby Collection)';
 window.ACTIVE_MATRIX_ROLE = ACTIVE_MATRIX_ROLE;
@@ -26523,6 +26596,9 @@ function renderStaffView() {
 // 4. Switch Sub-View Tabs inside #view-staff
 function switchStaffTab(tab) {
   ACTIVE_STAFF_TAB = tab;
+  try {
+    localStorage.setItem('GRM_CRM_ACTIVE_STAFF_TAB', tab);
+  } catch (e) { }
 
   // Toggle Header tab buttons
   ['list', 'create', 'roles'].forEach(t => {
