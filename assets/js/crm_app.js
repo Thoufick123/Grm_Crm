@@ -1374,7 +1374,7 @@ function getCurrentUser() {
 
 function getPersistedActiveView() {
   try {
-    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking'];
+    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
     const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
     const mainHash = rawHash.split('/')[0];
     if (mainHash && validViews.includes(mainHash)) {
@@ -3956,7 +3956,10 @@ function switchView(viewName, subName) {
   if (viewName === 'followups') renderFollowupsCards();
   if (viewName === 'customers') renderCustomersGrid();
   if (viewName === 'dnd') renderDndModule();
-  if (viewName === 'staff') renderStaffView();
+  if (viewName === 'staff') {
+    if (subName && typeof switchStaffTab === 'function') switchStaffTab(subName);
+    renderStaffView();
+  }
   if (viewName === 'audit') renderAuditTable();
   if (viewName === 'analytics') renderAnalyticsView();
   if (viewName === 'settings') renderWhatsAppSettings();
@@ -3974,7 +3977,7 @@ window.addEventListener('hashchange', () => {
   const hashParts = rawHash.split('/');
   const mainHash = hashParts[0];
   const subHash = hashParts[1];
-  const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking'];
+  const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
   if (mainHash && validViews.includes(mainHash)) {
     let needsSwitch = false;
     if (mainHash !== ACTIVE_VIEW) {
