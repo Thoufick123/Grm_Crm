@@ -9109,8 +9109,17 @@ function renderCustomer360Panel() {
         <span class="text-[11px] font-bold uppercase text-slate-700 flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[16px] text-emerald-600">shopping_bag</span>
           <span>Orders &amp; Lifetime Value</span>
+          ${orders.length > 0 ? `<span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full font-mono font-bold">${orders.length}</span>` : ''}
         </span>
-        <button onclick="switchView('orders')" class="text-brand-wa font-bold hover:underline text-[11px]">View All</button>
+        <div class="flex items-center gap-2">
+          ${orders.length > 5 ? `
+            <span class="text-[10px] text-slate-500 font-semibold flex items-center gap-0.5 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200" title="Showing first 5 orders. Scroll down to view all ${orders.length} orders">
+              <span class="material-symbols-outlined text-[12px] text-slate-500">unfold_more</span>
+              <span>5 of ${orders.length} (Scroll)</span>
+            </span>
+          ` : ''}
+          <button onclick="switchView('orders')" class="text-brand-wa font-bold hover:underline text-[11px]">View All</button>
+        </div>
       </div>
 
       <!-- Metrics Cards (Total Orders & Lifetime Spend - Shown Last) -->
@@ -9125,10 +9134,10 @@ function renderCustomer360Panel() {
         </div>
       </div>
 
-      <!-- Past WhatsApp Orders List -->
-      <div class="space-y-2 pt-1">
+      <!-- Past WhatsApp Orders List (First 5 visible; scrolls up to bottom for 6+ orders) -->
+      <div id="c360-past-orders-list" class="space-y-2 pt-1 ${orders.length > 5 ? 'max-h-[468px] overflow-y-auto overflow-x-hidden pr-1.5 scroll-smooth custom-scrollbar' : ''}" style="${orders.length > 5 ? 'max-height: 468px;' : ''}">
         ${orders.length === 0 ? '<p class="text-slate-400 italic text-center py-1">No previous orders</p>' : orders.map(ord => `
-          <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
+          <div onclick="if(typeof openOrderInvoiceModal==='function') openOrderInvoiceModal('${ord.id}')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-300 hover:shadow-xs transition cursor-pointer" title="Click to view invoice for ${ord.id}">
             <div class="flex items-center justify-between">
               <span class="font-mono font-bold text-slate-800">${ord.id}</span>
               <span class="font-mono font-bold text-emerald-700">₹${ord.grandTotal}</span>
