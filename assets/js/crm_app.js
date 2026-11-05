@@ -9183,11 +9183,11 @@ function renderCustomer360Panel() {
         </div>
       </div>
 
-      <!-- Metrics Cards (Total Orders & Lifetime Spend - Net Sellable Style) -->
+      <!-- Metrics Cards (Total Orders: Blue, Lifetime Spend: Net Sellable Emerald) -->
       <div class="grid grid-cols-2 gap-2.5">
-        <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-2.5 rounded-xl border border-emerald-200 text-center shadow-2xs">
-          <span class="text-[10px] uppercase font-bold text-emerald-800">Total Orders</span>
-          <p class="text-base font-extrabold text-emerald-800 mt-0.5">${customer.totalOrders || 0} Orders</p>
+        <div class="bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-2.5 rounded-xl border border-blue-200 text-center shadow-2xs">
+          <span class="text-[10px] uppercase font-bold text-blue-800">Total Orders</span>
+          <p class="text-base font-extrabold text-blue-900 mt-0.5">${customer.totalOrders || 0} Orders</p>
         </div>
         <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-2.5 rounded-xl border border-emerald-200 text-center shadow-2xs">
           <span class="text-[10px] uppercase font-bold text-emerald-800">Lifetime Spend</span>

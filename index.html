@@ -2431,57 +2431,57 @@
             </div>
           </div>
 
-          <!-- 6 Main KPI Cards: Distinct thematic colors for each metric card -->
+          <!-- 6 Main KPI Cards: Each card has its own distinct thematic color gradient & border -->
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             <!-- Card 1: Total Enquiries (Teal) -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 hover:border-teal-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
+            <div class="bg-gradient-to-br from-teal-50/70 via-white to-teal-50/30 p-4 rounded-2xl border border-teal-200 hover:border-teal-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-teal-700 uppercase tracking-wider" data-i18n="dash.total_enquiries">Total Enquiries</p>
-                  <h3 id="dash-total-queries" class="text-2xl font-black text-slate-900 mt-1">12</h3>
+                  <p class="text-[10px] font-bold text-teal-800 uppercase tracking-wider" data-i18n="dash.total_enquiries">Total Enquiries</p>
+                  <h3 id="dash-total-queries" class="text-2xl font-black text-teal-900 mt-1">12</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 shadow-2xs">
-                  <span class="material-symbols-outlined text-[22px]">chat</span>
+                <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center border border-teal-200 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[20px]">chat</span>
                 </div>
               </div>
-              <div class="mt-3 text-[11px] flex items-center text-teal-600 font-semibold truncate">
+              <div class="mt-2.5 text-[11px] flex items-center text-teal-700 font-bold truncate">
                 <span class="material-symbols-outlined text-[15px] mr-1">trending_up</span> <span data-i18n="dash.inbound_capture">100% Capture</span>
               </div>
             </div>
 
             <!-- Card 2: Unassigned Queries (Amber) -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 hover:border-amber-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
+            <div class="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-4 rounded-2xl border border-amber-200 hover:border-amber-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-amber-700 uppercase tracking-wider" data-i18n="dash.unassigned_queries">Unassigned Queries</p>
-                  <h3 id="dash-unassigned-queries" class="text-2xl font-black text-amber-600 mt-1">2</h3>
+                  <p class="text-[10px] font-bold text-amber-800 uppercase tracking-wider" data-i18n="dash.unassigned_queries">Unassigned Queries</p>
+                  <h3 id="dash-unassigned-queries" class="text-2xl font-black text-amber-700 mt-1">2</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 shadow-2xs">
-                  <span class="material-symbols-outlined text-[22px]">person_add</span>
+                <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-200 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[20px]">person_add</span>
                 </div>
               </div>
-              <div class="mt-3 text-[11px] flex items-center text-amber-600 font-semibold truncate">
+              <div class="mt-2.5 text-[11px] flex items-center text-amber-700 font-bold truncate">
                 <span class="material-symbols-outlined text-[15px] mr-1">warning</span> <span data-i18n="dash.action_required">Action Required</span>
               </div>
             </div>
 
-            <!-- Card 3: WhatsApp Orders Booked (Emerald) -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 hover:border-emerald-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
+            <!-- Card 3: WhatsApp Orders Booked (Emerald / Green) -->
+            <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider" data-i18n="dash.orders_booked">Orders Booked</p>
-                  <h3 id="dash-total-orders" class="text-2xl font-black text-emerald-700 mt-1">5</h3>
+                  <p class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider" data-i18n="dash.orders_booked">Orders Booked</p>
+                  <h3 id="dash-total-orders" class="text-2xl font-black text-emerald-800 mt-1">5</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
-                  <span class="material-symbols-outlined text-[22px]">shopping_bag</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-200 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
                 </div>
               </div>
-              <div class="mt-3 text-[11px] flex items-center text-emerald-700 font-semibold truncate">
+              <div class="mt-2.5 text-[11px] flex items-center text-emerald-700 font-bold truncate">
                 <span class="font-bold mr-1" id="dash-total-revenue">₹18,450</span> <span data-i18n="dash.total_sales">Sales</span>
               </div>
             </div>
 
-<!-- Card 4: Dedicated Total Revenue Card (Net Sellable Emerald Style) -->
+            <!-- Card 4: Dedicated Total Revenue Card (Net Sellable Emerald Style) -->
             <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
                 <div>
@@ -2499,34 +2499,34 @@
             </div>
 
             <!-- Card 5: Total Staff Team Card (Indigo) -->
-            <div class="bg-white p-4 rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-white via-white to-indigo-50/30 hover:border-indigo-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
+            <div class="bg-gradient-to-br from-indigo-50/70 via-white to-indigo-50/30 p-4 rounded-2xl border border-indigo-200 hover:border-indigo-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Total Staff Team</p>
+                  <p class="text-[10px] font-bold text-indigo-800 uppercase tracking-wider">Total Staff Team</p>
                   <h3 id="dash-total-staff" class="text-2xl font-black text-indigo-900 mt-1">0</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shadow-indigo-600/30 shrink-0">
-                  <span class="material-symbols-outlined text-[22px]">badge</span>
+                <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center border border-indigo-200 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[20px]">badge</span>
                 </div>
               </div>
-              <div class="mt-3 text-[11px] flex items-center text-indigo-700 font-semibold truncate">
+              <div class="mt-2.5 text-[11px] flex items-center text-indigo-700 font-bold truncate">
                 <span class="material-symbols-outlined text-[15px] mr-1 text-indigo-600">group</span>
                 <span id="dash-active-staff">Active Members</span>
               </div>
             </div>
 
             <!-- Card 6: Follow-ups Scheduled (Sky Blue) -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 hover:border-sky-300 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
+            <div class="bg-gradient-to-br from-sky-50/70 via-white to-sky-50/30 p-4 rounded-2xl border border-sky-200 hover:border-sky-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[10px] font-bold text-sky-700 uppercase tracking-wider" data-i18n="dash.followups_scheduled">Follow-ups</p>
-                  <h3 id="dash-total-followups" class="text-2xl font-black text-sky-700 mt-1">3</h3>
+                  <p class="text-[10px] font-bold text-sky-800 uppercase tracking-wider" data-i18n="dash.followups_scheduled">Follow-ups</p>
+                  <h3 id="dash-total-followups" class="text-2xl font-black text-sky-800 mt-1">3</h3>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 shadow-2xs">
-                  <span class="material-symbols-outlined text-[22px]">schedule</span>
+                <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center border border-sky-200 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[20px]">schedule</span>
                 </div>
               </div>
-              <div class="mt-3 text-[11px] flex items-center text-sky-700 font-semibold truncate">
+              <div class="mt-2.5 text-[11px] flex items-center text-sky-700 font-bold truncate">
                 <span class="material-symbols-outlined text-[15px] mr-1">notifications_active</span> <span data-i18n="dash.automated_reminders">Active Reminders</span>
               </div>
             </div>
@@ -2605,78 +2605,78 @@
 
 
 
-          <!-- Live Stock Metrics Banner (5 Modern Interactive Cards) -->
+          <!-- Live Stock Metrics Banner (5 Modern Interactive Cards with distinct colors) -->
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-            <!-- Card 1: Total Garments -->
+            <!-- Card 1: Total Garments (Teal) -->
             <div id="catalog-card-all" onclick="setStockStatusFilter('ALL')"
-              class="bg-white p-4 rounded-2xl border border-slate-200/90 hover:border-teal-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden"
+              class="bg-gradient-to-br from-teal-50/70 via-white to-teal-50/30 p-4 rounded-2xl border border-teal-200 hover:border-teal-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden"
               title="Click to view all garments">
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Garments</span>
+                <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">Total Garments</span>
                 <div
-                  class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center border border-teal-100 group-hover:scale-110 transition-transform">
+                  class="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center border border-teal-200 group-hover:scale-110 transition-transform">
                   <span class="material-symbols-outlined text-[20px]">inventory_2</span>
                 </div>
               </div>
               <div class="mt-2.5">
                 <div class="flex items-baseline gap-1.5">
                   <span id="catalog-stat-skus"
-                    class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-mono">6</span>
-                  <span class="text-xs font-medium text-slate-400">Active SKUs</span>
+                    class="text-2xl sm:text-3xl font-extrabold text-teal-900 tracking-tight font-mono">6</span>
+                  <span class="text-xs font-bold text-teal-600">Active SKUs</span>
                 </div>
-                <div class="mt-1 flex items-center text-[11px] text-teal-700 font-semibold">
+                <div class="mt-1 flex items-center text-[11px] text-teal-700 font-bold">
                   <span class="inline-block w-1.5 h-1.5 rounded-full bg-teal-500 mr-1.5"></span> Live In Catalog
                 </div>
               </div>
             </div>
 
-            <!-- Card 2: Physical Stock -->
+            <!-- Card 2: Physical Stock (Blue) -->
             <div
-              class="bg-white p-4 rounded-2xl border border-slate-200/90 hover:border-blue-400 hover:shadow-md transition-all duration-200 group flex flex-col justify-between relative overflow-hidden"
+              class="bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-4 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-md transition-all duration-200 group flex flex-col justify-between relative overflow-hidden"
               title="Total physical stock count across warehouse racks">
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Physical Stock</span>
+                <span class="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Physical Stock</span>
                 <div
-                  class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:scale-110 transition-transform">
+                  class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center border border-blue-200 group-hover:scale-110 transition-transform">
                   <span class="material-symbols-outlined text-[20px]">warehouse</span>
                 </div>
               </div>
               <div class="mt-2.5">
                 <div class="flex items-baseline gap-1.5">
                   <span id="catalog-stat-physical"
-                    class="text-2xl sm:text-3xl font-extrabold text-blue-700 tracking-tight font-mono">76</span>
-                  <span class="text-xs font-medium text-slate-400">Total Units</span>
+                    class="text-2xl sm:text-3xl font-extrabold text-blue-800 tracking-tight font-mono">76</span>
+                  <span class="text-xs font-bold text-blue-600">Total Units</span>
                 </div>
-                <div class="mt-1 flex items-center text-[11px] text-blue-600 font-semibold">
+                <div class="mt-1 flex items-center text-[11px] text-blue-700 font-bold">
                   <span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span> In Warehouse
                 </div>
               </div>
             </div>
 
-            <!-- Card 3: Reserved Orders -->
+            <!-- Card 3: Reserved Orders (Amber) -->
             <div
-              class="bg-white p-4 rounded-2xl border border-slate-200/90 hover:border-amber-400 hover:shadow-md transition-all duration-200 group flex flex-col justify-between relative overflow-hidden"
+              class="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-4 rounded-2xl border border-amber-200 hover:border-amber-400 hover:shadow-md transition-all duration-200 group flex flex-col justify-between relative overflow-hidden"
               title="Units on hold for pending and confirmed orders">
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Reserved Orders</span>
+                <span class="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Reserved Orders</span>
                 <div
-                  class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 group-hover:scale-110 transition-transform">
+                  class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-200 group-hover:scale-110 transition-transform">
                   <span class="material-symbols-outlined text-[20px]">lock_clock</span>
                 </div>
               </div>
               <div class="mt-2.5">
                 <div class="flex items-baseline gap-1.5">
                   <span id="catalog-stat-reserved"
-                    class="text-2xl sm:text-3xl font-extrabold text-amber-600 tracking-tight font-mono">20</span>
-                  <span class="text-xs font-medium text-slate-400">On Hold</span>
+                    class="text-2xl sm:text-3xl font-extrabold text-amber-800 tracking-tight font-mono">20</span>
+                  <span class="text-xs font-bold text-amber-600">On Hold</span>
                 </div>
-                <div class="mt-1 flex items-center text-[11px] text-amber-700 font-semibold">
+                <div class="mt-1 flex items-center text-[11px] text-amber-700 font-bold">
                   <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span> Customer Bookings
                 </div>
               </div>
             </div>
 
-            <!-- Card 4: Net Sellable -->
+            <!-- Card 4: Net Sellable (Emerald) -->
             <div id="catalog-card-instock" onclick="setStockStatusFilter('IN_STOCK')"
               class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden"
               title="Click to filter products with ready stock">
@@ -2700,7 +2700,7 @@
               </div>
             </div>
 
-            <!-- Card 5: Low Stock Alert -->
+            <!-- Card 5: Low Stock Alert (Rose) -->
             <div id="catalog-card-lowstock" onclick="setStockStatusFilter('LOW_STOCK')"
               class="bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-4 rounded-2xl border border-rose-200 hover:border-rose-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between col-span-2 sm:col-span-1 relative overflow-hidden"
               title="Click to filter products requiring restock (&le; 5 units)">
@@ -2718,8 +2718,7 @@
                   <span class="text-xs font-bold text-rose-600">Need Attention</span>
                 </div>
                 <div class="mt-1 flex items-center text-[11px] text-rose-700 font-bold">
-                  <span class="material-symbols-outlined text-[14px] text-rose-600 mr-1">priority_high</span> Restock
-                  (&le;5)
+                  <span class="material-symbols-outlined text-[14px] text-rose-600 mr-1">warning</span> Restock (&le;5)
                 </div>
               </div>
             </div>
@@ -2953,7 +2952,7 @@
           <!-- ======================================================== -->
             <div id="subview-orders-dashboard" class="space-y-4 sm:space-y-5">
             
-            <!-- 1. Key Metrics Cards Grid: Overall Revenue, Weekly, Monthly, AOV -->
+            <!-- 1. Key Metrics Cards Grid: Overall Revenue, Weekly, Monthly, AOV (Each distinct color) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               <!-- Card 1: Overall Revenue (Net Sellable Emerald Style) -->
               <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 rounded-2xl p-4 border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
@@ -2972,51 +2971,54 @@
                 </div>
               </div>
 
-              <!-- Card 2: Weekly Order Total Count -->
-              <div class="bg-white rounded-2xl p-4 border border-blue-200/90 shadow-2xs hover:shadow-md transition-all relative overflow-hidden group">
-                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+              <!-- Card 2: Weekly Order Total Count (Blue) -->
+              <div class="bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 rounded-2xl p-4 border border-blue-200 hover:border-blue-400 hover:shadow-md shadow-sm transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
                 <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">Weekly Orders</span>
-                  <div class="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600">
-                    <span class="material-symbols-outlined text-[18px]">date_range</span>
+                  <span class="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Weekly Orders</span>
+                  <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center border border-blue-200 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">date_range</span>
                   </div>
                 </div>
-                <p id="dash-ord-weekly-count" class="text-2xl sm:text-3xl font-black font-mono mt-2 text-slate-900 tracking-tight">0</p>
-                <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span class="text-slate-500 font-medium">Weekly Revenue:</span>
-                  <strong id="dash-ord-weekly-revenue" class="text-blue-700 font-mono font-bold">₹0.00</strong>
+                <div class="mt-2.5">
+                  <p id="dash-ord-weekly-count" class="text-2xl sm:text-3xl font-extrabold font-mono text-blue-800 tracking-tight">0</p>
+                  <div class="mt-2 pt-2 border-t border-blue-100/80 flex items-center justify-between text-[11px]">
+                    <span class="text-blue-700 font-bold">Weekly Revenue:</span>
+                    <strong id="dash-ord-weekly-revenue" class="text-blue-800 font-mono font-bold">₹0.00</strong>
+                  </div>
                 </div>
               </div>
 
-              <!-- Card 3: Monthly Total Order Count -->
-              <div class="bg-white rounded-2xl p-4 border border-indigo-200/90 shadow-2xs hover:shadow-md transition-all relative overflow-hidden group">
-                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+              <!-- Card 3: Monthly Total Order Count (Indigo) -->
+              <div class="bg-gradient-to-br from-indigo-50/70 via-white to-indigo-50/30 rounded-2xl p-4 border border-indigo-200 hover:border-indigo-400 hover:shadow-md shadow-sm transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
                 <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">Monthly Orders</span>
-                  <div class="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/60 flex items-center justify-center text-indigo-600">
-                    <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+                  <span class="text-[11px] font-bold text-indigo-800 uppercase tracking-wider">Monthly Orders</span>
+                  <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center border border-indigo-200 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">calendar_month</span>
                   </div>
                 </div>
-                <p id="dash-ord-monthly-count" class="text-2xl sm:text-3xl font-black font-mono mt-2 text-slate-900 tracking-tight">0</p>
-                <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span class="text-slate-500 font-medium">Monthly Revenue:</span>
-                  <strong id="dash-ord-monthly-revenue" class="text-indigo-700 font-mono font-bold">₹0.00</strong>
+                <div class="mt-2.5">
+                  <p id="dash-ord-monthly-count" class="text-2xl sm:text-3xl font-extrabold font-mono text-indigo-800 tracking-tight">0</p>
+                  <div class="mt-2 pt-2 border-t border-indigo-100/80 flex items-center justify-between text-[11px]">
+                    <span class="text-indigo-700 font-bold">Monthly Revenue:</span>
+                    <strong id="dash-ord-monthly-revenue" class="text-indigo-800 font-mono font-bold">₹0.00</strong>
+                  </div>
                 </div>
               </div>
 
-              <!-- Card 4: Average Order Value & Total Volume -->
-              <div class="bg-white rounded-2xl p-4 border border-amber-200/90 shadow-2xs hover:shadow-md transition-all relative overflow-hidden group">
-                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+              <!-- Card 4: Average Order Value & Total Volume (Amber) -->
+              <div class="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 rounded-2xl p-4 border border-amber-200 hover:border-amber-400 hover:shadow-md shadow-sm transition-all duration-200 group flex flex-col justify-between relative overflow-hidden">
                 <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">Avg. Order Value (AOV)</span>
-                  <div class="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
-                    <span class="material-symbols-outlined text-[18px]">query_stats</span>
+                  <span class="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Avg. Order Value (AOV)</span>
+                  <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-200 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">query_stats</span>
                   </div>
                 </div>
-                <p id="dash-ord-aov" class="text-2xl sm:text-3xl font-black font-mono mt-2 text-slate-900 tracking-tight">₹0</p>
-                <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span class="text-slate-500 font-medium">All-Time Volume:</span>
-                  <strong id="dash-ord-all-time-count" class="text-slate-900 font-mono font-bold">0</strong>
+                <div class="mt-2.5">
+                  <p id="dash-ord-aov" class="text-2xl sm:text-3xl font-extrabold font-mono text-amber-800 tracking-tight">₹0</p>
+                  <div class="mt-2 pt-2 border-t border-amber-100/80 flex items-center justify-between text-[11px]">
+                    <span class="text-amber-700 font-bold">All-Time Volume:</span>
+                    <strong id="dash-ord-all-time-count" class="text-amber-900 font-mono font-bold">0</strong>
+                  </div>
                 </div>
               </div>
             </div>
