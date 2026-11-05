@@ -56,7 +56,15 @@ define('DB_USER', $envConfig['DB_USER']);
 define('DB_PASS', $envConfig['DB_PASS']);
 define('DB_NAME', $envConfig['DB_NAME']);
 define('DB_PORT', (int)$envConfig['DB_PORT']);
-define('BRIDGE_URL', $envConfig['BRIDGE_URL'] ?? 'http://localhost:3000');
+$dynamicBridgeUrl = null;
+$cfgFileForBridge = dirname(__DIR__) . '/whatsapp_account_config.json';
+if (file_exists($cfgFileForBridge)) {
+    $cfgDataForBridge = json_decode(file_get_contents($cfgFileForBridge), true);
+    if (!empty($cfgDataForBridge['bridge_url'])) {
+        $dynamicBridgeUrl = rtrim($cfgDataForBridge['bridge_url'], '/');
+    }
+}
+define('BRIDGE_URL', $dynamicBridgeUrl ?? ($envConfig['BRIDGE_URL'] ?? 'http://localhost:3000'));
 define('APP_URL', $envConfig['APP_URL'] ?? 'http://localhost:8080');
 
 function getDBConnection() {

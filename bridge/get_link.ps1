@@ -24,3 +24,4 @@ if (Test-Path $logFile) {
 
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Cyan
+

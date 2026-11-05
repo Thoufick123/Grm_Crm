@@ -664,6 +664,10 @@ function broadcastAccountsUpdate() {
     });
 }
 
+
+
+const CRM_BASE_URL = (process.env.CRM_URL || 'https://maroon-partridge-532881.hostingersite.com').replace(/\/+$/, '');
+
 // Forward inbound WhatsApp call to CRM PHP API
 async function forwardCallToCRM(data) {
     try {
@@ -698,7 +702,42 @@ async function forwardCallToCRM(data) {
 }
 
 // Forward inbound WhatsApp message to CRM PHP API for persistent file storage
-const CRM_BASE_URL = (process.env.CRM_URL || 'https://maroon-partridge-532881.hostingerhostingsite.com').replace(/\/+$/, '');
+
+
+let _lastSyncedTunnelUrl = null;
+async function autoSyncTunnelUrlToHostinger() {
+    try {
+        const logPath = path.join(process.env.USERPROFILE || process.env.HOME || '', '.pm2', 'logs', 'cf-tunnel-error.log');
+        if (!fs.existsSync(logPath)) return;
+        const logContent = fs.readFileSync(logPath, 'utf8');
+        const matches = [...logContent.matchAll(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/g)];
+        if (matches.length === 0) return;
+        const latestUrl = matches[matches.length - 1][0];
+
+        if (latestUrl && latestUrl !== _lastSyncedTunnelUrl) {
+            console.log(`📡 [Auto-Tunnel Sync] Found live Cloudflare URL: ${latestUrl}`);
+            if (typeof fetch === 'function') {
+                const res = await fetch(`${CRM_BASE_URL}/api.php?action=sync_bridge_url`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        bridge_url: latestUrl,
+                        secret: 'GRM_BRIDGE_AUTO_SYNC_2026'
+                    })
+                });
+                const data = await res.json();
+                if (data && data.status === 'success') {
+                    _lastSyncedTunnelUrl = latestUrl;
+                    console.log(`✅ [Auto-Tunnel Sync] Successfully updated Hostinger CRM bridge URL to: ${latestUrl}`);
+                }
+            }
+        }
+    } catch (e) {
+        // Silent catch
+    }
+}
+setTimeout(autoSyncTunnelUrlToHostinger, 2000);
+setInterval(autoSyncTunnelUrlToHostinger, 15000);
 
 async function forwardToCRM(data) {
     try {

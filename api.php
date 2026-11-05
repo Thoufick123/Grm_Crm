@@ -738,6 +738,32 @@ if ($action === 'get_config') {
     exit;
 }
 
+if ($action === 'sync_bridge_url' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $rawInput = file_get_contents('php://input');
+    $postData = json_decode($rawInput, true) ?: $_POST;
+    $newBridgeUrl = trim($postData['bridge_url'] ?? '');
+    $secret = trim($postData['secret'] ?? '');
+
+    if ($secret !== 'GRM_BRIDGE_AUTO_SYNC_2026' || empty($newBridgeUrl)) {
+        http_response_code(403);
+        echo json_encode(["status" => "error", "message" => "Unauthorized or empty bridge URL"]);
+        exit;
+    }
+
+    $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    $currentConfig['bridge_url'] = rtrim($newBridgeUrl, '/');
+    $currentConfig['last_bridge_sync'] = date("Y-m-d H:i:s");
+    atomicWriteJson($configFile, $currentConfig);
+
+    echo json_encode([
+        "status" => "success",
+        "message" => "Bridge URL synchronized successfully",
+        "bridge_url" => $currentConfig['bridge_url'],
+        "synced_at" => $currentConfig['last_bridge_sync']
+    ]);
+    exit;
+}
+
 if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
     $postData = json_decode($input, true);
