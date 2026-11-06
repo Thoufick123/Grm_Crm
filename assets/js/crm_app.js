@@ -3795,7 +3795,7 @@ function updatePageHeaderTitle() {
     },
     staff: {
       title: t('header.title.staff', 'Staff & Team Management Hub'),
-      sub: t('header.sub.staff', 'Onboard team members, assign operational roles & permissions, and monitor workloads')
+      sub: ''
     },
     audit: {
       title: t('header.title.audit', 'System Audit Trail & Security Logs'),
@@ -3811,7 +3811,7 @@ function updatePageHeaderTitle() {
     },
     backup: {
       title: t('header.title.backup', 'Data Backup & Recovery Hub'),
-      sub: t('header.sub.backup', 'Full database snapshot export, restore, and zero-data-loss protection')
+      sub: ''
     },
     masking: {
       title: t('header.title.masking', 'Call & Number Masking Control Hub'),
@@ -3819,7 +3819,7 @@ function updatePageHeaderTitle() {
     },
     'packing-slip-config': {
       title: 'Packing Slip & Label Configuration',
-      sub: 'Customize brand logo, GST, positions, notes, and thermal/standard print templates'
+      sub: ''
     }
   };
 
