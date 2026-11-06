@@ -315,21 +315,36 @@ function initializeDatabaseSchema($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
-    // 5. Chat Conversations & Messages Table
+    // 5. Chat Conversations & Messages Table (All WhatsApp Values Stored)
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS `messages` (
             `id` INT AUTO_INCREMENT PRIMARY KEY,
             `message_uid` VARCHAR(100) UNIQUE NULL,
             `customer_id` VARCHAR(50) NOT NULL,
-            `sender` ENUM('customer', 'staff', 'system') NOT NULL,
-            `text` TEXT NOT NULL,
-            `media_type` VARCHAR(30) NULL,
-            `media_url` TEXT NULL,
+            `sender` VARCHAR(50) NOT NULL DEFAULT 'customer',
+            `sender_name` VARCHAR(150) NULL,
+            `sender_phone` VARCHAR(50) NULL,
+            `sender_jid` VARCHAR(150) NULL,
+            `direction` ENUM('inbound', 'outbound') NOT NULL DEFAULT 'inbound',
+            `text` TEXT NULL,
+            `message_text` TEXT NULL,
+            `media_type` VARCHAR(50) NULL,
+            `media_url` MEDIUMTEXT NULL,
             `audio_duration` VARCHAR(20) NULL,
+            `account_id` VARCHAR(50) NULL DEFAULT 'account_1',
+            `received_on_number` VARCHAR(50) NULL,
+            `is_bot` TINYINT(1) NOT NULL DEFAULT 0,
+            `rule_name` VARCHAR(150) NULL,
+            `rule_id` VARCHAR(50) NULL,
+            `source` VARCHAR(50) NULL DEFAULT 'REAL_WHATSAPP_LIVE',
             `time_str` VARCHAR(30) NULL,
-            `status` ENUM('SENT', 'DELIVERED', 'READ') DEFAULT 'DELIVERED',
+            `timestamp_epoch` BIGINT NULL,
+            `status` VARCHAR(30) DEFAULT 'DELIVERED',
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX(`customer_id`)
+            INDEX(`customer_id`),
+            INDEX(`account_id`),
+            INDEX(`timestamp_epoch`),
+            INDEX(`created_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
@@ -857,16 +872,34 @@ function initializeDatabaseSchema($pdo) {
         error_log("Audit logs migration note: " . $e->getMessage());
     }
 
-    // Dynamic Alter for Messages (direction, message_text)
+    // Dynamic Alter for Messages & Customers (Comprehensive WhatsApp Storage)
     try {
         $existingMsgCols = $pdo->query("SHOW COLUMNS FROM `messages`")->fetchAll(PDO::FETCH_COLUMN);
-        if (!in_array('direction', $existingMsgCols)) {
-            $pdo->exec("ALTER TABLE `messages` ADD COLUMN `direction` ENUM('inbound', 'outbound') DEFAULT 'inbound' AFTER `sender`");
-        }
-        if (!in_array('message_text', $existingMsgCols)) {
-            $pdo->exec("ALTER TABLE `messages` ADD COLUMN `message_text` TEXT NULL AFTER `text`");
-        }
+        $pdo->exec("ALTER TABLE `messages` MODIFY COLUMN `sender` VARCHAR(50) NOT NULL DEFAULT 'customer'");
+        $pdo->exec("ALTER TABLE `messages` MODIFY COLUMN `direction` ENUM('inbound', 'outbound') NOT NULL DEFAULT 'inbound'");
+        $pdo->exec("ALTER TABLE `messages` MODIFY COLUMN `status` VARCHAR(30) DEFAULT 'DELIVERED'");
+        $pdo->exec("ALTER TABLE `messages` MODIFY COLUMN `media_type` VARCHAR(50) NULL");
+        $pdo->exec("ALTER TABLE `messages` MODIFY COLUMN `media_url` MEDIUMTEXT NULL");
         $pdo->exec("ALTER TABLE `messages` MODIFY COLUMN `text` TEXT NULL");
+
+        if (!in_array('sender_name', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `sender_name` VARCHAR(150) NULL AFTER `sender`");
+        if (!in_array('sender_phone', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `sender_phone` VARCHAR(50) NULL AFTER `sender_name`");
+        if (!in_array('sender_jid', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `sender_jid` VARCHAR(150) NULL AFTER `sender_phone`");
+        if (!in_array('direction', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `direction` ENUM('inbound', 'outbound') DEFAULT 'inbound' AFTER `sender_jid`");
+        if (!in_array('message_text', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `message_text` TEXT NULL AFTER `text`");
+        if (!in_array('account_id', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `account_id` VARCHAR(50) NULL DEFAULT 'account_1' AFTER `audio_duration`");
+        if (!in_array('received_on_number', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `received_on_number` VARCHAR(50) NULL AFTER `account_id`");
+        if (!in_array('is_bot', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `is_bot` TINYINT(1) NOT NULL DEFAULT 0 AFTER `received_on_number`");
+        if (!in_array('rule_name', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `rule_name` VARCHAR(150) NULL AFTER `is_bot`");
+        if (!in_array('rule_id', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `rule_id` VARCHAR(50) NULL AFTER `rule_name`");
+        if (!in_array('source', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `source` VARCHAR(50) NULL DEFAULT 'REAL_WHATSAPP_LIVE' AFTER `rule_id`");
+        if (!in_array('timestamp_epoch', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `timestamp_epoch` BIGINT NULL AFTER `source`");
+
+        $existingCustCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('account_id', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_id` VARCHAR(50) NULL DEFAULT 'account_1' AFTER `customer_type`");
+        if (!in_array('last_message', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `last_message` TEXT NULL AFTER `notes`");
+        if (!in_array('last_message_at', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `last_message_at` DATETIME NULL AFTER `last_message`");
+        if (!in_array('unread_count', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `unread_count` INT NOT NULL DEFAULT 0 AFTER `last_message_at`");
     } catch (Exception $e) {
         error_log("Messages migration note: " . $e->getMessage());
     }

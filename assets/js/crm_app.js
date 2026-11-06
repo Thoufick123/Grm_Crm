@@ -5270,7 +5270,7 @@ function renderChatMessages() {
     ${filterBannerHtml}
   ` + messages.map((msg, idx) => {
     const msgId = msg.id || ('msg-' + idx + '-' + (msg.timestamp || Date.now()));
-    const isOut = msg.sender === 'staff';
+    const isOut = msg.sender === 'staff' || msg.direction === 'outbound' || msg.sender === 'bot' || Boolean(msg.isBot);
     const rawMedia = String(msg.media_url || msg.mediaUrl || msg.audio_url || '');
     const isAudio = msg.type === 'audio' ||
       msg.media_type === 'audio' ||
@@ -33620,6 +33620,11 @@ async function syncCustomerMessagesFromDB(customerId) {
 
         if (target) {
           target.id = dbMsg.id;
+          if (dbMsg.sender_name && !target.sender_name) target.sender_name = dbMsg.sender_name;
+          if (dbMsg.direction) target.direction = dbMsg.direction;
+          if (typeof dbMsg.isBot !== 'undefined') target.isBot = dbMsg.isBot;
+          if (dbMsg.account_id && !target.account_id) target.account_id = dbMsg.account_id;
+          if (dbMsg.timestamp_epoch && !target.timestamp) target.timestamp = dbMsg.timestamp_epoch * 1000;
           if (dbMsg.type === 'audio' || dbMsg.media_type === 'audio') {
             target.type = 'audio';
             target.media_type = 'audio';

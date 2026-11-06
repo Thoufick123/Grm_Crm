@@ -106,22 +106,34 @@ CREATE TABLE IF NOT EXISTS `queries` (
     INDEX(`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. WhatsApp Chat Messages & Audio Notes
+-- 5. WhatsApp Chat Messages & Audio Notes (All WhatsApp Values Stored)
 CREATE TABLE IF NOT EXISTS `messages` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `message_uid` VARCHAR(100) UNIQUE NULL,
     `customer_id` VARCHAR(50) NOT NULL,
-    `sender` VARCHAR(20) NOT NULL DEFAULT 'customer',
-    `direction` ENUM('inbound', 'outbound') DEFAULT 'inbound',
+    `sender` VARCHAR(50) NOT NULL DEFAULT 'customer',
+    `sender_name` VARCHAR(150) NULL,
+    `sender_phone` VARCHAR(50) NULL,
+    `sender_jid` VARCHAR(150) NULL,
+    `direction` ENUM('inbound', 'outbound') NOT NULL DEFAULT 'inbound',
     `text` TEXT NULL,
     `message_text` TEXT NULL,
-    `media_type` VARCHAR(30) NULL,
-    `media_url` TEXT NULL,
+    `media_type` VARCHAR(50) NULL,
+    `media_url` MEDIUMTEXT NULL,
     `audio_duration` VARCHAR(20) NULL,
+    `account_id` VARCHAR(50) NULL DEFAULT 'account_1',
+    `received_on_number` VARCHAR(50) NULL,
+    `is_bot` TINYINT(1) NOT NULL DEFAULT 0,
+    `rule_name` VARCHAR(150) NULL,
+    `rule_id` VARCHAR(50) NULL,
+    `source` VARCHAR(50) NULL DEFAULT 'REAL_WHATSAPP_LIVE',
     `time_str` VARCHAR(30) NULL,
+    `timestamp_epoch` BIGINT NULL,
     `status` VARCHAR(30) DEFAULT 'DELIVERED',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX(`customer_id`),
+    INDEX(`account_id`),
+    INDEX(`timestamp_epoch`),
     INDEX(`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

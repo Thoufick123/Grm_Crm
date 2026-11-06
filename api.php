@@ -260,6 +260,10 @@ if ($action === 'get_state' || $action === 'get_all') {
             if (!empty($c['tags']) && is_string($c['tags'])) {
                 $c['tags'] = json_decode($c['tags'], true) ?: [];
             }
+            $c['accountId'] = $c['account_id'] ?? 'account_1';
+            $c['lastMessage'] = $c['last_message'] ?? '';
+            $c['lastMessageAt'] = $c['last_message_at'] ?? '';
+            $c['unreadCount'] = (int)($c['unread_count'] ?? 0);
         }
 
         // 5. Queries
@@ -284,7 +288,7 @@ if ($action === 'get_state' || $action === 'get_all') {
             $q['statusNotes'] = $q['status_notes'] ?? '';
         }
 
-        // 6. Conversations map grouped by customer_id
+        // 6. Conversations map grouped by customer_id (All WhatsApp Fields Included)
         $mStmt = $pdo->query("SELECT * FROM `messages` ORDER BY `created_at` ASC");
         $allMessages = $mStmt->fetchAll();
         $conversations = [];
@@ -294,9 +298,24 @@ if ($action === 'get_state' || $action === 'get_all') {
                 $conversations[$cid] = [];
             }
             $conversations[$cid][] = [
-                'id' => (string)$msg['id'],
+                'id' => (string)($msg['message_uid'] ?: $msg['id']),
+                'message_uid' => (string)($msg['message_uid'] ?: $msg['id']),
+                'db_id' => (int)$msg['id'],
                 'sender' => $msg['sender'],
+                'sender_name' => $msg['sender_name'] ?? ($msg['sender'] === 'bot' ? 'Bot (Auto-Reply)' : ($msg['sender'] === 'staff' ? 'Super Admin' : 'Customer')),
+                'sender_phone' => $msg['sender_phone'] ?? '',
+                'sender_jid' => $msg['sender_jid'] ?? '',
+                'direction' => $msg['direction'] ?? ($msg['sender'] === 'customer' ? 'inbound' : 'outbound'),
+                'isBot' => (bool)($msg['is_bot'] ?? ($msg['sender'] === 'bot')),
+                'is_bot' => (int)($msg['is_bot'] ?? ($msg['sender'] === 'bot' ? 1 : 0)),
+                'account_id' => $msg['account_id'] ?? 'account_1',
+                'accountId' => $msg['account_id'] ?? 'account_1',
+                'received_on_number' => $msg['received_on_number'] ?? '',
+                'rule_name' => $msg['rule_name'] ?? null,
+                'rule_id' => $msg['rule_id'] ?? null,
+                'source' => $msg['source'] ?? 'REAL_WHATSAPP_LIVE',
                 'text' => $msg['text'],
+                'message_text' => $msg['message_text'] ?: $msg['text'],
                 'type' => $msg['media_type'] ?: 'text',
                 'media_type' => $msg['media_type'],
                 'mediaType' => $msg['media_type'],
@@ -306,7 +325,9 @@ if ($action === 'get_state' || $action === 'get_all') {
                 'audio_duration' => $msg['audio_duration'],
                 'audioDuration' => $msg['audio_duration'],
                 'time' => $msg['time_str'],
-                'status' => $msg['status'] ?: 'DELIVERED'
+                'timestamp_epoch' => (int)($msg['timestamp_epoch'] ?? strtotime($msg['created_at'])),
+                'status' => $msg['status'] ?: 'DELIVERED',
+                'created_at' => $msg['created_at']
             ];
         }
 
@@ -1629,22 +1650,42 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    // Also persist message in MySQL
+    // Also persist message in MySQL (All WhatsApp Fields Recorded)
     if ($pdo) {
         try {
             $effectiveCustId = $customerId;
             if (empty($effectiveCustId) && !empty($phone)) {
                 $cleanP = preg_replace('/[^0-9]/', '', $phone);
+                $clean10 = substr($cleanP, -10);
                 $cStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `phone` LIKE ? OR `whatsapp` LIKE ? LIMIT 1");
-                $cStmt->execute(["%$cleanP%", "%$cleanP%"]);
+                $cStmt->execute(["%$clean10%", "%$clean10%"]);
                 $effectiveCustId = $cStmt->fetchColumn() ?: null;
             }
             if (!empty($effectiveCustId)) {
+                $accSlot = $postData['accountId'] ?? 'account_1';
                 $stmt = $pdo->prepare("
-                    INSERT INTO `messages` (`customer_id`, `sender`, `text`, `media_type`, `media_url`, `time_str`, `status`)
-                    VALUES (?, 'staff', ?, ?, ?, ?, 'DELIVERED')
+                    INSERT INTO `messages` (
+                        `customer_id`, `sender`, `sender_name`, `sender_phone`, `sender_jid`,
+                        `direction`, `text`, `message_text`, `media_type`, `media_url`,
+                        `account_id`, `is_bot`, `source`, `time_str`, `timestamp_epoch`, `status`
+                    ) VALUES (?, 'staff', 'Super Admin', ?, ?, 'outbound', ?, ?, ?, ?, ?, 0, 'CRM_OUTBOUND', ?, ?, 'DELIVERED')
                 ");
-                $stmt->execute([$effectiveCustId, $text, $mediaType, $mediaUrl, date("h:i A")]);
+                $stmt->execute([
+                    $effectiveCustId,
+                    $phone,
+                    $postData['jid'] ?? null,
+                    $text,
+                    $text,
+                    $mediaType,
+                    $mediaUrl,
+                    $accSlot,
+                    date("h:i A"),
+                    time()
+                ]);
+
+                // Update query & customer last message
+                $pdo->prepare("UPDATE `queries` SET `last_message` = ? WHERE `customer_id` = ?")->execute([$text, $effectiveCustId]);
+                $pdo->prepare("UPDATE `customers` SET `last_message` = ?, `last_message_at` = NOW() WHERE `id` = ?")->execute([$text, $effectiveCustId]);
             }
         } catch (Exception $e) {
             error_log("Error saving outbound message: " . $e->getMessage());
@@ -1741,12 +1782,37 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $custId = $existingCust['id'];
             }
 
-            // Insert message (Deduplicated with UNIQUE message_uid)
+            $isBot = (!empty($payload['is_outbound']) || ($payload['sender_name'] ?? '') === 'Bot (Auto-Reply)' || ($payload['source'] ?? '') === 'AUTOREPLY_BOT') ? 1 : 0;
+            $direction = $isBot ? 'outbound' : 'inbound';
+            $sender = $isBot ? 'bot' : 'customer';
+
+            // Insert message (Deduplicated with UNIQUE message_uid, all values stored!)
             $pdo->prepare("
-                INSERT INTO `messages` (`message_uid`, `customer_id`, `sender`, `text`, `media_type`, `media_url`, `audio_duration`, `time_str`, `status`)
-                VALUES (?, ?, 'customer', ?, ?, ?, ?, ?, 'DELIVERED')
-                ON DUPLICATE KEY UPDATE `media_url` = IF(VALUES(`media_url`) IS NOT NULL, VALUES(`media_url`), `media_url`)
-            ")->execute([$msgUid, $custId, $messageText, $type, $mediaUrl, $duration, $receivedAt]);
+                INSERT INTO `messages` (
+                    `message_uid`, `customer_id`, `sender`, `sender_name`, `sender_phone`, `sender_jid`,
+                    `direction`, `text`, `message_text`, `media_type`, `media_url`, `audio_duration`,
+                    `account_id`, `received_on_number`, `is_bot`, `rule_name`, `rule_id`, `source`,
+                    `time_str`, `timestamp_epoch`, `status`
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DELIVERED')
+                ON DUPLICATE KEY UPDATE 
+                    `sender_name` = IF(VALUES(`sender_name`) IS NOT NULL, VALUES(`sender_name`), `sender_name`),
+                    `account_id` = IF(VALUES(`account_id`) IS NOT NULL, VALUES(`account_id`), `account_id`),
+                    `is_bot` = VALUES(`is_bot`),
+                    `direction` = VALUES(`direction`),
+                    `media_url` = IF(VALUES(`media_url`) IS NOT NULL, VALUES(`media_url`), `media_url`),
+                    `text` = IF(VALUES(`text` ) IS NOT NULL, VALUES(`text`), `text`),
+                    `message_text` = IF(VALUES(`message_text`) IS NOT NULL, VALUES(`message_text`), `message_text`)
+            ")->execute([
+                $msgUid, $custId, $sender, $senderName, $senderPhone, $payload['sender_jid'] ?? null,
+                $direction, $messageText, $messageText, $type, $mediaUrl, $duration,
+                $payload['account_id'] ?? 'account_1', $payload['received_on_number'] ?? null,
+                $isBot, $payload['rule_name'] ?? null, $payload['rule_id'] ?? null, $payload['source'] ?? 'REAL_WHATSAPP_LIVE',
+                $receivedAt, (int)$timestampEpoch
+            ]);
+
+            // Update customer account_id and last_message
+            $pdo->prepare("UPDATE `customers` SET `account_id` = ?, `last_message` = ?, `last_message_at` = NOW() WHERE `id` = ?")
+                ->execute([$payload['account_id'] ?? 'account_1', $messageText, $custId]);
 
             // Update or insert query
             $checkQ = $pdo->prepare("SELECT `id`, `unread_count` FROM `queries` WHERE `customer_id` = ? LIMIT 1");
@@ -1796,7 +1862,19 @@ if ($action === 'get_customer_messages') {
                 'message_uid' => (string)($r['message_uid'] ?: $r['id']),
                 'db_id' => (int)$r['id'],
                 'sender' => $r['sender'],
+                'sender_name' => $r['sender_name'] ?? ($r['sender'] === 'bot' ? 'Bot (Auto-Reply)' : ($r['sender'] === 'staff' ? 'Super Admin' : 'Customer')),
+                'sender_phone' => $r['sender_phone'] ?? '',
+                'sender_jid' => $r['sender_jid'] ?? '',
+                'direction' => $r['direction'] ?? ($r['sender'] === 'customer' ? 'inbound' : 'outbound'),
+                'isBot' => (bool)($r['is_bot'] ?? ($r['sender'] === 'bot')),
+                'is_bot' => (int)($r['is_bot'] ?? ($r['sender'] === 'bot' ? 1 : 0)),
+                'account_id' => $r['account_id'] ?? 'account_1',
+                'accountId' => $r['account_id'] ?? 'account_1',
+                'received_on_number' => $r['received_on_number'] ?? '',
+                'rule_name' => $r['rule_name'] ?? null,
+                'source' => $r['source'] ?? 'REAL_WHATSAPP_LIVE',
                 'text' => $r['text'],
+                'message_text' => $r['message_text'] ?: $r['text'],
                 'type' => $r['media_type'] ?: 'text',
                 'media_type' => $r['media_type'],
                 'mediaType' => $r['media_type'],
@@ -1805,12 +1883,59 @@ if ($action === 'get_customer_messages') {
                 'duration' => (float)($r['audio_duration'] ?: 8),
                 'audioDuration' => (float)($r['audio_duration'] ?: 8),
                 'time' => $r['time_str'],
+                'timestamp_epoch' => (int)($r['timestamp_epoch'] ?? strtotime($r['created_at'])),
                 'status' => $r['status'] ?: 'DELIVERED',
                 'created_at' => $r['created_at']
             ];
         }
     }
     echo json_encode(['status' => 'success', 'messages' => $msgs]);
+    exit;
+}
+
+// Dedicated Sync Action: Import any un-synced messages from live_messages_queue.json into DB
+if ($action === 'sync_inbox_queue_to_db') {
+    $synced = 0;
+    if ($pdo && file_exists($messagesFile)) {
+        try {
+            $queue = json_decode(file_get_contents($messagesFile), true) ?: [];
+            $insStmt = $pdo->prepare("
+                INSERT INTO `messages` (
+                    `message_uid`, `customer_id`, `sender`, `sender_name`, `sender_phone`, `sender_jid`,
+                    `direction`, `text`, `message_text`, `media_type`, `media_url`, `audio_duration`,
+                    `account_id`, `received_on_number`, `is_bot`, `rule_name`, `rule_id`, `source`,
+                    `time_str`, `timestamp_epoch`, `status`
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DELIVERED')
+                ON DUPLICATE KEY UPDATE 
+                    `sender_name` = IF(VALUES(`sender_name`) IS NOT NULL, VALUES(`sender_name`), `sender_name`),
+                    `account_id` = IF(VALUES(`account_id`) IS NOT NULL, VALUES(`account_id`), `account_id`),
+                    `is_bot` = VALUES(`is_bot`),
+                    `direction` = VALUES(`direction`),
+                    `media_url` = IF(VALUES(`media_url`) IS NOT NULL, VALUES(`media_url`), `media_url`)
+            ");
+            foreach ($queue as $qItem) {
+                $uid = $qItem['message_uid'] ?? ($qItem['id'] ?? null);
+                if (!$uid) continue;
+                $sp = $qItem['sender_phone'] ?? '';
+                $clean10 = substr(preg_replace('/[^0-9]/', '', $sp), -10);
+                $cId = 'cust_' . ($clean10 ?: substr(uniqid(), -6));
+                $cRow = $pdo->query("SELECT `id` FROM `customers` WHERE `id` = '$cId' OR `phone` LIKE '%$clean10%' LIMIT 1")->fetch();
+                if ($cRow) $cId = $cRow['id'];
+                $isB = (!empty($qItem['is_outbound']) || ($qItem['sender_name'] ?? '') === 'Bot (Auto-Reply)' || ($qItem['source'] ?? '') === 'AUTOREPLY_BOT') ? 1 : 0;
+                $txt = $qItem['message_text'] ?? ($qItem['text'] ?? '');
+                $insStmt->execute([
+                    $uid, $cId, $isB ? 'bot' : 'customer', $qItem['sender_name'] ?? null, $sp, $qItem['sender_jid'] ?? null,
+                    $isB ? 'outbound' : 'inbound', $txt, $txt, $qItem['type'] ?? 'text', $qItem['media_url'] ?? null,
+                    isset($qItem['duration']) ? (string)$qItem['duration'] : null,
+                    $qItem['account_id'] ?? 'account_1', $qItem['received_on_number'] ?? null,
+                    $isB, $qItem['rule_name'] ?? null, $qItem['rule_id'] ?? null, $qItem['source'] ?? 'REAL_WHATSAPP_LIVE',
+                    $qItem['received_at'] ?? date("h:i A"), (int)($qItem['timestamp_epoch'] ?? time())
+                ]);
+                $synced++;
+            }
+        } catch (Exception $e) {}
+    }
+    echo json_encode(['status' => 'success', 'synced_count' => $synced]);
     exit;
 }
 
