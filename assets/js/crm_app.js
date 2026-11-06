@@ -35167,21 +35167,13 @@ window.openBulkPriceRequestModal = function () {
   const phoneEl = document.getElementById('bulk-customer-display-phone');
   if (phoneEl) phoneEl.innerText = custPhone || 'No Phone';
 
-  // Populate products
-  const select = document.getElementById('bulk-product-select');
-  if (select) {
-    const products = (CRM_STATE && CRM_STATE.products) ? CRM_STATE.products : [];
-    select.innerHTML = '<option value="">-- Choose from Catalog --</option>' +
-      products.map(p => `<option value="${p.id}" data-name="${(p.name || '').replace(/"/g, '&quot;')}" data-price="${p.price || 599}">${p.name} - ₹${p.price}</option>`).join('') +
-      '<option value="CUSTOM">+ Enter Custom Product Name</option>';
-  }
+  // Reset text inputs
+  const prodInput = document.getElementById('bulk-product-name');
+  if (prodInput) prodInput.value = '';
 
-  // Reset fields
-  const customProd = document.getElementById('bulk-custom-product-input');
-  if (customProd) {
-    customProd.classList.add('hidden');
-    customProd.value = '';
-  }
+  const sizeInput = document.getElementById('bulk-product-size');
+  if (sizeInput) sizeInput.value = 'Free Size';
+
   const qtyInput = document.getElementById('bulk-product-quantity');
   if (qtyInput) qtyInput.value = '10';
 
@@ -35210,45 +35202,26 @@ window.closeBulkPriceRequestModal = function () {
   }
 };
 
-window.onBulkProductSelectChange = function (val) {
-  const customProd = document.getElementById('bulk-custom-product-input');
-  const sellPrice = document.getElementById('bulk-selling-price');
-  const reqPrice = document.getElementById('bulk-requested-price');
-
-  if (val === 'CUSTOM') {
-    if (customProd) customProd.classList.remove('hidden');
-    if (sellPrice) sellPrice.value = '';
-    if (reqPrice) reqPrice.value = '';
-  } else if (val) {
-    if (customProd) customProd.classList.add('hidden');
-    const products = (CRM_STATE && CRM_STATE.products) ? CRM_STATE.products : [];
-    const prod = products.find(p => String(p.id) === String(val));
-    if (prod) {
-      const price = parseFloat(prod.price) || 599;
-      if (sellPrice) sellPrice.value = price;
-      if (reqPrice) reqPrice.value = Math.round(price * 0.85);
-    }
-  }
-  window.calculateBulkRequestTotals();
-};
-
 window.calculateBulkRequestTotals = function () {
-  const qty = parseInt(document.getElementById('bulk-product-quantity')?.value || '1', 10) || 1;
-  const sellPrice = parseFloat(document.getElementById('bulk-selling-price')?.value || '0') || 0;
-  const reqPrice = parseFloat(document.getElementById('bulk-requested-price')?.value || '0') || 0;
+  const qtyRaw = document.getElementById('bulk-product-quantity')?.value || '1';
+  const qty = parseFloat(String(qtyRaw).replace(/[^0-9.]/g, '')) || 1;
+  const sellPriceRaw = document.getElementById('bulk-selling-price')?.value || '0';
+  const sellPrice = parseFloat(String(sellPriceRaw).replace(/[^0-9.]/g, '')) || 0;
+  const reqPriceRaw = document.getElementById('bulk-requested-price')?.value || '0';
+  const reqPrice = parseFloat(String(reqPriceRaw).replace(/[^0-9.]/g, '')) || 0;
 
   const normalTotal = qty * sellPrice;
   const reqTotal = qty * reqPrice;
   const savings = Math.max(0, normalTotal - reqTotal);
 
   const stdEl = document.getElementById('bulk-calc-standard-total');
-  if (stdEl) stdEl.innerText = '₹' + normalTotal.toLocaleString('en-IN');
+  if (stdEl) stdEl.innerText = '₹' + Math.round(normalTotal).toLocaleString('en-IN');
 
   const reqEl = document.getElementById('bulk-calc-requested-total');
-  if (reqEl) reqEl.innerText = '₹' + reqTotal.toLocaleString('en-IN');
+  if (reqEl) reqEl.innerText = '₹' + Math.round(reqTotal).toLocaleString('en-IN');
 
   const savEl = document.getElementById('bulk-calc-savings');
-  if (savEl) savEl.innerText = '₹' + savings.toLocaleString('en-IN');
+  if (savEl) savEl.innerText = '₹' + Math.round(savings).toLocaleString('en-IN');
 };
 
 window.submitBulkPriceRequest = async function (ev) {
@@ -35258,25 +35231,23 @@ window.submitBulkPriceRequest = async function (ev) {
   const custName = customer ? (customer.name || 'Customer') : 'Walk-in Customer';
   const custPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
 
-  const prodSelect = document.getElementById('bulk-product-select');
-  const customProd = document.getElementById('bulk-custom-product-input');
-  let productName = '';
-  if (prodSelect && prodSelect.value === 'CUSTOM') {
-    productName = customProd ? customProd.value.trim() : '';
-  } else if (prodSelect && prodSelect.value) {
-    const opt = prodSelect.options[prodSelect.selectedIndex];
-    productName = opt ? (opt.getAttribute('data-name') || opt.text) : '';
-  }
+  const prodInput = document.getElementById('bulk-product-name');
+  const productName = prodInput ? prodInput.value.trim() : '';
 
   if (!productName) {
-    if (typeof showToast === 'function') showToast('Missing Product', 'Please select or enter a product name.', 'warning', 'amber');
+    if (typeof showToast === 'function') showToast('Missing Product', 'Please enter a product name.', 'warning', 'amber');
     return;
   }
 
-  const size = document.getElementById('bulk-product-size')?.value || 'Free Size';
-  const qty = parseInt(document.getElementById('bulk-product-quantity')?.value || '1', 10) || 1;
-  const sellPrice = parseFloat(document.getElementById('bulk-selling-price')?.value || '0') || 0;
-  const reqPrice = parseFloat(document.getElementById('bulk-requested-price')?.value || '0') || 0;
+  const sizeInput = document.getElementById('bulk-product-size');
+  const size = sizeInput ? (sizeInput.value.trim() || 'Free Size') : 'Free Size';
+
+  const qtyRaw = document.getElementById('bulk-product-quantity')?.value || '1';
+  const qty = parseFloat(String(qtyRaw).replace(/[^0-9.]/g, '')) || 1;
+  const sellPriceRaw = document.getElementById('bulk-selling-price')?.value || '0';
+  const sellPrice = parseFloat(String(sellPriceRaw).replace(/[^0-9.]/g, '')) || 0;
+  const reqPriceRaw = document.getElementById('bulk-requested-price')?.value || '0';
+  const reqPrice = parseFloat(String(reqPriceRaw).replace(/[^0-9.]/g, '')) || 0;
   const adminPhone = document.getElementById('bulk-admin-phone')?.value.trim() || '+91 99435 57998';
 
   const staffUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : { id: 'admin', name: 'Super Admin' };

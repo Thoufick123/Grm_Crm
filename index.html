@@ -10398,17 +10398,13 @@
           </div>
         </div>
 
-        <!-- Product Selection -->
+        <!-- Product Name Input -->
         <div>
           <label class="block font-bold text-slate-700 mb-1">Product Name <span class="text-rose-500">*</span>:</label>
           <div class="relative">
             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">inventory_2</span>
-            <select id="bulk-product-select" onchange="onBulkProductSelectChange(this.value)" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
-              <option value="">-- Choose from Catalog or Select Custom --</option>
-            </select>
+            <input type="text" id="bulk-product-name" placeholder="Enter Product Name (e.g. Baby Frock / Girls Wear)" required class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
           </div>
-          <!-- Custom Product Input if not in catalog -->
-          <input type="text" id="bulk-custom-product-input" placeholder="Or type custom product name..." class="mt-1.5 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition hidden">
         </div>
 
         <!-- Size & Quantity -->
@@ -10417,27 +10413,14 @@
             <label class="block font-bold text-slate-700 mb-1">Size <span class="text-rose-500">*</span>:</label>
             <div class="relative">
               <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">straighten</span>
-              <select id="bulk-product-size" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
-                <option value="Free Size">Free Size</option>
-                <option value="0-6M">0–6 Months</option>
-                <option value="6-12M">6–12 Months</option>
-                <option value="1-2Y">1–2 Years</option>
-                <option value="2-3Y">2–3 Years</option>
-                <option value="3-4Y">3–4 Years</option>
-                <option value="4-5Y">4–5 Years</option>
-                <option value="S">S (Small)</option>
-                <option value="M">M (Medium)</option>
-                <option value="L">L (Large)</option>
-                <option value="XL">XL</option>
-                <option value="XXL">XXL</option>
-              </select>
+              <input type="text" id="bulk-product-size" value="Free Size" placeholder="Enter Size (e.g. Free Size, M, XL)" required class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
             </div>
           </div>
           <div>
             <label class="block font-bold text-slate-700 mb-1">Quantity (Pcs) <span class="text-rose-500">*</span>:</label>
             <div class="relative">
               <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">pin</span>
-              <input type="number" id="bulk-product-quantity" min="1" value="10" oninput="calculateBulkRequestTotals()" required class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+              <input type="text" id="bulk-product-quantity" value="10" placeholder="e.g. 10" oninput="calculateBulkRequestTotals()" required class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
             </div>
           </div>
         </div>
@@ -10448,14 +10431,14 @@
             <label class="block font-bold text-slate-700 mb-1">Product Selling Amount (Per Pc) <span class="text-rose-500">*</span>:</label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
-              <input type="number" id="bulk-selling-price" step="0.5" min="0" placeholder="e.g. 599" oninput="calculateBulkRequestTotals()" required class="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold font-mono text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+              <input type="text" id="bulk-selling-price" placeholder="e.g. 599" oninput="calculateBulkRequestTotals()" required class="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold font-mono text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
             </div>
           </div>
           <div>
             <label class="block font-bold text-indigo-900 mb-1">Request Amount (Per Pc) <span class="text-rose-500">*</span>:</label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-600 font-bold">₹</span>
-              <input type="number" id="bulk-requested-price" step="0.5" min="0" placeholder="e.g. 450" oninput="calculateBulkRequestTotals()" required class="w-full pl-8 pr-3 py-2.5 bg-indigo-50/70 border border-indigo-300 rounded-xl font-extrabold font-mono text-indigo-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+              <input type="text" id="bulk-requested-price" placeholder="e.g. 450" oninput="calculateBulkRequestTotals()" required class="w-full pl-8 pr-3 py-2.5 bg-indigo-50/70 border border-indigo-300 rounded-xl font-extrabold font-mono text-indigo-900 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
             </div>
           </div>
         </div>
@@ -10534,7 +10517,7 @@
   </div>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20.5"></script>
+  <script src="crm_app.js?v=20.6"></script>
 </body>
 
 </html>
