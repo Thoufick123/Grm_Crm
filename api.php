@@ -202,7 +202,39 @@ if (isset($_GET['action']) && $_GET['action'] === 'reset_customer_payment') {
 
 $configFile = __DIR__ . '/whatsapp_account_config.json';
 $messagesFile = __DIR__ . '/live_messages_queue.json';
-$bridgeUrl = defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000';
+
+function getEffectiveBridgeUrl() {
+    static $resolved = null;
+    if ($resolved !== null) return $resolved;
+    $fp = @fsockopen('127.0.0.1', 3000, $errNo, $errStr, 0.1);
+    if ($fp) {
+        fclose($fp);
+        $resolved = 'http://127.0.0.1:3000';
+        return $resolved;
+    }
+    $resolved = defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000';
+    return $resolved;
+}
+
+function curlBridgePost($endpoint, $payloadArray, $timeout = 7) {
+    $targetUrl = rtrim(getEffectiveBridgeUrl(), '/') . '/' . ltrim($endpoint, '/');
+    $ch = curl_init($targetUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payloadArray));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    $resp = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+    return ['http_code' => $httpCode, 'response' => $resp, 'error' => $err];
+}
+
+$bridgeUrl = getEffectiveBridgeUrl();
 
 function atomicWriteJson($filePath, $data) {
     $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
@@ -1463,16 +1495,14 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             if (file_exists(__DIR__ . '/whatsapp_account_config.json')) {
                 $cfgData = json_decode(file_get_contents(__DIR__ . '/whatsapp_account_config.json'), true);
                 if (!empty($cfgData['phone_number'])) {
-                    $crmPhone = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
+                    $cleanCfgNum = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
+                    if (strlen($cleanCfgNum) >= 10) $crmPhone = $cleanCfgNum;
                 }
             }
 
-            $approveUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$requestCode}&decision=approve";
-            $rejectUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$requestCode}&decision=reject";
-
-            // Instant WhatsApp direct response links (stays inside WhatsApp - ZERO browser navigation!)
+            // In-WhatsApp Zero-Navigation Action Links (Never leaves WhatsApp, stays in same screen)
             $waApproveUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("APPROVE {$requestCode}");
-            $waRejectUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("REJECT {$requestCode}");
+            $waRejectUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("REJECT {$requestCode} Price too low for this bulk order quantity.");
 
             $alertMsg = "🔔 *NEW BULK PRICE REQUEST*\n\n" .
                         "Request Code: *{$requestCode}*\n" .
@@ -1482,38 +1512,27 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                         "Standard Price: ₹{$sellingPrice}/pc → Requested Price: *₹{$requestedPrice}/pc*\n" .
                         "Total Value: *₹{$totalRequestedAmount}*\n\n" .
                         "━━━━━━━━━━━━━━━━━━━━\n" .
-                        "👉 *Quick Actions (Without Leaving WhatsApp):*\n" .
-                        "✅ *Tap to Approve:*\n" .
+                        "👉 *Quick Actions:*\n" .
+                        "✅ Reply *1* or *APPROVE {$requestCode}* to APPROVE\n" .
+                        "❌ Reply *2* or *REJECT {$requestCode} <reason>* to REJECT\n\n" .
+                        "🔗 *One-Click Decision Links (Message 1 of 3):*\n" .
+                        "✅ *Approve Link:*\n" .
                         "{$waApproveUrl}\n\n" .
-                        "❌ *Tap to Reject:*\n" .
-                        "{$waRejectUrl}\n\n" .
-                        "🔗 *Or Direct Web Links (Message 1 of 3):*\n" .
-                        "✅ *Approve:* {$approveUrl}\n" .
-                        "❌ *Reject:* {$rejectUrl}\n" .
+                        "❌ *Reject Link:*\n" .
+                        "{$waRejectUrl}\n" .
                         "━━━━━━━━━━━━━━━━━━━━\n" .
                         "⚠️ *Notice:* Valid up to 3 message sends. After the 3rd send, links will automatically expire.";
             try {
-                $bridgePayload = json_encode([
+                $bRes = curlBridgePost('/api/send', [
                     'phone' => $cleanAdminPhone,
                     'text' => $alertMsg
-                ]);
-                $ch = curl_init(BRIDGE_URL . '/api/send');
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $bridgePayload);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 7);
-                $resp = curl_exec($ch);
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $curlErr = curl_error($ch);
-                curl_close($ch);
-                if ($httpCode >= 200 && $httpCode < 300) {
+                ], 7);
+                if ($bRes['http_code'] >= 200 && $bRes['http_code'] < 300) {
                     $waNotifyStatus = 'SENT';
-                    $bridgeResponse = json_decode($resp, true);
+                    $bridgeResponse = json_decode($bRes['response'], true);
                 } else {
                     $waNotifyStatus = 'FAILED';
-                    $bridgeResponse = ['http_code' => $httpCode, 'error' => $curlErr, 'raw' => $resp];
+                    $bridgeResponse = $bRes;
                 }
             } catch (Exception $e) {
                 error_log("Bridge notification error: " . $e->getMessage());
@@ -1529,7 +1548,8 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             "alert_message" => $alertMsg,
             "approve_url" => $approveUrl ?? '',
             "reject_url" => $rejectUrl ?? '',
-            "wa_notify" => $waNotifyStatus
+            "wa_notify" => $waNotifyStatus,
+            "bridge_response" => $bridgeResponse
         ]);
         exit;
     } catch (Exception $e) {
@@ -1740,15 +1760,17 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     $approveUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$req['request_code']}&decision=approve";
     $rejectUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$req['request_code']}&decision=reject";
 
+    // Connected WhatsApp line phone number
     $crmPhone = '919943557998';
     if (file_exists(__DIR__ . '/whatsapp_account_config.json')) {
         $cfgData = json_decode(file_get_contents(__DIR__ . '/whatsapp_account_config.json'), true);
         if (!empty($cfgData['phone_number'])) {
-            $crmPhone = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
+            $cleanCfgNum = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
+            if (strlen($cleanCfgNum) >= 10) $crmPhone = $cleanCfgNum;
         }
     }
     $waApproveUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("APPROVE {$req['request_code']}");
-    $waRejectUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("REJECT {$req['request_code']}");
+    $waRejectUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("REJECT {$req['request_code']} Price too low for this bulk order quantity.");
 
     $alertMsg = "🔔 *NEW BULK PRICE REQUEST (REMINDER)*\n\n" .
                 "Request Code: *{$req['request_code']}*\n" .
@@ -1756,16 +1778,16 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 "Customer: *{$req['customer_name']}* ({$req['customer_phone']})\n" .
                 "Product: *{$req['product_name']}* ({$req['size']}) × *{$req['quantity']} pcs*\n" .
                 "Standard Price: ₹{$req['selling_price']}/pc → Requested Price: *₹{$req['requested_price']}/pc*\n" .
-                "Total Value: *{$req['total_requested_amount']}*\n\n" .
+                "Total Value: *₹{$req['total_requested_amount']}*\n\n" .
                 "━━━━━━━━━━━━━━━━━━━━\n" .
-                "👉 *Quick Actions (Without Leaving WhatsApp):*\n" .
-                "✅ *Tap to Approve:*\n" .
+                "👉 *Quick Actions:*\n" .
+                "✅ Reply *1* or *APPROVE {$req['request_code']}* to APPROVE\n" .
+                "❌ Reply *2* or *REJECT {$req['request_code']} <reason>* to REJECT\n\n" .
+                "🔗 *One-Click Decision Links (Message {$newSendCount} of 3):*\n" .
+                "✅ *Approve Link:*\n" .
                 "{$waApproveUrl}\n\n" .
-                "❌ *Tap to Reject:*\n" .
-                "{$waRejectUrl}\n\n" .
-                "🔗 *Or Direct Web Links (Message {$newSendCount} of 3):*\n" .
-                "✅ *Approve:* {$approveUrl}\n" .
-                "❌ *Reject:* {$rejectUrl}\n" .
+                "❌ *Reject Link:*\n" .
+                "{$waRejectUrl}\n" .
                 "━━━━━━━━━━━━━━━━━━━━\n" .
                 ($newSendCount >= 3 ? "⚠️ *FINAL NOTICE (3 of 3):* After this message, one-click links will expire." : "⚠️ *Notice:* Valid up to 3 message sends.");
 
@@ -1775,15 +1797,10 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         $cleanPhone = preg_replace('/[^0-9]/', '', $req['admin_phone']);
         if (strlen($cleanPhone) === 10) $cleanPhone = '91' . $cleanPhone;
         try {
-            $ch = curl_init(BRIDGE_URL . '/api/send');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['phone' => $cleanPhone, 'text' => $alertMsg]));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-            $r = curl_exec($ch);
-            curl_close($ch);
-            $waSent = true;
+            $bRes = curlBridgePost('/api/send', ['phone' => $cleanPhone, 'text' => $alertMsg], 7);
+            if ($bRes['http_code'] >= 200 && $bRes['http_code'] < 300) {
+                $waSent = true;
+            }
         } catch (Exception $e) {}
     }
 
@@ -2130,15 +2147,22 @@ HTML;
             'approved_at' => date('Y-m-d H:i:s')
         ]);
         try {
-            $ch = curl_init(BRIDGE_URL . '/api/bulk_request/event');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['status' => 'APPROVED', 'request' => $updatedReq]));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-            curl_exec($ch);
-            curl_close($ch);
+            curlBridgePost('/api/bulk_request/event', ['status' => 'APPROVED', 'request' => $updatedReq], 3);
         } catch (Exception $e) {}
+
+        // Send exact Image 3 format to Admin WhatsApp
+        if (!empty($req['admin_phone'])) {
+            $cleanAdminP = preg_replace('/[^0-9]/', '', $req['admin_phone']);
+            if (strlen($cleanAdminP) === 10) $cleanAdminP = '91' . $cleanAdminP;
+            $confirmText = "✅ *BULK PRICE REQUEST APPROVED!*\n\n" .
+                "Request Code: *{$req['request_code']}*\n" .
+                "Product: *{$req['product_name']}* ({$req['size']}) × *{$req['quantity']} pcs*\n" .
+                "Approved Price: *₹{$req['requested_price']}/pc* (Total: ₹{$req['total_requested_amount']})\n\n" .
+                "Status: Special price activated. Staff can now take the order.";
+            try {
+                curlBridgePost('/api/send', ['phone' => $cleanAdminP, 'text' => $confirmText], 5);
+            } catch (Exception $e) {}
+        }
 
         $renderShell("Approved Successfully", "
             <div class='status-icon icon-success'>✓</div>
@@ -2209,15 +2233,21 @@ HTML;
                 'approved_by' => $rejectedBy
             ]);
             try {
-                $ch = curl_init(BRIDGE_URL . '/api/bulk_request/event');
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['status' => 'REJECTED', 'request' => $updatedReq, 'reason' => $reason]));
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-                curl_exec($ch);
-                curl_close($ch);
+                curlBridgePost('/api/bulk_request/event', ['status' => 'REJECTED', 'request' => $updatedReq, 'reason' => $reason], 3);
             } catch (Exception $e) {}
+
+            // Send exact Image 4 format to Admin WhatsApp
+            if (!empty($req['admin_phone'])) {
+                $cleanAdminP = preg_replace('/[^0-9]/', '', $req['admin_phone']);
+                if (strlen($cleanAdminP) === 10) $cleanAdminP = '91' . $cleanAdminP;
+                $rejectText = "❌ *BULK PRICE REQUEST REJECTED*\n\n" .
+                    "Request Code: *{$req['request_code']}*\n" .
+                    "Reason: *{$reason}*\n\n" .
+                    "Staff has been informed of rejection.";
+                try {
+                    curlBridgePost('/api/send', ['phone' => $cleanAdminP, 'text' => $rejectText], 5);
+                } catch (Exception $e) {}
+            }
 
             $safeSubReason = htmlspecialchars($reason);
             $renderShell("Request Rejected", "
@@ -2328,22 +2358,15 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Call Node.js Baileys Bridge
-    $ch = curl_init(BRIDGE_URL . '/api/send');
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+    $bRes = curlBridgePost('/api/send', [
         'phone' => $phone, 
         'text' => $text,
         'jid' => $postData['jid'] ?? null,
         'accountId' => $postData['accountId'] ?? null,
         'mediaUrl' => $mediaUrl
-    ]));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 7);
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    ], 7);
+    $response = $bRes['response'];
+    $httpCode = $bRes['http_code'];
 
     // Also persist message in MySQL (All WhatsApp Fields Recorded)
     if ($pdo) {

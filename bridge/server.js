@@ -680,7 +680,37 @@ function broadcastAccountsUpdate() {
 
 
 
-const CRM_BASE_URL = (process.env.CRM_URL || 'https://maroon-partridge-532881.hostingersite.com').replace(/\/+$/, '');
+const CRM_BASE_URL = (process.env.CRM_URL || 'http://localhost:8000').replace(/\/+$/, '');
+
+// Robust CRM API Dispatcher with Multi-Host Fallback (Local Port 8000 -> Hostinger)
+async function callCrmApi(action, postData) {
+    const candidateUrls = [
+        (process.env.CRM_URL || 'http://localhost:8000').replace(/\/+$/, ''),
+        'http://127.0.0.1:8000',
+        'http://localhost:8080',
+        'https://maroon-partridge-532881.hostingersite.com'
+    ].filter(Boolean);
+
+    for (const base of candidateUrls) {
+        try {
+            const resp = await fetch(`${base}/api.php?action=${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(postData),
+                signal: AbortSignal.timeout(4000)
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data && data.status === 'success') {
+                    return data;
+                }
+            }
+        } catch (e) {
+            // try next base
+        }
+    }
+    return null;
+}
 
 // Forward inbound WhatsApp call to CRM PHP API
 async function forwardCallToCRM(data) {
@@ -1238,14 +1268,13 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                             if (isApproveCmd) {
                                 try {
-                                    const resp = await fetch(`${CRM_BASE_URL}/api.php?action=approve_bulk_price_request`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ request_code: reqCode, approved_by: 'Super Admin (via WhatsApp)' })
+                                    const d = await callCrmApi('approve_bulk_price_request', {
+                                        request_code: reqCode,
+                                        approved_by: 'Super Admin (via WhatsApp)'
                                     });
-                                    const d = await resp.json();
-                                    if (d.status === 'success') {
+                                    if (d && d.status === 'success') {
                                         const r = d.request || {};
+                                        // EXACT Image 3 Format
                                         const confirmText = `✅ *BULK PRICE REQUEST APPROVED!*\n\n` +
                                             `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
                                             `Product: *${r.product_name || 'Product'}* (${r.size || 'Free Size'}) × *${r.quantity || 10} pcs*\n` +
@@ -1262,14 +1291,14 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 try {
                                     let reason = messageText.replace(/^2\s*/i, '').replace(/^REJECT:?\s*(BPR-\d+)?\s*/i, '').trim();
                                     if (!reason) reason = 'Price too low for this bulk order quantity.';
-                                    const resp = await fetch(`${CRM_BASE_URL}/api.php?action=reject_bulk_price_request`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ request_code: reqCode, rejection_reason: reason, rejected_by: 'Super Admin (via WhatsApp)' })
+                                    const d = await callCrmApi('reject_bulk_price_request', {
+                                        request_code: reqCode,
+                                        rejection_reason: reason,
+                                        rejected_by: 'Super Admin (via WhatsApp)'
                                     });
-                                    const d = await resp.json();
-                                    if (d.status === 'success') {
+                                    if (d && d.status === 'success') {
                                         const r = d.request || {};
+                                        // EXACT Image 4 Format
                                         const rejectText = `❌ *BULK PRICE REQUEST REJECTED*\n\n` +
                                             `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
                                             `Reason: *${reason}*\n\n` +
