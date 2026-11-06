@@ -3815,7 +3815,7 @@ function updatePageHeaderTitle() {
     },
     masking: {
       title: t('header.title.masking', 'Call & Number Masking Control Hub'),
-      sub: t('header.sub.masking', 'Lead data privacy, In-CRM WebRTC softphone & virtual brand caller ID configuration')
+      sub: ''
     },
     'packing-slip-config': {
       title: 'Packing Slip & Label Configuration',

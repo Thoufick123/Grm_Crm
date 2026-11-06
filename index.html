@@ -149,7 +149,7 @@
             analytics: { title: 'Staff Performance Analytics & KPIs', sub: 'Factual metrics on response times, volume handled, and conversions' },
             settings: { title: 'WhatsApp Business Settings & Phone Configuration', sub: '' },
             backup: { title: 'Data Backup & Recovery Hub', sub: '' },
-            masking: { title: 'Call & Number Masking Control Hub', sub: 'Lead data privacy, In-CRM WebRTC softphone & virtual brand caller ID configuration' },
+            masking: { title: 'Call & Number Masking Control Hub', sub: '' },
             'packing-slip-config': { title: 'Packing Slip & Label Configuration', sub: '' }
           };
 
@@ -5004,11 +5004,7 @@
                 <span class="material-symbols-outlined text-[28px]">phone_locked</span>
               </div>
               <div>
-                <div class="flex items-center gap-2">
-                  <h2 class="text-xl font-extrabold tracking-tight">Call &amp; Number Masking Control Hub</h2>
-                  <span class="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-400/40 rounded-full text-[10px] font-bold">Privacy Shield</span>
-                </div>
-                <p class="text-xs text-amber-200/80 mt-1">Simultaneous Inbound Ring &bull; Atomic Staff Claiming &bull; Virtual DID Lead Privacy</p>
+                <h2 class="text-xl font-extrabold tracking-tight">Call &amp; Number Masking Control Hub</h2>
               </div>
             </div>
             <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -5129,7 +5125,6 @@
                 </div>
                 <div>
                   <h3 class="font-bold text-slate-900 text-sm">Live Call Queue &amp; Active Connections</h3>
-                  <p class="text-xs text-slate-500">Real-time incoming calls ringing across eligible staff and active bridges</p>
                 </div>
               </div>
               <span id="badge-active-queue-count" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">0 in Queue</span>
@@ -5165,7 +5160,6 @@
                 </div>
                 <div>
                   <h3 class="font-bold text-slate-900 text-sm">Eligible Staff Members (Inbound Ring Recipients)</h3>
-                  <p class="text-xs text-slate-500">Selected staff members receive instant incoming call popups when a customer dials the company DID</p>
                 </div>
               </div>
               <button type="button" onclick="saveEligibleStaffSelection()" class="px-4 py-2 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs">
@@ -5188,7 +5182,6 @@
                 </div>
                 <div>
                   <h3 class="font-bold text-slate-900 text-sm">Telephony &amp; Number Masking Configuration</h3>
-                  <p class="text-xs text-slate-500">Manage virtual caller ID number, ring durations, and auto-fallback routing</p>
                 </div>
               </div>
               <button type="button" onclick="saveMaskingConfigurationForm()" id="btn-save-masking-config" class="px-5 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-xl shadow-sm flex items-center gap-2 transition cursor-pointer text-xs">
@@ -5265,7 +5258,6 @@
                 </div>
                 <div>
                   <h3 class="font-bold text-slate-900 text-sm">Masked Call Sessions &amp; Activity Logs</h3>
-                  <p class="text-xs text-slate-500">Live logs recorded from the MariaDB call_sessions table</p>
                 </div>
               </div>
               <div class="flex items-center gap-2">
@@ -10305,7 +10297,7 @@
   <!-- Tesseract OCR engine is lazy-loaded on-demand when payment screenshots are verified -->
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20.1"></script>
+  <script src="crm_app.js?v=20.2"></script>
 </body>
 
 </html>
