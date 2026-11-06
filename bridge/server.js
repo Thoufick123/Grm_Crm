@@ -1227,6 +1227,63 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                         console.log(`[Inbound on ${accountObj.connectedNumber || accountId}] From ${senderName} (${senderJid}): "${messageText}" [${msgType}]`);
 
+                        // WhatsApp Direct Bulk Price Request Approval / Rejection Interceptor
+                        const cleanUpperMsg = (messageText || '').trim().toUpperCase();
+                        const isApproveCmd = cleanUpperMsg === '1' || cleanUpperMsg === 'APPROVE' || cleanUpperMsg.startsWith('APPROVE ') || cleanUpperMsg.startsWith('APPROVE:');
+                        const isRejectCmd = cleanUpperMsg.startsWith('2') || cleanUpperMsg === 'REJECT' || cleanUpperMsg.startsWith('REJECT ') || cleanUpperMsg.startsWith('REJECT:');
+
+                        if (isApproveCmd || isRejectCmd) {
+                            const codeMatch = messageText.match(/BPR-\d+/i);
+                            const reqCode = codeMatch ? codeMatch[0].toUpperCase() : null;
+
+                            if (isApproveCmd) {
+                                try {
+                                    const resp = await fetch(`${CRM_BASE_URL}/api.php?action=approve_bulk_price_request`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ request_code: reqCode, approved_by: 'Super Admin (via WhatsApp)' })
+                                    });
+                                    const d = await resp.json();
+                                    if (d.status === 'success') {
+                                        const r = d.request || {};
+                                        const confirmText = `✅ *BULK PRICE REQUEST APPROVED!*\n\n` +
+                                            `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
+                                            `Product: *${r.product_name || 'Product'}* (${r.size || 'Free Size'}) × *${r.quantity || 10} pcs*\n` +
+                                            `Approved Price: *₹${r.requested_price}/pc* (Total: ₹${r.total_requested_amount})\n\n` +
+                                            `Status: Special price activated. Staff can now take the order.`;
+                                        await sock.sendMessage(senderJid, { text: confirmText });
+                                        io.emit('bulk_request:updated', { status: 'APPROVED', request: r });
+                                        continue;
+                                    }
+                                } catch (e) {
+                                    console.error('[Bulk Approve via WhatsApp Error]:', e.message);
+                                }
+                            } else if (isRejectCmd) {
+                                try {
+                                    let reason = messageText.replace(/^2\s*/i, '').replace(/^REJECT:?\s*(BPR-\d+)?\s*/i, '').trim();
+                                    if (!reason) reason = 'Price too low for this bulk order quantity.';
+                                    const resp = await fetch(`${CRM_BASE_URL}/api.php?action=reject_bulk_price_request`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ request_code: reqCode, rejection_reason: reason, rejected_by: 'Super Admin (via WhatsApp)' })
+                                    });
+                                    const d = await resp.json();
+                                    if (d.status === 'success') {
+                                        const r = d.request || {};
+                                        const rejectText = `❌ *BULK PRICE REQUEST REJECTED*\n\n` +
+                                            `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
+                                            `Reason: *${reason}*\n\n` +
+                                            `Staff has been informed of rejection.`;
+                                        await sock.sendMessage(senderJid, { text: rejectText });
+                                        io.emit('bulk_request:updated', { status: 'REJECTED', request: r, reason: reason });
+                                        continue;
+                                    }
+                                } catch (e) {
+                                    console.error('[Bulk Reject via WhatsApp Error]:', e.message);
+                                }
+                            }
+                        }
+
                         const payload = {
                             id: msgId || ('msg_' + Date.now()),
                             sender_name: senderName,

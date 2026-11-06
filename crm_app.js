@@ -35266,14 +35266,16 @@ window.submitBulkPriceRequest = async function (ev) {
   const totalRequestedAmount = qty * reqPrice;
   const alertMsg = `🔔 *NEW BULK PRICE REQUEST*\n\n` +
                    `Request Code: *PENDING*\n` +
-                   `Staff: *${staffUser.name || 'Super Admin'}*\n` +
+                   `Status: *PENDING APPROVAL* by *${staffUser.name || 'Super Admin'}*\n` +
                    `Customer: *${custName}* (${custPhone})\n` +
-                   `Product: *${productName}* (Size: ${size})\n` +
-                   `Qty: *${qty} pcs*\n` +
-                   `Standard Price: ₹${sellPrice}/pc\n` +
-                   `Requested Price: *₹${reqPrice}/pc*\n` +
+                   `Product: *${productName}* (${size}) × *${qty} pcs*\n` +
+                   `Standard Price: ₹${sellPrice}/pc → Requested Price: *₹${reqPrice}/pc*\n` +
                    `Total Value: *₹${totalRequestedAmount}*\n\n` +
-                   `👉 Action Required: Open CRM to Approve or Reject.`;
+                   `━━━━━━━━━━━━━━━━━━━━\n` +
+                   `👉 *Quick Actions:*\n` +
+                   `✅ Reply *1* or *APPROVE PENDING* to APPROVE\n` +
+                   `❌ Reply *2* or *REJECT PENDING <reason>* to REJECT\n` +
+                   `━━━━━━━━━━━━━━━━━━━━`;
 
   try {
     const payload = {
@@ -35297,7 +35299,7 @@ window.submitBulkPriceRequest = async function (ev) {
     });
     const data = await res.json();
     const reqCode = (data && data.request && data.request.request_code) ? data.request.request_code : 'BPR';
-    const finalAlertMsg = alertMsg.replace('*PENDING*', `*${reqCode}*`);
+    const finalAlertMsg = alertMsg.split('PENDING').join(reqCode);
 
     // 2. Direct WhatsApp Dispatch to Admin Phone via Live WebSocket & Baileys Bridge
     if (typeof dispatchWhatsAppOutbound === 'function' && adminPhone) {
@@ -35361,41 +35363,11 @@ window.renderBulkRequestBanner = function (req) {
   const banner = document.getElementById('chat-bulk-price-request-banner');
   if (!banner || !req) return;
 
-  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin' || CURRENT_USER.username === 'admin'));
-
+  // Yellow container and approve/reject buttons deleted from staff and admin panel per user instruction
   if (req.status === 'PENDING') {
-    banner.className = 'px-4 py-2.5 bg-amber-50 border-b border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs';
-    banner.innerHTML = `
-      <div class="flex items-center gap-2.5 text-amber-950">
-        <span class="material-symbols-outlined text-[20px] text-amber-600 animate-pulse">price_change</span>
-        <div>
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="font-bold text-amber-900">${req.request_code}</span>
-            <span class="px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 font-extrabold text-[10px]">PENDING APPROVAL</span>
-            <span class="text-amber-800">by ${req.staff_name}</span>
-          </div>
-          <p class="text-amber-900 font-medium mt-0.5">
-            <b>${req.product_name}</b> (${req.size}) &times; <b>${req.quantity} pcs</b> &bull; Standard: ₹${req.selling_price} &rarr; <strong class="text-emerald-800">Requested: ₹${req.requested_price}/pc</strong> (Total: ₹${req.total_requested_amount})
-          </p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2 shrink-0">
-        ${isSuperAdmin ? `
-          <button type="button" onclick="handleApproveBulkPriceRequest('${req.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
-            <span class="material-symbols-outlined text-[16px]">check_circle</span>
-            <span>Approve</span>
-          </button>
-          <button type="button" onclick="openBulkRejectReasonModal('${req.id}')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
-            <span class="material-symbols-outlined text-[16px]">cancel</span>
-            <span>Reject</span>
-          </button>
-        ` : `
-          <span class="text-amber-800 font-bold text-[11px] bg-amber-100 px-2 py-1 rounded-md border border-amber-300">Awaiting Admin Decision</span>
-        `}
-      </div>
-    `;
-    banner.classList.remove('hidden');
+    banner.classList.add('hidden');
+    banner.innerHTML = '';
+    return;
   } else if (req.status === 'APPROVED') {
     banner.className = 'px-4 py-2.5 bg-emerald-50 border-b border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs';
     banner.innerHTML = `

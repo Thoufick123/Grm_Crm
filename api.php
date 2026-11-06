@@ -1450,14 +1450,16 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             }
             $alertMsg = "🔔 *NEW BULK PRICE REQUEST*\n\n" .
                         "Request Code: *{$requestCode}*\n" .
-                        "Staff: *{$staffName}*\n" .
+                        "Status: *PENDING APPROVAL* by *{$staffName}*\n" .
                         "Customer: *{$customerName}* ({$customerPhone})\n" .
-                        "Product: *{$productName}* (Size: {$size})\n" .
-                        "Qty: *{$quantity} pcs*\n" .
-                        "Standard Price: ₹{$sellingPrice}/pc\n" .
-                        "Requested Price: *₹{$requestedPrice}/pc*\n" .
+                        "Product: *{$productName}* ({$size}) × *{$quantity} pcs*\n" .
+                        "Standard Price: ₹{$sellingPrice}/pc → Requested Price: *₹{$requestedPrice}/pc*\n" .
                         "Total Value: *₹{$totalRequestedAmount}*\n\n" .
-                        "👉 Action Required: Open CRM to Approve or Reject.";
+                        "━━━━━━━━━━━━━━━━━━━━\n" .
+                        "👉 *Quick Actions:*\n" .
+                        "✅ Reply *1* or *APPROVE {$requestCode}* to APPROVE\n" .
+                        "❌ Reply *2* or *REJECT {$requestCode} <reason>* to REJECT\n" .
+                        "━━━━━━━━━━━━━━━━━━━━";
             try {
                 $bridgePayload = json_encode([
                     'phone' => $cleanAdminPhone,
@@ -1506,12 +1508,22 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
     $raw = file_get_contents('php://input');
     $data = json_decode($raw, true) ?: $_POST;
     $id = (int)($data['id'] ?? 0);
+    $requestCode = trim($data['request_code'] ?? ($data['request_id_or_code'] ?? ''));
+    if ($id <= 0 && !empty($requestCode)) {
+        $cStmt = $pdo->prepare("SELECT `id` FROM `bulk_price_requests` WHERE `request_code` = ? LIMIT 1");
+        $cStmt->execute([$requestCode]);
+        $id = (int)$cStmt->fetchColumn();
+    }
+    if ($id <= 0) {
+        $latest = $pdo->query("SELECT `id` FROM `bulk_price_requests` WHERE `status` = 'PENDING' ORDER BY `id` DESC LIMIT 1")->fetchColumn();
+        $id = (int)$latest;
+    }
     $approvedBy = trim($data['approved_by'] ?? 'Super Admin');
     $adminNotes = trim($data['admin_notes'] ?? '');
 
     if ($id <= 0) {
         http_response_code(400);
-        echo json_encode(["status" => "error", "message" => "Valid request ID is required."]);
+        echo json_encode(["status" => "error", "message" => "No pending bulk price request found to approve."]);
         exit;
     }
 
@@ -1559,12 +1571,22 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     $raw = file_get_contents('php://input');
     $data = json_decode($raw, true) ?: $_POST;
     $id = (int)($data['id'] ?? 0);
+    $requestCode = trim($data['request_code'] ?? ($data['request_id_or_code'] ?? ''));
+    if ($id <= 0 && !empty($requestCode)) {
+        $cStmt = $pdo->prepare("SELECT `id` FROM `bulk_price_requests` WHERE `request_code` = ? LIMIT 1");
+        $cStmt->execute([$requestCode]);
+        $id = (int)$cStmt->fetchColumn();
+    }
+    if ($id <= 0) {
+        $latest = $pdo->query("SELECT `id` FROM `bulk_price_requests` WHERE `status` = 'PENDING' ORDER BY `id` DESC LIMIT 1")->fetchColumn();
+        $id = (int)$latest;
+    }
     $rejectionReason = trim($data['rejection_reason'] ?? '');
     $rejectedBy = trim($data['rejected_by'] ?? 'Super Admin');
 
     if ($id <= 0) {
         http_response_code(400);
-        echo json_encode(["status" => "error", "message" => "Valid request ID is required."]);
+        echo json_encode(["status" => "error", "message" => "No pending bulk price request found to reject."]);
         exit;
     }
 
