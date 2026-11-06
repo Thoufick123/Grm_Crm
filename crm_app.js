@@ -3807,7 +3807,7 @@ function updatePageHeaderTitle() {
     },
     settings: {
       title: t('header.title.settings', 'WhatsApp Business Settings & Phone Configuration'),
-      sub: t('header.sub.settings', 'Set your primary WhatsApp Business number for dynamic live message routing')
+      sub: ''
     },
     backup: {
       title: t('header.title.backup', 'Data Backup & Recovery Hub'),
@@ -27585,7 +27585,6 @@ function renderMultiAccountsHub() {
               <span class="material-symbols-outlined text-[22px] text-emerald-600">verified</span>
               <div>
                 <p class="font-bold text-xs text-emerald-900">Live Device Linked & Authenticated</p>
-                <p class="text-[11px] text-emerald-700">Real-time incoming & outgoing messages active</p>
               </div>
             </div>
             <span class="font-mono text-emerald-900 font-extrabold text-xs bg-emerald-200/70 px-2.5 py-1 rounded-lg">${acc.connected_number || '+91 ...'}</span>
