@@ -1422,13 +1422,14 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     $totalRequestedAmount = $quantity * $requestedPrice;
 
     try {
+        $linkToken = bin2hex(random_bytes(16));
         $stmt = $pdo->prepare("
             INSERT INTO `bulk_price_requests`
-            (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `admin_phone`, `status`, `created_at`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NOW())
+            (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `admin_phone`, `link_token`, `send_count`, `link_click_count`, `max_sends`, `status`, `created_at`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 3, 'PENDING', NOW())
         ");
         $stmt->execute([
-            $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $adminPhone
+            $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $adminPhone, $linkToken
         ]);
         $newId = (int)$pdo->lastInsertId();
 
@@ -1448,6 +1449,18 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             if (strlen($cleanAdminPhone) === 10) {
                 $cleanAdminPhone = '91' . $cleanAdminPhone;
             }
+            // Determine public base URL for mobile WhatsApp links
+            $publicBaseUrl = 'https://maroon-partridge-532881.hostingersite.com';
+            if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') === false && strpos($_SERVER['HTTP_HOST'], '127.0.0.1') === false) {
+                $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $publicBaseUrl = $proto . '://' . $_SERVER['HTTP_HOST'];
+            } elseif (defined('APP_URL') && strpos(APP_URL, 'localhost') === false) {
+                $publicBaseUrl = rtrim(APP_URL, '/');
+            }
+
+            $approveUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$requestCode}&decision=approve";
+            $rejectUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$requestCode}&decision=reject";
+
             $alertMsg = "🔔 *NEW BULK PRICE REQUEST*\n\n" .
                         "Request Code: *{$requestCode}*\n" .
                         "Status: *PENDING APPROVAL* by *{$staffName}*\n" .
@@ -1458,8 +1471,14 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                         "━━━━━━━━━━━━━━━━━━━━\n" .
                         "👉 *Quick Actions:*\n" .
                         "✅ Reply *1* or *APPROVE {$requestCode}* to APPROVE\n" .
-                        "❌ Reply *2* or *REJECT {$requestCode} <reason>* to REJECT\n" .
-                        "━━━━━━━━━━━━━━━━━━━━";
+                        "❌ Reply *2* or *REJECT {$requestCode} <reason>* to REJECT\n\n" .
+                        "🔗 *One-Click Decision Links (Message 1 of 3):*\n" .
+                        "✅ *Approve Link:*\n" .
+                        "{$approveUrl}\n\n" .
+                        "❌ *Reject Link:*\n" .
+                        "{$rejectUrl}\n" .
+                        "━━━━━━━━━━━━━━━━━━━━\n" .
+                        "⚠️ *Notice:* Valid up to 3 message sends. After the 3rd send, links will automatically expire.";
             try {
                 $bridgePayload = json_encode([
                     'phone' => $cleanAdminPhone,
@@ -1488,6 +1507,9 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             "status" => "success",
             "message" => "Bulk price request submitted successfully and sent to Admin for approval",
             "request" => $createdRecord,
+            "alert_message" => $alertMsg,
+            "approve_url" => $approveUrl ?? '',
+            "reject_url" => $rejectUrl ?? '',
             "wa_notify" => $waNotifyStatus
         ]);
         exit;
@@ -1628,6 +1650,628 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         echo json_encode(["status" => "error", "message" => $e->getMessage()]);
         exit;
     }
+}
+
+// =========================================================================
+// BULK PRICE REQUEST: RESEND NOTIFICATION (Enforce 3-Message Send Limit)
+// =========================================================================
+if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true) ?: $_POST;
+    $id = (int)($data['id'] ?? 0);
+    $requestCode = trim($data['request_code'] ?? '');
+
+    $req = null;
+    if ($id > 0) {
+        $stmt = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `id` = ? LIMIT 1");
+        $stmt->execute([$id]);
+        $req = $stmt->fetch(PDO::FETCH_ASSOC);
+    } elseif (!empty($requestCode)) {
+        $stmt = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `request_code` = ? LIMIT 1");
+        $stmt->execute([$requestCode]);
+        $req = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    if (!$req) {
+        http_response_code(404);
+        echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
+        exit;
+    }
+
+    if ($req['status'] !== 'PENDING') {
+        echo json_encode(["status" => "error", "message" => "Request {$req['request_code']} is already {$req['status']}."]);
+        exit;
+    }
+
+    $currentSendCount = (int)($req['send_count'] ?? 1);
+    if ($currentSendCount >= 3) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Maximum limit of 3 messages reached for request {$req['request_code']}. Further sends are blocked and action links are disabled.",
+            "send_count" => $currentSendCount,
+            "max_reached" => true
+        ]);
+        exit;
+    }
+
+    $newSendCount = $currentSendCount + 1;
+    $pdo->prepare("UPDATE `bulk_price_requests` SET `send_count` = ? WHERE `id` = ?")->execute([$newSendCount, $req['id']]);
+
+    // Construct token and public URLs
+    $linkToken = $req['link_token'];
+    if (empty($linkToken)) {
+        $linkToken = bin2hex(random_bytes(16));
+        $pdo->prepare("UPDATE `bulk_price_requests` SET `link_token` = ? WHERE `id` = ?")->execute([$linkToken, $req['id']]);
+    }
+
+    $publicBaseUrl = 'https://maroon-partridge-532881.hostingersite.com';
+    if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') === false && strpos($_SERVER['HTTP_HOST'], '127.0.0.1') === false) {
+        $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $publicBaseUrl = $proto . '://' . $_SERVER['HTTP_HOST'];
+    } elseif (defined('APP_URL') && strpos(APP_URL, 'localhost') === false) {
+        $publicBaseUrl = rtrim(APP_URL, '/');
+    }
+
+    $approveUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$req['request_code']}&decision=approve";
+    $rejectUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$req['request_code']}&decision=reject";
+
+    $alertMsg = "🔔 *NEW BULK PRICE REQUEST (REMINDER)*\n\n" .
+                "Request Code: *{$req['request_code']}*\n" .
+                "Status: *PENDING APPROVAL* by *{$req['staff_name']}*\n" .
+                "Customer: *{$req['customer_name']}* ({$req['customer_phone']})\n" .
+                "Product: *{$req['product_name']}* ({$req['size']}) × *{$req['quantity']} pcs*\n" .
+                "Standard Price: ₹{$req['selling_price']}/pc → Requested Price: *₹{$req['requested_price']}/pc*\n" .
+                "Total Value: *₹{$req['total_requested_amount']}*\n\n" .
+                "━━━━━━━━━━━━━━━━━━━━\n" .
+                "👉 *Quick Actions:*\n" .
+                "✅ Reply *1* or *APPROVE {$req['request_code']}* to APPROVE\n" .
+                "❌ Reply *2* or *REJECT {$req['request_code']} <reason>* to REJECT\n\n" .
+                "🔗 *One-Click Decision Links (Message {$newSendCount} of 3):*\n" .
+                "✅ *Approve Link:*\n" .
+                "{$approveUrl}\n\n" .
+                "❌ *Reject Link:*\n" .
+                "{$rejectUrl}\n" .
+                "━━━━━━━━━━━━━━━━━━━━\n" .
+                ($newSendCount >= 3 ? "⚠️ *FINAL NOTICE (3 of 3):* After this message, one-click links will expire." : "⚠️ *Notice:* Valid up to 3 message sends.");
+
+    // Send via bridge
+    $waSent = false;
+    if (!empty($req['admin_phone'])) {
+        $cleanPhone = preg_replace('/[^0-9]/', '', $req['admin_phone']);
+        if (strlen($cleanPhone) === 10) $cleanPhone = '91' . $cleanPhone;
+        try {
+            $ch = curl_init(BRIDGE_URL . '/api/send');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['phone' => $cleanPhone, 'text' => $alertMsg]));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+            $r = curl_exec($ch);
+            curl_close($ch);
+            $waSent = true;
+        } catch (Exception $e) {}
+    }
+
+    echo json_encode([
+        "status" => "success",
+        "message" => "Reminder sent to Admin WhatsApp (Message {$newSendCount} of 3)",
+        "send_count" => $newSendCount,
+        "alert_message" => $alertMsg
+    ]);
+    exit;
+}
+
+// =========================================================================
+// BULK PRICE REQUEST: ONE-CLICK DECISION WEB PORTAL (Approve / Reject Links)
+// Enforces: Max 3 sends / 3 clicks limit rule ("more than third link not working")
+// =========================================================================
+if ($action === 'bulk_link_action') {
+    if (!headers_sent()) {
+        header("Content-Type: text/html; charset=UTF-8");
+    }
+
+    if (!$pdo) {
+        echo "<!DOCTYPE html><html><body style='font-family:sans-serif;padding:30px;text-align:center;'><h2>Database connection unavailable. Please try again.</h2></body></html>";
+        exit;
+    }
+
+    $token = trim($_GET['token'] ?? ($_POST['token'] ?? ''));
+    $code = trim($_GET['code'] ?? ($_POST['code'] ?? ''));
+    $decision = strtolower(trim($_GET['decision'] ?? ($_POST['decision'] ?? '')));
+    $confirm = trim($_GET['confirm'] ?? ($_POST['confirm'] ?? ''));
+    $reason = trim($_POST['rejection_reason'] ?? ($_GET['rejection_reason'] ?? ''));
+
+    $req = null;
+    if (!empty($token)) {
+        $stmt = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `link_token` = ? LIMIT 1");
+        $stmt->execute([$token]);
+        $req = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    if (!$req && !empty($code)) {
+        $stmt = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `request_code` = ? LIMIT 1");
+        $stmt->execute([$code]);
+        $req = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Helper to render HTML shell
+    $renderShell = function($title, $contentHtml) {
+        echo <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>{$title} — GRM CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f172a;
+      color: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .wrapper {
+      width: 100%;
+      max-width: 460px;
+      background: #ffffff;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
+      color: #ffffff;
+      padding: 24px 20px;
+      text-align: center;
+      position: relative;
+    }
+    .brand-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .content {
+      padding: 24px 20px;
+    }
+    .card-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px dashed #e2e8f0;
+      font-size: 13px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: #64748b; font-weight: 600; }
+    .detail-value { color: #0f172a; font-weight: 700; text-align: right; }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-approved { background: #d1fae5; color: #065f46; }
+    .badge-rejected { background: #ffe4e6; color: #9f1239; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-approve { background: #059669; color: white; }
+    .btn-approve:hover { background: #047857; }
+    .btn-reject { background: #e11d48; color: white; }
+    .btn-reject:hover { background: #be123c; }
+    .btn-secondary { background: #e2e8f0; color: #334155; margin-top: 10px; }
+    .status-icon {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+      margin: 0 auto 16px;
+    }
+    .icon-success { background: #d1fae5; color: #059669; }
+    .icon-danger { background: #ffe4e6; color: #e11d48; }
+    .icon-warning { background: #fef3c7; color: #d97706; }
+    .footer-note {
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 16px;
+    }
+    .chip {
+      display: inline-block;
+      padding: 7px 12px;
+      border-radius: 20px;
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 4px 2px;
+      cursor: pointer;
+      border: 1px solid #cbd5e1;
+      transition: all 0.15s;
+    }
+    .chip.active, .chip:hover {
+      background: #ffe4e6;
+      color: #9f1239;
+      border-color: #f43f5e;
+    }
+    textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 13px;
+      resize: vertical;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="brand-pill">GRM Business CRM</div>
+      <h1>Bulk Price Decision</h1>
+    </div>
+    <div class="content">
+      {$contentHtml}
+    </div>
+  </div>
+</body>
+</html>
+HTML;
+    };
+
+    if (!$req) {
+        $renderShell("Request Not Found", "
+            <div class='status-icon icon-danger'>✕</div>
+            <h2 style='text-align:center;font-size:18px;margin-bottom:8px;'>Request Not Found</h2>
+            <p style='text-align:center;color:#64748b;font-size:13px;margin-bottom:20px;'>The requested bulk price approval could not be found. Please check your link or open the CRM directly.</p>
+        ");
+        exit;
+    }
+
+    // Increment click counter
+    $pdo->prepare("UPDATE `bulk_price_requests` SET `link_click_count` = `link_click_count` + 1 WHERE `id` = ?")->execute([$req['id']]);
+
+    // RULE: "so one reqest can message send three time more than third link not working there"
+    $sendCount = (int)($req['send_count'] ?? 1);
+    if ($sendCount > 3) {
+        $renderShell("Link Expired", "
+            <div class='status-icon icon-warning'>⚠️</div>
+            <h2 style='text-align:center;font-size:18px;margin-bottom:8px;color:#92400e;'>Link Inactive & Expired</h2>
+            <p style='text-align:center;color:#64748b;font-size:13px;margin-bottom:16px;'>
+                This bulk price request notification has been sent <b>{$sendCount} times</b>, which exceeds the maximum allowed limit of 3 messages.
+            </p>
+            <div class='card-box' style='background:#fffbeb;border-color:#fde68a;'>
+                <div class='detail-row'>
+                    <span class='detail-label'>Request Code</span>
+                    <span class='detail-value'>{$req['request_code']}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Customer</span>
+                    <span class='detail-value'>{$req['customer_name']}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Status</span>
+                    <span class='detail-value' style='color:#b45309;'>LINK DISABLED (Exceeded 3 Sends)</span>
+                </div>
+            </div>
+            <p style='font-size:12px;color:#94a3b8;text-align:center;margin-bottom:16px;'>
+                For data protection, one-click WhatsApp action links are automatically deactivated after the 3rd message. Please log in directly to your CRM workstation to review and process this order.
+            </p>
+        ");
+        exit;
+    }
+
+    // Check if already approved
+    if ($req['status'] === 'APPROVED') {
+        $renderShell("Already Approved", "
+            <div class='status-icon icon-success'>✓</div>
+            <h2 style='text-align:center;font-size:18px;margin-bottom:6px;color:#065f46;'>Already Approved</h2>
+            <p style='text-align:center;color:#64748b;font-size:12px;margin-bottom:16px;'>This bulk request is already active in CRM.</p>
+            <div class='card-box'>
+                <div class='detail-row'>
+                    <span class='detail-label'>Request Code</span>
+                    <span class='detail-value'><span class='badge badge-approved'>{$req['request_code']}</span></span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Customer</span>
+                    <span class='detail-value'>{$req['customer_name']}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Product</span>
+                    <span class='detail-value'>{$req['product_name']} ({$req['size']})</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Approved Price</span>
+                    <span class='detail-value' style='color:#059669;font-weight:800;'>₹{$req['requested_price']}/pc</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Total Amount</span>
+                    <span class='detail-value'>₹{$req['total_requested_amount']} ({$req['quantity']} pcs)</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Approved By</span>
+                    <span class='detail-value'>{$req['approved_by']}</span>
+                </div>
+            </div>
+            <div class='footer-note'>Special price active &bull; Staff can process order</div>
+        ");
+        exit;
+    }
+
+    // Check if already rejected
+    if ($req['status'] === 'REJECTED') {
+        $safeRejReason = htmlspecialchars($req['rejection_reason'] ?: 'Price declined');
+        $renderShell("Already Rejected", "
+            <div class='status-icon icon-danger'>✕</div>
+            <h2 style='text-align:center;font-size:18px;margin-bottom:6px;color:#9f1239;'>Request Declined</h2>
+            <p style='text-align:center;color:#64748b;font-size:12px;margin-bottom:16px;'>This bulk request has already been rejected.</p>
+            <div class='card-box'>
+                <div class='detail-row'>
+                    <span class='detail-label'>Request Code</span>
+                    <span class='detail-value'><span class='badge badge-rejected'>{$req['request_code']}</span></span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Customer</span>
+                    <span class='detail-value'>{$req['customer_name']}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Reason</span>
+                    <span class='detail-value' style='color:#e11d48;'>{$safeRejReason}</span>
+                </div>
+            </div>
+            <div class='footer-note'>Decision recorded in CRM</div>
+        ");
+        exit;
+    }
+
+    // Process Action if PENDING
+    if ($decision === 'approve') {
+        $approvedBy = 'Super Admin (via WhatsApp Link)';
+        $pdo->prepare("
+            UPDATE `bulk_price_requests`
+            SET `status` = 'APPROVED',
+                `approved_by` = ?,
+                `approved_at` = NOW(),
+                `updated_at` = NOW()
+            WHERE `id` = ?
+        ")->execute([$approvedBy, $req['id']]);
+
+        // Audit log
+        try {
+            $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `details`) VALUES ('BULK_PRICE_APPROVED', 'PRICING', ?, ?)")
+                ->execute([$approvedBy, "Approved bulk request {$req['request_code']} for {$req['customer_name']} via WhatsApp One-Click Link"]);
+        } catch (Exception $e) {}
+
+        // Broadcast to bridge
+        $updatedReq = array_merge($req, [
+            'status' => 'APPROVED',
+            'approved_by' => $approvedBy,
+            'approved_at' => date('Y-m-d H:i:s')
+        ]);
+        try {
+            $ch = curl_init(BRIDGE_URL . '/api/bulk_request/event');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['status' => 'APPROVED', 'request' => $updatedReq]));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+            curl_exec($ch);
+            curl_close($ch);
+        } catch (Exception $e) {}
+
+        $renderShell("Approved Successfully", "
+            <div class='status-icon icon-success'>✓</div>
+            <h2 style='text-align:center;font-size:20px;font-weight:800;color:#065f46;margin-bottom:4px;'>Approved Successfully!</h2>
+            <p style='text-align:center;color:#64748b;font-size:12px;margin-bottom:16px;'>Bulk special price is now active in CRM</p>
+            <div class='card-box' style='background:#f0fdf4;border-color:#bbf7d0;'>
+                <div class='detail-row'>
+                    <span class='detail-label'>Request Code</span>
+                    <span class='detail-value'><span class='badge badge-approved'>{$req['request_code']}</span></span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Customer</span>
+                    <span class='detail-value'>{$req['customer_name']} ({$req['customer_phone']})</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Product</span>
+                    <span class='detail-value'>{$req['product_name']} ({$req['size']})</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Standard Price</span>
+                    <span class='detail-value' style='text-decoration:line-through;color:#94a3b8;'>₹{$req['selling_price']}/pc</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Approved Price</span>
+                    <span class='detail-value' style='color:#059669;font-size:16px;font-weight:800;'>₹{$req['requested_price']}/pc</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Total Order Value</span>
+                    <span class='detail-value' style='color:#065f46;'>₹{$req['total_requested_amount']} ({$req['quantity']} pcs)</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Requested By</span>
+                    <span class='detail-value'>{$req['staff_name']}</span>
+                </div>
+            </div>
+            <div style='background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px;text-align:center;font-size:12px;color:#047857;font-weight:600;'>
+                Staff workstation updated in real-time. Staff can now take this order with the special approved price.
+            </div>
+        ");
+        exit;
+    } elseif ($decision === 'reject') {
+        // If confirmed or POST
+        if ($confirm === '1' || $_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (empty($reason)) {
+                $reason = "Price too low for requested bulk quantity.";
+            }
+            $rejectedBy = 'Super Admin (via WhatsApp Link)';
+            $pdo->prepare("
+                UPDATE `bulk_price_requests`
+                SET `status` = 'REJECTED',
+                    `rejection_reason` = ?,
+                    `admin_notes` = ?,
+                    `approved_by` = ?,
+                    `updated_at` = NOW()
+                WHERE `id` = ?
+            ")->execute([$reason, $reason, $rejectedBy, $req['id']]);
+
+            // Audit log
+            try {
+                $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `details`) VALUES ('BULK_PRICE_REJECTED', 'PRICING', ?, ?)")
+                    ->execute([$rejectedBy, "Rejected bulk request {$req['request_code']} with reason: $reason via WhatsApp Link"]);
+            } catch (Exception $e) {}
+
+            // Broadcast to bridge
+            $updatedReq = array_merge($req, [
+                'status' => 'REJECTED',
+                'rejection_reason' => $reason,
+                'approved_by' => $rejectedBy
+            ]);
+            try {
+                $ch = curl_init(BRIDGE_URL . '/api/bulk_request/event');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['status' => 'REJECTED', 'request' => $updatedReq, 'reason' => $reason]));
+                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+                curl_exec($ch);
+                curl_close($ch);
+            } catch (Exception $e) {}
+
+            $safeSubReason = htmlspecialchars($reason);
+            $renderShell("Request Rejected", "
+                <div class='status-icon icon-danger'>✕</div>
+                <h2 style='text-align:center;font-size:20px;font-weight:800;color:#9f1239;margin-bottom:4px;'>Request Rejected</h2>
+                <p style='text-align:center;color:#64748b;font-size:12px;margin-bottom:16px;'>Bulk price request has been declined</p>
+                <div class='card-box' style='background:#fff1f2;border-color:#fecdd3;'>
+                    <div class='detail-row'>
+                        <span class='detail-label'>Request Code</span>
+                        <span class='detail-value'><span class='badge badge-rejected'>{$req['request_code']}</span></span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='detail-label'>Customer</span>
+                        <span class='detail-value'>{$req['customer_name']}</span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='detail-label'>Reason</span>
+                        <span class='detail-value' style='color:#e11d48;'>{$safeSubReason}</span>
+                    </div>
+                </div>
+                <div style='background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:12px;text-align:center;font-size:12px;color:#991b1b;font-weight:600;'>
+                    Staff workstation notified in real-time.
+                </div>
+            ");
+            exit;
+        }
+
+        // Show Rejection reason selection page
+        $renderShell("Decline Request", "
+            <h2 style='font-size:18px;font-weight:800;color:#0f172a;margin-bottom:4px;'>Decline Bulk Price</h2>
+            <p style='color:#64748b;font-size:12px;margin-bottom:16px;'>Select or enter a reason for rejecting request <b>{$req['request_code']}</b>.</p>
+            <div class='card-box'>
+                <div class='detail-row'>
+                    <span class='detail-label'>Customer</span>
+                    <span class='detail-value'>{$req['customer_name']}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Product</span>
+                    <span class='detail-value'>{$req['product_name']} ({$req['quantity']} pcs)</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Requested Price</span>
+                    <span class='detail-value' style='color:#e11d48;font-weight:800;'>₹{$req['requested_price']}/pc</span>
+                </div>
+            </div>
+            <form method='POST' action='api.php?action=bulk_link_action'>
+                <input type='hidden' name='token' value='{$token}'>
+                <input type='hidden' name='code' value='{$req['request_code']}'>
+                <input type='hidden' name='decision' value='reject'>
+                <input type='hidden' name='confirm' value='1'>
+                <div style='margin-bottom:8px;'>
+                    <span style='font-size:12px;font-weight:700;color:#475569;'>Quick Reasons:</span>
+                    <div style='margin-top:6px;'>
+                        <span class='chip' onclick='setReason(&quot;Price too low for this bulk order quantity&quot;)'>Price too low</span>
+                        <span class='chip' onclick='setReason(&quot;Insufficient stock for bulk quantity&quot;)'>Low stock</span>
+                        <span class='chip' onclick='setReason(&quot;Margin below cost / minimum price&quot;)'>Low margin</span>
+                        <span class='chip' onclick='setReason(&quot;Cannot offer discount on this collection&quot;)'>No discount</span>
+                    </div>
+                </div>
+                <textarea id='rejection_reason' name='rejection_reason' rows='3' placeholder='Enter reason for staff...' required>Price too low for this bulk order quantity.</textarea>
+                <button type='submit' class='btn btn-reject'>Confirm Rejection</button>
+            </form>
+            <script>
+                function setReason(txt) {
+                    document.getElementById('rejection_reason').value = txt;
+                }
+            </script>
+        ");
+        exit;
+    }
+
+    $renderShell("Bulk Price Request", "
+        <h2 style='text-align:center;font-size:18px;'>Pending Decision</h2>
+        <div class='card-box' style='margin-top:16px;'>
+            <div class='detail-row'><span class='detail-label'>Request</span><span class='detail-value'>{$req['request_code']}</span></div>
+            <div class='detail-row'><span class='detail-label'>Customer</span><span class='detail-value'>{$req['customer_name']}</span></div>
+            <div class='detail-row'><span class='detail-label'>Product</span><span class='detail-value'>{$req['product_name']}</span></div>
+            <div class='detail-row'><span class='detail-label'>Requested</span><span class='detail-value'>₹{$req['requested_price']}/pc (Total: ₹{$req['total_requested_amount']})</span></div>
+        </div>
+        <a href='api.php?action=bulk_link_action&token=".urlencode($token)."&code=".urlencode($req['request_code'])."&decision=approve' class='btn btn-approve' style='margin-bottom:10px;'>✓ Approve Request</a>
+        <a href='api.php?action=bulk_link_action&token=".urlencode($token)."&code=".urlencode($req['request_code'])."&decision=reject' class='btn btn-reject'>✕ Reject Request</a>
+    ");
+    exit;
 }
 
 // =========================================================================

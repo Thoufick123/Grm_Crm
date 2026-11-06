@@ -165,6 +165,10 @@ function getDBConnection() {
                                 `staff_id` VARCHAR(50) NULL,
                                 `staff_name` VARCHAR(150) NOT NULL,
                                 `admin_phone` VARCHAR(50) NULL,
+                                `link_token` VARCHAR(64) NULL,
+                                `send_count` INT NOT NULL DEFAULT 1,
+                                `link_click_count` INT NOT NULL DEFAULT 0,
+                                `max_sends` INT NOT NULL DEFAULT 3,
                                 `status` ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
                                 `rejection_reason` TEXT NULL,
                                 `admin_notes` TEXT NULL,
@@ -173,9 +177,24 @@ function getDBConnection() {
                                 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
                                 `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                                 INDEX (`customer_phone`),
-                                INDEX (`status`)
+                                INDEX (`status`),
+                                INDEX (`link_token`)
                             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
                         ");
+                    } else {
+                        // Ensure migration columns exist
+                        try {
+                            $cols = $pdo->query("SHOW COLUMNS FROM `bulk_price_requests` LIKE 'link_token'")->fetch();
+                            if (!$cols) {
+                                $pdo->exec("ALTER TABLE `bulk_price_requests` 
+                                    ADD COLUMN `link_token` VARCHAR(64) NULL AFTER `admin_phone`,
+                                    ADD COLUMN `send_count` INT NOT NULL DEFAULT 1 AFTER `link_token`,
+                                    ADD COLUMN `link_click_count` INT NOT NULL DEFAULT 0 AFTER `send_count`,
+                                    ADD COLUMN `max_sends` INT NOT NULL DEFAULT 3 AFTER `link_click_count`,
+                                    ADD INDEX `idx_link_token` (`link_token`);
+                                ");
+                            }
+                        } catch (Exception $colEx) {}
                     }
                 } catch (Exception $e) {}
 

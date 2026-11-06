@@ -2077,6 +2077,17 @@ app.post('/api/calls/initiate', async (req, res) => {
     }
 });
 
+app.post('/api/bulk_request/event', (req, res) => {
+    try {
+        const { status, request, reason } = req.body || {};
+        console.log(`⚡ [Bridge Event] Bulk Request ${request ? request.request_code : ''} updated to ${status}`);
+        io.emit('bulk_request:updated', { status, request, reason });
+        res.json({ success: true, status, code: request ? request.request_code : null });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.post('/api/send', async (req, res) => {
     try {
         const { phone, text, jid, accountId, mediaUrl, media_url } = req.body;

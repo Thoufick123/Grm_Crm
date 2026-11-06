@@ -2085,6 +2085,23 @@ function initSocketIO() {
       if (typeof handleSocketCallEnded === 'function') handleSocketCallEnded(data);
     });
 
+    // Real-time Bulk Price Request Approval / Rejection Update from Admin Link or WhatsApp
+    SOCKET_IO.on('bulk_request:updated', (data) => {
+      console.log('⚡ [Socket.IO Bulk Request Updated]:', data);
+      if (typeof checkActiveCustomerBulkRequests === 'function') {
+        checkActiveCustomerBulkRequests();
+      }
+      if (data && data.status === 'APPROVED') {
+        if (typeof showToast === 'function') {
+          showToast('Bulk Request Approved', `Admin approved ${data.request?.request_code || 'bulk price request'}! Special price active.`, 'check_circle', 'emerald');
+        }
+      } else if (data && data.status === 'REJECTED') {
+        if (typeof showToast === 'function') {
+          showToast('Bulk Request Rejected', `${data.request?.request_code || 'Bulk request'} was rejected: ${data.reason || 'Price declined'}`, 'cancel', 'rose');
+        }
+      }
+    });
+
     SOCKET_IO.on('whatsapp:inbound', (payload) => {
       console.log('⚡ [Socket.IO Inbound Message Received]:', payload);
       ingestInboundMessage(payload);
@@ -35299,10 +35316,10 @@ window.submitBulkPriceRequest = async function (ev) {
     });
     const data = await res.json();
     const reqCode = (data && data.request && data.request.request_code) ? data.request.request_code : 'BPR';
-    const finalAlertMsg = alertMsg.split('PENDING').join(reqCode);
+    const finalAlertMsg = (data && data.alert_message) ? data.alert_message : alertMsg.split('PENDING').join(reqCode);
 
-    // 2. Direct WhatsApp Dispatch to Admin Phone via Live WebSocket & Baileys Bridge
-    if (typeof dispatchWhatsAppOutbound === 'function' && adminPhone) {
+    // 2. Direct WhatsApp Dispatch fallback if backend bridge curl was not sent
+    if (data.wa_notify !== 'SENT' && typeof dispatchWhatsAppOutbound === 'function' && adminPhone) {
       try {
         await dispatchWhatsAppOutbound(adminPhone, finalAlertMsg, null, null, null, false);
       } catch (waErr) {
