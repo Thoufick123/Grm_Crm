@@ -27527,24 +27527,24 @@ function renderMultiAccountsHub() {
       <div class="bg-white rounded-2xl border ${isSelectedActive ? 'border-brand-wa ring-2 ring-brand-wa/30 shadow-md' : (isConnected ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-amber-200 shadow-sm')} p-5 space-y-4 flex flex-col justify-between transition-all">
         
         <!-- Account Card Header -->
-        <div class="flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl ${isConnected ? 'bg-emerald-50 text-emerald-700' : (isScanning ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600')} flex items-center justify-center font-bold text-sm">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex items-start gap-3 min-w-0 flex-1">
+            <div class="w-10 h-10 rounded-xl ${isConnected ? 'bg-emerald-50 text-emerald-700' : (isScanning ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600')} flex items-center justify-center font-bold text-sm shrink-0">
               <span class="material-symbols-outlined text-[22px]">${isConnected ? 'phone_android' : (isScanning ? 'qr_code_scanner' : 'sync')}</span>
             </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h4 class="font-bold text-slate-900 text-xs sm:text-sm">${acc.label || ('WhatsApp Phone #' + (index + 1))}</h4>
+            <div class="min-w-0 flex-1">
+              <h4 class="font-bold text-slate-900 text-xs sm:text-sm">${acc.label || ('WhatsApp Phone #' + (index + 1))}</h4>
+              <div class="flex items-center gap-1.5 flex-wrap mt-1">
                 <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-100 text-emerald-800' : (isScanning ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300 animate-pulse' : 'bg-slate-100 text-slate-800')}">
                   ${isConnected ? '🟢 CONNECTED (LIVE)' : (isScanning ? '🟡 SCAN QR WITH PHONE' : (isConnecting ? '⚪ INITIALIZING...' : '🔴 DISCONNECTED'))}
                 </span>
                 ${isSelectedActive && isConnected ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-brand-wa text-white">⭐ ACTIVE LINE</span>' : ''}
               </div>
-              <p class="text-xs font-mono font-bold text-slate-600 mt-0.5">${isConnected ? (acc.connected_number || 'Device Linked') : '📱 Scan QR code below with WhatsApp mobile'}</p>
+              <p class="text-xs font-mono font-bold text-slate-600 mt-1">${isConnected ? (acc.connected_number || 'Device Linked') : '📱 Scan QR code below with WhatsApp mobile'}</p>
             </div>
           </div>
 
-          <span class="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded font-bold">${acc.id}</span>
+          <span class="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded font-bold shrink-0">${acc.id}</span>
         </div>
 
         <!-- 1. ACTIVE QR CODE DISPLAY (When awaiting mobile scan) -->
