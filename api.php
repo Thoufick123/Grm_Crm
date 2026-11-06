@@ -1458,8 +1458,21 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 $publicBaseUrl = rtrim(APP_URL, '/');
             }
 
+            // Connected WhatsApp line phone number
+            $crmPhone = '919943557998';
+            if (file_exists(__DIR__ . '/whatsapp_account_config.json')) {
+                $cfgData = json_decode(file_get_contents(__DIR__ . '/whatsapp_account_config.json'), true);
+                if (!empty($cfgData['phone_number'])) {
+                    $crmPhone = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
+                }
+            }
+
             $approveUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$requestCode}&decision=approve";
             $rejectUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$requestCode}&decision=reject";
+
+            // Instant WhatsApp direct response links (stays inside WhatsApp - ZERO browser navigation!)
+            $waApproveUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("APPROVE {$requestCode}");
+            $waRejectUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("REJECT {$requestCode}");
 
             $alertMsg = "🔔 *NEW BULK PRICE REQUEST*\n\n" .
                         "Request Code: *{$requestCode}*\n" .
@@ -1469,14 +1482,14 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                         "Standard Price: ₹{$sellingPrice}/pc → Requested Price: *₹{$requestedPrice}/pc*\n" .
                         "Total Value: *₹{$totalRequestedAmount}*\n\n" .
                         "━━━━━━━━━━━━━━━━━━━━\n" .
-                        "👉 *Quick Actions:*\n" .
-                        "✅ Reply *1* or *APPROVE {$requestCode}* to APPROVE\n" .
-                        "❌ Reply *2* or *REJECT {$requestCode} <reason>* to REJECT\n\n" .
-                        "🔗 *One-Click Decision Links (Message 1 of 3):*\n" .
-                        "✅ *Approve Link:*\n" .
-                        "{$approveUrl}\n\n" .
-                        "❌ *Reject Link:*\n" .
-                        "{$rejectUrl}\n" .
+                        "👉 *Quick Actions (Without Leaving WhatsApp):*\n" .
+                        "✅ *Tap to Approve:*\n" .
+                        "{$waApproveUrl}\n\n" .
+                        "❌ *Tap to Reject:*\n" .
+                        "{$waRejectUrl}\n\n" .
+                        "🔗 *Or Direct Web Links (Message 1 of 3):*\n" .
+                        "✅ *Approve:* {$approveUrl}\n" .
+                        "❌ *Reject:* {$rejectUrl}\n" .
                         "━━━━━━━━━━━━━━━━━━━━\n" .
                         "⚠️ *Notice:* Valid up to 3 message sends. After the 3rd send, links will automatically expire.";
             try {
@@ -1721,22 +1734,32 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     $approveUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$req['request_code']}&decision=approve";
     $rejectUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$req['request_code']}&decision=reject";
 
+    $crmPhone = '919943557998';
+    if (file_exists(__DIR__ . '/whatsapp_account_config.json')) {
+        $cfgData = json_decode(file_get_contents(__DIR__ . '/whatsapp_account_config.json'), true);
+        if (!empty($cfgData['phone_number'])) {
+            $crmPhone = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
+        }
+    }
+    $waApproveUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("APPROVE {$req['request_code']}");
+    $waRejectUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("REJECT {$req['request_code']}");
+
     $alertMsg = "🔔 *NEW BULK PRICE REQUEST (REMINDER)*\n\n" .
                 "Request Code: *{$req['request_code']}*\n" .
                 "Status: *PENDING APPROVAL* by *{$req['staff_name']}*\n" .
                 "Customer: *{$req['customer_name']}* ({$req['customer_phone']})\n" .
                 "Product: *{$req['product_name']}* ({$req['size']}) × *{$req['quantity']} pcs*\n" .
                 "Standard Price: ₹{$req['selling_price']}/pc → Requested Price: *₹{$req['requested_price']}/pc*\n" .
-                "Total Value: *₹{$req['total_requested_amount']}*\n\n" .
+                "Total Value: *{$req['total_requested_amount']}*\n\n" .
                 "━━━━━━━━━━━━━━━━━━━━\n" .
-                "👉 *Quick Actions:*\n" .
-                "✅ Reply *1* or *APPROVE {$req['request_code']}* to APPROVE\n" .
-                "❌ Reply *2* or *REJECT {$req['request_code']} <reason>* to REJECT\n\n" .
-                "🔗 *One-Click Decision Links (Message {$newSendCount} of 3):*\n" .
-                "✅ *Approve Link:*\n" .
-                "{$approveUrl}\n\n" .
-                "❌ *Reject Link:*\n" .
-                "{$rejectUrl}\n" .
+                "👉 *Quick Actions (Without Leaving WhatsApp):*\n" .
+                "✅ *Tap to Approve:*\n" .
+                "{$waApproveUrl}\n\n" .
+                "❌ *Tap to Reject:*\n" .
+                "{$waRejectUrl}\n\n" .
+                "🔗 *Or Direct Web Links (Message {$newSendCount} of 3):*\n" .
+                "✅ *Approve:* {$approveUrl}\n" .
+                "❌ *Reject:* {$rejectUrl}\n" .
                 "━━━━━━━━━━━━━━━━━━━━\n" .
                 ($newSendCount >= 3 ? "⚠️ *FINAL NOTICE (3 of 3):* After this message, one-click links will expire." : "⚠️ *Notice:* Valid up to 3 message sends.");
 

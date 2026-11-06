@@ -35408,20 +35408,6 @@ window.submitBulkPriceRequest = async function (ev) {
     submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span> Sending to WhatsApp...';
   }
 
-  const totalRequestedAmount = qty * reqPrice;
-  const alertMsg = `🔔 *NEW BULK PRICE REQUEST*\n\n` +
-                   `Request Code: *PENDING*\n` +
-                   `Status: *PENDING APPROVAL* by *${staffUser.name || 'Super Admin'}*\n` +
-                   `Customer: *${custName}* (${custPhone})\n` +
-                   `Product: *${productName}* (${size}) × *${qty} pcs*\n` +
-                   `Standard Price: ₹${sellPrice}/pc → Requested Price: *₹${reqPrice}/pc*\n` +
-                   `Total Value: *₹${totalRequestedAmount}*\n\n` +
-                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                   `👉 *Quick Actions:*\n` +
-                   `✅ Reply *1* or *APPROVE PENDING* to APPROVE\n` +
-                   `❌ Reply *2* or *REJECT PENDING <reason>* to REJECT\n` +
-                   `━━━━━━━━━━━━━━━━━━━━`;
-
   try {
     const payload = {
       customer_name: custName,
@@ -35436,24 +35422,13 @@ window.submitBulkPriceRequest = async function (ev) {
       admin_phone: adminPhone
     };
 
-    // 1. Save to Database
+    // 1. Save to Database & Dispatch Single Official WhatsApp Alert via Backend Bridge
     const res = await fetch('api.php?action=create_bulk_price_request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    const reqCode = (data && data.request && data.request.request_code) ? data.request.request_code : 'BPR';
-    const finalAlertMsg = (data && data.alert_message) ? data.alert_message : alertMsg.split('PENDING').join(reqCode);
-
-    // 2. Direct WhatsApp Dispatch fallback if backend bridge curl was not sent
-    if (data.wa_notify !== 'SENT' && typeof dispatchWhatsAppOutbound === 'function' && adminPhone) {
-      try {
-        await dispatchWhatsAppOutbound(adminPhone, finalAlertMsg, null, null, null, false);
-      } catch (waErr) {
-        console.warn('[Direct WhatsApp to Admin Notice]:', waErr);
-      }
-    }
 
     if (data.status === 'success') {
       if (typeof showToast === 'function') {

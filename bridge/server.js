@@ -2098,8 +2098,16 @@ app.post('/api/send', async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Text is required' });
         }
 
+        let finalTextToSend = text;
+        const activeAcc = (accountId && accounts[accountId] && accounts[accountId].sock) ? accounts[accountId] : getActiveAccount();
+        if (activeAcc && activeAcc.connectedNumber) {
+            const cleanCrmNum = activeAcc.connectedNumber.replace(/[^0-9]/g, '');
+            if (cleanCrmNum) {
+                finalTextToSend = finalTextToSend.replace(/https:\/\/wa\.me\/[0-9]+/g, `https://wa.me/${cleanCrmNum}`);
+            }
+        }
         const imageTarget = mediaUrl || media_url || null;
-        const result = await sendWhatsAppMessage(jid || phone, text, accountId, imageTarget);
+        const result = await sendWhatsAppMessage(jid || phone, finalTextToSend, accountId, imageTarget);
         res.json(result);
     } catch (err) {
         console.error('[REST Send Error]:', err.message);
