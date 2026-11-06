@@ -1421,8 +1421,13 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         } catch (Exception $e) {}
 
         $waNotifyStatus = 'NOT_SENT';
+        $bridgeResponse = null;
         if (!empty($adminPhone)) {
-            $alertMsg = "🔔 *NEW BULK PRICE REQUEST*\n" .
+            $cleanAdminPhone = preg_replace('/[^0-9]/', '', $adminPhone);
+            if (strlen($cleanAdminPhone) === 10) {
+                $cleanAdminPhone = '91' . $cleanAdminPhone;
+            }
+            $alertMsg = "🔔 *NEW BULK PRICE REQUEST*\n\n" .
                         "Request Code: *{$requestCode}*\n" .
                         "Staff: *{$staffName}*\n" .
                         "Customer: *{$customerName}* ({$customerPhone})\n" .
@@ -1431,23 +1436,29 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                         "Standard Price: ₹{$sellingPrice}/pc\n" .
                         "Requested Price: *₹{$requestedPrice}/pc*\n" .
                         "Total Value: *₹{$totalRequestedAmount}*\n\n" .
-                        "👉 Open CRM to Approve or Reject.";
+                        "👉 Action Required: Open CRM to Approve or Reject.";
             try {
                 $bridgePayload = json_encode([
-                    'phone' => $adminPhone,
+                    'phone' => $cleanAdminPhone,
                     'text' => $alertMsg
                 ]);
-                $ctx = stream_context_create([
-                    'http' => [
-                        'method' => 'POST',
-                        'header' => "Content-Type: application/json\r\n",
-                        'content' => $bridgePayload,
-                        'timeout' => 3
-                    ]
-                ]);
-                @file_get_contents(BRIDGE_URL . '/send-message', false, $ctx);
-                $waNotifyStatus = 'SENT';
-            } catch (Exception $e) {}
+                $ch = curl_init(BRIDGE_URL . '/api/send');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $bridgePayload);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+                $resp = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                if ($httpCode >= 200 && $httpCode < 300) {
+                    $waNotifyStatus = 'SENT';
+                    $bridgeResponse = json_decode($resp, true);
+                }
+            } catch (Exception $e) {
+                error_log("Bridge notification error: " . $e->getMessage());
+            }
         }
 
         echo json_encode([
@@ -1601,7 +1612,7 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Call Node.js Baileys Bridge
-    $ch = curl_init($bridgeUrl . '/api/send');
+    $ch = curl_init(BRIDGE_URL . '/api/send');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([

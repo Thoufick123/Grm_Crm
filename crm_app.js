@@ -2498,7 +2498,7 @@ function handleInboundSimulationSubmit(event) {
     media_url: null,
     duration: type === 'audio' ? 8 : null,
     account_id: slot,
-    received_on_number: CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115',
+    received_on_number: CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998',
     priority: priority,
     assigned_to: 'UNASSIGNED',
     source: 'INBOUND_SIMULATOR',
@@ -4404,7 +4404,7 @@ function renderQuickLineSwitcher() {
 
     let displayPhone = acc.connected_number && acc.connected_number !== 'Awaiting Link' && acc.connected_number !== 'Scan QR Code'
       ? formatPhoneNumberPretty(acc.connected_number)
-      : (idx === 0 ? '+91 97896 60115' : 'Line ' + (idx + 1));
+      : (idx === 0 ? '+91 99435 57998' : 'Line ' + (idx + 1));
 
     const lineName = (idx === 0) ? 'Line 1 (Central)' : (idx === 1 ? 'Line 2 (Blue Berry)' : (acc.label || 'Line ' + (idx + 1)));
 
@@ -5264,7 +5264,7 @@ function renderChatMessages() {
     <div class="flex justify-center my-2">
       <div class="bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-medium px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
         <span class="material-symbols-outlined text-[14px]">lock</span>
-        <span>${t('inbox.connected_business', 'Connected to Business Number:')} <strong>${CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115'}</strong> &bull; ${t('inbox.central_record', 'GRM Central Record')}</span>
+        <span>${t('inbox.connected_business', 'Connected to Business Number:')} <strong>${CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998'}</strong> &bull; ${t('inbox.central_record', 'GRM Central Record')}</span>
       </div>
     </div>
     ${filterBannerHtml}
@@ -11083,7 +11083,7 @@ function updateAutoReplyLivePreview() {
   if (!tplArea || !previewBox) return;
 
   const rawTemplate = tplArea.value || getDefaultStockAutoReplyTemplate();
-  const sampleCustomer = { name: 'Mekha 🦋', phone: '+91 97896 60115' };
+  const sampleCustomer = { name: 'Mekha 🦋', phone: '+91 99435 57998' };
   const brand = getBrandName();
   const categoriesText = generateLiveCategoryStockText();
   const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
@@ -13387,7 +13387,7 @@ function initOrderModal(customer, items) {
   const addrInput = document.getElementById('order-shipping-addr');
 
   if (cName) cName.innerText = customer.name;
-  if (cPhone) cPhone.innerText = customer.whatsapp || customer.phone || '+91 97896 60115';
+  if (cPhone) cPhone.innerText = customer.whatsapp || customer.phone || '+91 99435 57998';
   if (qId) qId.innerText = query ? query.id : 'Q-2026-AUTO';
   if (cAvatar) cAvatar.innerText = customer.avatar || customer.name.charAt(0);
   const primaryAddr = (customer.address && customer.address !== 'Online WhatsApp Customer') ? customer.address : '';
@@ -27682,7 +27682,7 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
   // Format clean phone number
   const raw = (connectedNumber && connectedNumber !== 'Awaiting Link')
     ? connectedNumber
-    : (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 97896 60115');
+    : (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998');
   const cleanPhone = formatPhoneNumberPretty(raw);
 
   if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
@@ -33823,7 +33823,7 @@ function handleSocketIncomingCall(data) {
   if (callIdInput) callIdInput.value = data.call_id;
   if (nameEl) nameEl.innerText = data.customer_name || 'Customer';
   if (phoneEl) phoneEl.innerText = data.masked_phone || formatDisplayPhone(data.customer_phone || '');
-  if (didEl) didEl.innerText = data.virtual_number || '+91 97896 60115';
+  if (didEl) didEl.innerText = data.virtual_number || '+91 99435 57998';
   if (avatarEl) avatarEl.innerText = (data.customer_name || 'CU').substring(0, 2).toUpperCase();
 
   if (banner) banner.classList.add('hidden');
@@ -33960,7 +33960,7 @@ async function claimIncomingCallNow() {
         name: ACTIVE_INCOMING_CALL.customer_name,
         phone: ACTIVE_INCOMING_CALL.customer_phone,
         avatar: (ACTIVE_INCOMING_CALL.customer_name || 'CU').substring(0, 2).toUpperCase()
-      } : { name: 'Customer', phone: '+91 97896 60115', avatar: 'CU' });
+      } : { name: 'Customer', phone: '+91 99435 57998', avatar: 'CU' });
 
       ACTIVE_CALL_CUSTOMER_ID = customer.id;
 
@@ -34067,7 +34067,7 @@ async function triggerSimulatedIncomingCall() {
   }
   const custName = prompt('Enter Customer Caller Name:', 'Ananya & Baby Aarav');
   if (!custName) return;
-  const custPhone = prompt('Enter Customer WhatsApp Number:', '+91 97896 60115');
+  const custPhone = prompt('Enter Customer WhatsApp Number:', '+91 99435 57998');
   if (!custPhone) return;
 
   try {
@@ -34420,7 +34420,7 @@ async function loadMaskingSettingsAndSessions() {
       if (statBusyStaff) statBusyStaff.innerText = m.busy_staff || 0;
 
       // Populate Configuration inputs
-      const virtNum = s.virtual_company_number || '+91 97896 60115';
+      const virtNum = s.virtual_company_number || '+91 99435 57998';
       const inputVirtual = document.getElementById('masking-config-virtual-num');
       const selTimeout = document.getElementById('masking-config-timeout');
       const selFallback = document.getElementById('masking-config-fallback');
@@ -34527,7 +34527,7 @@ function renderActiveCallsQueueTable(activeCalls) {
           <div class="text-[11px] font-mono text-slate-500">${c.masked_phone || formatDisplayPhone(c.customer_phone)}</div>
         </td>
         <td class="py-3 px-4 font-mono font-bold text-emerald-700">
-          ${c.virtual_number || '+91 97896 60115'}
+          ${c.virtual_number || '+91 99435 57998'}
         </td>
         <td class="py-3 px-4">
           <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${isRinging ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}">
@@ -34613,7 +34613,7 @@ function renderCallSessionsTable(sessions) {
           <div class="text-[11px] font-mono text-slate-500">${call.masked_phone || formatDisplayPhone(call.customer_phone || '')}</div>
         </td>
         <td class="py-3 px-4 font-mono font-bold text-emerald-700">
-          ${call.virtual_number || '+91 97896 60115'}
+          ${call.virtual_number || '+91 99435 57998'}
         </td>
         <td class="py-3 px-4">
           <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-semibold text-[11px]">
@@ -34694,7 +34694,7 @@ async function saveMaskingConfigurationForm(event) {
     showToast('Permission Denied', 'Your assigned role does not have permission to update telephony settings.', 'lock', 'rose');
     return;
   }
-  const virtNum = document.getElementById('masking-config-virtual-num')?.value?.trim() || '+91 97896 60115';
+  const virtNum = document.getElementById('masking-config-virtual-num')?.value?.trim() || '+91 99435 57998';
   const timeout = parseInt(document.getElementById('masking-config-timeout')?.value || '30');
   const fallback = document.getElementById('masking-config-fallback')?.value || 'RETURN_TO_POOL';
   const recording = document.getElementById('masking-config-recording')?.checked ? 1 : 0;
@@ -34949,14 +34949,14 @@ async function triggerIncomingCallForActiveCustomer(customerId) {
     return;
   }
 
-  const rawPhone = customer.whatsapp || customer.phone || '+91 97896 60115';
+  const rawPhone = customer.whatsapp || customer.phone || '+91 99435 57998';
   const custName = customer.name || 'Customer';
   const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
   const maskedPhone = (cleanDigits.length >= 10)
     ? '+91 ' + cleanDigits.slice(-10, -8) + '*** ***' + cleanDigits.slice(-2)
     : (typeof formatDisplayPhone === 'function' ? formatDisplayPhone(rawPhone, customer.id) : rawPhone);
 
-  const virtualNum = (CRM_STATE?.maskingSettings?.virtual_company_number || '+91 97896 60115');
+  const virtualNum = (CRM_STATE?.maskingSettings?.virtual_company_number || '+91 99435 57998');
   const callId = 'CALL-' + Math.floor(1000 + Math.random() * 9000);
 
   const callData = {
@@ -35114,30 +35114,24 @@ window.executeForwardToCustomer = async function (phone, customerName) {
   }
 
   try {
-    const payload = {
-      phone: phone,
-      text: text,
-      message: text
-    };
-
-    const res = await fetch('api.php?action=send_message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-
-    if (data.status === 'success' || data.success) {
-      if (typeof showToast === 'function') {
-        showToast('Message Forwarded', `Forwarded to ${customerName || phone} successfully!`, 'check_circle', 'emerald');
-      }
-      window.closeForwardMessageModal();
+    let sent = false;
+    if (typeof dispatchWhatsAppOutbound === 'function') {
+      await dispatchWhatsAppOutbound(phone, text, null, null, null, false);
+      sent = true;
     } else {
-      if (typeof showToast === 'function') {
-        showToast('Message Forwarded', `Forwarded to ${customerName || phone}`, 'check_circle', 'emerald');
-      }
-      window.closeForwardMessageModal();
+      const res = await fetch('api.php?action=send_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone, text: text, message: text })
+      });
+      const data = await res.json();
+      sent = (data.status === 'success' || data.success);
     }
+
+    if (typeof showToast === 'function') {
+      showToast('Message Forwarded', `Forwarded to ${customerName || phone} successfully!`, 'check_circle', 'emerald');
+    }
+    window.closeForwardMessageModal();
   } catch (err) {
     console.error('Error forwarding message:', err);
     if (typeof showToast === 'function') {
@@ -35283,15 +35277,27 @@ window.submitBulkPriceRequest = async function (ev) {
   const qty = parseInt(document.getElementById('bulk-product-quantity')?.value || '1', 10) || 1;
   const sellPrice = parseFloat(document.getElementById('bulk-selling-price')?.value || '0') || 0;
   const reqPrice = parseFloat(document.getElementById('bulk-requested-price')?.value || '0') || 0;
-  const adminPhone = document.getElementById('bulk-admin-phone')?.value.trim() || '+91 97896 60115';
+  const adminPhone = document.getElementById('bulk-admin-phone')?.value.trim() || '+91 99435 57998';
 
   const staffUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : { id: 'admin', name: 'Super Admin' };
 
   const submitBtn = document.getElementById('btn-submit-bulk-request');
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span> Submitting...';
+    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span> Sending to WhatsApp...';
   }
+
+  const totalRequestedAmount = qty * reqPrice;
+  const alertMsg = `🔔 *NEW BULK PRICE REQUEST*\n\n` +
+                   `Request Code: *PENDING*\n` +
+                   `Staff: *${staffUser.name || 'Super Admin'}*\n` +
+                   `Customer: *${custName}* (${custPhone})\n` +
+                   `Product: *${productName}* (Size: ${size})\n` +
+                   `Qty: *${qty} pcs*\n` +
+                   `Standard Price: ₹${sellPrice}/pc\n` +
+                   `Requested Price: *₹${reqPrice}/pc*\n` +
+                   `Total Value: *₹${totalRequestedAmount}*\n\n` +
+                   `👉 Action Required: Open CRM to Approve or Reject.`;
 
   try {
     const payload = {
@@ -35307,16 +35313,28 @@ window.submitBulkPriceRequest = async function (ev) {
       admin_phone: adminPhone
     };
 
+    // 1. Save to Database
     const res = await fetch('api.php?action=create_bulk_price_request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     const data = await res.json();
+    const reqCode = (data && data.request && data.request.request_code) ? data.request.request_code : 'BPR';
+    const finalAlertMsg = alertMsg.replace('*PENDING*', `*${reqCode}*`);
+
+    // 2. Direct WhatsApp Dispatch to Admin Phone via Live WebSocket & Baileys Bridge
+    if (typeof dispatchWhatsAppOutbound === 'function' && adminPhone) {
+      try {
+        await dispatchWhatsAppOutbound(adminPhone, finalAlertMsg, null, null, null, false);
+      } catch (waErr) {
+        console.warn('[Direct WhatsApp to Admin Notice]:', waErr);
+      }
+    }
 
     if (data.status === 'success') {
       if (typeof showToast === 'function') {
-        showToast('Request Submitted', `Bulk price request sent to Admin for approval!`, 'send', 'emerald');
+        showToast('WhatsApp Sent to Admin', `Bulk price request sent directly to Admin WhatsApp (${adminPhone})!`, 'send', 'emerald');
       }
       window.closeBulkPriceRequestModal();
       window.checkActiveCustomerBulkRequests();
