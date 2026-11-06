@@ -1502,17 +1502,23 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 curl_setopt($ch, CURLOPT_POST, true);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $bridgePayload);
                 curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 7);
                 $resp = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlErr = curl_error($ch);
                 curl_close($ch);
                 if ($httpCode >= 200 && $httpCode < 300) {
                     $waNotifyStatus = 'SENT';
                     $bridgeResponse = json_decode($resp, true);
+                } else {
+                    $waNotifyStatus = 'FAILED';
+                    $bridgeResponse = ['http_code' => $httpCode, 'error' => $curlErr, 'raw' => $resp];
                 }
             } catch (Exception $e) {
                 error_log("Bridge notification error: " . $e->getMessage());
+                $waNotifyStatus = 'ERROR';
+                $bridgeResponse = ['error' => $e->getMessage()];
             }
         }
 
@@ -2333,8 +2339,8 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'mediaUrl' => $mediaUrl
     ]));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 7);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);

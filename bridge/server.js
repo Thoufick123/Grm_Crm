@@ -2099,7 +2099,15 @@ app.post('/api/send', async (req, res) => {
         }
 
         let finalTextToSend = text;
-        const activeAcc = (accountId && accounts[accountId] && accounts[accountId].sock) ? accounts[accountId] : getActiveAccount();
+        let activeAcc = (accountId && accounts.has(accountId) && accounts.get(accountId).sock) ? accounts.get(accountId) : null;
+        if (!activeAcc) {
+            for (const acc of accounts.values()) {
+                if (acc.status === 'CONNECTED' && acc.sock) {
+                    activeAcc = acc;
+                    break;
+                }
+            }
+        }
         if (activeAcc && activeAcc.connectedNumber) {
             const cleanCrmNum = activeAcc.connectedNumber.replace(/[^0-9]/g, '');
             if (cleanCrmNum) {

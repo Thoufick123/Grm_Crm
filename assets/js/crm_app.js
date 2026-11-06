@@ -35598,8 +35598,14 @@ window.submitBulkPriceRequest = async function (ev) {
     const data = await res.json();
 
     if (data.status === 'success') {
-      if (typeof showToast === 'function') {
-        showToast('WhatsApp Sent to Admin', `Bulk price request sent directly to Admin WhatsApp (${adminPhone})!`, 'send', 'emerald');
+      if (data.whatsapp_notification === 'FAILED' || data.whatsapp_notification === 'ERROR') {
+        if (typeof showToast === 'function') {
+          showToast('Request Recorded', `Bulk request ${data.request?.request_code || ''} saved, but WhatsApp notification failed to send. Check WhatsApp line.`, 'warning', 'amber');
+        }
+      } else {
+        if (typeof showToast === 'function') {
+          showToast('WhatsApp Sent to Admin', `Bulk price request sent directly to Admin WhatsApp (${adminPhone})!`, 'send', 'emerald');
+        }
       }
       window.closeBulkPriceRequestModal();
       window.checkActiveCustomerBulkRequests();
