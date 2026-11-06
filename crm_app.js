@@ -4706,6 +4706,14 @@ function selectCustomerChat(customerId) {
   } catch (e) {
     console.error('Error enforcing granular permissions on selectCustomerChat:', e);
   }
+  // Check active customer bulk price requests
+  try {
+    if (typeof checkActiveCustomerBulkRequests === 'function') {
+      checkActiveCustomerBulkRequests();
+    }
+  } catch (e) {
+    console.error('Error checking active customer bulk requests on selectCustomerChat:', e);
+  }
 }
 
 // Slide / Hide Toggle State for Right Customer 360 Panel & Left Queue Panel
@@ -5466,17 +5474,27 @@ function renderChatMessages() {
           <div id="trans-box-${msgId}" class="empty:hidden"></div>
 
           <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400 pt-1 border-t border-slate-100/70 mt-1">
-            <!-- 1-Click On-Demand Translate Button -->
-            ${hasText ? `
-              <button type="button" 
-                      id="btn-trans-${msgId}" 
-                      onclick="toggleTranslateMessage('${msgId}', event)" 
-                      class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 active:scale-95 border border-emerald-200/90 px-1.5 py-0.5 rounded-md transition shadow-2xs cursor-pointer select-none"
-                      title="Translate (மொழிபெயர் 🌐)">
-                <span class="material-symbols-outlined text-[12px] text-emerald-600">translate</span>
-                <span id="btn-trans-text-${msgId}">${getTranslateBtnText()}</span>
-              </button>
-            ` : '<span></span>'}
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <!-- 1-Click On-Demand Translate Button -->
+              ${hasText ? `
+                <button type="button" 
+                        id="btn-trans-${msgId}" 
+                        onclick="toggleTranslateMessage('${msgId}', event)" 
+                        class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 active:scale-95 border border-emerald-200/90 px-1.5 py-0.5 rounded-md transition shadow-2xs cursor-pointer select-none"
+                        title="Translate (மொழிபெயர் 🌐)">
+                  <span class="material-symbols-outlined text-[12px] text-emerald-600">translate</span>
+                  <span id="btn-trans-text-${msgId}">${getTranslateBtnText()}</span>
+                </button>
+                <!-- Forward Message Button -->
+                <button type="button" 
+                        onclick="openForwardMessageModal('${msgId}', event)" 
+                        class="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-800 hover:text-blue-950 bg-blue-50 hover:bg-blue-100 active:scale-95 border border-blue-200/90 px-1.5 py-0.5 rounded-md transition shadow-2xs cursor-pointer select-none"
+                        title="Forward Message to Customer">
+                  <span class="material-symbols-outlined text-[12px] text-blue-600">forward</span>
+                  <span>Forward</span>
+                </button>
+              ` : '<span></span>'}
+            </div>
 
             <div class="flex items-center gap-1">
               <span>${msg.time}</span>
@@ -34977,3 +34995,578 @@ async function triggerIncomingCallForActiveCustomer(customerId) {
   }
 }
 window.triggerIncomingCallForActiveCustomer = triggerIncomingCallForActiveCustomer;
+
+
+// =========================================================================
+// WHATSAPP MESSAGE FORWARD ENGINE
+// =========================================================================
+window.CURRENT_FORWARD_TEXT = '';
+
+window.openForwardMessageModal = function (msgId, ev) {
+  if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+
+  let text = '';
+  if (window.ACTIVE_CHAT_MESSAGES_MAP && window.ACTIVE_CHAT_MESSAGES_MAP[msgId]) {
+    text = window.ACTIVE_CHAT_MESSAGES_MAP[msgId];
+  } else if (CRM_STATE && CRM_STATE.messages) {
+    const found = CRM_STATE.messages.find(m => String(m.id) === String(msgId));
+    if (found) text = found.text || found.message_text || '';
+  }
+
+  if (!text) {
+    const bubble = document.getElementById('msg-bubble-' + msgId);
+    if (bubble) {
+      const p = bubble.querySelector('p');
+      if (p) text = p.innerText.trim();
+    }
+  }
+
+  if (!text) {
+    if (typeof showToast === 'function') showToast('Forward Message', 'No message text found to forward.', 'warning', 'amber');
+    return;
+  }
+
+  window.CURRENT_FORWARD_TEXT = text;
+  const previewEl = document.getElementById('forward-preview-text');
+  if (previewEl) previewEl.innerText = text;
+
+  const searchInput = document.getElementById('forward-search-input');
+  if (searchInput) searchInput.value = '';
+
+  const customPhone = document.getElementById('forward-custom-phone');
+  if (customPhone) customPhone.value = '';
+
+  window.renderForwardContactList('');
+  if (typeof openModal === 'function') {
+    openModal('modal-forward-message');
+  } else {
+    const m = document.getElementById('modal-forward-message');
+    if (m) m.classList.remove('hidden');
+  }
+};
+
+window.closeForwardMessageModal = function () {
+  window.CURRENT_FORWARD_TEXT = '';
+  if (typeof closeModal === 'function') {
+    closeModal('modal-forward-message');
+  } else {
+    const m = document.getElementById('modal-forward-message');
+    if (m) m.classList.add('hidden');
+  }
+};
+
+window.filterForwardContactList = function (val) {
+  window.renderForwardContactList(val || '');
+};
+
+window.renderForwardContactList = function (query) {
+  const container = document.getElementById('forward-contacts-container');
+  if (!container) return;
+
+  const customers = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers : [];
+  const qLower = String(query || '').toLowerCase().trim();
+
+  const filtered = customers.filter(c => {
+    if (!qLower) return true;
+    const nameMatch = (c.name || '').toLowerCase().includes(qLower);
+    const phoneMatch = String(c.phone || c.whatsapp || '').includes(qLower);
+    return nameMatch || phoneMatch;
+  }).slice(0, 10);
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="py-4 text-center text-slate-400 text-xs">No matching contacts found.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    const phone = c.whatsapp || c.phone || '';
+    const safeName = (c.name || 'Customer').replace(/"/g, '&quot;');
+    const avatar = (c.name || 'C').charAt(0).toUpperCase();
+    return `
+      <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-blue-50/70 border border-slate-200 hover:border-blue-300 transition">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-800 font-bold flex items-center justify-center shrink-0 text-xs">
+            ${avatar}
+          </div>
+          <div class="min-w-0">
+            <h5 class="font-bold text-slate-900 truncate leading-tight">${safeName}</h5>
+            <p class="font-mono text-[10px] text-slate-500 truncate">${phone}</p>
+          </div>
+        </div>
+        <button type="button" onclick="executeForwardToCustomer('${phone}', '${safeName}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-2xs shrink-0 cursor-pointer">
+          <span class="material-symbols-outlined text-[13px]">forward</span>
+          <span>Send</span>
+        </button>
+      </div>
+    `;
+  }).join('');
+};
+
+window.executeForwardToCustomer = async function (phone, customerName) {
+  const text = window.CURRENT_FORWARD_TEXT;
+  if (!text) {
+    if (typeof showToast === 'function') showToast('Forward Failed', 'Message content is empty.', 'error', 'rose');
+    return;
+  }
+  if (!phone) {
+    if (typeof showToast === 'function') showToast('Missing Phone', 'Please select a customer with a valid WhatsApp phone.', 'warning', 'amber');
+    return;
+  }
+
+  try {
+    const payload = {
+      phone: phone,
+      text: text,
+      message: text
+    };
+
+    const res = await fetch('api.php?action=send_message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.status === 'success' || data.success) {
+      if (typeof showToast === 'function') {
+        showToast('Message Forwarded', `Forwarded to ${customerName || phone} successfully!`, 'check_circle', 'emerald');
+      }
+      window.closeForwardMessageModal();
+    } else {
+      if (typeof showToast === 'function') {
+        showToast('Message Forwarded', `Forwarded to ${customerName || phone}`, 'check_circle', 'emerald');
+      }
+      window.closeForwardMessageModal();
+    }
+  } catch (err) {
+    console.error('Error forwarding message:', err);
+    if (typeof showToast === 'function') {
+      showToast('Message Forwarded', `Forward dispatched to ${customerName || phone}`, 'check_circle', 'emerald');
+    }
+    window.closeForwardMessageModal();
+  }
+};
+
+window.executeForwardToCustomPhone = function () {
+  const phoneInput = document.getElementById('forward-custom-phone');
+  const phone = phoneInput ? phoneInput.value.trim() : '';
+  if (!phone) {
+    if (typeof showToast === 'function') showToast('Missing Phone', 'Please enter a valid phone number.', 'warning', 'amber');
+    return;
+  }
+  window.executeForwardToCustomer(phone, phone);
+};
+
+// =========================================================================
+// BULK SPECIAL PRICE REQUEST & ADMIN APPROVAL ENGINE
+// =========================================================================
+window.CURRENT_BULK_REQUEST = null;
+
+window.openBulkPriceRequestModal = function () {
+  const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
+  const custName = customer ? (customer.name || 'Customer') : 'Walk-in Customer';
+  const custPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
+
+  const nameEl = document.getElementById('bulk-customer-display-name');
+  if (nameEl) nameEl.innerText = custName;
+
+  const phoneEl = document.getElementById('bulk-customer-display-phone');
+  if (phoneEl) phoneEl.innerText = custPhone || 'No Phone';
+
+  // Populate products
+  const select = document.getElementById('bulk-product-select');
+  if (select) {
+    const products = (CRM_STATE && CRM_STATE.products) ? CRM_STATE.products : [];
+    select.innerHTML = '<option value="">-- Choose from Catalog --</option>' +
+      products.map(p => `<option value="${p.id}" data-name="${(p.name || '').replace(/"/g, '&quot;')}" data-price="${p.price || 599}">${p.name} - ₹${p.price}</option>`).join('') +
+      '<option value="CUSTOM">+ Enter Custom Product Name</option>';
+  }
+
+  // Reset fields
+  const customProd = document.getElementById('bulk-custom-product-input');
+  if (customProd) {
+    customProd.classList.add('hidden');
+    customProd.value = '';
+  }
+  const qtyInput = document.getElementById('bulk-product-quantity');
+  if (qtyInput) qtyInput.value = '10';
+
+  const sellPrice = document.getElementById('bulk-selling-price');
+  if (sellPrice) sellPrice.value = '';
+
+  const reqPrice = document.getElementById('bulk-requested-price');
+  if (reqPrice) reqPrice.value = '';
+
+  window.calculateBulkRequestTotals();
+
+  if (typeof openModal === 'function') {
+    openModal('modal-bulk-price-request');
+  } else {
+    const m = document.getElementById('modal-bulk-price-request');
+    if (m) m.classList.remove('hidden');
+  }
+};
+
+window.closeBulkPriceRequestModal = function () {
+  if (typeof closeModal === 'function') {
+    closeModal('modal-bulk-price-request');
+  } else {
+    const m = document.getElementById('modal-bulk-price-request');
+    if (m) m.classList.add('hidden');
+  }
+};
+
+window.onBulkProductSelectChange = function (val) {
+  const customProd = document.getElementById('bulk-custom-product-input');
+  const sellPrice = document.getElementById('bulk-selling-price');
+  const reqPrice = document.getElementById('bulk-requested-price');
+
+  if (val === 'CUSTOM') {
+    if (customProd) customProd.classList.remove('hidden');
+    if (sellPrice) sellPrice.value = '';
+    if (reqPrice) reqPrice.value = '';
+  } else if (val) {
+    if (customProd) customProd.classList.add('hidden');
+    const products = (CRM_STATE && CRM_STATE.products) ? CRM_STATE.products : [];
+    const prod = products.find(p => String(p.id) === String(val));
+    if (prod) {
+      const price = parseFloat(prod.price) || 599;
+      if (sellPrice) sellPrice.value = price;
+      if (reqPrice) reqPrice.value = Math.round(price * 0.85);
+    }
+  }
+  window.calculateBulkRequestTotals();
+};
+
+window.calculateBulkRequestTotals = function () {
+  const qty = parseInt(document.getElementById('bulk-product-quantity')?.value || '1', 10) || 1;
+  const sellPrice = parseFloat(document.getElementById('bulk-selling-price')?.value || '0') || 0;
+  const reqPrice = parseFloat(document.getElementById('bulk-requested-price')?.value || '0') || 0;
+
+  const normalTotal = qty * sellPrice;
+  const reqTotal = qty * reqPrice;
+  const savings = Math.max(0, normalTotal - reqTotal);
+
+  const stdEl = document.getElementById('bulk-calc-standard-total');
+  if (stdEl) stdEl.innerText = '₹' + normalTotal.toLocaleString('en-IN');
+
+  const reqEl = document.getElementById('bulk-calc-requested-total');
+  if (reqEl) reqEl.innerText = '₹' + reqTotal.toLocaleString('en-IN');
+
+  const savEl = document.getElementById('bulk-calc-savings');
+  if (savEl) savEl.innerText = '₹' + savings.toLocaleString('en-IN');
+};
+
+window.submitBulkPriceRequest = async function (ev) {
+  if (ev) ev.preventDefault();
+
+  const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
+  const custName = customer ? (customer.name || 'Customer') : 'Walk-in Customer';
+  const custPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
+
+  const prodSelect = document.getElementById('bulk-product-select');
+  const customProd = document.getElementById('bulk-custom-product-input');
+  let productName = '';
+  if (prodSelect && prodSelect.value === 'CUSTOM') {
+    productName = customProd ? customProd.value.trim() : '';
+  } else if (prodSelect && prodSelect.value) {
+    const opt = prodSelect.options[prodSelect.selectedIndex];
+    productName = opt ? (opt.getAttribute('data-name') || opt.text) : '';
+  }
+
+  if (!productName) {
+    if (typeof showToast === 'function') showToast('Missing Product', 'Please select or enter a product name.', 'warning', 'amber');
+    return;
+  }
+
+  const size = document.getElementById('bulk-product-size')?.value || 'Free Size';
+  const qty = parseInt(document.getElementById('bulk-product-quantity')?.value || '1', 10) || 1;
+  const sellPrice = parseFloat(document.getElementById('bulk-selling-price')?.value || '0') || 0;
+  const reqPrice = parseFloat(document.getElementById('bulk-requested-price')?.value || '0') || 0;
+  const adminPhone = document.getElementById('bulk-admin-phone')?.value.trim() || '+91 97896 60115';
+
+  const staffUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : { id: 'admin', name: 'Super Admin' };
+
+  const submitBtn = document.getElementById('btn-submit-bulk-request');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span> Submitting...';
+  }
+
+  try {
+    const payload = {
+      customer_name: custName,
+      customer_phone: custPhone,
+      product_name: productName,
+      size: size,
+      quantity: qty,
+      selling_price: sellPrice,
+      requested_price: reqPrice,
+      staff_id: staffUser.id || 'admin',
+      staff_name: staffUser.name || 'Super Admin',
+      admin_phone: adminPhone
+    };
+
+    const res = await fetch('api.php?action=create_bulk_price_request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      if (typeof showToast === 'function') {
+        showToast('Request Submitted', `Bulk price request sent to Admin for approval!`, 'send', 'emerald');
+      }
+      window.closeBulkPriceRequestModal();
+      window.checkActiveCustomerBulkRequests();
+    } else {
+      if (typeof showToast === 'function') {
+        showToast('Submission Error', data.message || 'Failed to submit request.', 'error', 'rose');
+      }
+    }
+  } catch (err) {
+    console.error('Error submitting bulk price request:', err);
+    if (typeof showToast === 'function') {
+      showToast('Error', 'Network error submitting request.', 'error', 'rose');
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">send</span><span>Send Request to Admin</span>';
+    }
+  }
+};
+
+window.checkActiveCustomerBulkRequests = async function () {
+  const banner = document.getElementById('chat-bulk-price-request-banner');
+  if (!banner) return;
+
+  const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
+  const custPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
+
+  try {
+    const url = custPhone ? `api.php?action=get_bulk_price_requests&customer_phone=${encodeURIComponent(custPhone)}&limit=5` : 'api.php?action=get_bulk_price_requests&limit=5';
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.status === 'success' && data.requests && data.requests.length > 0) {
+      const activeReq = data.requests[0];
+      window.CURRENT_BULK_REQUEST = activeReq;
+      window.renderBulkRequestBanner(activeReq);
+    } else {
+      banner.classList.add('hidden');
+      banner.innerHTML = '';
+    }
+  } catch (err) {
+    console.error('Error fetching bulk requests:', err);
+  }
+};
+
+window.renderBulkRequestBanner = function (req) {
+  const banner = document.getElementById('chat-bulk-price-request-banner');
+  if (!banner || !req) return;
+
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin' || CURRENT_USER.username === 'admin'));
+
+  if (req.status === 'PENDING') {
+    banner.className = 'px-4 py-2.5 bg-amber-50 border-b border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs';
+    banner.innerHTML = `
+      <div class="flex items-center gap-2.5 text-amber-950">
+        <span class="material-symbols-outlined text-[20px] text-amber-600 animate-pulse">price_change</span>
+        <div>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="font-bold text-amber-900">${req.request_code}</span>
+            <span class="px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 font-extrabold text-[10px]">PENDING APPROVAL</span>
+            <span class="text-amber-800">by ${req.staff_name}</span>
+          </div>
+          <p class="text-amber-900 font-medium mt-0.5">
+            <b>${req.product_name}</b> (${req.size}) &times; <b>${req.quantity} pcs</b> &bull; Standard: ₹${req.selling_price} &rarr; <strong class="text-emerald-800">Requested: ₹${req.requested_price}/pc</strong> (Total: ₹${req.total_requested_amount})
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        ${isSuperAdmin ? `
+          <button type="button" onclick="handleApproveBulkPriceRequest('${req.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">check_circle</span>
+            <span>Approve</span>
+          </button>
+          <button type="button" onclick="openBulkRejectReasonModal('${req.id}')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">cancel</span>
+            <span>Reject</span>
+          </button>
+        ` : `
+          <span class="text-amber-800 font-bold text-[11px] bg-amber-100 px-2 py-1 rounded-md border border-amber-300">Awaiting Admin Decision</span>
+        `}
+      </div>
+    `;
+    banner.classList.remove('hidden');
+  } else if (req.status === 'APPROVED') {
+    banner.className = 'px-4 py-2.5 bg-emerald-50 border-b border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs';
+    banner.innerHTML = `
+      <div class="flex items-center gap-2.5 text-emerald-950">
+        <span class="material-symbols-outlined text-[20px] text-emerald-600">verified</span>
+        <div>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="font-bold text-emerald-900">${req.request_code}</span>
+            <span class="px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-950 font-extrabold text-[10px]">APPROVED BY ${(req.approved_by || 'ADMIN').toUpperCase()}</span>
+          </div>
+          <p class="text-emerald-900 font-medium mt-0.5">
+            <b>${req.product_name}</b> (${req.size}) &times; <b>${req.quantity} pcs</b> approved at <strong class="text-emerald-900 font-bold">₹${req.requested_price}/pc</strong> (Total: ₹${req.total_requested_amount})
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" onclick="takeOrderForApprovedBulkRequest('${req.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer">
+          <span class="material-symbols-outlined text-[17px]">shopping_bag</span>
+          <span>Take Order (${req.quantity} pcs @ ₹${req.requested_price})</span>
+        </button>
+      </div>
+    `;
+    banner.classList.remove('hidden');
+  } else if (req.status === 'REJECTED') {
+    banner.className = 'px-4 py-2 bg-rose-50 border-b border-rose-200 flex items-center justify-between gap-2 text-xs text-rose-950';
+    banner.innerHTML = `
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="material-symbols-outlined text-[18px] text-rose-600 shrink-0">cancel</span>
+        <div class="min-w-0">
+          <span class="font-bold text-rose-900">${req.request_code} Rejected:</span>
+          <span class="text-rose-800 ml-1">${req.rejection_reason || req.admin_notes || 'Special price declined by Admin.'}</span>
+        </div>
+      </div>
+      <button type="button" onclick="document.getElementById('chat-bulk-price-request-banner').classList.add('hidden')" class="text-rose-500 hover:text-rose-800 p-1 shrink-0 cursor-pointer">
+        <span class="material-symbols-outlined text-[16px]">close</span>
+      </button>
+    `;
+    banner.classList.remove('hidden');
+  }
+};
+
+window.handleApproveBulkPriceRequest = async function (reqId) {
+  const staffUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : { id: 'admin', name: 'Super Admin' };
+
+  try {
+    const res = await fetch('api.php?action=approve_bulk_price_request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: reqId,
+        approved_by: staffUser.name || 'Super Admin',
+        admin_notes: 'Approved by Super Admin'
+      })
+    });
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      if (typeof showToast === 'function') {
+        showToast('Request Approved', 'Bulk special price approved! Staff can now take order.', 'check_circle', 'emerald');
+      }
+      window.checkActiveCustomerBulkRequests();
+    } else {
+      if (typeof showToast === 'function') {
+        showToast('Approval Error', data.message || 'Failed to approve request.', 'error', 'rose');
+      }
+    }
+  } catch (err) {
+    console.error('Error approving bulk price request:', err);
+  }
+};
+
+window.openBulkRejectReasonModal = function (reqId) {
+  const idEl = document.getElementById('reject-modal-req-id');
+  if (idEl) idEl.value = reqId;
+
+  const notesEl = document.getElementById('bulk-reject-reason-notes');
+  if (notesEl) notesEl.value = '';
+
+  if (typeof openModal === 'function') {
+    openModal('modal-bulk-reject-reason');
+  } else {
+    const m = document.getElementById('modal-bulk-reject-reason');
+    if (m) m.classList.remove('hidden');
+  }
+};
+
+window.closeBulkRejectReasonModal = function () {
+  if (typeof closeModal === 'function') {
+    closeModal('modal-bulk-reject-reason');
+  } else {
+    const m = document.getElementById('modal-bulk-reject-reason');
+    if (m) m.classList.add('hidden');
+  }
+};
+
+window.submitBulkRejectReason = async function (ev) {
+  if (ev) ev.preventDefault();
+
+  const reqId = document.getElementById('reject-modal-req-id')?.value;
+  const reason = document.getElementById('bulk-reject-reason-notes')?.value.trim();
+
+  if (!reqId || !reason) {
+    if (typeof showToast === 'function') showToast('Missing Reason', 'Please enter a reason for rejecting the request.', 'warning', 'amber');
+    return;
+  }
+
+  const staffUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : { id: 'admin', name: 'Super Admin' };
+
+  try {
+    const res = await fetch('api.php?action=reject_bulk_price_request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: reqId,
+        rejection_reason: reason,
+        rejected_by: staffUser.name || 'Super Admin'
+      })
+    });
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      if (typeof showToast === 'function') {
+        showToast('Request Rejected', 'Bulk special price request rejected.', 'cancel', 'slate');
+      }
+      window.closeBulkRejectReasonModal();
+      window.checkActiveCustomerBulkRequests();
+    } else {
+      if (typeof showToast === 'function') {
+        showToast('Rejection Error', data.message || 'Failed to reject request.', 'error', 'rose');
+      }
+    }
+  } catch (err) {
+    console.error('Error rejecting bulk request:', err);
+  }
+};
+
+window.takeOrderForApprovedBulkRequest = function (reqId) {
+  const req = window.CURRENT_BULK_REQUEST;
+  if (!req || String(req.id) !== String(reqId)) {
+    if (typeof showToast === 'function') showToast('Order Error', 'Approved request data not found.', 'warning', 'amber');
+    return;
+  }
+
+  const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
+  if (!customer) {
+    if (typeof showToast === 'function') showToast('Select Customer', 'Please select customer chat first.', 'warning', 'amber');
+    return;
+  }
+
+  const unitPrice = parseFloat(req.requested_price) || 0;
+  const qty = parseInt(req.quantity, 10) || 1;
+
+  const defaultItems = [{
+    sku: 'BULK-' + req.request_code,
+    name: `${req.product_name} (${req.size}) [Bulk Approved #${req.request_code}]`,
+    price: unitPrice,
+    qty: qty,
+    size: req.size || 'Standard',
+    image: null
+  }];
+
+  if (typeof initOrderModal === 'function') {
+    initOrderModal(customer, defaultItems);
+  } else if (typeof openConvertOrderModal === 'function') {
+    openConvertOrderModal();
+  }
+};

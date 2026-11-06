@@ -1319,6 +1319,264 @@ if ($action === 'delete_customer_requirement' && $_SERVER['REQUEST_METHOD'] === 
 }
 
 // =========================================================================
+// BULK PRICE REQUEST ACTIONS (Staff Request, Admin Approve / Reject with Notes)
+// =========================================================================
+if ($action === 'get_bulk_price_requests') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+
+    $statusFilter = $_GET['status'] ?? null;
+    $customerPhone = $_GET['customer_phone'] ?? null;
+    $staffId = $_GET['staff_id'] ?? null;
+    $limit = (int)($_GET['limit'] ?? 100);
+
+    $sql = "SELECT * FROM `bulk_price_requests` WHERE 1=1";
+    $params = [];
+
+    if (!empty($statusFilter) && $statusFilter !== 'ALL') {
+        $sql .= " AND `status` = ?";
+        $params[] = $statusFilter;
+    }
+    if (!empty($customerPhone)) {
+        $sql .= " AND `customer_phone` = ?";
+        $params[] = $customerPhone;
+    }
+    if (!empty($staffId)) {
+        $sql .= " AND `staff_id` = ?";
+        $params[] = $staffId;
+    }
+
+    $sql .= " ORDER BY `created_at` DESC LIMIT " . $limit;
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "status" => "success",
+            "count" => count($requests),
+            "requests" => $requests
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true) ?: $_POST;
+
+    $customerName = trim($data['customer_name'] ?? '');
+    $customerPhone = trim($data['customer_phone'] ?? '');
+    $productName = trim($data['product_name'] ?? '');
+    $size = trim($data['size'] ?? '');
+    $quantity = (int)($data['quantity'] ?? 1);
+    $sellingPrice = (float)($data['selling_price'] ?? 0);
+    $requestedPrice = (float)($data['requested_price'] ?? 0);
+    $staffId = trim($data['staff_id'] ?? 'admin');
+    $staffName = trim($data['staff_name'] ?? 'Super Admin');
+    $adminPhone = trim($data['admin_phone'] ?? '+919789660115');
+
+    if (empty($customerName) || empty($productName) || $requestedPrice <= 0 || $quantity <= 0) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Customer name, product name, quantity and requested price are required."]);
+        exit;
+    }
+
+    $count = (int)$pdo->query("SELECT COUNT(*) FROM `bulk_price_requests`")->fetchColumn();
+    $requestCode = 'BPR-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+    $totalRequestedAmount = $quantity * $requestedPrice;
+
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO `bulk_price_requests`
+            (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `admin_phone`, `status`, `created_at`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NOW())
+        ");
+        $stmt->execute([
+            $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $adminPhone
+        ]);
+        $newId = (int)$pdo->lastInsertId();
+
+        $fetchStmt = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `id` = ?");
+        $fetchStmt->execute([$newId]);
+        $createdRecord = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+
+        try {
+            $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `details`) VALUES ('BULK_PRICE_REQUEST', 'PRICING', ?, ?)")
+                ->execute([$staffName, "Created bulk price request $requestCode for $customerName ($productName x $quantity at Rs.$requestedPrice)"]);
+        } catch (Exception $e) {}
+
+        $waNotifyStatus = 'NOT_SENT';
+        if (!empty($adminPhone)) {
+            $alertMsg = "🔔 *NEW BULK PRICE REQUEST*\n" .
+                        "Request Code: *{$requestCode}*\n" .
+                        "Staff: *{$staffName}*\n" .
+                        "Customer: *{$customerName}* ({$customerPhone})\n" .
+                        "Product: *{$productName}* (Size: {$size})\n" .
+                        "Qty: *{$quantity} pcs*\n" .
+                        "Standard Price: ₹{$sellingPrice}/pc\n" .
+                        "Requested Price: *₹{$requestedPrice}/pc*\n" .
+                        "Total Value: *₹{$totalRequestedAmount}*\n\n" .
+                        "👉 Open CRM to Approve or Reject.";
+            try {
+                $bridgePayload = json_encode([
+                    'phone' => $adminPhone,
+                    'text' => $alertMsg
+                ]);
+                $ctx = stream_context_create([
+                    'http' => [
+                        'method' => 'POST',
+                        'header' => "Content-Type: application/json\r\n",
+                        'content' => $bridgePayload,
+                        'timeout' => 3
+                    ]
+                ]);
+                @file_get_contents(BRIDGE_URL . '/send-message', false, $ctx);
+                $waNotifyStatus = 'SENT';
+            } catch (Exception $e) {}
+        }
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Bulk price request submitted successfully and sent to Admin for approval",
+            "request" => $createdRecord,
+            "wa_notify" => $waNotifyStatus
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true) ?: $_POST;
+    $id = (int)($data['id'] ?? 0);
+    $approvedBy = trim($data['approved_by'] ?? 'Super Admin');
+    $adminNotes = trim($data['admin_notes'] ?? '');
+
+    if ($id <= 0) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Valid request ID is required."]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE `bulk_price_requests` 
+            SET `status` = 'APPROVED', 
+                `approved_by` = ?, 
+                `admin_notes` = ?, 
+                `approved_at` = NOW(),
+                `updated_at` = NOW() 
+            WHERE `id` = ?
+        ");
+        $stmt->execute([$approvedBy, $adminNotes, $id]);
+
+        $fetchStmt = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `id` = ?");
+        $fetchStmt->execute([$id]);
+        $record = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+
+        try {
+            $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `details`) VALUES ('BULK_PRICE_APPROVED', 'PRICING', ?, ?)")
+                ->execute([$approvedBy, "Approved bulk request {$record['request_code']} for {$record['customer_name']}"]);
+        } catch (Exception $e) {}
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Bulk price request approved successfully! Staff can now take order at the approved price.",
+            "request" => $record
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true) ?: $_POST;
+    $id = (int)($data['id'] ?? 0);
+    $rejectionReason = trim($data['rejection_reason'] ?? '');
+    $rejectedBy = trim($data['rejected_by'] ?? 'Super Admin');
+
+    if ($id <= 0) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Valid request ID is required."]);
+        exit;
+    }
+
+    if (empty($rejectionReason)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Rejection reason / notes are required."]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE `bulk_price_requests` 
+            SET `status` = 'REJECTED', 
+                `rejection_reason` = ?, 
+                `admin_notes` = ?, 
+                `approved_by` = ?, 
+                `updated_at` = NOW() 
+            WHERE `id` = ?
+        ");
+        $stmt->execute([$rejectionReason, $rejectionReason, $rejectedBy, $id]);
+
+        $fetchStmt = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `id` = ?");
+        $fetchStmt->execute([$id]);
+        $record = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+
+        try {
+            $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `details`) VALUES ('BULK_PRICE_REJECTED', 'PRICING', ?, ?)")
+                ->execute([$rejectedBy, "Rejected bulk request {$record['request_code']} with reason: $rejectionReason"]);
+        } catch (Exception $e) {}
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Bulk price request rejected with specified reason.",
+            "request" => $record
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+// =========================================================================
 // 4. SEND OUTBOUND WHATSAPP MESSAGE TO CUSTOMER (Via Baileys Bridge)
 // =========================================================================
 if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {

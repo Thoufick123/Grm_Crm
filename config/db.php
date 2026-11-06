@@ -146,6 +146,39 @@ function getDBConnection() {
                 }
 
 
+                // Ensure bulk_price_requests table exists
+                try {
+                    $checkBpr = $pdo->query("SHOW TABLES LIKE 'bulk_price_requests'")->fetch();
+                    if (!$checkBpr) {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS `bulk_price_requests` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `request_code` VARCHAR(50) NOT NULL UNIQUE,
+                                `customer_name` VARCHAR(150) NOT NULL,
+                                `customer_phone` VARCHAR(50) NOT NULL,
+                                `product_name` VARCHAR(255) NOT NULL,
+                                `size` VARCHAR(50) NOT NULL,
+                                `quantity` INT NOT NULL DEFAULT 1,
+                                `selling_price` DECIMAL(10, 2) NOT NULL,
+                                `requested_price` DECIMAL(10, 2) NOT NULL,
+                                `total_requested_amount` DECIMAL(10, 2) NOT NULL,
+                                `staff_id` VARCHAR(50) NULL,
+                                `staff_name` VARCHAR(150) NOT NULL,
+                                `admin_phone` VARCHAR(50) NULL,
+                                `status` ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+                                `rejection_reason` TEXT NULL,
+                                `admin_notes` TEXT NULL,
+                                `approved_by` VARCHAR(150) NULL,
+                                `approved_at` DATETIME NULL,
+                                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                INDEX (`customer_phone`),
+                                INDEX (`status`)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+                    }
+                } catch (Exception $e) {}
+
                 // Ensure customer_requirements table exists
                 try {
                     $checkReq = $pdo->query("SHOW TABLES LIKE 'customer_requirements'")->fetch();
