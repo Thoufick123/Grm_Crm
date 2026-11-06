@@ -3799,11 +3799,11 @@ function updatePageHeaderTitle() {
     },
     audit: {
       title: t('header.title.audit', 'System Audit Trail & Security Logs'),
-      sub: t('header.sub.audit', 'Tamper-proof record of every staff assignment and order update')
+      sub: ''
     },
     analytics: {
       title: t('header.title.analytics', 'Staff Performance Analytics & KPIs'),
-      sub: t('header.sub.analytics', 'Factual metrics on response times, volume handled, and conversions')
+      sub: ''
     },
     settings: {
       title: t('header.title.settings', 'WhatsApp Business Settings & Phone Configuration'),
