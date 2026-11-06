@@ -1588,6 +1588,36 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         exit;
     }
 
+    // Fetch current request and enforce 3-time validity limit
+    $cCheck = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `id` = ? LIMIT 1");
+    $cCheck->execute([$id]);
+    $currReq = $cCheck->fetch(PDO::FETCH_ASSOC);
+
+    if (!$currReq) {
+        http_response_code(404);
+        echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
+        exit;
+    }
+    if ($currReq['status'] === 'APPROVED') {
+        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} is already approved."]);
+        exit;
+    }
+    if ($currReq['status'] === 'REJECTED') {
+        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} has already been rejected."]);
+        exit;
+    }
+    $sendCount = (int)($currReq['send_count'] ?? 1);
+    if ($sendCount > 3) {
+        $pdo->prepare("UPDATE `bulk_price_requests` SET `status` = 'EXPIRED' WHERE `id` = ? AND `status` = 'PENDING'")->execute([$id]);
+        echo json_encode([
+            "status" => "error",
+            "expired" => true,
+            "message" => "This bulk price request ({$currReq['request_code']}) has expired. Valid up to 3 message sends only.",
+            "request" => $currReq
+        ]);
+        exit;
+    }
+
     try {
         $stmt = $pdo->prepare("
             UPDATE `bulk_price_requests` 
@@ -1648,6 +1678,36 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     if ($id <= 0) {
         http_response_code(400);
         echo json_encode(["status" => "error", "message" => "No pending bulk price request found to reject."]);
+        exit;
+    }
+
+    // Fetch current request and enforce 3-time validity limit
+    $cCheck = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `id` = ? LIMIT 1");
+    $cCheck->execute([$id]);
+    $currReq = $cCheck->fetch(PDO::FETCH_ASSOC);
+
+    if (!$currReq) {
+        http_response_code(404);
+        echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
+        exit;
+    }
+    if ($currReq['status'] === 'APPROVED') {
+        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} is already approved."]);
+        exit;
+    }
+    if ($currReq['status'] === 'REJECTED') {
+        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} has already been rejected."]);
+        exit;
+    }
+    $sendCount = (int)($currReq['send_count'] ?? 1);
+    if ($sendCount > 3) {
+        $pdo->prepare("UPDATE `bulk_price_requests` SET `status` = 'EXPIRED' WHERE `id` = ? AND `status` = 'PENDING'")->execute([$id]);
+        echo json_encode([
+            "status" => "error",
+            "expired" => true,
+            "message" => "This bulk price request ({$currReq['request_code']}) has expired. Valid up to 3 message sends only.",
+            "request" => $currReq
+        ]);
         exit;
     }
 
