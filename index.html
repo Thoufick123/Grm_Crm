@@ -1514,10 +1514,37 @@
             <!-- Dynamic Bulk Special Price Request Alert Banner Container -->
             <div id="chat-bulk-price-request-banner" class="hidden px-3 py-2 border-b text-xs transition-all"></div>
 
-            <!-- Message History Stream Container (With Centered Max-Width Wrapper for Ultra-Wide VPW) -->
-            <div id="chat-messages-stream"
-              class="flex-1 min-w-0 overflow-y-auto p-3 sm:p-5 space-y-3 custom-chat-scroll bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]">
-              <!-- Rendered dynamically -->
+            <!-- Message History Stream Container with Floating Top-to-Bottom Bouncing Button -->
+            <div class="relative flex-1 min-w-0 flex flex-col overflow-hidden">
+              <div id="chat-messages-stream"
+                class="flex-1 min-w-0 overflow-y-auto p-3 sm:p-5 space-y-3 custom-chat-scroll bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Top-to-Bottom Bouncing Scroll Button (Image 4) -->
+              <button id="btn-scroll-to-bottom"
+                      type="button"
+                      onclick="scrollChatToBottom(true)"
+                      class="absolute right-5 bottom-4 z-20 w-10 h-10 rounded-full bg-white border border-slate-200/90 text-slate-600 hover:text-[#00a884] shadow-lg flex items-center justify-center transition-all cursor-pointer animate-bounce hover:animate-none active:scale-95 group select-none"
+                      title="Scroll to bottom">
+                <span class="material-symbols-outlined text-[22px] group-hover:translate-y-0.5 transition-transform">keyboard_arrow_down</span>
+              </button>
+            </div>
+
+            <!-- Multi-Message Bulk Forward Bottom Bar (Image 4) -->
+            <div id="chat-bulk-forward-bar"
+                 class="hidden bg-white/95 backdrop-blur-md border-t border-slate-200 px-5 py-2.5 flex items-center justify-between text-xs shadow-md shrink-0 z-30 transition-all select-none">
+              <div class="flex items-center gap-3">
+                <button type="button" onclick="cancelBulkMessageSelect()" class="p-1 hover:bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition cursor-pointer" title="Cancel selection">
+                  <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+                <span id="chat-bulk-selected-count" class="font-bold text-slate-800 text-sm">0 selected</span>
+              </div>
+              <button type="button" onclick="openBulkForwardModal()" class="p-2.5 hover:bg-emerald-50 rounded-full text-slate-700 hover:text-[#00a884] active:scale-95 transition cursor-pointer flex items-center justify-center shrink-0" title="Forward selected messages">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <path d="M14 6l6 6-6 6v-4c-6 0-10 3-12 8 1-7 5-11 12-11V6z"/>
+                </svg>
+              </button>
             </div>
 
 
@@ -10304,16 +10331,13 @@
   <!-- ========================================================================= -->
   <div id="modal-forward-message" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
     <div class="bg-white rounded-3xl shadow-2xl max-w-[440px] w-full overflow-hidden border border-slate-100 transform transition-all flex flex-col max-h-[92vh]">
-      <!-- WhatsApp Style Header -->
+      <!-- WhatsApp Style Header (Clean) -->
       <div class="px-5 pt-4 pb-3 flex items-center justify-between border-b border-slate-100 shrink-0">
         <div class="flex items-center gap-3">
           <button type="button" onclick="closeForwardMessageModal()" class="text-slate-600 hover:text-slate-900 p-1 rounded-full hover:bg-slate-100 transition cursor-pointer" title="Close">
             <span class="material-symbols-outlined text-[20px]">close</span>
           </button>
           <h3 class="text-[17px] font-bold text-slate-900 tracking-tight">Forward message to</h3>
-        </div>
-        <div class="text-slate-600 p-1">
-          <span class="material-symbols-outlined text-[22px]">group_add</span>
         </div>
       </div>
 
@@ -10330,22 +10354,7 @@
 
       <!-- Scrollable Body with My Status & Recent Chats -->
       <div class="overflow-y-auto px-5 py-2 space-y-3 custom-chat-scroll flex-1">
-        <!-- My Status Option (Authentic WhatsApp) -->
-        <div onclick="toggleForwardContact('status', 'My status')" class="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 transition cursor-pointer select-none">
-          <div class="flex items-center gap-3 min-w-0">
-            <div id="check-box-status" class="w-5 h-5 rounded border-2 border-slate-300 bg-white flex items-center justify-center shrink-0 text-xs font-bold transition"></div>
-            <div class="w-11 h-11 rounded-full bg-[#00a884] text-white flex items-center justify-center shrink-0 shadow-2xs">
-              <span class="material-symbols-outlined text-[22px]">donut_large</span>
-            </div>
-            <div class="min-w-0">
-              <h4 class="text-sm font-bold text-slate-900 leading-tight">My status</h4>
-              <p class="text-[11px] text-slate-500 mt-0.5">131 contacts included</p>
-            </div>
-          </div>
-          <div class="text-slate-400 p-1">
-            <span class="material-symbols-outlined text-[18px]">more_horiz</span>
-          </div>
-        </div>
+
 
         <!-- Section: Recent Chats -->
         <div>
@@ -10543,7 +10552,7 @@
   </div>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=21.1"></script>
+  <script src="crm_app.js?v=21.2"></script>
 </body>
 
 </html>

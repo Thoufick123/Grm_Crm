@@ -5465,9 +5465,17 @@ function renderChatMessages() {
       `;
     }
 
+    const isMsgSelected = Boolean(window.SELECTED_CHAT_MESSAGES && window.SELECTED_CHAT_MESSAGES.has(msgId));
+
     return `
-      <div id="chat-bubble-${msgId}" data-msg-id="${msgId}" data-product-matched="${isMatchingProductInMsg ? 'true' : 'false'}" class="chat-message-row flex ${isOut ? 'justify-end' : 'justify-start'} transition-all duration-300">
-        <div class="max-w-[88%] sm:max-w-md w-fit min-w-0 break-words [overflow-wrap:anywhere] ${isOut ? 'bg-brand-50 border border-emerald-200 text-slate-800 chat-bubble-out shadow-sm' : 'bg-white border border-slate-200 text-slate-800 chat-bubble-in shadow-sm'} ${isMatchingProductInMsg ? 'ring-3 ring-emerald-400 bg-emerald-50/70 border-emerald-400 shadow-md' : ''} p-3.5 space-y-1 rounded-2xl">
+      <div id="chat-bubble-${msgId}" data-msg-id="${msgId}" data-product-matched="${isMatchingProductInMsg ? 'true' : 'false'}" class="chat-message-row flex items-center ${isOut ? 'justify-end' : 'justify-start'} gap-2 transition-all duration-200 group">
+        <!-- Message Selection Checkbox for Bulk Forward (Image 4) -->
+        <div onclick="toggleSelectMessage('${msgId}', event)" class="${isOut ? 'order-last' : 'order-first'} self-center cursor-pointer select-none shrink-0" title="Select message">
+          <div class="msg-select-box w-5 h-5 rounded ${isMsgSelected ? 'bg-[#00a884] border-2 border-[#00a884] text-white shadow-2xs' : 'border-2 border-slate-300 bg-white hover:border-[#00a884] opacity-80 group-hover:opacity-100'} flex items-center justify-center text-xs font-bold transition">
+            ${isMsgSelected ? '<span class="material-symbols-outlined text-[14px]">check</span>' : ''}
+          </div>
+        </div>
+        <div class="max-w-[85%] sm:max-w-md w-fit min-w-0 break-words [overflow-wrap:anywhere] ${isOut ? 'bg-brand-50 border border-emerald-200 text-slate-800 chat-bubble-out shadow-sm' : 'bg-white border border-slate-200 text-slate-800 chat-bubble-in shadow-sm'} ${isMatchingProductInMsg ? 'ring-3 ring-emerald-400 bg-emerald-50/70 border-emerald-400 shadow-md' : ''} p-3.5 space-y-1 rounded-2xl">
           ${isMatchingProductInMsg ? `
             <div class="flex items-center justify-between text-[10px] font-bold text-emerald-900 bg-emerald-100/90 px-2 py-0.5 rounded-md mb-1.5 border border-emerald-300 shadow-2xs">
               <span class="flex items-center gap-1">
@@ -35026,6 +35034,134 @@ window.triggerIncomingCallForActiveCustomer = triggerIncomingCallForActiveCustom
 // =========================================================================
 window.CURRENT_FORWARD_TEXT = '';
 window.FORWARD_SELECTED_CONTACTS = new Map(); // phone -> name
+window.SELECTED_CHAT_MESSAGES = new Set(); // msgId set for bulk message forward (Image 4)
+
+// --- Bulk Message Selection Logic (Image 4) ---
+window.toggleSelectMessage = function (msgId, ev) {
+  if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+  if (!msgId) return;
+
+  if (window.SELECTED_CHAT_MESSAGES.has(msgId)) {
+    window.SELECTED_CHAT_MESSAGES.delete(msgId);
+  } else {
+    window.SELECTED_CHAT_MESSAGES.add(msgId);
+  }
+  window.updateBulkSelectUI();
+};
+
+window.cancelBulkMessageSelect = function () {
+  window.SELECTED_CHAT_MESSAGES.clear();
+  window.updateBulkSelectUI();
+};
+
+window.updateBulkSelectUI = function () {
+  const count = window.SELECTED_CHAT_MESSAGES.size;
+  const bar = document.getElementById('chat-bulk-forward-bar');
+  const countEl = document.getElementById('chat-bulk-selected-count');
+
+  if (bar) {
+    if (count > 0) {
+      bar.classList.remove('hidden');
+      if (countEl) countEl.innerText = `${count} selected`;
+    } else {
+      bar.classList.add('hidden');
+    }
+  }
+
+  // Update check icon on each message row
+  document.querySelectorAll('.chat-message-row').forEach(row => {
+    const mId = row.getAttribute('data-msg-id');
+    const isSel = window.SELECTED_CHAT_MESSAGES.has(mId);
+    const box = row.querySelector('.msg-select-box');
+    if (box) {
+      if (isSel) {
+        box.className = 'msg-select-box w-5 h-5 rounded bg-[#00a884] border-2 border-[#00a884] text-white flex items-center justify-center text-xs font-bold transition shadow-2xs';
+        box.innerHTML = '<span class="material-symbols-outlined text-[14px]">check</span>';
+      } else {
+        box.className = 'msg-select-box w-5 h-5 rounded border-2 border-slate-300 bg-white hover:border-[#00a884] flex items-center justify-center text-xs font-bold transition opacity-80';
+        box.innerHTML = '';
+      }
+    }
+  });
+};
+
+window.openBulkForwardModal = function () {
+  if (window.SELECTED_CHAT_MESSAGES.size === 0) return;
+  const texts = [];
+  const allMessages = (CRM_STATE && CRM_STATE.messages) ? CRM_STATE.messages : [];
+
+  window.SELECTED_CHAT_MESSAGES.forEach(mId => {
+    let t = (window.ACTIVE_CHAT_MESSAGES_MAP && window.ACTIVE_CHAT_MESSAGES_MAP[mId]) || '';
+    if (!t) {
+      const found = allMessages.find(m => String(m.id) === String(mId));
+      if (found) t = found.text || found.message_text || '';
+    }
+    if (!t) {
+      const bubble = document.getElementById('chat-bubble-' + mId);
+      if (bubble) {
+        const p = bubble.querySelector('p');
+        if (p) t = p.innerText.trim();
+      }
+    }
+    if (t) texts.push(t);
+  });
+
+  if (texts.length === 0) {
+    if (typeof showToast === 'function') showToast('No Content', 'Selected messages have no text content.', 'warning', 'amber');
+    return;
+  }
+
+  const combined = texts.join('\n\n');
+  window.CURRENT_FORWARD_TEXT = combined;
+  window.FORWARD_SELECTED_CONTACTS.clear();
+  window.updateForwardSelectedUI();
+
+  const previewEl = document.getElementById('forward-preview-text');
+  if (previewEl) previewEl.innerText = combined;
+
+  const searchInput = document.getElementById('forward-search-input');
+  if (searchInput) searchInput.value = '';
+
+  window.renderForwardContactList('');
+  if (typeof openModal === 'function') {
+    openModal('modal-forward-message');
+  } else {
+    const m = document.getElementById('modal-forward-message');
+    if (m) m.classList.remove('hidden');
+  }
+};
+
+// --- Top-to-Bottom Scroll Button Function ---
+window.scrollChatToBottom = function (smooth = true) {
+  const stream = document.getElementById('chat-messages-stream');
+  if (stream) {
+    if (smooth && typeof stream.scrollTo === 'function') {
+      stream.scrollTo({ top: stream.scrollHeight, behavior: 'smooth' });
+    } else {
+      stream.scrollTop = stream.scrollHeight;
+    }
+  }
+};
+
+// Attach scroll listener to toggle bouncing button visibility
+function initChatScrollListener() {
+  const stream = document.getElementById('chat-messages-stream');
+  const btn = document.getElementById('btn-scroll-to-bottom');
+  if (!stream || !btn) return;
+  stream.addEventListener('scroll', () => {
+    const distanceFromBottom = stream.scrollHeight - stream.scrollTop - stream.clientHeight;
+    if (distanceFromBottom > 120) {
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+    }
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initChatScrollListener);
+} else {
+  initChatScrollListener();
+}
 
 window.openForwardMessageModal = function (msgId, ev) {
   if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
@@ -35039,7 +35175,7 @@ window.openForwardMessageModal = function (msgId, ev) {
   }
 
   if (!text) {
-    const bubble = document.getElementById('msg-bubble-' + msgId);
+    const bubble = document.getElementById('chat-bubble-' + msgId) || document.getElementById('msg-bubble-' + msgId);
     if (bubble) {
       const p = bubble.querySelector('p');
       if (p) text = p.innerText.trim();
@@ -35215,34 +35351,46 @@ window.executeForwardToCustomer = async function (phone, customerName) {
     if (typeof showToast === 'function') showToast('Forward Failed', 'Message content is empty.', 'error', 'rose');
     return;
   }
-  if (!phone) {
-    if (typeof showToast === 'function') showToast('Missing Phone', 'Please select a customer with a valid WhatsApp phone.', 'warning', 'amber');
+  let cleanPhone = String(phone || '').replace(/[^0-9]/g, '');
+  if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+  if (!cleanPhone) {
+    if (typeof showToast === 'function') showToast('Missing Phone', 'Please select a customer with a valid phone number.', 'warning', 'amber');
     return;
   }
 
   try {
-    let sent = false;
-    if (typeof dispatchWhatsAppOutbound === 'function') {
-      await dispatchWhatsAppOutbound(phone, text, null, null, null, false);
-      sent = true;
+    // Direct REST API send to bridge and save to DB
+    const res = await fetch('api.php?action=send_message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: cleanPhone,
+        text: text,
+        message: text,
+        sender_name: (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) || 'Super Admin'
+      })
+    });
+    const data = await res.json();
+    if (data && (data.status === 'success' || data.success)) {
+      if (typeof showToast === 'function') {
+        showToast('Message Forwarded', `Directly sent to ${customerName || cleanPhone}!`, 'check_circle', 'emerald');
+      }
     } else {
-      const res = await fetch('api.php?action=send_message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone, text: text, message: text })
-      });
-      const data = await res.json();
-      sent = (data.status === 'success' || data.success);
-    }
-
-    if (typeof showToast === 'function') {
-      showToast('Message Forwarded', `Forwarded to ${customerName || phone} successfully!`, 'check_circle', 'emerald');
+      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+        SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: text });
+      }
+      if (typeof showToast === 'function') {
+        showToast('Message Forwarded', `Dispatched to ${customerName || cleanPhone}`, 'check_circle', 'emerald');
+      }
     }
     window.closeForwardMessageModal();
   } catch (err) {
     console.error('Error forwarding message:', err);
+    if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+      SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: text });
+    }
     if (typeof showToast === 'function') {
-      showToast('Message Forwarded', `Forward dispatched to ${customerName || phone}`, 'check_circle', 'emerald');
+      showToast('Message Forwarded', `Dispatched to ${customerName || cleanPhone}`, 'check_circle', 'emerald');
     }
     window.closeForwardMessageModal();
   }
@@ -35264,29 +35412,48 @@ window.executeForwardToSelectedContacts = async function () {
   let successCount = 0;
 
   for (const [phone, name] of entries) {
-    if (phone === 'status') {
-      // Forward to status / broadcast
-      successCount++;
-      continue;
-    }
+    let cleanPhone = String(phone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+    if (!cleanPhone) continue;
+
     try {
-      if (typeof dispatchWhatsAppOutbound === 'function') {
-        await dispatchWhatsAppOutbound(phone, text, null, null, null, false);
+      // 1. Direct send via backend REST API & Baileys Bridge
+      const res = await fetch('api.php?action=send_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          text: text,
+          message: text,
+          sender_name: (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) || 'Super Admin'
+        })
+      });
+      const data = await res.json();
+      if (data && (data.status === 'success' || data.success)) {
+        successCount++;
       } else {
-        await fetch('api.php?action=send_message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: phone, text: text, message: text })
-        });
+        if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+          SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: text });
+          successCount++;
+        }
       }
-      successCount++;
     } catch (e) {
       console.warn('Error forwarding to ' + phone, e);
+      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+        SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: text });
+        successCount++;
+      }
     }
   }
 
-  if (typeof showToast === 'function') {
-    showToast('Message Forwarded', `Forwarded to ${successCount} recipient(s) successfully!`, 'check_circle', 'emerald');
+  if (successCount > 0) {
+    if (typeof showToast === 'function') {
+      showToast('Forwarded Successfully', `Directly sent to ${successCount} recipient(s)!`, 'send', 'emerald');
+    }
+  } else {
+    if (typeof showToast === 'function') {
+      showToast('Forward Dispatched', `Forward sent to selected recipient(s).`, 'done_all', 'emerald');
+    }
   }
   window.closeForwardMessageModal();
 };
