@@ -5465,16 +5465,30 @@ function renderChatMessages() {
       `;
     }
 
+    const isBulkMode = Boolean(window.IS_BULK_SELECT_MODE);
     const isMsgSelected = Boolean(window.SELECTED_CHAT_MESSAGES && window.SELECTED_CHAT_MESSAGES.has(msgId));
 
     return `
-      <div id="chat-bubble-${msgId}" data-msg-id="${msgId}" data-product-matched="${isMatchingProductInMsg ? 'true' : 'false'}" class="chat-message-row flex items-center ${isOut ? 'justify-end' : 'justify-start'} gap-2 transition-all duration-200 group">
-        <!-- Message Selection Checkbox for Bulk Forward (Image 4) -->
-        <div onclick="toggleSelectMessage('${msgId}', event)" class="${isOut ? 'order-last' : 'order-first'} self-center cursor-pointer select-none shrink-0" title="Select message">
+      <div id="chat-bubble-${msgId}" data-msg-id="${msgId}" data-product-matched="${isMatchingProductInMsg ? 'true' : 'false'}" class="chat-message-row flex items-center ${isOut ? 'justify-end' : 'justify-start'} gap-2 transition-all duration-200 group relative">
+        <!-- Message Selection Checkbox for Bulk Forward (Always Left: order-first, appears when Forward is touched) -->
+        <div onclick="toggleSelectMessage('${msgId}', event)" class="msg-checkbox-container order-first self-center cursor-pointer select-none shrink-0 ${isBulkMode ? '' : 'hidden'}" title="Select message">
           <div class="msg-select-box w-5 h-5 rounded ${isMsgSelected ? 'bg-[#00a884] border-2 border-[#00a884] text-white shadow-2xs' : 'border-2 border-slate-300 bg-white hover:border-[#00a884] opacity-80 group-hover:opacity-100'} flex items-center justify-center text-xs font-bold transition">
             ${isMsgSelected ? '<span class="material-symbols-outlined text-[14px]">check</span>' : ''}
           </div>
         </div>
+
+        <!-- Authentic WhatsApp Circular Forward Icon Button (Image 2) -->
+        <div class="msg-forward-btn-wrap ${isOut ? 'order-first' : 'order-last'} self-center shrink-0 ${isBulkMode ? 'hidden' : ''}">
+          <button type="button" 
+                  onclick="triggerMessageForward('${msgId}', event)" 
+                  class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-500 hover:text-[#00a884] shadow-xs hover:shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer select-none opacity-80 group-hover:opacity-100"
+                  title="Forward message">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+              <path d="M14 6l6 6-6 6v-4c-6 0-10 3-12 8 1-7 5-11 12-11V6z"/>
+            </svg>
+          </button>
+        </div>
+
         <div class="max-w-[85%] sm:max-w-md w-fit min-w-0 break-words [overflow-wrap:anywhere] ${isOut ? 'bg-brand-50 border border-emerald-200 text-slate-800 chat-bubble-out shadow-sm' : 'bg-white border border-slate-200 text-slate-800 chat-bubble-in shadow-sm'} ${isMatchingProductInMsg ? 'ring-3 ring-emerald-400 bg-emerald-50/70 border-emerald-400 shadow-md' : ''} p-3.5 space-y-1 rounded-2xl">
           ${isMatchingProductInMsg ? `
             <div class="flex items-center justify-between text-[10px] font-bold text-emerald-900 bg-emerald-100/90 px-2 py-0.5 rounded-md mb-1.5 border border-emerald-300 shadow-2xs">
@@ -5509,16 +5523,6 @@ function renderChatMessages() {
                         title="Translate (மொழிபெயர் 🌐)">
                   <span class="material-symbols-outlined text-[12px] text-emerald-600">translate</span>
                   <span id="btn-trans-text-${msgId}">${getTranslateBtnText()}</span>
-                </button>
-                <!-- Forward Message Button (Authentic WhatsApp Style) -->
-                <button type="button" 
-                        onclick="openForwardMessageModal('${msgId}', event)" 
-                        class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-[#00a884] bg-white/80 hover:bg-emerald-50 active:scale-95 border border-slate-200/80 hover:border-emerald-300 px-2 py-0.5 rounded-full transition shadow-2xs cursor-pointer select-none"
-                        title="Forward Message">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" class="text-slate-500 hover:text-[#00a884] shrink-0">
-                    <path d="M14 6l6 6-6 6v-4c-6 0-10 3-12 8 1-7 5-11 12-11V6z"/>
-                  </svg>
-                  <span>Forward</span>
                 </button>
               ` : '<span></span>'}
             </div>
@@ -35035,6 +35039,19 @@ window.triggerIncomingCallForActiveCustomer = triggerIncomingCallForActiveCustom
 window.CURRENT_FORWARD_TEXT = '';
 window.FORWARD_SELECTED_CONTACTS = new Map(); // phone -> name
 window.SELECTED_CHAT_MESSAGES = new Set(); // msgId set for bulk message forward (Image 4)
+window.IS_BULK_SELECT_MODE = false;
+
+// Trigger Message Forward: activates bulk select checkboxes on the left and checks this message (Image 2 -> Image 4)
+window.triggerMessageForward = function (msgId, ev) {
+  if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+  if (!msgId) return;
+
+  window.IS_BULK_SELECT_MODE = true;
+  if (!window.SELECTED_CHAT_MESSAGES.has(msgId)) {
+    window.SELECTED_CHAT_MESSAGES.add(msgId);
+  }
+  window.updateBulkSelectUI();
+};
 
 // --- Bulk Message Selection Logic (Image 4) ---
 window.toggleSelectMessage = function (msgId, ev) {
@@ -35051,27 +35068,44 @@ window.toggleSelectMessage = function (msgId, ev) {
 
 window.cancelBulkMessageSelect = function () {
   window.SELECTED_CHAT_MESSAGES.clear();
+  window.IS_BULK_SELECT_MODE = false;
   window.updateBulkSelectUI();
 };
 
 window.updateBulkSelectUI = function () {
   const count = window.SELECTED_CHAT_MESSAGES.size;
+  const isBulk = Boolean(window.IS_BULK_SELECT_MODE);
   const bar = document.getElementById('chat-bulk-forward-bar');
   const countEl = document.getElementById('chat-bulk-selected-count');
 
   if (bar) {
-    if (count > 0) {
+    if (isBulk && count > 0) {
       bar.classList.remove('hidden');
       if (countEl) countEl.innerText = `${count} selected`;
-    } else {
+    } else if (!isBulk) {
       bar.classList.add('hidden');
+    } else {
+      bar.classList.remove('hidden');
+      if (countEl) countEl.innerText = `0 selected`;
     }
   }
 
-  // Update check icon on each message row
+  // Update check icon, visibility of checkboxes on left, and forward buttons on all message rows
   document.querySelectorAll('.chat-message-row').forEach(row => {
     const mId = row.getAttribute('data-msg-id');
     const isSel = window.SELECTED_CHAT_MESSAGES.has(mId);
+
+    // Checkbox container on left
+    const chkWrap = row.querySelector('.msg-checkbox-container');
+    if (chkWrap) {
+      if (isBulk) {
+        chkWrap.classList.remove('hidden');
+      } else {
+        chkWrap.classList.add('hidden');
+      }
+    }
+
+    // Checkbox UI
     const box = row.querySelector('.msg-select-box');
     if (box) {
       if (isSel) {
@@ -35080,6 +35114,16 @@ window.updateBulkSelectUI = function () {
       } else {
         box.className = 'msg-select-box w-5 h-5 rounded border-2 border-slate-300 bg-white hover:border-[#00a884] flex items-center justify-center text-xs font-bold transition opacity-80';
         box.innerHTML = '';
+      }
+    }
+
+    // Circular forward button
+    const fwdWrap = row.querySelector('.msg-forward-btn-wrap');
+    if (fwdWrap) {
+      if (isBulk) {
+        fwdWrap.classList.add('hidden');
+      } else {
+        fwdWrap.classList.remove('hidden');
       }
     }
   });
