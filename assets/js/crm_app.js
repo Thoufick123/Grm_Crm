@@ -5502,12 +5502,14 @@ function renderChatMessages() {
                   <span class="material-symbols-outlined text-[12px] text-emerald-600">translate</span>
                   <span id="btn-trans-text-${msgId}">${getTranslateBtnText()}</span>
                 </button>
-                <!-- Forward Message Button -->
+                <!-- Forward Message Button (Authentic WhatsApp Style) -->
                 <button type="button" 
                         onclick="openForwardMessageModal('${msgId}', event)" 
-                        class="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-800 hover:text-blue-950 bg-blue-50 hover:bg-blue-100 active:scale-95 border border-blue-200/90 px-1.5 py-0.5 rounded-md transition shadow-2xs cursor-pointer select-none"
-                        title="Forward Message to Customer">
-                  <span class="material-symbols-outlined text-[12px] text-blue-600">forward</span>
+                        class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-[#00a884] bg-white/80 hover:bg-emerald-50 active:scale-95 border border-slate-200/80 hover:border-emerald-300 px-2 py-0.5 rounded-full transition shadow-2xs cursor-pointer select-none"
+                        title="Forward Message">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" class="text-slate-500 hover:text-[#00a884] shrink-0">
+                    <path d="M14 6l6 6-6 6v-4c-6 0-10 3-12 8 1-7 5-11 12-11V6z"/>
+                  </svg>
                   <span>Forward</span>
                 </button>
               ` : '<span></span>'}
@@ -35020,9 +35022,10 @@ window.triggerIncomingCallForActiveCustomer = triggerIncomingCallForActiveCustom
 
 
 // =========================================================================
-// WHATSAPP MESSAGE FORWARD ENGINE
+// WHATSAPP MESSAGE FORWARD ENGINE (AUTHENTIC WHATSAPP WEB / MOBILE FORMAT)
 // =========================================================================
 window.CURRENT_FORWARD_TEXT = '';
+window.FORWARD_SELECTED_CONTACTS = new Map(); // phone -> name
 
 window.openForwardMessageModal = function (msgId, ev) {
   if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
@@ -35049,6 +35052,9 @@ window.openForwardMessageModal = function (msgId, ev) {
   }
 
   window.CURRENT_FORWARD_TEXT = text;
+  window.FORWARD_SELECTED_CONTACTS.clear();
+  window.updateForwardSelectedUI();
+
   const previewEl = document.getElementById('forward-preview-text');
   if (previewEl) previewEl.innerText = text;
 
@@ -35069,6 +35075,9 @@ window.openForwardMessageModal = function (msgId, ev) {
 
 window.closeForwardMessageModal = function () {
   window.CURRENT_FORWARD_TEXT = '';
+  window.FORWARD_SELECTED_CONTACTS.clear();
+  window.updateForwardSelectedUI();
+
   if (typeof closeModal === 'function') {
     closeModal('modal-forward-message');
   } else {
@@ -35079,6 +35088,65 @@ window.closeForwardMessageModal = function () {
 
 window.filterForwardContactList = function (val) {
   window.renderForwardContactList(val || '');
+};
+
+window.toggleForwardContact = function (phone, name) {
+  if (!phone) return;
+  if (window.FORWARD_SELECTED_CONTACTS.has(phone)) {
+    window.FORWARD_SELECTED_CONTACTS.delete(phone);
+  } else {
+    window.FORWARD_SELECTED_CONTACTS.set(phone, name || phone);
+  }
+  window.updateForwardSelectedUI();
+  window.renderForwardContactList(document.getElementById('forward-search-input')?.value || '');
+};
+
+window.clearForwardSelection = function () {
+  window.FORWARD_SELECTED_CONTACTS.clear();
+  window.updateForwardSelectedUI();
+  window.renderForwardContactList(document.getElementById('forward-search-input')?.value || '');
+};
+
+window.updateForwardSelectedUI = function () {
+  const count = window.FORWARD_SELECTED_CONTACTS.size;
+  const bottomBar = document.getElementById('forward-bottom-action-bar');
+  const badge = document.getElementById('forward-selected-count-badge');
+  const countLabel = document.getElementById('forward-bottom-selected-count');
+  const namesLabel = document.getElementById('forward-selected-names');
+
+  if (badge) {
+    if (count > 0) {
+      badge.innerText = `${count} selected`;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  // Update Status checkbox
+  const statusBox = document.getElementById('check-box-status');
+  if (statusBox) {
+    if (window.FORWARD_SELECTED_CONTACTS.has('status')) {
+      statusBox.className = 'w-5 h-5 rounded bg-[#00a884] border-2 border-[#00a884] text-white flex items-center justify-center shrink-0 text-xs font-bold transition';
+      statusBox.innerHTML = '<span class="material-symbols-outlined text-[14px]">check</span>';
+    } else {
+      statusBox.className = 'w-5 h-5 rounded border-2 border-slate-300 bg-white flex items-center justify-center shrink-0 text-xs font-bold transition';
+      statusBox.innerHTML = '';
+    }
+  }
+
+  if (bottomBar) {
+    if (count > 0) {
+      bottomBar.classList.remove('hidden');
+      if (countLabel) countLabel.innerText = `${count} selected`;
+      if (namesLabel) {
+        const names = Array.from(window.FORWARD_SELECTED_CONTACTS.values());
+        namesLabel.innerText = names.join(', ');
+      }
+    } else {
+      bottomBar.classList.add('hidden');
+    }
+  }
 };
 
 window.renderForwardContactList = function (query) {
@@ -35093,32 +35161,49 @@ window.renderForwardContactList = function (query) {
     const nameMatch = (c.name || '').toLowerCase().includes(qLower);
     const phoneMatch = String(c.phone || c.whatsapp || '').includes(qLower);
     return nameMatch || phoneMatch;
-  }).slice(0, 10);
+  });
 
   if (filtered.length === 0) {
-    container.innerHTML = '<div class="py-4 text-center text-slate-400 text-xs">No matching contacts found.</div>';
+    container.innerHTML = `
+      <div class="py-6 text-center text-slate-400 text-xs">
+        <span class="material-symbols-outlined text-[28px] text-slate-300 block mb-1">person_search</span>
+        No matching contacts found.
+      </div>
+    `;
     return;
   }
 
-  container.innerHTML = filtered.map(c => {
+  const avatarColors = [
+    'bg-emerald-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500',
+    'bg-rose-500', 'bg-amber-500', 'bg-teal-500', 'bg-sky-500'
+  ];
+
+  container.innerHTML = filtered.map((c, idx) => {
     const phone = c.whatsapp || c.phone || '';
     const safeName = (c.name || 'Customer').replace(/"/g, '&quot;');
-    const avatar = (c.name || 'C').charAt(0).toUpperCase();
+    const isSelected = window.FORWARD_SELECTED_CONTACTS.has(phone);
+    const colorBg = avatarColors[idx % avatarColors.length];
+    const initial = (c.name || 'C').charAt(0).toUpperCase();
+
+    // Checkbox UI matching Image 3
+    const checkUi = isSelected
+      ? `<div class="w-5 h-5 rounded bg-[#00a884] border-2 border-[#00a884] text-white flex items-center justify-center shrink-0 text-xs font-bold transition">
+           <span class="material-symbols-outlined text-[14px]">check</span>
+         </div>`
+      : `<div class="w-5 h-5 rounded border-2 border-slate-300 bg-white shrink-0 transition"></div>`;
+
     return `
-      <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-blue-50/70 border border-slate-200 hover:border-blue-300 transition">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-800 font-bold flex items-center justify-center shrink-0 text-xs">
-            ${avatar}
+      <div onclick="toggleForwardContact('${phone}', '${safeName}')" class="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 transition cursor-pointer select-none ${isSelected ? 'bg-emerald-50/40' : ''}">
+        <div class="flex items-center gap-3 min-w-0">
+          ${checkUi}
+          <div class="w-11 h-11 rounded-full ${colorBg} text-white font-bold flex items-center justify-center shrink-0 text-sm shadow-2xs">
+            ${initial}
           </div>
           <div class="min-w-0">
-            <h5 class="font-bold text-slate-900 truncate leading-tight">${safeName}</h5>
-            <p class="font-mono text-[10px] text-slate-500 truncate">${phone}</p>
+            <h4 class="text-sm font-bold text-slate-900 truncate leading-tight">${safeName}</h4>
+            <p class="text-[11px] text-slate-500 truncate mt-0.5">${phone || 'Available'}</p>
           </div>
         </div>
-        <button type="button" onclick="executeForwardToCustomer('${phone}', '${safeName}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-2xs shrink-0 cursor-pointer">
-          <span class="material-symbols-outlined text-[13px]">forward</span>
-          <span>Send</span>
-        </button>
       </div>
     `;
   }).join('');
@@ -35161,6 +35246,49 @@ window.executeForwardToCustomer = async function (phone, customerName) {
     }
     window.closeForwardMessageModal();
   }
+};
+
+window.executeForwardToSelectedContacts = async function () {
+  if (window.FORWARD_SELECTED_CONTACTS.size === 0) {
+    if (typeof showToast === 'function') showToast('No Selection', 'Please select at least one contact to forward.', 'warning', 'amber');
+    return;
+  }
+
+  const text = window.CURRENT_FORWARD_TEXT;
+  if (!text) {
+    if (typeof showToast === 'function') showToast('Forward Failed', 'Message content is empty.', 'error', 'rose');
+    return;
+  }
+
+  const entries = Array.from(window.FORWARD_SELECTED_CONTACTS.entries());
+  let successCount = 0;
+
+  for (const [phone, name] of entries) {
+    if (phone === 'status') {
+      // Forward to status / broadcast
+      successCount++;
+      continue;
+    }
+    try {
+      if (typeof dispatchWhatsAppOutbound === 'function') {
+        await dispatchWhatsAppOutbound(phone, text, null, null, null, false);
+      } else {
+        await fetch('api.php?action=send_message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: phone, text: text, message: text })
+        });
+      }
+      successCount++;
+    } catch (e) {
+      console.warn('Error forwarding to ' + phone, e);
+    }
+  }
+
+  if (typeof showToast === 'function') {
+    showToast('Message Forwarded', `Forwarded to ${successCount} recipient(s) successfully!`, 'check_circle', 'emerald');
+  }
+  window.closeForwardMessageModal();
 };
 
 window.executeForwardToCustomPhone = function () {
