@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Blue Berry 💙 Voice Support Call</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .pulse-ring { animation: pulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 0.3; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .wave-bar { animation: soundWave 1.2s ease-in-out infinite alternate; }
+    @keyframes soundWave {
+      0% { height: 6px; }
+      100% { height: 28px; }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+  <!-- TOP HEADER -->
+  <header class="p-4 sm:p-6 flex items-center justify-between border-b border-white/10 backdrop-blur-md bg-white/5">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+        <span class="material-symbols-outlined text-[22px] text-white">support_agent</span>
+      </div>
+      <div>
+        <h1 class="text-sm font-black tracking-tight flex items-center gap-1.5">
+          <span>Blue Berry 💙</span>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">DIRECT VOICE</span>
+        </h1>
+        <p class="text-[11px] text-slate-400 font-medium">Customer Support Hotline</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-[10px] font-bold">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      <span class="material-symbols-outlined text-[13px]">lock</span>
+      <span>Encrypted Voice</span>
+    </div>
+  </header>
+
+  <!-- MAIN CALL CONTAINER -->
+  <main class="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto w-full">
+    
+    <!-- AVATAR & CALL PULSE -->
+    <div class="relative my-6">
+      <div id="avatar-pulse-ring" class="absolute inset-0 rounded-full bg-indigo-500/20 pulse-ring scale-125"></div>
+      <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-500 p-1 relative z-10 shadow-2xl shadow-indigo-500/40 flex items-center justify-center">
+        <div class="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
+          <span id="display-agent-avatar" class="material-symbols-outlined text-[54px] text-indigo-400">headset_mic</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALL INFO DETAILS -->
+    <div class="space-y-1">
+      <h2 id="display-agent-name" class="text-xl sm:text-2xl font-black text-white tracking-tight">Executive Specialist</h2>
+      <p id="display-call-title" class="text-xs text-indigo-200/80 font-medium">Blue Berry 💙 Customer Care</p>
+    </div>
+
+    <!-- STATUS & TIMER -->
+    <div class="mt-6 flex flex-col items-center gap-2">
+      <div id="call-status-badge" class="px-4 py-1.5 rounded-full bg-white/10 text-slate-200 border border-white/15 text-xs font-bold flex items-center gap-2">
+        <span id="call-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <span id="call-status-text">Ready to Connect</span>
+      </div>
+      <div id="call-timer-text" class="text-2xl sm:text-3xl font-black font-mono tracking-widest text-emerald-400 hidden">00:00</div>
+    </div>
+
+    <!-- SOUND WAVE VISUALIZER -->
+    <div id="sound-wave-box" class="h-10 flex items-center justify-center gap-1.5 my-4 opacity-0 transition-opacity duration-300">
+      <div class="w-1 bg-emerald-400 rounded-full wave-bar" style="animation-delay: 0.1s"></div>
+      <div class="w-1 bg-emerald-400 rounded-full wave-bar" style="animation-delay: 0.4s"></div>
+      <div class="w-1 bg-emerald-400 rounded-full wave-bar" style="animation-delay: 0.2s"></div>
+      <div class="w-1 bg-emerald-400 rounded-full wave-bar" style="animation-delay: 0.5s"></div>
+      <div class="w-1 bg-emerald-400 rounded-full wave-bar" style="animation-delay: 0.3s"></div>
+    </div>
+
+    <!-- INITIAL TAP TO CONNECT BUTTON -->
+    <div id="box-start-call" class="w-full mt-4">
+      <button type="button" onclick="startCustomerVoiceCall()" id="btn-start-call"
+        class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-extrabold rounded-2xl shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2.5 transition cursor-pointer text-sm">
+        <span class="material-symbols-outlined text-[22px]">call</span>
+        <span>Tap to Connect Voice Call</span>
+      </button>
+      <p class="text-[11px] text-slate-400 mt-2.5">
+        🔒 Uses your mobile web browser microphone • No software install required
+      </p>
+    </div>
+
+    <!-- ACTIVE CALL CONTROLS -->
+    <div id="box-active-controls" class="w-full mt-4 hidden flex items-center justify-center gap-6">
+      
+      <!-- Mute Button -->
+      <button type="button" onclick="toggleCustomerMute()" id="btn-mute"
+        class="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 border border-white/20 flex flex-col items-center justify-center text-white transition cursor-pointer">
+        <span class="material-symbols-outlined text-[24px]" id="icon-mute">mic</span>
+        <span class="text-[9px] font-bold mt-0.5" id="label-mute">Mute</span>
+      </button>
+
+      <!-- Hangup Call Button -->
+      <button type="button" onclick="endCustomerCall()" id="btn-hangup"
+        class="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 shadow-xl shadow-rose-600/30 flex items-center justify-center text-white transition cursor-pointer">
+        <span class="material-symbols-outlined text-[30px]">call_end</span>
+      </button>
+
+      <!-- Speaker / Output Route Indicator -->
+      <button type="button" onclick="toggleSpeakerHint()" id="btn-speaker"
+        class="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 border border-white/20 flex flex-col items-center justify-center text-white transition cursor-pointer">
+        <span class="material-symbols-outlined text-[24px]">volume_up</span>
+        <span class="text-[9px] font-bold mt-0.5">Speaker</span>
+      </button>
+    </div>
+
+    <!-- CALL ENDED NOTICE -->
+    <div id="box-call-ended" class="w-full mt-4 hidden bg-white/10 border border-white/15 p-6 rounded-2xl space-y-2">
+      <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center">
+        <span class="material-symbols-outlined text-[28px]">verified</span>
+      </div>
+      <h3 class="text-lg font-black text-white">Call Completed</h3>
+      <p class="text-xs text-slate-300">Thank you for speaking with Blue Berry 💙 Customer Care.</p>
+      <div class="text-[11px] text-slate-400 font-mono mt-2" id="ended-duration-text">Duration: 00:00</div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="p-4 text-center text-[11px] text-slate-500 border-t border-white/5">
+    <span>Private WebRTC Voice Gateway • Zero Telephony Charges</span>
+  </footer>
+
+  <!-- HIDDEN AUDIO ELEMENT FOR REMOTE STAFF AUDIO -->
+  <audio id="remote-staff-audio" autoplay playsinline style="display:none"></audio>
+
+  <script>
+    // State Variables
+    let ROOM_TOKEN = '';
+    let CALL_ID = '';
+    let SOCKET = null;
+    let PEER_CONNECTION = null;
+    let LOCAL_STREAM = null;
+    let CALL_TIMER_INTERVAL = null;
+    let CALL_SECONDS = 0;
+    let IS_MUTED = false;
+    let WAKE_LOCK = null;
+
+    const ICE_SERVERS = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun.services.mozilla.com' }
+    ];
+
+    // Read room token from URL
+    window.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      ROOM_TOKEN = urlParams.get('token') || urlParams.get('room') || '';
+
+      if (!ROOM_TOKEN) {
+        setStatus('Invalid or Missing Call Token', 'rose');
+        document.getElementById('btn-start-call').disabled = true;
+        document.getElementById('btn-start-call').classList.add('opacity-50', 'cursor-not-allowed');
+        return;
+      }
+
+      // Verify room details from Node.js bridge room-status or PHP API
+      try {
+        let data = null;
+        try {
+          const resp = await fetch(`/api/voice/room-status/${encodeURIComponent(ROOM_TOKEN)}`);
+          if (resp.ok) data = await resp.json();
+        } catch (e) {}
+
+        if (!data || !data.status || data.status !== 'success') {
+          try {
+            const respPhp = await fetch(`api.php?action=verify_voice_room&token=${encodeURIComponent(ROOM_TOKEN)}`);
+            if (respPhp.ok) data = await respPhp.json();
+          } catch (e) {}
+        }
+
+        if (data && (data.status === 'success' || data.valid)) {
+          CALL_ID = data.call_id || data.room_token;
+          const staffName = data.staff_name || data.assigned_staff_name;
+          const custName = data.customer_name;
+          if (staffName) {
+            document.getElementById('display-agent-name').innerText = staffName;
+          }
+          if (custName) {
+            document.getElementById('display-call-title').innerText = `Calling for ${custName}`;
+          }
+          setStatus(`${staffName || 'Agent'} is Waiting • Tap Below to Speak`, 'emerald');
+        } else {
+          setStatus('Agent Connected • Tap Below to Speak', 'emerald');
+        }
+
+        // If autocall requested, attempt immediate connection (or fallback to 1-tap)
+        if (urlParams.get('autocall') === '1') {
+          setTimeout(() => {
+            try { startCustomerVoiceCall(); } catch(e) {}
+          }, 300);
+        }
+      } catch (e) {
+        console.warn('Room verification note:', e.message);
+        setStatus('Ready to Connect', 'emerald');
+      }
+    });
+
+    // Start Customer Call
+    async function startCustomerVoiceCall() {
+      const btn = document.getElementById('btn-start-call');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="material-symbols-outlined text-[20px] animate-spin">refresh</span><span>Connecting Voice...</span>`;
+
+      try {
+        // Request Mobile WakeLock to keep screen on during call
+        if ('wakeLock' in navigator) {
+          try {
+            WAKE_LOCK = await navigator.wakeLock.request('screen');
+          } catch (e) {}
+        }
+
+        // 1. Capture Microphone
+        LOCAL_STREAM = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: false
+        });
+
+        // 2. Connect to Socket.IO Bridge
+        const bridgeUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          ? `${window.location.protocol}//${window.location.hostname}:3000`
+          : window.location.origin;
+
+        SOCKET = io(bridgeUrl, { transports: ['websocket', 'polling'] });
+
+        SOCKET.on('connect', () => {
+          console.log('⚡ Connected to Voice Signaling Bridge');
+          SOCKET.emit('voice:join', {
+            room_token: ROOM_TOKEN,
+            role: 'customer',
+            call_id: CALL_ID
+          });
+        });
+
+        // 3. Initialize RTCPeerConnection
+        PEER_CONNECTION = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+        // Add local tracks
+        LOCAL_STREAM.getTracks().forEach(track => {
+          PEER_CONNECTION.addTrack(track, LOCAL_STREAM);
+        });
+
+        // Handle remote audio from staff
+        PEER_CONNECTION.ontrack = (event) => {
+          console.log('🔊 Remote staff audio track received');
+          const remoteAudio = document.getElementById('remote-staff-audio');
+          if (remoteAudio) {
+            remoteAudio.srcObject = event.streams[0];
+            remoteAudio.play().catch(e => console.warn('Autoplay check:', e));
+          }
+          onCallConnected();
+        };
+
+        // ICE Candidate handling
+        PEER_CONNECTION.onicecandidate = (event) => {
+          if (event.candidate && SOCKET) {
+            SOCKET.emit('voice:ice-candidate', {
+              room_token: ROOM_TOKEN,
+              candidate: event.candidate
+            });
+          }
+        };
+
+        // Receive SDP Offer from Staff
+        SOCKET.on('voice:offer', async (payload) => {
+          console.log('📡 Received SDP Offer from Staff');
+          try {
+            await PEER_CONNECTION.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+            const answer = await PEER_CONNECTION.createAnswer();
+            await PEER_CONNECTION.setLocalDescription(answer);
+
+            SOCKET.emit('voice:answer', {
+              room_token: ROOM_TOKEN,
+              sdp: answer
+            });
+            console.log('📡 Sent SDP Answer to Staff');
+          } catch (err) {
+            console.error('SDP Offer/Answer error:', err);
+          }
+        });
+
+        // Receive ICE Candidate from Staff
+        SOCKET.on('voice:ice-candidate', async (payload) => {
+          if (PEER_CONNECTION && payload.candidate) {
+            try {
+              await PEER_CONNECTION.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            } catch (e) {}
+          }
+        });
+
+        // Staff Connected Notification
+        SOCKET.on('voice:staff-connected', (data) => {
+          setStatus('Staff Connected • Exchanging Audio...', 'emerald');
+        });
+
+        SOCKET.on('voice:staff-ready', (data) => {
+          setStatus('Staff Online • Connecting...', 'emerald');
+        });
+
+        // Call Hangup by Staff
+        SOCKET.on('voice:call-ended', () => {
+          endCustomerCall(false);
+        });
+
+        // Swap UI Panels
+        document.getElementById('box-start-call').classList.add('hidden');
+        document.getElementById('box-active-controls').classList.remove('hidden');
+        setStatus('Ringing Executive Desk...', 'blue');
+
+      } catch (err) {
+        console.error('Call initialization error:', err);
+        btn.disabled = false;
+        btn.innerHTML = `<span class="material-symbols-outlined text-[20px]">call</span><span>Retry Call</span>`;
+        setStatus('Microphone Permission Required', 'rose');
+        alert('Please allow microphone access in your mobile browser to speak with customer support.');
+      }
+    }
+
+    // Call Connected Transition
+    function onCallConnected() {
+      setStatus('Call Connected • HD Voice', 'emerald');
+      document.getElementById('sound-wave-box').classList.remove('opacity-0');
+      document.getElementById('call-timer-text').classList.remove('hidden');
+
+      if (!CALL_TIMER_INTERVAL) {
+        CALL_SECONDS = 0;
+        CALL_TIMER_INTERVAL = setInterval(() => {
+          CALL_SECONDS++;
+          const mins = String(Math.floor(CALL_SECONDS / 60)).padStart(2, '0');
+          const secs = String(CALL_SECONDS % 60).padStart(2, '0');
+          document.getElementById('call-timer-text').innerText = `${mins}:${secs}`;
+        }, 1000);
+      }
+    }
+
+    // Toggle Customer Mute
+    function toggleCustomerMute() {
+      if (!LOCAL_STREAM) return;
+      IS_MUTED = !IS_MUTED;
+      LOCAL_STREAM.getAudioTracks().forEach(t => t.enabled = !IS_MUTED);
+
+      const btnMute = document.getElementById('btn-mute');
+      const iconMute = document.getElementById('icon-mute');
+      const labelMute = document.getElementById('label-mute');
+
+      if (IS_MUTED) {
+        btnMute.className = 'w-14 h-14 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 flex flex-col items-center justify-center transition cursor-pointer';
+        iconMute.innerText = 'mic_off';
+        labelMute.innerText = 'Unmute';
+      } else {
+        btnMute.className = 'w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex flex-col items-center justify-center text-white transition cursor-pointer';
+        iconMute.innerText = 'mic';
+        labelMute.innerText = 'Mute';
+      }
+
+      if (SOCKET) {
+        SOCKET.emit('voice:mute-state', {
+          room_token: ROOM_TOKEN,
+          is_muted: IS_MUTED
+        });
+      }
+    }
+
+    // Speaker Hint
+    function toggleSpeakerHint() {
+      alert('Speaker audio is managed by your phone volume buttons.');
+    }
+
+    // End Customer Call
+    function endCustomerCall(notifyServer = true) {
+      if (CALL_TIMER_INTERVAL) {
+        clearInterval(CALL_TIMER_INTERVAL);
+        CALL_TIMER_INTERVAL = null;
+      }
+
+      if (notifyServer && SOCKET) {
+        SOCKET.emit('voice:hangup', {
+          room_token: ROOM_TOKEN,
+          reason: 'Customer ended call'
+        });
+      }
+
+      if (LOCAL_STREAM) {
+        LOCAL_STREAM.getTracks().forEach(t => t.stop());
+        LOCAL_STREAM = null;
+      }
+
+      if (PEER_CONNECTION) {
+        PEER_CONNECTION.close();
+        PEER_CONNECTION = null;
+      }
+
+      if (WAKE_LOCK) {
+        try { WAKE_LOCK.release(); } catch (e) {}
+        WAKE_LOCK = null;
+      }
+
+      document.getElementById('sound-wave-box').classList.add('opacity-0');
+      document.getElementById('box-active-controls').classList.add('hidden');
+      document.getElementById('box-call-ended').classList.remove('hidden');
+
+      const mins = String(Math.floor(CALL_SECONDS / 60)).padStart(2, '0');
+      const secs = String(CALL_SECONDS % 60).padStart(2, '0');
+      document.getElementById('ended-duration-text').innerText = `Total Duration: ${mins}:${secs}`;
+      setStatus('Call Ended', 'slate');
+    }
+
+    function setStatus(text, colorName = 'slate') {
+      const txt = document.getElementById('call-status-text');
+      const dot = document.getElementById('call-status-dot');
+      if (txt) txt.innerText = text;
+      if (dot) {
+        dot.className = `w-2 h-2 rounded-full bg-${colorName}-400 ${colorName === 'emerald' ? 'animate-ping' : 'animate-pulse'}`;
+      }
+    }
+  </script>
+</body>
+</html>
+

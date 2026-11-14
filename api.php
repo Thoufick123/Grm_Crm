@@ -5173,17 +5173,38 @@ if ($action === 'restore_db') {
 // CALL & NUMBER MASKING TELEPHONY ENGINE (MYSQL PERSISTENCE & ATOMIC DISPATCH)
 // =========================================================================
 function notifySocketBridge($event, $data = []) {
-    $bridgeUrl = (defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000') . '/api/calls/event';
+    $configFile = __DIR__ . '/whatsapp_account_config.json';
+    $bridgeBase = 'http://localhost:3000';
+    if (file_exists($configFile)) {
+        $cfg = json_decode(file_get_contents($configFile), true);
+        if (!empty($cfg['bridge_url'])) {
+            $bridgeBase = rtrim($cfg['bridge_url'], '/');
+        }
+    }
+    if (defined('BRIDGE_URL') && !empty(BRIDGE_URL)) {
+        $bridgeBase = rtrim(BRIDGE_URL, '/');
+    }
+
+    $endpoints = [
+        'http://127.0.0.1:3000/api/calls/event',
+        'http://localhost:3000/api/calls/event'
+    ];
     $payload = json_encode(['event' => $event, 'data' => $data]);
-    $ch = @curl_init($bridgeUrl);
-    if ($ch) {
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-        @curl_exec($ch);
-        @curl_close($ch);
+    foreach ($endpoints as $ep) {
+        $ch = @curl_init($ep);
+        if ($ch) {
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT_MS, 500);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 300);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            @curl_exec($ch);
+            $code = @curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            @curl_close($ch);
+            if ($code >= 200 && $code < 300) break;
+        }
     }
 }
 
@@ -5202,6 +5223,7 @@ if ($action === 'get_masking_settings') {
         $metrics = [
             "incoming_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` = 'RINGING' AND `started_at` >= DATE_SUB(NOW(), INTERVAL 35 SECOND)")->fetchColumn(),
             "active_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` IN ('CONNECTED', 'CLAIMED', 'ASSIGNED')")->fetchColumn(),
+            "answered_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` IN ('CLAIMED', 'CONNECTED', 'COMPLETED')")->fetchColumn(),
             "completed_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` = 'COMPLETED'")->fetchColumn(),
             "missed_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions` WHERE `status` IN ('MISSED', 'TIMEOUT', 'REJECTED')")->fetchColumn(),
             "total_calls" => (int)$pdo->query("SELECT COUNT(*) FROM `call_sessions`")->fetchColumn()
@@ -5311,25 +5333,30 @@ if ($action === 'get_incoming_calls') {
     $calls = [];
     try {
         if ($pdo) {
-            // 1. Auto-expire any stale calls (> 35 seconds old) from RINGING to MISSED
+            // 1. Auto-expire any stale calls (> 45 seconds old) from RINGING to MISSED
             $pdo->query("
                 UPDATE `call_sessions`
                 SET `status` = 'MISSED',
                     `outcome` = 'MISSED',
                     `ended_at` = IFNULL(`ended_at`, NOW())
                 WHERE `status` = 'RINGING' 
-                  AND (TIMESTAMPDIFF(SECOND, `started_at`, NOW()) > 35 OR `started_at` < DATE_SUB(NOW(), INTERVAL 35 SECOND))
+                  AND TIMESTAMPDIFF(SECOND, `started_at`, NOW()) > 45
             ");
 
-            // 2. Only return genuine fresh ringing calls within the last 35 seconds
+            // 2. Only return genuine fresh ringing calls within the last 45 seconds
             $stmt = $pdo->query("
                 SELECT * FROM `call_sessions` 
                 WHERE `status` = 'RINGING' 
-                  AND TIMESTAMPDIFF(SECOND, `started_at`, NOW()) <= 35
+                  AND TIMESTAMPDIFF(SECOND, `started_at`, NOW()) <= 45
                 ORDER BY `started_at` DESC 
                 LIMIT 5
             ");
-            $calls = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $rawCalls = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rawCalls as $rc) {
+                $rc['call_id'] = $rc['id'];
+                $rc['epoch'] = !empty($rc['started_at']) ? strtotime($rc['started_at']) : time();
+                $calls[] = $rc;
+            }
         }
     } catch (Exception $e) {}
 
@@ -5339,18 +5366,27 @@ if ($action === 'get_incoming_calls') {
         $fileCalls = json_decode(file_get_contents($callsFile), true) ?: [];
         $validFileCalls = array_values(array_filter($fileCalls, function($c) {
             $t = isset($c['started_at']) ? strtotime($c['started_at']) : time();
-            return (time() - $t) < 35 && ($c['status'] ?? '') === 'RINGING';
+            return (time() - $t) < 45 && ($c['status'] ?? '') === 'RINGING';
         }));
         foreach ($validFileCalls as $fc) {
             $found = false;
             foreach ($calls as $c) {
                 if ($c['id'] === $fc['id']) { $found = true; break; }
             }
-            if (!$found) $calls[] = $fc;
+            if (!$found) {
+                $fc['call_id'] = $fc['id'];
+                $fc['epoch'] = isset($fc['started_at']) ? strtotime($fc['started_at']) : time();
+                $calls[] = $fc;
+            }
         }
     }
 
-    echo json_encode(["status" => "success", "incoming_calls" => $calls]);
+    echo json_encode([
+        "status" => "success",
+        "incoming_calls" => $calls,
+        "server_time" => time(),
+        "server_time_ms" => round(microtime(true) * 1000)
+    ]);
     exit;
 }
 
@@ -5395,33 +5431,46 @@ if ($action === 'accept_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$pdo) throw new Exception("Database connection unavailable");
         $pdo->beginTransaction();
 
-        // ATOMIC CONDITIONAL UPDATE: Exactly one winner can claim a call in RINGING status
-        $updateStmt = $pdo->prepare("
-            UPDATE `call_sessions`
-            SET `assigned_staff_id` = ?,
-                `assigned_staff_name` = ?,
-                `status` = 'CONNECTED',
-                `answered_at` = NOW()
-            WHERE `id` = ? AND `status` = 'RINGING'
-        ");
-        $updateStmt->execute([$staffId, $staffName, $callId]);
+        // ROW-LEVEL LOCKING: Exclusively lock the call row for this transaction
+        $checkStmt = $pdo->prepare("SELECT `id`, `assigned_staff_id`, `assigned_staff_name`, `status`, `started_at` FROM `call_sessions` WHERE `id` = ? FOR UPDATE");
+        $checkStmt->execute([$callId]);
+        $current = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-        // Check if this worker won the atomic claim
-        if ($updateStmt->rowCount() === 0) {
+        if ($current && !empty($current['assigned_staff_id']) && $current['assigned_staff_id'] !== $staffId) {
+            // TRUE CONFLICT: Another staff member claimed this call first
             $pdo->rollBack();
-            // Call was already claimed by another staff member, cancelled, or timed out
-            $checkStmt = $pdo->prepare("SELECT `assigned_staff_name`, `status` FROM `call_sessions` WHERE `id` = ?");
-            $checkStmt->execute([$callId]);
-            $current = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
             http_response_code(409); // 409 Conflict
             echo json_encode([
                 "status" => "conflict",
                 "message" => "This call has already been assigned to " . ($current['assigned_staff_name'] ?? 'another staff member') . ".",
                 "assigned_to" => $current['assigned_staff_name'] ?? 'Another Staff Member',
-                "call_status" => $current['status'] ?? 'CONNECTED'
+                "call_status" => $current['status'] ?? 'CLAIMED'
             ]);
             exit;
+        }
+
+        if ($current) {
+            // ATOMIC CLAIM: Assign call to this worker and transition status to CLAIMED
+            $updateStmt = $pdo->prepare("
+                UPDATE `call_sessions`
+                SET `assigned_staff_id` = ?,
+                    `assigned_staff_name` = ?,
+                    `status` = 'CLAIMED',
+                    `answered_at` = IFNULL(`answered_at`, NOW()),
+                    `outcome` = 'CLAIMED'
+                WHERE `id` = ?
+            ");
+            $updateStmt->execute([$staffId, $staffName, $callId]);
+        } else {
+            // Call session record created on demand for incoming event
+            $insStmt = $pdo->prepare("
+                INSERT INTO `call_sessions` (
+                    `id`, `provider_call_id`, `customer_id`, `customer_name`, `customer_phone`,
+                    `masked_phone`, `virtual_number`, `assigned_staff_id`, `assigned_staff_name`,
+                    `status`, `started_at`, `answered_at`, `outcome`
+                ) VALUES (?, ?, 'cust_caller', 'WhatsApp Caller', '+91 97896 60115', '+91 97*** 60115', '+91 99435 57998', ?, ?, 'CLAIMED', NOW(), NOW(), 'CLAIMED')
+            ");
+            $insStmt->execute([$callId, 'INBOUND-' . uniqid(), $staffId, $staffName]);
         }
 
         // Winner gets recorded into call_assignments and call_activity_logs
@@ -5439,12 +5488,20 @@ if ($action === 'accept_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
 
+        $custPhone = $current['customer_phone'] ?? '';
+        $cleanId = preg_replace('/[^a-zA-Z0-9]/', '', $callId);
+        $roomToken = !empty($current['voice_room_token']) ? $current['voice_room_token'] : ('vrm_' . $cleanId);
+
         // Broadcast to all other staff members via Socket.IO so their Accept button immediately disables
+        // and trigger immediate WhatsApp ringing cut & pickup message dispatch on bridge
         notifySocketBridge('call:claimed', [
             'call_id' => $callId,
             'assigned_staff_id' => $staffId,
             'assigned_staff_name' => $staffName,
-            'status' => 'CONNECTED'
+            'customer_phone' => $custPhone,
+            'customer_name' => $current['customer_name'] ?? 'WhatsApp Caller',
+            'voice_room_token' => $roomToken,
+            'status' => 'CLAIMED'
         ]);
 
         echo json_encode([
@@ -5452,7 +5509,8 @@ if ($action === 'accept_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             "message" => "Call successfully assigned to you!",
             "call_id" => $callId,
             "staff_id" => $staffId,
-            "staff_name" => $staffName
+            "staff_name" => $staffName,
+            "call_status" => "CLAIMED"
         ]);
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -5545,9 +5603,58 @@ if ($action === 'end_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([$duration, $outcome, $notes, $callId]);
 
+        // Persist staff notes into call_staff_notes table
+        if (!empty($notes)) {
+            try {
+                $staffInfoStmt = $pdo->prepare("SELECT `assigned_staff_id`, `assigned_staff_name` FROM `call_sessions` WHERE `id` = ?");
+                $staffInfoStmt->execute([$callId]);
+                $staffInfo = $staffInfoStmt->fetch(PDO::FETCH_ASSOC);
+                $noteStaffId = $staffInfo['assigned_staff_id'] ?? 'staff_01';
+                $noteStaffName = $staffInfo['assigned_staff_name'] ?? 'Staff Member';
+
+                $noteStmt = $pdo->prepare("
+                    INSERT INTO `call_staff_notes` (`note_id`, `call_id`, `staff_id`, `staff_name`, `note_summary`)
+                    VALUES (?, ?, ?, ?, ?)
+                ");
+                $noteStmt->execute(['NOTE-' . uniqid(), $callId, $noteStaffId, $noteStaffName, $notes]);
+            } catch (Exception $e) {}
+        }
+
         $pdo->prepare("UPDATE `call_assignments` SET `released_at` = NOW() WHERE `call_session_id` = ? AND `released_at` IS NULL")->execute([$callId]);
 
         $pdo->prepare("INSERT INTO `call_activity_logs` (`call_session_id`, `actor_id`, `actor_name`, `action`) VALUES (?, 'system', 'Telephony', 'CALL_COMPLETED')")->execute([$callId]);
+
+        // Update customer chat timeline
+        try {
+            $sessStmt = $pdo->prepare("SELECT `customer_id`, `customer_name`, `customer_phone`, `assigned_staff_name` FROM `call_sessions` WHERE `id` = ?");
+            $sessStmt->execute([$callId]);
+            $sData = $sessStmt->fetch(PDO::FETCH_ASSOC);
+            if ($sData && !empty($sData['customer_id'])) {
+                $durMin = floor($duration / 60);
+                $durSec = $duration % 60;
+                $durFormatted = sprintf("%02d:%02d", $durMin, $durSec);
+                $chatNotice = "📞 [Call Completed] Duration: $durFormatted • Outcome: $outcome" . (!empty($notes) ? " • Notes: $notes" : "");
+
+                $msgStmt = $pdo->prepare("
+                    INSERT INTO `messages` (
+                        `customer_id`, `sender`, `sender_name`, `sender_phone`,
+                        `direction`, `text`, `message_text`, `media_type`,
+                        `account_id`, `source`, `time_str`, `timestamp_epoch`, `status`
+                    ) VALUES (?, 'staff', ?, ?, 'outbound', ?, ?, 'call_event', 'account_1', 'CRM_CALL_MASKING', ?, ?, 'DELIVERED')
+                ");
+                $nowTs = time();
+                $timeStr = date('h:i A');
+                $staffN = $sData['assigned_staff_name'] ?? 'Staff Member';
+                $custPhone = $sData['customer_phone'] ?? '';
+                $msgStmt->execute([
+                    $sData['customer_id'], $staffN, $custPhone,
+                    $chatNotice, $chatNotice, $timeStr, $nowTs
+                ]);
+
+                // Update customers last_message and last_message_at
+                $pdo->prepare("UPDATE `customers` SET `last_message` = ?, `last_message_at` = NOW() WHERE `id` = ?")->execute([$chatNotice, $sData['customer_id']]);
+            }
+        } catch (Exception $e) {}
 
         notifySocketBridge('call:ended', [
             'call_id' => $callId,
@@ -5633,17 +5740,33 @@ if ($action === 'simulate_incoming_call' && $_SERVER['REQUEST_METHOD'] === 'POST
     try {
         if (!$pdo) throw new Exception("Database connection unavailable");
         $callId = !empty($data['call_id']) ? trim($data['call_id']) : ('CALL-' . rand(1000, 9999));
-        $custName = trim($data['customer_name'] ?? 'Ananya & Baby Aarav');
+        $custName = trim($data['customer_name'] ?? '');
         $rawPhone = trim($data['customer_phone'] ?? '+91 97896 60115');
         $customerId = $data['customer_id'] ?? null;
         
         $cleanDigits = preg_replace('/[^0-9]/', '', $rawPhone);
+        
+        // Intelligent Customer Resolution: Match phone digits against customers table
+        if (empty($custName) || $custName === 'WhatsApp Caller' || $custName === 'Customer') {
+            $last10 = (strlen($cleanDigits) >= 10) ? substr($cleanDigits, -10) : $cleanDigits;
+            if (!empty($last10)) {
+                $cStmt = $pdo->prepare("SELECT `id`, `name` FROM `customers` WHERE `phone` LIKE ? OR `whatsapp` LIKE ? LIMIT 1");
+                $cStmt->execute(["%$last10%", "%$last10%"]);
+                $matchedCust = $cStmt->fetch(PDO::FETCH_ASSOC);
+                if ($matchedCust && !empty($matchedCust['name'])) {
+                    $custName = $matchedCust['name'];
+                    if (empty($customerId)) $customerId = $matchedCust['id'];
+                }
+            }
+        }
+        if (empty($custName)) $custName = 'WhatsApp Caller';
+
         $maskedPhone = (strlen($cleanDigits) >= 10) 
             ? '+91 ' . substr($cleanDigits, -10, 2) . '*** ' . substr($cleanDigits, -5)
             : $rawPhone;
 
         $settings = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
-        $virtualNum = $settings['virtual_company_number'] ?? '+91 97896 60115';
+        $virtualNum = $settings['virtual_company_number'] ?? '+91 99435 57998';
         $eligibleStaff = $settings['eligible_staff_ids'] ?? 'staff_05,admin,all';
         $eligibleArr = array_filter(array_map('trim', explode(',', $eligibleStaff)));
         
@@ -5653,30 +5776,51 @@ if ($action === 'simulate_incoming_call' && $_SERVER['REQUEST_METHOD'] === 'POST
             $eligibleArr = array_unique(array_merge($eligibleArr, $allActiveStaff, ['all', 'admin', 'staff_05']));
         } catch (Exception $e) {}
 
+        $cleanCallId = preg_replace('/[^a-zA-Z0-9]/', '', $callId);
+        $voiceRoomToken = !empty($data['voice_room_token']) ? trim($data['voice_room_token']) : ('vrm_' . $cleanCallId);
+
+        // Insert or update existing call_session record
         $stmt = $pdo->prepare("
             INSERT INTO `call_sessions` (
-                `id`, `provider_call_id`, `customer_name`, `customer_phone`, 
-                `masked_phone`, `virtual_number`, `status`, `started_at`, `outcome`
-            ) VALUES (?, ?, ?, ?, ?, ?, 'RINGING', NOW(), 'PENDING')
+                `id`, `provider_call_id`, `customer_id`, `customer_name`, `customer_phone`, 
+                `masked_phone`, `virtual_number`, `status`, `voice_room_token`, `voice_room_id`, `started_at`, `outcome`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'RINGING', ?, ?, NOW(), 'PENDING')
+            ON DUPLICATE KEY UPDATE 
+                `customer_name` = VALUES(`customer_name`),
+                `customer_phone` = VALUES(`customer_phone`),
+                `masked_phone` = VALUES(`masked_phone`),
+                `voice_room_token` = VALUES(`voice_room_token`),
+                `voice_room_id` = VALUES(`voice_room_id`),
+                `status` = 'RINGING',
+                `started_at` = NOW()
         ");
         $stmt->execute([
-            $callId, 'SIM-' . uniqid(), $custName, $rawPhone, $maskedPhone, $virtualNum
+            $callId, 'SIM-' . uniqid(), $customerId, $custName, $rawPhone, $maskedPhone, $virtualNum, $voiceRoomToken, $voiceRoomToken
         ]);
 
+        $nowMs = round(microtime(true) * 1000);
         $callData = [
             'call_id' => $callId,
             'id' => $callId,
+            'customer_id' => $customerId,
             'customer_name' => $custName,
             'customer_phone' => $rawPhone,
             'masked_phone' => $maskedPhone,
             'virtual_number' => $virtualNum,
             'status' => 'RINGING',
+            'voice_room_token' => $voiceRoomToken,
+            'is_video' => !empty($data['is_video']),
             'started_at' => date('Y-m-d H:i:s'),
+            'timestamp' => $nowMs,
+            'epoch' => time(),
             'timeout_seconds' => intval($settings['call_timeout_seconds'] ?? 30),
             'eligible_staff_ids' => array_values($eligibleArr)
         ];
 
-        notifySocketBridge('call:incoming', $callData);
+        // If manually simulated from CRM (not forwarded from real bridge event), broadcast via bridge
+        if (empty($data['account_id'])) {
+            notifySocketBridge('call:incoming', $callData);
+        }
 
         echo json_encode([
             "status" => "success",
@@ -5720,6 +5864,394 @@ if ($action === 'get_call_sessions') {
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'get_call_details') {
+    header('Content-Type: application/json');
+    $callId = trim($_GET['call_id'] ?? '');
+    if (empty($callId)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "call_id is required."]);
+        exit;
+    }
+    try {
+        if (!$pdo) throw new Exception("Database connection unavailable");
+        $stmt = $pdo->prepare("SELECT * FROM `call_sessions` WHERE `id` = ?");
+        $stmt->execute([$callId]);
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$session) {
+            http_response_code(404);
+            echo json_encode(["status" => "error", "message" => "Call session not found."]);
+            exit;
+        }
+
+        // Compute duration if not persisted
+        $dur = intval($session['duration_seconds'] ?? 0);
+        if ($dur <= 0 && !empty($session['started_at'])) {
+            $startTs = strtotime($session['started_at']);
+            if (!empty($session['ended_at'])) {
+                $endTs = strtotime($session['ended_at']);
+                if ($endTs > $startTs) $dur = $endTs - $startTs;
+            } elseif ($session['status'] === 'CLAIMED' || $session['status'] === 'CONNECTED') {
+                $dur = max(1, time() - $startTs);
+            }
+        }
+        $session['duration_seconds'] = $dur;
+
+        // Fetch staff assignment history
+        $assignStmt = $pdo->prepare("SELECT * FROM `call_assignments` WHERE `call_session_id` = ? ORDER BY `assigned_at` ASC");
+        $assignStmt->execute([$callId]);
+        $assignments = $assignStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fetch call activity logs
+        $logStmt = $pdo->prepare("SELECT * FROM `call_activity_logs` WHERE `call_session_id` = ? ORDER BY `created_at` ASC");
+        $logStmt->execute([$callId]);
+        $activityLogs = $logStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fetch staff notes
+        $noteStmt = $pdo->prepare("SELECT * FROM `call_staff_notes` WHERE `call_id` = ? ORDER BY `created_at` ASC");
+        $noteStmt->execute([$callId]);
+        $staffNotes = $noteStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fetch recordings
+        $recStmt = $pdo->prepare("SELECT * FROM `call_recordings` WHERE `call_id` = ? ORDER BY `created_at` ASC");
+        $recStmt->execute([$callId]);
+        $recordings = $recStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "status" => "success",
+            "session" => $session,
+            "assignments" => $assignments,
+            "activity_logs" => $activityLogs,
+            "staff_notes" => $staffNotes,
+            "recordings" => $recordings,
+            "media_capability" => [
+                "media_accessible" => true,
+                "protocol" => "WebRTC In-CRM Dual Audio Stream + Self-Hosted Storage",
+                "notice" => "WebRTC voice session active. Two-way audio stream mixed & stored securely on self-hosted server."
+            ]
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+// -------------------------------------------------------------------------
+// WEBRTC IN-CRM VOICE CALL & AUDIO RECORDING ENGINE ENDPOINTS
+// -------------------------------------------------------------------------
+
+// 1. VERIFY VOICE ROOM (Customer & Staff Handshake Authentication)
+if ($action === 'verify_voice_room') {
+    header('Content-Type: application/json');
+    $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
+    if (empty($token)) {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $token = trim($input['token'] ?? '');
+    }
+
+    if (empty($token)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "valid" => false, "message" => "Room token is required"]);
+        exit;
+    }
+
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        $stmt = $pdo->prepare("SELECT * FROM `call_sessions` WHERE `voice_room_token` = ? OR `id` = ? LIMIT 1");
+        $stmt->execute([$token, $token]);
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$session) {
+            http_response_code(404);
+            echo json_encode(["status" => "error", "valid" => false, "message" => "Voice room not found or expired"]);
+            exit;
+        }
+
+        echo json_encode([
+            "status" => "success",
+            "valid" => true,
+            "call_id" => $session['id'],
+            "room_token" => $session['voice_room_token'] ?? $token,
+            "customer_name" => $session['customer_name'] ?? 'Customer',
+            "customer_phone" => $session['customer_phone'] ?? '',
+            "masked_phone" => $session['masked_phone'] ?? '',
+            "assigned_staff_name" => $session['assigned_staff_name'] ?? 'Support Specialist',
+            "assigned_staff_id" => $session['assigned_staff_id'] ?? 'staff_01',
+            "call_status" => $session['status'],
+            "voice_connection_status" => $session['voice_connection_status'] ?? 'PENDING'
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "valid" => false, "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+// 2. SAVE CALL RECORDING (Persists WebRTC recorded audio reference & metadata)
+if ($action === 'save_call_recording' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?? [];
+    $callId = trim($data['call_id'] ?? '');
+    $roomToken = trim($data['room_token'] ?? '');
+    $recordingRef = trim($data['recording_reference'] ?? $data['recording_url'] ?? '');
+    $duration = intval($data['duration_seconds'] ?? 0);
+    $fileSize = intval($data['file_size_bytes'] ?? 0);
+    $format = trim($data['audio_format'] ?? 'webm');
+    $source = trim($data['recording_source'] ?? 'STAFF_BROWSER_MIX');
+
+    if (empty($callId) || empty($recordingRef)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "call_id and recording_reference required"]);
+        exit;
+    }
+
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        $recId = 'REC_' . uniqid();
+        $stmt = $pdo->prepare("
+            INSERT INTO `call_recordings` (
+                `recording_id`, `call_id`, `room_token`, `recording_reference`, `recording_status`, 
+                `file_size_bytes`, `duration_seconds`, `audio_format`, `recording_source`, `storage_disk`
+            ) VALUES (?, ?, ?, ?, 'Completed', ?, ?, ?, ?, 'local')
+            ON DUPLICATE KEY UPDATE 
+                `recording_reference` = VALUES(`recording_reference`),
+                `file_size_bytes` = VALUES(`file_size_bytes`),
+                `duration_seconds` = VALUES(`duration_seconds`),
+                `recording_status` = 'Completed'
+        ");
+        $stmt->execute([$recId, $callId, $roomToken, $recordingRef, $fileSize, $duration, $format, $source]);
+
+        // Update call_sessions
+        $upStmt = $pdo->prepare("
+            UPDATE `call_sessions`
+            SET `recording_url` = ?,
+                `duration_seconds` = IF(? > 0, ?, `duration_seconds`),
+                `status` = IF(`status` = 'MISSED' OR `status` = 'REJECTED', `status`, 'COMPLETED'),
+                `voice_connection_status` = 'DISCONNECTED',
+                `recording_status` = 'COMPLETED',
+                `ended_at` = IFNULL(`ended_at`, NOW())
+            WHERE `id` = ? OR `voice_room_token` = ?
+        ");
+        $upStmt->execute([$recordingRef, $duration, $duration, $callId, $roomToken]);
+
+        // Log call activity
+        try {
+            $pdo->prepare("INSERT INTO `call_activity_logs` (`call_session_id`, `activity_type`, `description`, `actor`) VALUES (?, 'RECORDING_SAVED', ?, 'Bridge WebRTC Engine')")
+                ->execute([$callId, "Two-way call recording archived ($duration s, format: $format)"]);
+        } catch (Exception $e) {}
+
+        echo json_encode(["status" => "success", "recording_id" => $recId, "call_id" => $callId, "message" => "Recording metadata saved"]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+// 3. STREAM CALL RECORDING (Supports HTTP 206 Partial Content for Seekable Playback & Audits Access)
+if ($action === 'get_call_recording_stream' || $action === 'stream_recording') {
+    $recordingId = trim($_GET['recording_id'] ?? $_GET['id'] ?? '');
+    $callId = trim($_GET['call_id'] ?? '');
+
+    if (empty($recordingId) && empty($callId)) {
+        http_response_code(400);
+        die("Recording ID or Call ID required.");
+    }
+
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+
+        if (!empty($recordingId)) {
+            $stmt = $pdo->prepare("SELECT * FROM `call_recordings` WHERE `recording_id` = ? LIMIT 1");
+            $stmt->execute([$recordingId]);
+        } else {
+            $stmt = $pdo->prepare("SELECT * FROM `call_recordings` WHERE `call_id` = ? ORDER BY `created_at` DESC LIMIT 1");
+            $stmt->execute([$callId]);
+        }
+        $rec = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$rec || empty($rec['recording_reference'])) {
+            // Check fallback in call_sessions
+            $sessStmt = $pdo->prepare("SELECT `id`, `recording_url` FROM `call_sessions` WHERE `id` = ? OR `voice_room_token` = ? LIMIT 1");
+            $sessStmt->execute([$callId, $callId]);
+            $sess = $sessStmt->fetch(PDO::FETCH_ASSOC);
+            if ($sess && !empty($sess['recording_url'])) {
+                $rec = [
+                    'recording_id' => 'REC_' . $sess['id'],
+                    'call_id' => $sess['id'],
+                    'recording_reference' => $sess['recording_url'],
+                    'audio_format' => 'webm'
+                ];
+            } else {
+                http_response_code(404);
+                die("Recording reference not found.");
+            }
+        }
+
+        // Resolve absolute file path
+        $filePath = $rec['recording_reference'];
+        if (!file_exists($filePath)) {
+            // Check relative to project root
+            $candidate = __DIR__ . '/' . ltrim($filePath, '/\\');
+            if (file_exists($candidate)) {
+                $filePath = $candidate;
+            } else {
+                $candidateStorage = __DIR__ . '/storage/' . ltrim($filePath, '/\\');
+                if (file_exists($candidateStorage)) {
+                    $filePath = $candidateStorage;
+                }
+            }
+        }
+
+        if (!file_exists($filePath)) {
+            http_response_code(404);
+            die("Audio recording file does not exist on server storage: " . htmlspecialchars(basename($filePath)));
+        }
+
+        // Audit this playback access
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $actorId = $_SESSION['user']['id'] ?? 'user_admin';
+        $actorName = $_SESSION['user']['name'] ?? 'Admin User';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+        try {
+            $pdo->prepare("
+                INSERT INTO `call_recording_access_logs` 
+                    (`recording_id`, `call_id`, `actor_id`, `actor_name`, `action_type`, `ip_address`, `user_agent`) 
+                VALUES (?, ?, ?, ?, 'STREAM_PLAY', ?, ?)
+            ")->execute([$rec['recording_id'], $rec['call_id'], $actorId, $actorName, $ip, substr($ua, 0, 500)]);
+        } catch (Exception $e) {}
+
+        // Determine MIME type
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mime = 'audio/webm';
+        if ($ext === 'mp3') $mime = 'audio/mpeg';
+        elseif ($ext === 'ogg' || $ext === 'opus') $mime = 'audio/ogg';
+        elseif ($ext === 'wav') $mime = 'audio/wav';
+
+        // Stream with HTTP 206 Partial Content
+        $size = filesize($filePath);
+        $start = 0;
+        $end = $size - 1;
+        $length = $size;
+
+        header("Accept-Ranges: bytes");
+        header("Content-Type: $mime");
+        header("Cache-Control: no-cache, no-store, must-revalidate");
+
+        if (isset($_SERVER['HTTP_RANGE'])) {
+            $range = $_SERVER['HTTP_RANGE'];
+            list(, $range) = explode('=', $range, 2);
+            if (strpos($range, ',') !== false) {
+                http_response_code(416);
+                exit;
+            }
+            if ($range === '-') {
+                $c_start = $size - substr($range, 1);
+            } else {
+                $range = explode('-', $range);
+                $c_start = intval($range[0]);
+                $c_end = (isset($range[1]) && is_numeric($range[1])) ? intval($range[1]) : $size - 1;
+            }
+            $c_end = ($c_end > $end) ? $end : $c_end;
+            if ($c_start > $c_end || $c_start > $size - 1 || $c_end >= $size) {
+                http_response_code(416);
+                header("Content-Range: bytes $start-$end/$size");
+                exit;
+            }
+            $start = $c_start;
+            $end = $c_end;
+            $length = $end - $start + 1;
+            http_response_code(206);
+            header("Content-Range: bytes $start-$end/$size");
+        }
+        header("Content-Length: " . $length);
+
+        $fp = fopen($filePath, 'rb');
+        fseek($fp, $start);
+        $chunkSize = 1024 * 64;
+        while (!feof($fp) && ($pos = ftell($fp)) <= $end) {
+            if ($pos + $chunkSize > $end) {
+                $chunkSize = $end - $pos + 1;
+            }
+            set_time_limit(30);
+            echo fread($fp, $chunkSize);
+            flush();
+        }
+        fclose($fp);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        die("Error streaming audio: " . $e->getMessage());
+    }
+    exit;
+}
+
+// 4. DOWNLOAD CALL RECORDING (With Audit Logging)
+if ($action === 'download_call_recording') {
+    $recordingId = trim($_GET['recording_id'] ?? $_GET['id'] ?? '');
+    $callId = trim($_GET['call_id'] ?? '');
+
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        if (!empty($recordingId)) {
+            $stmt = $pdo->prepare("SELECT * FROM `call_recordings` WHERE `recording_id` = ? LIMIT 1");
+            $stmt->execute([$recordingId]);
+        } else {
+            $stmt = $pdo->prepare("SELECT * FROM `call_recordings` WHERE `call_id` = ? ORDER BY `created_at` DESC LIMIT 1");
+            $stmt->execute([$callId]);
+        }
+        $rec = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$rec || empty($rec['recording_reference'])) {
+            http_response_code(404);
+            die("Recording not found.");
+        }
+
+        $filePath = $rec['recording_reference'];
+        if (!file_exists($filePath)) {
+            $candidate = __DIR__ . '/' . ltrim($filePath, '/\\');
+            if (file_exists($candidate)) $filePath = $candidate;
+        }
+
+        if (!file_exists($filePath)) {
+            http_response_code(404);
+            die("Recording file missing on disk.");
+        }
+
+        // Audit Download
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $actorId = $_SESSION['user']['id'] ?? 'user_admin';
+        $actorName = $_SESSION['user']['name'] ?? 'Admin User';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+        try {
+            $pdo->prepare("
+                INSERT INTO `call_recording_access_logs` 
+                    (`recording_id`, `call_id`, `actor_id`, `actor_name`, `action_type`, `ip_address`, `user_agent`) 
+                VALUES (?, ?, ?, ?, 'DOWNLOAD', ?, ?)
+            ")->execute([$rec['recording_id'], $rec['call_id'], $actorId, $actorName, $ip, substr($ua, 0, 500)]);
+        } catch (Exception $e) {}
+
+        $downloadFilename = "Call_Recording_" . preg_replace('/[^a-zA-Z0-9_-]/', '_', $rec['call_id']) . "." . pathinfo($filePath, PATHINFO_EXTENSION);
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . $downloadFilename . '"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($filePath));
+        readfile($filePath);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        die("Download error: " . $e->getMessage());
     }
     exit;
 }

@@ -1609,6 +1609,9 @@ function toggleCallHold() {
 // Direct WhatsApp Voice Call Initiator (Fallback)
 function triggerDirectWhatsAppVoiceCall(phone, mode = 'app') {
   let custPhone = phone;
+  if (!custPhone && typeof ACTIVE_CALL_CUSTOMER_PHONE !== 'undefined' && ACTIVE_CALL_CUSTOMER_PHONE) {
+    custPhone = ACTIVE_CALL_CUSTOMER_PHONE;
+  }
   if (!custPhone && ACTIVE_CALL_CUSTOMER_ID) {
     const cust = CRM_STATE.customers.find(c => c.id === ACTIVE_CALL_CUSTOMER_ID);
     if (cust) custPhone = cust.whatsapp || cust.phone;
@@ -1748,6 +1751,9 @@ function toggleCallMute() {
       track.enabled = !CALL_IS_MUTED;
     });
   }
+  if (window.CRM_STAFF_VOICE) {
+    window.CRM_STAFF_VOICE.setMute(CALL_IS_MUTED);
+  }
   updateCallMuteUI();
   showToast(CALL_IS_MUTED ? 'Microphone Muted' : 'Microphone Unmuted', '', CALL_IS_MUTED ? 'mic_off' : 'mic', 'blue');
 }
@@ -1827,6 +1833,11 @@ function endBrandMaskedCall(saveOutcome = false) {
   if (WEBRTC_AUDIO_CTX && WEBRTC_AUDIO_CTX.state !== 'closed') {
     WEBRTC_AUDIO_CTX.close().catch(() => { });
     WEBRTC_AUDIO_CTX = null;
+  }
+
+  // Terminate Staff WebRTC session & finalize dual-stream audio recording
+  if (window.CRM_STAFF_VOICE) {
+    window.CRM_STAFF_VOICE.endCall(CALL_ACTIVE_SECONDS);
   }
 
   const custId = ACTIVE_CALL_CUSTOMER_ID || ACTIVE_CUSTOMER_ID;
@@ -2083,6 +2094,15 @@ function initSocketIO() {
     SOCKET_IO.on('call:ended', (data) => {
       console.log('🏁 [Socket.IO Call Ended]:', data);
       if (typeof handleSocketCallEnded === 'function') handleSocketCallEnded(data);
+    });
+
+    // Real-time Call Pickup Notification (Native WhatsApp Call)
+    SOCKET_IO.on('call:pickup_link_sent', (data) => {
+      console.log('📤 [Socket.IO Call Connected]:', data);
+      const statusLabel = document.getElementById('call-status-label');
+      if (statusLabel) statusLabel.innerText = '● Connected • Active Call';
+      const streamStatus = document.getElementById('call-audio-stream-status');
+      if (streamStatus) streamStatus.innerText = '● WhatsApp Call Connected on Official Line';
     });
 
     // Real-time Bulk Price Request Approval / Rejection Update from Admin Link or WhatsApp
@@ -2428,27 +2448,37 @@ function syncIncomingCallsNow() {
   fetch('api.php?action=get_incoming_calls')
     .then(r => r.json())
     .then(res => {
-      if (res && res.status === 'success' && Array.isArray(res.incoming_calls) && res.incoming_calls.length > 0) {
+      if (res && res.status === 'success' && Array.isArray(res.incoming_calls)) {
         const ringingCall = res.incoming_calls.find(c => c.status === 'RINGING');
         if (ringingCall) {
           const callId = ringingCall.call_id || ringingCall.id;
           if (!callId) return;
 
-          // Never pop up stale calls older than 35 seconds
-          const startedAt = ringingCall.started_at ? new Date(ringingCall.started_at.replace(' ', 'T')).getTime() : Date.now();
-          const ageSec = Math.floor((Date.now() - startedAt) / 1000);
-          if (ageSec > 35) return;
+          // Check call age safely (handling epoch and UTC strings)
+          let ageSec = 0;
+          if (ringingCall.epoch && res.server_time) {
+            ageSec = Math.max(0, res.server_time - ringingCall.epoch);
+          } else if (ringingCall.timestamp) {
+            ageSec = Math.floor((Date.now() - Number(ringingCall.timestamp)) / 1000);
+          } else if (ringingCall.started_at) {
+            const sStr = ringingCall.started_at.includes('Z') || ringingCall.started_at.includes('+')
+              ? ringingCall.started_at
+              : ringingCall.started_at.replace(' ', 'T') + 'Z';
+            const parsed = Date.parse(sStr);
+            if (!isNaN(parsed)) ageSec = Math.floor((Date.now() - parsed) / 1000);
+          }
+          if (ageSec > 50) return;
 
           // Never pop up a call already dismissed or claimed in this session
           if (window.DISMISSED_CALL_IDS && window.DISMISSED_CALL_IDS.has(callId)) return;
 
+          const modalEl = document.getElementById('modal-incoming-call-alert');
+          const currentModalId = document.getElementById('incoming-call-id')?.value;
+          const isModalVisible = modalEl && !modalEl.classList.contains('hidden');
+
+          if (currentModalId === callId && isModalVisible) return;
+
           if (callId !== LAST_PROCESSED_RINGING_CALL_ID) {
-            const currentModalId = document.getElementById('incoming-call-id')?.value;
-            const modalEl = document.getElementById('modal-incoming-call-alert');
-            const isModalVisible = modalEl && !modalEl.classList.contains('hidden');
-
-            if (currentModalId === callId && isModalVisible) return;
-
             LAST_PROCESSED_RINGING_CALL_ID = callId;
             ringingCall.call_id = callId;
             if (typeof handleSocketIncomingCall === 'function') {
@@ -33803,10 +33833,8 @@ window.renderMaskingView = renderMaskingView;
 function handleSocketIncomingCall(data) {
   if (!data || !data.call_id) return;
 
-  // 1. Ignore if dismissed or stale (> 35s)
+  // 1. Ignore if explicitly dismissed by user in this session
   if (window.DISMISSED_CALL_IDS && window.DISMISSED_CALL_IDS.has(data.call_id)) return;
-  const startedAt = data.started_at ? new Date(data.started_at.replace(' ', 'T')).getTime() : Date.now();
-  if (Math.floor((Date.now() - startedAt) / 1000) > 35) return;
 
   const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
   const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.name === 'Super Admin';
@@ -33823,14 +33851,7 @@ function handleSocketIncomingCall(data) {
     }
   }
 
-  // 3. Suppress call popups only if staff role has no view access to masking/telephony
-  const hasMaskingPerm = (typeof canUserPerformAction === 'function') ? canUserPerformAction('masking', 'view') : true;
-  if (!isSuperAdmin && !hasMaskingPerm) {
-    console.log('[Inbound Call Suppressed]: Staff role has no view access for call masking.');
-    return;
-  }
-
-  // 4. Check eligibility list
+  // 3. Check eligibility list
   const isEligible = isSuperAdmin
     || eligibleList.includes('all')
     || (eligibleList.length === 0 && !data.assigned_staff_id)
@@ -33842,6 +33863,107 @@ function handleSocketIncomingCall(data) {
     console.log('[Inbound Call Filtered]: Current staff (' + currentStaffId + ') is not in eligible ring list.');
     return;
   }
+
+  // 4. Resolve real customer name & auto-sync to CRM state so inbox queue updates live!
+  let customerDisplayName = data.customer_name || '';
+  const rawDigits = (data.customer_phone || data.raw_caller_digits || '').replace(/\D/g, '');
+  const last10 = rawDigits.slice(-10);
+  let customer = null;
+  if (Array.isArray(CRM_STATE?.customers)) {
+    customer = CRM_STATE.customers.find(c => {
+      const cd = String(c.whatsapp || c.phone || '').replace(/\D/g, '');
+      return cd && (cd === rawDigits || (last10 && cd.endsWith(last10)) || (last10 && last10.endsWith(cd.slice(-10))));
+    });
+  }
+
+  if (customer && customer.name && (!customerDisplayName || customerDisplayName === 'WhatsApp Caller' || customerDisplayName === 'Customer')) {
+    customerDisplayName = customer.name;
+    data.customer_name = customer.name;
+    data.customer_id = customer.id;
+  }
+
+  if (!customer && rawDigits) {
+    const newCustId = 'cust_' + (last10 || Date.now());
+    customer = {
+      id: newCustId,
+      code: `CUST-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      name: customerDisplayName && customerDisplayName !== 'WhatsApp Caller' ? customerDisplayName : `Customer +${rawDigits.slice(-10)}`,
+      phone: data.customer_phone || ('+' + rawDigits),
+      whatsapp: data.customer_phone || ('+' + rawDigits),
+      jid: `${rawDigits}@s.whatsapp.net`,
+      accountId: data.account_id || 'account_1',
+      businessNumber: data.virtual_number || '+91 99435 57998',
+      address: '',
+      city: 'Inbound Caller',
+      customerType: 'Live WhatsApp Lead',
+      tags: ['Inbound Call Lead', 'Live WhatsApp'],
+      totalOrders: 0,
+      totalSpend: 0,
+      avatar: (customerDisplayName || 'CU').substring(0, 2).toUpperCase()
+    };
+    if (!CRM_STATE.customers) CRM_STATE.customers = [];
+    CRM_STATE.customers.unshift(customer);
+  }
+
+  if (customer) {
+    data.customer_id = customer.id;
+    if (customer.name) customerDisplayName = customer.name;
+
+    // Add or bump Lead / Query in CRM_STATE.queries to immediately show at top of inbox
+    if (!CRM_STATE.queries) CRM_STATE.queries = [];
+    let query = CRM_STATE.queries.find(q => q.customerId === customer.id);
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (query) {
+      query.lastMessage = '📞 Inbound WhatsApp Voice Call (Ringing)';
+      query.unreadCount = (query.unreadCount || 0) + 1;
+      query.lastTimeEpoch = Date.now();
+      query.status = 'NEW';
+      CRM_STATE.queries = [query, ...CRM_STATE.queries.filter(q => q.id !== query.id)];
+    } else {
+      query = {
+        id: `Q-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+        customerId: customer.id,
+        accountId: data.account_id || 'account_1',
+        businessNumber: data.virtual_number || '+91 99435 57998',
+        assignedTo: 'UNASSIGNED',
+        status: 'NEW',
+        priority: 'HIGH',
+        queryText: 'Inbound WhatsApp Voice Call',
+        productSku: null,
+        createdAt: timeStr,
+        unreadCount: 1,
+        lastMessage: '📞 Inbound WhatsApp Voice Call (Ringing)',
+        lastTimeEpoch: Date.now()
+      };
+      CRM_STATE.queries.unshift(query);
+    }
+
+    // Add call entry to customer conversations
+    if (!CRM_STATE.conversations) CRM_STATE.conversations = {};
+    if (!CRM_STATE.conversations[customer.id]) CRM_STATE.conversations[customer.id] = [];
+    CRM_STATE.conversations[customer.id].push({
+      id: 'call_' + data.call_id,
+      sender: 'customer',
+      isBot: false,
+      text: '📞 Incoming WhatsApp Voice Call',
+      time: timeStr,
+      status: 'RINGING',
+      type: 'call',
+      timestamp: Date.now()
+    });
+
+    // Auto-select this customer and refresh Inbox queue view instantly
+    ACTIVE_CUSTOMER_ID = customer.id;
+    saveCRMState();
+    if (ACTIVE_VIEW === 'inbox' && typeof renderInbox === 'function') {
+      renderInbox();
+    }
+    if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+  }
+
+  if (!customerDisplayName) customerDisplayName = 'WhatsApp Caller';
+
+  console.log('🔔 [Incoming Call Alert Triggered]:', data.call_id, customerDisplayName, data.customer_phone);
 
   ACTIVE_INCOMING_CALL = data;
 
@@ -33857,10 +33979,10 @@ function handleSocketIncomingCall(data) {
   const countdownEl = document.getElementById('incoming-call-countdown');
 
   if (callIdInput) callIdInput.value = data.call_id;
-  if (nameEl) nameEl.innerText = data.customer_name || 'Customer';
+  if (nameEl) nameEl.innerText = customerDisplayName;
   if (phoneEl) phoneEl.innerText = data.masked_phone || formatDisplayPhone(data.customer_phone || '');
   if (didEl) didEl.innerText = data.virtual_number || '+91 99435 57998';
-  if (avatarEl) avatarEl.innerText = (data.customer_name || 'CU').substring(0, 2).toUpperCase();
+  if (avatarEl) avatarEl.innerText = (customerDisplayName || 'CU').substring(0, 2).toUpperCase();
 
   if (banner) banner.classList.add('hidden');
   if (acceptBtn) {
@@ -33887,7 +34009,7 @@ function handleSocketIncomingCall(data) {
     }
   }, 1000);
 
-  if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
+  if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') loadMaskingSettingsAndSessions();
 }
 window.handleSocketIncomingCall = handleSocketIncomingCall;
 
@@ -33895,11 +34017,14 @@ window.handleSocketIncomingCall = handleSocketIncomingCall;
 function handleSocketCallClaimed(data) {
   if (!data || !data.call_id) return;
 
-  const currentCallId = document.getElementById('incoming-call-id')?.value;
-  if (currentCallId === data.call_id) {
+  const currentCallId = document.getElementById('incoming-call-id')?.value || ACTIVE_INCOMING_CALL?.call_id || ACTIVE_INCOMING_CALL?.id;
+  const modalEl = document.getElementById('modal-incoming-call-alert');
+  const isModalOpen = modalEl && !modalEl.classList.contains('hidden');
+
+  if (isModalOpen && (!currentCallId || currentCallId === data.call_id)) {
     const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
-    const currentStaffId = user ? (user.id || user.staffId || user.staff_id) : '';
-    const isWinner = (currentStaffId && currentStaffId === data.assigned_staff_id);
+    const currentStaffId = user ? (user.id || user.staffId || user.staff_id || user.username) : '';
+    const isWinner = (currentStaffId && String(currentStaffId).toLowerCase() === String(data.assigned_staff_id).toLowerCase());
 
     if (!isWinner) {
       if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
@@ -33922,24 +34047,138 @@ function handleSocketCallClaimed(data) {
       if (acceptText) acceptText.innerText = 'Claimed by ' + (data.assigned_staff_name || 'Staff');
 
       setTimeout(() => {
-        dismissIncomingCallAlert();
+        if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
+        ACTIVE_INCOMING_CALL = null;
       }, 2500);
     }
   }
 
-  if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
+  if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') loadMaskingSettingsAndSessions();
 }
 window.handleSocketCallClaimed = handleSocketCallClaimed;
 
 function handleSocketCallReleased(data) {
-  if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
+  if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') loadMaskingSettingsAndSessions();
 }
 window.handleSocketCallReleased = handleSocketCallReleased;
 
 function handleSocketCallEnded(data) {
-  if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
+  const currentCallId = document.getElementById('incoming-call-id')?.value;
+  if (currentCallId && data && (data.call_id === currentCallId || data.id === currentCallId)) {
+    // If the staff is actively on this call in the Softphone HUD, don't dismiss the Softphone HUD!
+    // Native WhatsApp ringing termination is normal when transferring to WebRTC softphone.
+    if (typeof ACTIVE_CURRENT_CALL_SESSION_ID !== 'undefined' && ACTIVE_CURRENT_CALL_SESSION_ID === currentCallId) {
+      return;
+    }
+
+    if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
+    if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
+      clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
+      INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+    }
+    if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
+    ACTIVE_INCOMING_CALL = null;
+    if (typeof showToast === 'function') {
+      showToast('Call Missed / Ended', 'The caller has ended the call.', 'phone_missed', 'amber');
+    }
+  }
+  if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') loadMaskingSettingsAndSessions();
 }
 window.handleSocketCallEnded = handleSocketCallEnded;
+
+// Open Dedicated In-CRM Softphone HUD for Winner / Attending Staff
+function openIncomingSoftphoneCallModal(callId, customer, voiceRoomToken) {
+  if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
+  if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
+    clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
+    INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+  }
+  if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
+
+  ACTIVE_CALL_CUSTOMER_ID = customer.id;
+  ACTIVE_CURRENT_CALL_SESSION_ID = callId;
+  window.ACTIVE_CALL_CUSTOMER_PHONE = customer.phone;
+
+  // Preserve voice room token across both customer and staff
+  const resolvedRoomToken = voiceRoomToken || (ACTIVE_INCOMING_CALL && ACTIVE_INCOMING_CALL.voice_room_token)
+    ? (voiceRoomToken || ACTIVE_INCOMING_CALL.voice_room_token)
+    : ('vrm_' + String(callId).replace(/[^a-zA-Z0-9]/g, ''));
+
+  ACTIVE_INCOMING_CALL = null;
+
+  const brandName = (typeof getBrandName === 'function') ? getBrandName() : 'Blue Berry 💙';
+  const maskedPhone = customer.masked_phone || formatDisplayPhone(customer.phone, customer.id);
+
+  const modalTitle = document.getElementById('call-modal-brand-title');
+  const modalCustName = document.getElementById('call-customer-name');
+  const modalCustPhone = document.getElementById('call-customer-phone');
+  const modalCustAvatar = document.getElementById('call-customer-avatar');
+  const modalBrand = document.getElementById('call-brand-display-name');
+  const statusLabel = document.getElementById('call-status-label');
+  const timerDisplay = document.getElementById('call-timer-display');
+  const notesArea = document.getElementById('call-outcome-notes');
+
+  if (modalTitle) modalTitle.innerText = `${brandName} Voice Call`;
+  if (modalCustName) modalCustName.innerText = customer.name || 'WhatsApp Caller';
+  if (modalCustPhone) modalCustPhone.innerText = maskedPhone;
+  if (modalCustAvatar) modalCustAvatar.innerText = customer.avatar || (customer.name ? customer.name.substring(0, 2).toUpperCase() : 'CU');
+  if (modalBrand) modalBrand.innerText = brandName;
+  if (statusLabel) statusLabel.innerText = '● Connected • Active Call';
+  const streamStatus = document.getElementById('call-audio-stream-status');
+  if (streamStatus) streamStatus.innerText = '● WhatsApp Call Connected on Official Line';
+  if (timerDisplay) timerDisplay.innerText = '00:00';
+  if (notesArea) notesArea.value = '';
+
+  // Hide WebRTC voice link buttons as native WhatsApp calling is used
+  const resendBtn = document.getElementById('btn-resend-voice-link');
+  if (resendBtn) resendBtn.style.display = 'none';
+  const webrtcBtn = document.querySelector('button[onclick*="startInBrowserWebRTCCall"]');
+  if (webrtcBtn) webrtcBtn.style.display = 'none';
+
+  // Reset audio controls
+  CALL_IS_MUTED = false;
+  CALL_IS_ON_HOLD = false;
+  if (typeof updateCallMuteUI === 'function') updateCallMuteUI();
+
+  // Open modal directly with guaranteed high z-index and flex display
+  if (typeof openModal === 'function') openModal('modal-brand-call');
+  const brandModal = document.getElementById('modal-brand-call');
+  if (brandModal) {
+    brandModal.classList.remove('hidden');
+    brandModal.style.display = 'flex';
+    brandModal.style.zIndex = '9999';
+  }
+
+  // Play connection chime
+  if (typeof playChime === 'function') playChime('order');
+
+  // Active call duration timer increment
+  CALL_ACTIVE_SECONDS = 0;
+  if (CALL_ACTIVE_INTERVAL) clearInterval(CALL_ACTIVE_INTERVAL);
+  CALL_ACTIVE_INTERVAL = setInterval(() => {
+    if (!CALL_IS_ON_HOLD) {
+      CALL_ACTIVE_SECONDS++;
+      const mins = String(Math.floor(CALL_ACTIVE_SECONDS / 60)).padStart(2, '0');
+      const secs = String(CALL_ACTIVE_SECONDS % 60).padStart(2, '0');
+      const td = document.getElementById('call-timer-display');
+      if (td) td.innerText = `${mins}:${secs}`;
+    }
+  }, 1000);
+
+  // Switch to customer in chat queue if available
+  if (typeof selectCustomerChat === 'function' && customer.id) {
+    try { selectCustomerChat(customer.id); } catch(e) {}
+  }
+
+  // Native WhatsApp Call Mode: Voice audio is handled directly on WhatsApp.
+  // We keep CRM_STAFF_VOICE idle so the HUD displays Active Call without waiting for browser links.
+
+  showToast('Call Claimed', 'You have claimed the call with ' + (customer.name || 'Customer') + '. Staff SIM is 100% masked.', 'call', 'emerald');
+  if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
+    loadMaskingSettingsAndSessions();
+  }
+}
+window.openIncomingSoftphoneCallModal = openIncomingSoftphoneCallModal;
 
 // Atomically Claim Incoming Call (Rule 2: First successful acceptance wins)
 async function claimIncomingCallNow() {
@@ -33956,6 +34195,62 @@ async function claimIncomingCallNow() {
   if (acceptBtn) acceptBtn.disabled = true;
   if (acceptText) acceptText.innerText = 'Connecting...';
 
+  // 1. Resolve room token and customer details BEFORE clearing state
+  const voiceRoomToken = ACTIVE_INCOMING_CALL?.voice_room_token || ('vrm_' + String(callId).replace(/[^a-zA-Z0-9]/g, ''));
+  let matchedCust = null;
+  if (ACTIVE_INCOMING_CALL?.customer_id) {
+    matchedCust = (CRM_STATE?.customers || []).find(c => c && String(c.id) === String(ACTIVE_INCOMING_CALL.customer_id));
+  }
+  if (!matchedCust && ACTIVE_INCOMING_CALL?.customer_phone) {
+    const d1 = String(ACTIVE_INCOMING_CALL.customer_phone).replace(/\D/g, '');
+    matchedCust = (CRM_STATE?.customers || []).find(c => {
+      const d2 = String(c.whatsapp || c.phone || '').replace(/\D/g, '');
+      return d1 && d2 && (d1 === d2 || d1.endsWith(d2) || d2.endsWith(d1));
+    });
+  }
+
+  const customer = matchedCust || ((ACTIVE_INCOMING_CALL && ACTIVE_INCOMING_CALL.customer_name) ? {
+    id: ACTIVE_INCOMING_CALL.customer_id || ('cust_' + Date.now()),
+    name: ACTIVE_INCOMING_CALL.customer_name,
+    phone: ACTIVE_INCOMING_CALL.customer_phone,
+    masked_phone: ACTIVE_INCOMING_CALL.masked_phone,
+    avatar: (ACTIVE_INCOMING_CALL.customer_name || 'CU').substring(0, 2).toUpperCase()
+  } : { name: 'WhatsApp Caller', phone: '+91 97896 60115', masked_phone: '+91 97*** 60115', avatar: 'WH' });
+
+  // 2. INSTANT REALTIME BROADCAST: Tell Node.js bridge to immediately cut WhatsApp ringing on customer's phone!
+  if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+    console.log('⚡ [Instant Claim Broadcast] Emitting claim_broadcast to cut WhatsApp ringing immediately');
+    SOCKET_IO.emit('call:claim_broadcast', {
+      call_id: callId,
+      assigned_staff_id: staffId,
+      assigned_staff_name: staffName,
+      customer_phone: customer.phone || ACTIVE_INCOMING_CALL?.customer_phone || '',
+      customer_name: customer.name || ACTIVE_INCOMING_CALL?.customer_name || '',
+      voice_room_token: voiceRoomToken,
+      status: 'CLAIMED'
+    });
+  }
+
+  // 3. Immediately dismiss ringing alert & open Softphone HUD for the staff
+  if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
+  if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
+    clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
+    INCOMING_CALL_COUNTDOWN_INTERVAL = null;
+  }
+  if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
+  openIncomingSoftphoneCallModal(callId, customer, voiceRoomToken);
+
+  // Update conversation record in CRM stream
+  if (customer && customer.id && CRM_STATE?.conversations && CRM_STATE.conversations[customer.id]) {
+    const callMsg = CRM_STATE.conversations[customer.id].find(m => m.id === 'call_' + callId);
+    if (callMsg) {
+      callMsg.status = 'CLAIMED';
+      callMsg.text = `📞 Inbound Call Answered by ${staffName}`;
+    }
+    saveCRMState();
+  }
+
+  // 4. Concurrently persist claim to PHP MySQL database in background
   try {
     const res = await fetch('api.php?action=accept_call', {
       method: 'POST',
@@ -33966,105 +34261,13 @@ async function claimIncomingCallNow() {
         staff_name: staffName
       })
     });
-
     const data = await res.json();
-
-    if (res.status === 200 && data.status === 'success') {
-      // WINNER: Claim secured atomically!
-      if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
-      if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
-        clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
-        INCOMING_CALL_COUNTDOWN_INTERVAL = null;
-      }
-      if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
-
-      // Connect to In-CRM Softphone Call HUD & Switch Active Customer
-      let matchedCust = null;
-      if (ACTIVE_INCOMING_CALL?.customer_id) {
-        matchedCust = (CRM_STATE?.customers || []).find(c => c && String(c.id) === String(ACTIVE_INCOMING_CALL.customer_id));
-      }
-      if (!matchedCust && ACTIVE_INCOMING_CALL?.customer_phone) {
-        const d1 = String(ACTIVE_INCOMING_CALL.customer_phone).replace(/\D/g, '');
-        matchedCust = (CRM_STATE?.customers || []).find(c => {
-          const d2 = String(c.whatsapp || c.phone || '').replace(/\D/g, '');
-          return d1 && d2 && (d1 === d2 || d1.endsWith(d2) || d2.endsWith(d1));
-        });
-      }
-
-      const customer = matchedCust || ((ACTIVE_INCOMING_CALL && ACTIVE_INCOMING_CALL.customer_name) ? {
-        id: ACTIVE_INCOMING_CALL.customer_id || ('cust_' + Date.now()),
-        name: ACTIVE_INCOMING_CALL.customer_name,
-        phone: ACTIVE_INCOMING_CALL.customer_phone,
-        avatar: (ACTIVE_INCOMING_CALL.customer_name || 'CU').substring(0, 2).toUpperCase()
-      } : { name: 'Customer', phone: '+91 99435 57998', avatar: 'CU' });
-
-      ACTIVE_CALL_CUSTOMER_ID = customer.id;
-
-      // Automatically switch to customer in WhatsApp Inbox if not active
-      if (typeof switchCustomerChat === 'function' && customer.id) {
-        switchCustomerChat(customer.id);
-      }
-      openModal('modal-brand-call');
-
-      const modalCustName = document.getElementById('call-customer-name');
-      const modalCustPhone = document.getElementById('call-customer-phone');
-      const modalCustAvatar = document.getElementById('call-customer-avatar');
-      const modalBrand = document.getElementById('call-brand-display-name');
-      const statusLabel = document.getElementById('call-status-label');
-      const timerDisplay = document.getElementById('call-timer-display');
-
-      if (modalCustName) modalCustName.innerText = customer.name;
-      if (modalCustPhone) modalCustPhone.innerText = ACTIVE_INCOMING_CALL?.masked_phone || formatDisplayPhone(customer.phone);
-      if (modalCustAvatar) modalCustAvatar.innerText = customer.avatar;
-      if (modalBrand) modalBrand.innerText = (typeof getBrandName === 'function') ? getBrandName() : 'GRM Garments Hub';
-      if (statusLabel) statusLabel.innerText = 'Connected';
-      if (timerDisplay) timerDisplay.innerText = '00:00';
-
-      CALL_ACTIVE_SECONDS = 0;
-      if (CALL_ACTIVE_INTERVAL) clearInterval(CALL_ACTIVE_INTERVAL);
-      CALL_ACTIVE_INTERVAL = setInterval(() => {
-        CALL_ACTIVE_SECONDS++;
-        const mins = String(Math.floor(CALL_ACTIVE_SECONDS / 60)).padStart(2, '0');
-        const secs = String(CALL_ACTIVE_SECONDS % 60).padStart(2, '0');
-        if (timerDisplay) timerDisplay.innerText = mins + ':' + secs;
-      }, 1000);
-
-      showToast('Call Connected', 'You are now connected with ' + customer.name + '. Staff SIM is masked.', 'call', 'emerald');
-      if (ACTIVE_VIEW === 'masking') loadMaskingSettingsAndSessions();
-    } else if (res.status === 409 || data.status === 'conflict') {
-      // CONFLICT: Another staff member clicked first!
-      if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
-      if (INCOMING_CALL_COUNTDOWN_INTERVAL) {
-        clearInterval(INCOMING_CALL_COUNTDOWN_INTERVAL);
-        INCOMING_CALL_COUNTDOWN_INTERVAL = null;
-      }
-
-      const banner = document.getElementById('incoming-call-claim-banner');
-      const bannerText = document.getElementById('incoming-call-claim-text');
-      if (banner) banner.classList.remove('hidden');
-      if (bannerText) bannerText.innerText = data.message || 'This call has already been assigned to another staff member.';
-
-      if (acceptBtn) {
-        acceptBtn.disabled = true;
-        acceptBtn.className = 'flex-2 py-3 bg-slate-200 text-slate-500 font-bold rounded-2xl cursor-not-allowed text-xs flex items-center justify-center gap-2';
-      }
-      if (acceptText) acceptText.innerText = 'Already Claimed';
-
-      showToast('Call Claimed', data.message || 'Another staff member accepted the call first.', 'lock', 'amber');
-
-      setTimeout(() => {
-        dismissIncomingCallAlert();
-      }, 2500);
-    } else {
-      showToast('Error', data.message || 'Failed to claim call.', 'error', 'rose');
-      if (acceptBtn) acceptBtn.disabled = false;
-      if (acceptText) acceptText.innerText = 'Accept Call (Claim Now)';
+    if (res.status === 409 || data.status === 'conflict') {
+      showToast('Call Already Taken', data.message || 'Another staff member claimed this call.', 'lock', 'amber');
+      if (typeof closeModal === 'function') closeModal('modal-brand-call');
     }
   } catch (err) {
-    console.error('Error accepting call:', err);
-    showToast('Network Error', 'Could not reach server to claim call.', 'error', 'rose');
-    if (acceptBtn) acceptBtn.disabled = false;
-    if (acceptText) acceptText.innerText = 'Accept Call (Claim Now)';
+    console.warn('Note syncing accept_call to PHP:', err.message);
   }
 }
 window.claimIncomingCallNow = claimIncomingCallNow;
@@ -34089,11 +34292,38 @@ function dismissIncomingCallAlert() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ call_id: callId })
     }).catch(() => { });
+
+    // Notify bridge to terminate WhatsApp ringing on caller's phone
+    if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+      SOCKET_IO.emit('call:dismiss_broadcast', { call_id: callId });
+    }
   }
   if (typeof closeModal === 'function') closeModal('modal-incoming-call-alert');
   ACTIVE_INCOMING_CALL = null;
 }
 window.dismissIncomingCallAlert = dismissIncomingCallAlert;
+
+// Resend Voice Call Link via WhatsApp on demand
+function resendVoiceCallLinkToCustomer() {
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const staffName = user ? (user.name || 'Staff Member') : 'Staff Member';
+  const callId = ACTIVE_CURRENT_CALL_SESSION_ID;
+  const custPhone = window.ACTIVE_CALL_CUSTOMER_PHONE;
+  const roomToken = (window.CRM_STAFF_VOICE && window.CRM_STAFF_VOICE.activeRoomToken) || null;
+
+  if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+    SOCKET_IO.emit('call:resend_voice_link', {
+      call_id: callId,
+      customer_phone: custPhone,
+      voice_room_token: roomToken,
+      staff_name: staffName
+    });
+    showToast('Link Dispatched', 'Voice call link sent to customer WhatsApp!', 'send', 'emerald');
+  } else {
+    showToast('Bridge Offline', 'Cannot reach WhatsApp bridge.', 'warning', 'amber');
+  }
+}
+window.resendVoiceCallLinkToCustomer = resendVoiceCallLinkToCustomer;
 
 // Trigger Simulated Incoming Customer Call (Free in-CRM testing)
 async function triggerSimulatedIncomingCall() {
@@ -34450,6 +34680,10 @@ async function loadMaskingSettingsAndSessions() {
         else pulseIncoming.classList.add('hidden');
       }
 
+      const statTotal = document.getElementById('masking-stat-total-calls');
+      const statMissed = document.getElementById('masking-stat-missed-calls');
+      if (statTotal) statTotal.innerText = m.total_calls || 0;
+      if (statMissed) statMissed.innerText = m.missed_calls || 0;
       if (statActive) statActive.innerText = m.active_calls || 0;
       if (statCompleted) statCompleted.innerText = m.completed_calls || 0;
       if (statAvailStaff) statAvailStaff.innerText = m.available_staff || 0;
@@ -34667,11 +34901,184 @@ function renderCallSessionsTable(sessions) {
         <td class="py-3 px-4 max-w-xs truncate text-slate-600 text-[11px]">
           ${call.outcome_notes || 'Call completed normally'}
         </td>
+        <td class="py-3 px-4 text-right whitespace-nowrap">
+          ${(call.recording_url || call.recording_status === 'COMPLETED') ? `
+            <button type="button" onclick="openCallAudioPlayerModal('${call.id}', '${(call.customer_name || 'Customer').replace(/'/g, "\\'")}', '${call.masked_phone || ''}', '${(call.assigned_staff_name || 'Staff').replace(/'/g, "\\'")}', '${durFormatted}')"
+              class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition cursor-pointer inline-flex items-center gap-1 shadow-2xs mr-1"
+              title="Play Two-Way Call Recording">
+              <span class="material-symbols-outlined text-[14px]">play_circle</span>
+              <span>Listen</span>
+            </button>
+          ` : ''}
+          <button type="button" onclick="openCallDetailsModal('${call.id}')"
+            class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition cursor-pointer inline-flex items-center gap-1"
+            title="View Assignment History, Activity Logs & Audit Trail">
+            <span class="material-symbols-outlined text-[14px]">visibility</span>
+            <span>Audit</span>
+          </button>
+        </td>
       </tr>
     `;
   }).join('');
 }
 window.renderCallSessionsTable = renderCallSessionsTable;
+
+// Open Call Audio Player Modal
+function openCallAudioPlayerModal(callId, customerName, customerPhone, staffName, durationFormatted) {
+  const modal = document.getElementById('modal-call-audio-player');
+  if (!modal) return;
+
+  const titleEl = document.getElementById('player-modal-title');
+  const custEl = document.getElementById('player-customer-name');
+  const phoneEl = document.getElementById('player-customer-phone');
+  const staffEl = document.getElementById('player-staff-name');
+  const durEl = document.getElementById('player-call-duration');
+  const audioEl = document.getElementById('crm-call-audio-stream');
+  const dlBtn = document.getElementById('btn-download-recording');
+
+  if (titleEl) titleEl.innerText = `Call Recording: ${callId}`;
+  if (custEl) custEl.innerText = customerName || 'Customer';
+  if (phoneEl) phoneEl.innerText = customerPhone || '';
+  if (staffEl) staffEl.innerText = staffName || 'Staff Agent';
+  if (durEl) durEl.innerText = durationFormatted || '00:00';
+
+  const streamUrl = `api.php?action=get_call_recording_stream&call_id=${encodeURIComponent(callId)}`;
+  const downloadUrl = `api.php?action=download_call_recording&call_id=${encodeURIComponent(callId)}`;
+
+  if (audioEl) {
+    audioEl.src = streamUrl;
+    audioEl.load();
+    audioEl.play().catch(() => {});
+  }
+  if (dlBtn) dlBtn.href = downloadUrl;
+
+  openModal('modal-call-audio-player');
+}
+window.openCallAudioPlayerModal = openCallAudioPlayerModal;
+
+function closeCallAudioPlayerModal() {
+  const audioEl = document.getElementById('crm-call-audio-stream');
+  if (audioEl) {
+    audioEl.pause();
+    audioEl.currentTime = 0;
+    audioEl.src = '';
+  }
+  closeModal('modal-call-audio-player');
+}
+window.closeCallAudioPlayerModal = closeCallAudioPlayerModal;
+
+// Open Detailed Audit Modal for a Call Session
+async function openCallDetailsModal(callId) {
+  if (!callId) return;
+  try {
+    const res = await fetch(`api.php?action=get_call_details&call_id=${encodeURIComponent(callId)}`);
+    const data = await res.json();
+    if (!data || data.status !== 'success') {
+      showToast('Error', data?.message || 'Could not fetch call details.', 'error', 'rose');
+      return;
+    }
+
+    const s = data.session || {};
+    const assignments = data.assignments || [];
+    const logs = data.activity_logs || [];
+    const notes = data.staff_notes || [];
+
+    // Populate Overview
+    const elId = document.getElementById('detail-call-id');
+    const elCust = document.getElementById('detail-customer-name');
+    const elPhone = document.getElementById('detail-customer-phone');
+    const elStaff = document.getElementById('detail-staff-name');
+    const elStatus = document.getElementById('detail-call-status');
+    const elDur = document.getElementById('detail-call-duration');
+
+    if (elId) elId.innerText = s.id || callId;
+    if (elCust) elCust.innerText = s.customer_name || 'Customer';
+    if (elPhone) elPhone.innerText = s.masked_phone || s.customer_phone || '-';
+    if (elStaff) elStaff.innerText = s.assigned_staff_name || 'Unassigned Pool';
+    if (elStatus) {
+      elStatus.innerText = s.status || 'UNKNOWN';
+      elStatus.className = s.status === 'COMPLETED' ? 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800' :
+        s.status === 'CLAIMED' ? 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800' :
+        s.status === 'RINGING' ? 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 animate-pulse' :
+        'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700';
+    }
+    if (elDur) {
+      const durSecs = parseInt(s.duration_seconds || 0);
+      const mins = String(Math.floor(durSecs / 60)).padStart(2, '0');
+      const secs = String(durSecs % 60).padStart(2, '0');
+      elDur.innerText = `${mins}:${secs}`;
+    }
+
+    // Populate Assignments Table
+    const assignTbody = document.getElementById('detail-assignments-tbody');
+    if (assignTbody) {
+      if (assignments.length === 0) {
+        assignTbody.innerHTML = '<tr><td colspan="5" class="py-3 text-center text-slate-400 text-xs">No assignment records</td></tr>';
+      } else {
+        assignTbody.innerHTML = assignments.map(a => `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-2 px-3 font-bold text-slate-800">${a.staff_name || '-'}</td>
+            <td class="py-2 px-3 font-mono text-[11px] text-slate-500">${a.staff_id || '-'}</td>
+            <td class="py-2 px-3"><span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold ${a.assignment_status === 'ACCEPTED' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">${a.assignment_status}</span></td>
+            <td class="py-2 px-3 text-slate-600">${a.assigned_at ? a.assigned_at.replace('T', ' ') : '-'}</td>
+            <td class="py-2 px-3 text-slate-400">${a.released_at ? a.released_at.replace('T', ' ') : '-'}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    // Populate Staff Notes
+    const notesList = document.getElementById('detail-staff-notes-list');
+    if (notesList) {
+      if (notes.length === 0 && !s.outcome_notes) {
+        notesList.innerHTML = '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 text-xs">No staff notes recorded for this call.</div>';
+      } else {
+        let notesHtml = '';
+        if (s.outcome_notes) {
+          notesHtml += `<div class="p-3 bg-amber-50/60 border border-amber-200 rounded-xl"><p class="font-bold text-amber-900 text-xs">${s.assigned_staff_name || 'Staff'}:</p><p class="text-amber-950 text-xs mt-0.5">${s.outcome_notes}</p></div>`;
+        }
+        notesHtml += notes.map(n => `
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-800 text-xs">${n.staff_name || n.staff_id}</span>
+              <span class="text-[10px] text-slate-400">${n.created_at || ''}</span>
+            </div>
+            <p class="text-slate-700 text-xs mt-1">${n.note_summary}</p>
+          </div>
+        `).join('');
+        notesList.innerHTML = notesHtml;
+      }
+    }
+
+    // Populate Activity Logs
+    const logList = document.getElementById('detail-activity-logs-list');
+    if (logList) {
+      if (logs.length === 0) {
+        logList.innerHTML = '<div class="text-slate-400">No activity log entries found.</div>';
+      } else {
+        logList.innerHTML = logs.map(l => `
+          <div class="py-1 border-b border-slate-200/50 last:border-none flex items-start gap-2">
+            <span class="text-slate-400 shrink-0 text-[10px]">${l.created_at ? l.created_at.slice(11, 19) : ''}</span>
+            <span class="font-bold text-indigo-700 shrink-0">[${l.action}]</span>
+            <span class="text-slate-700">${l.actor_name || l.actor_id}: ${l.notes || ''}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    if (typeof openModal === 'function') openModal('modal-call-session-details');
+    const modal = document.getElementById('modal-call-session-details');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      modal.style.zIndex = '9999';
+    }
+  } catch (err) {
+    console.error('Error fetching call details:', err);
+    showToast('Network Error', 'Could not load call details.', 'error', 'rose');
+  }
+}
+window.openCallDetailsModal = openCallDetailsModal;
 
 function filterCallSessionsTable() {
   const query = (document.getElementById('masking-filter-input')?.value || '').toLowerCase().trim();

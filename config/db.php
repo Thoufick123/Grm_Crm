@@ -56,6 +56,11 @@ define('DB_USER', $envConfig['DB_USER']);
 define('DB_PASS', $envConfig['DB_PASS']);
 define('DB_NAME', $envConfig['DB_NAME']);
 define('DB_PORT', (int)$envConfig['DB_PORT']);
+// Priority: If BRIDGE_URL is explicitly defined in .env and is not the default localhost, prioritize it over stale cache files
+$envBridgeUrl = (!empty($envConfig['BRIDGE_URL']) && $envConfig['BRIDGE_URL'] !== 'http://localhost:3000') 
+    ? rtrim($envConfig['BRIDGE_URL'], '/') 
+    : null;
+
 $dynamicBridgeUrl = null;
 $cfgFileForBridge = dirname(__DIR__) . '/whatsapp_account_config.json';
 if (file_exists($cfgFileForBridge)) {
@@ -64,8 +69,14 @@ if (file_exists($cfgFileForBridge)) {
         $dynamicBridgeUrl = rtrim($cfgDataForBridge['bridge_url'], '/');
     }
 }
-define('BRIDGE_URL', $dynamicBridgeUrl ?? ($envConfig['BRIDGE_URL'] ?? 'http://localhost:3000'));
-define('APP_URL', $envConfig['APP_URL'] ?? 'http://localhost:8080');
+define('BRIDGE_URL', $envBridgeUrl ?? $dynamicBridgeUrl ?? ($envConfig['BRIDGE_URL'] ?? 'http://localhost:3000'));
+
+// Sanitize APP_URL (ensure https:// or http:// protocol is present)
+$appUrl = $envConfig['APP_URL'] ?? 'http://localhost:8080';
+if ($appUrl && !str_starts_with($appUrl, 'http://') && !str_starts_with($appUrl, 'https://')) {
+    $appUrl = 'https://' . $appUrl;
+}
+define('APP_URL', rtrim($appUrl, '/'));
 
 function getDBConnection() {
     static $pdo = null;
@@ -828,6 +839,93 @@ function initializeDatabaseSchema($pdo) {
             INDEX(`voice_message_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
+
+    // 20. Call Recordings Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `call_recordings` (
+            `recording_id` VARCHAR(60) PRIMARY KEY,
+            `call_id` VARCHAR(50) NOT NULL,
+            `recording_reference` TEXT NOT NULL,
+            `recording_status` ENUM('Processing', 'Completed', 'Failed', 'Unavailable') DEFAULT 'Unavailable',
+            `file_size_bytes` BIGINT DEFAULT 0,
+            `duration_seconds` INT DEFAULT 0,
+            `audio_format` VARCHAR(20) DEFAULT 'mp3',
+            `storage_disk` VARCHAR(50) DEFAULT 'local',
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(`call_id`),
+            INDEX(`recording_status`),
+            INDEX(`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 21. Call Staff Notes Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `call_staff_notes` (
+            `note_id` VARCHAR(60) PRIMARY KEY,
+            `call_id` VARCHAR(50) NOT NULL,
+            `staff_id` VARCHAR(50) NOT NULL,
+            `staff_name` VARCHAR(100) DEFAULT NULL,
+            `target_staff_id` VARCHAR(50) DEFAULT NULL,
+            `target_staff_name` VARCHAR(100) DEFAULT NULL,
+            `note_summary` TEXT NOT NULL,
+            `handover_status` ENUM('NONE', 'ASSIGNED', 'ACKNOWLEDGED', 'RESOLVED') DEFAULT 'NONE',
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(`call_id`),
+            INDEX(`staff_id`),
+            INDEX(`target_staff_id`),
+            INDEX(`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 22. Call Recording Access Logs Table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `call_recording_access_logs` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `recording_id` VARCHAR(60) DEFAULT NULL,
+            `call_id` VARCHAR(50) NOT NULL,
+            `actor_id` VARCHAR(50) NOT NULL,
+            `actor_name` VARCHAR(100) DEFAULT NULL,
+            `action_type` ENUM('STREAM_PLAY', 'DOWNLOAD', 'DELETE', 'EXPORT') NOT NULL,
+            `ip_address` VARCHAR(50) DEFAULT NULL,
+            `user_agent` TEXT DEFAULT NULL,
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(`recording_id`),
+            INDEX(`call_id`),
+            INDEX(`actor_id`),
+            INDEX(`action_type`),
+            INDEX(`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // Dynamic Alter for Call Sessions (target_staff_id, target_staff_name, WebRTC voice columns)
+    try {
+        $callSessionCols = $pdo->query("SHOW COLUMNS FROM `call_sessions`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('target_staff_id', $callSessionCols)) {
+            $pdo->exec("ALTER TABLE `call_sessions` ADD COLUMN `target_staff_id` VARCHAR(50) DEFAULT NULL AFTER `assigned_staff_name`");
+        }
+        if (!in_array('target_staff_name', $callSessionCols)) {
+            $pdo->exec("ALTER TABLE `call_sessions` ADD COLUMN `target_staff_name` VARCHAR(100) DEFAULT NULL AFTER `target_staff_id`");
+        }
+        if (!in_array('voice_room_token', $callSessionCols)) {
+            $pdo->exec("ALTER TABLE `call_sessions` ADD COLUMN `voice_room_token` VARCHAR(64) DEFAULT NULL AFTER `provider_call_id`");
+            $pdo->exec("ALTER TABLE `call_sessions` ADD INDEX `idx_voice_room_token` (`voice_room_token`)");
+        }
+        if (!in_array('voice_connection_status', $callSessionCols)) {
+            $pdo->exec("ALTER TABLE `call_sessions` ADD COLUMN `voice_connection_status` ENUM('PENDING', 'RINGING', 'CONNECTING', 'CONNECTED', 'DISCONNECTED', 'FAILED') DEFAULT 'PENDING' AFTER `status`");
+        }
+        if (!in_array('recording_status', $callSessionCols)) {
+            $pdo->exec("ALTER TABLE `call_sessions` ADD COLUMN `recording_status` ENUM('NOT_STARTED', 'RECORDING', 'PROCESSING', 'COMPLETED', 'FAILED') DEFAULT 'NOT_STARTED' AFTER `duration_seconds`");
+        }
+        if (!in_array('recording_chunks_count', $callSessionCols)) {
+            $pdo->exec("ALTER TABLE `call_sessions` ADD COLUMN `recording_chunks_count` INT DEFAULT 0 AFTER `recording_status`");
+        }
+        if (!in_array('recording_consent_at', $callSessionCols)) {
+            $pdo->exec("ALTER TABLE `call_sessions` ADD COLUMN `recording_consent_at` DATETIME DEFAULT NULL AFTER `recording_chunks_count`");
+        }
+        if (!in_array('client_user_agent', $callSessionCols)) {
+            $pdo->exec("ALTER TABLE `call_sessions` ADD COLUMN `client_user_agent` VARCHAR(255) DEFAULT NULL AFTER `recording_consent_at`");
+        }
+    } catch (Exception $e) {}
 
     // Dynamic Alter for Users (preferred_language and status)
     try {

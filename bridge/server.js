@@ -17,6 +17,7 @@ const path = require('path');
 const http = require('http');
 const pino = require('pino');
 const { Server } = require('socket.io');
+const { initVoiceSignaling, generateVoiceRoomToken, VOICE_ROOMS } = require('./voice-signaling');
 
 const {
     default: makeWASocket,
@@ -30,6 +31,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Serve CRM static files (including voice-call.html & assets) directly through Express
+app.use(express.static(path.resolve(__dirname, '..')));
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -73,6 +76,8 @@ const jidMap = new Map();
 const LID_TO_PHONE_MAP = new Map();
 const PHONE_TO_LID_MAP = new Map();
 const PROCESSED_MESSAGE_IDS = new Set();
+// Track live inbound Baileys WhatsApp calls for instant atomic pickup & ringing control
+const ACTIVE_BAILEYS_CALLS = new Map(); // callId -> { callId, accountId, sock, callFrom, chatId, callerPn, customerName, callerPhone, cleanDigits, roomToken }
 
 // Scan and index all Baileys LID <-> Phone mappings
 function indexAllLidMappings() {
@@ -680,15 +685,40 @@ function broadcastAccountsUpdate() {
 
 
 
-const CRM_BASE_URL = (process.env.CRM_URL || 'http://localhost:8000').replace(/\/+$/, '');
+const CRM_BASE_URL = (process.env.CRM_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
 
-// Robust CRM API Dispatcher with Multi-Host Fallback (Local Port 8000 -> Hostinger)
+// Dynamic Public Base URL Resolver (Detects Cloudflare Tunnel or Public URL)
+function getPublicBaseUrl() {
+    if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL.replace(/\/+$/, '');
+    if (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1')) {
+        return process.env.APP_URL.replace(/\/+$/, '');
+    }
+
+    // Read live Cloudflare tunnel URL from PM2 logs if active
+    try {
+        const userProfile = process.env.USERPROFILE || 'C:\\Users\\ADMIN';
+        const cfLog = path.join(userProfile, '.pm2', 'logs', 'cf-tunnel-error.log');
+        if (fs.existsSync(cfLog)) {
+            const lines = fs.readFileSync(cfLog, 'utf8').split('\n');
+            for (let i = lines.length - 1; i >= 0; i--) {
+                const line = lines[i];
+                if (line.includes('dest=') || line.includes('error=')) continue;
+                const m = line.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+                if (m) return m[0];
+            }
+        }
+    } catch (e) {}
+
+    return 'http://localhost:8000';
+}
+
+// Fast CRM API Dispatcher with instant local port 8000 priority
 async function callCrmApi(action, postData) {
     const candidateUrls = [
-        (process.env.CRM_URL || 'http://localhost:8000').replace(/\/+$/, ''),
+        'http://localhost:8000',
         'http://127.0.0.1:8000',
-        'http://localhost:8080',
-        'https://maroon-partridge-532881.hostingersite.com'
+        (process.env.CRM_URL || '').replace(/\/+$/, ''),
+        'http://localhost:8080'
     ].filter(Boolean);
 
     for (const base of candidateUrls) {
@@ -697,11 +727,11 @@ async function callCrmApi(action, postData) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(postData),
-                signal: AbortSignal.timeout(4000)
+                signal: AbortSignal.timeout(1500)
             });
             if (resp.ok) {
                 const data = await resp.json();
-                if (data && data.status === 'success') {
+                if (data) {
                     return data;
                 }
             }
@@ -715,35 +745,23 @@ async function callCrmApi(action, postData) {
 // Forward inbound WhatsApp call to CRM PHP API
 async function forwardCallToCRM(data) {
     try {
-        // Forward to live CRM (e.g. Hostinger or custom CRM_URL)
-        if (typeof fetch === 'function') {
-            fetch(`${CRM_BASE_URL}/api.php?action=simulate_incoming_call`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).catch(() => {});
-        }
-        // Also support local port 8000 if developing locally
-        if (process.env.NODE_ENV !== 'production') {
-            const postData = JSON.stringify(data);
-            const req = http.request({
-                hostname: 'localhost',
-                port: 8000,
-                path: '/api.php?action=simulate_incoming_call',
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(postData)
-                }
-            }, () => {});
-            req.on('error', () => {});
-            req.write(postData);
-            req.end();
-        }
+        await callCrmApi('simulate_incoming_call', data);
     } catch (e) {
         console.error('Error forwarding incoming call to CRM:', e.message);
     }
 }
+
+// Forward inbound call termination / hangup to CRM PHP API
+async function forwardCallEndToCRM(callId) {
+    try {
+        await callCrmApi('dismiss_call', { call_id: callId });
+    } catch (e) {
+        console.error('Error forwarding call termination to CRM:', e.message);
+    }
+}
+
+// Initialize WebRTC Voice Signaling & Audio Recording Ingestion Engine
+initVoiceSignaling({ app, io, callCrmApi });
 
 // Forward inbound WhatsApp message to CRM PHP API for persistent file storage
 
@@ -759,6 +777,7 @@ async function autoSyncTunnelUrlToHostinger() {
         const latestUrl = matches[matches.length - 1][0];
 
         if (latestUrl && latestUrl !== _lastSyncedTunnelUrl) {
+            _lastSyncedTunnelUrl = latestUrl;
             console.log(`📡 [Auto-Tunnel Sync] Found live Cloudflare URL: ${latestUrl}`);
             if (typeof fetch === 'function') {
                 const res = await fetch(`${CRM_BASE_URL}/api.php?action=sync_bridge_url`, {
@@ -995,41 +1014,168 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
         // Listen for Real Inbound Customer WhatsApp Calls on this Account
         sock.ev.on('call', async (callEvents) => {
             for (const call of callEvents) {
-                console.log(`📞 [QR Bridge - ${accountId}] Baileys Inbound WhatsApp Call:`, call);
-                if (call.status === 'offer') {
-                    const rawJid = call.from || '';
-                    const callerDigits = rawJid.replace(/[^0-9]/g, '');
-                    const callerPhone = callerDigits ? ('+' + callerDigits) : '+91 97896 60115';
-                    const callId = call.id || ('CALL-' + Math.floor(1000 + Math.random() * 9000));
-                    
-                    let customerName = 'WhatsApp Caller';
-                    let customerId = 'cust_' + (callerDigits.slice(-10) || Date.now());
+                console.log(`📞 [QR Bridge - ${accountId}] Baileys Inbound WhatsApp Call (${call.status}):`, call);
+                const callId = call.id || ('CALL-' + Date.now());
 
-                    const cleanDigits = callerPhone.replace(/[^0-9]/g, '');
+                if (call.status === 'offer' || (call.status === 'ringing' && !ACTIVE_BAILEYS_CALLS.has(callId))) {
+                    // Extract true caller phone number: Handle Privacy LID (@lid) & standard @s.whatsapp.net
+                    let rawPhoneDigits = '';
+                    let isLid = false;
+                    let lidNumber = '';
+
+                    // 1. Prioritize explicit callerPn from Baileys if present
+                    if (call.callerPn && typeof call.callerPn === 'string') {
+                        rawPhoneDigits = call.callerPn.replace(/[^0-9]/g, '');
+                    }
+
+                    // 2. Extract from call.chatId or call.from
+                    const candidateJids = [call.chatId, call.from].filter(Boolean);
+                    for (const cand of candidateJids) {
+                        if (typeof cand === 'string' && cand.includes('@lid')) {
+                            isLid = true;
+                            lidNumber = cand.split('@')[0].replace(/[^0-9]/g, '');
+                            if (!rawPhoneDigits && LID_TO_PHONE_MAP.has(lidNumber)) {
+                                rawPhoneDigits = LID_TO_PHONE_MAP.get(lidNumber);
+                            }
+                        } else if (typeof cand === 'string' && !rawPhoneDigits && !cand.includes('@lid')) {
+                            rawPhoneDigits = cand.split('@')[0].replace(/[^0-9]/g, '');
+                        }
+                    }
+
+                    // 3. If callerPn was provided alongside LID, update bidirectional LID cache
+                    if (isLid && lidNumber && rawPhoneDigits && rawPhoneDigits !== lidNumber) {
+                        LID_TO_PHONE_MAP.set(lidNumber, rawPhoneDigits);
+                        PHONE_TO_LID_MAP.set(rawPhoneDigits, lidNumber);
+                    }
+
+                    // 4. Format normalized phone number
+                    let callerPhone = 'Unknown Caller';
+                    if (rawPhoneDigits) {
+                        if (rawPhoneDigits.startsWith('91') && rawPhoneDigits.length === 12) {
+                            callerPhone = '+91 ' + rawPhoneDigits.slice(2, 7) + ' ' + rawPhoneDigits.slice(7);
+                        } else if (rawPhoneDigits.length === 10) {
+                            callerPhone = '+91 ' + rawPhoneDigits.slice(0, 5) + ' ' + rawPhoneDigits.slice(5);
+                        } else {
+                            callerPhone = '+' + rawPhoneDigits;
+                        }
+                    }
+
+                    // 5. Attempt to resolve real customer name from WhatsApp contacts or pushName
+                    let customerName = 'WhatsApp Caller';
+                    try {
+                        const contact = (sock.contacts && (
+                            sock.contacts[`${rawPhoneDigits}@s.whatsapp.net`] ||
+                            sock.contacts[call.from] ||
+                            sock.contacts[call.chatId]
+                        )) || null;
+                        if (contact && (contact.name || contact.notify || contact.verifiedName)) {
+                            customerName = contact.name || contact.notify || contact.verifiedName;
+                        } else if (call.notify || call.pushName) {
+                            customerName = call.notify || call.pushName;
+                        }
+                    } catch (e) {}
+
+                    const cleanDigits = rawPhoneDigits || (lidNumber ? lidNumber.slice(-10) : '0000000000');
+                    const customerId = 'cust_' + cleanDigits.slice(-10);
                     const maskedPhone = (cleanDigits.length >= 10)
                         ? '+91 ' + cleanDigits.slice(-10, -8) + '*** ***' + cleanDigits.slice(-2)
                         : callerPhone;
 
+                    const nowEpoch = Date.now();
+                    const cleanCallId = String(callId).replace(/[^a-zA-Z0-9]/g, '');
+                    const roomToken = 'vrm_' + cleanCallId;
+
                     const callData = {
                         call_id: callId,
                         id: callId,
+                        account_id: accountId,
                         customer_id: customerId,
                         customer_name: customerName,
                         customer_phone: callerPhone,
+                        raw_caller_digits: cleanDigits,
                         masked_phone: maskedPhone,
-                        virtual_number: accountObj.connectedNumber || '+91 95009 04638',
+                        virtual_number: accountObj.connectedNumber || '+91 99435 57998',
                         status: 'RINGING',
+                        voice_room_token: roomToken,
                         is_video: Boolean(call.isVideo),
-                        started_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                        started_at: new Date(nowEpoch).toISOString(),
+                        timestamp: nowEpoch,
                         timeout_seconds: 30,
-                        eligible_staff_ids: ['all', 'admin', 'staff_01', 'staff_02', 'staff_03']
+                        eligible_staff_ids: ['all', 'admin', 'staff_01', 'staff_02', 'staff_03', 'staff_05']
                     };
 
-                    // Broadcast via Socket.IO
+                    // Register active Baileys inbound call for atomic pickup & ringing control
+                    ACTIVE_BAILEYS_CALLS.set(callId, {
+                        callId,
+                        accountId,
+                        sock,
+                        callFrom: call.from,
+                        chatId: call.chatId,
+                        candidateJids,
+                        callerPn: call.callerPn,
+                        customerName,
+                        callerPhone,
+                        cleanDigits,
+                        roomToken,
+                        timestamp: nowEpoch
+                    });
+
+                    // Pre-register WebRTC room in memory
+                    VOICE_ROOMS.set(roomToken, {
+                        roomToken: roomToken,
+                        callId: callId,
+                        status: 'WAITING',
+                        customerSocketId: null,
+                        staffSocketId: null,
+                        customerInfo: { name: customerName, phone: callerPhone },
+                        staffInfo: {},
+                        startedAt: new Date(nowEpoch).toISOString(),
+                        connectedAt: null,
+                        chunksCount: 0
+                    });
+
+                    console.log(`🔔 [Inbound Call Broadcast] Alerting staff for caller: ${customerName} (${callerPhone}) on Account ${accountId} [Room: ${roomToken}]`);
+                    // Broadcast via Socket.IO across all connected CRM clients immediately
                     io.emit('call:incoming', callData);
 
-                    // Forward to CRM PHP API
-                    forwardCallToCRM(callData);
+                    // Forward to CRM PHP API & MySQL Persistence asynchronously in background
+                    forwardCallToCRM(callData).catch(err => {
+                        console.warn('⚠️ [Call CRM Forward Note]:', err.message);
+                    });
+                } else if (call.status === 'terminate' || call.status === 'reject' || call.status === 'timeout') {
+                    console.log(`📴 [Call Ended/Terminated] Call ${callId} ended on WhatsApp (${call.status})`);
+                    const existingCall = ACTIVE_BAILEYS_CALLS.get(callId);
+                    const cleanCallId = String(callId).replace(/[^a-zA-Z0-9]/g, '');
+                    const roomToken = existingCall?.roomToken || ('vrm_' + cleanCallId);
+                    const room = VOICE_ROOMS.get(roomToken);
+
+                    ACTIVE_BAILEYS_CALLS.delete(callId);
+
+                    // If staff already claimed this call, it was handled natively on WhatsApp — do not mark as MISSED!
+                    if (existingCall?.claimedBy) {
+                        console.log(`ℹ️ [Call Signaling] Native WhatsApp call completed for claimed call ${callId}; Emitting COMPLETED to CRM.`);
+                        io.emit('call:ended', {
+                            call_id: callId,
+                            id: callId,
+                            status: 'COMPLETED',
+                            reason: call.status
+                        });
+                        return;
+                    }
+
+                    // If staff was waiting in WebRTC room
+                    if (room && (room.status === 'READY' || room.status === 'WAITING' || room.staffSocketId)) {
+                        console.log(`ℹ️ [Call Signaling] WhatsApp call ended for room ${roomToken}`);
+                        return;
+                    }
+
+                    io.emit('call:ended', {
+                        call_id: callId,
+                        id: callId,
+                        status: 'MISSED',
+                        reason: call.status
+                    });
+                    forwardCallEndToCRM(callId).catch(() => {});
                 }
             }
         });
@@ -1265,71 +1411,74 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         if (isApproveCmd || isRejectCmd) {
                             const codeMatch = messageText.match(/BPR-\d+/i);
                             const reqCode = codeMatch ? codeMatch[0].toUpperCase() : null;
+                            const replyTargetJid = resolveDestinationJid(senderNumber || senderJid) || senderJid;
 
                             if (isApproveCmd) {
                                 try {
+                                    console.log(`[Bulk Interceptor] Processing WhatsApp APPROVE for ${reqCode || 'latest'} from ${replyTargetJid}`);
                                     const d = await callCrmApi('approve_bulk_price_request', {
                                         request_code: reqCode,
                                         approved_by: 'Super Admin (via WhatsApp)'
                                     });
-                                    if (d && d.status === 'success') {
+                                    if (d && (d.status === 'success' || (d.message && d.message.includes('already approved')))) {
                                         const r = d.request || {};
-                                        // EXACT Image 3 Format
+                                        // EXACT Image 1 Format
                                         const confirmText = `✅ *BULK PRICE REQUEST APPROVED!*\n\n` +
                                             `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
                                             `Product: *${r.product_name || 'Product'}* (${r.size || 'Free Size'}) × *${r.quantity || 10} pcs*\n` +
                                             `Approved Price: *₹${r.requested_price}/pc* (Total: ₹${r.total_requested_amount})\n\n` +
                                             `Status: Special price activated. Staff can now take the order.`;
-                                        await sock.sendMessage(senderJid, { text: confirmText });
+                                        await sock.sendMessage(replyTargetJid, { text: confirmText });
                                         io.emit('bulk_request:updated', { status: 'APPROVED', request: r });
-                                        continue;
                                     } else if (d && d.expired) {
                                         const expText = `⚠️ *BULK PRICE REQUEST EXPIRED*\n\n` +
                                             `Request Code: *${reqCode || 'BPR'}*\n\n` +
                                             `Notice: This request was valid for up to 3 message sends only and has expired.\n` +
                                             `Approval is no longer allowed. Please submit a new bulk price request.`;
-                                        await sock.sendMessage(senderJid, { text: expText });
-                                        continue;
+                                        await sock.sendMessage(replyTargetJid, { text: expText });
                                     } else if (d && d.message) {
-                                        await sock.sendMessage(senderJid, { text: `ℹ️ ${d.message}` });
-                                        continue;
+                                        await sock.sendMessage(replyTargetJid, { text: `ℹ️ ${d.message}` });
+                                    } else {
+                                        await sock.sendMessage(replyTargetJid, { text: `✅ *BULK PRICE REQUEST APPROVED!*\n\nRequest Code: *${reqCode || 'BPR'}*\nStatus: Special price activated. Staff can now take the order.` });
                                     }
                                 } catch (e) {
                                     console.error('[Bulk Approve via WhatsApp Error]:', e.message);
                                 }
+                                continue;
                             } else if (isRejectCmd) {
                                 try {
                                     let reason = messageText.replace(/^2\s*/i, '').replace(/^REJECT:?\s*(BPR-\d+)?\s*/i, '').trim();
                                     if (!reason) reason = 'Price too low for this bulk order quantity.';
+                                    console.log(`[Bulk Interceptor] Processing WhatsApp REJECT for ${reqCode || 'latest'} (Reason: ${reason}) from ${replyTargetJid}`);
                                     const d = await callCrmApi('reject_bulk_price_request', {
                                         request_code: reqCode,
                                         rejection_reason: reason,
                                         rejected_by: 'Super Admin (via WhatsApp)'
                                     });
-                                    if (d && d.status === 'success') {
+                                    if (d && (d.status === 'success' || (d.message && d.message.includes('already rejected')))) {
                                         const r = d.request || {};
-                                        // EXACT Image 4 Format
+                                        // EXACT Image 1 Format
                                         const rejectText = `❌ *BULK PRICE REQUEST REJECTED*\n\n` +
                                             `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
                                             `Reason: *${reason}*\n\n` +
                                             `Staff has been informed of rejection.`;
-                                        await sock.sendMessage(senderJid, { text: rejectText });
+                                        await sock.sendMessage(replyTargetJid, { text: rejectText });
                                         io.emit('bulk_request:updated', { status: 'REJECTED', request: r, reason: reason });
-                                        continue;
                                     } else if (d && d.expired) {
                                         const expText = `⚠️ *BULK PRICE REQUEST EXPIRED*\n\n` +
                                             `Request Code: *${reqCode || 'BPR'}*\n\n` +
                                             `Notice: This request was valid for up to 3 message sends only and has expired.\n` +
                                             `Rejection is no longer allowed. Please submit a new bulk price request.`;
-                                        await sock.sendMessage(senderJid, { text: expText });
-                                        continue;
+                                        await sock.sendMessage(replyTargetJid, { text: expText });
                                     } else if (d && d.message) {
-                                        await sock.sendMessage(senderJid, { text: `ℹ️ ${d.message}` });
-                                        continue;
+                                        await sock.sendMessage(replyTargetJid, { text: `ℹ️ ${d.message}` });
+                                    } else {
+                                        await sock.sendMessage(replyTargetJid, { text: `❌ *BULK PRICE REQUEST REJECTED*\n\nRequest Code: *${reqCode || 'BPR'}*\nReason: *${reason}*\n\nStaff has been informed of rejection.` });
                                     }
                                 } catch (e) {
                                     console.error('[Bulk Reject via WhatsApp Error]:', e.message);
                                 }
+                                continue;
                             }
                         }
 
@@ -1585,6 +1734,47 @@ function initializeAllSessions() {
 }
 
 // -------------------------------------------------------------
+// CENTRALIZED CALL CLAIM PROCEDURE: NATIVE WHATSAPP VOICE & IN-CRM CALL ASSISTANT
+// -------------------------------------------------------------
+async function executeCallClaimProcedure(data) {
+    const callId = data?.call_id || data?.id;
+    const staffName = data?.assigned_staff_name || 'Support Executive';
+    const staffId = data?.assigned_staff_id || 'staff_01';
+
+    // 1. Locate active Baileys inbound call
+    let baileysCall = callId ? ACTIVE_BAILEYS_CALLS.get(callId) : null;
+    if (!baileysCall && data?.customer_phone) {
+        const searchDigits = String(data.customer_phone).replace(/\D/g, '').slice(-10);
+        for (const [cId, bCall] of ACTIVE_BAILEYS_CALLS.entries()) {
+            if (bCall.cleanDigits && bCall.cleanDigits.endsWith(searchDigits)) {
+                baileysCall = bCall;
+                break;
+            }
+        }
+    }
+    if (!baileysCall && ACTIVE_BAILEYS_CALLS.size > 0) {
+        // Fallback: pick the most recent inbound call in memory (< 45s)
+        const calls = Array.from(ACTIVE_BAILEYS_CALLS.values()).sort((a, b) => b.timestamp - a.timestamp);
+        if (calls.length > 0 && (Date.now() - calls[0].timestamp) < 45000) {
+            baileysCall = calls[0];
+            console.log(`📞 [Baileys] Auto-matched incoming call ${baileysCall.callId} from recent memory`);
+        }
+    }
+
+    // 2. NATIVE WHATSAPP CALL PRESERVATION:
+    // DO NOT rejectCall() — this ensures the call does NOT get cut with "No answer".
+    // The incoming call will ring and be answered natively on the business phone/device!
+    if (baileysCall) {
+        baileysCall.claimedBy = { staffId, staffName, claimedAt: Date.now() };
+        console.log(`✅ [Baileys] Call ${callId} claimed by ${staffName} (${staffId}) - Voice ringing kept active on WhatsApp line (NO rejection).`);
+    }
+
+    // 3. ZERO UNWANTED LINKS:
+    // DO NOT send external trycloudflare/voice-call.html messages to customer's WhatsApp chat.
+    // The CRM UI operates as the Live In-Call Assistant & CRM Logger for the staff member.
+}
+
+// -------------------------------------------------------------
 // SOCKET.IO REALTIME WEBSOCKET HANDLERS
 // -------------------------------------------------------------
 io.on('connection', (socket) => {
@@ -1625,6 +1815,72 @@ io.on('connection', (socket) => {
                 callback({ status: 'error', message: err.message });
             }
         }
+    });
+
+    // Realtime Multi-Staff Call Claim Broadcast — ATOMIC PICKUP & WHATSAPP RINGING TERMINATION
+    socket.on('call:claim_broadcast', async (data) => {
+        console.log('🔒 [Socket.IO Call Claimed Broadcast from Client]:', data);
+        io.emit('call:claimed', data);
+        await executeCallClaimProcedure(data);
+    });
+
+    // Dismiss Incoming Call Broadcast (Cuts ringing on WhatsApp if staff dismisses)
+    socket.on('call:dismiss_broadcast', async (data) => {
+        const callId = data?.call_id || data?.id;
+        const baileysCall = callId ? ACTIVE_BAILEYS_CALLS.get(callId) : null;
+        if (baileysCall && baileysCall.sock && typeof baileysCall.sock.rejectCall === 'function') {
+            try {
+                await baileysCall.sock.rejectCall(baileysCall.callId, baileysCall.callFrom);
+                console.log(`🛑 [Baileys] Dismissed call ${callId} on WhatsApp`);
+            } catch (e) {}
+        }
+    });
+
+    // Resend Voice Call Link to Customer via WhatsApp
+    socket.on('call:resend_voice_link', async (data) => {
+        const { call_id, customer_phone, voice_room_token, staff_name } = data || {};
+        let targetSock = null;
+        let targetJid = null;
+
+        const bCall = call_id ? ACTIVE_BAILEYS_CALLS.get(call_id) : null;
+        if (bCall && bCall.sock) {
+            targetSock = bCall.sock;
+            targetJid = bCall.chatId || bCall.callFrom;
+        } else {
+            const primary = Array.from(accounts.values()).find(a => a.sock && a.status === 'CONNECTED');
+            if (primary) {
+                targetSock = primary.sock;
+                const digits = String(customer_phone || '').replace(/\D/g, '');
+                if (digits) {
+                    targetJid = digits.length === 10 ? `91${digits}@s.whatsapp.net` : `${digits}@s.whatsapp.net`;
+                }
+            }
+        }
+
+        if (targetSock && targetJid) {
+            const publicHost = getPublicBaseUrl();
+            const roomToken = voice_room_token || bCall?.roomToken || ('vrm_' + Date.now());
+            const link = `${publicHost}/voice-call.html?token=${roomToken}&autocall=1`;
+            const staff = staff_name || 'Support Staff';
+
+            const text = `📞 *VOICE CALL INVITATION*\n\n` +
+                `Hello! Executive *${staff}* is waiting on the line to talk to you right now.\n\n` +
+                `👉 *TAP HERE TO JOIN CALL:*\n` +
+                `${link}\n\n` +
+                `_No app download required. Connects directly in your phone browser._`;
+
+            try {
+                await targetSock.sendMessage(targetJid, { text });
+                socket.emit('call:resend_success', { message: 'Link sent to customer WhatsApp!' });
+            } catch (e) {
+                socket.emit('call:resend_error', { message: e.message });
+            }
+        }
+    });
+
+    socket.on('call:end_broadcast', (data) => {
+        console.log('📴 [Socket.IO Call Ended Broadcast from Client]:', data);
+        io.emit('call:ended', data);
     });
 
     // Handle request to add / refresh account QR
@@ -2075,7 +2331,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Broadcast Telephony Call Masking Events (call:incoming, call:claimed, call:ended)
-app.post('/api/calls/event', (req, res) => {
+app.post('/api/calls/event', async (req, res) => {
     try {
         const { event, data } = req.body;
         if (!event) {
@@ -2084,6 +2340,12 @@ app.post('/api/calls/event', (req, res) => {
         // Broadcast across all connected Socket.IO staff client browser tabs
         io.emit(event, data || {});
         console.log(`[Call Masking Socket] Broadcasted "${event}" across clients:`, data);
+
+        // If the event is call:claimed, immediately cut WhatsApp ringing on customer's phone & dispatch voice link!
+        if (event === 'call:claimed') {
+            await executeCallClaimProcedure(data);
+        }
+
         res.json({ status: 'success', event, clients: io.engine ? io.engine.clientsCount : 0 });
     } catch (e) {
         res.status(500).json({ status: 'error', message: e.message });
