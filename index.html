@@ -1298,18 +1298,18 @@
     <header
       class="min-h-[56px] sm:min-h-[64px] bg-white border-b border-slate-200 px-2.5 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 sm:gap-3">
       <!-- Left: Sidebar Toggle Menu Button & Dynamic Header Title -->
-      <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
         <!-- Sidebar Toggle Menu Bar Button -->
         <button type="button" onclick="toggleSidebar()" id="sidebar-toggle-btn"
           class="p-1.5 sm:p-2 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-xl transition flex items-center justify-center cursor-pointer shadow-xs border border-slate-200 shrink-0"
           title="Toggle Navigation Menu">
-          <span class="material-symbols-outlined text-[22px] sm:text-[24px]" id="sidebar-toggle-icon">menu</span>
+          <span class="material-symbols-outlined text-[20px] sm:text-[24px]" id="sidebar-toggle-icon">menu</span>
         </button>
 
-        <!-- Dynamic Header Title & Live Status Pill -->
-        <div id="header-title-container" class="flex items-center gap-2 sm:gap-3 min-w-0">
+        <!-- Dynamic Header Title (Clean Desktop Title; Hidden on Mobile < sm to Prevent Header Collisions) -->
+        <div id="header-title-container" class="hidden sm:flex items-center gap-2 sm:gap-3 min-w-0">
           <div class="min-w-0">
-            <h2 id="page-title" class="font-bold text-xs sm:text-base lg:text-lg text-slate-900 leading-tight truncate"
+            <h2 id="page-title" class="font-bold text-sm lg:text-lg text-slate-900 leading-tight truncate"
               data-i18n="inbox.title">
               WhatsApp Dashboard</h2>
             <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden" data-i18n="inbox.subtitle"></p>
@@ -1318,7 +1318,7 @@
       </div>
 
       <!-- Header Actions (Responsive Compact Buttons to Prevent Text Cutoff on Mobile) -->
-      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0 ml-auto">
         <!-- Interactive Multi-WhatsApp Number Switcher Dropdown -->
         <div class="relative" id="header-phone-switcher-wrapper">
           <button type="button" onclick="togglePhoneSwitcherDropdown(event)" id="header-phone-badge"
@@ -1330,9 +1330,9 @@
               <span class="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
             </span>
             <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 shrink-0">phone_android</span>
-            <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold text-[11px] sm:text-xs truncate max-w-[110px] sm:max-w-none">+Scan QR Code</span>
+            <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold text-[10px] sm:text-xs truncate max-w-[85px] sm:max-w-none">+Scan QR</span>
             <span
-              class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 transition-transform duration-200 shrink-0"
+              class="material-symbols-outlined text-[14px] sm:text-[16px] text-emerald-600 transition-transform duration-200 shrink-0"
               id="phone-dropdown-arrow">expand_more</span>
           </button>
 
@@ -2797,18 +2797,18 @@
           <!-- Quick Charts & Workflow Cards: Side-by-side on Desktop, Segmented or Stacked on Mobile -->
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             <!-- 2-col: Recent High Priority Leads -->
-            <div id="dash-card-active-chats" class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4 block">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h3 class="font-bold text-slate-900 text-sm" data-i18n="dash.active_conversations">Active WhatsApp
+            <div id="dash-card-active-chats" class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4 block overflow-hidden">
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <h3 class="font-bold text-slate-900 text-sm truncate" data-i18n="dash.active_conversations">Active WhatsApp
                     Conversations</h3>
-                  <p class="text-xs text-slate-500" data-i18n="dash.active_conversations_sub">Live feed of pending
+                  <p class="text-xs text-slate-500 truncate" data-i18n="dash.active_conversations_sub">Live feed of pending
                     customer chats across all staff</p>
                 </div>
-                <button onclick="switchView('inbox')" class="text-xs text-brand-wa font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                <button onclick="switchView('inbox')" class="text-xs text-brand-wa font-bold hover:underline flex items-center gap-0.5 cursor-pointer shrink-0 whitespace-nowrap"
                   data-i18n="dash.open_inbox">Open Inbox &rarr;</button>
               </div>
-              <div id="dash-recent-chats" class="divide-y divide-slate-100 text-xs">
+              <div id="dash-recent-chats" class="divide-y divide-slate-100 text-xs overflow-hidden">
                 <!-- Rendered by JS -->
               </div>
             </div>

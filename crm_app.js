@@ -17474,21 +17474,21 @@ function renderDashboard() {
       const cust = CRM_STATE.customers.find(c => c.id === q.customerId);
       const avatarLetter = (cust && cust.name) ? cust.name.charAt(0).toUpperCase() : 'C';
       return `
-        <div onclick="selectCustomerChat('${q.customerId}'); switchView('inbox');" class="py-2.5 sm:py-3 px-1.5 sm:px-2.5 hover:bg-slate-50 active:bg-slate-100 rounded-xl transition flex items-center justify-between cursor-pointer group">
-          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+        <div onclick="selectCustomerChat('${q.customerId}'); switchView('inbox');" class="py-2.5 sm:py-3 px-1.5 sm:px-2.5 hover:bg-slate-50 active:bg-slate-100 rounded-xl transition flex items-center justify-between cursor-pointer group gap-2">
+          <div class="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
             <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-700 to-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
               ${avatarLetter}
             </div>
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 flex-1 overflow-hidden">
               <p class="font-bold text-slate-800 text-xs truncate flex items-center gap-1.5">
-                <span>${cust ? cust.name : t('common.customer', 'Customer')}</span>
+                <span class="truncate">${cust ? cust.name : t('common.customer', 'Customer')}</span>
                 <span class="font-mono text-slate-400 text-[10px] shrink-0 font-normal">(${q.id})</span>
               </p>
-              <p class="text-slate-500 text-[11px] truncate mt-0.5">${q.queryText}</p>
+              <p class="text-slate-500 text-[11px] truncate mt-0.5 overflow-hidden whitespace-nowrap">${q.queryText}</p>
             </div>
           </div>
-          <span class="text-brand-wa font-bold text-xs group-hover:translate-x-0.5 transition-transform shrink-0 ml-2 flex items-center gap-0.5">
-            ${t('dash.open', 'Open')} &rarr;
+          <span class="text-brand-wa font-bold text-xs group-hover:translate-x-0.5 transition-transform shrink-0 whitespace-nowrap flex items-center">
+            ${t('dash.open', 'Open')}&nbsp;&rarr;
           </span>
         </div>
       `;
