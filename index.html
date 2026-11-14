@@ -98,7 +98,18 @@
         var mainHash = hashParts[0];
         var subHash = hashParts[1] || '';
         var targetView = (mainHash && validViews.includes(mainHash)) ? mainHash : null;
-        if (!targetView) {
+
+        var isMobile = (window.innerWidth < 1024);
+        var sessionUser = null;
+        try {
+          var rawSess = sessionStorage.getItem('GRM_CRM_SESSION') || localStorage.getItem('GRM_CRM_SESSION');
+          if (rawSess) sessionUser = JSON.parse(rawSess);
+        } catch(e) {}
+
+        if (isMobile && sessionUser) {
+          var isAdm = (sessionUser.role === 'admin' || sessionUser.id === 'admin' || sessionUser.role === 'Super Admin' || (sessionUser.title && sessionUser.title.indexOf('Admin') !== -1));
+          targetView = isAdm ? 'dashboard' : 'inbox';
+        } else if (!targetView) {
           var stored = localStorage.getItem('GRM_CRM_ACTIVE_VIEW');
           if (stored && validViews.includes(stored)) {
             targetView = stored;
@@ -231,36 +242,11 @@
     window.toggleSidebar = toggleSidebar;
 
     // Auto-initialize sidebar state on page load (open on desktop >= 1024px unless user collapsed it; ALWAYS closed on mobile < 1024px)
-    (function () {
-      try {
-        var isDesktop = window.innerWidth >= 1024;
-        var saved = localStorage.getItem('GRM_SIDEBAR_OPEN');
-        // On desktop: open unless user explicitly closed it. On mobile: ALWAYS closed by default so user sees dashboard details!
-        var shouldOpen = isDesktop ? (saved !== 'false') : false;
-        var sidebar = document.getElementById('app-sidebar');
-        var toggleIcon = document.getElementById('sidebar-toggle-icon');
-        var toggleBtn = document.getElementById('sidebar-toggle-btn');
-        if (sidebar) {
-          if (shouldOpen) {
-            sidebar.classList.remove('sidebar-hidden');
-            sidebar.classList.add('sidebar-visible');
-            if (toggleIcon) toggleIcon.innerText = 'menu_open';
-            if (toggleBtn) {
-              toggleBtn.classList.add('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
-              toggleBtn.setAttribute('aria-expanded', 'true');
-            }
-          } else {
-            sidebar.classList.remove('sidebar-visible');
-            sidebar.classList.add('sidebar-hidden');
-            if (toggleIcon) toggleIcon.innerText = 'menu';
-            if (toggleBtn) {
-              toggleBtn.classList.remove('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
-              toggleBtn.setAttribute('aria-expanded', 'false');
-            }
-          }
-        }
-      } catch (e) { }
-    })();
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.innerWidth < 1024) {
+        toggleSidebar(false);
+      }
+    });
 
 
     // =========================================================================
@@ -646,7 +632,7 @@
       will-change: transform, margin-left;
     }
 
-    /* Small / Mobile / Tablet (< 1024px): Sliding Off-Canvas Drawer Overlay */
+    /* Small / Mobile / Tablet (< 1024px): Sliding Off-Canvas Drawer Overlay (Closed by default on mobile) */
     @media (max-width: 1023px) {
       #app-sidebar {
         position: fixed !important;
@@ -656,9 +642,6 @@
         height: 100vh !important;
         max-width: 85vw;
         z-index: 70 !important;
-      }
-
-      #app-sidebar.sidebar-hidden {
         transform: translateX(-100%) !important;
         opacity: 0 !important;
         pointer-events: none !important;
@@ -670,6 +653,13 @@
         opacity: 1 !important;
         pointer-events: auto !important;
         visibility: visible !important;
+      }
+
+      #app-sidebar.sidebar-hidden {
+        transform: translateX(-100%) !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
       }
     }
 
@@ -948,7 +938,7 @@
   <!-- 1. LEFT NAVIGATION SIDEBAR -->
   <!-- ========================================================================= -->
   <aside id="app-sidebar"
-    class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-[70] select-none transition-all duration-300 ease-in-out relative">
+    class="sidebar-hidden lg:sidebar-visible w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-[70] select-none transition-all duration-300 ease-in-out relative">
     <!-- Main Sidebar Right Edge Resizer Handle (Drag with Mouse to Resize) -->
     <div id="resizer-app-sidebar"
       class="absolute top-0 -right-1 w-2.5 h-full hover:bg-emerald-500/50 active:bg-emerald-500 cursor-col-resize z-50 transition-colors select-none group hidden lg:block"
@@ -1050,6 +1040,17 @@
             </div>
             <span
               class="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">Blast</span>
+          </button>
+
+          <!-- Sub-module 4: Setting -->
+          <button onclick="switchView('inbox', 'settings')" id="nav-inbox-sub-settings"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-xs font-medium transition group cursor-pointer"
+            title="WhatsApp Inbox Settings">
+            <div class="flex items-center gap-2">
+              <span
+                class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">settings</span>
+              <span>Setting</span>
+            </div>
           </button>
         </div>
       </div>
@@ -1379,7 +1380,7 @@
           class="flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
           title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
           <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-rose-600">restart_alt</span>
-          <span data-i18n="header.reset_inbox">Reset Inbox</span>
+          <span data-i18n="header.reset_inbox">Reset</span>
         </button>
 
         <div class="h-5 w-px bg-slate-200 shrink-0"></div>
@@ -1454,26 +1455,9 @@
           <div id="inbox-left-panel"
             class="w-full md:w-80 xl:w-80 2xl:w-88 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0 transition-all duration-300 relative">
 
-            <!-- Daily Inbound Message Volume Progress Tracker -->
-            <div
-              class="px-3 py-2 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200/80 flex items-center justify-between text-xs min-w-0 gap-1.5">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span class="material-symbols-outlined text-[16px] text-brand-wa shrink-0">mark_chat_unread</span>
-
-              </div>
-              <div class="flex items-center gap-1.5 shrink-0">
-                <span id="inbox-today-message-count"
-                  class="font-mono font-extrabold text-emerald-900 bg-white border border-emerald-300 px-2 py-0.5 rounded-lg text-[10px] shadow-sm">
-                  0 msgs
-                </span>
-                <!-- Minimize Left Panel Controller Button -->
-                <button type="button" id="btn-minimize-left-panel" onclick="toggleLeftPanel(false)"
-                  class="p-1 text-slate-500 hover:text-emerald-900 hover:bg-emerald-100 rounded-lg transition shrink-0 cursor-pointer flex items-center justify-center border border-emerald-300/60 bg-white shadow-2xs"
-                  title="Minimize Conversation Queue (Alt+L)">
-                  <span class="material-symbols-outlined text-[15px]">first_page</span>
-                </button>
-              </div>
-            </div>
+            <!-- Daily Inbound Message Volume Progress Tracker (Removed) -->
+            <span id="inbox-today-message-count" class="hidden"></span>
+            <button type="button" id="btn-minimize-left-panel" class="hidden"></button>
 
 
             <!-- Search & Filters -->
@@ -2120,9 +2104,6 @@
                 <div>
                   <div class="flex items-center gap-2">
                     <h3 class="font-bold text-base text-white">Automated WhatsApp Template Broadcast</h3>
-                    <span
-                      class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">Free
-                      &amp; Safe Dispatch</span>
                   </div>
 
                 </div>
@@ -2138,24 +2119,26 @@
               <div class="lg:col-span-7 space-y-4">
 
                 <!-- 1. Preset Template Selector Bar -->
-                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2">
-                  <div class="flex items-center justify-between">
-                    <label class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5 sm:space-y-2">
+                  <!-- Row 1: Label on left. On mobile: + New on right. On desktop: Save, + New, Edit, Delete on right -->
+                  <div class="flex items-center justify-between gap-2">
+                    <label class="font-bold text-slate-800 text-xs flex items-center gap-1.5 shrink-0">
                       <span class="material-symbols-outlined text-[16px] text-emerald-600">bookmark</span>
                       <span>Choose Message Template:</span>
                     </label>
-                    <div class="flex items-center gap-1">
+
+                    <!-- Desktop Actions Bar: Save, + New, Edit, Delete (Visible on sm: and up, Desktop untouched) -->
+                    <div class="hidden sm:flex items-center gap-1">
                       <button type="button" id="btn-bcast-save-changes" onclick="handleSaveCurrentTemplateChanges()"
                         class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
                         title="Save changes to this template and its dynamic values in database">
                         <span class="material-symbols-outlined text-[14px]">save</span>
-                        <span>Save Changes</span>
+                        <span>Save</span>
                       </button>
                       <button type="button" id="btn-bcast-save-new" onclick="handleSaveCurrentAsNewTemplate()"
                         class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
                         title="Save current text as a new template">
-                        <span class="material-symbols-outlined text-[14px]">bookmark_add</span>
-                        <span>Save New</span>
+                        <span>+ New</span>
                       </button>
                       <button type="button" id="btn-bcast-rename" onclick="handleRenameCurrentTemplate()"
                         class="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs transition cursor-pointer"
@@ -2168,11 +2151,42 @@
                         <span class="material-symbols-outlined text-[14px]">delete</span>
                       </button>
                     </div>
+
+                    <!-- Mobile Row 1 Action: + New in single row with Choose Message Template (Mobile only) -->
+                    <div class="flex sm:hidden items-center shrink-0">
+                      <button type="button" id="btn-bcast-save-new-mob" onclick="handleSaveCurrentAsNewTemplate()"
+                        class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                        title="Save current text as a new template">
+                        <span>+ New</span>
+                      </button>
+                    </div>
                   </div>
+
+                  <!-- Row 2: Dropdown Select -->
                   <select id="bcast-preset-select" onchange="applyBroadcastPreset(this.value)"
                     class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
                     <!-- Rendered by JS -->
                   </select>
+
+                  <!-- Row 3 on Mobile: Save, Edit, Delete on the right side (Hidden on desktop) -->
+                  <div class="flex sm:hidden items-center justify-end gap-1.5 pt-0.5">
+                    <button type="button" id="btn-bcast-save-changes-mob" onclick="handleSaveCurrentTemplateChanges()"
+                      class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                      title="Save changes to this template and its dynamic values in database">
+                      <span class="material-symbols-outlined text-[14px]">save</span>
+                      <span>Save</span>
+                    </button>
+                    <button type="button" id="btn-bcast-rename-mob" onclick="handleRenameCurrentTemplate()"
+                      class="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs transition cursor-pointer"
+                      title="Rename template">
+                      <span class="material-symbols-outlined text-[14px]">edit</span>
+                    </button>
+                    <button type="button" id="btn-bcast-delete-mob" onclick="handleDeleteCurrentTemplate()"
+                      class="p-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs transition cursor-pointer"
+                      title="Delete template">
+                      <span class="material-symbols-outlined text-[14px]">delete</span>
+                    </button>
+                  </div>
                 </div>
 
                 <!-- 2. Message Textarea & Insert Tags Bar -->
@@ -2303,17 +2317,13 @@
                       <div>
                         <h4 class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
                           <span>Set Dynamic Template Values</span>
-                          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">Live
-                            Sync</span>
                         </h4>
-                        <p class="text-[10px] text-slate-500">Edit dynamic tag values below. Changes instantly reflect
-                          in preview &amp; outbound messages.</p>
                       </div>
                     </div>
                     <button type="button" id="btn-bcast-add-var" onclick="promptAddNewCustomTag()"
                       class="px-2 py-1 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer">
                       <span class="material-symbols-outlined text-[13px]">add_circle</span>
-                      <span>Add Variable</span>
+                      <span>Add </span>
                     </button>
                   </div>
 
@@ -2330,18 +2340,24 @@
                     <div>
                       <label class="block font-bold text-slate-800 text-xs mb-1">Target Audience:</label>
                       <select id="bcast-target-audience" onchange="updateBroadcastTargetCount()"
-                        class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-emerald-500">
-                        <option value="ALL">📱 All Active Customers (Excluding DND)</option>
-                        <option value="ALL_INCLUDING_DND">👥 All Customers (Including DND List)</option>
-                        <option value="DND_ONLY">🚫 DND / Opt-Out Customers Only</option>
-                        <option value="account_1">Line 1: GRM Business Central (+91 86680 07593)</option>
-                        <option value="account_2">Line 2: Blue Berry Kids &amp; Maternity (+91 97896 60115)</option>
-                        <option value="account_3">Line 3: Customer Support &amp; Enquiries (+91 98765 43210)</option>
-                        <option value="account_4">Line 4: Wholesale &amp; Bulk Orders (+91 98450 99887)</option>
-                        <option value="account_5">Line 5: VIP Fast-Track &amp; Dispatch (+91 95009 04638)</option>
-                        <option value="TAG_VIP">⭐ VIP Customers Only</option>
-                        <option value="TAG_WHOLESALE">📦 Wholesale Partners Only</option>
-                        <option value="TAG_NEW">🌱 New WhatsApp Leads Only</option>
+                        class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-800 focus:bg-white focus:ring-1 focus:ring-emerald-500 truncate cursor-pointer">
+                        <optgroup label="── Main Audience ──">
+                          <option value="ALL" selected>📱 All Active Customers (No DND)</option>
+                          <option value="ALL_INCLUDING_DND">👥 All Customers (Incl. DND)</option>
+                          <option value="DND_ONLY">🚫 DND Customers Only</option>
+                        </optgroup>
+                        <optgroup label="── Filter by WhatsApp Line ──">
+                          <option value="account_1">📞 Line 1: Main Business</option>
+                          <option value="account_2">📞 Line 2: Kids &amp; Maternity</option>
+                          <option value="account_3">📞 Line 3: Customer Support</option>
+                          <option value="account_4">📞 Line 4: Wholesale &amp; Bulk</option>
+                          <option value="account_5">📞 Line 5: VIP Orders</option>
+                        </optgroup>
+                        <optgroup label="── Customer Segments ──">
+                          <option value="TAG_VIP">⭐ VIP Customers Only</option>
+                          <option value="TAG_WHOLESALE">📦 Wholesale Partners Only</option>
+                          <option value="TAG_NEW">🌱 New Leads Only</option>
+                        </optgroup>
                       </select>
                     </div>
 
@@ -2492,6 +2508,71 @@
 
             </div>
 
+          </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- SUB-MODULE 4: SETTING WORKSTATION                        -->
+        <!-- ======================================================== -->
+        <div id="submodule-inbox-settings"
+          class="flex-1 overflow-y-auto hidden bg-slate-100/70 p-4 pb-28 sm:p-6 sm:pb-8 custom-chat-scroll">
+          <div class="max-w-4xl mx-auto space-y-4">
+            <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-soft space-y-4">
+              <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <span class="material-symbols-outlined text-[24px]">settings</span>
+                </div>
+                <div>
+                  <h3 class="font-extrabold text-base text-slate-800">Setting</h3>
+                  <p class="text-xs text-slate-500">WhatsApp line switcher, call masking &amp; reset controls</p>
+                </div>
+              </div>
+
+              <!-- First Image Content (Quick Settings Controls) -->
+              <div class="flex items-center gap-2.5 flex-wrap pt-1">
+                <!-- Interactive Multi-WhatsApp Number Switcher Dropdown -->
+                <div class="relative shrink-0" id="settings-phone-switcher-wrapper">
+                  <button type="button" onclick="togglePhoneSwitcherDropdown(event)" id="settings-phone-badge"
+                    class="flex items-center gap-1.5 sm:gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-xs cursor-pointer whitespace-nowrap"
+                    title="Switch active WhatsApp Line / Business Number">
+                    <span class="relative flex h-2.5 w-2.5 shrink-0">
+                      <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span class="material-symbols-outlined text-[16px] text-emerald-600 shrink-0">phone_android</span>
+                    <span class="configured-business-phone font-mono font-bold text-xs">+Scan QR Code</span>
+                    <span
+                      class="material-symbols-outlined text-[16px] text-emerald-600 transition-transform duration-200 shrink-0">expand_more</span>
+                  </button>
+                </div>
+
+                <!-- Number Masking & Lead Privacy Toggle Button -->
+                <button onclick="toggleGlobalPhoneMasking()" id="btn-settings-mask-toggle"
+                  class="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-semibold transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
+                  title="Toggle Number Masking (Protects customer phone numbers from unauthorized export)">
+                  <span class="material-symbols-outlined text-[16px] text-amber-700">lock</span>
+                  <span data-i18n="header.masking">Masking:</span>
+                  <span class="font-extrabold text-amber-950 text-xs">OFF</span>
+                </button>
+
+                <!-- Reset Test Inbox Messages Button (Dev / Test Helper) -->
+                <button onclick="confirmResetInboxMessages()" id="settings-reset-inbox-btn"
+                  class="flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
+                  title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
+                  <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>
+                  <span data-i18n="header.reset_inbox">Reset</span>
+                </button>
+
+                <!-- Logout Button -->
+                <button onclick="handleLogout()"
+                  class="flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
+                  title="Sign out from CRM Panel">
+                  <span class="material-symbols-outlined text-[16px] text-rose-600">logout</span>
+                  <span data-i18n="header.logout">Logout</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -3812,51 +3893,52 @@
                     class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                 </div>
 
-                <!-- Filters Row -->
-                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                  <!-- Customize Date Pick -->
-                  <div
-                    class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-2xl px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition shrink-0"
-                    title="Customize Date Pick">
-                    <span class="material-symbols-outlined text-[16px] text-slate-400">calendar_month</span>
-                    <input type="date" id="followup-filter-date" onchange="filterFollowupsCards()"
-                      class="text-xs font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer">
-                    <button type="button" onclick="clearFollowupDateFilter()" id="btn-clear-followup-date"
-                      class="hidden text-slate-400 hover:text-rose-500 transition cursor-pointer"
-                      title="Clear Date Filter">
-                      <span class="material-symbols-outlined text-[15px]">cancel</span>
+                <!-- Filters Container (Row 1: Date & Staff in single row, Row 2: Export & Custom in second row) -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                  <!-- Row 1: Date Dropdown and Staff Dropdown in Single Row -->
+                  <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+                    <!-- Customize Date Pick -->
+                    <div
+                      class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-2xl px-2 sm:px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition min-w-0"
+                      title="Customize Date Pick">
+                      <span class="material-symbols-outlined text-[16px] text-slate-400 shrink-0">calendar_month</span>
+                      <input type="date" id="followup-filter-date" onchange="filterFollowupsCards()"
+                        class="w-full text-xs font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer min-w-0">
+                      <button type="button" onclick="clearFollowupDateFilter()" id="btn-clear-followup-date"
+                        class="hidden text-slate-400 hover:text-rose-500 transition cursor-pointer shrink-0"
+                        title="Clear Date Filter">
+                        <span class="material-symbols-outlined text-[15px]">cancel</span>
+                      </button>
+                    </div>
+
+                    <!-- Staff Filter -->
+                    <div id="followup-staff-filter-container" class="min-w-0 flex items-center">
+                      <select id="followup-filter-staff" onchange="filterFollowupsCards()"
+                        class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-2.5 sm:px-3 py-2 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition truncate">
+                        <option value="ALL">👥 All Staff Members</option>
+                        <option value="admin">Super Admin</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Row 2: Export All and Custom Button in Second Row -->
+                  <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+                    <!-- Direct 1-Click Export All (Follow-ups First + Payment Pending Included) -->
+                    <button type="button" onclick="autoExportAllBothTabs('FOLLOWUPS')" id="btn-fu-quick-export-all"
+                      class="flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-2xl text-xs font-bold transition shadow-2xs shrink-0 cursor-pointer active:scale-95"
+                      title="Export Follow-up Details First &amp; Automatically Include Payment Pending Tab">
+                      <span class="material-symbols-outlined text-[16px] text-blue-600">download</span>
+                      <span>Export All</span>
+                    </button>
+
+                    <!-- Quick Export Follow-ups Modal Button -->
+                    <button type="button" onclick="openFollowupExportModal('FOLLOWUPS')"
+                      class="flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-2xl text-xs font-bold transition shadow-2xs shrink-0 cursor-pointer active:scale-95"
+                      title="Customize Export Filters">
+                      <span class="material-symbols-outlined text-[16px] text-emerald-600">tune</span>
+                      <span>Custom</span>
                     </button>
                   </div>
-
-
-
-                  <!-- Staff Filter -->
-                  <div id="followup-staff-filter-container" class="shrink-0">
-                    <select id="followup-filter-staff" onchange="filterFollowupsCards()"
-                      class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-3 py-2.5 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                      <option value="ALL">👥 All Staff Members</option>
-
-                      <option value="admin">Super Admin</option>
-                    </select>
-                  </div>
-
-
-
-                  <!-- Direct 1-Click Export All (Follow-ups First + Payment Pending Included) -->
-                  <button type="button" onclick="autoExportAllBothTabs('FOLLOWUPS')" id="btn-fu-quick-export-all"
-                    class="flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-2xl text-xs font-bold transition shadow-2xs shrink-0 cursor-pointer active:scale-95"
-                    title="Export Follow-up Details First &amp; Automatically Include Payment Pending Tab">
-                    <span class="material-symbols-outlined text-[16px] text-blue-600">download</span>
-                    <span>Export All</span>
-                  </button>
-
-                  <!-- Quick Export Follow-ups Modal Button -->
-                  <button type="button" onclick="openFollowupExportModal('FOLLOWUPS')"
-                    class="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-2xl text-xs font-bold transition shadow-2xs shrink-0 cursor-pointer active:scale-95"
-                    title="Customize Export Filters">
-                    <span class="material-symbols-outlined text-[16px] text-emerald-600">tune</span>
-                    <span>Custom</span>
-                  </button>
                 </div>
               </div>
 
@@ -6404,18 +6486,17 @@
     class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
     <div
       class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-      <div class="bg-gradient-to-r from-teal-800 to-indigo-900 p-4 text-white flex items-center justify-between">
+      <div class="bg-gradient-to-r from-sky-500 via-sky-600 to-blue-600 p-4 text-white flex items-center justify-between">
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white">
             <span class="material-symbols-outlined text-[18px]">tune</span>
           </div>
           <div>
             <h3 class="font-bold text-sm">Add Dynamic Variable</h3>
-            <p class="text-[11px] text-teal-200/90">Create a dynamic tag to insert in broadcast messages</p>
           </div>
         </div>
         <button type="button" onclick="closeModal('modal-broadcast-add-variable')"
-          class="text-teal-200 hover:text-white transition cursor-pointer">
+          class="text-sky-100 hover:text-white transition cursor-pointer">
           <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
@@ -8255,14 +8336,9 @@
             <span class="material-symbols-outlined text-[24px]">file_download</span>
           </div>
           <div>
-            <h3 class="font-extrabold text-base text-white flex items-center gap-2">
+            <h3 class="font-extrabold text-base text-white">
               <span>Export All Details Report</span>
-              <span
-                class="text-[10px] bg-indigo-500/30 text-indigo-200 font-mono px-2 py-0.5 rounded-full border border-indigo-400/30">CSV
-                / Excel</span>
             </h3>
-            <p class="text-xs text-indigo-200/80 mt-0.5">Customize date range, sort order &amp; export separated
-              follow-up or payment records</p>
           </div>
         </div>
         <button type="button" onclick="closeModal('modal-followup-export')"
@@ -8279,14 +8355,13 @@
           <label
             class="block font-black text-slate-700 uppercase tracking-wider text-[11px] mb-2 flex items-center justify-between">
             <span>1. Select Report Type (Separated Details)</span>
-            <span class="text-[10px] text-slate-400 font-normal">Choose dataset to export</span>
           </label>
           <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
             <!-- Follow-up Details Option -->
             <button type="button" id="export-mode-btn-followups" onclick="switchExportHubMode('FOLLOWUPS')"
               class="py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-blue-600 text-white shadow-sm">
               <span class="material-symbols-outlined text-[18px]">event_repeat</span>
-              <span>Follow-ups Details</span>
+              <span>Follow Ups</span>
               <span id="export-badge-followups-count"
                 class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.2 rounded-full font-mono font-bold">0</span>
             </button>
@@ -8294,7 +8369,7 @@
             <button type="button" id="export-mode-btn-payment" onclick="switchExportHubMode('PAYMENT_PENDING')"
               class="py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-transparent text-slate-700 hover:text-amber-800">
               <span class="material-symbols-outlined text-[18px]">payments</span>
-              <span>Payment Pending Details</span>
+              <span>Payment Pending</span>
               <span id="export-badge-payment-count"
                 class="bg-amber-100 text-amber-900 text-[10px] px-2 py-0.2 rounded-full font-mono font-bold">0</span>
             </button>
@@ -8303,12 +8378,11 @@
 
         <!-- 2. Customize Date Pick (Range & Presets) -->
         <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
-          <div class="flex items-center justify-between">
+          <div>
             <label class="font-black text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
               <span class="material-symbols-outlined text-[16px] text-blue-600">calendar_month</span>
               <span>2. Customize Date Pick</span>
             </label>
-            <span class="text-[10px] text-slate-400">Filter records by date range</span>
           </div>
 
           <!-- Date Presets -->
@@ -8345,12 +8419,11 @@
 
         <!-- 3. Order Picker & Filters -->
         <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
-          <div class="flex items-center justify-between">
+          <div>
             <label class="font-black text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
               <span class="material-symbols-outlined text-[16px] text-indigo-600">sort</span>
               <span>3. Order Picker &amp; Filters</span>
             </label>
-            <span class="text-[10px] text-slate-400">Sort sequence &amp; status filtering</span>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -8441,7 +8514,7 @@
           <button type="button" onclick="handleExportFollowupsCSV()"
             class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-extrabold shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95">
             <span class="material-symbols-outlined text-[18px]">download</span>
-            <span>Download CSV (Excel)</span>
+            <span>Download</span>
           </button>
         </div>
       </div>

@@ -925,14 +925,20 @@ function enforceGranularActionPermissions() {
   }
 
   // Template Creation & Saving controls
-  const btnBcastSaveNew = document.getElementById('btn-bcast-save-new');
-  if (btnBcastSaveNew) btnBcastSaveNew.style.display = canBcastCreate ? '' : 'none';
+  ['btn-bcast-save-new', 'btn-bcast-save-new-mob'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canBcastCreate ? '' : 'none';
+  });
 
   // Template Editing controls
-  const btnBcastSaveChanges = document.getElementById('btn-bcast-save-changes');
-  if (btnBcastSaveChanges) btnBcastSaveChanges.style.display = canBcastEdit ? '' : 'none';
-  const btnBcastRename = document.getElementById('btn-bcast-rename');
-  if (btnBcastRename) btnBcastRename.style.display = canBcastEdit ? '' : 'none';
+  ['btn-bcast-save-changes', 'btn-bcast-save-changes-mob'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canBcastEdit ? '' : 'none';
+  });
+  ['btn-bcast-rename', 'btn-bcast-rename-mob'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canBcastEdit ? '' : 'none';
+  });
   const btnBcastAddVar = document.getElementById('btn-bcast-add-var');
   if (btnBcastAddVar) btnBcastAddVar.style.display = canBcastEdit ? '' : 'none';
 
@@ -1015,8 +1021,10 @@ function enforceGranularActionPermissions() {
   }
 
   // Template Deletion controls
-  const btnBcastDelete = document.getElementById('btn-bcast-delete');
-  if (btnBcastDelete) btnBcastDelete.style.display = canBcastDelete ? '' : 'none';
+  ['btn-bcast-delete', 'btn-bcast-delete-mob'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canBcastDelete ? '' : 'none';
+  });
 
   // ── SECTION 8: LIVE CHAT COMPOSER & INBOX CONTROLS ──────────────────────
   if (ACTIVE_VIEW === 'inbox') {
@@ -1987,6 +1995,30 @@ function updateMaskingUI() {
   }
   if (icon) icon.innerText = isMasked ? 'lock' : 'lock_open';
   if (label) label.innerText = isMasked ? 'ON' : 'OFF';
+
+  // Also synchronize Inbox Settings Submodule controls
+  const sBtn = document.getElementById('inbox-settings-mask-btn');
+  const sIcon = document.getElementById('inbox-settings-mask-icon');
+  const sStatus = document.getElementById('inbox-settings-mask-status');
+  const sPill = document.getElementById('inbox-settings-mask-pill');
+  const sPreview = document.getElementById('inbox-settings-mask-preview');
+  const sActionBtn = document.getElementById('inbox-settings-mask-btn-text');
+
+  if (sBtn) {
+    sBtn.className = isMasked
+      ? 'flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95'
+      : 'flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95';
+  }
+  if (sIcon) sIcon.innerText = isMasked ? 'lock' : 'lock_open';
+  if (sStatus) sStatus.innerText = isMasked ? 'ON' : 'OFF';
+  if (sPill) {
+    sPill.innerText = isMasked ? 'MASKING ACTIVE' : 'MASKING OFF';
+    sPill.className = isMasked
+      ? 'text-[10px] font-extrabold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full border border-amber-200'
+      : 'text-[10px] font-extrabold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full border border-slate-200';
+  }
+  if (sPreview) sPreview.innerText = isMasked ? '+91 86*** **593' : '+91 86680 07593';
+  if (sActionBtn) sActionBtn.innerText = isMasked ? 'Disable Number Masking' : 'Enable Number Masking';
 }
 
 function renderCurrentView() {
@@ -2034,7 +2066,7 @@ function initSocketIO() {
 
     SOCKET_IO.on('connect', () => {
       console.log('⚡ Socket.IO Connected to Bridge (ID: ' + SOCKET_IO.id + ')');
-      showToast('WebSocket Connected', 'Live WhatsApp synchronization active', 'bolt', 'emerald');
+      // Toast silenced on connect/refresh to prevent intrusive notification slider
 
       // 1. Fetch latest rules
       fetch(`${getBridgeBaseUrl()}/api/autoreply/rules`)
@@ -3557,6 +3589,9 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
   if (ACTIVE_VIEW === 'settings') {
     renderMultiAccountsHub();
   }
+  if (typeof renderInboxSettingsView === 'function') {
+    renderInboxSettingsView();
+  }
 
   // Auto-switch ACTIVE_CUSTOMER_ID to the first available conversation in this line
   const availableCusts = (CRM_STATE.customers || []).filter(c => {
@@ -3671,6 +3706,7 @@ function switchInboxSubmodule(submodule) {
   const chatSub = document.getElementById('submodule-inbox-chats');
   const autoSub = document.getElementById('submodule-inbox-autoreply');
   const bcastSub = document.getElementById('submodule-inbox-broadcast');
+  const settingsSub = document.getElementById('submodule-inbox-settings');
 
   const tabChat = document.getElementById('tab-sub-inbox-chats');
   const tabAuto = document.getElementById('tab-sub-inbox-autoreply');
@@ -3679,8 +3715,9 @@ function switchInboxSubmodule(submodule) {
   const navSubChat = document.getElementById('nav-inbox-sub-chats');
   const navSubAuto = document.getElementById('nav-inbox-sub-autoreply');
   const navSubBcast = document.getElementById('nav-inbox-sub-broadcast');
+  const navSubSettings = document.getElementById('nav-inbox-sub-settings');
 
-  // Toggle sub-modules strip: hidden on live 3-panel chats, shown on autoreply/broadcast
+  // Toggle sub-modules strip: hidden on live 3-panel chats, shown on autoreply/broadcast/settings
   const strip = document.getElementById('inbox-submodules-nav-strip');
   if (strip) {
     if (submodule === 'chats') {
@@ -3694,6 +3731,7 @@ function switchInboxSubmodule(submodule) {
   if (chatSub) chatSub.classList.add('hidden');
   if (autoSub) autoSub.classList.add('hidden');
   if (bcastSub) bcastSub.classList.add('hidden');
+  if (settingsSub) settingsSub.classList.add('hidden');
 
   // Reset tab classes
   const inactiveTabClass = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer";
@@ -3706,6 +3744,7 @@ function switchInboxSubmodule(submodule) {
   if (navSubChat) navSubChat.className = inactiveNavClass;
   if (navSubAuto) navSubAuto.className = inactiveNavClass;
   if (navSubBcast) navSubBcast.className = inactiveNavClass;
+  if (navSubSettings) navSubSettings.className = inactiveNavClass;
 
   const pTitle = document.getElementById('page-title');
   const pSub = document.getElementById('page-subtitle');
@@ -3740,7 +3779,7 @@ function switchInboxSubmodule(submodule) {
     if (bcastSub) bcastSub.classList.remove('hidden');
     if (tabBcast) tabBcast.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white cursor-pointer";
     if (navSubBcast) navSubBcast.className = activeSubNavClass;
-    if (pTitle) pTitle.innerText = t('header.title.inbox_broadcast', 'WhatsApp Inbox — Automated Template Broadcast');
+    if (pTitle) pTitle.innerText = t('header.title.inbox_broadcast', 'Automated Template Broadcast');
     if (pSub) {
       pSub.innerText = '';
       pSub.classList.add('hidden');
@@ -3751,12 +3790,85 @@ function switchInboxSubmodule(submodule) {
     if (typeof refreshBroadcastAutoFetchedNumbers === 'function') refreshBroadcastAutoFetchedNumbers();
     if (typeof renderDynamicTemplateFields === 'function') renderDynamicTemplateFields();
     if (typeof updateBroadcastPreview === 'function') updateBroadcastPreview();
+  } else if (submodule === 'settings' || submodule === 'setting') {
+    if (settingsSub) settingsSub.classList.remove('hidden');
+    if (navSubSettings) navSubSettings.className = activeSubNavClass;
+    if (pTitle) pTitle.innerText = t('header.title.inbox_settings', 'WhatsApp Inbox Settings & Controls');
+    if (pSub) {
+      pSub.innerText = '';
+      pSub.classList.add('hidden');
+    }
+
+    if (typeof renderInboxSettingsView === 'function') renderInboxSettingsView();
   }
 
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
   }
 }
+
+function renderInboxSettingsView() {
+  // Sync quick actions phone label
+  const headerPhoneLabel = document.getElementById('header-current-phone-label');
+  const settingsPhoneLabel = document.getElementById('inbox-settings-phone-label');
+  if (headerPhoneLabel && settingsPhoneLabel) {
+    settingsPhoneLabel.innerText = headerPhoneLabel.innerText || '+Scan QR Code';
+  }
+
+  // Sync quick actions masking status
+  if (typeof updateMaskingUI === 'function') {
+    updateMaskingUI();
+  }
+
+  // Render business lines list
+  const linesContainer = document.getElementById('inbox-settings-lines-list');
+  const countBadge = document.getElementById('inbox-settings-line-count');
+  if (linesContainer && typeof getAvailableWhatsAppAccounts === 'function') {
+    const accounts = getAvailableWhatsAppAccounts();
+    if (countBadge) {
+      countBadge.innerText = `${accounts.length} Lines Configured`;
+    }
+    const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593').replace(/\s+/g, '');
+
+    linesContainer.innerHTML = accounts.map((acc, index) => {
+      const accCleanPhone = (acc.connected_number || '').replace(/\s+/g, '');
+      const isCurrent = (acc.id === ACTIVE_SEND_ACCOUNT_ID) || (accounts.length === 1) || (ACTIVE_SEND_ACCOUNT_ID !== 'all' && accCleanPhone === currentPhone);
+      const isConn = acc.status === 'CONNECTED';
+      const displayPhone = acc.connected_number || 'Awaiting Link';
+
+      return `
+        <div class="p-3 rounded-xl border ${isCurrent ? 'bg-emerald-50/70 border-emerald-300' : 'bg-slate-50 border-slate-200'} flex items-center justify-between gap-2.5 transition">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-lg ${isCurrent ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600'} flex items-center justify-center shrink-0 font-bold text-xs">
+              <span class="material-symbols-outlined text-[18px]">${isCurrent ? 'check_circle' : 'phone_android'}</span>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-bold text-slate-900 text-xs">${acc.label || ('Line ' + (index + 1))}</span>
+                ${isCurrent ? '<span class="text-[9px] bg-emerald-600 text-white font-extrabold px-1.5 py-0.2 rounded-full">ACTIVE</span>' : ''}
+                <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-full ${isConn ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}">${acc.status || 'READY'}</span>
+              </div>
+              <p class="text-[11px] font-mono text-slate-600 truncate">${displayPhone} ${acc.brand_name ? '• ' + acc.brand_name : ''}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            ${isCurrent ? `
+              <span class="text-xs font-bold text-emerald-700 flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 rounded-lg shadow-2xs">
+                <span class="material-symbols-outlined text-[14px]">done</span> Active
+              </span>
+            ` : `
+              <button type="button" onclick="switchActiveWhatsAppLine('${acc.id}', '${acc.connected_number || ''}', '${acc.label || ''}'); renderInboxSettingsView();"
+                class="px-2.5 py-1 bg-white hover:bg-emerald-50 border border-slate-300 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 rounded-lg text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95">
+                Switch Line
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+window.renderInboxSettingsView = renderInboxSettingsView;
 
 // Interactive WhatsApp Inbox Dropdown Sidebar Toggle Handler
 function toggleWhatsAppDropdown(targetSubmodule) {
@@ -4397,6 +4509,19 @@ function applyRoleBasedAccessControl(user) {
     targetSubmodule = (typeof ACTIVE_STAFF_TAB !== 'undefined') ? ACTIVE_STAFF_TAB : (localStorage.getItem('GRM_CRM_ACTIVE_STAFF_TAB') || 'list');
   } else if (ACTIVE_VIEW === 'customers') {
     targetSubmodule = (typeof ACTIVE_CUSTOMERS_SUBMODULE !== 'undefined') ? ACTIVE_CUSTOMERS_SUBMODULE : (localStorage.getItem('GRM_CRM_ACTIVE_CUSTOMERS_SUBMODULE') || 'list');
+  }
+
+  // Mobile View Landing: Staff -> 'inbox' (chats), Admin -> 'dashboard' (Desktop view untouched)
+  const isMobile = (typeof window !== 'undefined' && window.innerWidth < 1024);
+  if (isMobile) {
+    if (!isAdmin) {
+      ACTIVE_VIEW = 'inbox';
+      targetSubmodule = 'chats';
+    } else {
+      ACTIVE_VIEW = 'dashboard';
+      targetSubmodule = null;
+    }
+    if (typeof toggleSidebar === 'function') toggleSidebar(false);
   }
 
   switchView(ACTIVE_VIEW, targetSubmodule);
@@ -30808,7 +30933,7 @@ function renderDynamicTemplateFields(preserveActiveFocus = false) {
             <span class="font-mono font-bold text-xs text-emerald-950 bg-white border border-emerald-300 px-2 py-0.5 rounded shadow-2xs">{{${tag}}}</span>
             <span class="text-[11px] text-emerald-800 font-semibold flex items-center gap-1">
               <span class="material-symbols-outlined text-[14px] text-emerald-600">auto_awesome</span>
-              <span>Automatically filled with each customer's name</span>
+              <span>Automatically filled customer's name</span>
             </span>
           </div>
           
