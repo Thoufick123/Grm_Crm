@@ -230,12 +230,13 @@
     }
     window.toggleSidebar = toggleSidebar;
 
-    // Auto-initialize sidebar state on page load (open on desktop >= 1024px unless user collapsed it)
+    // Auto-initialize sidebar state on page load (open on desktop >= 1024px unless user collapsed it; ALWAYS closed on mobile < 1024px)
     (function () {
       try {
         var isDesktop = window.innerWidth >= 1024;
         var saved = localStorage.getItem('GRM_SIDEBAR_OPEN');
-        var shouldOpen = isDesktop ? (saved !== 'false') : (saved === 'true');
+        // On desktop: open unless user explicitly closed it. On mobile: ALWAYS closed by default so user sees dashboard details!
+        var shouldOpen = isDesktop ? (saved !== 'false') : false;
         var sidebar = document.getElementById('app-sidebar');
         var toggleIcon = document.getElementById('sidebar-toggle-icon');
         var toggleBtn = document.getElementById('sidebar-toggle-btn');
@@ -649,7 +650,7 @@
         left: 0;
         height: 100vh !important;
         max-width: 85vw;
-        z-index: 50 !important;
+        z-index: 70 !important;
       }
 
       #app-sidebar.sidebar-hidden {
@@ -935,14 +936,14 @@
 
   <!-- Sidebar Backdrop Overlay (Mobile & Tablet) -->
   <div id="sidebar-backdrop" onclick="toggleSidebar(false)"
-    class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 hidden transition-opacity duration-300 opacity-0 cursor-pointer lg:hidden">
+    class="fixed inset-0 bg-black/60 backdrop-blur-xs z-[65] hidden transition-opacity duration-300 opacity-0 cursor-pointer lg:hidden">
   </div>
 
   <!-- ========================================================================= -->
   <!-- 1. LEFT NAVIGATION SIDEBAR -->
   <!-- ========================================================================= -->
   <aside id="app-sidebar"
-    class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-40 select-none transition-all duration-300 ease-in-out sidebar-visible relative">
+    class="w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-[70] select-none transition-all duration-300 ease-in-out relative">
     <!-- Main Sidebar Right Edge Resizer Handle (Drag with Mouse to Resize) -->
     <div id="resizer-app-sidebar"
       class="absolute top-0 -right-1 w-2.5 h-full hover:bg-emerald-500/50 active:bg-emerald-500 cursor-col-resize z-50 transition-colors select-none group hidden lg:block"
@@ -2597,176 +2598,210 @@
       <!-- ========================================== -->
       <!-- VIEW: DASHBOARD & OVERVIEW -->
       <!-- ========================================== -->
-      <section id="view-dashboard" class="h-full overflow-y-auto p-6 hidden">
-        <div class="max-w-7xl mx-auto space-y-6">
+      <section id="view-dashboard" class="h-full overflow-y-auto p-3 sm:p-5 md:p-6 pb-24 md:pb-6 hidden custom-chat-scroll">
+        <div class="max-w-7xl mx-auto space-y-4 sm:space-y-6">
 
           <!-- Dashboard Executive Control Bar (Refresh, Export & Live Timestamp) -->
           <div
-            class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3">
               <div
                 class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                 <span class="material-symbols-outlined text-[22px]">space_dashboard</span>
               </div>
-              <div>
+              <div class="min-w-0">
                 <div class="flex items-center gap-2">
-                  <h2 class="text-sm font-extrabold text-slate-900 tracking-tight">Executive Dashboard & Operations Hub
+                  <h2 class="text-sm font-extrabold text-slate-900 tracking-tight truncate">Executive Dashboard & Operations Hub
                   </h2>
                   <span
-                    class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                    class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
                     <span>Live</span>
                   </span>
                 </div>
-                <p class="text-xs text-slate-500 mt-0.5" id="dash-last-synced-label"></p>
+                <p class="text-xs text-slate-500 mt-0.5 truncate" id="dash-last-synced-label"></p>
               </div>
             </div>
-            <div class="flex items-center gap-2 self-end sm:self-auto">
+            <div class="flex items-center gap-2 self-stretch sm:self-auto justify-end">
               <!-- Refresh Dashboard Button -->
               <button type="button" onclick="refreshDashboardData(this)" id="btn-dash-refresh"
-                class="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer group"
+                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer group"
                 title="Refresh dashboard metrics & reload live database state">
                 <span
                   class="material-symbols-outlined text-[16px] text-slate-500 group-hover:text-emerald-600 transition">sync</span>
-                <span>Refresh Dashboard</span>
+                <span>Refresh</span>
               </button>
 
               <!-- Export All Details Button -->
               <button type="button" onclick="exportDashboardSummary(this)" id="btn-dash-export"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm shadow-emerald-600/20 cursor-pointer hover:shadow"
+                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm shadow-emerald-600/20 cursor-pointer hover:shadow"
                 title="Export and download all dashboard metrics, staff rosters, orders, and inquiries to CSV">
                 <span class="material-symbols-outlined text-[16px]">download</span>
-                <span>Export Details</span>
+                <span>Export</span>
               </button>
             </div>
           </div>
 
-          <!-- 6 Main KPI Cards: Image 4 UI Style with 6 Distinct Colors & Larger Icons (Blue, Orange, Pink, Green, Purple, Yellow) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <!-- Mobile Quick Action Shortcuts Bar (Visible only on Mobile & Tablet screens < lg) -->
+          <div class="grid grid-cols-4 gap-2 lg:hidden">
+            <button type="button" onclick="switchView('inbox')" class="flex flex-col items-center justify-center p-2.5 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200/80 rounded-xl text-emerald-900 transition shadow-2xs group cursor-pointer">
+              <span class="material-symbols-outlined text-[20px] text-emerald-600 group-hover:scale-110 transition-transform">forum</span>
+              <span class="text-[10px] font-bold mt-1">Inbox</span>
+            </button>
+            <button type="button" onclick="switchView('orders')" class="flex flex-col items-center justify-center p-2.5 bg-pink-50 hover:bg-pink-100 active:bg-pink-200 border border-pink-200/80 rounded-xl text-pink-900 transition shadow-2xs group cursor-pointer">
+              <span class="material-symbols-outlined text-[20px] text-pink-600 group-hover:scale-110 transition-transform">shopping_bag</span>
+              <span class="text-[10px] font-bold mt-1">Orders</span>
+            </button>
+            <button type="button" onclick="switchView('followups')" class="flex flex-col items-center justify-center p-2.5 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200/80 rounded-xl text-amber-900 transition shadow-2xs group cursor-pointer">
+              <span class="material-symbols-outlined text-[20px] text-amber-600 group-hover:scale-110 transition-transform">schedule</span>
+              <span class="text-[10px] font-bold mt-1">Follow-up</span>
+            </button>
+            <button type="button" onclick="switchView('settings')" class="flex flex-col items-center justify-center p-2.5 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border border-blue-200/80 rounded-xl text-blue-900 transition shadow-2xs group cursor-pointer">
+              <span class="material-symbols-outlined text-[20px] text-blue-600 group-hover:scale-110 transition-transform">qr_code_scanner</span>
+              <span class="text-[10px] font-bold mt-1">Link WA</span>
+            </button>
+          </div>
+
+          <!-- 6 Main KPI Cards: Responsive 2-col on Mobile, 3-col on Tablet, 6-col on Desktop -->
+          <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5 sm:gap-4">
             <!-- Card 1: Total Enquiries (Blue) -->
             <div
-              class="bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-4 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
+              class="bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-3 sm:p-4 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-[10px] font-bold text-blue-800 uppercase tracking-wider"
+                <div class="min-w-0">
+                  <p class="text-[9px] sm:text-[10px] font-bold text-blue-800 uppercase tracking-wider truncate"
                     data-i18n="dash.total_enquiries">Total Enquiries</p>
-                  <h3 id="dash-total-queries" class="text-2xl font-black text-blue-900 mt-1">12</h3>
+                  <h3 id="dash-total-queries" class="text-xl sm:text-2xl font-black text-blue-900 mt-1">12</h3>
                 </div>
                 <div
-                  class="w-11 h-11 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center border border-blue-200/80 shrink-0 group-hover:scale-110 transition-transform">
-                  <span class="material-symbols-outlined text-[25px]">chat</span>
+                  class="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center border border-blue-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[18px] sm:text-[25px]">chat</span>
                 </div>
               </div>
-              <div class="mt-2.5 text-[11px] flex items-center text-blue-700 font-bold truncate">
-                <span class="material-symbols-outlined text-[15px] mr-1 text-blue-600">trending_up</span> <span
-                  data-i18n="dash.inbound_capture">100% Capture</span>
+              <div class="mt-2 text-[10px] sm:text-[11px] flex items-center text-blue-700 font-bold truncate">
+                <span class="material-symbols-outlined text-[13px] sm:text-[15px] mr-1 text-blue-600 shrink-0">trending_up</span> <span
+                  data-i18n="dash.inbound_capture" class="truncate">100% Capture</span>
               </div>
             </div>
 
             <!-- Card 2: Unassigned Queries (Orange) -->
             <div
-              class="bg-gradient-to-br from-orange-50/70 via-white to-orange-50/30 p-4 rounded-2xl border border-orange-200 hover:border-orange-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
+              class="bg-gradient-to-br from-orange-50/70 via-white to-orange-50/30 p-3 sm:p-4 rounded-2xl border border-orange-200 hover:border-orange-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-[10px] font-bold text-orange-800 uppercase tracking-wider"
-                    data-i18n="dash.unassigned_queries">Unassigned Queries</p>
-                  <h3 id="dash-unassigned-queries" class="text-2xl font-black text-orange-900 mt-1">2</h3>
+                <div class="min-w-0">
+                  <p class="text-[9px] sm:text-[10px] font-bold text-orange-800 uppercase tracking-wider truncate"
+                    data-i18n="dash.unassigned_queries">Unassigned</p>
+                  <h3 id="dash-unassigned-queries" class="text-xl sm:text-2xl font-black text-orange-900 mt-1">2</h3>
                 </div>
                 <div
-                  class="w-11 h-11 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center border border-orange-200/80 shrink-0 group-hover:scale-110 transition-transform">
-                  <span class="material-symbols-outlined text-[25px]">person_add</span>
+                  class="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center border border-orange-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[18px] sm:text-[25px]">person_add</span>
                 </div>
               </div>
-              <div class="mt-2.5 text-[11px] flex items-center text-orange-700 font-bold truncate">
-                <span class="material-symbols-outlined text-[15px] mr-1 text-orange-600">warning</span> <span
-                  data-i18n="dash.action_required">Action Required</span>
+              <div class="mt-2 text-[10px] sm:text-[11px] flex items-center text-orange-700 font-bold truncate">
+                <span class="material-symbols-outlined text-[13px] sm:text-[15px] mr-1 text-orange-600 shrink-0">warning</span> <span
+                  data-i18n="dash.action_required" class="truncate">Action Required</span>
               </div>
             </div>
 
             <!-- Card 3: WhatsApp Orders Booked (Pink) -->
             <div
-              class="bg-gradient-to-br from-pink-50/70 via-white to-pink-50/30 p-4 rounded-2xl border border-pink-200 hover:border-pink-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
+              class="bg-gradient-to-br from-pink-50/70 via-white to-pink-50/30 p-3 sm:p-4 rounded-2xl border border-pink-200 hover:border-pink-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-[10px] font-bold text-pink-800 uppercase tracking-wider"
+                <div class="min-w-0">
+                  <p class="text-[9px] sm:text-[10px] font-bold text-pink-800 uppercase tracking-wider truncate"
                     data-i18n="dash.orders_booked">Orders Booked</p>
-                  <h3 id="dash-total-orders" class="text-2xl font-black text-pink-900 mt-1">5</h3>
+                  <h3 id="dash-total-orders" class="text-xl sm:text-2xl font-black text-pink-900 mt-1">5</h3>
                 </div>
                 <div
-                  class="w-11 h-11 rounded-2xl bg-pink-100 text-pink-700 flex items-center justify-center border border-pink-200/80 shrink-0 group-hover:scale-110 transition-transform">
-                  <span class="material-symbols-outlined text-[25px]">shopping_bag</span>
+                  class="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-pink-100 text-pink-700 flex items-center justify-center border border-pink-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[18px] sm:text-[25px]">shopping_bag</span>
                 </div>
               </div>
-              <div class="mt-2.5 text-[11px] flex items-center text-pink-700 font-bold truncate">
-                <span class="font-bold mr-1" id="dash-total-revenue">₹18,450</span> <span
-                  data-i18n="dash.total_sales">Sales</span>
+              <div class="mt-2 text-[10px] sm:text-[11px] flex items-center text-pink-700 font-bold truncate">
+                <span class="font-bold mr-1 truncate" id="dash-total-revenue">₹18,450</span> <span
+                  data-i18n="dash.total_sales" class="shrink-0">Sales</span>
               </div>
             </div>
 
             <!-- Card 4: Dedicated Total Revenue Card (Green) -->
             <div
-              class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
+              class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-3 sm:p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Total Revenue</p>
+                <div class="min-w-0">
+                  <p class="text-[9px] sm:text-[10px] font-bold text-emerald-800 uppercase tracking-wider truncate">Revenue</p>
                   <h3 id="dash-kpi-revenue"
-                    class="text-2xl sm:text-3xl font-extrabold text-emerald-800 font-mono tracking-tight mt-1">₹0</h3>
+                    class="text-xl sm:text-2xl font-extrabold text-emerald-800 font-mono tracking-tight mt-1 truncate">₹0</h3>
                 </div>
                 <div
-                  class="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-200/80 shrink-0 group-hover:scale-110 transition-transform">
-                  <span class="material-symbols-outlined text-[25px]">payments</span>
+                  class="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[18px] sm:text-[25px]">payments</span>
                 </div>
               </div>
-              <div class="mt-2.5 text-[11px] flex items-center text-emerald-700 font-bold truncate">
-                <span class="material-symbols-outlined text-[14px] mr-1 text-emerald-600">verified</span>
-                <span id="dash-kpi-revenue-sub">Verified Sales</span>
+              <div class="mt-2 text-[10px] sm:text-[11px] flex items-center text-emerald-700 font-bold truncate">
+                <span class="material-symbols-outlined text-[13px] sm:text-[14px] mr-1 text-emerald-600 shrink-0">verified</span>
+                <span id="dash-kpi-revenue-sub" class="truncate">Verified Sales</span>
               </div>
             </div>
 
             <!-- Card 5: Total Staff Team Card (Purple) -->
             <div
-              class="bg-gradient-to-br from-purple-50/70 via-white to-purple-50/30 p-4 rounded-2xl border border-purple-200 hover:border-purple-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
+              class="bg-gradient-to-br from-purple-50/70 via-white to-purple-50/30 p-3 sm:p-4 rounded-2xl border border-purple-200 hover:border-purple-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-[10px] font-bold text-purple-800 uppercase tracking-wider">Total Staff Team</p>
-                  <h3 id="dash-total-staff" class="text-2xl font-black text-purple-900 mt-1">0</h3>
+                <div class="min-w-0">
+                  <p class="text-[9px] sm:text-[10px] font-bold text-purple-800 uppercase tracking-wider truncate">Staff Team</p>
+                  <h3 id="dash-total-staff" class="text-xl sm:text-2xl font-black text-purple-900 mt-1">0</h3>
                 </div>
                 <div
-                  class="w-11 h-11 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center border border-purple-200/80 shrink-0 group-hover:scale-110 transition-transform">
-                  <span class="material-symbols-outlined text-[25px]">badge</span>
+                  class="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center border border-purple-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[18px] sm:text-[25px]">badge</span>
                 </div>
               </div>
-              <div class="mt-2.5 text-[11px] flex items-center text-purple-700 font-bold truncate">
-                <span class="material-symbols-outlined text-[15px] mr-1 text-purple-600">group</span>
-                <span id="dash-active-staff">Active Members</span>
+              <div class="mt-2 text-[10px] sm:text-[11px] flex items-center text-purple-700 font-bold truncate">
+                <span class="material-symbols-outlined text-[13px] sm:text-[15px] mr-1 text-purple-600 shrink-0">group</span>
+                <span id="dash-active-staff" class="truncate">Active Members</span>
               </div>
             </div>
 
             <!-- Card 6: Follow-ups Scheduled (Yellow) -->
             <div
-              class="bg-gradient-to-br from-yellow-50/70 via-white to-amber-50/30 p-4 rounded-2xl border border-yellow-200 hover:border-yellow-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
+              class="bg-gradient-to-br from-yellow-50/70 via-white to-amber-50/30 p-3 sm:p-4 rounded-2xl border border-yellow-200 hover:border-yellow-400 hover:shadow-md shadow-sm relative overflow-hidden flex flex-col justify-between transition-all group">
               <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-[10px] font-bold text-amber-800 uppercase tracking-wider"
+                <div class="min-w-0">
+                  <p class="text-[9px] sm:text-[10px] font-bold text-amber-800 uppercase tracking-wider truncate"
                     data-i18n="dash.followups_scheduled">Follow-ups</p>
-                  <h3 id="dash-total-followups" class="text-2xl font-black text-amber-900 mt-1">3</h3>
+                  <h3 id="dash-total-followups" class="text-xl sm:text-2xl font-black text-amber-900 mt-1">3</h3>
                 </div>
                 <div
-                  class="w-11 h-11 rounded-2xl bg-yellow-100 text-amber-700 flex items-center justify-center border border-yellow-200/80 shrink-0 group-hover:scale-110 transition-transform">
-                  <span class="material-symbols-outlined text-[25px]">schedule</span>
+                  class="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-yellow-100 text-amber-700 flex items-center justify-center border border-yellow-200/80 shrink-0 group-hover:scale-110 transition-transform">
+                  <span class="material-symbols-outlined text-[18px] sm:text-[25px]">schedule</span>
                 </div>
               </div>
-              <div class="mt-2.5 text-[11px] flex items-center text-amber-700 font-bold truncate">
-                <span class="material-symbols-outlined text-[15px] mr-1 text-amber-600">notifications_active</span>
-                <span data-i18n="dash.automated_reminders">Active Reminders</span>
+              <div class="mt-2 text-[10px] sm:text-[11px] flex items-center text-amber-700 font-bold truncate">
+                <span class="material-symbols-outlined text-[13px] sm:text-[15px] mr-1 text-amber-600 shrink-0">notifications_active</span>
+                <span data-i18n="dash.automated_reminders" class="truncate">Active Reminders</span>
               </div>
             </div>
           </div>
 
-          <!-- Quick Charts & Workflow Cards -->
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Mobile Segmented Tab Switcher (Visible only on Mobile & Tablet screens < lg) -->
+          <div class="flex lg:hidden bg-slate-200/70 p-1 rounded-xl gap-1 text-xs font-bold" id="dash-mobile-tabs">
+            <button type="button" onclick="setDashMobileTab('chats')" id="dash-tab-btn-chats"
+              class="flex-1 py-2 px-3 rounded-lg bg-white text-slate-900 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px] text-emerald-600">forum</span>
+              <span>Active Chats</span>
+            </button>
+            <button type="button" onclick="setDashMobileTab('staff')" id="dash-tab-btn-staff"
+              class="flex-1 py-2 px-3 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px] text-indigo-600">badge</span>
+              <span>Staff Performance</span>
+            </button>
+          </div>
+
+          <!-- Quick Charts & Workflow Cards: Side-by-side on Desktop, Segmented or Stacked on Mobile -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             <!-- 2-col: Recent High Priority Leads -->
-            <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+            <div id="dash-card-active-chats" class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4 block">
               <div class="flex items-center justify-between">
                 <div>
                   <h3 class="font-bold text-slate-900 text-sm" data-i18n="dash.active_conversations">Active WhatsApp
@@ -2774,7 +2809,7 @@
                   <p class="text-xs text-slate-500" data-i18n="dash.active_conversations_sub">Live feed of pending
                     customer chats across all staff</p>
                 </div>
-                <button onclick="switchView('inbox')" class="text-xs text-brand-wa font-bold hover:underline"
+                <button onclick="switchView('inbox')" class="text-xs text-brand-wa font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
                   data-i18n="dash.open_inbox">Open Inbox &rarr;</button>
               </div>
               <div id="dash-recent-chats" class="divide-y divide-slate-100 text-xs">
@@ -2783,7 +2818,7 @@
             </div>
 
             <!-- 1-col: Staff Conversion Board -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+            <div id="dash-card-staff-perf" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4 hidden lg:block">
               <h3 class="font-bold text-slate-900 text-sm" data-i18n="dash.staff_performance">Staff Performance Snapshot
               </h3>
               <div class="space-y-3" id="dash-staff-perf-list">
@@ -6240,6 +6275,40 @@
       </section>
 
     </main>
+
+    <!-- ========================================================================= -->
+    <!-- MOBILE BOTTOM APP BAR (Visible only on Mobile & Tablet screens < lg)      -->
+    <!-- Provides 1-tap thumb navigation for native app experience                  -->
+    <!-- ========================================================================= -->
+    <nav id="mobile-bottom-app-bar"
+      class="flex lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 items-center justify-around py-1.5 px-2 shadow-2xl">
+      <button type="button" onclick="switchView('dashboard')" id="mobile-nav-dashboard"
+        class="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition text-emerald-600 font-bold text-[10px] cursor-pointer">
+        <span class="material-symbols-outlined text-[22px]">space_dashboard</span>
+        <span>Dashboard</span>
+      </button>
+      <button type="button" onclick="switchView('inbox')" id="mobile-nav-inbox"
+        class="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition text-slate-500 hover:text-emerald-600 text-[10px] cursor-pointer relative">
+        <span class="material-symbols-outlined text-[22px]">chat</span>
+        <span id="mobile-badge-unread" class="hidden absolute top-0.5 right-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+        <span>Inbox</span>
+      </button>
+      <button type="button" onclick="switchView('followups')" id="mobile-nav-followups"
+        class="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition text-slate-500 hover:text-emerald-600 text-[10px] cursor-pointer">
+        <span class="material-symbols-outlined text-[22px]">schedule</span>
+        <span>Follow-up</span>
+      </button>
+      <button type="button" onclick="switchView('orders')" id="mobile-nav-orders"
+        class="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition text-slate-500 hover:text-emerald-600 text-[10px] cursor-pointer">
+        <span class="material-symbols-outlined text-[22px]">shopping_bag</span>
+        <span>Orders</span>
+      </button>
+      <button type="button" onclick="toggleSidebar()" id="mobile-nav-menu"
+        class="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition text-slate-500 hover:text-emerald-600 text-[10px] cursor-pointer">
+        <span class="material-symbols-outlined text-[22px]">menu</span>
+        <span>Menu</span>
+      </button>
+    </nav>
   </div>
 
 

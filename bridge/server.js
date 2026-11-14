@@ -14,6 +14,25 @@ const cors = require('cors');
 const qrcode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
+
+// Auto-load .env from root or bridge directory if present
+[path.join(__dirname, '..', '.env'), path.join(__dirname, '.env')].forEach(envFile => {
+    if (fs.existsSync(envFile)) {
+        try {
+            const raw = fs.readFileSync(envFile, 'utf8');
+            raw.split(/\r?\n/).forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith('#')) return;
+                const eq = trimmed.indexOf('=');
+                if (eq !== -1) {
+                    const k = trimmed.slice(0, eq).trim();
+                    let v = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+                    if (!process.env[k]) process.env[k] = v;
+                }
+            });
+        } catch (e) {}
+    }
+});
 const http = require('http');
 const pino = require('pino');
 const { Server } = require('socket.io');
@@ -685,13 +704,22 @@ function broadcastAccountsUpdate() {
 
 
 
-const CRM_BASE_URL = (process.env.CRM_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+function resolveCrmBaseUrl() {
+    let url = process.env.CRM_URL || process.env.APP_URL || 'http://127.0.0.1:8000';
+    if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+    }
+    return url.replace(/\/+$/, '');
+}
+const CRM_BASE_URL = resolveCrmBaseUrl();
 
 // Dynamic Public Base URL Resolver (Detects Cloudflare Tunnel or Public URL)
 function getPublicBaseUrl() {
     if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL.replace(/\/+$/, '');
     if (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1')) {
-        return process.env.APP_URL.replace(/\/+$/, '');
+        let u = process.env.APP_URL;
+        if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
+        return u.replace(/\/+$/, '');
     }
 
     // Read live Cloudflare tunnel URL from PM2 logs if active
@@ -712,12 +740,12 @@ function getPublicBaseUrl() {
     return 'http://localhost:8000';
 }
 
-// Fast CRM API Dispatcher with instant local port 8000 priority
+// Fast CRM API Dispatcher with instant CRM_BASE_URL priority
 async function callCrmApi(action, postData) {
     const candidateUrls = [
+        CRM_BASE_URL,
         'http://localhost:8000',
         'http://127.0.0.1:8000',
-        (process.env.CRM_URL || '').replace(/\/+$/, ''),
         'http://localhost:8080'
     ].filter(Boolean);
 

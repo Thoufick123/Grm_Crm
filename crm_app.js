@@ -3948,6 +3948,19 @@ function switchView(viewName, subName) {
     }
   });
 
+  // Dynamically update mobile bottom navigation bar active state
+  const mobileNavItems = ['dashboard', 'inbox', 'followups', 'orders'];
+  mobileNavItems.forEach(mn => {
+    const btn = document.getElementById(`mobile-nav-${mn}`);
+    if (btn) {
+      if (mn === viewName) {
+        btn.className = "flex flex-col items-center justify-center py-1 px-3 rounded-xl transition text-emerald-600 font-bold text-[10px] cursor-pointer";
+      } else {
+        btn.className = "flex flex-col items-center justify-center py-1 px-3 rounded-xl transition text-slate-500 hover:text-emerald-600 text-[10px] cursor-pointer";
+      }
+    }
+  });
+
   // Handle standalone WhatsApp Dashboard & WhatsApp Orders sidebar styling
   const navDashStand = document.getElementById('nav-orders-dashboard');
   const navOrdersStand = document.getElementById('nav-orders');
@@ -17459,13 +17472,24 @@ function renderDashboard() {
   if (recentList) {
     recentList.innerHTML = CRM_STATE.queries.slice(0, 4).map(q => {
       const cust = CRM_STATE.customers.find(c => c.id === q.customerId);
+      const avatarLetter = (cust && cust.name) ? cust.name.charAt(0).toUpperCase() : 'C';
       return `
-        <div class="py-2.5 flex items-center justify-between">
-          <div>
-            <p class="font-bold text-slate-800">${cust ? cust.name : t('common.customer', 'Customer')} <span class="font-normal text-slate-400 text-[10px]">(${q.id})</span></p>
-            <p class="text-slate-500 text-[11px] truncate">${q.queryText}</p>
+        <div onclick="selectCustomerChat('${q.customerId}'); switchView('inbox');" class="py-2.5 sm:py-3 px-1.5 sm:px-2.5 hover:bg-slate-50 active:bg-slate-100 rounded-xl transition flex items-center justify-between cursor-pointer group">
+          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-700 to-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+              ${avatarLetter}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-bold text-slate-800 text-xs truncate flex items-center gap-1.5">
+                <span>${cust ? cust.name : t('common.customer', 'Customer')}</span>
+                <span class="font-mono text-slate-400 text-[10px] shrink-0 font-normal">(${q.id})</span>
+              </p>
+              <p class="text-slate-500 text-[11px] truncate mt-0.5">${q.queryText}</p>
+            </div>
           </div>
-          <button onclick="selectCustomerChat('${q.customerId}'); switchView('inbox');" class="text-brand-wa font-bold text-xs hover:underline flex items-center gap-1">${t('dash.open', 'Open')} &rarr;</button>
+          <span class="text-brand-wa font-bold text-xs group-hover:translate-x-0.5 transition-transform shrink-0 ml-2 flex items-center gap-0.5">
+            ${t('dash.open', 'Open')} &rarr;
+          </span>
         </div>
       `;
     }).join('');
@@ -17487,6 +17511,40 @@ function renderDashboard() {
     `).join('');
   }
 }
+
+// Mobile Segmented Tab Switcher Controller (Active Chats vs Staff Performance)
+function setDashMobileTab(tab) {
+  const chatsCard = document.getElementById('dash-card-active-chats');
+  const staffCard = document.getElementById('dash-card-staff-perf');
+  const btnChats = document.getElementById('dash-tab-btn-chats');
+  const btnStaff = document.getElementById('dash-tab-btn-staff');
+  if (!chatsCard || !staffCard) return;
+
+  if (tab === 'chats') {
+    chatsCard.classList.remove('hidden');
+    chatsCard.classList.add('block');
+    staffCard.classList.add('hidden');
+    staffCard.classList.remove('block');
+    if (btnChats) {
+      btnChats.className = 'flex-1 py-2 px-3 rounded-lg bg-white text-slate-900 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer font-bold';
+    }
+    if (btnStaff) {
+      btnStaff.className = 'flex-1 py-2 px-3 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 cursor-pointer font-semibold';
+    }
+  } else {
+    chatsCard.classList.add('hidden');
+    chatsCard.classList.remove('block');
+    staffCard.classList.remove('hidden');
+    staffCard.classList.add('block');
+    if (btnStaff) {
+      btnStaff.className = 'flex-1 py-2 px-3 rounded-lg bg-white text-slate-900 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer font-bold';
+    }
+    if (btnChats) {
+      btnChats.className = 'flex-1 py-2 px-3 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 cursor-pointer font-semibold';
+    }
+  }
+}
+window.setDashMobileTab = setDashMobileTab;
 
 // =========================================================================
 // LIVE STOCK & PRODUCT SHARING MODULE
