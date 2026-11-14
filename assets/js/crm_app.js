@@ -3999,6 +3999,9 @@ function switchView(viewName, subName) {
   // Trigger specific view renders
   if (viewName === 'inbox') {
     switchInboxSubmodule(subName || ACTIVE_INBOX_SUBMODULE || 'chats');
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && !ACTIVE_CUSTOMER_ID) {
+      if (typeof mobileBackToConversations === 'function') mobileBackToConversations();
+    }
     renderInbox();
   }
   if (viewName === 'enquiries') renderEnquiriesTable();
@@ -4739,6 +4742,26 @@ function renderInboxConversationList() {
 }
 window.renderInboxConversationList = renderInboxConversationList;
 
+function mobileBackToConversations() {
+  const leftPanel = document.getElementById('inbox-left-panel');
+  const centerPanel = document.getElementById('chat-center-panel');
+  if (leftPanel) {
+    leftPanel.classList.remove('hidden');
+    leftPanel.classList.add('flex');
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      leftPanel.style.width = '100%';
+      leftPanel.style.minWidth = '0px';
+    }
+  }
+  if (centerPanel) {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      centerPanel.classList.add('hidden');
+      centerPanel.classList.remove('flex');
+    }
+  }
+}
+window.mobileBackToConversations = mobileBackToConversations;
+
 function selectCustomerChat(customerId) {
   if (!customerId) return;
   ACTIVE_CUSTOMER_ID = customerId;
@@ -4746,6 +4769,22 @@ function selectCustomerChat(customerId) {
   if (CRM_STATE) {
     CRM_STATE.activeCustomerId = customerId;
   }
+
+  // On mobile (< 768px), transition from conversation list view to active chat view
+  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    const leftPanel = document.getElementById('inbox-left-panel');
+    const centerPanel = document.getElementById('chat-center-panel');
+    if (leftPanel) {
+      leftPanel.classList.add('hidden');
+      leftPanel.classList.remove('flex');
+    }
+    if (centerPanel) {
+      centerPanel.classList.remove('hidden');
+      centerPanel.classList.add('flex');
+      centerPanel.style.width = '100%';
+    }
+  }
+
   renderInbox();
   // Guarantee right Customer 360 panel and header dynamically sync to active profile
   try {
@@ -4800,8 +4839,13 @@ function toggleLeftPanel(forceState = null) {
       panel.classList.remove('hidden');
       panel.classList.add('flex');
       const saved = localStorage.getItem('GRM_INBOX_LEFT_WIDTH') || '320';
-      panel.style.width = saved + 'px';
-      panel.style.minWidth = saved + 'px';
+      if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+        panel.style.width = saved + 'px';
+        panel.style.minWidth = saved + 'px';
+      } else {
+        panel.style.width = '100%';
+        panel.style.minWidth = '0px';
+      }
       if (resizer) resizer.style.display = '';
       if (floatingBtn) {
         floatingBtn.style.display = 'none';
@@ -4910,7 +4954,7 @@ function initPanelResizers() {
   // Restore saved widths & states
   try {
     const savedLeftWidth = localStorage.getItem('GRM_INBOX_LEFT_WIDTH');
-    if (savedLeftWidth && leftPanel && parseInt(savedLeftWidth) > 160) {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768 && savedLeftWidth && leftPanel && parseInt(savedLeftWidth) > 160) {
       const lW = Math.min(320, parseInt(savedLeftWidth));
       leftPanel.style.width = lW + 'px';
       leftPanel.style.minWidth = lW + 'px';
@@ -5147,7 +5191,13 @@ function renderChatHeader() {
   const t = window.t || ((k, f) => f || k);
 
   if (!customer) {
-    bar.innerHTML = `<p class="text-xs text-slate-400">${t('chat.select_conversation', 'Select a conversation to start chatting')}</p>`;
+    bar.innerHTML = `
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="mobileBackToConversations()" class="md:hidden p-1.5 -ml-1 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition flex items-center justify-center shrink-0 cursor-pointer" title="Back to Chats">
+          <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+        </button>
+        <p class="text-xs text-slate-400">${t('chat.select_conversation', 'Select a conversation to start chatting')}</p>
+      </div>`;
     return;
   }
 
@@ -5155,7 +5205,10 @@ function renderChatHeader() {
   const displayPhone = formatDisplayPhone(customer.whatsapp || customer.phone, customer.id);
 
   bar.innerHTML = `
-    <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+    <div class="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
+      <button type="button" onclick="mobileBackToConversations()" class="md:hidden p-1.5 -ml-1 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition flex items-center justify-center shrink-0 cursor-pointer" title="Back to Chats">
+        <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+      </button>
       <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
         ${customer.avatar}
       </div>

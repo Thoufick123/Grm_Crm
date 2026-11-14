@@ -285,8 +285,13 @@
           panel.classList.remove('hidden');
           panel.classList.add('flex');
           var saved = localStorage.getItem('GRM_INBOX_LEFT_WIDTH') || '320';
-          panel.style.width = saved + 'px';
-          panel.style.minWidth = saved + 'px';
+          if (window.innerWidth >= 768) {
+            panel.style.width = saved + 'px';
+            panel.style.minWidth = saved + 'px';
+          } else {
+            panel.style.width = '100%';
+            panel.style.minWidth = '0px';
+          }
           if (resizer) resizer.style.display = '';
           if (floatingBtn) {
             floatingBtn.style.display = 'none';
@@ -332,7 +337,7 @@
       // Restore saved widths from localStorage
       try {
         var savedLeftWidth = localStorage.getItem('GRM_INBOX_LEFT_WIDTH');
-        if (savedLeftWidth && leftPanel && parseInt(savedLeftWidth) > 160) {
+        if (window.innerWidth >= 768 && savedLeftWidth && leftPanel && parseInt(savedLeftWidth) > 160) {
           leftPanel.style.width = savedLeftWidth + 'px';
           leftPanel.style.minWidth = savedLeftWidth + 'px';
         }
@@ -1392,18 +1397,19 @@
     <!-- Staff Workstation Info Banner (Responsive Text & Badge Alignment) -->
     <div id="staff-workstation-banner"
       class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-3 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-500/30 gap-1.5 sm:gap-2 hidden">
-      <div class="flex items-center gap-2 min-w-0">
+      <!-- Row 1 on Mobile: Badge on Left, "Assigned to: Name" on Right; Grouped on Left in Desktop -->
+      <div class="flex items-center justify-between sm:justify-start gap-2 min-w-0 w-full sm:w-auto">
         <span
           class="px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 shrink-0">
           <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
           <span>STAFF WORKSTATION</span>
         </span>
-        <p class="text-[11px] sm:text-xs text-indigo-100 truncate">
+        <p class="text-[11px] sm:text-xs text-indigo-100 truncate text-right sm:text-left">
           Assigned to: <strong id="staff-banner-name" class="text-white">Staff Member</strong>
           <span class="hidden md:inline">(<span id="staff-banner-role" class="text-indigo-200 font-medium">Sales Specialist</span>)</span>
         </p>
       </div>
-      <div class="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
+      <div class="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto shrink-0">
         <!-- Live Staff Daily Message Allocation Quota Indicator -->
         <div
           class="flex items-center gap-1.5 bg-indigo-900/80 border border-indigo-400/40 px-2.5 sm:px-3 py-1 rounded-lg sm:rounded-xl shadow-sm text-[10px] sm:text-[11px]">
@@ -1420,7 +1426,7 @@
           </div>
         </div>
 
-        <span class="text-[10px] sm:text-[11px] text-slate-300 font-mono">Staff ID: <span id="staff-banner-id"
+        <span class="text-[10px] sm:text-[11px] text-slate-300 font-mono text-right">Staff ID: <span id="staff-banner-id"
             class="text-indigo-300 font-bold">staff_01</span></span>
       </div>
     </div>
@@ -1443,7 +1449,7 @@
 
           <!-- Left Panel: Conversation & Enquiry List (Generous Width for Clear Customer Names & Phone Numbers) -->
           <div id="inbox-left-panel"
-            class="w-72 md:w-80 xl:w-80 2xl:w-88 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0 transition-all duration-300 relative">
+            class="w-full md:w-80 xl:w-80 2xl:w-88 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 min-w-0 transition-all duration-300 relative">
 
             <!-- Daily Inbound Message Volume Progress Tracker -->
             <div
@@ -1503,7 +1509,7 @@
           </div>
 
           <!-- Left Panel Resizer Splitter (Drag with Mouse to Resize • Click to Minimize/Expand) -->
-          <div id="resizer-left-panel" class="resizer-splitter select-none"
+          <div id="resizer-left-panel" class="resizer-splitter select-none hidden md:flex"
             title="Drag with mouse to resize conversation queue • Double-click to reset">
             <button type="button" id="resizer-left-btn" onclick="toggleLeftPanel()" class="resizer-snap-btn"
               style="right: -10px;" title="Minimize / Expand Conversation Queue">
@@ -1513,7 +1519,7 @@
 
           <!-- Center Panel: Active Chat History & Messaging Stream (Responsive Flex Column) -->
           <div id="chat-center-panel"
-            class="flex-1 min-w-0 flex flex-col h-full bg-[#efeae2]/40 relative overflow-hidden transition-all duration-300">
+            class="hidden md:flex flex-1 min-w-0 flex-col h-full bg-[#efeae2]/40 relative overflow-hidden transition-all duration-300">
 
             <!-- Floating Slide-Open Tab Button for LEFT PANEL (Visible when left panel is minimized) -->
             <button id="floating-left-panel-toggle-btn" onclick="toggleLeftPanel(true)"
@@ -6282,7 +6288,7 @@
         <span class="material-symbols-outlined text-[22px]">space_dashboard</span>
         <span>Dashboard</span>
       </button>
-      <button type="button" onclick="switchView('inbox')" id="mobile-nav-inbox"
+      <button type="button" onclick="mobileBackToConversations(); switchView('inbox')" id="mobile-nav-inbox"
         class="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition text-slate-500 hover:text-emerald-600 text-[10px] cursor-pointer relative">
         <span class="material-symbols-outlined text-[22px]">chat</span>
         <span id="mobile-badge-unread" class="hidden absolute top-0.5 right-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white"></span>
