@@ -3,10 +3,12 @@
 # Security Hardening, MIME Types, Compression & File Protection
 # =========================================================================
 
+DirectoryIndex index.php index.html login.php login.html
+
 Options -Indexes -MultiViews
 
 # 1. Protect Sensitive Configuration, Database Dumps & Secret Files
-<FilesMatch "^\.|\.env|\.env\..*|whatsapp_account_config\.json|live_messages_queue\.json|webhook_logs\.json|database\.sql|\.log$">
+<FilesMatch "(^\.env|\.env\..*|whatsapp_account_config\.json|live_messages_queue\.json|webhook_logs\.json|database\.sql|\.log)$">
     Require all denied
 </FilesMatch>
 
