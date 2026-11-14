@@ -3,7 +3,7 @@
 # Security Hardening, MIME Types, Compression & File Protection
 # =========================================================================
 
-DirectoryIndex index.php index.html login.php login.html
+DirectoryIndex index.html index.php login.html login.php
 
 Options -Indexes -MultiViews
 
