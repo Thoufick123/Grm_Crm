@@ -1612,43 +1612,43 @@
 
             <!-- Outbound Reply Auto-Translator Language Bar (SEND AS: 6 Indic Languages) -->
             <div id="reply-lang-bar"
-              class="bg-slate-50/95 border-t border-slate-100 px-3 py-1.5 flex items-center gap-1.5 flex-wrap shrink-0 min-w-0">
+              class="bg-slate-50/95 border-t border-slate-100 px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto flex-nowrap shrink-0 min-w-0 custom-chat-scroll">
               <span class="text-[10px] font-bold uppercase text-slate-400 shrink-0 flex items-center gap-1">
                 <span class="material-symbols-outlined text-[13px] text-indigo-500">g_translate</span>
                 Send As:
               </span>
-              <button type="button" onclick="setReplyLang(null)" id="rl-none" class="reply-lang-pill active"
+              <button type="button" onclick="setReplyLang(null)" id="rl-none" class="reply-lang-pill active shrink-0"
                 title="Send message as typed (no translation)">
                 🚫 Original
               </button>
-              <button type="button" onclick="setReplyLang('en')" id="rl-en" class="reply-lang-pill"
+              <button type="button" onclick="setReplyLang('en')" id="rl-en" class="reply-lang-pill shrink-0"
                 title="Translate reply to English before sending">
                 🇬🇧 English
               </button>
-              <button type="button" onclick="setReplyLang('ta')" id="rl-ta" class="reply-lang-pill"
+              <button type="button" onclick="setReplyLang('ta')" id="rl-ta" class="reply-lang-pill shrink-0"
                 title="Translate reply to Tamil before sending">
                 தமிழ் Tamil
               </button>
-              <button type="button" onclick="setReplyLang('hi')" id="rl-hi" class="reply-lang-pill"
+              <button type="button" onclick="setReplyLang('hi')" id="rl-hi" class="reply-lang-pill shrink-0"
                 title="Translate reply to Hindi before sending">
                 हिंदी Hindi
               </button>
-              <button type="button" onclick="setReplyLang('te')" id="rl-te" class="reply-lang-pill"
+              <button type="button" onclick="setReplyLang('te')" id="rl-te" class="reply-lang-pill shrink-0"
                 title="Translate reply to Telugu before sending">
                 తెలుగు Telugu
               </button>
-              <button type="button" onclick="setReplyLang('ml')" id="rl-ml" class="reply-lang-pill"
+              <button type="button" onclick="setReplyLang('ml')" id="rl-ml" class="reply-lang-pill shrink-0"
                 title="Translate reply to Malayalam before sending">
                 മലയാളം Malayalam
               </button>
-              <button type="button" onclick="setReplyLang('kn')" id="rl-kn" class="reply-lang-pill"
+              <button type="button" onclick="setReplyLang('kn')" id="rl-kn" class="reply-lang-pill shrink-0"
                 title="Translate reply to Kannada before sending">
                 ಕನ್ನಡ Kannada
               </button>
             </div>
 
             <!-- Message Input Bar with Photo Upload Support -->
-            <div class="p-2.5 sm:p-3 bg-white border-t border-slate-200 shrink-0 min-w-0">
+            <div id="chat-input-bar-container" class="p-2 sm:p-3 bg-white border-t border-slate-200 shrink-0 min-w-0">
               <!-- Attached Image Preview Strip in 1:1 Chat -->
               <div id="chat-attached-image-preview"
                 class="hidden mb-2 p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
@@ -1671,47 +1671,49 @@
 
               <!-- Voice Record Panel -->
               <div id="voice-record-panel"
-                class="hidden mb-2.5 p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border border-emerald-300 rounded-2xl shadow-sm transition-all duration-300">
+                class="hidden mb-2.5 p-2.5 sm:p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border border-emerald-300 rounded-2xl shadow-sm transition-all duration-300">
                 <!-- 1. Live Recording State -->
                 <div id="voice-recording-active" class="space-y-2">
-                  <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <div class="flex items-center gap-2.5 min-w-0">
+                  <!-- Top Row: Recording Status on Left, Cancel & Stop on Right -->
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
                       <span class="relative flex h-3.5 w-3.5 shrink-0">
                         <span
                           class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-600"></span>
                       </span>
-                      <span class="text-xs font-bold text-slate-800">Recording Voice Note...</span>
+                      <span class="text-xs font-bold text-slate-800 truncate">Recording Voice Note...</span>
                       <span id="voice-record-timer"
-                        class="font-mono text-xs font-extrabold text-rose-600 bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200">00:00</span>
+                        class="font-mono text-xs font-extrabold text-rose-600 bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200 shrink-0">00:00</span>
                     </div>
 
-                    <div class="flex items-center gap-2 shrink-0">
-                      <!-- Spoken language selection -->
-                      <div class="flex items-center gap-1 text-[11px] font-bold text-slate-600">
-                        <span class="flex items-center gap-1 text-slate-700 font-extrabold"><span
-                            class="material-symbols-outlined text-[14px] text-emerald-600">record_voice_over</span>Staff
-                          Speaks:</span>
-                        <select id="voice-source-lang" onchange="onVoiceSourceLangChange(this.value)"
-                          class="bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
-                          <option value="en-IN" selected>English (India)</option>
-                          <option value="ta-IN">தமிழ் (Tamil)</option>
-                          <option value="ml-IN">മലയാളം (Malayalam)</option>
-                          <option value="hi-IN">हिंदी (Hindi)</option>
-                          <option value="te-IN">తెలుగు (Telugu)</option>
-                          <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
-                        </select>
-                      </div>
-
+                    <div class="flex items-center gap-1.5 shrink-0">
                       <button type="button" onclick="cancelVoiceRecording()"
-                        class="px-2.5 py-1 text-slate-500 hover:text-rose-700 hover:bg-rose-100 text-xs font-bold rounded-lg transition"
+                        class="px-2 sm:px-2.5 py-1 text-slate-500 hover:text-rose-700 hover:bg-rose-100 text-xs font-bold rounded-lg transition cursor-pointer"
                         title="Discard">Cancel</button>
                       <button type="button" onclick="stopVoiceRecording()"
-                        class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow transition flex items-center gap-1 active:scale-95 cursor-pointer">
-                        <span class="material-symbols-outlined text-[16px]">stop</span>
+                        class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow transition flex items-center gap-1 active:scale-95 cursor-pointer shrink-0">
+                        <span class="material-symbols-outlined text-[15px] sm:text-[16px]">stop</span>
                         <span>Stop</span>
                       </button>
                     </div>
+                  </div>
+
+                  <!-- Second Row: Staff Speaks Language Selection -->
+                  <div class="flex items-center justify-between gap-2 bg-white/70 px-2.5 py-1 rounded-xl border border-emerald-200/80">
+                    <div class="flex items-center gap-1 text-[11px] font-bold text-slate-700 shrink-0">
+                      <span class="material-symbols-outlined text-[14px] text-emerald-600">record_voice_over</span>
+                      <span>Staff Speaks:</span>
+                    </div>
+                    <select id="voice-source-lang" onchange="onVoiceSourceLangChange(this.value)"
+                      class="flex-1 max-w-[210px] bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+                      <option value="en-IN" selected>English (India)</option>
+                      <option value="ta-IN">தமிழ் (Tamil)</option>
+                      <option value="ml-IN">മലയാളം (Malayalam)</option>
+                      <option value="hi-IN">हिंदी (Hindi)</option>
+                      <option value="te-IN">తెలుగు (Telugu)</option>
+                      <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
+                    </select>
                   </div>
 
                   <!-- Real-time Live Speech Transcript Indicator -->
@@ -8449,9 +8451,9 @@
   </div>
 
   <!-- MODAL: PRODUCT SEARCH & INSTANT WHATSAPP SHARING -->
-  <div id="modal-product-search" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+  <div id="modal-product-search" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-2 sm:p-4">
     <div
-      class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+      class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[96vh] sm:max-h-[90vh]">
       <!-- Header with Customer Target Context -->
       <div
         class="bg-gradient-to-r from-teal-900 to-emerald-950 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
@@ -8468,8 +8470,6 @@
                 <span id="modal-share-active-target">Active Customer</span>
               </span>
             </div>
-            <p class="text-xs text-teal-200/80">Choose category, subcategory &amp; product stock sharing options for
-              instant dispatch</p>
           </div>
         </div>
         <button onclick="closeModal('modal-product-search')"
@@ -8478,24 +8478,19 @@
         </button>
       </div>
 
-      <!-- Filter Controls: Category, Sub Category, Stock Status & Search -->
-      <div class="p-3.5 sm:p-4 border-b border-slate-200 bg-slate-50/90 shrink-0 space-y-3">
+      <!-- Main Scrollable Body Container (Guarantees Full Top-to-Bottom Scrolling on All Screens) -->
+      <div id="modal-share-scroll-body" class="flex-1 overflow-y-auto min-h-0 custom-chat-scroll flex flex-col">
+
+        <!-- Filter Controls: Category, Sub Category, Stock Status & Search -->
+        <div class="p-3.5 sm:p-4 border-b border-slate-200 bg-slate-50/90 shrink-0 space-y-3">
         <!-- Cascading Filter Row: Category -> Subcategory (Stock Status removed) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <div class="flex items-center justify-between mb-1">
-              <label
-                class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px] text-teal-600">category</span>
-                <span>1. Choose Category</span>
-              </label>
-              <button type="button" onclick="openCatalogFormatPreview('category_only')"
-                class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-white bg-emerald-100/90 hover:bg-emerald-600 px-2 py-0.5 rounded-md transition cursor-pointer shadow-2xs"
-                title="Preview &amp; Send Category List to WhatsApp customer">
-                <span class="material-symbols-outlined text-[12px]">visibility</span>
-                <span>Preview List</span>
-              </button>
-            </div>
+            <label
+              class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-teal-600">category</span>
+              <span>1. Choose Category</span>
+            </label>
             <select id="modal-share-category-filter" onchange="onModalShareCategoryChange()"
               class="w-full px-3 py-2 text-xs bg-white rounded-xl border border-slate-300 font-semibold text-slate-800 focus:ring-2 focus:ring-teal-600 focus:border-teal-600 transition shadow-xs">
               <option value="ALL">📁 All Categories</option>
@@ -8503,19 +8498,11 @@
           </div>
 
           <div>
-            <div class="flex items-center justify-between mb-1">
-              <label
-                class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px] text-teal-600">label</span>
-                <span>2. Sub Category</span>
-              </label>
-              <button type="button" onclick="openCatalogFormatPreview('category_sub')"
-                class="inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 hover:text-white bg-teal-100/90 hover:bg-teal-600 px-2 py-0.5 rounded-md transition cursor-pointer shadow-2xs"
-                title="Preview &amp; Send Subcategories to WhatsApp customer">
-                <span class="material-symbols-outlined text-[12px]">visibility</span>
-                <span>Preview Subcats</span>
-              </button>
-            </div>
+            <label
+              class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-teal-600">label</span>
+              <span>2. Sub Category</span>
+            </label>
             <select id="modal-share-subcategory-filter" onchange="onModalShareSubcategoryChange()"
               class="w-full px-3 py-2 text-xs bg-white rounded-xl border border-slate-300 font-semibold text-slate-800 focus:ring-2 focus:ring-teal-600 focus:border-teal-600 transition shadow-xs">
               <option value="ALL">🏷️ All Subcategories</option>
@@ -8523,50 +8510,9 @@
           </div>
         </div>
 
-        <!-- Quick Catalog WhatsApp Sharing Action Banner (Share Category Stock removed) -->
-        <div
-          class="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white p-2.5 rounded-xl border border-emerald-700/60 flex flex-col md:flex-row md:items-center justify-between gap-2 shadow-sm">
-          <div class="flex items-center gap-2">
-            <div
-              class="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
-              <span class="material-symbols-outlined text-[17px]">visibility</span>
-            </div>
-            <div>
-              <p class="text-[11px] font-extrabold text-white leading-tight">Send Catalog Directly to WhatsApp:</p>
-              <p class="text-[10px] text-teal-200/80 leading-tight">Preview format &amp; staff identity before sending
-                to customer</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <!-- Format 1: Category List Only Preview & Send -->
-            <button type="button" onclick="openCatalogFormatPreview('category_only')"
-              class="px-2.5 py-1.5 bg-white/10 hover:bg-white text-emerald-200 hover:text-emerald-950 border border-white/20 hover:border-white rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition shadow-xs cursor-pointer active:scale-95"
-              title="Preview format &amp; send clean numbered Category List Only">
-              <span class="material-symbols-outlined text-[14px] text-emerald-400">format_list_numbered</span>
-              <span>1. Preview Category List Only</span>
-            </button>
-
-            <!-- Format 2: Category & Subcategory List Preview & Send -->
-            <button type="button" onclick="openCatalogFormatPreview('category_sub')"
-              class="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg font-extrabold text-[11px] flex items-center gap-1.5 transition shadow-xs cursor-pointer active:scale-95"
-              title="Preview format &amp; send complete nested Catalog Directory">
-              <span class="material-symbols-outlined text-[14px]">account_tree</span>
-              <span>2. Preview Category &amp; Subcategories</span>
-            </button>
-
-            <!-- Format 3: Selected Stock Products Preview & Send -->
-            <button type="button" id="btn-banner-preview-stock" onclick="openCatalogFormatPreview('selected_products')"
-              class="px-2.5 py-1.5 bg-white/10 hover:bg-white text-emerald-200 hover:text-emerald-950 border border-white/20 hover:border-white rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition shadow-xs cursor-pointer active:scale-95"
-              title="Preview format &amp; edit message for selected stock products">
-              <span class="material-symbols-outlined text-[14px] text-amber-400">inventory_2</span>
-              <span id="btn-banner-preview-stock-text">3. Preview Stock Products</span>
-            </button>
-          </div>
-        </div>
-
         <!-- Live WhatsApp Message Format Preview & Staff Content Editor Card (Expands when staff clicks Preview) -->
         <div id="modal-catalog-preview-box"
-          class="hidden bg-slate-900 border-2 border-emerald-500/80 rounded-2xl p-3 sm:p-4 text-white shadow-xl space-y-3 animate-in fade-in duration-150">
+          class="hidden bg-slate-900 border-2 border-emerald-500/80 rounded-2xl p-3 sm:p-4 text-white shadow-xl space-y-3 animate-in fade-in duration-150 max-h-[78vh] sm:max-h-[70vh] overflow-y-auto custom-chat-scroll">
           <!-- Preview Header: Staff Sender & Customer Target Identity -->
           <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800 text-xs">
             <div class="flex items-center gap-2 min-w-0">
@@ -8715,18 +8661,18 @@
           </div>
 
           <!-- Action Footer inside Preview Card -->
-          <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80 flex-wrap">
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80 flex-wrap">
             <p class="text-[10px] text-slate-400 flex items-center gap-1">
               <span class="material-symbols-outlined text-[13px] text-emerald-400">verified</span>
               <span>Staff verified format &amp; customized message. Dispatches directly to customer on WhatsApp.</span>
             </p>
-            <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center justify-end gap-2 w-full sm:w-auto shrink-0">
               <button type="button" onclick="closeCatalogFormatPreview()"
-                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer">
+                class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer">
                 Cancel
               </button>
               <button type="button" id="btn-send-previewed-format" onclick="dispatchPreviewedCatalogFormat()"
-                class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-md transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer flex-1 sm:flex-none">
                 <span class="material-symbols-outlined text-[16px]">send</span>
                 <span id="btn-send-previewed-text">Send Message to Customer</span>
               </button>
@@ -8757,10 +8703,10 @@
 
         <!-- Product Stock Sharing Options Toolbar -->
         <div
-          class="bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border border-emerald-200/90 rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-2xs">
+          class="bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border border-emerald-200/90 rounded-xl p-2 sm:p-2.5 flex items-center justify-between gap-2 text-xs shadow-2xs">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span
-              class="font-extrabold text-emerald-950 text-[10px] uppercase tracking-wider flex items-center gap-1 shrink-0">
+              class="font-extrabold text-emerald-950 text-[10px] uppercase tracking-wider flex items-center gap-1 shrink-0 mr-1">
               <span class="material-symbols-outlined text-[15px] text-emerald-700">tune</span>
               <span>Product Card Options:</span>
             </span>
@@ -8797,24 +8743,24 @@
               <span>Photo Card</span>
             </label>
           </div>
-
-          <span class="text-[10px] text-slate-500 italic hidden lg:inline">Applied to cards sent below</span>
         </div>
       </div>
 
       <!-- Products List Container -->
       <div id="modal-products-list"
-        class="flex-1 overflow-y-auto p-4 space-y-2.5 divide-y divide-slate-100 custom-chat-scroll">
+        class="flex-1 p-3 sm:p-4 space-y-2.5 divide-y divide-slate-100">
         <!-- Rendered by JS -->
       </div>
 
+    </div> <!-- /#modal-share-scroll-body -->
+
       <!-- Sticky Bottom Selection Action Footer -->
       <div id="modal-share-selection-footer"
-        class="p-3 sm:p-4 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-lg">
-        <div class="flex items-center gap-2 flex-wrap">
+        class="p-2.5 sm:p-4 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0 shadow-lg">
+        <div class="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
           <!-- Multi-select trigger controls -->
           <label
-            class="inline-flex items-center gap-1.5 cursor-pointer select-none text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl border border-slate-300 transition"
+            class="inline-flex items-center gap-1.5 cursor-pointer select-none text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-xl border border-slate-300 transition"
             title="Select all currently filtered garments">
             <input type="checkbox" id="modal-share-select-all-checkbox"
               onchange="toggleSelectAllModalProducts(this.checked)"
@@ -8831,23 +8777,23 @@
           </span>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="grid grid-cols-2 sm:flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
           <button type="button" onclick="closeModal('modal-product-search')"
-            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer">
+            class="px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer text-center">
             Cancel
           </button>
           <!-- Preview & Edit Stock Message Button -->
           <button type="button" id="btn-preview-selected-to-chat"
             onclick="openCatalogFormatPreview('selected_products')"
-            class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-extrabold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+            class="px-3 sm:px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-extrabold transition shadow-xs flex items-center justify-center gap-1 cursor-pointer text-center"
             title="Preview and edit formatted message before sending">
-            <span class="material-symbols-outlined text-[16px] text-emerald-600">visibility</span>
-            <span>Preview &amp; Edit Message</span>
+            <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600">visibility</span>
+            <span class="truncate">Preview &amp; Edit</span>
           </button>
           <!-- Main Multi-Select Send Button -->
           <button type="button" id="btn-send-selected-to-chat" onclick="shareSelectedProductsToChat()"
-            class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl text-xs font-extrabold transition shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-            <span class="material-symbols-outlined text-[17px]">send</span>
+            class="col-span-2 sm:col-auto px-4 sm:px-5 py-2.5 sm:py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
+            <span class="material-symbols-outlined text-[16px] sm:text-[17px]">send</span>
             <span id="btn-send-selected-text">Select Products to Send</span>
           </button>
         </div>

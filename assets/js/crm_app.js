@@ -3961,6 +3961,15 @@ function switchView(viewName, subName) {
     }
   });
 
+  // Ensure mobile bottom app bar is visible when switching between main modules
+  const mobileBottomBar = document.getElementById('mobile-bottom-app-bar');
+  if (mobileBottomBar && typeof window !== 'undefined' && window.innerWidth < 1024) {
+    if (viewName !== 'inbox' || !ACTIVE_CUSTOMER_ID) {
+      mobileBottomBar.classList.remove('hidden');
+      mobileBottomBar.classList.add('flex');
+    }
+  }
+
   // Handle standalone WhatsApp Dashboard & WhatsApp Orders sidebar styling
   const navDashStand = document.getElementById('nav-orders-dashboard');
   const navOrdersStand = document.getElementById('nav-orders');
@@ -4597,14 +4606,42 @@ function renderInboxConversationList() {
     customerCards = customerCards.filter(c => availableAccountIds.includes(c.accountId) || !c.accountId);
   }
 
+  // Robust Set of Customer IDs with active or scheduled follow-ups
+  const followupCustIds = new Set((CRM_STATE.followups || [])
+    .filter(f => f && (f.status === 'PENDING' || f.status === 'FOLLOW_UP' || !f.status || f.status === 'OPEN'))
+    .map(f => String(f.customerId || '')));
+
+  const isFollowupCard = c => {
+    const s = String(c.status || '').toUpperCase();
+    return s === 'FOLLOW_UP' || s === 'PENDING' || followupCustIds.has(String(c.customerId));
+  };
+
+  const isNewLeadCard = c => {
+    const s = String(c.status || '').toUpperCase();
+    if (isFollowupCard(c)) return false;
+    if (s === 'NEW' || s === 'OPEN' || s === 'ASSIGNED') return true;
+    const isUnassigned = !c.assignedTo || c.assignedTo === 'UNASSIGNED' || c.assignedTo === 'unassigned';
+    if (isUnassigned && s !== 'RESOLVED' && s !== 'CLOSED' && s !== 'CONVERTED') return true;
+    return false;
+  };
+
+  // Dynamically update counter pills in Inbox header: All, New Leads, Follow-up
+  const countAllEl = document.getElementById('count-all');
+  if (countAllEl) countAllEl.innerText = customerCards.length;
+
+  const countNewLeadsEl = document.getElementById('count-new-leads');
+  if (countNewLeadsEl) countNewLeadsEl.innerText = customerCards.filter(isNewLeadCard).length;
+
+  const countFollowupEl = document.getElementById('count-followup');
+  if (countFollowupEl) countFollowupEl.innerText = customerCards.filter(isFollowupCard).length;
+
   // Filter based on active filter tab
   if (INBOX_FILTER === 'new_leads') {
-    customerCards = customerCards.filter(c => c.status === 'NEW' || (c.assignedTo && c.assignedTo !== 'UNASSIGNED'));
+    customerCards = customerCards.filter(isNewLeadCard);
   } else if (INBOX_FILTER === 'followup') {
-    const followupCustIds = new Set((CRM_STATE.followups || []).map(f => f.customerId));
-    customerCards = customerCards.filter(c => c.status === 'FOLLOW_UP' || followupCustIds.has(c.customerId) || c.status === 'PENDING');
+    customerCards = customerCards.filter(isFollowupCard);
   } else if (INBOX_FILTER === 'unassigned') {
-    customerCards = customerCards.filter(c => c.assignedTo === 'UNASSIGNED');
+    customerCards = customerCards.filter(c => !c.assignedTo || c.assignedTo === 'UNASSIGNED');
   } else if (INBOX_FILTER === 'my') {
     if (ACTIVE_ROLE !== 'admin') {
       const u = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
@@ -4642,10 +4679,14 @@ function renderInboxConversationList() {
     ACTIVE_CUSTOMER_ID = null;
     const accObj = getAvailableWhatsAppAccounts().find(a => a.id === ACTIVE_SEND_ACCOUNT_ID);
     const lineName = accObj ? accObj.label : 'this line';
+    let emptyMsg = `No conversations recorded on ${lineName}`;
+    if (INBOX_FILTER === 'new_leads') emptyMsg = `No new leads currently in queue on ${lineName}`;
+    else if (INBOX_FILTER === 'followup') emptyMsg = `No follow-up conversations scheduled on ${lineName}`;
+    else if (INBOX_FILTER === 'unassigned') emptyMsg = `No unassigned conversations on ${lineName}`;
     container.innerHTML = `
       <div class="p-8 text-center text-slate-400">
         <span class="material-symbols-outlined text-[36px] text-slate-300">chat_bubble_outline</span>
-        <p class="text-xs font-semibold mt-2">No conversations recorded on ${lineName}</p>
+        <p class="text-xs font-semibold mt-2">${emptyMsg}</p>
         <button onclick="openInboundSimulatorModal()" class="mt-3 text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-100 transition">
           + Simulate Inbound WhatsApp Message
         </button>
@@ -4745,6 +4786,7 @@ window.renderInboxConversationList = renderInboxConversationList;
 function mobileBackToConversations() {
   const leftPanel = document.getElementById('inbox-left-panel');
   const centerPanel = document.getElementById('chat-center-panel');
+  const mobileBottomBar = document.getElementById('mobile-bottom-app-bar');
   if (leftPanel) {
     leftPanel.classList.remove('hidden');
     leftPanel.classList.add('flex');
@@ -4758,6 +4800,10 @@ function mobileBackToConversations() {
       centerPanel.classList.add('hidden');
       centerPanel.classList.remove('flex');
     }
+  }
+  if (mobileBottomBar && typeof window !== 'undefined' && window.innerWidth < 1024) {
+    mobileBottomBar.classList.remove('hidden');
+    mobileBottomBar.classList.add('flex');
   }
 }
 window.mobileBackToConversations = mobileBackToConversations;
@@ -4774,6 +4820,7 @@ function selectCustomerChat(customerId) {
   if (typeof window !== 'undefined' && window.innerWidth < 768) {
     const leftPanel = document.getElementById('inbox-left-panel');
     const centerPanel = document.getElementById('chat-center-panel');
+    const mobileBottomBar = document.getElementById('mobile-bottom-app-bar');
     if (leftPanel) {
       leftPanel.classList.add('hidden');
       leftPanel.classList.remove('flex');
@@ -4782,6 +4829,10 @@ function selectCustomerChat(customerId) {
       centerPanel.classList.remove('hidden');
       centerPanel.classList.add('flex');
       centerPanel.style.width = '100%';
+    }
+    if (mobileBottomBar) {
+      mobileBottomBar.classList.add('hidden');
+      mobileBottomBar.classList.remove('flex');
     }
   }
 
@@ -6905,6 +6956,36 @@ function updateBadgeCounters() {
   const staffEl = document.getElementById('badge-total-staff-count');
   if (staffEl) {
     staffEl.innerText = (CRM_STATE.staffList || []).length;
+  }
+
+  // 7. Dynamic Inbox Counter Pills: All, New Leads, Follow-up
+  const countAllEl = document.getElementById('count-all');
+  const countNewLeadsEl = document.getElementById('count-new-leads');
+  const countFollowupEl = document.getElementById('count-followup');
+
+  if (countAllEl || countNewLeadsEl || countFollowupEl) {
+    const activeQ = (CRM_STATE.queries || []).filter(q => q.status !== 'DND');
+    const fuCustIds = new Set((CRM_STATE.followups || [])
+      .filter(f => f && (f.status === 'PENDING' || f.status === 'FOLLOW_UP' || !f.status || f.status === 'OPEN'))
+      .map(f => String(f.customerId || '')));
+
+    const isFu = q => {
+      const s = String(q.status || '').toUpperCase();
+      return s === 'FOLLOW_UP' || s === 'PENDING' || fuCustIds.has(String(q.customerId));
+    };
+
+    const isNl = q => {
+      const s = String(q.status || '').toUpperCase();
+      if (isFu(q)) return false;
+      if (s === 'NEW' || s === 'OPEN' || s === 'ASSIGNED') return true;
+      const isUn = !q.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
+      if (isUn && s !== 'RESOLVED' && s !== 'CLOSED' && s !== 'CONVERTED') return true;
+      return false;
+    };
+
+    if (countAllEl) countAllEl.innerText = activeQ.length;
+    if (countNewLeadsEl) countNewLeadsEl.innerText = activeQ.filter(isNl).length;
+    if (countFollowupEl) countFollowupEl.innerText = activeQ.filter(isFu).length;
   }
 }
 
@@ -12922,7 +13003,7 @@ function openCatalogFormatPreview(format = 'category_only', singleProductId = nu
   const previewBox = document.getElementById('modal-catalog-preview-box');
   if (previewBox) {
     previewBox.classList.remove('hidden');
-    previewBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    previewBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -29746,11 +29827,52 @@ function updateBadgeCounters() {
   const countAll = document.getElementById('count-all');
   if (countAll) countAll.innerText = activeQueries.length;
 
+  // Compute dynamic Follow-up and New Leads counts for Inbox filter pills
+  const followupCustIds = new Set((CRM_STATE.followups || [])
+    .filter(f => f && (f.status === 'PENDING' || f.status === 'FOLLOW_UP' || !f.status || f.status === 'OPEN'))
+    .map(f => String(f.customerId || '')));
+
+  const isFollowupQuery = q => {
+    const s = String(q.status || '').toUpperCase();
+    return s === 'FOLLOW_UP' || s === 'PENDING' || followupCustIds.has(String(q.customerId));
+  };
+
+  const isNewLeadQuery = q => {
+    const s = String(q.status || '').toUpperCase();
+    if (isFollowupQuery(q)) return false;
+    if (s === 'NEW' || s === 'OPEN' || s === 'ASSIGNED') return true;
+    const isUnassigned = !q.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
+    if (isUnassigned && s !== 'RESOLVED' && s !== 'CLOSED' && s !== 'CONVERTED') return true;
+    return false;
+  };
+
+  const countNewLeads = document.getElementById('count-new-leads');
+  if (countNewLeads) countNewLeads.innerText = activeQueries.filter(isNewLeadQuery).length;
+
+  const countFollowup = document.getElementById('count-followup');
+  if (countFollowup) countFollowup.innerText = activeQueries.filter(isFollowupQuery).length;
+
   const countUnassigned = document.getElementById('count-unassigned');
   if (countUnassigned) countUnassigned.innerText = unassignedCount;
 
   const countMy = document.getElementById('count-my');
   if (countMy) countMy.innerText = myQueueCount;
+
+  const followupEl = document.getElementById('badge-followup-count');
+  if (followupEl) {
+    const dueCount = (CRM_STATE.followups || []).filter(f => f.status === 'PENDING').length;
+    followupEl.innerText = `${dueCount} Due`;
+  }
+
+  const ordersEl = document.getElementById('badge-orders-count');
+  if (ordersEl) {
+    ordersEl.innerText = (CRM_STATE.orders || []).length;
+  }
+
+  const staffEl = document.getElementById('badge-total-staff-count');
+  if (staffEl) {
+    staffEl.innerText = (CRM_STATE.staffList || []).length;
+  }
 
   // DND count update
   const dndEl = document.getElementById('badge-dnd-count');
