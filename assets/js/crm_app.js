@@ -2698,11 +2698,14 @@ function cleanupAndDeduplicateCRMState() {
   });
   CRM_STATE.queries = dedupedQueries;
 
-  // 4. Ensure all catalog products have valid, non-broken, beautiful garment images
+  // 4. Ensure all catalog products have valid, non-broken, beautiful garment images and clean descriptions
   if (Array.isArray(CRM_STATE.products)) {
     CRM_STATE.products.forEach(p => {
       if (!p.image || p.image.includes('photo-1518831959646-742c3a14ebf7') || p.image.includes('photo-1583846783977-d2b0993d4265') || p.image.includes('No Image') || p.image.includes('No%20Image')) {
         p.image = getSmartProductImage(p);
+      }
+      if (p.description && (p.description.includes('xdsgt') || p.description.includes('ytfdw') || /^[a-z]{12,}$/i.test(p.description.trim()))) {
+        p.description = '';
       }
     });
   }
@@ -3416,6 +3419,7 @@ function getAvailableWhatsAppAccounts() {
 function togglePhoneSwitcherDropdown(event) {
   if (event) event.stopPropagation();
   const dropdown = document.getElementById('phone-switcher-dropdown');
+  const btn = document.getElementById('header-phone-badge');
   const arrow = document.getElementById('phone-dropdown-arrow');
   if (!dropdown) return;
 
@@ -3424,6 +3428,24 @@ function togglePhoneSwitcherDropdown(event) {
     renderPhoneSwitcherDropdown();
     dropdown.classList.remove('hidden');
     if (arrow) arrow.style.transform = 'rotate(180deg)';
+
+    // Dynamic viewport positioning so dropdown is NEVER clipped by any header or overflow container
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const dropWidth = Math.min(320, window.innerWidth - 24);
+      dropdown.style.position = 'fixed';
+      dropdown.style.top = (rect.bottom + 6) + 'px';
+      dropdown.style.width = dropWidth + 'px';
+      dropdown.style.maxWidth = 'calc(100vw - 24px)';
+      dropdown.style.zIndex = '99999';
+
+      let leftPos = rect.left;
+      if (leftPos + dropWidth > window.innerWidth - 12) {
+        leftPos = Math.max(12, window.innerWidth - dropWidth - 12);
+      }
+      dropdown.style.left = leftPos + 'px';
+      dropdown.style.right = 'auto';
+    }
   } else {
     closePhoneSwitcherDropdown();
   }
@@ -3704,7 +3726,7 @@ function switchInboxSubmodule(submodule) {
     if (autoSub) autoSub.classList.remove('hidden');
     if (tabAuto) tabAuto.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-teal-600 to-emerald-600 text-white cursor-pointer";
     if (navSubAuto) navSubAuto.className = activeSubNavClass;
-    if (pTitle) pTitle.innerText = t('header.title.inbox_autoreply', 'WhatsApp Inbox — Pre-Set Templates & Auto-Reply Hub');
+    if (pTitle) pTitle.innerText = t('header.title.inbox_autoreply', 'Pre-Set Templates & Auto-Reply Hub');
     if (pSub) {
       pSub.innerText = '';
       pSub.classList.add('hidden');
@@ -4784,6 +4806,10 @@ function renderInboxConversationList() {
 window.renderInboxConversationList = renderInboxConversationList;
 
 function mobileBackToConversations() {
+  ACTIVE_CUSTOMER_ID = null;
+  if (CRM_STATE) {
+    CRM_STATE.activeCustomerId = null;
+  }
   const leftPanel = document.getElementById('inbox-left-panel');
   const centerPanel = document.getElementById('chat-center-panel');
   const mobileBottomBar = document.getElementById('mobile-bottom-app-bar');
@@ -5208,6 +5234,66 @@ window.addEventListener('keydown', (e) => {
 // Auto-adjust layout dynamically based on Viewport Width (vpw)
 function handleResponsiveLayout() {
   const vpw = window.innerWidth;
+  const leftPanel = document.getElementById('inbox-left-panel');
+  const centerPanel = document.getElementById('chat-center-panel');
+  const mobileBottomBar = document.getElementById('mobile-bottom-app-bar');
+
+  if (vpw < 768) {
+    if (ACTIVE_CUSTOMER_ID) {
+      if (leftPanel) {
+        leftPanel.classList.add('hidden');
+        leftPanel.classList.remove('flex');
+      }
+      if (centerPanel) {
+        centerPanel.classList.remove('hidden');
+        centerPanel.classList.add('flex');
+        centerPanel.style.width = '100%';
+      }
+      if (mobileBottomBar) {
+        mobileBottomBar.classList.add('hidden');
+        mobileBottomBar.classList.remove('flex');
+      }
+    } else {
+      if (leftPanel) {
+        leftPanel.classList.remove('hidden');
+        leftPanel.classList.add('flex');
+        leftPanel.style.width = '100%';
+        leftPanel.style.minWidth = '0px';
+      }
+      if (centerPanel) {
+        centerPanel.classList.add('hidden');
+        centerPanel.classList.remove('flex');
+      }
+      if (mobileBottomBar) {
+        mobileBottomBar.classList.remove('hidden');
+        mobileBottomBar.classList.add('flex');
+      }
+    }
+  } else {
+    // Desktop / Tablet (>= 768px): restore two-panel view
+    if (leftPanel) {
+      leftPanel.classList.remove('hidden');
+      leftPanel.classList.add('flex');
+      const savedLeftWidth = localStorage.getItem('GRM_INBOX_LEFT_WIDTH');
+      if (savedLeftWidth && parseInt(savedLeftWidth) > 160) {
+        leftPanel.style.width = Math.min(320, parseInt(savedLeftWidth)) + 'px';
+        leftPanel.style.minWidth = Math.min(320, parseInt(savedLeftWidth)) + 'px';
+      } else {
+        leftPanel.style.width = '';
+        leftPanel.style.minWidth = '';
+      }
+    }
+    if (centerPanel) {
+      centerPanel.classList.remove('hidden');
+      centerPanel.classList.add('flex');
+      centerPanel.style.width = '';
+    }
+    if (mobileBottomBar && vpw >= 1024) {
+      mobileBottomBar.classList.add('hidden');
+      mobileBottomBar.classList.remove('flex');
+    }
+  }
+
   if (!USER_MANUAL_PANEL_TOGGLE) {
     if (vpw < 960 && IS_RIGHT_PANEL_OPEN) {
       toggleRightPanel(false, false);
@@ -10704,22 +10790,22 @@ function renderAutoReplyRulesList() {
         ` : ''}
 
         <!-- Actions -->
-        <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
-          <div class="flex items-center gap-2">
+        <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px] flex-wrap gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             ${canArEdit ? `
             <button type="button" onclick="editRule('${rule.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg flex items-center gap-1 transition cursor-pointer">
               <span class="material-symbols-outlined text-[14px] text-slate-600">edit</span>
-              <span>Edit Question &amp; Answer</span>
+              <span>Edit Q &amp; A</span>
             </button>
             ` : ''}
             <button type="button" onclick="applyRuleToActiveChat('${rule.id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg flex items-center gap-1 transition border border-emerald-200 cursor-pointer" title="Insert or Send to active customer chat">
               <span class="material-symbols-outlined text-[14px]">send</span>
-              <span>Send to Chat</span>
+              <span>Send</span>
             </button>
           </div>
 
           ${canArDelete ? `
-          <button type="button" onclick="deleteRule('${rule.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer" title="Delete Rule">
+          <button type="button" onclick="deleteRule('${rule.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer ml-auto sm:ml-0" title="Delete Rule">
             <span class="material-symbols-outlined text-[16px]">delete</span>
           </button>
           ` : ''}
@@ -12084,10 +12170,22 @@ function onModalShareCategoryChange() {
   }
 
   renderModalProductList();
+
+  // Automatically refresh preview message content if preview box is currently visible
+  const previewBox = document.getElementById('modal-catalog-preview-box');
+  if (previewBox && !previewBox.classList.contains('hidden')) {
+    setCatalogPreviewFormat('auto');
+  }
 }
 
 function onModalShareSubcategoryChange() {
   renderModalProductList();
+
+  // Automatically refresh preview message content if preview box is currently visible
+  const previewBox = document.getElementById('modal-catalog-preview-box');
+  if (previewBox && !previewBox.classList.contains('hidden')) {
+    setCatalogPreviewFormat('auto');
+  }
 }
 
 function clearModalShareSearch() {
@@ -12203,10 +12301,10 @@ function updateModalShareSelectionUI() {
     sendBtn.disabled = (count === 0);
   }
 
-  // If live preview is currently open on selected_products, refresh it live
+  // If live preview is currently open, refresh it automatically with updated selections
   const previewBox = document.getElementById('modal-catalog-preview-box');
-  if (previewBox && !previewBox.classList.contains('hidden') && CURRENT_CATALOG_PREVIEW_FORMAT === 'selected_products') {
-    setCatalogPreviewFormat('selected_products');
+  if (previewBox && !previewBox.classList.contains('hidden')) {
+    setCatalogPreviewFormat('auto');
   }
 
   if (selectAllCb) {
@@ -12320,7 +12418,12 @@ function buildConfiguredProductShareText(p, opts) {
     specsLine = `${catLine}${sizeLine}${colorLine}${fabricLine}${extraSpecs}`;
   }
 
-  const descLine = p.description ? `\n✨ *Product Highlights:*\n${p.description}\n` : '';
+  // Sanitize description to remove test/placeholder junk (like xdsgt... or ytfdw)
+  let cleanDesc = (p.description || '').trim();
+  if (cleanDesc.includes('xdsgt') || cleanDesc.includes('ytfdw') || /^[a-z]{12,}$/i.test(cleanDesc)) {
+    cleanDesc = '';
+  }
+  const descLine = cleanDesc ? `\n✨ *Product Highlights:*\n${cleanDesc}\n` : '';
 
   return `🛍️ *${p.name}*\n🏷️ *SKU Code:* ${p.sku}\n${specsLine}${priceLine}${stockLine}${descLine}\n✨ *GRM Garments Premium Quality Promise*\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n\n👉 *Reply 'YES' with your delivery address to confirm your booking!*`;
 }
@@ -12826,6 +12929,64 @@ function buildCategoryAndSubcategoryMessageText(customerName = '', brand = '') {
   return text;
 }
 
+function buildSingleCategorySubcollectionsText(categoryName, customerName = '', brand = '') {
+  const brandName = brand || ((typeof getBrandName === 'function') ? getBrandName() : 'GRM Garments');
+  const categories = getCategoriesSummaryList();
+  const cat = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
+
+  let text = `📋 *${brandName} — ${categoryName} Collections Directory* 🏷️\n\n`;
+  text += `Hello ${customerName || 'there'}! Explore our available garment collections under *${categoryName}*:\n\n`;
+
+  const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '1️⃣1️⃣', '1️⃣2️⃣'];
+
+  if (cat && cat.subcategories && cat.subcategories.length > 0) {
+    cat.subcategories.forEach((sub, idx) => {
+      const num = numberEmojis[idx] || `${idx + 1}.`;
+      text += `${num} *${sub}* (In Stock • Ready Dispatch)\n`;
+    });
+  } else {
+    text += `📁 *${categoryName}* — Multiple fresh designs ready for immediate dispatch!\n`;
+  }
+
+  text += `\n💬 *Reply with any Collection name* (or number) to receive live photos, sizes, and pricing details!\n`;
+  text += `🚚 _Fast Dispatch & COD Available Across India 🇮🇳_`;
+  return text;
+}
+
+function buildCategorySubcategoryStockSummaryText(categoryName, subcategoryName, matchingProducts, customerName = '', brand = '', opts = null) {
+  const brandName = brand || ((typeof getBrandName === 'function') ? getBrandName() : 'GRM Garments');
+  const catHeader = categoryName && categoryName !== 'ALL' ? `${categoryName} › ${subcategoryName}` : subcategoryName;
+
+  let text = `✨ *${brandName} — Ready Stock Collections* 🛍️\n`;
+  text += `📁 *Category:* ${catHeader}\n\n`;
+  text += `Hello ${customerName || 'there'}! Explore our current available designs in *${catHeader}* below:\n\n`;
+
+  const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '1️⃣1️⃣', '1️⃣2️⃣'];
+
+  (matchingProducts || []).slice(0, 8).forEach((p, idx) => {
+    const num = numberEmojis[idx] || `${idx + 1}.`;
+    const available = (parseInt(p.physicalStock) || 0) - (parseInt(p.reservedStock) || 0);
+    const priceNum = parseFloat(p.price) || 0;
+    const mrpNum = parseFloat(p.mrp) || 0;
+    let priceStr = `₹${priceNum}`;
+    if (mrpNum > priceNum) {
+      const discount = Math.round(((mrpNum - priceNum) / mrpNum) * 100);
+      priceStr = `₹${priceNum} ~₹${mrpNum}~ (${discount}% OFF)`;
+    }
+    const sizeStr = p.size ? ` • Size: ${p.size}` : '';
+    const colorStr = p.color ? ` • Color: ${p.color}` : '';
+    const stockStr = available > 0 ? ` • ✅ ${available} In Stock` : ' • ⚡ Limited';
+
+    text += `${num} *${p.name}* (SKU: ${p.sku})\n`;
+    text += `   💰 ${priceStr}${sizeStr}${colorStr}${stockStr}\n\n`;
+  });
+
+  text += `✨ *GRM Garments Premium Quality Promise*\n`;
+  text += `🚚 Fast door delivery & Cash on Delivery (COD) available!\n\n`;
+  text += `👉 *Reply with the Item SKU Code or photo to confirm your booking!*`;
+  return text;
+}
+
 function buildSelectedProductsShareText(products, opts) {
   const options = opts || getModalStockSharingOptions();
   const prods = (products && products.length > 0)
@@ -12970,7 +13131,7 @@ function resetPreviewMessageToDefault() {
   showToast('Template Reset', 'Reverted message content to the original default format.', 'restart_alt', 'slate');
 }
 
-function openCatalogFormatPreview(format = 'category_only', singleProductId = null) {
+function openCatalogFormatPreview(format = 'auto', singleProductId = null) {
   if (!ACTIVE_CUSTOMER_ID) {
     showToast('Select Customer', 'Please open a customer chat first before previewing format.', 'warning', 'amber');
     return;
@@ -12996,8 +13157,8 @@ function openCatalogFormatPreview(format = 'category_only', singleProductId = nu
   const timeElem = document.getElementById('preview-whatsapp-time');
   if (timeElem) timeElem.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  // Update Format Tab and Preview Content
-  setCatalogPreviewFormat(format, singleProductId);
+  // Update Format Tab and Preview Content automatically
+  setCatalogPreviewFormat(format || 'auto', singleProductId);
 
   // Reveal Preview Box
   const previewBox = document.getElementById('modal-catalog-preview-box');
@@ -13007,14 +13168,35 @@ function openCatalogFormatPreview(format = 'category_only', singleProductId = nu
   }
 }
 
-function setCatalogPreviewFormat(format = 'category_only', targetProdId = null) {
-  CURRENT_CATALOG_PREVIEW_FORMAT = format;
+function setCatalogPreviewFormat(format = 'auto', targetProdId = null) {
+  const catSelect = document.getElementById('modal-share-category-filter');
+  const subcatSelect = document.getElementById('modal-share-subcategory-filter');
+  const selectedCat = catSelect ? catSelect.value : 'ALL';
+  const selectedSub = subcatSelect ? subcatSelect.value : 'ALL';
+  const selectedIds = Array.from(MODAL_SHARE_SELECTED_PRODUCT_IDS);
+
+  let effectiveFormat = format;
+  if (!effectiveFormat || effectiveFormat === 'auto') {
+    if (selectedIds.length > 0) {
+      effectiveFormat = (selectedIds.length === 1) ? 'single_product' : 'selected_products';
+      if (selectedIds.length === 1 && !targetProdId) targetProdId = selectedIds[0];
+    } else if (selectedSub !== 'ALL') {
+      effectiveFormat = 'filtered_subcategory_stock';
+    } else if (selectedCat !== 'ALL') {
+      effectiveFormat = 'filtered_category_sub';
+    } else {
+      effectiveFormat = 'category_only';
+    }
+  }
+
+  CURRENT_CATALOG_PREVIEW_FORMAT = effectiveFormat;
   CURRENT_PREVIEW_TARGET_PROD_ID = targetProdId;
 
   const btnCatOnly = document.getElementById('btn-format-tab-cat-only');
   const btnCatSub = document.getElementById('btn-format-tab-cat-sub');
   const btnStockProds = document.getElementById('btn-format-tab-stock-prods');
   const badge = document.getElementById('preview-format-badge');
+  const badgeText = document.getElementById('preview-format-badge-text');
   const editor = document.getElementById('modal-preview-message-editor');
   const sendBtnText = document.getElementById('btn-send-previewed-text');
   const mediaContainer = document.getElementById('preview-whatsapp-media-container');
@@ -13025,30 +13207,66 @@ function setCatalogPreviewFormat(format = 'category_only', targetProdId = null) 
   const brandName = (typeof getBrandName === 'function') ? getBrandName() : 'GRM Garments';
   const opts = getModalStockSharingOptions();
 
-  // Tab button styling
+  // Tab button styling if present
   const activeClass = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer bg-emerald-600 text-white shadow-sm flex items-center gap-1';
   const inactiveClass = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1';
 
-  if (btnCatOnly) btnCatOnly.className = (format === 'category_only') ? activeClass : inactiveClass;
-  if (btnCatSub) btnCatSub.className = (format === 'category_sub') ? activeClass : inactiveClass;
-  if (btnStockProds) btnStockProds.className = (format === 'selected_products' || format === 'single_product') ? activeClass : inactiveClass;
+  if (btnCatOnly) btnCatOnly.className = (effectiveFormat === 'category_only') ? activeClass : inactiveClass;
+  if (btnCatSub) btnCatSub.className = (effectiveFormat === 'category_sub' || effectiveFormat === 'filtered_category_sub') ? activeClass : inactiveClass;
+  if (btnStockProds) btnStockProds.className = (effectiveFormat === 'selected_products' || effectiveFormat === 'single_product' || effectiveFormat === 'filtered_subcategory_stock') ? activeClass : inactiveClass;
 
   let rawMessageText = '';
   let photoUrl = null;
 
-  if (format === 'category_only') {
-    if (badge) badge.innerText = 'Format 1 (Category List Only)';
-    if (sendBtnText) sendBtnText.innerText = 'Send Category List to Customer';
+  const setBadgeLabel = (txt) => {
+    if (badgeText) badgeText.innerText = txt;
+    else if (badge) badge.innerText = txt;
+  };
+
+  if (effectiveFormat === 'category_only') {
+    setBadgeLabel('All Collections & Categories');
+    if (sendBtnText) sendBtnText.innerText = 'Send Collections to Customer';
     rawMessageText = buildCategoryListMessageText(customerName, brandName);
-  } else if (format === 'category_sub') {
-    if (badge) badge.innerText = 'Format 2 (Category & Subcategories)';
-    if (sendBtnText) sendBtnText.innerText = 'Send Category & Subcategories to Customer';
-    rawMessageText = buildCategoryAndSubcategoryMessageText(customerName, brandName);
-  } else if (format === 'single_product') {
-    const prodId = targetProdId || (CRM_STATE.products && CRM_STATE.products[0] ? CRM_STATE.products[0].id : null);
+  } else if (effectiveFormat === 'category_sub' || effectiveFormat === 'filtered_category_sub') {
+    if (selectedCat !== 'ALL') {
+      setBadgeLabel(`${selectedCat} Collections Directory`);
+      if (sendBtnText) sendBtnText.innerText = `Send ${selectedCat} Collections to Customer`;
+      rawMessageText = buildSingleCategorySubcollectionsText(selectedCat, customerName, brandName);
+    } else {
+      setBadgeLabel('Complete Catalog & Collections Directory');
+      if (sendBtnText) sendBtnText.innerText = 'Send Collections Directory to Customer';
+      rawMessageText = buildCategoryAndSubcategoryMessageText(customerName, brandName);
+    }
+  } else if (effectiveFormat === 'filtered_subcategory_stock') {
+    const catLower = selectedCat.trim().toLowerCase();
+    const subLower = selectedSub.trim().toLowerCase();
+    const matching = (CRM_STATE.products || []).filter(p => {
+      const pCat = (p.category || '').toString().trim().toLowerCase();
+      const pSub = (p.subcategory || '').toString().trim().toLowerCase();
+      const matchCat = selectedCat === 'ALL' || pCat === catLower;
+      const matchSub = selectedSub === 'ALL' || pSub === subLower;
+      return matchCat && matchSub;
+    });
+
+    setBadgeLabel(`${selectedCat !== 'ALL' ? selectedCat + ' › ' : ''}${selectedSub} (${matching.length} Items)`);
+    if (sendBtnText) sendBtnText.innerText = `Send ${selectedSub} Stock to Customer`;
+
+    if (matching.length === 1) {
+      rawMessageText = buildConfiguredProductShareText(matching[0], opts);
+      if (opts.includePhoto && matching[0].image && !matching[0].image.includes('photo-1518831959646-742c3a14ebf7')) {
+        photoUrl = matching[0].image;
+      }
+    } else {
+      rawMessageText = buildCategorySubcategoryStockSummaryText(selectedCat, selectedSub, matching, customerName, brandName, opts);
+      if (matching.length > 0 && opts.includePhoto && matching[0].image && !matching[0].image.includes('photo-1518831959646-742c3a14ebf7')) {
+        photoUrl = matching[0].image;
+      }
+    }
+  } else if (effectiveFormat === 'single_product') {
+    const prodId = targetProdId || (selectedIds.length > 0 ? selectedIds[0] : (CRM_STATE.products && CRM_STATE.products[0] ? CRM_STATE.products[0].id : null));
     const p = (CRM_STATE.products || []).find(x => String(x.id) === String(prodId));
     if (p) {
-      if (badge) badge.innerText = `Product Card: ${p.sku}`;
+      setBadgeLabel(`Product Card: ${p.sku}`);
       if (sendBtnText) sendBtnText.innerText = `Send ${p.sku} to Customer`;
       rawMessageText = buildConfiguredProductShareText(p, opts);
       if (opts.includePhoto && p.image && !p.image.includes('photo-1518831959646-742c3a14ebf7')) {
@@ -13059,17 +13277,9 @@ function setCatalogPreviewFormat(format = 'category_only', targetProdId = null) 
     }
   } else {
     // selected_products
-    const selectedIds = Array.from(MODAL_SHARE_SELECTED_PRODUCT_IDS);
-    let selectedProducts = (CRM_STATE.products || []).filter(p => selectedIds.includes(String(p.id)));
-    if (selectedProducts.length === 0) {
-      const visible = getCurrentlyFilteredModalProducts();
-      if (visible.length > 0) {
-        selectedProducts = [visible[0]];
-      }
-    }
-
+    const selectedProducts = (CRM_STATE.products || []).filter(p => selectedIds.includes(String(p.id)));
     const count = selectedProducts.length;
-    if (badge) badge.innerText = `Format 3 (${count} Garments Selected)`;
+    setBadgeLabel(`${count} Garments Selected`);
     if (sendBtnText) sendBtnText.innerText = `Send ${count} Selected Garment${count > 1 ? 's' : ''} to Customer`;
 
     rawMessageText = buildSelectedProductsShareText(selectedProducts, opts);
@@ -23255,7 +23465,11 @@ function generateProductWhatsAppText(p) {
     }
   }
 
-  const descLine = p.description ? `\n✨ *Product Highlights:*\n${p.description}\n` : '';
+  let cleanDesc = (p.description || '').trim();
+  if (cleanDesc.includes('xdsgt') || cleanDesc.includes('ytfdw') || /^[a-z]{12,}$/i.test(cleanDesc)) {
+    cleanDesc = '';
+  }
+  const descLine = cleanDesc ? `\n✨ *Product Highlights:*\n${cleanDesc}\n` : '';
 
   return `🛍️ *${p.name}*\n🏷️ *SKU Code:* ${p.sku}\n${catLine}📏 *Size / Age:* ${p.size || 'Standard'}\n🎨 *Color:* ${p.color || 'Default'}\n${fabricLine}${specsLines}${priceLine}\n📦 *Warehouse Stock:* ${stockText}${descLine}\n✨ *GRM Garments Premium Quality Promise*\n🚚 Fast door delivery & Cash on Delivery (COD) available!\n\n👉 *Reply 'YES' with your delivery address to confirm your booking!*`;
 }

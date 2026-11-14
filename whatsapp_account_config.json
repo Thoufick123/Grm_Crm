@@ -21,91 +21,28 @@
             "status": "DISCONNECTED"
         }
     ],
-    "autoReplyEnabled": true,
+    "autoReplyEnabled": false,
     "autoReplyCooldownMinutes": 0,
     "autoReplyKeywordMatching": true,
     "autoReplyRules": [
         {
-            "id": "rule_1793797184283",
-            "name": "price",
+            "id": "rule_wholesale",
+            "name": "Wholesale & Bulk Orders",
             "keywords": [
-                "price"
-            ],
-            "actionType": "custom_text",
-            "action_type": "custom_text",
-            "categoryId": null,
-            "category_id": null,
-            "replyText": "qwerttty",
-            "reply_text": "qwerttty",
-            "enabled": true,
-            "autoSend": true
-        },
-        {
-            "id": "rule_testing_the_crm",
-            "name": "testing the crm",
-            "keywords": [
-                "feeding gown",
-                "testing the crm",
-                "testing",
-                "crm"
-            ],
-            "actionType": "custom_text",
-            "categoryId": null,
-            "replyText": "Good Morning",
-            "enabled": true,
-            "autoSend": true,
-            "action_type": "custom_text",
-            "category_id": null,
-            "reply_text": "Good Morning"
-        },
-        {
-            "id": "rule_feeding_kurti",
-            "name": "Feeding Kurti & Maternity Wear",
-            "keywords": [
-                "feeding kurti",
-                "feeding",
-                "kurti",
-                "maternity",
-                "feeding dress",
-                "feeding gown"
+                "wholesale",
+                "bulk",
+                "bundle",
+                "resale",
+                "dealer",
+                "margin",
+                "bulk price"
             ],
             "actionType": "category_and_text",
-            "categoryId": "2",
-            "replyText": "🤰 *Maternity & Feeding Collection*\nHello *{customer_name}*! 👋 Yes, we have ready stock of Pure Cotton Feeding Kurtis & Maternity Gowns with concealed invisible feeding zips!\n\n✨ Pure mulmul breathable cotton • Sizes L to XXL • Ready to dispatch.",
-            "enabled": true,
-            "autoSend": true
-        },
-        {
-            "id": "rule_baby_frocks",
-            "name": "Baby Frocks & Frocks (0-3Y)",
-            "keywords": [
-                "baby frock",
-                "frock",
-                "baby dress",
-                "baby collection",
-                "cotton frock",
-                "baby cloth"
-            ],
-            "actionType": "category_and_text",
-            "categoryId": "1",
-            "replyText": "👗 *Baby Collection (0–3 Years)*\nHello *{customer_name}*! 👋 Here are our 100% combed cotton embroidered baby frocks:",
-            "enabled": true,
-            "autoSend": true
-        },
-        {
-            "id": "rule_newborn_sets",
-            "name": "Newborn Gift Sets (0-6M)",
-            "keywords": [
-                "newborn",
-                "gift set",
-                "baby born",
-                "romper",
-                "swaddle",
-                "born baby"
-            ],
-            "actionType": "category_and_text",
-            "categoryId": "3",
-            "replyText": "🎁 *Newborn Gift Sets (0–6 Months)*\nHello *{customer_name}*! 👋 Here are our organic cotton romper & swaddle luxury gift boxes:",
+            "action_type": "category_and_text",
+            "categoryId": "5",
+            "category_id": "5",
+            "replyText": "📦 *Wholesale & Bulk Bundles*\nHello *{customer_name}*! 👋 We offer bulk retailer carton boxes (25–50 pcs) with maximum resale profit margins:",
+            "reply_text": "📦 *Wholesale & Bulk Bundles*\nHello *{customer_name}*! 👋 We offer bulk retailer carton boxes (25–50 pcs) with maximum resale profit margins:",
             "enabled": true,
             "autoSend": true
         },
@@ -121,63 +58,31 @@
                 "shorts combo"
             ],
             "actionType": "category_and_text",
+            "action_type": "category_and_text",
             "categoryId": "4",
+            "category_id": "4",
             "replyText": "👕 *Kids Everyday Wear (4–5 Years)*\nHello *{customer_name}*! 👋 Check out our bio-washed organic cotton t-shirt and denim combos:",
+            "reply_text": "👕 *Kids Everyday Wear (4–5 Years)*\nHello *{customer_name}*! 👋 Check out our bio-washed organic cotton t-shirt and denim combos:",
             "enabled": true,
             "autoSend": true
         },
         {
-            "id": "rule_wholesale",
-            "name": "Wholesale & Bulk Orders",
+            "id": "rule_baby_frocks",
+            "name": "Baby Frocks & Frocks (0-3Y)",
             "keywords": [
-                "wholesale",
-                "bulk",
-                "bundle",
-                "resale",
-                "dealer",
-                "margin",
-                "bulk price"
+                "baby frock",
+                "frock",
+                "baby dress",
+                "baby collection",
+                "cotton frock",
+                "baby cloth"
             ],
             "actionType": "category_and_text",
-            "categoryId": "5",
-            "replyText": "📦 *Wholesale & Bulk Bundles*\nHello *{customer_name}*! 👋 We offer bulk retailer carton boxes (25–50 pcs) with maximum resale profit margins:",
-            "enabled": true,
-            "autoSend": true
-        },
-        {
-            "id": "rule_festive_silk",
-            "name": "Festive & Silk Pattu Pavadai",
-            "keywords": [
-                "pattu",
-                "silk",
-                "lehenga",
-                "festive",
-                "pavadai",
-                "diwali",
-                "kanjivaram"
-            ],
-            "actionType": "category_and_text",
-            "categoryId": "6",
-            "replyText": "🥻 *Festive & Silk Collection*\nHello *{customer_name}*! 👋 Here are our pure zari Kanjivaram silk pattu pavadais & designer lehengas:",
-            "enabled": true,
-            "autoSend": true
-        },
-        {
-            "id": "rule_store_location",
-            "name": "Store Address & Timings",
-            "keywords": [
-                "address",
-                "location",
-                "shop address",
-                "where is your shop",
-                "store",
-                "visit",
-                "timings",
-                "map"
-            ],
-            "actionType": "custom_text",
-            "categoryId": null,
-            "replyText": "📍 *{brand_name} Store Location*\n\n🏢 GRM Garments Hub, 42 Cotton Market Road, Tirupur, Tamil Nadu - 641604.\n🕒 Working Hours: Monday – Saturday (9:30 AM to 8:30 PM)\n📞 Direct Desk: {business_phone}\n\n🗺️ You are welcome to visit our retail counter & wholesale warehouse!",
+            "action_type": "category_and_text",
+            "categoryId": "1",
+            "category_id": "1",
+            "replyText": "👗 *Baby Collection (0–3 Years)*\nHello *{customer_name}*! 👋 Here are our 100% combed cotton embroidered baby frocks:",
+            "reply_text": "👗 *Baby Collection (0–3 Years)*\nHello *{customer_name}*! 👋 Here are our 100% combed cotton embroidered baby frocks:",
             "enabled": true,
             "autoSend": true
         },
@@ -196,9 +101,93 @@
                 "scanner"
             ],
             "actionType": "custom_text",
+            "action_type": "custom_text",
             "categoryId": null,
+            "category_id": null,
             "replyText": "💳 *Payment Details — {brand_name}*\n\n📱 UPI ID: `grmgarments@upi`\n📲 GPay \/ PhonePe: {business_phone}\n\n🏦 *Bank Transfer:*\nBank: HDFC Bank\nA\/C Name: GRM Garments Hub\nA\/C No: 50200088991122\nIFSC: HDFC0001234\n\n📸 *Please reply with your payment screenshot once paid for immediate dispatch!*",
+            "reply_text": "💳 *Payment Details — {brand_name}*\n\n📱 UPI ID: `grmgarments@upi`\n📲 GPay \/ PhonePe: {business_phone}\n\n🏦 *Bank Transfer:*\nBank: HDFC Bank\nA\/C Name: GRM Garments Hub\nA\/C No: 50200088991122\nIFSC: HDFC0001234\n\n📸 *Please reply with your payment screenshot once paid for immediate dispatch!*",
             "enabled": true,
+            "autoSend": true
+        },
+        {
+            "id": "rule_festive_silk",
+            "name": "Festive & Silk Pattu Pavadai",
+            "keywords": [
+                "pattu",
+                "silk",
+                "lehenga",
+                "festive",
+                "pavadai",
+                "diwali",
+                "kanjivaram"
+            ],
+            "actionType": "category_and_text",
+            "action_type": "category_and_text",
+            "categoryId": "6",
+            "category_id": "6",
+            "replyText": "🥻 *Festive & Silk Collection*\nHello *{customer_name}*! 👋 Here are our pure zari Kanjivaram silk pattu pavadais & designer lehengas:",
+            "reply_text": "🥻 *Festive & Silk Collection*\nHello *{customer_name}*! 👋 Here are our pure zari Kanjivaram silk pattu pavadais & designer lehengas:",
+            "enabled": true,
+            "autoSend": true
+        },
+        {
+            "id": "rule_newborn_sets",
+            "name": "Newborn Gift Sets (0-6M)",
+            "keywords": [
+                "newborn",
+                "gift set",
+                "baby born",
+                "romper",
+                "swaddle",
+                "born baby"
+            ],
+            "actionType": "category_and_text",
+            "action_type": "category_and_text",
+            "categoryId": "3",
+            "category_id": "3",
+            "replyText": "🎁 *Newborn Gift Sets (0–6 Months)*\nHello *{customer_name}*! 👋 Here are our organic cotton romper & swaddle luxury gift boxes:",
+            "reply_text": "🎁 *Newborn Gift Sets (0–6 Months)*\nHello *{customer_name}*! 👋 Here are our organic cotton romper & swaddle luxury gift boxes:",
+            "enabled": true,
+            "autoSend": true
+        },
+        {
+            "id": "rule_store_location",
+            "name": "Store Address & Timings",
+            "keywords": [
+                "address",
+                "location",
+                "shop address",
+                "where is your shop",
+                "store",
+                "visit",
+                "timings",
+                "map"
+            ],
+            "actionType": "custom_text",
+            "action_type": "custom_text",
+            "categoryId": null,
+            "category_id": null,
+            "replyText": "📍 *{brand_name} Store Location*\n\n🏢 GRM Garments Hub, 42 Cotton Market Road, Tirupur, Tamil Nadu - 641604.\n🕒 Working Hours: Monday – Saturday (9:30 AM to 8:30 PM)\n📞 Direct Desk: {business_phone}\n\n🗺️ You are welcome to visit our retail counter & wholesale warehouse!",
+            "reply_text": "📍 *{brand_name} Store Location*\n\n🏢 GRM Garments Hub, 42 Cotton Market Road, Tirupur, Tamil Nadu - 641604.\n🕒 Working Hours: Monday – Saturday (9:30 AM to 8:30 PM)\n📞 Direct Desk: {business_phone}\n\n🗺️ You are welcome to visit our retail counter & wholesale warehouse!",
+            "enabled": true,
+            "autoSend": true
+        },
+        {
+            "id": "rule_testing_the_crm",
+            "name": "testing the crm",
+            "keywords": [
+                "feeding gown",
+                "testing the crm",
+                "testing",
+                "crm"
+            ],
+            "actionType": "custom_text",
+            "action_type": "custom_text",
+            "categoryId": null,
+            "category_id": null,
+            "replyText": "welcome",
+            "reply_text": "welcome",
+            "enabled": false,
             "autoSend": true
         },
         {
@@ -214,12 +203,15 @@
                 "charge"
             ],
             "actionType": "custom_text",
+            "action_type": "custom_text",
             "categoryId": null,
+            "category_id": null,
             "replyText": "🚚 *Shipping & Delivery Information*\n\n⚡ Dispatch: Same day \/ within 24 hours of confirmation\n📦 Courier Partners: ST Courier, Professional Couriers & DTDC\n⏱️ Delivery Time: 2–3 days within South India, 4–5 days Rest of India\n\nLive tracking link will be sent to your WhatsApp upon courier pickup! 📦",
+            "reply_text": "🚚 *Shipping & Delivery Information*\n\n⚡ Dispatch: Same day \/ within 24 hours of confirmation\n📦 Courier Partners: ST Courier, Professional Couriers & DTDC\n⏱️ Delivery Time: 2–3 days within South India, 4–5 days Rest of India\n\nLive tracking link will be sent to your WhatsApp upon courier pickup! 📦",
             "enabled": true,
             "autoSend": true
         }
     ],
-    "bridge_url": "https://mediumturquoise-dugong-987946.hostingersite.com",
+    "bridge_url": "https:\/\/mediumturquoise-dugong-987946.hostingersite.com",
     "last_bridge_sync": "2026-11-07 10:04:03"
 }
