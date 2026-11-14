@@ -1294,35 +1294,33 @@
   <!-- ========================================================================= -->
   <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100">
 
-    <!-- Top Header (Clean Height & Responsive Layout to Prevent Text Cutoff) -->
+    <!-- Top Header (Responsive: Row 1 = Title, Row 2 = Action Buttons on Mobile; Clean 1-Row on Desktop) -->
     <header
-      class="min-h-[56px] sm:min-h-[64px] bg-white border-b border-slate-200 px-2.5 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 sm:gap-3">
-      <!-- Left: Sidebar Toggle Menu Button & Dynamic Header Title -->
-      <div class="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
+      class="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 sm:gap-3">
+      <!-- Row 1 on Mobile / Left Side on Desktop: Sidebar Toggle Button & Dynamic Header Title -->
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 w-full sm:w-auto">
         <!-- Sidebar Toggle Menu Bar Button -->
         <button type="button" onclick="toggleSidebar()" id="sidebar-toggle-btn"
           class="p-1.5 sm:p-2 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-xl transition flex items-center justify-center cursor-pointer shadow-xs border border-slate-200 shrink-0"
           title="Toggle Navigation Menu">
-          <span class="material-symbols-outlined text-[20px] sm:text-[24px]" id="sidebar-toggle-icon">menu</span>
+          <span class="material-symbols-outlined text-[22px] sm:text-[24px]" id="sidebar-toggle-icon">menu</span>
         </button>
 
-        <!-- Dynamic Header Title (Clean Desktop Title; Hidden on Mobile < sm to Prevent Header Collisions) -->
-        <div id="header-title-container" class="hidden sm:flex items-center gap-2 sm:gap-3 min-w-0">
-          <div class="min-w-0">
-            <h2 id="page-title" class="font-bold text-sm lg:text-lg text-slate-900 leading-tight truncate"
-              data-i18n="inbox.title">
-              WhatsApp Dashboard</h2>
-            <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden" data-i18n="inbox.subtitle"></p>
-          </div>
+        <!-- Dynamic Header Title -->
+        <div id="header-title-container" class="flex items-center gap-2 min-w-0">
+          <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight truncate"
+            data-i18n="inbox.title">
+            WhatsApp Dashboard</h2>
+          <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden" data-i18n="inbox.subtitle"></p>
         </div>
       </div>
 
-      <!-- Header Actions (Responsive Compact Buttons to Prevent Text Cutoff on Mobile) -->
-      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0 ml-auto">
+      <!-- Row 2 on Mobile (Buttons in Next Row) / Right Side on Desktop: Action Buttons -->
+      <div class="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2.5 w-full sm:w-auto overflow-x-auto pb-0.5 sm:pb-0 custom-chat-scroll shrink-0">
         <!-- Interactive Multi-WhatsApp Number Switcher Dropdown -->
-        <div class="relative" id="header-phone-switcher-wrapper">
+        <div class="relative shrink-0" id="header-phone-switcher-wrapper">
           <button type="button" onclick="togglePhoneSwitcherDropdown(event)" id="header-phone-badge"
-            class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-xs cursor-pointer"
+            class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-xs cursor-pointer whitespace-nowrap"
             title="Switch active WhatsApp Line / Business Number">
             <span class="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0">
               <span
@@ -1330,15 +1328,15 @@
               <span class="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
             </span>
             <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 shrink-0">phone_android</span>
-            <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold text-[10px] sm:text-xs truncate max-w-[85px] sm:max-w-none">+Scan QR</span>
+            <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold text-xs">+Scan QR Code</span>
             <span
-              class="material-symbols-outlined text-[14px] sm:text-[16px] text-emerald-600 transition-transform duration-200 shrink-0"
+              class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 transition-transform duration-200 shrink-0"
               id="phone-dropdown-arrow">expand_more</span>
           </button>
 
           <!-- Dropdown Menu Box -->
           <div id="phone-switcher-dropdown"
-            class="hidden absolute right-0 sm:left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[100] text-xs">
+            class="hidden absolute left-0 sm:left-auto sm:right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[100] text-xs">
             <div class="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <p class="font-bold text-slate-900 text-xs">Switch WhatsApp Line</p>
@@ -1364,28 +1362,29 @@
 
         <!-- Number Masking & Lead Privacy Toggle Button -->
         <button onclick="toggleGlobalPhoneMasking()" id="btn-mask-toggle"
-          class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-semibold transition shadow-xs shrink-0 cursor-pointer"
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-semibold transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
           title="Toggle Number Masking (Protects customer phone numbers from unauthorized export)">
           <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-amber-700" id="mask-icon">lock</span>
-          <span class="hidden sm:inline" data-i18n="header.masking">Masking:</span>
-          <span class="font-extrabold text-amber-950 text-[11px] sm:text-xs" id="mask-status-label">OFF</span>
+          <span data-i18n="header.masking">Masking:</span>
+          <span class="font-extrabold text-amber-950 text-xs" id="mask-status-label">OFF</span>
         </button>
 
         <!-- Reset Test Inbox Messages Button (Dev / Test Helper) -->
         <button onclick="confirmResetInboxMessages()" id="header-reset-inbox-btn"
-          class="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-lg transition shadow-sm"
+          class="flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
           title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
-          <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>
+          <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-rose-600">restart_alt</span>
           <span data-i18n="header.reset_inbox">Reset Inbox</span>
         </button>
-        <div class="hidden sm:block h-5 w-px bg-slate-200"></div>
+
+        <div class="h-5 w-px bg-slate-200 shrink-0"></div>
 
         <!-- Header Logout Button -->
         <button onclick="handleLogout()"
-          class="flex items-center gap-1 p-1.5 sm:px-3 sm:py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition shadow-xs shrink-0 cursor-pointer"
+          class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
           title="Sign out from CRM Panel">
-          <span class="material-symbols-outlined text-[16px]">logout</span>
-          <span class="hidden sm:inline" data-i18n="header.logout">Logout</span>
+          <span class="material-symbols-outlined text-[15px] sm:text-[16px]">logout</span>
+          <span data-i18n="header.logout">Logout</span>
         </button>
       </div>
     </header>
