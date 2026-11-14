@@ -1296,50 +1296,47 @@
 
     <!-- Top Header (Clean Height & Responsive Layout to Prevent Text Cutoff) -->
     <header
-      class="min-h-[64px] bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm relative z-50 gap-3">
+      class="min-h-[56px] sm:min-h-[64px] bg-white border-b border-slate-200 px-2.5 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 sm:gap-3">
       <!-- Left: Sidebar Toggle Menu Button & Dynamic Header Title -->
-      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">
         <!-- Sidebar Toggle Menu Bar Button -->
         <button type="button" onclick="toggleSidebar()" id="sidebar-toggle-btn"
-          class="p-2 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-xl transition flex items-center justify-center cursor-pointer shadow-xs border border-slate-200 shrink-0"
+          class="p-1.5 sm:p-2 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-xl transition flex items-center justify-center cursor-pointer shadow-xs border border-slate-200 shrink-0"
           title="Toggle Navigation Menu">
-          <span class="material-symbols-outlined text-[24px]" id="sidebar-toggle-icon">menu</span>
+          <span class="material-symbols-outlined text-[22px] sm:text-[24px]" id="sidebar-toggle-icon">menu</span>
         </button>
 
         <!-- Dynamic Header Title & Live Status Pill -->
-        <div id="header-title-container" class="flex items-center gap-3 min-w-0">
+        <div id="header-title-container" class="flex items-center gap-2 sm:gap-3 min-w-0">
           <div class="min-w-0">
-            <div class="flex items-center gap-2">
-              <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight"
-                data-i18n="inbox.title">
-                WhatsApp Inbox &amp; Customer Queue</h2>
-            </div>
+            <h2 id="page-title" class="font-bold text-xs sm:text-base lg:text-lg text-slate-900 leading-tight truncate"
+              data-i18n="inbox.title">
+              WhatsApp Dashboard</h2>
             <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden" data-i18n="inbox.subtitle"></p>
           </div>
         </div>
       </div>
 
-      <!-- Header Actions -->
-      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      <!-- Header Actions (Responsive Compact Buttons to Prevent Text Cutoff on Mobile) -->
+      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <!-- Interactive Multi-WhatsApp Number Switcher Dropdown -->
         <div class="relative" id="header-phone-switcher-wrapper">
           <button type="button" onclick="togglePhoneSwitcherDropdown(event)" id="header-phone-badge"
-            class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-sm cursor-pointer"
+            class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-xs cursor-pointer"
             title="Switch active WhatsApp Line / Business Number">
-            <span class="relative flex h-2.5 w-2.5 shrink-0">
+            <span class="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0">
               <span
                 class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
             </span>
-            <span class="material-symbols-outlined text-[16px] text-emerald-600 shrink-0">phone_android</span>
-            <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold">+91 86680
-              07593</span>
+            <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 shrink-0">phone_android</span>
+            <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold text-[11px] sm:text-xs truncate max-w-[110px] sm:max-w-none">+Scan QR Code</span>
             <span
-              class="material-symbols-outlined text-[16px] text-emerald-600 transition-transform duration-200 shrink-0"
+              class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 transition-transform duration-200 shrink-0"
               id="phone-dropdown-arrow">expand_more</span>
           </button>
 
-          <!-- Dropdown Menu Box (Positioned left-0 to open towards the open space instead of under sidebar) -->
+          <!-- Dropdown Menu Box -->
           <div id="phone-switcher-dropdown"
             class="hidden absolute right-0 sm:left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[100] text-xs">
             <div class="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
@@ -1367,26 +1364,25 @@
 
         <!-- Number Masking & Lead Privacy Toggle Button -->
         <button onclick="toggleGlobalPhoneMasking()" id="btn-mask-toggle"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition shadow-sm"
+          class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-semibold transition shadow-xs shrink-0 cursor-pointer"
           title="Toggle Number Masking (Protects customer phone numbers from unauthorized export)">
-          <span class="material-symbols-outlined text-[16px] text-amber-700" id="mask-icon">lock</span>
-          <span data-i18n="header.masking">Masking:</span>
-          <span class="font-extrabold text-amber-950" id="mask-status-label">OFF</span>
+          <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-amber-700" id="mask-icon">lock</span>
+          <span class="hidden sm:inline" data-i18n="header.masking">Masking:</span>
+          <span class="font-extrabold text-amber-950 text-[11px] sm:text-xs" id="mask-status-label">OFF</span>
         </button>
-
 
         <!-- Reset Test Inbox Messages Button (Dev / Test Helper) -->
         <button onclick="confirmResetInboxMessages()" id="header-reset-inbox-btn"
-          class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-lg transition shadow-sm"
+          class="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-lg transition shadow-sm"
           title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
           <span class="material-symbols-outlined text-[16px] text-rose-600">restart_alt</span>
           <span data-i18n="header.reset_inbox">Reset Inbox</span>
         </button>
-        <div class="h-6 w-px bg-slate-200"></div>
+        <div class="hidden sm:block h-5 w-px bg-slate-200"></div>
 
         <!-- Header Logout Button -->
         <button onclick="handleLogout()"
-          class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg transition shadow-sm ml-1"
+          class="flex items-center gap-1 p-1.5 sm:px-3 sm:py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition shadow-xs shrink-0 cursor-pointer"
           title="Sign out from CRM Panel">
           <span class="material-symbols-outlined text-[16px]">logout</span>
           <span class="hidden sm:inline" data-i18n="header.logout">Logout</span>
@@ -1394,38 +1390,38 @@
       </div>
     </header>
 
-    <!-- Staff Workstation Info Banner (Visible Only When Logged in as Staff) -->
+    <!-- Staff Workstation Info Banner (Responsive Text & Badge Alignment) -->
     <div id="staff-workstation-banner"
-      class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-4 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-500/30 gap-2 hidden">
-      <div class="flex items-center gap-3">
+      class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-3 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-500/30 gap-1.5 sm:gap-2 hidden">
+      <div class="flex items-center gap-2 min-w-0">
         <span
-          class="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[10px] font-extrabold flex items-center gap-1.5 shrink-0">
-          <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-          STAFF WORKSTATION PANEL
+          class="px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+          <span>STAFF WORKSTATION</span>
         </span>
-        <p class="text-xs text-indigo-100 truncate">
-          Showing assigned conversations for: <strong id="staff-banner-name" class="text-white">Staff Member</strong>
-          (<span id="staff-banner-role" class="text-indigo-200 font-medium">Sales Specialist</span>).
+        <p class="text-[11px] sm:text-xs text-indigo-100 truncate">
+          Assigned to: <strong id="staff-banner-name" class="text-white">Staff Member</strong>
+          <span class="hidden md:inline">(<span id="staff-banner-role" class="text-indigo-200 font-medium">Sales Specialist</span>)</span>
         </p>
       </div>
-      <div class="flex items-center gap-2.5 shrink-0">
+      <div class="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
         <!-- Live Staff Daily Message Allocation Quota Indicator -->
         <div
-          class="flex items-center gap-2 bg-indigo-900/80 border border-indigo-400/40 px-3 py-1 rounded-xl shadow-sm">
-          <span class="material-symbols-outlined text-[16px] text-emerald-400">stacked_bar_chart</span>
-          <div class="text-[11px] leading-tight flex items-center gap-1.5">
+          class="flex items-center gap-1.5 bg-indigo-900/80 border border-indigo-400/40 px-2.5 sm:px-3 py-1 rounded-lg sm:rounded-xl shadow-sm text-[10px] sm:text-[11px]">
+          <span class="material-symbols-outlined text-[14px] sm:text-[16px] text-emerald-400">stacked_bar_chart</span>
+          <div class="leading-tight flex items-center gap-1">
             <span class="text-indigo-200 hidden md:inline">Today's Allocation:</span>
-            <strong id="staff-banner-quota" class="text-emerald-300 font-extrabold font-mono">0 / 70 msgs (0%)</strong>
+            <strong id="staff-banner-quota" class="text-emerald-300 font-extrabold font-mono">0 msgs</strong>
           </div>
           <!-- Mini Progress Bar -->
           <div
-            class="w-16 h-1.5 bg-indigo-950 rounded-full overflow-hidden border border-indigo-700/50 hidden lg:block">
+            class="w-16 h-1.5 bg-indigo-950 rounded-full overflow-hidden border border-indigo-700/50 hidden lg:block ml-1">
             <div id="staff-banner-progress-bar" class="h-full bg-emerald-400 rounded-full transition-all duration-500"
               style="width: 0%"></div>
           </div>
         </div>
 
-        <span class="text-[11px] text-slate-400 font-mono">Staff ID: <span id="staff-banner-id"
+        <span class="text-[10px] sm:text-[11px] text-slate-300 font-mono">Staff ID: <span id="staff-banner-id"
             class="text-indigo-300 font-bold">staff_01</span></span>
       </div>
     </div>
@@ -2622,22 +2618,22 @@
                 <p class="text-xs text-slate-500 mt-0.5 truncate" id="dash-last-synced-label"></p>
               </div>
             </div>
-            <div class="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+            <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
               <!-- Refresh Dashboard Button -->
               <button type="button" onclick="refreshDashboardData(this)" id="btn-dash-refresh"
-                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer group"
+                class="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer group"
                 title="Refresh dashboard metrics & reload live database state">
                 <span
                   class="material-symbols-outlined text-[16px] text-slate-500 group-hover:text-emerald-600 transition">sync</span>
-                <span>Refresh</span>
+                <span>Refresh Dashboard</span>
               </button>
 
               <!-- Export All Details Button -->
               <button type="button" onclick="exportDashboardSummary(this)" id="btn-dash-export"
-                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm shadow-emerald-600/20 cursor-pointer hover:shadow"
+                class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-xs shadow-emerald-600/20 cursor-pointer"
                 title="Export and download all dashboard metrics, staff rosters, orders, and inquiries to CSV">
                 <span class="material-symbols-outlined text-[16px]">download</span>
-                <span>Export</span>
+                <span>Export Details</span>
               </button>
             </div>
           </div>

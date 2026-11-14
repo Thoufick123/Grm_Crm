@@ -17498,14 +17498,14 @@ function renderDashboard() {
   const staffPerf = document.getElementById('dash-staff-perf-list');
   if (staffPerf) {
     staffPerf.innerHTML = CRM_STATE.staffList.map(s => `
-      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-        <div>
-          <p class="font-bold text-slate-800">${s.name}</p>
-          <p class="text-[10px] text-slate-500">${s.role}</p>
+      <div class="bg-slate-50 hover:bg-slate-100/80 p-3 rounded-xl border border-slate-200/90 flex items-center justify-between text-xs gap-2 transition">
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-slate-900 truncate">${s.name}</p>
+          <p class="text-[10px] text-slate-500 truncate mt-0.5">${s.role}</p>
         </div>
-        <div class="text-right">
-          <p class="font-bold text-emerald-700">${s.converted} ${t('dash.orders_converted', 'Orders Converted')}</p>
-          <p class="text-[10px] text-slate-400">${s.activeQueries} ${t('dash.active_leads', 'Active Leads')}</p>
+        <div class="text-right shrink-0">
+          <p class="font-bold text-emerald-700 text-[11px] sm:text-xs">${s.converted} ${t('dash.orders_converted', 'Orders Converted')}</p>
+          <p class="text-[10px] text-slate-400 mt-0.5">${s.activeQueries} ${t('dash.active_leads', 'Active Leads')}</p>
         </div>
       </div>
     `).join('');
