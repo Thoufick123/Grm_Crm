@@ -3244,13 +3244,13 @@
       <!-- VIEW: ORDERS (DASHBOARD & ORDER HISTORY)   -->
       <!-- ========================================== -->
       <section id="view-orders" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
-        <div class="max-w-7xl mx-auto space-y-4 sm:space-y-5">
+        <div class="max-w-7xl mx-auto min-w-0 space-y-4 sm:space-y-5">
 
           <!-- 1. TOP COMMAND BAR: TITLE, SUBMODULE SWITCHER & ACTIONS -->
           <div
-            class="bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+            class="bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 min-w-0">
             <!-- Left: Title & Live Badge -->
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 min-w-0">
               <div
                 class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
                 <span id="orders-hub-icon" class="material-symbols-outlined text-[22px] sm:text-[24px]">analytics</span>
@@ -3269,24 +3269,24 @@
 
 
             <!-- Right: Action Buttons with Date Range Filter -->
-            <div class="flex items-center gap-2 self-start lg:self-center shrink-0 flex-wrap">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 self-stretch lg:self-center min-w-0 w-full lg:w-auto lg:shrink-0">
 
               <!-- Date Range Filter: From & To -->
               <div
-                class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 shadow-2xs"
+                class="grid grid-cols-1 sm:flex sm:items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 shadow-2xs min-w-0 w-full sm:w-auto"
                 title="Filter orders by date range">
-                <span class="material-symbols-outlined text-emerald-600 text-[17px]">calendar_month</span>
-                <div class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-emerald-600 text-[17px] hidden sm:inline-flex">calendar_month</span>
+                <div class="flex items-center justify-between sm:justify-start gap-1 min-w-0 w-full sm:w-auto">
                   <span class="text-[10px] font-extrabold text-slate-500 uppercase">From:</span>
                   <input type="date" id="orders-filter-date-from" onchange="onOrdersDateFilterChange()"
-                    class="bg-transparent font-bold text-slate-800 text-xs focus:outline-none cursor-pointer"
+                    class="w-[140px] max-w-full bg-transparent font-bold text-slate-800 text-xs focus:outline-none cursor-pointer"
                     title="Select start date">
                 </div>
-                <span class="text-slate-300">|</span>
-                <div class="flex items-center gap-1">
+                <span class="text-slate-300 hidden sm:inline">|</span>
+                <div class="flex items-center justify-between sm:justify-start gap-1 min-w-0 w-full sm:w-auto">
                   <span class="text-[10px] font-extrabold text-slate-500 uppercase">To:</span>
                   <input type="date" id="orders-filter-date-to" onchange="onOrdersDateFilterChange()"
-                    class="bg-transparent font-bold text-slate-800 text-xs focus:outline-none cursor-pointer"
+                    class="w-[140px] max-w-full bg-transparent font-bold text-slate-800 text-xs focus:outline-none cursor-pointer"
                     title="Select end date">
                 </div>
                 <button type="button" onclick="clearOrdersDateFilter()" id="btn-clear-orders-date"
@@ -3296,20 +3296,22 @@
                 </button>
               </div>
 
-              <!-- Download Report -->
-              <button type="button" onclick="downloadOrdersDashboardReport()"
-                class="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
-                title="Download Excel/CSV Report">
-                <span class="material-symbols-outlined text-[17px]">download</span>
-                <span class="hidden sm:inline">Export</span>
-              </button>
+              <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+                <!-- Download Report -->
+                <button type="button" onclick="downloadOrdersDashboardReport()"
+                  class="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+                  title="Download Excel/CSV Report">
+                  <span class="material-symbols-outlined text-[17px]">download</span>
+                  <span>Export</span>
+                </button>
 
-              <!-- Refresh -->
-              <button type="button" onclick="refreshOrdersFromDB()"
-                class="p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 transition shadow-2xs cursor-pointer"
-                title="Refresh Live Orders from Database">
-                <span class="material-symbols-outlined text-[18px]">sync</span>
-              </button>
+                <!-- Refresh -->
+                <button type="button" onclick="refreshOrdersFromDB()"
+                  class="w-full sm:w-auto flex items-center justify-center p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 transition shadow-2xs cursor-pointer"
+                  title="Refresh Live Orders from Database">
+                  <span class="material-symbols-outlined text-[18px]">sync</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -3598,64 +3600,64 @@
 
             <!-- Filters & Search Toolbar -->
             <div
-              class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+              class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 w-full min-w-0">
               <!-- Search Input -->
-              <div class="relative flex-1 max-w-md">
+              <div class="relative flex-1 max-w-md min-w-0 w-full">
                 <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
                 <input type="text" id="order-history-search" oninput="filterOrdersHistoryTable()"
                   placeholder="Search customer, phone, order ID, product, staff..."
-                  class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                  class="w-full min-w-0 pl-9 pr-3 sm:pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
               </div>
 
               <!-- Quick Status Pills -->
-              <div class="flex items-center gap-1.5 flex-wrap">
+              <div class="grid grid-cols-2 sm:flex sm:items-center sm:flex-wrap gap-1.5 w-full min-w-0">
                 <button type="button" onclick="setOrderHistoryStatusFilter('ALL')" id="filter-btn-status-ALL"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white cursor-pointer">
+                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white cursor-pointer text-center justify-center">
                   All (<span id="count-filter-all">0</span>)
                 </button>
                 <button type="button" onclick="setOrderHistoryStatusFilter('PLACED')" id="filter-btn-status-PLACED"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-blue-100 cursor-pointer">
+                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-blue-100 cursor-pointer text-center">
                   Placed (<span id="count-filter-placed">0</span>)
                 </button>
                 <button type="button" onclick="setOrderHistoryStatusFilter('PACKED')" id="filter-btn-status-PACKED"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-purple-100 cursor-pointer">
+                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-purple-100 cursor-pointer text-center">
                   Packed (<span id="count-filter-packed">0</span>)
                 </button>
                 <button type="button" onclick="setOrderHistoryStatusFilter('SHIPPED')" id="filter-btn-status-SHIPPED"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-amber-100 cursor-pointer">
+                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-amber-100 cursor-pointer text-center">
                   Shipped (<span id="count-filter-shipped">0</span>)
                 </button>
                 <button type="button" onclick="setOrderHistoryStatusFilter('OUT_FOR_DELIVERY')"
                   id="filter-btn-status-OUT_FOR_DELIVERY"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-orange-100 cursor-pointer">
+                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-orange-100 cursor-pointer text-center">
                   Out for Delivery (<span id="count-filter-out-for-delivery">0</span>)
                 </button>
 
                 <button type="button" onclick="setOrderHistoryStatusFilter('DELIVERED')"
                   id="filter-btn-status-DELIVERED"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-emerald-100 cursor-pointer">
+                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-emerald-100 cursor-pointer text-center">
                   Delivered (<span id="count-filter-delivered">0</span>)
                 </button>
               </div>
 
               <!-- Staff Filter & Download CSV -->
-              <div class="flex items-center gap-2">
+              <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto min-w-0">
                 <select id="order-history-staff-filter" onchange="filterOrdersHistoryTable()"
-                  class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none">
+                  class="col-span-2 sm:col-span-1 w-full sm:w-auto min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none">
                   <option value="ALL">All Staff Members</option>
                   <!-- Populated by JS -->
                 </select>
                 <button type="button" onclick="downloadOrdersHistoryCSV()"
-                  class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 whitespace-normal text-center leading-tight"
                   title="Download Order History as CSV">
                   <span class="material-symbols-outlined text-[16px]">download</span>
                   <span>Export CSV</span>
                 </button>
                 <button type="button" onclick="openBatchPackingSlipsModal()"
-                  class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 whitespace-normal text-center leading-tight"
                   title="Print Packing Slips for all current filtered orders">
                   <span class="material-symbols-outlined text-[16px]">receipt_long</span>
-                  <span>Packing Slips (<span id="batch-slips-count">0</span>)</span>
+                  <span class="min-w-0 text-center leading-tight">Packing Slips (<span id="batch-slips-count">0</span>)</span>
                 </button>
               </div>
             </div>
@@ -11328,7 +11330,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=22.4"></script>
+  <script src="crm_app.js?v=22.5"></script>
 </body>
 
 </html>
