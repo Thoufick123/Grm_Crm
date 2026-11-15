@@ -1300,7 +1300,7 @@
   <!-- ========================================================================= -->
   <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100">
 
-    <!-- Top Header (Responsive: Row 1 = Title, Row 2 = Action Buttons on Mobile; Clean 1-Row on Desktop) -->
+    <!-- Top Header (Mobile: title only; Desktop: title and action buttons) -->
     <header
       class="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 sm:gap-3">
       <!-- Row 1 on Mobile / Left Side on Desktop: Sidebar Toggle Button & Dynamic Header Title -->
@@ -1321,8 +1321,8 @@
         </div>
       </div>
 
-      <!-- Row 2 on Mobile (Buttons in Next Row) / Right Side on Desktop: Action Buttons -->
-      <div class="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2.5 w-full sm:w-auto overflow-x-auto sm:overflow-visible pb-0.5 sm:pb-0 custom-chat-scroll shrink-0">
+      <!-- Header actions are available on desktop; mobile navigation remains unchanged. -->
+      <div class="hidden sm:flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2.5 w-full sm:w-auto shrink-0">
         <!-- Interactive Multi-WhatsApp Number Switcher Dropdown -->
         <div class="relative shrink-0" id="header-phone-switcher-wrapper">
           <button type="button" onclick="togglePhoneSwitcherDropdown(event)" id="header-phone-badge"
@@ -2724,26 +2724,6 @@
             </div>
           </div>
 
-          <!-- Mobile Quick Action Shortcuts Bar (Visible only on Mobile & Tablet screens < lg) -->
-          <div class="grid grid-cols-4 gap-2 lg:hidden">
-            <button type="button" onclick="switchView('inbox')" class="flex flex-col items-center justify-center p-2.5 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200/80 rounded-xl text-emerald-900 transition shadow-2xs group cursor-pointer">
-              <span class="material-symbols-outlined text-[20px] text-emerald-600 group-hover:scale-110 transition-transform">forum</span>
-              <span class="text-[10px] font-bold mt-1">Inbox</span>
-            </button>
-            <button type="button" onclick="switchView('orders')" class="flex flex-col items-center justify-center p-2.5 bg-pink-50 hover:bg-pink-100 active:bg-pink-200 border border-pink-200/80 rounded-xl text-pink-900 transition shadow-2xs group cursor-pointer">
-              <span class="material-symbols-outlined text-[20px] text-pink-600 group-hover:scale-110 transition-transform">shopping_bag</span>
-              <span class="text-[10px] font-bold mt-1">Orders</span>
-            </button>
-            <button type="button" onclick="switchView('followups')" class="flex flex-col items-center justify-center p-2.5 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200/80 rounded-xl text-amber-900 transition shadow-2xs group cursor-pointer">
-              <span class="material-symbols-outlined text-[20px] text-amber-600 group-hover:scale-110 transition-transform">schedule</span>
-              <span class="text-[10px] font-bold mt-1">Follow-up</span>
-            </button>
-            <button type="button" onclick="switchView('settings')" class="flex flex-col items-center justify-center p-2.5 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border border-blue-200/80 rounded-xl text-blue-900 transition shadow-2xs group cursor-pointer">
-              <span class="material-symbols-outlined text-[20px] text-blue-600 group-hover:scale-110 transition-transform">qr_code_scanner</span>
-              <span class="text-[10px] font-bold mt-1">Link WA</span>
-            </button>
-          </div>
-
           <!-- 6 Main KPI Cards: Responsive 2-col on Mobile, 3-col on Tablet, 6-col on Desktop -->
           <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5 sm:gap-4">
             <!-- Card 1: Total Enquiries (Blue) -->
@@ -2930,7 +2910,7 @@
                 class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-emerald-300 shadow-sm"
                 title="Sync live products & stock from connected WhatsApp Business Account (100% Free)">
                 <span class="material-symbols-outlined text-[18px] text-brand-wa">sync_saved_locally</span>
-                <span>Sync WhatsApp Catalog (Free)</span>
+                <span>Sync WhatsApp</span>
               </button>
 
               <button onclick="refreshCatalogStockFromAPI()"

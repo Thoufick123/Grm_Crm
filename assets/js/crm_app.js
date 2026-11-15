@@ -18178,7 +18178,7 @@ async function syncWhatsAppBusinessCatalog() {
     showToast('Catalog Updated', 'Refreshed local inventory and stock from WhatsApp configuration.', 'inventory', 'emerald');
   } finally {
     if (btn) {
-      btn.innerHTML = `<span class="material-symbols-outlined text-[18px] text-brand-wa">sync_saved_locally</span> <span>Sync WhatsApp Catalog (Free)</span>`;
+      btn.innerHTML = `<span class="material-symbols-outlined text-[18px] text-brand-wa">sync_saved_locally</span> <span>Sync WhatsApp</span>`;
       btn.disabled = false;
     }
   }
