@@ -4533,43 +4533,43 @@
       <!-- ========================================== -->
       <!-- VIEW: STAFF MANAGEMENT MODULE -->
       <!-- ========================================== -->
-      <section id="view-staff" class="h-full overflow-y-auto p-6 hidden">
-        <div class="max-w-7xl mx-auto space-y-6">
+      <section id="view-staff" class="h-full overflow-y-auto p-3.5 sm:p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-4 sm:space-y-6">
 
           <!-- ======================================================= -->
           <!-- SUB-DIVISION 1: TOTAL STAFF LIST -->
           <!-- ======================================================= -->
-          <div id="subview-staff-list" class="space-y-6">
+          <div id="subview-staff-list" class="space-y-4 sm:space-y-6">
 
             <!-- Staff KPI Overview Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Total Staff Team</span>
-                <p id="kpi-staff-total" class="text-2xl font-black text-slate-900 mt-1">3 Members</p>
-                <p class="text-[11px] text-blue-600 font-semibold mt-1 flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[14px]">groups</span> Onboarded Staff
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+              <div class="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <span class="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 truncate block">Total Staff Team</span>
+                <p id="kpi-staff-total" class="text-lg sm:text-2xl font-black text-slate-900 mt-1">3 Members</p>
+                <p class="text-[10px] sm:text-[11px] text-blue-600 font-semibold mt-1 flex items-center gap-1 truncate">
+                  <span class="material-symbols-outlined text-[14px] shrink-0">groups</span> Onboarded Staff
                 </p>
               </div>
 
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Active On-Duty</span>
-                <p id="kpi-staff-active" class="text-2xl font-black text-emerald-700 mt-1">3 Active</p>
-                <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[14px]">check_circle</span> Ready to take leads
+              <div class="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <span class="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 truncate block">Active On-Duty</span>
+                <p id="kpi-staff-active" class="text-lg sm:text-2xl font-black text-emerald-700 mt-1">3 Active</p>
+                <p class="text-[10px] sm:text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1 truncate">
+                  <span class="material-symbols-outlined text-[14px] shrink-0">check_circle</span> Ready to take leads
                 </p>
               </div>
 
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Active Leads Handled</span>
-                <p id="kpi-staff-leads" class="text-2xl font-black text-amber-600 mt-1">6 Leads</p>
-                <p class="text-[11px] text-slate-500 font-medium mt-1">In progress across team</p>
+              <div class="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <span class="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 truncate block">Active Leads Handled</span>
+                <p id="kpi-staff-leads" class="text-lg sm:text-2xl font-black text-amber-600 mt-1">6 Leads</p>
+                <p class="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-1 truncate">In progress across team</p>
               </div>
 
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Total Converted Orders</span>
-                <p id="kpi-staff-orders" class="text-2xl font-black text-purple-700 mt-1">34 Orders</p>
-                <p class="text-[11px] text-purple-600 font-semibold mt-1 flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[14px]">trending_up</span> ₹42,500+ Revenue
+              <div class="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <span class="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 truncate block">Total Converted Orders</span>
+                <p id="kpi-staff-orders" class="text-lg sm:text-2xl font-black text-purple-700 mt-1">34 Orders</p>
+                <p class="text-[10px] sm:text-[11px] text-purple-600 font-semibold mt-1 flex items-center gap-1 truncate">
+                  <span class="material-symbols-outlined text-[14px] shrink-0">trending_up</span> ₹42,500+ Revenue
                 </p>
               </div>
             </div>
@@ -4577,40 +4577,39 @@
             <!-- Staff List Container with Filter & Search -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div
-                class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                class="p-3.5 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                 <div>
-                  <h3 class="font-bold text-sm text-slate-900">Registered Staff Directory</h3>
+                  <h3 class="font-bold text-xs sm:text-sm text-slate-900">Registered Staff Directory</h3>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <div class="relative">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                  <div class="relative flex-1 sm:w-56">
                     <span
                       class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
                     <input type="text" id="staff-search-input" oninput="renderStaffTable()"
                       placeholder="Search staff name or role..."
-                      class="pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-wa focus:bg-white w-56 transition">
+                      class="w-full pl-9 pr-3 py-1.5 sm:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
                   </div>
                   <button type="button" onclick="switchStaffTab('create')" id="btn-add-staff-table"
-                    class="px-3.5 py-1.5 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1 transition">
+                    class="px-3.5 py-1.5 sm:py-2 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1 transition cursor-pointer shrink-0">
                     <span class="material-symbols-outlined text-[16px]">add</span> + Add Staff
                   </button>
                 </div>
               </div>
 
               <!-- Table -->
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-700">
+              <div class="overflow-x-auto w-full">
+                <table class="w-full text-left text-xs text-slate-700 min-w-[640px] sm:min-w-full">
                   <thead
-                    class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                    class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider whitespace-nowrap">
                     <tr>
-                      <th class="py-3.5 px-4">Staff Member</th>
-                      <th class="py-3.5 px-4">Role & Specialization</th>
-
-                      <th class="py-3.5 px-4">Today Handled</th>
-                      <th class="py-3.5 px-4">Active Leads</th>
-                      <th class="py-3.5 px-4">Converted Orders</th>
-                      <th class="py-3.5 px-4">Status</th>
-                      <th class="py-3.5 px-4 text-right" id="th-staff-actions">Actions</th>
+                      <th class="py-3 px-3 sm:px-4">Staff Member</th>
+                      <th class="py-3 px-3 sm:px-4">Role & Specialization</th>
+                      <th class="py-3 px-3 sm:px-4 text-center">Today Handled</th>
+                      <th class="py-3 px-3 sm:px-4 text-center">Active Leads</th>
+                      <th class="py-3 px-3 sm:px-4 text-center">Converted Orders</th>
+                      <th class="py-3 px-3 sm:px-4">Status</th>
+                      <th class="py-3 px-3 sm:px-4 text-right" id="th-staff-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="staff-list-table-body" class="divide-y divide-slate-100 font-medium">
@@ -4626,19 +4625,27 @@
           <!-- SUB-DIVISION 2: DAILY MESSAGE ALLOCATION & QUOTA (200 TARGET) -->
           <!-- ======================================================= -->
           <!-- ======================================================= -->
-          <div id="subview-staff-create" class="space-y-6 hidden">
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-3xl mx-auto space-y-6">
-              <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md">
-                  <span class="material-symbols-outlined text-[24px]">person_add</span>
+          <div id="subview-staff-create" class="space-y-4 sm:space-y-6 hidden">
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 max-w-3xl mx-auto space-y-4 sm:space-y-6">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3 sm:pb-4">
+                <div class="flex items-center gap-2.5 sm:gap-3">
+                  <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md shrink-0">
+                    <span class="material-symbols-outlined text-[20px] sm:text-[24px]">person_add</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-xs sm:text-sm text-slate-900">Onboard New Staff Member</h3>
+                    <p class="text-[10px] sm:text-[11px] text-slate-400">Add credentials and role assignments</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 class="font-bold text-sm text-slate-900">Onboard New Staff Member</h3>
-                </div>
+                <button type="button" onclick="switchStaffTab('list')"
+                  class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                  title="Back to All Staff">
+                  <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
               </div>
 
-              <form onsubmit="handleCreateNewStaff(event)" class="space-y-5 text-xs">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form onsubmit="handleCreateNewStaff(event)" class="space-y-3.5 sm:space-y-5 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Full Name <span
                         class="text-rose-500">*</span>:</label>
@@ -4646,7 +4653,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">person</span>
                       <input type="text" id="staff-new-name" required placeholder="e.g. Suresh Kumar"
-                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                        class="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
                     </div>
                   </div>
 
@@ -4656,12 +4663,12 @@
                       <span
                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">mail</span>
                       <input type="email" id="staff-new-email" placeholder="e.g. suresh@grmgarments.com"
-                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                        class="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
                     </div>
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Mobile / WhatsApp Number <span
                         class="text-rose-500">*</span>:</label>
@@ -4669,7 +4676,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">phone</span>
                       <input type="text" id="staff-new-phone" required placeholder="e.g. +91 98765 12345"
-                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                        class="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
                     </div>
                   </div>
 
@@ -4677,17 +4684,17 @@
                     <label class="block font-bold text-slate-800 mb-1">Primary Role <span
                         class="text-rose-500">*</span>:</label>
                     <select id="staff-new-role" required
-                      class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                      class="w-full p-2 sm:p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
                       <!-- Dynamically populated from created roles -->
                     </select>
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Product Specialization / Department:</label>
                     <input type="text" id="staff-new-specialization" placeholder="e.g. Sales, Support, Operations, General"
-                      class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa focus:bg-white transition"
+                      class="w-full p-2 sm:p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa focus:bg-white transition"
                       list="staff-dept-suggestions">
                     <datalist id="staff-dept-suggestions">
                       <option value="General"></option>
@@ -4701,7 +4708,7 @@
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Initial Status:</label>
                     <select id="staff-new-status"
-                      class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                      class="w-full p-2 sm:p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
                       <option value="ACTIVE" selected>🟢 Active (Ready for Lead Assignment)</option>
                       <option value="ON_LEAVE">⚪ On Leave (Temporary Pause)</option>
                     </select>
@@ -4709,7 +4716,7 @@
                 </div>
 
                 <!-- Password Row -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-start">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Login Password <span
                         class="text-rose-500">*</span>:</label>
@@ -4718,7 +4725,7 @@
                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">lock</span>
                       <input type="password" id="staff-new-password" required
                         placeholder="Enter login password (e.g. staff123)"
-                        class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                        class="w-full pl-9 pr-10 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
                       <button type="button" onclick="togglePasswordVisibility('staff-new-password', this)"
                         class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
                         title="Show / hide password">
@@ -4729,10 +4736,10 @@
                       at login screen (min. 6 chars).</span>
                   </div>
 
-                  <div class="flex items-center">
+                  <div>
                     <div
                       class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-[11px] leading-relaxed w-full">
-                      <div class="font-bold text-slate-700 flex items-center gap-1.5 mb-0.5">
+                      <div class="font-bold text-slate-700 flex items-center gap-1.5 mb-1">
                         <span class="material-symbols-outlined text-[15px] text-emerald-600">security</span>
                         <span>Staff Login Credentials</span>
                       </div>
@@ -4742,13 +4749,13 @@
                   </div>
                 </div>
 
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                <div class="pt-3 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2.5 sm:gap-3">
                   <button type="button" onclick="switchStaffTab('list')"
-                    class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
+                    class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition text-center cursor-pointer">
                     Cancel
                   </button>
                   <button type="submit"
-                    class="px-6 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-xl shadow-md flex items-center gap-1.5 transition hover:scale-105">
+                    class="w-full sm:w-auto px-6 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                     <span class="material-symbols-outlined text-[18px]">check_circle</span> Onboard & Create Staff
                   </button>
                 </div>
@@ -4759,29 +4766,30 @@
           <!-- ======================================================= -->
           <!-- SUB-DIVISION 3: ASSIGN THE ROLE -->
           <!-- ======================================================= -->
-          <div id="subview-staff-roles" class="space-y-6 hidden">
+          <div id="subview-staff-roles" class="space-y-4 sm:space-y-6 hidden">
 
             <!-- Granular Role-Based Access Control Card -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-6 space-y-4 sm:space-y-6">
 
               <!-- Header -->
               <div
-                class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-                <div class="flex items-center gap-3">
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 pb-3.5 sm:pb-5">
+                <div class="flex items-center gap-2.5 sm:gap-3">
                   <div
-                    class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-600 text-white flex items-center justify-center shadow-md">
-                    <span class="material-symbols-outlined text-[24px]">admin_panel_settings</span>
+                    class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <span class="material-symbols-outlined text-[22px] sm:text-[24px]">admin_panel_settings</span>
                   </div>
                   <div>
-                    <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
-                      <span>Role-Based Access Control &amp; Module Permissions</span>
+                    <h3 class="font-bold text-xs sm:text-base text-slate-900 leading-tight">
+                      Role-Based Access Control &amp; Module Permissions
                     </h3>
+                    <p class="text-[10px] sm:text-xs text-slate-400 mt-0.5">Configure operational permissions per role</p>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 self-start sm:self-auto">
                   <button type="button" onclick="handleDeleteCurrentRole()" id="btn-delete-role"
-                    class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition hidden flex items-center gap-1 cursor-pointer">
+                    class="px-3 py-1.5 sm:py-2 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition hidden flex items-center gap-1 cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">delete</span>
                     <span>Delete Role</span>
                   </button>
@@ -4789,21 +4797,21 @@
               </div>
 
               <!-- Role Creation & Action Presets Bar -->
-              <div class="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div class="bg-slate-50/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
 
                   <!-- Role Name Input & Direct Save Button -->
-                  <div class="flex flex-wrap items-center gap-3">
-                    <div>
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+                    <div class="w-full sm:w-auto">
                       <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                         <span class="material-symbols-outlined text-[15px] text-purple-600">badge</span>
                         <span>Role Name:</span>
                       </label>
-                      <div class="flex items-center gap-2">
+                      <div class="flex items-center gap-2 w-full sm:w-auto">
                         <input type="text" id="role-input-name" placeholder="Enter Role Name (e.g. Telecaller, Support, Whatsapp)"
-                          class="w-64 sm:w-80 px-3.5 py-2 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none transition shadow-2xs">
+                          class="flex-1 min-w-0 sm:w-72 px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none transition shadow-2xs">
                         <button type="button" onclick="handleSaveRolePermissions()"
-                          class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                          class="shrink-0 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap">
                           <span class="material-symbols-outlined text-[16px]">save</span>
                           <span>Save Role</span>
                         </button>
@@ -4811,46 +4819,46 @@
                     </div>
 
                     <!-- Existing Roles Switcher -->
-                    <div class="sm:border-l sm:border-slate-200 sm:pl-3">
+                    <div class="w-full sm:w-auto sm:border-l sm:border-slate-200 sm:pl-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/80">
                       <label class="block text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1">
                         <span class="material-symbols-outlined text-[14px] text-slate-400">tune</span>
                         <span>Select Role:</span>
                       </label>
                       <div class="flex items-center gap-2">
                         <select id="role-matrix-role-select" onchange="handleRoleSelectChange(this.value)"
-                          class="bg-white border border-slate-300 text-slate-800 font-bold text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer shadow-2xs">
+                          class="flex-1 sm:flex-none bg-white border border-slate-300 text-slate-800 font-bold text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer shadow-2xs min-w-0">
                           <!-- Populated dynamically -->
                         </select>
                         <span id="role-staff-count-badge"
-                          class="text-[10px] font-mono font-bold bg-purple-100 text-purple-800 px-2 py-1 rounded-lg border border-purple-200">
-                          0 Staff
+                          class="shrink-0 text-[10px] font-mono font-bold bg-purple-100 text-purple-800 px-2 py-1 rounded-lg border border-purple-200 whitespace-nowrap">
+                          0 Staff Assigned
                         </span>
                       </div>
                     </div>
                   </div>
 
                   <!-- Quick Action Presets -->
-                  <div class="flex items-center gap-1.5 flex-wrap self-start lg:self-center">
-                    <span class="text-[10px] font-bold text-slate-500 uppercase mr-1">Presets:</span>
+                  <div class="flex items-center gap-1.5 flex-wrap w-full lg:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/80">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase mr-1 shrink-0">Presets:</span>
                     <button type="button" onclick="applyRolePreset('all')"
-                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                       title="Grant all actions across all modules">
-                      <span class="material-symbols-outlined text-[12px] text-emerald-600">check_circle</span> All
+                      <span class="material-symbols-outlined text-[13px] text-emerald-600">check_circle</span> All
                     </button>
                     <button type="button" onclick="applyRolePreset('view_only')"
-                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                       title="Read-only access (View only)">
-                      <span class="material-symbols-outlined text-[12px] text-sky-600">visibility</span> View Only
+                      <span class="material-symbols-outlined text-[13px] text-sky-600">visibility</span> View Only
                     </button>
                     <button type="button" onclick="applyRolePreset('sales')"
-                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                       title="Standard Sales Specialist permissions">
-                      <span class="material-symbols-outlined text-[12px] text-purple-600">point_of_sale</span> Sales
+                      <span class="material-symbols-outlined text-[13px] text-purple-600">point_of_sale</span> Sales
                     </button>
                     <button type="button" onclick="applyRolePreset('reset')"
-                      class="px-2.5 py-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      class="px-2.5 py-1.5 bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                       title="Clear all checkboxes">
-                      <span class="material-symbols-outlined text-[12px] text-rose-600">clear_all</span> Clear
+                      <span class="material-symbols-outlined text-[13px] text-rose-600">clear_all</span> Clear
                     </button>
                   </div>
 
@@ -4858,20 +4866,20 @@
               </div>
 
               <!-- GRANULAR MODULE PERMISSIONS MATRIX TABLE -->
-              <div class="overflow-hidden rounded-2xl border border-slate-200 shadow-xs">
-                <table class="w-full text-left text-xs text-slate-700">
+              <div class="overflow-x-auto rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs w-full">
+                <table class="w-full text-left text-xs text-slate-700 min-w-[560px] sm:min-w-full">
                   <thead
-                    class="bg-gradient-to-r from-slate-900 to-slate-800 text-white font-bold text-[11px] uppercase tracking-wider">
+                    class="bg-gradient-to-r from-slate-900 to-slate-800 text-white font-bold text-[10px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap">
                     <tr>
-                      <th class="py-3.5 px-4 w-2/5">
+                      <th class="py-3 px-3.5 sm:py-3.5 sm:px-4 min-w-[200px] w-2/5">
                         <div class="flex items-center gap-2">
                           <span class="material-symbols-outlined text-[16px] text-indigo-400">tune</span>
-                          <span>CRM Module / Operational Section</span>
+                          <span>CRM Module / Section</span>
                         </div>
                       </th>
-                      <th class="py-3.5 px-3 text-center w-1/8">
+                      <th class="py-3 px-2 sm:py-3.5 sm:px-3 text-center min-w-[70px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-sky-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-sky-300 transition select-none"
                           title="Select / Deselect View for all 12 modules">
                           <input type="checkbox" id="role-header-view"
                             onchange="handleToggleActionForAllModules('view', this.checked)"
@@ -4880,9 +4888,9 @@
                           <span>View</span>
                         </label>
                       </th>
-                      <th class="py-3.5 px-3 text-center w-1/8">
+                      <th class="py-3 px-2 sm:py-3.5 sm:px-3 text-center min-w-[70px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-emerald-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-emerald-300 transition select-none"
                           title="Select / Deselect Create for all 12 modules">
                           <input type="checkbox" id="role-header-create"
                             onchange="handleToggleActionForAllModules('create', this.checked)"
@@ -4891,9 +4899,9 @@
                           <span>Create</span>
                         </label>
                       </th>
-                      <th class="py-3.5 px-3 text-center w-1/8">
+                      <th class="py-3 px-2 sm:py-3.5 sm:px-3 text-center min-w-[70px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-amber-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-amber-300 transition select-none"
                           title="Select / Deselect Edit for all 12 modules">
                           <input type="checkbox" id="role-header-edit"
                             onchange="handleToggleActionForAllModules('edit', this.checked)"
@@ -4902,9 +4910,9 @@
                           <span>Edit</span>
                         </label>
                       </th>
-                      <th class="py-3.5 px-3 text-center w-1/8">
+                      <th class="py-3 px-2 sm:py-3.5 sm:px-3 text-center min-w-[70px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-rose-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-rose-300 transition select-none"
                           title="Select / Deselect Delete for all 12 modules">
                           <input type="checkbox" id="role-header-delete"
                             onchange="handleToggleActionForAllModules('delete', this.checked)"
@@ -4913,15 +4921,15 @@
                           <span>Delete</span>
                         </label>
                       </th>
-                      <th class="py-3.5 px-4 text-center w-1/8">
+                      <th class="py-3 px-3 sm:py-3.5 sm:px-4 text-center min-w-[85px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-teal-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-teal-300 transition select-none"
                           title="Select / Deselect All Actions across all 12 modules">
                           <input type="checkbox" id="role-header-all"
                             onchange="handleToggleActionForAllModules('all', this.checked)"
                             class="w-4 h-4 text-teal-500 rounded border-slate-600 bg-slate-800 focus:ring-teal-400 cursor-pointer">
                           <span class="material-symbols-outlined text-[14px] text-teal-400">select_all</span>
-                          <span>All Actions</span>
+                          <span>All</span>
                         </label>
                       </th>
                     </tr>
@@ -4957,7 +4965,7 @@
 
           <!-- Header Banner -->
           <div
-            class="bg-gradient-to-r from-brand-dark to-emerald-900 p-4 sm:p-6 rounded-2xl text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            class="bg-gradient-to-r from-brand-dark to-emerald-900 p-4 sm:p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
             <div class="flex items-center gap-3 sm:gap-4 min-w-0">
               <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand-wa flex items-center justify-center text-white shadow-glow shrink-0">
                 <span class="material-symbols-outlined text-[24px] sm:text-[28px]">settings_phone</span>
@@ -4966,10 +4974,6 @@
                 <h2 class="text-base sm:text-xl font-bold leading-snug">WhatsApp Business Phone Configuration</h2>
               </div>
             </div>
-            <span
-              class="self-start sm:self-auto px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-full text-xs font-bold flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"></span> Live Dynamic Sync
-            </span>
           </div>
 
           <!-- Configuration Form Card -->
@@ -5123,7 +5127,7 @@
 
           <!-- BRAND IDENTITY & CUSTOMER DISPLAY CONFIGURATION CARD -->
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-md shrink-0">
                   <span class="material-symbols-outlined text-[22px]">storefront</span>
@@ -5132,10 +5136,6 @@
                   <h3 class="font-bold text-sm text-slate-900 leading-snug">Company Brand Identity & Customer Display</h3>
                 </div>
               </div>
-              <span
-                class="self-start sm:self-auto px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 shrink-0">
-                Brand Branding Mode
-              </span>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -5248,65 +5248,66 @@
       <!-- ========================================== -->
       <!-- VIEW: DATA BACKUP & RECOVERY MODULE -->
       <!-- ========================================== -->
-      <section id="view-backup" class="h-full overflow-y-auto p-6 hidden">
-        <div class="max-w-4xl mx-auto space-y-6">
+      <section id="view-backup" class="h-full overflow-y-auto p-3.5 sm:p-6 hidden">
+        <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
 
           <!-- Header Banner -->
           <div
-            class="bg-gradient-to-r from-emerald-950 via-brand-dark to-slate-900 p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-glow">
-                <span class="material-symbols-outlined text-[28px]">cloud_sync</span>
+            class="bg-gradient-to-r from-emerald-950 via-brand-dark to-slate-900 p-4 sm:p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
+            <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-glow shrink-0">
+                <span class="material-symbols-outlined text-[24px] sm:text-[28px]">cloud_sync</span>
               </div>
-              <div>
-                <h2 class="text-xl font-bold">CRM Data Backup & Recovery Hub</h2>
+              <div class="min-w-0">
+                <h2 class="text-base sm:text-xl font-bold leading-snug">CRM Data Backup &amp; Recovery Hub</h2>
               </div>
             </div>
-            <span
-              class="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-full text-xs font-bold flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 100% Data Protection
-            </span>
           </div>
 
           <!-- Backup Status Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
               <span class="text-[10px] uppercase font-bold text-slate-400">Total Records Protected</span>
-              <p id="backup-total-records" class="text-2xl font-black text-slate-900 mt-1">128 Items</p>
+              <p id="backup-total-records" class="text-xl sm:text-2xl font-black text-slate-900 mt-1">128 Items</p>
               <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px]">check_circle</span> Customers & Orders Safe
+                <span class="material-symbols-outlined text-[14px]">check_circle</span> Customers &amp; Orders Safe
               </p>
             </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
               <span class="text-[10px] uppercase font-bold text-slate-400">Auto-Backup Engine</span>
-              <p class="text-2xl font-black text-emerald-700 mt-1">Active (Local)</p>
+              <p class="text-xl sm:text-2xl font-black text-emerald-700 mt-1">Active (Local)</p>
               <p class="text-[11px] text-slate-500 mt-1">Continuous zero-loss sync</p>
             </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
               <span class="text-[10px] uppercase font-bold text-slate-400">Last Backup Snapshot</span>
-              <p id="backup-last-time" class="text-2xl font-black text-blue-700 mt-1">Today</p>
+              <p id="backup-last-time" class="text-xl sm:text-2xl font-black text-blue-700 mt-1">Today</p>
               <p class="text-[11px] text-slate-500 mt-1">Ready for 1-click download</p>
             </div>
           </div>
 
           <!-- Action Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 
             <!-- 1. Export Backup Card -->
             <div id="card-backup-export"
-              class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between space-y-4">
+              class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 flex flex-col justify-between space-y-4">
               <div class="space-y-2">
                 <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
                   <span class="material-symbols-outlined text-[24px]">download</span>
                 </div>
-                <h3 class="font-bold text-slate-900 text-sm">Download Complete Database Backup</h3>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base">Download Complete Database Backup</h3>
                 <p class="text-xs text-slate-500 leading-relaxed">
                   Export all customer profiles, chat history, queries, staff assignments, product reservations, and
                   audit logs into a single downloadable JSON backup file.
                 </p>
               </div>
+<<<<<<< HEAD
               <button id="btn-download-backup-json" onclick="handleExportBackupJSON()"
                 class="w-full py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02]">
+=======
+              <button onclick="handleExportBackupJSON()"
+                class="w-full py-2.5 sm:py-3 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02] cursor-pointer">
+>>>>>>> 7ae4403b8e76e8291e0e2cbb76cdb4a43cbc0161
                 <span class="material-symbols-outlined text-[18px]">file_download</span>
                 <span id="btn-download-backup-text">Download Backup File (.json)</span>
               </button>
@@ -5314,12 +5315,12 @@
 
             <!-- 2. Restore Backup Card -->
             <div id="card-backup-restore"
-              class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between space-y-4">
+              class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 flex flex-col justify-between space-y-4">
               <div class="space-y-2">
                 <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
                   <span class="material-symbols-outlined text-[24px]">upload_file</span>
                 </div>
-                <h3 class="font-bold text-slate-900 text-sm">Restore from Backup File</h3>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base">Restore from Backup File</h3>
                 <p class="text-xs text-slate-500 leading-relaxed">
                   Upload a previously saved CRM backup file to instantly restore the complete database state with zero
                   loss.
@@ -5329,9 +5330,9 @@
                 <input type="file" id="backup-file-input" accept=".json" class="hidden"
                   onchange="handleImportBackupJSON(event)">
                 <button onclick="document.getElementById('backup-file-input').click()"
-                  class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02]">
+                  class="w-full py-2.5 sm:py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02] cursor-pointer">
                   <span class="material-symbols-outlined text-[18px]">file_upload</span>
-                  <span>Upload & Restore Backup</span>
+                  <span>Upload &amp; Restore Backup</span>
                 </button>
               </div>
             </div>
@@ -5340,7 +5341,7 @@
 
           <!-- Reset / Factory Defaults Note -->
           <div id="card-backup-reset"
-            class="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center justify-between text-xs">
+            class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div>
               <h4 class="font-bold text-slate-800">Reset System to Initial Demo State</h4>
               <p class="text-slate-500 mt-0.5">Cleans temporary test chats and reloads the default garment catalog with
@@ -5349,7 +5350,7 @@
             <button
               onclick="if(confirm('Are you sure you want to reset demo data?')) { localStorage.removeItem('GRM_CRM_STATE_V2_5'); location.reload(); }"
               id="btn-backup-reset"
-              class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold transition">
+              class="w-full sm:w-auto px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold transition text-center cursor-pointer shrink-0">
               Reset Demo Data
             </button>
           </div>
@@ -6722,11 +6723,11 @@
           <span class="text-[10px] text-slate-400 mt-1 block">Only enter a password if you want to reset the staff member's login password.</span>
         </div>
 
-        <div class="pt-3 flex items-center justify-end gap-2 border-t border-slate-200">
+        <div class="pt-3 flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2 border-t border-slate-200">
           <button type="button" onclick="closeModal('modal-edit-staff')"
-            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer">Cancel</button>
+            class="w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer text-center">Cancel</button>
           <button type="submit"
-            class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition cursor-pointer">
+            class="w-full sm:w-auto px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer">
             <span class="material-symbols-outlined text-[18px]">save</span> Save Staff Details
           </button>
         </div>
@@ -8996,6 +8997,65 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL: UNIVERSAL ACTION & DELETE CONFIRMATION POPUP -->
+  <!-- ======================================================= -->
+  <div id="modal-custom-confirm"
+    class="fixed inset-0 z-[120] modal-backdrop hidden flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs"
+    onclick="if(event.target===this)cancelCustomConfirm()">
+    <div
+      class="bg-white w-full max-w-sm sm:max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+
+      <!-- Modal Header -->
+      <div id="custom-confirm-header"
+        class="p-4 sm:p-5 text-white flex items-center justify-between bg-gradient-to-r from-rose-900 via-slate-900 to-rose-950">
+        <div class="flex items-center gap-3 min-w-0">
+          <div id="custom-confirm-icon-box"
+            class="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white shadow-md shrink-0">
+            <span id="custom-confirm-icon" class="material-symbols-outlined text-[24px]">delete</span>
+          </div>
+          <div class="min-w-0">
+            <h3 id="custom-confirm-title" class="font-bold text-sm sm:text-base text-white truncate">Delete Confirmation</h3>
+            <p id="custom-confirm-subtitle" class="text-[11px] text-rose-200/80 truncate">Action requires confirmation</p>
+          </div>
+        </div>
+        <button type="button" onclick="cancelCustomConfirm()"
+          class="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer" title="Cancel & Close">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 sm:p-5 space-y-4 text-xs">
+        <div id="custom-confirm-banner"
+          class="p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-slate-800 flex items-start gap-3">
+          <span id="custom-confirm-banner-icon"
+            class="material-symbols-outlined text-rose-600 text-[22px] shrink-0 mt-0.5">warning</span>
+          <div class="text-xs space-y-1 min-w-0 flex-1">
+            <p id="custom-confirm-message" class="font-bold text-slate-900 leading-snug break-words">
+              Are you sure you want to proceed?
+            </p>
+            <p id="custom-confirm-detail" class="text-slate-600 text-[11px] leading-relaxed break-words hidden"></p>
+          </div>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
+          <button type="button" id="custom-confirm-btn-cancel" onclick="cancelCustomConfirm()"
+            class="flex-1 sm:flex-none px-4 py-2.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold rounded-xl transition cursor-pointer text-center text-xs">
+            Cancel
+          </button>
+          <button type="button" id="custom-confirm-btn-action" onclick="executeCustomConfirm()"
+            class="flex-1 sm:flex-none px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer text-xs">
+            <span id="custom-confirm-action-icon" class="material-symbols-outlined text-[17px]">delete</span>
+            <span id="custom-confirm-action-text">Delete</span>
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -11545,7 +11605,11 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
+<<<<<<< HEAD
   <script src="crm_app.js?v=20261116_v11"></script>
+=======
+  <script src="crm_app.js?v=20261116_v14"></script>
+>>>>>>> 7ae4403b8e76e8291e0e2cbb76cdb4a43cbc0161
 </body>
 
 </html>

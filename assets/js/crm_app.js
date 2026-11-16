@@ -11323,17 +11323,28 @@ function deleteRule(ruleId) {
     if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete auto-reply rules.', 'lock', 'rose');
     return;
   }
-  if (!confirm('Are you sure you want to delete this auto-reply rule?')) return;
-  if (!Array.isArray(CRM_STATE.autoReplyRules)) return;
-  CRM_STATE.autoReplyRules = CRM_STATE.autoReplyRules.filter(r => r.id !== ruleId);
-  saveCRMState();
-  renderAutoReplyRulesList();
-  renderInboxPresetTemplatesBar();
-  updateRulesCountBadge();
+  showConfirmDialog({
+    title: 'Delete Auto-Reply Rule',
+    subtitle: 'Automation Action',
+    message: 'Are you sure you want to delete this auto-reply rule?',
+    detail: 'This keyword template will no longer trigger automatic responses.',
+    confirmText: 'Yes, Delete Rule',
+    cancelText: 'Cancel',
+    icon: 'smart_toy',
+    color: 'rose',
+    onConfirm: () => {
+      if (!Array.isArray(CRM_STATE.autoReplyRules)) return;
+      CRM_STATE.autoReplyRules = CRM_STATE.autoReplyRules.filter(r => r.id !== ruleId);
+      saveCRMState();
+      renderAutoReplyRulesList();
+      renderInboxPresetTemplatesBar();
+      updateRulesCountBadge();
 
-  syncAutoReplyRulesToBackend();
+      syncAutoReplyRulesToBackend();
 
-  showToast('Rule Removed', 'Auto-reply template rule deleted.', 'delete', 'slate');
+      showToast('Rule Removed', 'Auto-reply template rule deleted.', 'delete', 'slate');
+    }
+  });
 }
 
 function toggleRuleEnabled(ruleId, enabled) {
@@ -17605,14 +17616,25 @@ function deleteFollowupCard(id) {
     }
     return;
   }
-  if (!confirm('Are you sure you want to delete this follow-up record?')) return;
-  CRM_STATE.followups = (CRM_STATE.followups || []).filter(f => f && f.id !== id);
-  saveCRMState();
-  updateFollowupsKPICounters();
-  filterFollowupsCards();
-  if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
-  if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
-  showToast('Follow-up Deleted', `Record ${id} has been removed.`, 'delete', 'slate');
+  showConfirmDialog({
+    title: 'Delete Follow-up',
+    subtitle: 'Follow-up Scheduler Action',
+    message: 'Are you sure you want to delete this follow-up record?',
+    detail: 'This will remove the scheduled reminder and callback notes.',
+    confirmText: 'Yes, Delete',
+    cancelText: 'Cancel',
+    icon: 'alarm_off',
+    color: 'rose',
+    onConfirm: () => {
+      CRM_STATE.followups = (CRM_STATE.followups || []).filter(f => f && f.id !== id);
+      saveCRMState();
+      updateFollowupsKPICounters();
+      filterFollowupsCards();
+      if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+      if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+      showToast('Follow-up Deleted', `Record ${id} has been removed.`, 'delete', 'slate');
+    }
+  });
 }
 window.deleteFollowupCard = deleteFollowupCard;
 
@@ -22338,25 +22360,35 @@ async function handleDeleteProduct() {
 
   const skuStr = p.sku ? `[${p.sku}] ` : '';
   const nameStr = p.name || 'this product';
-  if (!window.confirm(`⚠️ Permanently Delete Product?\n\nAre you sure you want to delete ${skuStr}"${nameStr}"?\n\nThis will remove it from both your live catalog and the database.`)) return;
+  showConfirmDialog({
+    title: 'Delete Product',
+    subtitle: 'Catalog Action',
+    message: `Are you sure you want to permanently delete ${skuStr}"${nameStr}"?`,
+    detail: 'This will remove it from both your live catalog and the database.',
+    confirmText: 'Yes, Delete',
+    cancelText: 'Cancel',
+    icon: 'delete_forever',
+    color: 'rose',
+    onConfirm: async () => {
+      CRM_STATE.products = CRM_STATE.products.filter(prod => String(prod.id) !== String(idVal));
+      saveCRMState();
 
-  CRM_STATE.products = CRM_STATE.products.filter(prod => String(prod.id) !== String(idVal));
-  saveCRMState();
+      try {
+        await fetch('api.php?action=delete_product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: idVal, sku: p.sku })
+        });
+      } catch (err) {
+        console.warn('API delete_product failed:', err);
+      }
 
-  try {
-    await fetch('api.php?action=delete_product', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: idVal, sku: p.sku })
-    });
-  } catch (err) {
-    console.warn('API delete_product failed:', err);
-  }
-
-  closeModal('modal-product-edit');
-  filterCatalogGrid();
-  updateOrderProductDropdown();
-  showToast('Product Deleted', `${p.sku || p.name} removed from catalog and database.`, 'delete', 'rose');
+      closeModal('modal-product-edit');
+      filterCatalogGrid();
+      updateOrderProductDropdown();
+      showToast('Product Deleted', `${p.sku || p.name} removed from catalog and database.`, 'delete', 'rose');
+    }
+  });
 }
 window.handleDeleteProduct = handleDeleteProduct;
 
@@ -22368,6 +22400,7 @@ async function confirmDeleteProduct(productId, isFamilyGroup = false, groupKey =
     return;
   }
   let delTargets = [];
+  let confirmTitle = 'Delete Product';
   let confirmMsg = '';
 
   const grouped = groupCatalogProducts(CRM_STATE.products || []);
@@ -22375,7 +22408,8 @@ async function confirmDeleteProduct(productId, isFamilyGroup = false, groupKey =
     const group = grouped.find(g => g.groupKey === groupKey || String(g.id) === String(productId));
     if (group && group.variants && group.variants.length > 0) {
       delTargets = group.variants;
-      confirmMsg = `⚠️ Permanently Delete Product Family?\n\nAre you sure you want to delete the entire product family "${group.name}" with all ${group.variantCount || group.variants.length} variants [Base SKU: ${group.sku}]?\n\nThis will permanently delete ALL variants from your live catalog and the database.`;
+      confirmTitle = 'Delete Product Family';
+      confirmMsg = `Are you sure you want to delete the entire product family "${group.name}" with all ${group.variantCount || group.variants.length} variants [Base SKU: ${group.sku}]?`;
     }
   }
 
@@ -22388,39 +22422,58 @@ async function confirmDeleteProduct(productId, isFamilyGroup = false, groupKey =
     delTargets = [p];
     const skuStr = p.sku ? `[${p.sku}] ` : '';
     const nameStr = p.name || 'this product';
-    confirmMsg = `⚠️ Permanently Delete Product Variant?\n\nAre you sure you want to delete ${skuStr}"${nameStr}"?\n\nThis will permanently delete this product from both your live catalog and the database.`;
+    confirmTitle = 'Delete Product Variant';
+    confirmMsg = `Are you sure you want to delete ${skuStr}"${nameStr}"?`;
   }
 
-  const confirmed = window.confirm(confirmMsg);
-  if (!confirmed) return;
+  showConfirmDialog({
+    title: confirmTitle,
+    subtitle: 'Catalog Management Action',
+    message: confirmMsg,
+    detail: 'This will permanently delete item(s) from your live catalog and the database.',
+    confirmText: 'Yes, Delete',
+    cancelText: 'Cancel',
+    icon: 'delete_forever',
+    color: 'rose',
+    onConfirm: () => {
+      const idsToDelete = new Set(delTargets.map(t => String(t.id)));
+      const skusToDelete = new Set(delTargets.map(t => String(t.sku || '')).filter(Boolean));
 
-  const idsToDelete = new Set(delTargets.map(t => String(t.id)));
-  const skusToDelete = new Set(delTargets.map(t => String(t.sku || '')).filter(Boolean));
+      // Optimistic UI & local storage removal
+      CRM_STATE.products = CRM_STATE.products.filter(prod => !idsToDelete.has(String(prod.id)) && (!prod.sku || !skusToDelete.has(String(prod.sku))));
+      saveCRMState();
+      filterCatalogGrid();
+      updateOrderProductDropdown();
 
-  // Optimistic UI & local storage removal
-  CRM_STATE.products = CRM_STATE.products.filter(prod => !idsToDelete.has(String(prod.id)) && (!prod.sku || !skusToDelete.has(String(prod.sku))));
-  saveCRMState();
-  filterCatalogGrid();
-  updateOrderProductDropdown();
-
-  // If variants modal is open, refresh or close it
-  const variantsModal = document.getElementById('modal-product-variants');
-  if (variantsModal && !variantsModal.classList.contains('hidden')) {
-    if (window.CURRENT_OPEN_VARIANTS_GROUP_KEY) {
-      const remainingGrouped = groupCatalogProducts(CRM_STATE.products || []);
-      const remainingGroup = remainingGrouped.find(g => g.groupKey === window.CURRENT_OPEN_VARIANTS_GROUP_KEY);
-      if (remainingGroup && remainingGroup.variants && remainingGroup.variants.length > 0) {
-        openProductVariantsModal(window.CURRENT_OPEN_VARIANTS_GROUP_KEY);
-      } else {
-        closeModal('modal-product-variants');
+      // If variants modal is open, refresh or close it
+      const variantsModal = document.getElementById('modal-product-variants');
+      if (variantsModal && !variantsModal.classList.contains('hidden')) {
+        if (window.CURRENT_OPEN_VARIANTS_GROUP_KEY) {
+          const remainingGrouped = groupCatalogProducts(CRM_STATE.products || []);
+          const remainingGroup = remainingGrouped.find(g => g.groupKey === window.CURRENT_OPEN_VARIANTS_GROUP_KEY);
+          if (remainingGroup && remainingGroup.variants && remainingGroup.variants.length > 0) {
+            openProductVariantsModal(window.CURRENT_OPEN_VARIANTS_GROUP_KEY);
+          } else {
+            closeModal('modal-product-variants');
+          }
+        } else {
+          closeModal('modal-product-variants');
+        }
       }
-    } else {
-      closeModal('modal-product-variants');
-    }
-  }
 
-  const label = delTargets.length > 1 ? `${delTargets.length} variants` : (delTargets[0].sku || delTargets[0].name);
-  showToast('Product Deleted', `${label} deleted from database.`, 'delete_forever', 'rose');
+      const label = delTargets.length > 1 ? `${delTargets.length} variants` : (delTargets[0].sku || delTargets[0].name);
+      showToast('Product Deleted', `${label} deleted from database.`, 'delete_forever', 'rose');
+
+      // Server MySQL removal
+      delTargets.forEach(t => {
+        fetch('api.php?action=delete_product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: t.id, sku: t.sku })
+        }).catch(() => { });
+      });
+    }
+  });
 
   // Server MySQL removal
   for (const t of delTargets) {
@@ -22979,30 +23032,40 @@ async function deleteCategory(catId, catName) {
     if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete categories.', 'lock', 'rose');
     return;
   }
-  if (!confirm(`Delete category "${catName}" and all associated catalog groupings?`)) return;
+  showConfirmDialog({
+    title: 'Delete Category',
+    subtitle: 'Catalog Management Action',
+    message: `Delete category "${catName}" and all associated catalog groupings?`,
+    detail: 'This will remove the category from product forms and navigation filters.',
+    confirmText: 'Yes, Delete Category',
+    cancelText: 'Cancel',
+    icon: 'category',
+    color: 'rose',
+    onConfirm: async () => {
+      CRM_STATE.categories = (CRM_STATE.categories || []).filter(c => c.name !== catName && c.id != catId);
+      CRM_STATE.subcategories = (CRM_STATE.subcategories || []).filter(s => s.category_name !== catName && s.category !== catName);
 
-  CRM_STATE.categories = (CRM_STATE.categories || []).filter(c => c.name !== catName && c.id != catId);
-  CRM_STATE.subcategories = (CRM_STATE.subcategories || []).filter(s => s.category_name !== catName && s.category !== catName);
+      if (ACTIVE_MANAGER_CATEGORY === catName) {
+        ACTIVE_MANAGER_CATEGORY = (CRM_STATE.categories[0] && CRM_STATE.categories[0].name) || '';
+      }
 
-  if (ACTIVE_MANAGER_CATEGORY === catName) {
-    ACTIVE_MANAGER_CATEGORY = (CRM_STATE.categories[0] && CRM_STATE.categories[0].name) || '';
-  }
+      try {
+        await fetch('api.php?action=delete_category', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: catId, name: catName })
+        });
+      } catch (err) {
+        console.warn('API delete_category failed:', err);
+      }
 
-  try {
-    await fetch('api.php?action=delete_category', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: catId, name: catName })
-    });
-  } catch (err) {
-    console.warn('API delete_category failed:', err);
-  }
-
-  saveCRMState();
-  renderCategoriesManager();
-  populateCatalogCategoryFilters();
-  populateProductFormCategories();
-  showToast('Category Deleted', `Category "${catName}" removed.`, 'delete', 'rose');
+      saveCRMState();
+      renderCategoriesManager();
+      populateCatalogCategoryFilters();
+      populateProductFormCategories();
+      showToast('Category Deleted', `Category "${catName}" removed.`, 'delete', 'rose');
+    }
+  });
 }
 
 async function saveSubcategorySubmit(e) {
@@ -23101,25 +23164,35 @@ async function deleteSubcategory(subId, subName) {
     if (typeof showToast === 'function') showToast('Permission Denied', 'Your assigned role does not have permission to delete subcategories.', 'lock', 'rose');
     return;
   }
-  if (!confirm(`Delete subcategory "${subName}"?`)) return;
+  showConfirmDialog({
+    title: 'Delete Subcategory',
+    subtitle: 'Catalog Management Action',
+    message: `Delete subcategory "${subName}"?`,
+    detail: 'This will remove the subcategory grouping from your product forms.',
+    confirmText: 'Yes, Delete',
+    cancelText: 'Cancel',
+    icon: 'folder_delete',
+    color: 'rose',
+    onConfirm: async () => {
+      CRM_STATE.subcategories = (CRM_STATE.subcategories || []).filter(s => s.name !== subName && s.id != subId);
 
-  CRM_STATE.subcategories = (CRM_STATE.subcategories || []).filter(s => s.name !== subName && s.id != subId);
+      try {
+        await fetch('api.php?action=delete_subcategory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: subId, name: subName })
+        });
+      } catch (err) {
+        console.warn('API delete_subcategory failed:', err);
+      }
 
-  try {
-    await fetch('api.php?action=delete_subcategory', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: subId, name: subName })
-    });
-  } catch (err) {
-    console.warn('API delete_subcategory failed:', err);
-  }
-
-  saveCRMState();
-  renderCategoriesManager();
-  populateCatalogCategoryFilters();
-  populateProductFormCategories(ACTIVE_MANAGER_CATEGORY);
-  showToast('Subcategory Deleted', `Subcategory "${subName}" removed.`, 'delete', 'rose');
+      saveCRMState();
+      renderCategoriesManager();
+      populateCatalogCategoryFilters();
+      populateProductFormCategories(ACTIVE_MANAGER_CATEGORY);
+      showToast('Subcategory Deleted', `Subcategory "${subName}" removed.`, 'delete', 'rose');
+    }
+  });
 }
 
 // -------------------------------------------------------------------------
@@ -23496,38 +23569,46 @@ async function confirmDeleteCurrentAttributeType() {
   if (!ACTIVE_CUSTOM_ATTR_NAME) return;
   const attrName = ACTIVE_CUSTOM_ATTR_NAME;
 
-  if (!confirm(`Are you sure you want to permanently delete the "${attrName}" attribute and all its values from the catalog?`)) {
-    return;
-  }
+  showConfirmDialog({
+    title: 'Delete Attribute Type',
+    subtitle: 'Attribute System Action',
+    message: `Are you sure you want to permanently delete the "${attrName}" attribute and all its values from the catalog?`,
+    detail: 'This will remove the attribute tab and its configuration.',
+    confirmText: 'Yes, Delete Attribute',
+    cancelText: 'Cancel',
+    icon: 'delete_forever',
+    color: 'rose',
+    onConfirm: async () => {
+      if (CRM_STATE.attributes && CRM_STATE.attributes.custom) {
+        delete CRM_STATE.attributes.custom[attrName];
+      }
+      if (SELECTED_CUSTOM_ATTRIBUTES) {
+        delete SELECTED_CUSTOM_ATTRIBUTES[attrName];
+      }
 
-  if (CRM_STATE.attributes && CRM_STATE.attributes.custom) {
-    delete CRM_STATE.attributes.custom[attrName];
-  }
-  if (SELECTED_CUSTOM_ATTRIBUTES) {
-    delete SELECTED_CUSTOM_ATTRIBUTES[attrName];
-  }
+      saveCRMState();
 
-  saveCRMState();
+      try {
+        await fetch('api.php?action=delete_attribute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'attribute_type',
+            value: attrName
+          })
+        });
+      } catch (err) {
+        console.warn('API delete_attribute type failed:', err);
+      }
 
-  try {
-    await fetch('api.php?action=delete_attribute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'attribute_type',
-        value: attrName
-      })
-    });
-  } catch (err) {
-    console.warn('API delete_attribute type failed:', err);
-  }
-
-  ACTIVE_CUSTOM_ATTR_NAME = '';
-  switchAttributeManagerTab('sizes');
-  renderAttributesManager();
-  renderProductFormAttributeChips();
-  calculateProductVariantMatrix();
-  showToast('Attribute Deleted', `Deleted attribute "${attrName}".`, 'delete', 'rose');
+      ACTIVE_CUSTOM_ATTR_NAME = '';
+      switchAttributeManagerTab('sizes');
+      renderAttributesManager();
+      renderProductFormAttributeChips();
+      calculateProductVariantMatrix();
+      showToast('Attribute Deleted', `Deleted attribute "${attrName}".`, 'delete', 'rose');
+    }
+  });
 }
 
 async function saveAttributeSubmit(e, type) {
@@ -28113,31 +28194,42 @@ async function submitCustomerRequirementForm(event) {
 window.submitCustomerRequirementForm = submitCustomerRequirementForm;
 
 async function deleteCustomerRequirement(id) {
-  if (!confirm('Are you sure you want to delete this customer requirement?')) return;
-  try {
-    const res = await fetch('api.php?action=delete_customer_requirement', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
-    const result = await res.json();
-    if (result && result.status === 'success') {
-      if (typeof showToast === 'function') {
-        showToast('Deleted', 'Requirement deleted successfully', 'delete', 'slate');
-      }
-      CUSTOMER_REQUIREMENTS_CACHE = CUSTOMER_REQUIREMENTS_CACHE.filter(r => Number(r.id) !== Number(id));
-      renderCustomerRequirementsTable();
-    } else {
-      if (typeof showToast === 'function') {
-        showToast('Error', result.message || 'Failed to delete requirement', 'error', 'rose');
+  showConfirmDialog({
+    title: 'Delete Requirement',
+    subtitle: 'Customer Requirement Action',
+    message: 'Are you sure you want to delete this customer requirement?',
+    detail: 'This will remove the requirement entry from the customer records.',
+    confirmText: 'Yes, Delete',
+    cancelText: 'Cancel',
+    icon: 'delete',
+    color: 'rose',
+    onConfirm: async () => {
+      try {
+        const res = await fetch('api.php?action=delete_customer_requirement', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const result = await res.json();
+        if (result && result.status === 'success') {
+          if (typeof showToast === 'function') {
+            showToast('Deleted', 'Requirement deleted successfully', 'delete', 'slate');
+          }
+          CUSTOMER_REQUIREMENTS_CACHE = CUSTOMER_REQUIREMENTS_CACHE.filter(r => Number(r.id) !== Number(id));
+          renderCustomerRequirementsTable();
+        } else {
+          if (typeof showToast === 'function') {
+            showToast('Error', result.message || 'Failed to delete requirement', 'error', 'rose');
+          }
+        }
+      } catch (err) {
+        console.error('Error deleting requirement:', err);
+        if (typeof showToast === 'function') {
+          showToast('Error', 'Failed to delete requirement', 'error', 'rose');
+        }
       }
     }
-  } catch (err) {
-    console.error('Error deleting requirement:', err);
-    if (typeof showToast === 'function') {
-      showToast('Error', 'Failed to delete requirement', 'error', 'rose');
-    }
-  }
+  });
 }
 window.deleteCustomerRequirement = deleteCustomerRequirement;
 
@@ -28647,54 +28739,64 @@ function deleteWhatsAppAccountSlot(accountId) {
   const targetAcc = accounts.find(a => a.id === accountId);
   const label = targetAcc ? targetAcc.label : accountId;
 
-  if (confirm(`Are you sure you want to delete WhatsApp slot: "${label}" (${accountId})?\n\nThis will remove the slot and its QR connection.`)) {
-    // 1. Update CRM_STATE deletedSlots and active lines
-    if (!Array.isArray(CRM_STATE.deletedSlots)) {
-      CRM_STATE.deletedSlots = [];
+  showConfirmDialog({
+    title: 'Delete WhatsApp Slot',
+    subtitle: 'Multi-Account Hub Action',
+    message: `Are you sure you want to delete WhatsApp slot: "${label}" (${accountId})?`,
+    detail: 'This will remove the slot and its QR connection. Chats and customer records remain 100% safe.',
+    confirmText: 'Yes, Delete Slot',
+    cancelText: 'Cancel',
+    icon: 'phonelink_erase',
+    color: 'rose',
+    onConfirm: () => {
+      // 1. Update CRM_STATE deletedSlots and active lines
+      if (!Array.isArray(CRM_STATE.deletedSlots)) {
+        CRM_STATE.deletedSlots = [];
+      }
+      if (!CRM_STATE.deletedSlots.includes(accountId)) {
+        CRM_STATE.deletedSlots.push(accountId);
+      }
+      if (Array.isArray(CRM_STATE.whatsappLines)) {
+        CRM_STATE.whatsappLines = CRM_STATE.whatsappLines.filter(a => a.id !== accountId);
+      }
+
+      // 2. Remove from live MULTI_ACCOUNTS_STATE array
+      if (Array.isArray(MULTI_ACCOUNTS_STATE)) {
+        MULTI_ACCOUNTS_STATE = MULTI_ACCOUNTS_STATE.filter(a => a.id !== accountId);
+      }
+
+      // 3. If the user had currently selected this deleted line in inbox, switch to 'all'
+      if (ACTIVE_SEND_ACCOUNT_ID === accountId) {
+        ACTIVE_SEND_ACCOUNT_ID = 'all';
+      }
+
+      // 4. Save state
+      saveCRMState();
+
+      // 5. Send delete request to bridge server & backend API (non-blocking)
+      fetch(`${getBridgeBaseUrl()}/api/accounts/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId })
+      }).catch(() => { });
+
+      fetch('api.php?action=delete_account_slot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId })
+      }).catch(() => { });
+
+      // 6. Re-render UI components immediately
+      renderMultiAccountsHub();
+      renderQuickLineSwitcher();
+      renderPhoneSwitcherDropdown();
+      renderInbox();
+      updateConfiguredPhoneDisplays();
+
+      showToast('Slot Deleted', `WhatsApp slot "${label}" has been removed.`, 'delete', 'blue');
+      if (typeof playChime === 'function') playChime('inbound');
     }
-    if (!CRM_STATE.deletedSlots.includes(accountId)) {
-      CRM_STATE.deletedSlots.push(accountId);
-    }
-    if (Array.isArray(CRM_STATE.whatsappLines)) {
-      CRM_STATE.whatsappLines = CRM_STATE.whatsappLines.filter(a => a.id !== accountId);
-    }
-
-    // 2. Remove from live MULTI_ACCOUNTS_STATE array
-    if (Array.isArray(MULTI_ACCOUNTS_STATE)) {
-      MULTI_ACCOUNTS_STATE = MULTI_ACCOUNTS_STATE.filter(a => a.id !== accountId);
-    }
-
-    // 3. If the user had currently selected this deleted line in inbox, switch to 'all'
-    if (ACTIVE_SEND_ACCOUNT_ID === accountId) {
-      ACTIVE_SEND_ACCOUNT_ID = 'all';
-    }
-
-    // 4. Save state
-    saveCRMState();
-
-    // 5. Send delete request to bridge server & backend API (non-blocking)
-    fetch(`${getBridgeBaseUrl()}/api/accounts/delete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId })
-    }).catch(() => { });
-
-    fetch('api.php?action=delete_account_slot', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId })
-    }).catch(() => { });
-
-    // 6. Re-render UI components immediately
-    renderMultiAccountsHub();
-    renderQuickLineSwitcher();
-    renderPhoneSwitcherDropdown();
-    renderInbox();
-    updateConfiguredPhoneDisplays();
-
-    showToast('Slot Deleted', `WhatsApp slot "${label}" has been removed.`, 'delete', 'blue');
-    if (typeof playChime === 'function') playChime('inbound');
-  }
+  });
 }
 
 // Disconnect specific WhatsApp account session
@@ -28707,65 +28809,77 @@ function disconnectWhatsAppAccount(accountId) {
     }
   }
   const targetId = accountId || 'account_1';
-  if (confirm(`Disconnect and unbind WhatsApp session for ${targetId}? Your CRM chats, customers & orders are 100% safe.`)) {
-    // 1. Immediately update CRM_STATE.whatsappAccount
-    if (CRM_STATE.whatsappAccount && (targetId === 'account_1' || ACTIVE_SEND_ACCOUNT_ID === targetId)) {
-      CRM_STATE.whatsappAccount.status = 'DISCONNECTED';
-    }
-
-    // 2. Immediately update CRM_STATE.whatsappLines
-    if (Array.isArray(CRM_STATE.whatsappLines)) {
-      const line = CRM_STATE.whatsappLines.find(l => l.id === targetId);
-      if (line) {
-        line.status = 'DISCONNECTED';
-        line.connected_number = 'Awaiting Link';
-        line.qr_image = null;
-        line.qr = null;
+  showConfirmDialog({
+    title: 'Disconnect WhatsApp',
+    subtitle: 'Session Unbind',
+    message: `Disconnect and unbind WhatsApp session for ${targetId}?`,
+    detail: 'Your CRM chats, customers & orders are 100% safe. You can scan QR code to re-link anytime.',
+    confirmText: 'Yes, Disconnect',
+    cancelText: 'Cancel',
+    icon: 'phonelink_off',
+    color: 'amber',
+    onConfirm: () => {
+      // 1. Immediately update CRM_STATE.whatsappAccount
+      if (CRM_STATE.whatsappAccount && (targetId === 'account_1' || ACTIVE_SEND_ACCOUNT_ID === targetId)) {
+        CRM_STATE.whatsappAccount.status = 'DISCONNECTED';
       }
-    }
 
-    // 3. Immediately update MULTI_ACCOUNTS_STATE
-    if (Array.isArray(MULTI_ACCOUNTS_STATE)) {
-      const acc = MULTI_ACCOUNTS_STATE.find(a => a.id === targetId);
-      if (acc) {
-        acc.status = 'DISCONNECTED';
-        acc.connected_number = null;
-        acc.connectedName = null;
-        acc.qr_image = null;
+      // 2. Immediately update CRM_STATE.whatsappLines
+      if (Array.isArray(CRM_STATE.whatsappLines)) {
+        const line = CRM_STATE.whatsappLines.find(l => l.id === targetId);
+        if (line) {
+          line.status = 'DISCONNECTED';
+          line.connected_number = 'Awaiting Link';
+          line.qr_image = null;
+          line.qr = null;
+        }
       }
-    }
 
-    // 4. Save and re-render UI IMMEDIATELY
-    saveCRMState();
-    updateConfiguredPhoneDisplays();
-    renderMultiAccountsHub();
-    renderQuickLineSwitcher();
-    renderPhoneSwitcherDropdown();
+      // 3. Immediately update MULTI_ACCOUNTS_STATE
+      if (Array.isArray(MULTI_ACCOUNTS_STATE)) {
+        const acc = MULTI_ACCOUNTS_STATE.find(a => a.id === targetId);
+        if (acc) {
+          acc.status = 'DISCONNECTED';
+          acc.connected_number = null;
+          acc.connectedName = null;
+          acc.qr_image = null;
+        }
+      }
 
-    // 5. Send disconnect request to Baileys bridge
-    fetch(`${getBridgeBaseUrl()}/api/accounts/disconnect`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId: targetId })
-    })
-      .then(r => r.json())
-      .then(res => {
-        showToast('WhatsApp Disconnected', `Session logged out. Fresh QR code is ready to scan.`, 'link_off', 'blue');
-        setTimeout(fetchQRBridgeStatus, 1000);
-        setTimeout(fetchQRBridgeStatus, 2500);
+      // 4. Save and re-render UI IMMEDIATELY
+      saveCRMState();
+      updateConfiguredPhoneDisplays();
+      renderMultiAccountsHub();
+      renderQuickLineSwitcher();
+      renderPhoneSwitcherDropdown();
+
+      // 5. Send disconnect request to Baileys bridge
+      fetch(`${getBridgeBaseUrl()}/api/accounts/disconnect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId: targetId })
       })
-      .catch(() => {
-        showToast('Disconnected', 'Session reset and unlinked locally.', 'info', 'blue');
-        setTimeout(fetchQRBridgeStatus, 1500);
-      });
+        .then(r => r.json())
+        .then(res => {
+          showToast('WhatsApp Disconnected', `Session logged out. Fresh QR code is ready to scan.`, 'link_off', 'blue');
+          setTimeout(fetchQRBridgeStatus, 1000);
+          setTimeout(fetchQRBridgeStatus, 2500);
+        })
+        .catch(() => {
+          showToast('Disconnected', 'Session reset and unlinked locally.', 'info', 'blue');
+          setTimeout(fetchQRBridgeStatus, 1500);
+        });
 
-    // 6. Notify PHP backend API
-    fetch('api.php?action=disconnect_account', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId: targetId })
-    }).catch(() => { });
-  }
+      // 6. Notify PHP backend API
+      fetch('api.php?action=disconnect_account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId: targetId })
+      }).catch(() => { });
+
+      showToast('Session Disconnected', `WhatsApp line ${targetId} has been unlinked.`, 'phonelink_off', 'amber');
+    }
+  });
 }
 
 function refreshSpecificAccount(accountId) {
@@ -29538,23 +29652,23 @@ function renderStaffTable() {
     return `
       <tr class="hover:bg-slate-50/80 transition">
         <!-- Staff Info -->
-        <td class="py-3 px-4">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+        <td class="py-3 px-3 sm:px-4 whitespace-nowrap">
+          <div class="flex items-center gap-2.5 sm:gap-3">
+            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
               ${staff.avatar || staff.name.slice(0, 2).toUpperCase()}
             </div>
-            <div>
+            <div class="min-w-0">
               <div class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                <span>${staff.name}</span>
-                <span class="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-normal">${staff.id}</span>
+                <span class="truncate">${staff.name}</span>
+                <span class="text-[9px] sm:text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-normal shrink-0">${staff.id}</span>
               </div>
-              <div class="text-[11px] text-slate-500 font-normal">${staff.email || 'No email registered'}</div>
+              <div class="text-[10px] sm:text-[11px] text-slate-500 font-normal truncate max-w-[150px] sm:max-w-none">${staff.email || 'No email registered'}</div>
             </div>
           </div>
         </td>
 
         <!-- Role & Specialization -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 whitespace-nowrap">
           <div>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${getRoleBadgeClass(staff.role)}">
               ${staff.role}
@@ -29564,37 +29678,37 @@ function renderStaffTable() {
         </td>
 
         <!-- Today Handled -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 text-center whitespace-nowrap">
           <span class="font-bold text-slate-900 text-xs font-mono bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 inline-block">
             ${handled} msgs
           </span>
         </td>
 
         <!-- Active Leads -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 text-center whitespace-nowrap">
           <span class="text-xs font-bold ${activeLeads > 0 ? 'text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200' : 'text-slate-400'}">
-            ${activeLeads} Active Leads
+            ${activeLeads} Leads
           </span>
         </td>
 
         <!-- Converted Orders -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 text-center whitespace-nowrap">
           <span class="text-xs font-bold text-emerald-700 font-mono">
             ${convertedOrders} Orders
           </span>
         </td>
 
         <!-- Status Toggle -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 whitespace-nowrap">
           <button type="button" onclick="handleToggleStaffStatus('${staff.id}')"
             class="px-2.5 py-1 rounded-full text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer ${isActive ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}">
             <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
-            <span>${isActive ? 'Active (On-Duty)' : 'On Leave'}</span>
+            <span>${isActive ? 'Active' : 'On Leave'}</span>
           </button>
         </td>
 
         <!-- Actions -->
-        <td class="py-3 px-4 text-right">
+        <td class="py-3 px-3 sm:px-4 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1">
             ${canUserPerformAction('staff', 'edit') ? `
             <button type="button" onclick="quickAssignRoleForStaff('${staff.id}')"
@@ -29808,10 +29922,10 @@ function renderRolePermissionsMatrix(roleName) {
     return `
       <tr class="hover:bg-slate-50/70 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}">
         <!-- Module Info -->
-        <td class="py-3 px-4">
-          <div class="flex items-center gap-2.5">
-            <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[17px]">${mod.icon}</span>
+        <td class="py-2.5 sm:py-3 px-3 sm:px-4">
+          <div class="flex items-center gap-2 sm:gap-2.5">
+            <span class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[15px] sm:text-[17px]">${mod.icon}</span>
             </span>
             <div class="min-w-0">
               <span class="font-bold text-slate-900 text-xs block truncate">${mod.name}</span>
@@ -29821,7 +29935,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- View Action Checkbox -->
-        <td class="py-3 px-3 text-center">
+        <td class="py-2.5 sm:py-3 px-2 sm:px-3 text-center">
           <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-sky-50 cursor-pointer">
             <input type="checkbox" id="role-mod-view-${mod.key}" ${modPerm.view ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
               onchange="handleToggleModuleAction('${mod.key}', 'view', this.checked)"
@@ -29830,7 +29944,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- Create Action Checkbox (Removed for Customer 360) -->
-        <td class="py-3 px-3 text-center">
+        <td class="py-2.5 sm:py-3 px-2 sm:px-3 text-center">
           ${isViewOnlyMod ? `
             <span class="text-xs text-slate-300 font-bold select-none" title="Create action not applicable for this module">—</span>
           ` : `
@@ -29843,7 +29957,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- Edit Action Checkbox (Removed for Customer 360) -->
-        <td class="py-3 px-3 text-center">
+        <td class="py-2.5 sm:py-3 px-2 sm:px-3 text-center">
           ${isViewOnlyMod ? `
             <span class="text-xs text-slate-300 font-bold select-none" title="Edit action not applicable for this module">—</span>
           ` : `
@@ -29856,7 +29970,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- Delete Action Checkbox (Removed for Customer 360) -->
-        <td class="py-3 px-3 text-center">
+        <td class="py-2.5 sm:py-3 px-2 sm:px-3 text-center">
           ${isViewOnlyMod ? `
             <span class="text-xs text-slate-300 font-bold select-none" title="Delete action not applicable for this module">—</span>
           ` : `
@@ -29869,7 +29983,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- All Actions (Row Master Toggle) -->
-        <td class="py-3 px-4 text-center">
+        <td class="py-2.5 sm:py-3 px-3 sm:px-4 text-center">
           <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-purple-50 cursor-pointer">
             <input type="checkbox" id="role-mod-all-${mod.key}" ${allChecked ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
               onchange="handleToggleModuleAll('${mod.key}', this.checked)"
@@ -30289,42 +30403,59 @@ window.handleCreateNewRolePrompt = function () {
 
 window.handleDeleteCurrentRole = function () {
   if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
-    alert('Super Admin is a protected system role and cannot be deleted.');
+    showToast('Protected Role', 'Super Admin is a protected system role and cannot be deleted.', 'shield', 'amber');
     return;
   }
 
   const assignedStaff = (CRM_STATE.staffList || []).filter(s => s.role === ACTIVE_MATRIX_ROLE);
   if (assignedStaff.length > 0) {
-    alert(`Cannot delete role "${ACTIVE_MATRIX_ROLE}" because ${assignedStaff.length} staff member(s) are currently assigned to it. Please reassign them first.`);
+    showConfirmDialog({
+      title: 'Cannot Delete Role',
+      subtitle: 'Staff Assigned',
+      message: `Cannot delete role "${ACTIVE_MATRIX_ROLE}" because ${assignedStaff.length} staff member(s) are currently assigned to it.`,
+      detail: 'Please reassign or edit the assigned staff members to another role first.',
+      confirmText: 'Understood',
+      cancelText: 'Close',
+      icon: 'shield_lock',
+      color: 'amber'
+    });
     return;
   }
 
-  if (!confirm(`Are you sure you want to permanently delete role "${ACTIVE_MATRIX_ROLE}"?`)) {
-    return;
-  }
+  showConfirmDialog({
+    title: 'Delete Role',
+    subtitle: 'Access Control Action',
+    message: `Are you sure you want to permanently delete role "${ACTIVE_MATRIX_ROLE}"?`,
+    detail: 'All permission grants configured for this role will be removed immediately.',
+    confirmText: 'Yes, Delete Role',
+    cancelText: 'Cancel',
+    icon: 'delete_forever',
+    color: 'rose',
+    onConfirm: () => {
+      const deletedRole = ACTIVE_MATRIX_ROLE;
+      delete CRM_STATE.rolePermissions[deletedRole];
 
-  const deletedRole = ACTIVE_MATRIX_ROLE;
-  delete CRM_STATE.rolePermissions[deletedRole];
+      // Delete role from MySQL
+      fetch('api.php?action=delete_role_permissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: deletedRole })
+      }).then(r => r.json()).then(res => {
+        console.log('[delete_role_permissions] Server response:', res);
+      }).catch(() => { });
 
-  // Delete role from MySQL
-  fetch('api.php?action=delete_role_permissions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ role: deletedRole })
-  }).then(r => r.json()).then(res => {
-    console.log('[delete_role_permissions] Server response:', res);
-  }).catch(() => { });
+      const remainingRoles = Object.keys(CRM_STATE.rolePermissions);
+      ACTIVE_MATRIX_ROLE = remainingRoles.find(r => r !== 'Super Admin') || remainingRoles[0] || 'Super Admin';
+      saveCRMState();
 
-  const remainingRoles = Object.keys(CRM_STATE.rolePermissions);
-  ACTIVE_MATRIX_ROLE = remainingRoles.find(r => r !== 'Super Admin') || remainingRoles[0] || 'Super Admin';
-  saveCRMState();
+      updateStaffRoleSelectDropdowns();
+      if (ACTIVE_MATRIX_ROLE) {
+        renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+      }
 
-  updateStaffRoleSelectDropdowns();
-  if (ACTIVE_MATRIX_ROLE) {
-    renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
-  }
-
-  showToast('Role Removed', `Role "${deletedRole}" was successfully deleted.`, 'delete', 'amber');
+      showToast('Role Removed', `Role "${deletedRole}" was successfully deleted.`, 'delete', 'amber');
+    }
+  });
 };
 
 // 9. Synchronize Dynamic Role Select Dropdowns across CRM (Add Staff, Role Matrix, Reassign, Edit Staff)
@@ -30523,33 +30654,41 @@ function handleDeleteStaff(staffId) {
   const staff = (CRM_STATE.staffList || []).find(s => s.id === staffId);
   if (!staff) return;
 
-  if (!confirm(`Are you sure you want to remove ${staff.name} (${staffId}) from the staff directory?`)) {
-    return;
-  }
+  showConfirmDialog({
+    title: 'Remove Staff Member',
+    subtitle: 'Staff Directory Action',
+    message: `Are you sure you want to remove ${staff.name} (${staffId}) from the staff directory?`,
+    detail: 'This will remove the profile from your team roster and reassign any active customer leads.',
+    confirmText: 'Yes, Remove Staff',
+    cancelText: 'Cancel',
+    icon: 'person_remove',
+    color: 'rose',
+    onConfirm: () => {
+      CRM_STATE.staffList = (CRM_STATE.staffList || []).filter(s => s.id !== staffId);
+      (CRM_STATE.queries || []).forEach(q => {
+        if (q.assignedTo === staffId || q.staffId === staffId) {
+          q.assignedTo = 'UNASSIGNED';
+          q.staffId = 'UNASSIGNED';
+          q.assignedStaffName = 'Unassigned';
+        }
+      });
 
-  CRM_STATE.staffList = (CRM_STATE.staffList || []).filter(s => s.id !== staffId);
-  (CRM_STATE.queries || []).forEach(q => {
-    if (q.assignedTo === staffId || q.staffId === staffId) {
-      q.assignedTo = 'UNASSIGNED';
-      q.staffId = 'UNASSIGNED';
-      q.assignedStaffName = 'Unassigned';
+      // Sync delete to MySQL
+      fetch('api.php?action=delete_staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staff_id: staffId })
+      }).catch(() => { });
+
+      logAudit('STAFF_REMOVED', 'STAFF_MODULE', `Removed staff member ${staff.name} (${staffId})`);
+      saveCRMState();
+      renderStaffTable();
+      if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
+      updateStaffRoleSelectDropdowns();
+
+      showToast('Staff Removed', `${staff.name} was removed from the team roster.`, 'delete', 'amber');
     }
   });
-
-  // Sync delete to MySQL
-  fetch('api.php?action=delete_staff', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ staff_id: staffId })
-  }).catch(() => { });
-
-  logAudit('STAFF_REMOVED', 'STAFF_MODULE', `Removed staff member ${staff.name} (${staffId})`);
-  saveCRMState();
-  renderStaffTable();
-  if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
-  updateStaffRoleSelectDropdowns();
-
-  showToast('Staff Removed', `${staff.name} was removed from the team roster.`, 'delete', 'amber');
 }
 
 window.openEditStaffModal = function (staffId) {
@@ -30799,6 +30938,135 @@ function closeModal(id) {
 
 window.openModal = openModal;
 window.closeModal = closeModal;
+
+// =========================================================================
+// UNIVERSAL CUSTOM ACTION & DELETE CONFIRMATION POPUP SYSTEM
+// =========================================================================
+let _customConfirmResolve = null;
+let _customConfirmCallback = null;
+let _customCancelCallback = null;
+
+function showConfirmDialog(options = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('modal-custom-confirm');
+    if (!modal) {
+      const res = window.confirm(options.message || 'Are you sure?');
+      if (res && typeof options.onConfirm === 'function') options.onConfirm();
+      else if (!res && typeof options.onCancel === 'function') options.onCancel();
+      resolve(res);
+      return;
+    }
+
+    const titleEl = document.getElementById('custom-confirm-title');
+    const subEl = document.getElementById('custom-confirm-subtitle');
+    const msgEl = document.getElementById('custom-confirm-message');
+    const detailEl = document.getElementById('custom-confirm-detail');
+    const btnAction = document.getElementById('custom-confirm-btn-action');
+    const btnCancel = document.getElementById('custom-confirm-btn-cancel');
+    const actionText = document.getElementById('custom-confirm-action-text');
+    const actionIcon = document.getElementById('custom-confirm-action-icon');
+    const headerEl = document.getElementById('custom-confirm-header');
+    const iconBox = document.getElementById('custom-confirm-icon-box');
+    const iconEl = document.getElementById('custom-confirm-icon');
+    const bannerEl = document.getElementById('custom-confirm-banner');
+    const bannerIcon = document.getElementById('custom-confirm-banner-icon');
+
+    const color = options.color || 'rose';
+    const title = options.title || (color === 'rose' ? 'Delete Confirmation' : 'Please Confirm');
+    const subtitle = options.subtitle || 'Action requires confirmation';
+    const message = options.message || 'Are you sure you want to proceed?';
+    const detail = options.detail || '';
+    const confirmText = options.confirmText || (color === 'rose' ? 'Delete' : 'Confirm');
+    const cancelText = options.cancelText || 'Cancel';
+    const icon = options.icon || (color === 'rose' ? 'delete' : 'help_outline');
+
+    if (titleEl) titleEl.textContent = title;
+    if (subEl) subEl.textContent = subtitle;
+    if (msgEl) msgEl.textContent = message;
+    if (detailEl) {
+      if (detail) {
+        detailEl.textContent = detail;
+        detailEl.classList.remove('hidden');
+      } else {
+        detailEl.classList.add('hidden');
+      }
+    }
+    if (actionText) actionText.textContent = confirmText;
+    if (btnCancel) btnCancel.textContent = cancelText;
+    if (actionIcon) actionIcon.textContent = icon;
+    if (iconEl) iconEl.textContent = icon;
+
+    // Theme color adjustments
+    if (color === 'rose') {
+      if (headerEl) headerEl.className = 'p-4 sm:p-5 text-white flex items-center justify-between bg-gradient-to-r from-rose-900 via-slate-900 to-rose-950';
+      if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white shadow-md shrink-0';
+      if (bannerEl) bannerEl.className = 'p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-slate-800 flex items-start gap-3';
+      if (bannerIcon) bannerIcon.className = 'material-symbols-outlined text-rose-600 text-[22px] shrink-0 mt-0.5';
+      if (btnAction) btnAction.className = 'flex-1 sm:flex-none px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer text-xs';
+    } else if (color === 'amber') {
+      if (headerEl) headerEl.className = 'p-4 sm:p-5 text-white flex items-center justify-between bg-gradient-to-r from-amber-900 via-slate-900 to-amber-950';
+      if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white shadow-md shrink-0';
+      if (bannerEl) bannerEl.className = 'p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl text-slate-800 flex items-start gap-3';
+      if (bannerIcon) bannerIcon.className = 'material-symbols-outlined text-amber-600 text-[22px] shrink-0 mt-0.5';
+      if (btnAction) btnAction.className = 'flex-1 sm:flex-none px-5 py-2.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer text-xs';
+    } else if (color === 'emerald') {
+      if (headerEl) headerEl.className = 'p-4 sm:p-5 text-white flex items-center justify-between bg-gradient-to-r from-emerald-900 via-slate-900 to-emerald-950';
+      if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shrink-0';
+      if (bannerEl) bannerEl.className = 'p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-slate-800 flex items-start gap-3';
+      if (bannerIcon) bannerIcon.className = 'material-symbols-outlined text-emerald-600 text-[22px] shrink-0 mt-0.5';
+      if (btnAction) btnAction.className = 'flex-1 sm:flex-none px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer text-xs';
+    } else {
+      if (headerEl) headerEl.className = 'p-4 sm:p-5 text-white flex items-center justify-between bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950';
+      if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shrink-0';
+      if (bannerEl) bannerEl.className = 'p-3.5 bg-blue-50 border border-blue-200/80 rounded-xl text-slate-800 flex items-start gap-3';
+      if (bannerIcon) bannerIcon.className = 'material-symbols-outlined text-blue-600 text-[22px] shrink-0 mt-0.5';
+      if (btnAction) btnAction.className = 'flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer text-xs';
+    }
+
+    _customConfirmResolve = resolve;
+    _customConfirmCallback = options.onConfirm || null;
+    _customCancelCallback = options.onCancel || null;
+
+    openModal('modal-custom-confirm');
+  });
+}
+
+function executeCustomConfirm() {
+  closeModal('modal-custom-confirm');
+  const cb = _customConfirmCallback;
+  const res = _customConfirmResolve;
+  _customConfirmResolve = null;
+  _customConfirmCallback = null;
+  _customCancelCallback = null;
+
+  if (typeof cb === 'function') {
+    try { cb(); } catch (e) { console.error('executeCustomConfirm error:', e); }
+  }
+  if (typeof res === 'function') {
+    res(true);
+  }
+}
+
+function cancelCustomConfirm() {
+  closeModal('modal-custom-confirm');
+  const cb = _customCancelCallback;
+  const res = _customConfirmResolve;
+  _customConfirmResolve = null;
+  _customConfirmCallback = null;
+  _customCancelCallback = null;
+
+  if (typeof cb === 'function') {
+    try { cb(); } catch (e) { console.error('cancelCustomConfirm error:', e); }
+  }
+  if (typeof res === 'function') {
+    res(false);
+  }
+}
+
+window.showConfirmDialog = showConfirmDialog;
+window.showDeleteConfirm = showConfirmDialog;
+window.executeCustomConfirm = executeCustomConfirm;
+window.cancelCustomConfirm = cancelCustomConfirm;
 
 window.logAudit = logAudit;
 function logAudit(action, module, details) {
@@ -31356,31 +31624,42 @@ async function handleDeleteCurrentTemplate() {
 
   const keys = Object.keys(BROADCAST_PRESETS_DATA);
   if (keys.length <= 1) {
-    alert('You cannot delete the only remaining template.');
+    showToast('Cannot Delete', 'You cannot delete the only remaining template.', 'warning', 'amber');
     return;
   }
 
-  if (confirm(`Are you sure you want to delete the template "${BROADCAST_PRESETS_DATA[currentKey].label}"?`)) {
-    delete BROADCAST_PRESETS_DATA[currentKey];
-    try {
-      localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
-    } catch (e) { }
+  const templateLabel = BROADCAST_PRESETS_DATA[currentKey].label || 'Selected Template';
+  showConfirmDialog({
+    title: 'Delete Broadcast Template',
+    subtitle: 'Template Action',
+    message: `Are you sure you want to delete the template "${templateLabel}"?`,
+    detail: 'This template will be removed from your preset library and database.',
+    confirmText: 'Yes, Delete Template',
+    cancelText: 'Cancel',
+    icon: 'delete',
+    color: 'rose',
+    onConfirm: async () => {
+      delete BROADCAST_PRESETS_DATA[currentKey];
+      try {
+        localStorage.setItem('GRM_CUSTOM_BROADCAST_TEMPLATES', JSON.stringify(BROADCAST_PRESETS_DATA));
+      } catch (e) { }
 
-    // Persist delete to MySQL Database!
-    try {
-      await fetch('api.php?action=delete_broadcast_template', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: currentKey })
-      });
-    } catch (err) {
-      console.warn('API delete_broadcast_template error:', err);
+      // Persist delete to MySQL Database!
+      try {
+        await fetch('api.php?action=delete_broadcast_template', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: currentKey })
+        });
+      } catch (err) {
+        console.warn('API delete_broadcast_template error:', err);
+      }
+
+      renderBroadcastTemplateDropdown(Object.keys(BROADCAST_PRESETS_DATA)[0]);
+      applyBroadcastPreset(Object.keys(BROADCAST_PRESETS_DATA)[0]);
+      showToast('Template Deleted', 'Template removed from database.', 'delete', 'amber');
     }
-
-    renderBroadcastTemplateDropdown(Object.keys(BROADCAST_PRESETS_DATA)[0]);
-    applyBroadcastPreset(Object.keys(BROADCAST_PRESETS_DATA)[0]);
-    showToast('Template Deleted', 'Template removed from database.', 'delete', 'amber');
-  }
+  });
 }
 
 function openBroadcastModal() {
@@ -34060,38 +34339,47 @@ function confirmDeleteOrder(orderId) {
     if (typeof showToast === 'function') showToast('Order Not Found', `Cannot find order #${orderId}`, 'error', 'rose');
     return;
   }
-  if (!window.confirm(`⚠️ Permanently Delete Order #${orderId}?\n\nCustomer: ${ord.customerName || 'Customer'}\nAmount: ₹${parseFloat(ord.grandTotal || 0).toLocaleString('en-IN')}\n\nThis will remove the order permanently and restore reserved items back into sellable inventory stock.`)) {
-    return;
-  }
 
-  // Release reserved stock back into product catalog inventory
-  (ord.items || []).forEach(it => {
-    const p = (CRM_STATE?.products || []).find(prod => prod.sku === it.sku || prod.name === it.name);
-    if (p) {
-      p.reservedStock = Math.max(0, (parseInt(p.reservedStock) || 0) - (parseInt(it.qty) || 1));
+  showConfirmDialog({
+    title: `Delete Order #${orderId}`,
+    subtitle: 'Order Management Action',
+    message: `Are you sure you want to permanently delete Order #${orderId}?`,
+    detail: `Customer: ${ord.customerName || 'Customer'} • Amount: ₹${parseFloat(ord.grandTotal || 0).toLocaleString('en-IN')}. This will remove the order permanently and restore reserved items back into sellable inventory stock.`,
+    confirmText: 'Yes, Delete Order',
+    cancelText: 'Cancel',
+    icon: 'delete_forever',
+    color: 'rose',
+    onConfirm: () => {
+      // Release reserved stock back into product catalog inventory
+      (ord.items || []).forEach(it => {
+        const p = (CRM_STATE?.products || []).find(prod => prod.sku === it.sku || prod.name === it.name);
+        if (p) {
+          p.reservedStock = Math.max(0, (parseInt(p.reservedStock) || 0) - (parseInt(it.qty) || 1));
+        }
+      });
+
+      // Remove from state
+      CRM_STATE.orders = (CRM_STATE.orders || []).filter(o => o.id !== orderId);
+      saveCRMState();
+
+      if (typeof closeModal === 'function') closeModal('modal-edit-order');
+
+      // Sync to database
+      fetch('api.php?action=delete_order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: orderId, order_id: orderId })
+      }).catch(() => { });
+
+      if (typeof logAudit === 'function') logAudit('ORDER_DELETED', 'ORDERS', `Order #${orderId} deleted and reserved stock released`);
+      if (typeof showToast === 'function') showToast('Order Deleted', `Order #${orderId} permanently removed and reserved stock released.`, 'delete', 'rose');
+      if (typeof renderOrdersDashboard === 'function') renderOrdersDashboard();
+      if (typeof renderOrdersHistoryTable === 'function') renderOrdersHistoryTable();
+      if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+      if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+      if (ACTIVE_VIEW === 'catalog' && typeof renderCatalogGrid === 'function') renderCatalogGrid('');
     }
   });
-
-  // Remove from state
-  CRM_STATE.orders = (CRM_STATE.orders || []).filter(o => o.id !== orderId);
-  saveCRMState();
-
-  if (typeof closeModal === 'function') closeModal('modal-edit-order');
-
-  // Sync to database
-  fetch('api.php?action=delete_order', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: orderId, order_id: orderId })
-  }).catch(() => { });
-
-  if (typeof logAudit === 'function') logAudit('ORDER_DELETED', 'ORDERS', `Order #${orderId} deleted and reserved stock released`);
-  if (typeof showToast === 'function') showToast('Order Deleted', `Order #${orderId} permanently removed and reserved stock released.`, 'delete', 'rose');
-  if (typeof renderOrdersDashboard === 'function') renderOrdersDashboard();
-  if (typeof renderOrdersHistoryTable === 'function') renderOrdersHistoryTable();
-  if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
-  if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
-  if (ACTIVE_VIEW === 'catalog' && typeof renderCatalogGrid === 'function') renderCatalogGrid('');
 }
 window.confirmDeleteOrder = confirmDeleteOrder;
 
