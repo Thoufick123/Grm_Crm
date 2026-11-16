@@ -7410,6 +7410,7 @@ function quickReassignQueryStaff(queryId, newStaffId) {
   );
   if (typeof playChime === 'function') playChime('inbound');
 }
+window.quickReassignQueryStaff = quickReassignQueryStaff;
 
 // Track which customer profile is currently in Edit Mode (locked by default once saved)
 const CUSTOMER_EDIT_MODES = new Set();
@@ -12045,17 +12046,21 @@ function openStaffAssignModal(queryId) {
     if (typeof showToast === 'function') showToast('Permission Denied', 'Reassigning staff requires Edit permission.', 'lock', 'rose');
     return;
   }
-  let query = (CRM_STATE.queries || []).find(q => q && (
-    q.id === queryId || q.customerId === queryId || q.customer_id === queryId ||
-    ('Q-' + q.customerId) === queryId || ('Q-' + q.customer_id) === queryId
+  let query = (CRM_STATE?.queries || []).find(q => q && (
+    String(q.id) === String(queryId) ||
+    String(q.customerId) === String(queryId) ||
+    String(q.customer_id) === String(queryId) ||
+    ('Q-' + q.customerId) === String(queryId) ||
+    ('Q-' + q.customer_id) === String(queryId) ||
+    (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID && (String(q.customerId) === String(ACTIVE_CUSTOMER_ID) || String(q.customer_id) === String(ACTIVE_CUSTOMER_ID)))
   ));
   let customer = query
-    ? (CRM_STATE.customers || []).find(c => c && (c.id === query.customerId || c.id === query.customer_id))
-    : (CRM_STATE.customers || []).find(c => c && (c.id === queryId || ('Q-' + c.id) === queryId));
+    ? (CRM_STATE?.customers || []).find(c => c && (String(c.id) === String(query.customerId) || String(c.id) === String(query.customer_id)))
+    : (CRM_STATE?.customers || []).find(c => c && (String(c.id) === String(queryId) || ('Q-' + c.id) === String(queryId) || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID && String(c.id) === String(ACTIVE_CUSTOMER_ID))));
 
   if (!query && customer) {
     query = {
-      id: queryId.startsWith('Q-') ? queryId : ('Q-' + customer.id),
+      id: (queryId && String(queryId).startsWith('Q-')) ? queryId : ('Q-' + customer.id),
       customerId: customer.id,
       assignedTo: customer.assignedTo || 'UNASSIGNED',
       status: 'NEW',
@@ -12063,13 +12068,25 @@ function openStaffAssignModal(queryId) {
       queryText: customer.lastMessage || 'Customer Enquiry',
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
+    if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
     CRM_STATE.queries.unshift(query);
   }
-  if (!query) return;
+  if (!query) {
+    console.warn('[openStaffAssignModal] Neither query nor customer found for queryId:', queryId);
+    return;
+  }
 
-  if (!customer) customer = CRM_STATE.customers.find(c => c.id === query.customerId || c.id === query.customer_id);
-  document.getElementById('assign-target-query-id').value = query.id;
-  document.getElementById('assign-modal-subtitle').innerText = `Assign ${query.id} (${customer ? customer.name : 'Customer'}) to a dedicated staff`;
+  if (!customer && CRM_STATE?.customers) {
+    customer = CRM_STATE.customers.find(c => c && (String(c.id) === String(query.customerId) || String(c.id) === String(query.customer_id)));
+  }
+
+  const targetInput = document.getElementById('assign-target-query-id');
+  if (targetInput) targetInput.value = query.id;
+
+  const subtitleEl = document.getElementById('assign-modal-subtitle');
+  if (subtitleEl) {
+    subtitleEl.innerText = `Assign ${query.id} (${customer ? customer.name : 'Customer'}) to a dedicated staff`;
+  }
 
   // Toggle DND communication & inbox restoration option if customer is currently on DND
   const dndContainer = document.getElementById('assign-dnd-options-container');
@@ -12085,21 +12102,25 @@ function openStaffAssignModal(queryId) {
   }
 
   const optionsContainer = document.getElementById('assign-staff-options');
-  optionsContainer.innerHTML = CRM_STATE.staffList.map(staff => `
-    <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
-      <div class="flex items-center gap-3">
-        <input type="radio" name="selected_staff" value="${staff.id}" ${query.assignedTo === staff.id ? 'checked' : ''} class="text-brand-wa focus:ring-brand-wa h-4 w-4">
-        <div>
-          <p class="font-bold text-slate-800 text-xs">${staff.name}</p>
-          <p class="text-[11px] text-slate-500">${staff.role}</p>
+  if (optionsContainer) {
+    const staffList = Array.isArray(CRM_STATE?.staffList) ? CRM_STATE.staffList : [];
+    optionsContainer.innerHTML = staffList.map(staff => `
+      <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+        <div class="flex items-center gap-3">
+          <input type="radio" name="selected_staff" value="${staff.id}" ${query.assignedTo === staff.id ? 'checked' : ''} class="text-brand-wa focus:ring-brand-wa h-4 w-4">
+          <div>
+            <p class="font-bold text-slate-800 text-xs">${staff.name}</p>
+            <p class="text-[11px] text-slate-500">${staff.role || staff.specialization || 'Staff'}</p>
+          </div>
         </div>
-      </div>
-      <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-1 rounded-full">${staff.activeQueries} Active Leads</span>
-    </label>
-  `).join('');
+        <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-1 rounded-full">${staff.activeQueries || 0} Active Leads</span>
+      </label>
+    `).join('');
+  }
 
   openModal('modal-staff-assign');
 }
+window.openStaffAssignModal = openStaffAssignModal;
 
 function handleConfirmAssignment(event) {
   event.preventDefault();
@@ -12205,6 +12226,7 @@ function handleConfirmAssignment(event) {
     updateBadgeCounters();
   }
 }
+window.handleConfirmAssignment = handleConfirmAssignment;
 
 // =========================================================================
 // 6. INBOUND WHATSAPP SIMULATOR & DEV TESTING ACTIONS
