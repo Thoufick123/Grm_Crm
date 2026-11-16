@@ -29457,6 +29457,19 @@ function renderRolePermissionsMatrix(roleName) {
     `).join('');
   }
 
+  // Sync Role Name Input Field
+  const roleInput = document.getElementById('role-input-name');
+  if (roleInput) {
+    roleInput.value = targetRole || '';
+    if (targetRole === 'Super Admin') {
+      roleInput.setAttribute('disabled', 'true');
+      roleInput.title = 'Super Admin is a permanent system role';
+    } else {
+      roleInput.removeAttribute('disabled');
+      roleInput.title = '';
+    }
+  }
+
   // 2. Count staff assigned to this role
   const assignedStaffCount = (CRM_STATE.staffList || []).filter(s => s.role === targetRole).length;
   const countBadge = document.getElementById('role-staff-count-badge');
@@ -29814,7 +29827,10 @@ window.handleToggleModuleAll = function (moduleKey, isChecked) {
 
 window.applyRolePreset = function (presetType) {
   initRolePermissionsState();
-  if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
+  const roleInput = document.getElementById('role-input-name');
+  const targetRole = (roleInput && roleInput.value.trim()) ? roleInput.value.trim() : ACTIVE_MATRIX_ROLE;
+
+  if (targetRole === 'Super Admin') {
     showToast('Super Admin Locked', 'Super Admin always retains 100% full system access.', 'info', 'purple');
     return;
   }
@@ -29847,9 +29863,30 @@ window.applyRolePreset = function (presetType) {
     }
   });
 
-  CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE] = rolePerms;
-  renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
-  showToast('Preset Applied', `Applied ${presetType.toUpperCase()} permissions preset to ${ACTIVE_MATRIX_ROLE}.`, 'tune', 'blue');
+  if (targetRole) {
+    CRM_STATE.rolePermissions[targetRole] = rolePerms;
+    ACTIVE_MATRIX_ROLE = targetRole;
+    renderRolePermissionsMatrix(targetRole);
+  } else {
+    CRM_MODULE_DEFINITIONS.forEach(mod => {
+      const p = rolePerms[mod.key] || {};
+      const vEl = document.getElementById(`role-mod-view-${mod.key}`);
+      const cEl = document.getElementById(`role-mod-create-${mod.key}`);
+      const eEl = document.getElementById(`role-mod-edit-${mod.key}`);
+      const dEl = document.getElementById(`role-mod-delete-${mod.key}`);
+      const aEl = document.getElementById(`role-mod-all-${mod.key}`);
+      if (vEl) vEl.checked = Boolean(p.view);
+      if (cEl) cEl.checked = Boolean(p.create);
+      if (eEl) eEl.checked = Boolean(p.edit);
+      if (dEl) dEl.checked = Boolean(p.delete);
+      if (aEl) aEl.checked = (p.view && p.create && p.edit && p.delete);
+    });
+    if (typeof updateRoleMatrixHeaderCheckboxes === 'function') {
+      updateRoleMatrixHeaderCheckboxes();
+    }
+  }
+
+  showToast('Preset Applied', `Applied ${presetType.toUpperCase()} permissions preset.`, 'tune', 'blue');
 };
 
 window.handleSaveRolePermissions = function () {
@@ -29858,10 +29895,47 @@ window.handleSaveRolePermissions = function () {
     return;
   }
   initRolePermissionsState();
-  saveCRMState();
 
-  const currentRole = ACTIVE_MATRIX_ROLE;
-  const currentPerms = CRM_STATE.rolePermissions[currentRole];
+  const roleInput = document.getElementById('role-input-name');
+  const inputVal = roleInput ? roleInput.value.trim() : '';
+  const currentRole = inputVal || ACTIVE_MATRIX_ROLE;
+
+  if (!currentRole) {
+    alert('Please enter a role name to save.');
+    if (roleInput) roleInput.focus();
+    return;
+  }
+
+  // Collect checked permissions from the matrix table in DOM
+  const perms = {};
+  CRM_MODULE_DEFINITIONS.forEach(mod => {
+    if (currentRole === 'Super Admin') {
+      perms[mod.key] = { view: true, create: true, edit: true, delete: true };
+      return;
+    }
+    const vEl = document.getElementById(`role-mod-view-${mod.key}`);
+    const cEl = document.getElementById(`role-mod-create-${mod.key}`);
+    const eEl = document.getElementById(`role-mod-edit-${mod.key}`);
+    const dEl = document.getElementById(`role-mod-delete-${mod.key}`);
+    const isViewOnly = mod.key === 'customers' || mod.key === 'audit' || Boolean(mod.viewOnly);
+    perms[mod.key] = {
+      view: vEl ? Boolean(vEl.checked) : false,
+      create: !isViewOnly && cEl ? Boolean(cEl.checked) : false,
+      edit: !isViewOnly && eEl ? Boolean(eEl.checked) : false,
+      delete: !isViewOnly && dEl ? Boolean(dEl.checked) : false
+    };
+  });
+
+  // Keep sub-modules of inbox (autoreply, broadcast, enquiries) in sync
+  if (perms['inbox']) {
+    ['autoreply', 'broadcast', 'enquiries'].forEach(subKey => {
+      perms[subKey] = Object.assign({}, perms['inbox']);
+    });
+  }
+
+  CRM_STATE.rolePermissions[currentRole] = perms;
+  ACTIVE_MATRIX_ROLE = currentRole;
+  saveCRMState();
 
   // Persist to MySQL database
   fetch('api.php?action=save_role_permissions', {
@@ -29869,62 +29943,44 @@ window.handleSaveRolePermissions = function () {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       role: currentRole,
-      permissions: currentPerms
+      permissions: perms
     })
   }).then(r => r.json()).then(res => {
     console.log('Role permissions saved to DB:', res);
   }).catch(() => { });
 
-  logAudit('ROLE_PERMISSIONS_SAVED', 'ROLES', `Updated module action permissions matrix for role: "${currentRole}"`);
+  logAudit('ROLE_PERMISSIONS_SAVED', 'ROLES', `Saved role & permissions for: "${currentRole}"`);
 
   // Re-apply live access control to current active user
   if (CURRENT_USER) {
     applyRoleBasedAccessControl(CURRENT_USER);
   }
 
+  updateStaffRoleSelectDropdowns();
+  renderRolePermissionsMatrix(currentRole);
+
   playChime('order');
   showToast(
-    'Role Permissions Saved!',
-    `Updated View, Create, Edit, and Delete actions for role "${currentRole}".`,
+    'Role & Permissions Saved!',
+    `Role "${currentRole}" and its module permissions have been saved successfully.`,
     'verified_user',
     'emerald'
   );
-  alert(`Role Permissions Successfully Saved!\n\nGranular module actions (View, Create, Edit, Delete) for role "${currentRole}" have been saved to MySQL and applied live.`);
+  alert(`Role "${currentRole}" Successfully Saved!\n\nGranular module actions (View, Create, Edit, Delete) for role "${currentRole}" have been saved to MySQL and applied live.`);
 };
 
 window.handleCreateNewRolePrompt = function () {
-  const roleName = prompt('Enter a name for the new Role (e.g. Quality Auditor, Telecaller, Accounts, Whatsapp):');
-  if (!roleName || !roleName.trim()) return;
-
-  const cleanName = roleName.trim();
   initRolePermissionsState();
-
-  if (CRM_STATE.rolePermissions[cleanName]) {
-    alert('A role with this name already exists.');
-    ACTIVE_MATRIX_ROLE = cleanName;
-    renderRolePermissionsMatrix(cleanName);
-    return;
+  const roleInput = document.getElementById('role-input-name');
+  if (roleInput) {
+    roleInput.removeAttribute('disabled');
+    roleInput.value = '';
+    roleInput.focus();
   }
-
-  // Create new role with standard module permissions
-  const newPerms = createRoleDefaultPermissions(cleanName, false);
-  CRM_STATE.rolePermissions[cleanName] = newPerms;
-  ACTIVE_MATRIX_ROLE = cleanName;
-
-  // Persist role permissions immediately to MySQL
-  fetch('api.php?action=save_role_permissions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ role: cleanName, permissions: newPerms })
-  }).then(r => r.json()).then(res => {
-    console.log('[save_role_permissions] Created new role in DB:', res);
-  }).catch(() => { });
-
-  saveCRMState();
-  updateStaffRoleSelectDropdowns();
-  renderRolePermissionsMatrix(cleanName);
-
-  showToast('Role Created!', `New role "${cleanName}" created dynamically. Configure module access below and click Save.`, 'add_circle', 'purple');
+  ACTIVE_MATRIX_ROLE = '';
+  // Default matrix to view_only for quick onboarding
+  applyRolePreset('view_only');
+  showToast('Create New Role', 'Type the role name in the Role Name input box, adjust module permissions, and click "Save Role".', 'add_circle', 'purple');
 };
 
 window.handleDeleteCurrentRole = function () {
