@@ -26926,36 +26926,36 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
     </div>` : '';
   // 3. Sender Block
   const senderHtml = c.showSenderAddress ? `
-    <div class="p-2.5 rounded-lg border border-slate-300 bg-slate-50/70 text-[11px] space-y-1 flex-1">
-      <div class="text-[9px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-1 border-b border-slate-200 pb-0.5">
-        <span class="material-symbols-outlined text-[13px]">warehouse</span>
-        <span>DISPATCH / RETURN TO:</span>
+    <div class="p-2 sm:p-2.5 rounded-lg border border-slate-300 bg-slate-50/70 text-[11px] space-y-1 flex-1 min-w-0 overflow-hidden">
+      <div class="text-[9px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-1 border-b border-slate-200 pb-0.5 min-w-0">
+        <span class="material-symbols-outlined text-[13px] shrink-0">warehouse</span>
+        <span class="truncate">DISPATCH / RETURN TO:</span>
       </div>
-      <div class="font-bold text-slate-900">${c.brandName || 'GRM Garments Warehouse'}</div>
-      <div class="text-slate-700 whitespace-pre-line text-[10px] leading-tight">${c.senderAddress || 'Warehouse Address'}</div>
-      ${c.showPhone && c.phone ? `<div class="text-[10px] font-mono text-slate-700">Phone: ${c.phone}</div>` : ''}
+      <div class="font-bold text-slate-900 truncate">${c.brandName || 'GRM Garments Warehouse'}</div>
+      <div class="text-slate-700 whitespace-pre-line text-[10px] leading-tight break-words">${c.senderAddress || 'Warehouse Address'}</div>
+      ${c.showPhone && c.phone ? `<div class="text-[10px] font-mono text-slate-700 truncate whitespace-nowrap">Phone: ${c.phone}</div>` : ''}
     </div>
   ` : '';
 
   // 4. Customer (Ship-To) Block
   const customerCourierBadge = showCourier && c.courierPosition === 'customer' ? `
     <div class="mt-1 pt-1 border-t border-slate-200 text-[10px] text-slate-700 font-semibold flex items-center justify-between">
-      <span>Courier Partner:</span>
-      <span class="font-bold text-slate-900">${courierName}</span>
+      <span class="truncate">Courier Partner:</span>
+      <span class="font-bold text-slate-900 shrink-0">${courierName}</span>
     </div>` : '';
 
   const customerHtml = `
-    <div class="p-2.5 rounded-lg border-2 border-slate-900 bg-white text-[11px] space-y-1 flex-1 shadow-2xs">
-      <div class="text-[9px] font-black uppercase text-blue-900 tracking-wider flex items-center justify-between border-b border-slate-200 pb-0.5">
-        <span class="flex items-center gap-1">
-          <span class="material-symbols-outlined text-[13px]">local_shipping</span>
-          <span>SHIP TO (CUSTOMER):</span>
+    <div class="p-2 sm:p-2.5 rounded-lg border-2 border-slate-900 bg-white text-[11px] space-y-1 flex-1 min-w-0 overflow-hidden shadow-2xs">
+      <div class="text-[9px] font-black uppercase text-blue-900 tracking-wider flex items-center justify-between border-b border-slate-200 pb-0.5 gap-1 min-w-0">
+        <span class="flex items-center gap-1 min-w-0 truncate">
+          <span class="material-symbols-outlined text-[13px] shrink-0">local_shipping</span>
+          <span class="truncate"><span class="hidden sm:inline">SHIP TO (CUSTOMER):</span><span class="sm:hidden">SHIP TO:</span></span>
         </span>
-        <span class="font-bold text-slate-500 text-[9px]">PRIORITY</span>
+        <span class="font-bold text-slate-500 text-[8px] sm:text-[9px] shrink-0">PRIORITY</span>
       </div>
-      <div class="font-extrabold text-sm text-slate-950 uppercase">${order.customerName || 'Customer'}</div>
-      ${c.showCustomerPhone && order.customerPhone ? `<div class="font-mono font-bold text-slate-900 text-xs">📞 ${order.customerPhone}</div>` : ''}
-      ${c.showCustomerAddress ? `<div class="text-slate-800 text-[10px] leading-tight font-medium whitespace-pre-line">${order.shippingAddress || 'Store Pickup / Direct WhatsApp'}</div>` : ''}
+      <div class="font-extrabold text-xs sm:text-sm text-slate-950 uppercase truncate">${order.customerName || 'Customer'}</div>
+      ${c.showCustomerPhone && order.customerPhone ? `<div class="font-mono font-bold text-slate-900 text-[11px] sm:text-xs truncate whitespace-nowrap">📞 ${order.customerPhone}</div>` : ''}
+      ${c.showCustomerAddress ? `<div class="text-slate-800 text-[10px] leading-tight font-medium whitespace-pre-line break-words">${order.shippingAddress || 'Store Pickup / Direct WhatsApp'}</div>` : ''}
       ${customerCourierBadge}
     </div>
   `;
@@ -26967,10 +26967,10 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   } else if (c.customerPosition === 'top' || c.senderPosition === 'bottom') {
     addressesLayoutHtml = `<div class="space-y-2 mb-2.5">${customerHtml}${senderHtml}</div>`;
   } else if (c.senderPosition === 'right' || c.customerPosition === 'left') {
-    addressesLayoutHtml = `<div class="grid grid-cols-2 gap-2 mb-2.5">${customerHtml}${senderHtml}</div>`;
+    addressesLayoutHtml = `<div class="grid grid-cols-2 gap-1.5 sm:gap-2 mb-2.5">${customerHtml}${senderHtml}</div>`;
   } else {
     // Default: Sender on Left (Column 1), Customer on Right (Column 2)
-    addressesLayoutHtml = `<div class="grid grid-cols-2 gap-2 mb-2.5">${senderHtml}${customerHtml}</div>`;
+    addressesLayoutHtml = `<div class="grid grid-cols-2 gap-1.5 sm:gap-2 mb-2.5">${senderHtml}${customerHtml}</div>`;
   }
 
   // 5. Order & Payment Meta Badge
