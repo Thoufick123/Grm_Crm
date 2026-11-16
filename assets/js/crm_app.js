@@ -17911,8 +17911,13 @@ function markPaymentReceivedAndConvert(followupId, customerId) {
 }
 window.markPaymentReceivedAndConvert = markPaymentReceivedAndConvert;
 
-function refreshFollowupsState() {
-  showToast('Syncing Follow-ups', 'Fetching latest database records...', 'sync', 'blue');
+function refreshFollowupsState(btnEl) {
+  const icon = (btnEl ? btnEl.querySelector('.material-symbols-outlined') : null) ||
+    document.querySelector('#view-followups button[onclick*="refreshFollowupsState"] .material-symbols-outlined') ||
+    document.getElementById('btn-refresh-followups')?.querySelector('.material-symbols-outlined');
+  if (icon) icon.classList.add('animate-spin');
+  if (btnEl) btnEl.disabled = true;
+
   fetch('api.php?action=get_all')
     .then(r => r.json())
     .then(res => {
@@ -17958,16 +17963,25 @@ function refreshFollowupsState() {
           }
         });
         CRM_STATE.followups = cleanList;
+        saveCRMState();
       }
-
-      renderFollowupsCards();
-      saveCRMState();
-      showToast('Follow-ups Synchronized', 'All follow-up queues and outcomes are live.', 'check_circle', 'emerald');
     })
     .catch(() => {
+      // offline fallback
+    })
+    .finally(() => {
       renderFollowupsCards();
+      if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+      if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+      if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+
+      if (icon) icon.classList.remove('animate-spin');
+      if (btnEl) btnEl.disabled = false;
+      const count = (CRM_STATE?.followups || []).length;
+      showToast('Follow-ups Synchronized', `${count} follow-up records live from database.`, 'check_circle', 'emerald');
     });
 }
+window.refreshFollowupsState = refreshFollowupsState;
 
 function startFollowupReminderTicker() {
   if (FOLLOWUP_TICKER_INTERVAL) clearInterval(FOLLOWUP_TICKER_INTERVAL);
@@ -24920,8 +24934,13 @@ window.selectActiveChatOnly = selectActiveChatOnly;
 window.copyProductWhatsAppText = copyProductWhatsAppText;
 window.openDirectWhatsAppWeb = openDirectWhatsAppWeb;
 
-async function refreshCatalogStockFromAPI() {
-  showToast('Syncing Stock', 'Fetching latest warehouse stock and catalog from database...', 'sync', 'blue');
+async function refreshCatalogStockFromAPI(btnEl) {
+  const icon = (btnEl ? btnEl.querySelector('.material-symbols-outlined') : null) ||
+    document.querySelector('#view-catalog button[onclick*="refreshCatalogStockFromAPI"] .material-symbols-outlined') ||
+    document.getElementById('btn-refresh-catalog')?.querySelector('.material-symbols-outlined');
+  if (icon) icon.classList.add('animate-spin');
+  if (btnEl) btnEl.disabled = true;
+
   try {
     const res = await fetch('api.php?action=get_all');
     if (res.ok) {
@@ -24945,11 +24964,16 @@ async function refreshCatalogStockFromAPI() {
     }
   } catch (err) {
     console.log('Sync completed with current cache');
+  } finally {
+    filterCatalogGrid();
+    updateOrderProductDropdown();
+    if (typeof updateCatalogKPICards === 'function') updateCatalogKPICards();
+    if (icon) icon.classList.remove('animate-spin');
+    if (btnEl) btnEl.disabled = false;
+    showToast('Stock Synchronized', 'All garment inventory levels and catalog taxonomy are live.', 'check_circle', 'emerald');
   }
-  filterCatalogGrid();
-  updateOrderProductDropdown();
-  showToast('Stock Synchronized', 'All garment inventory levels and catalog taxonomy are live.', 'check_circle', 'emerald');
 }
+window.refreshCatalogStockFromAPI = refreshCatalogStockFromAPI;
 
 // =========================================================================
 // 8. WHATSAPP ORDERS ENGINE: ORDER DASHBOARD & ORDER HISTORY (SUBMODULES)
@@ -26817,11 +26841,45 @@ function saveCurrentPackingSlipConfig() {
 }
 window.saveCurrentPackingSlipConfig = saveCurrentPackingSlipConfig;
 
+function refreshPackingSlipConfig(btnEl) {
+  const icon = (btnEl ? btnEl.querySelector('.material-symbols-outlined') : null) ||
+    document.querySelector('#view-packing-slip-config button[onclick*="refreshPackingSlipConfig"] .material-symbols-outlined') ||
+    document.getElementById('btn-refresh-packing-slip')?.querySelector('.material-symbols-outlined');
+  if (icon) icon.classList.add('animate-spin');
+  if (btnEl) btnEl.disabled = true;
+
+  try {
+    renderPackingSlipConfigPage();
+    updatePackingSlipLivePreview();
+  } catch (err) {
+    console.warn('[refreshPackingSlipConfig] Error:', err);
+  } finally {
+    setTimeout(() => {
+      if (icon) icon.classList.remove('animate-spin');
+      if (btnEl) btnEl.disabled = false;
+      showToast('Packing Slip Refreshed', 'Configuration and live label preview reloaded.', 'sync', 'emerald');
+    }, 250);
+  }
+}
+window.refreshPackingSlipConfig = refreshPackingSlipConfig;
+
 function resetPackingSlipConfigToDefault() {
-  if (!confirm('Reset all packing slip field positions, sender details, and notes back to defaults?')) return;
-  savePackingSlipConfig(CRM_PACKING_SLIP_DEFAULT_CONFIG);
-  renderPackingSlipConfigPage();
-  showToast('Reset Complete', 'Packing slip configuration restored to defaults.', 'restart_alt', 'slate');
+  showConfirmDialog({
+    title: 'Reset Packing Slip Defaults',
+    subtitle: 'Label Configuration',
+    message: 'Reset all packing slip field positions, sender details, and notes back to defaults?',
+    detail: 'All custom field alignment and sender overrides will be restored to factory default settings.',
+    confirmText: 'Yes, Reset Defaults',
+    cancelText: 'Cancel',
+    icon: 'restart_alt',
+    color: 'rose',
+    onConfirm: () => {
+      savePackingSlipConfig(CRM_PACKING_SLIP_DEFAULT_CONFIG);
+      renderPackingSlipConfigPage();
+      updatePackingSlipLivePreview();
+      showToast('Reset Complete', 'Packing slip configuration restored to defaults.', 'restart_alt', 'slate');
+    }
+  });
 }
 window.resetPackingSlipConfigToDefault = resetPackingSlipConfigToDefault;
 
@@ -27733,7 +27791,13 @@ function printOrderInvoice() {
 }
 window.printOrderInvoice = printOrderInvoice;
 
-function refreshOrdersFromDB() {
+function refreshOrdersFromDB(btnEl) {
+  const icon = (btnEl ? btnEl.querySelector('.material-symbols-outlined') : null) ||
+    document.querySelector('#view-orders button[onclick*="refreshOrdersFromDB"] .material-symbols-outlined') ||
+    document.getElementById('btn-refresh-orders')?.querySelector('.material-symbols-outlined');
+  if (icon) icon.classList.add('animate-spin');
+  if (btnEl) btnEl.disabled = true;
+
   fetch('api.php?action=get_all')
     .then(r => r.json())
     .then(res => {
@@ -27746,7 +27810,7 @@ function refreshOrdersFromDB() {
           customerName: o.customerName || o.customer_name || 'Customer',
           customerPhone: o.customerPhone || o.customer_phone || '',
           shippingAddress: o.shippingAddress || o.shipping_address || '',
-          items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? JSON.parse(o.items_json) : []),
+          items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
           grandTotal: parseFloat(o.grandTotal || o.grand_total || 0),
           shippingAmount: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
           shippingCharge: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
@@ -27768,12 +27832,22 @@ function refreshOrdersFromDB() {
           createdAt: o.createdAt || o.created_at || ''
         }));
         saveCRMState();
-        renderOrdersModule();
-        showToast('Orders Synced', `${CRM_STATE.orders.length} orders updated from database.`, 'sync', 'emerald');
       }
     })
     .catch(() => {
-      showToast('Offline Mode', 'Displaying saved local orders.', 'info', 'blue');
+      // offline fallback to cached state
+    })
+    .finally(() => {
+      renderOrdersModule();
+      renderOrdersDashboard();
+      renderOrdersHistoryTable();
+      if (typeof updateOrdersPipelineUI === 'function') updateOrdersPipelineUI();
+      if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+
+      if (icon) icon.classList.remove('animate-spin');
+      if (btnEl) btnEl.disabled = false;
+      const total = (CRM_STATE?.orders || []).length;
+      showToast('Orders Synced', `${total} orders loaded from database.`, 'sync', 'emerald');
     });
 }
 window.refreshOrdersFromDB = refreshOrdersFromDB;
@@ -28671,56 +28745,108 @@ function updateQRBridgeUI(res) {
 }
 
 // Poll Bridge Server on http://localhost:3000/api/qr/status
-function fetchQRBridgeStatus() {
+function fetchQRBridgeStatus(btnEl) {
+  const icon = (btnEl ? btnEl.querySelector('.material-symbols-outlined') : null) ||
+    document.querySelector('#view-settings button[onclick*="fetchQRBridgeStatus"] .material-symbols-outlined') ||
+    document.getElementById('btn-refresh-whatsapp-settings')?.querySelector('.material-symbols-outlined');
+  if (icon) icon.classList.add('animate-spin');
+  if (btnEl) btnEl.disabled = true;
+
   const bUrl = getBridgeBaseUrl();
-  if (bUrl === 'http://localhost:3000' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return;
-  }
-  fetch(`${bUrl}/api/qr/status`)
-    .then(r => r.json())
-    .then(res => {
-      if (res.status === 'success' && Array.isArray(res.accounts)) {
-        MULTI_ACCOUNTS_STATE = res.accounts;
-        if (Array.isArray(CRM_STATE.whatsappLines)) {
-          CRM_STATE.whatsappLines.forEach(line => {
-            const live = res.accounts.find(a => a.id === line.id);
-            if (live) {
-              line.status = live.status;
-              if (live.status === 'CONNECTED') {
-                line.connected_number = live.connected_number || line.connected_number;
-                line.qr_image = null;
-              } else if (live.status === 'SCAN_QR') {
-                line.qr_image = live.qr_image;
-                line.connected_number = 'Scan QR Code';
-              } else if (live.status === 'DISCONNECTED') {
-                line.connected_number = 'Awaiting Link';
-                line.qr_image = null;
+  const isLocalHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  if (isLocalHost && bUrl) {
+    fetch(`${bUrl}/api/qr/status`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.status === 'success' && Array.isArray(res.accounts)) {
+          MULTI_ACCOUNTS_STATE = res.accounts;
+          if (Array.isArray(CRM_STATE.whatsappLines)) {
+            CRM_STATE.whatsappLines.forEach(line => {
+              const live = res.accounts.find(a => a.id === line.id);
+              if (live) {
+                line.status = live.status;
+                if (live.status === 'CONNECTED') {
+                  line.connected_number = live.connected_number || line.connected_number;
+                  line.qr_image = null;
+                } else if (live.status === 'SCAN_QR') {
+                  line.qr_image = live.qr_image;
+                  line.connected_number = 'Scan QR Code';
+                } else if (live.status === 'DISCONNECTED') {
+                  line.connected_number = 'Awaiting Link';
+                  line.qr_image = null;
+                }
               }
+            });
+          }
+          updateQRBridgeUI(res);
+          const primary = res.accounts.find(a => a.id === 'account_1') || res.accounts[0];
+          if (primary) {
+            if (primary.status === 'CONNECTED' && primary.connected_number) {
+              CRM_STATE.whatsappAccount.phoneNumber = primary.connected_number;
+              CRM_STATE.whatsappAccount.status = 'CONNECTED';
+            } else if (primary.status === 'SCAN_QR' || primary.status === 'DISCONNECTED') {
+              CRM_STATE.whatsappAccount.status = primary.status;
             }
-          });
+            saveCRMState();
+            updateConfiguredPhoneDisplays();
+          }
         }
+      })
+      .catch(() => {})
+      .finally(() => {
         renderMultiAccountsHub();
         renderQuickLineSwitcher();
         renderPhoneSwitcherDropdown();
-        updateQRBridgeUI(res);
-
-        const primary = res.accounts.find(a => a.id === 'account_1') || res.accounts[0];
-        if (primary) {
-          if (primary.status === 'CONNECTED' && primary.connected_number) {
-            CRM_STATE.whatsappAccount.phoneNumber = primary.connected_number;
-            CRM_STATE.whatsappAccount.status = 'CONNECTED';
-          } else if (primary.status === 'SCAN_QR' || primary.status === 'DISCONNECTED') {
-            CRM_STATE.whatsappAccount.status = primary.status;
+        if (icon) icon.classList.remove('animate-spin');
+        if (btnEl) btnEl.disabled = false;
+        showToast('WhatsApp Lines Refreshed', 'Live multi-account connection status checked.', 'sync', 'emerald');
+      });
+  } else {
+    // Hosted server fallback (e.g. Hostinger / MariaDB)
+    fetch('api.php?action=get_all')
+      .then(r => r.json())
+      .then(res => {
+        const data = res.data || res;
+        if (data) {
+          const accounts = data.whatsappAccounts || [];
+          if (Array.isArray(accounts) && accounts.length > 0) {
+            MULTI_ACCOUNTS_STATE = accounts.map(a => ({
+              id: a.account_slot || a.id,
+              name: a.account_name || a.name || 'WhatsApp Line',
+              phone: a.phone_number || a.phone || '',
+              status: (a.status || 'DISCONNECTED').toUpperCase(),
+              qr_image: a.qr_code || null
+            }));
+            if (Array.isArray(CRM_STATE.whatsappLines)) {
+              CRM_STATE.whatsappLines.forEach(line => {
+                const live = MULTI_ACCOUNTS_STATE.find(a => a.id === line.id);
+                if (live) {
+                  line.status = live.status;
+                  line.connected_number = live.phone || line.connected_number;
+                }
+              });
+            }
+          }
+          if (data.whatsappAccount) {
+            CRM_STATE.whatsappAccount = Object.assign(CRM_STATE.whatsappAccount || {}, data.whatsappAccount);
           }
           saveCRMState();
           updateConfiguredPhoneDisplays();
         }
-      }
-    })
-    .catch(() => {
-      renderMultiAccountsHub();
-    });
+      })
+      .catch(() => {})
+      .finally(() => {
+        renderMultiAccountsHub();
+        renderQuickLineSwitcher();
+        renderPhoneSwitcherDropdown();
+        if (icon) icon.classList.remove('animate-spin');
+        if (btnEl) btnEl.disabled = false;
+        showToast('WhatsApp Lines Refreshed', 'Connected lines synchronized with database.', 'sync', 'emerald');
+      });
+  }
 }
+window.fetchQRBridgeStatus = fetchQRBridgeStatus;
 
 function refreshQRCodeBridge() {
   fetch(`${getBridgeBaseUrl()}/api/accounts/refresh_qr`, {
@@ -36533,7 +36659,14 @@ async function adminEndActiveCall(callId) {
 window.adminEndActiveCall = adminEndActiveCall;
 
 // Load Masking Settings, Metrics, Active Calls & History Table
-async function loadMaskingSettingsAndSessions() {
+async function loadMaskingSettingsAndSessions(btnEl) {
+  const icon = (btnEl ? btnEl.querySelector('.material-symbols-outlined') : null) ||
+    document.querySelector('#view-masking button[onclick*="loadMaskingSettingsAndSessions"] .material-symbols-outlined') ||
+    document.getElementById('btn-refresh-masking-hub')?.querySelector('.material-symbols-outlined') ||
+    document.getElementById('btn-refresh-masking-table')?.querySelector('.material-symbols-outlined');
+  if (icon) icon.classList.add('animate-spin');
+  if (btnEl) btnEl.disabled = true;
+
   try {
     // 1. Fetch Masking Settings & Real-time Metrics from MariaDB
     const resSettings = await fetch('api.php?action=get_masking_settings');
@@ -36628,6 +36761,10 @@ async function loadMaskingSettingsAndSessions() {
     }
   } catch (err) {
     console.error('Failed to load masking settings and sessions:', err);
+  } finally {
+    if (icon) icon.classList.remove('animate-spin');
+    if (btnEl) btnEl.disabled = false;
+    showToast('Call Masking Refreshed', 'Telephony stats, queue & call records loaded.', 'sync', 'emerald');
   }
 }
 window.loadMaskingSettingsAndSessions = loadMaskingSettingsAndSessions;
