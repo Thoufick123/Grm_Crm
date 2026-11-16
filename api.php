@@ -1559,10 +1559,6 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 ->execute([$staffName, "Created bulk price request $requestCode for $customerName ($productName x $quantity at Rs.$requestedPrice)"]);
         } catch (Exception $e) {}
 
-        try {
-            curlBridgePost('/api/bulk_request/event', ['status' => 'PENDING', 'request' => $createdRecord], 3);
-        } catch (Exception $e) {}
-
         $waNotifyStatus = 'NOT_SENT';
         $bridgeResponse = null;
         if (!empty($adminPhone)) {
@@ -1604,11 +1600,13 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                         "👉 *Quick Actions:*\n" .
                         "✅ Reply *1* or *APPROVE {$requestCode}* to APPROVE\n" .
                         "❌ Reply *2* or *REJECT {$requestCode} <reason>* to REJECT\n\n" .
-                        "🔗 *One-Click WhatsApp Decision:*\n" .
+                        "🔗 *One-Click Decision Links (Message 1 of 3):*\n" .
                         "✅ *Approve Link:*\n" .
                         "{$waApproveUrl}\n\n" .
                         "❌ *Reject Link:*\n" .
-                        "{$waRejectUrl}";
+                        "{$waRejectUrl}\n" .
+                        "━━━━━━━━━━━━━━━━━━━━\n" .
+                        "⚠️ *Notice:* Valid up to 3 message sends. After the 3rd send, links will automatically expire.";
             try {
                 $bRes = curlBridgePost('/api/send', [
                     'phone' => $cleanAdminPhone,
@@ -1693,6 +1691,17 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} has already been rejected."]);
         exit;
     }
+    $sendCount = (int)($currReq['send_count'] ?? 1);
+    if ($sendCount > 3) {
+        $pdo->prepare("UPDATE `bulk_price_requests` SET `status` = 'EXPIRED' WHERE `id` = ? AND `status` = 'PENDING'")->execute([$id]);
+        echo json_encode([
+            "status" => "error",
+            "expired" => true,
+            "message" => "This bulk price request ({$currReq['request_code']}) has expired. Valid up to 3 message sends only.",
+            "request" => $currReq
+        ]);
+        exit;
+    }
 
     try {
         $stmt = $pdo->prepare("
@@ -1713,10 +1722,6 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         try {
             $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `details`) VALUES ('BULK_PRICE_APPROVED', 'PRICING', ?, ?)")
                 ->execute([$approvedBy, "Approved bulk request {$record['request_code']} for {$record['customer_name']}"]);
-        } catch (Exception $e) {}
-
-        try {
-            curlBridgePost('/api/bulk_request/event', ['status' => 'APPROVED', 'request' => $record], 3);
         } catch (Exception $e) {}
 
         echo json_encode([
@@ -1779,6 +1784,17 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} has already been rejected."]);
         exit;
     }
+    $sendCount = (int)($currReq['send_count'] ?? 1);
+    if ($sendCount > 3) {
+        $pdo->prepare("UPDATE `bulk_price_requests` SET `status` = 'EXPIRED' WHERE `id` = ? AND `status` = 'PENDING'")->execute([$id]);
+        echo json_encode([
+            "status" => "error",
+            "expired" => true,
+            "message" => "This bulk price request ({$currReq['request_code']}) has expired. Valid up to 3 message sends only.",
+            "request" => $currReq
+        ]);
+        exit;
+    }
 
     if (empty($rejectionReason)) {
         http_response_code(400);
@@ -1805,10 +1821,6 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         try {
             $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `details`) VALUES ('BULK_PRICE_REJECTED', 'PRICING', ?, ?)")
                 ->execute([$rejectedBy, "Rejected bulk request {$record['request_code']} with reason: $rejectionReason"]);
-        } catch (Exception $e) {}
-
-        try {
-            curlBridgePost('/api/bulk_request/event', ['status' => 'REJECTED', 'request' => $record, 'reason' => $rejectionReason], 3);
         } catch (Exception $e) {}
 
         echo json_encode([
@@ -1861,7 +1873,18 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         exit;
     }
 
-    $newSendCount = ((int)($req['send_count'] ?? 1)) + 1;
+    $currentSendCount = (int)($req['send_count'] ?? 1);
+    if ($currentSendCount >= 3) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Maximum limit of 3 messages reached for request {$req['request_code']}. Further sends are blocked and action links are disabled.",
+            "send_count" => $currentSendCount,
+            "max_reached" => true
+        ]);
+        exit;
+    }
+
+    $newSendCount = $currentSendCount + 1;
     $pdo->prepare("UPDATE `bulk_price_requests` SET `send_count` = ? WHERE `id` = ?")->execute([$newSendCount, $req['id']]);
 
     // Construct token and public URLs
@@ -1905,11 +1928,13 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 "👉 *Quick Actions:*\n" .
                 "✅ Reply *1* or *APPROVE {$req['request_code']}* to APPROVE\n" .
                 "❌ Reply *2* or *REJECT {$req['request_code']} <reason>* to REJECT\n\n" .
-                "🔗 *One-Click WhatsApp Decision:*\n" .
+                "🔗 *One-Click Decision Links (Message {$newSendCount} of 3):*\n" .
                 "✅ *Approve Link:*\n" .
                 "{$waApproveUrl}\n\n" .
                 "❌ *Reject Link:*\n" .
-                "{$waRejectUrl}";
+                "{$waRejectUrl}\n" .
+                "━━━━━━━━━━━━━━━━━━━━\n" .
+                ($newSendCount >= 3 ? "⚠️ *FINAL NOTICE (3 of 3):* After this message, one-click links will expire." : "⚠️ *Notice:* Valid up to 3 message sends.");
 
     // Send via bridge
     $waSent = false;
@@ -1926,7 +1951,7 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
 
     echo json_encode([
         "status" => "success",
-        "message" => "Reminder sent to Admin WhatsApp",
+        "message" => "Reminder sent to Admin WhatsApp (Message {$newSendCount} of 3)",
         "send_count" => $newSendCount,
         "alert_message" => $alertMsg
     ]);
@@ -2148,6 +2173,36 @@ HTML;
 
     // Increment click counter
     $pdo->prepare("UPDATE `bulk_price_requests` SET `link_click_count` = `link_click_count` + 1 WHERE `id` = ?")->execute([$req['id']]);
+
+    // RULE: "so one reqest can message send three time more than third link not working there"
+    $sendCount = (int)($req['send_count'] ?? 1);
+    if ($sendCount > 3) {
+        $renderShell("Link Expired", "
+            <div class='status-icon icon-warning'>⚠️</div>
+            <h2 style='text-align:center;font-size:18px;margin-bottom:8px;color:#92400e;'>Link Inactive & Expired</h2>
+            <p style='text-align:center;color:#64748b;font-size:13px;margin-bottom:16px;'>
+                This bulk price request notification has been sent <b>{$sendCount} times</b>, which exceeds the maximum allowed limit of 3 messages.
+            </p>
+            <div class='card-box' style='background:#fffbeb;border-color:#fde68a;'>
+                <div class='detail-row'>
+                    <span class='detail-label'>Request Code</span>
+                    <span class='detail-value'>{$req['request_code']}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Customer</span>
+                    <span class='detail-value'>{$req['customer_name']}</span>
+                </div>
+                <div class='detail-row'>
+                    <span class='detail-label'>Status</span>
+                    <span class='detail-value' style='color:#b45309;'>LINK DISABLED (Exceeded 3 Sends)</span>
+                </div>
+            </div>
+            <p style='font-size:12px;color:#94a3b8;text-align:center;margin-bottom:16px;'>
+                For data protection, one-click WhatsApp action links are automatically deactivated after the 3rd message. Please log in directly to your CRM workstation to review and process this order.
+            </p>
+        ");
+        exit;
+    }
 
     // Check if already approved
     if ($req['status'] === 'APPROVED') {

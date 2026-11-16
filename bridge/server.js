@@ -1453,6 +1453,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             `Status: Special price activated. Staff can now take the order.`;
                                         await sock.sendMessage(replyTargetJid, { text: confirmText });
                                         io.emit('bulk_request:updated', { status: 'APPROVED', request: r });
+                                    } else if (d && d.expired) {
+                                        const expText = `⚠️ *BULK PRICE REQUEST EXPIRED*\n\n` +
+                                            `Request Code: *${reqCode || 'BPR'}*\n\n` +
+                                            `Notice: This request was valid for up to 3 message sends only and has expired.\n` +
+                                            `Approval is no longer allowed. Please submit a new bulk price request.`;
+                                        await sock.sendMessage(replyTargetJid, { text: expText });
                                     } else if (d && d.message) {
                                         await sock.sendMessage(replyTargetJid, { text: `ℹ️ ${d.message}` });
                                     } else {
@@ -1481,6 +1487,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             `Staff has been informed of rejection.`;
                                         await sock.sendMessage(replyTargetJid, { text: rejectText });
                                         io.emit('bulk_request:updated', { status: 'REJECTED', request: r, reason: reason });
+                                    } else if (d && d.expired) {
+                                        const expText = `⚠️ *BULK PRICE REQUEST EXPIRED*\n\n` +
+                                            `Request Code: *${reqCode || 'BPR'}*\n\n` +
+                                            `Notice: This request was valid for up to 3 message sends only and has expired.\n` +
+                                            `Rejection is no longer allowed. Please submit a new bulk price request.`;
+                                        await sock.sendMessage(replyTargetJid, { text: expText });
                                     } else if (d && d.message) {
                                         await sock.sendMessage(replyTargetJid, { text: `ℹ️ ${d.message}` });
                                     } else {
