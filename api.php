@@ -5204,6 +5204,7 @@ if ($action === 'request_backup_download') {
         @mail($adminEmail, $subject, $message, $headers);
 
         echo json_encode([
+            "success" => true,
             "status" => "success",
             "request_code" => $requestCode,
             "admin_email" => $adminEmail,
@@ -5213,7 +5214,7 @@ if ($action === 'request_backup_download') {
         ]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        echo json_encode(["success" => false, "status" => "error", "message" => $e->getMessage(), "error" => $e->getMessage()]);
     }
     exit;
 }
@@ -5245,15 +5246,17 @@ if ($action === 'check_backup_request_status') {
         }
 
         echo json_encode([
+            "success" => true,
             "status" => "success",
             "request_status" => $req['status'],
+            "requestStatus" => $req['status'],
             "download_token" => ($req['status'] === 'APPROVED') ? $req['download_token'] : null,
             "action_at" => $req['action_at'],
             "action_by" => $req['action_by']
         ]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        echo json_encode(["success" => false, "status" => "error", "message" => $e->getMessage(), "error" => $e->getMessage()]);
     }
     exit;
 }

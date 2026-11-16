@@ -29425,8 +29425,9 @@ async function handleExportBackupJSON() {
     });
 
     const data = await res.json();
-    if (!data.success) {
-      alert('Failed to initiate backup authorization request: ' + (data.error || 'Unknown error'));
+    const isOk = data && (data.success === true || data.status === 'success');
+    if (!isOk) {
+      alert('Failed to initiate backup authorization request: ' + (data.error || data.message || 'Unknown error'));
       return;
     }
 
@@ -29487,9 +29488,12 @@ async function pollBackupApprovalStatus(requestCode) {
   try {
     const res = await fetch(`api.php?action=check_backup_request_status&request_code=${encodeURIComponent(requestCode)}`);
     const data = await res.json();
-    if (!data.success) return;
+    const isOk = data && (data.success === true || data.status === 'success');
+    if (!isOk) return;
 
-    if (data.status === 'APPROVED') {
+    const currentStatus = (data.request_status || data.requestStatus || (data.status !== 'success' ? data.status : '') || '').toUpperCase();
+
+    if (currentStatus === 'APPROVED') {
       if (BACKUP_APPROVAL_POLLER) {
         clearInterval(BACKUP_APPROVAL_POLLER);
         BACKUP_APPROVAL_POLLER = null;
@@ -29508,7 +29512,7 @@ async function pollBackupApprovalStatus(requestCode) {
         closeBackupApprovalModal();
       }, 3500);
 
-    } else if (data.status === 'REJECTED') {
+    } else if (currentStatus === 'REJECTED') {
       if (BACKUP_APPROVAL_POLLER) {
         clearInterval(BACKUP_APPROVAL_POLLER);
         BACKUP_APPROVAL_POLLER = null;
@@ -29527,7 +29531,7 @@ async function pollBackupApprovalStatus(requestCode) {
         showToast('🚫 Request Rejected', 'Super Admin rejected this backup download request. Access has been locked.', 'block', 'rose');
       }
 
-    } else if (data.status === 'EXPIRED') {
+    } else if (currentStatus === 'EXPIRED') {
       if (BACKUP_APPROVAL_POLLER) {
         clearInterval(BACKUP_APPROVAL_POLLER);
         BACKUP_APPROVAL_POLLER = null;
