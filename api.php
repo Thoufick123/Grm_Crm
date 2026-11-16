@@ -5120,7 +5120,7 @@ if ($action === 'request_backup_download') {
         $stmt = $pdo->prepare("
             INSERT INTO `backup_download_requests`
             (`request_code`, `requester_id`, `requester_name`, `requester_role`, `requester_ip`, `admin_email`, `token_approve`, `token_reject`, `status`, `expires_at`, `created_at`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', DATE_ADD(NOW(), INTERVAL 15 MINUTE), NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', DATE_ADD(NOW(), INTERVAL 60 MINUTE), NOW())
         ");
         $stmt->execute([
             $requestCode, $requesterId, $requesterName, $requesterRole, $ip, $adminEmail, $tokenApprove, $tokenReject
@@ -5139,20 +5139,51 @@ if ($action === 'request_backup_download') {
 
         // Send Email to Super Admin (Support custom subject/notes if provided)
         $customNotes = trim($data['custom_notes'] ?? $data['notes'] ?? '');
-        $subject = !empty($data['custom_subject']) ? trim($data['custom_subject']) : ("🔒 [Action Required] Database Backup Download Request - " . $requestCode);
-        // Resolve host domain for legitimate sender to avoid SPF/DMARC rejection by Gmail
+        // Clean transactional subject without spam triggers (avoid [Action Required] and emojis that trigger Gmail Spam)
+        $cleanSubject = !empty($data['custom_subject']) 
+            ? trim($data['custom_subject']) 
+            : ("Security Authorization: Database Backup Download Request (Code: " . $requestCode . ")");
+
         $hostDomain = !empty($_SERVER['HTTP_HOST']) ? preg_replace('/^www\./i', '', $_SERVER['HTTP_HOST']) : 'hostingersite.com';
         $fromEmail = "noreply@" . $hostDomain;
+        $boundary = "----=_NextPart_" . md5(uniqid((string)time(), true));
 
+        // RFC 2822 & Transactional Anti-Spam Headers
         $headers = "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
         $headers .= "From: GRM CRM Security Shield <{$fromEmail}>\r\n";
         $headers .= "Reply-To: {$fromEmail}\r\n";
-        $headers .= "X-Mailer: PHP/" . phpversion();
+        $headers .= "Return-Path: <{$fromEmail}>\r\n";
+        $headers .= "Date: " . date('r') . "\r\n";
+        $headers .= "Message-ID: <" . bin2hex(random_bytes(16)) . "@" . $hostDomain . ">\r\n";
+        $headers .= "X-Mailer: GRM-CRM-Mailer/2.5\r\n";
+        $headers .= "X-Priority: 1 (Highest)\r\n";
+        $headers .= "Importance: High\r\n";
+        $headers .= "Auto-Submitted: auto-generated\r\n";
+        $headers .= "Precedence: bulk\r\n";
+        $headers .= "X-Auto-Response-Suppress: All\r\n";
+        $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+
+        // Plain Text Fallback Body (Critical for 0 Spam score in Gmail)
+        $plainText = "SECURITY AUTHORIZATION REQUIRED\n"
+            . "Database Backup Download Request\n\n"
+            . "A staff user has requested to download the complete CRM database backup file.\n"
+            . "Your explicit authorization is required to unlock this export.\n\n"
+            . "Request Code: {$requestCode}\n"
+            . "Requester: {$requesterName} ({$requesterRole})\n"
+            . "Target Admin: {$adminEmail}\n"
+            . "IP Address: {$ip}\n"
+            . "Requested At: " . date('Y-m-d H:i:s') . "\n"
+            . "Authorization Expires: In 60 Minutes\n\n"
+            . "To APPROVE this backup download (1-Click):\n"
+            . "{$approveUrl}\n\n"
+            . "To REJECT & BLOCK this backup download:\n"
+            . "{$rejectUrl}\n\n"
+            . "If you did not initiate or approve this backup request, click REJECT immediately to prevent data extraction.\n\n"
+            . "GRM Garments CRM - Automated Data Protection Shield\n";
 
         $notesHtml = !empty($customNotes) ? "<div class='info-row'><span class='info-label'>Request Note:</span><span class='info-val'>" . htmlspecialchars($customNotes) . "</span></div>" : "";
 
-        $message = "
+        $htmlMessage = "
 <!DOCTYPE html>
 <html>
 <head>
@@ -5161,7 +5192,7 @@ if ($action === 'request_backup_download') {
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0f172a; margin: 0; padding: 24px 12px; }
     .card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
     .header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 24px 20px; text-align: center; }
-    .badge { display: inline-block; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+    .badge { display: inline-block; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
     .title { margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; }
     .body { padding: 24px 20px; color: #334155; font-size: 13px; line-height: 1.6; }
     .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin: 16px 0; }
@@ -5181,7 +5212,7 @@ if ($action === 'request_backup_download') {
       <h2 class='title'>Database Backup Download Request</h2>
     </div>
     <div class='body'>
-      <p>A user has requested to download the complete CRM database backup file. Your explicit email authorization is required to unlock this file.</p>
+      <p>A staff member has requested to download the complete CRM database backup file. Your explicit authorization is required to unlock this file.</p>
       
       <div class='info-box'>
         <div class='info-row'><span class='info-label'>Request Code:</span><span class='info-val'>{$requestCode}</span></div>
@@ -5189,7 +5220,7 @@ if ($action === 'request_backup_download') {
         <div class='info-row'><span class='info-label'>Target Admin Email:</span><span class='info-val'>{$adminEmail}</span></div>
         <div class='info-row'><span class='info-label'>IP Address:</span><span class='info-val'>{$ip}</span></div>
         <div class='info-row'><span class='info-label'>Requested At:</span><span class='info-val'>" . date('Y-m-d H:i:s') . "</span></div>
-        <div class='info-row'><span class='info-label'>Authorization Expires:</span><span class='info-val'>In 15 Minutes</span></div>
+        <div class='info-row'><span class='info-label'>Authorization Expires:</span><span class='info-val'>In 60 Minutes</span></div>
         {$notesHtml}
       </div>
 
@@ -5198,10 +5229,10 @@ if ($action === 'request_backup_download') {
       <table class='btn-table'>
         <tr>
           <td style='width: 50%;'>
-            <a href='{$approveUrl}' class='btn-approve' target='_blank'>✅ APPROVE DOWNLOAD</a>
+            <a href='{$approveUrl}' class='btn-approve' target='_blank'>APPROVE DOWNLOAD</a>
           </td>
           <td style='width: 50%;'>
-            <a href='{$rejectUrl}' class='btn-reject' target='_blank'>🚫 REJECT &amp; BLOCK</a>
+            <a href='{$rejectUrl}' class='btn-reject' target='_blank'>REJECT &amp; BLOCK</a>
           </td>
         </tr>
       </table>
@@ -5209,19 +5240,25 @@ if ($action === 'request_backup_download') {
       <p style='color: #64748b; font-size: 11px; margin-top: 16px;'>If you did not initiate or approve this backup request, click <strong>REJECT &amp; BLOCK</strong> to prevent data extraction.</p>
     </div>
     <div class='footer'>
-      GRM Garments CRM &bull; Automated Data Protection Shield &bull; Hostinger Secure Mailer
+      GRM Garments CRM &bull; Automated Data Protection Shield
     </div>
   </div>
 </body>
 </html>
 ";
-        // 1. Attempt mail delivery with RFC-compliant headers
-        $mailHeaders = $headers . "
 
-Date: " . date('r') . "
+        // Assemble multipart/alternative body
+        $fullBody = "--{$boundary}\r\n"
+            . "Content-Type: text/plain; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+            . $plainText . "\r\n\r\n"
+            . "--{$boundary}\r\n"
+            . "Content-Type: text/html; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+            . $htmlMessage . "\r\n\r\n"
+            . "--{$boundary}--\r\n";
 
-Message-ID: <" . bin2hex(random_bytes(16)) . "@" . $hostDomain . ">";
-        $mailSent = @mail($adminEmail, $subject, $message, $mailHeaders, "-f" . $fromEmail);
+        $mailSent = @mail($adminEmail, $cleanSubject, $fullBody, $headers, "-f" . $fromEmail);
 
         // 2. Dispatch Instant WhatsApp Security Authorization Link to Super Admin Phone
         $waSent = false;
@@ -5250,7 +5287,7 @@ Message-ID: <" . bin2hex(random_bytes(16)) . "@" . $hostDomain . ">";
 "
                 . "• *Target Admin:* {$adminEmail}
 "
-                . "• *Valid For:* 15 Minutes
+                . "• *Valid For:* 60 Minutes
 
 "
                 . "✅ *1-CLICK APPROVE:*
@@ -5283,7 +5320,7 @@ Message-ID: <" . bin2hex(random_bytes(16)) . "@" . $hostDomain . ">";
             "mail_sent" => (bool)$mailSent,
             "wa_sent" => (bool)$waSent,
             "wa_admin_phone" => $waAdminPhone,
-            "expires_in_minutes" => 15,
+            "expires_in_minutes" => 60,
             "approve_url" => $approveUrl,
             "reject_url" => $rejectUrl,
             "approve_url_preview" => $approveUrl,
@@ -5325,11 +5362,16 @@ if ($action === 'check_backup_request_status') {
         echo json_encode([
             "success" => true,
             "status" => "success",
+            "request_code" => $req['request_code'],
             "request_status" => $req['status'],
             "requestStatus" => $req['status'],
             "download_token" => ($req['status'] === 'APPROVED') ? $req['download_token'] : null,
             "action_at" => $req['action_at'],
-            "action_by" => $req['action_by']
+            "action_by" => $req['action_by'],
+            "admin_email" => $req['admin_email'],
+            "requester_name" => $req['requester_name'],
+            "requester_role" => $req['requester_role'],
+            "download_count" => (int)($req['download_count'] ?? 0)
         ]);
     } catch (Exception $e) {
         http_response_code(500);
@@ -5340,20 +5382,78 @@ if ($action === 'check_backup_request_status') {
 
 // 3. VERIFY BACKUP REQUEST (Webhook accessed when Admin clicks email button)
 if ($action === 'verify_backup_request') {
+    // Explicitly set text/html so browser never renders raw source code with Pretty-print
+    header('Content-Type: text/html; charset=UTF-8');
     $token = trim($_GET['token'] ?? '');
+
+    function renderVerifyHtmlPage($title, $icon, $themeColor, $message, $meta = []) {
+        $metaHtml = '';
+        foreach ($meta as $k => $v) {
+            $metaHtml .= '<div class="meta-row"><span class="meta-lbl">' . htmlspecialchars($k) . ':</span><span class="meta-val">' . htmlspecialchars((string)$v) . '</span></div>';
+        }
+        echo <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{$title} — GRM CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f172a; color: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { width: 100%; max-width: 460px; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); overflow: hidden; text-align: center; }
+    .header { background: {$themeColor}; color: #ffffff; padding: 32px 20px; }
+    .icon { font-size: 56px; }
+    .title { font-size: 20px; font-weight: 800; margin-top: 10px; }
+    .body { padding: 28px 24px; font-size: 13px; color: #334155; line-height: 1.6; }
+    .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin: 18px 0; text-align: left; font-size: 12px; }
+    .meta-row { display: flex; justify-content: space-between; margin-bottom: 7px; }
+    .meta-lbl { color: #64748b; font-weight: 600; }
+    .meta-val { color: #0f172a; font-weight: 700; font-family: monospace; }
+    .footer { padding: 16px; background: #f1f5f9; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <span class="material-symbols-outlined icon">{$icon}</span>
+      <h2 class="title">{$title}</h2>
+    </div>
+    <div class="body">
+      <p>{$message}</p>
+      <div class="meta-box">
+        {$metaHtml}
+      </div>
+      <p style="font-size: 11px; color: #64748b;">You can safely close this browser tab.</p>
+    </div>
+    <div class="footer">
+      GRM Garments CRM &bull; Security &amp; Access Control Shield
+    </div>
+  </div>
+</body>
+</html>
+HTML;
+    }
+
     if (empty($token)) {
-        die("Invalid verification link.");
+        renderVerifyHtmlPage("Invalid Request", "error", "#dc2626", "The verification token is missing or malformed.", ["Error" => "Missing Token"]);
+        exit;
     }
 
     try {
-        if (!$pdo) die("Database connection error");
+        if (!$pdo) {
+            renderVerifyHtmlPage("Database Error", "error", "#dc2626", "Database connection is currently unavailable.", ["Error" => "No Database Connection"]);
+            exit;
+        }
 
         $stmt = $pdo->prepare("SELECT * FROM `backup_download_requests` WHERE `token_approve` = ? OR `token_reject` = ? LIMIT 1");
         $stmt->execute([$token, $token]);
         $req = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$req) {
-            die("Verification token not found or already invalidated.");
+            renderVerifyHtmlPage("Token Invalid", "warning", "#64748b", "This verification link is invalid or has already expired / been used.", ["Notice" => "Token Not Found"]);
+            exit;
         }
 
         $isApprove = ($token === $req['token_approve']);
@@ -5370,88 +5470,70 @@ if ($action === 'verify_backup_request') {
                     ->execute([$downloadToken, $req['admin_email'], $req['id']]);
                 $req['status'] = 'APPROVED';
 
+                // Audit log: Admin approval
                 try {
-                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('BACKUP_DOWNLOAD_APPROVED', 'SECURITY', ?, ?, NOW())");
-                    $audit->execute([$req['admin_email'], "Approved database backup download for {$req['requester_name']} (Code: {$req['request_code']})"]);
+                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOAD_APPROVED', 'BACKUP_DOWNLOAD_APPROVED', 'SECURITY', 'SECURITY', ?, ?, ?, ?, NOW())");
+                    $desc = "Approved database backup download for staff: {$req['requester_name']} ({$req['requester_role']}) - Request Code: {$req['request_code']}";
+                    $audit->execute([$req['admin_email'], $req['admin_email'], $desc, $desc, date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
                 } catch (Exception $ae) {}
             } else {
                 $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'REJECTED', `download_token` = NULL, `action_at` = NOW(), `action_by` = ? WHERE `id` = ?")
                     ->execute([$req['admin_email'], $req['id']]);
                 $req['status'] = 'REJECTED';
 
+                // Audit log: Admin rejection
                 try {
-                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('BACKUP_DOWNLOAD_REJECTED', 'SECURITY', ?, ?, NOW())");
-                    $audit->execute([$req['admin_email'], "REJECTED and BLOCKED database backup download requested by {$req['requester_name']} (Code: {$req['request_code']})"]);
+                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOAD_REJECTED', 'BACKUP_DOWNLOAD_REJECTED', 'SECURITY', 'SECURITY', ?, ?, ?, ?, NOW())");
+                    $desc = "REJECTED and BLOCKED database backup download requested by staff: {$req['requester_name']} ({$req['requester_role']}) - Request Code: {$req['request_code']}";
+                    $audit->execute([$req['admin_email'], $req['admin_email'], $desc, $desc, date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
                 } catch (Exception $ae) {}
             }
         }
 
-        $statusBadge = $req['status'] === 'APPROVED' ? 'bg-emerald-500' : ($req['status'] === 'REJECTED' ? 'bg-rose-500' : 'bg-slate-500');
-        $title = $req['status'] === 'APPROVED' ? 'Backup Download Approved' : ($req['status'] === 'REJECTED' ? 'Backup Download Blocked' : 'Request ' . $req['status']);
-        $icon = $req['status'] === 'APPROVED' ? 'check_circle' : ($req['status'] === 'REJECTED' ? 'block' : 'info');
-        $themeColor = $req['status'] === 'APPROVED' ? '#059669' : ($req['status'] === 'REJECTED' ? '#dc2626' : '#64748b');
-
-        echo <<<HTML
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{$title} — GRM CRM</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f172a; color: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
-    .card { width: 100%; max-width: 440px; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); overflow: hidden; text-align: center; }
-    .header { background: {$themeColor}; color: #ffffff; padding: 32px 20px; }
-    .icon { font-size: 56px; }
-    .title { font-size: 20px; font-weight: 800; margin-top: 10px; }
-    .body { padding: 28px 24px; font-size: 13px; color: #334155; line-height: 1.6; }
-    .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin: 16px 0; text-align: left; font-size: 12px; }
-    .meta-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
-    .meta-lbl { color: #64748b; font-weight: 600; }
-    .meta-val { color: #0f172a; font-weight: 700; font-family: monospace; }
-    .footer { padding: 16px; background: #f1f5f9; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="header">
-      <span class="material-symbols-outlined icon">{$icon}</span>
-      <h2 class="title">{$title}</h2>
-    </div>
-    <div class="body">
-      <p>
-HTML;
         if ($req['status'] === 'APPROVED') {
-            echo "You have successfully <strong>APPROVED</strong> this database backup request. The requester's CRM window has now unlocked the backup file.";
+            renderVerifyHtmlPage(
+                "Backup Download Approved",
+                "check_circle",
+                "#059669",
+                "You have successfully <strong>APPROVED</strong> this database backup request. The requester's CRM window will immediately begin downloading the backup file.",
+                [
+                    "Request Code" => $req['request_code'],
+                    "Staff Requester" => $req['requester_name'] . " (" . $req['requester_role'] . ")",
+                    "Authorized By Admin" => $req['admin_email'],
+                    "Status" => "APPROVED",
+                    "Recorded Time" => $req['created_at']
+                ]
+            );
         } elseif ($req['status'] === 'REJECTED') {
-            echo "You have <strong>REJECTED &amp; BLOCKED</strong> this backup download request. Access to the database backup file has been forbidden.";
+            renderVerifyHtmlPage(
+                "Backup Download Blocked",
+                "block",
+                "#dc2626",
+                "You have <strong>REJECTED &amp; BLOCKED</strong> this backup download request. Access to the database backup file has been forbidden.",
+                [
+                    "Request Code" => $req['request_code'],
+                    "Staff Requester" => $req['requester_name'] . " (" . $req['requester_role'] . ")",
+                    "Blocked By Admin" => $req['admin_email'],
+                    "Status" => "REJECTED",
+                    "Recorded Time" => $req['created_at']
+                ]
+            );
         } else {
-            echo "This authorization request is currently marked as <strong>{$req['status']}</strong>.";
+            renderVerifyHtmlPage(
+                "Request Expired",
+                "history_toggle_off",
+                "#d97706",
+                "This authorization request is currently marked as <strong>EXPIRED</strong>. Please initiate a fresh backup authorization request from the CRM panel.",
+                [
+                    "Request Code" => $req['request_code'],
+                    "Staff Requester" => $req['requester_name'],
+                    "Status" => "EXPIRED",
+                    "Recorded Time" => $req['created_at']
+                ]
+            );
         }
-
-        echo <<<HTML
-      </p>
-
-      <div class="meta-box">
-        <div class="meta-row"><span class="meta-lbl">Request Code:</span><span class="meta-val">{$req['request_code']}</span></div>
-        <div class="meta-row"><span class="meta-lbl">Requester:</span><span class="meta-val">{$req['requester_name']}</span></div>
-        <div class="meta-row"><span class="meta-lbl">Status:</span><span class="meta-val" style="color: {$themeColor};">{$req['status']}</span></div>
-        <div class="meta-row"><span class="meta-lbl">Recorded Time:</span><span class="meta-val">{$req['created_at']}</span></div>
-      </div>
-
-      <p style="font-size: 11px; color: #64748b;">You can safely close this browser window.</p>
-    </div>
-    <div class="footer">
-      GRM Garments CRM &bull; Security &amp; Access Control
-    </div>
-  </div>
-</body>
-</html>
-HTML;
     } catch (Exception $e) {
-        die("Error: " . $e->getMessage());
+        renderVerifyHtmlPage("System Error", "error", "#dc2626", "An unexpected error occurred: " . htmlspecialchars($e->getMessage()), ["Error" => "Exception"]);
     }
     exit;
 }
@@ -5469,7 +5551,15 @@ if ($action === 'backup_db') {
             $authReq = $authStmt->fetch(PDO::FETCH_ASSOC);
             if ($authReq) {
                 $isAuthorized = true;
-                $pdo->prepare("UPDATE `backup_download_requests` SET `download_count` = `download_count` + 1, `downloaded_at` = NOW() WHERE `id` = ?")->execute([$authReq['id']]);
+                $newCount = intval($authReq['download_count'] ?? 0) + 1;
+                $pdo->prepare("UPDATE `backup_download_requests` SET `download_count` = ?, `downloaded_at` = NOW() WHERE `id` = ?")->execute([$newCount, $authReq['id']]);
+
+                // Audit log: Track which admin authorized, which staff downloaded, and total download count
+                try {
+                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOADED', 'DATABASE_BACKUP_EXPORTED', 'BACKUP', 'SECURITY', ?, ?, ?, ?, NOW())");
+                    $desc = "Database backup downloaded by staff: {$authReq['requester_name']} ({$authReq['requester_role']}) - Authorized by Admin: {$authReq['action_by']} (Download #{$newCount}, Request Code: {$authReq['request_code']})";
+                    $audit->execute([$authReq['requester_name'], $authReq['requester_name'], $desc, $desc, date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
+                } catch (Exception $ae) {}
             }
         } catch (Exception $e) {}
     }

@@ -29484,13 +29484,6 @@ async function handleExportBackupJSON(customEmailOverride) {
     const requesterEl = document.getElementById('backup-approval-requester');
     if (requesterEl) requesterEl.innerText = `${requesterName} (${requesterRole})`;
 
-    // Populate direct verification action links for instant authorization
-    const btnApprove = document.getElementById('btn-backup-open-approve');
-    if (btnApprove) btnApprove.href = data.approve_url_preview || data.approve_url || '#';
-
-    const btnReject = document.getElementById('btn-backup-open-reject');
-    if (btnReject) btnReject.href = data.reject_url_preview || data.reject_url || '#';
-
     // Reset status box UI to Pending
     renderBackupApprovalStatusUI('PENDING', data.admin_email);
 
@@ -29543,7 +29536,7 @@ async function pollBackupApprovalStatus(requestCode) {
         clearInterval(BACKUP_APPROVAL_COUNTDOWN);
         BACKUP_APPROVAL_COUNTDOWN = null;
       }
-      renderBackupApprovalStatusUI('APPROVED');
+      renderBackupApprovalStatusUI('APPROVED', data.action_by || data.admin_email);
 
       // Trigger authorized file download
       await executeAuthorizedBackupDownload(data.download_token);
@@ -29563,13 +29556,13 @@ async function pollBackupApprovalStatus(requestCode) {
         BACKUP_APPROVAL_COUNTDOWN = null;
       }
       IS_BACKUP_DOWNLOAD_LOCKED = true;
-      renderBackupApprovalStatusUI('REJECTED');
+      renderBackupApprovalStatusUI('REJECTED', data.action_by || data.admin_email);
 
       // Disable/Lock download backup button on the view
       lockBackupDownloadButtonUI();
 
       if (typeof showToast === 'function') {
-        showToast('🚫 Request Rejected', 'Super Admin rejected this backup download request. Access has been locked.', 'block', 'rose');
+        showToast('🚫 Request Rejected', 'Admin rejected this backup download request. Access has been locked.', 'block', 'rose');
       }
 
     } else if (currentStatus === 'EXPIRED') {
@@ -29581,7 +29574,7 @@ async function pollBackupApprovalStatus(requestCode) {
         clearInterval(BACKUP_APPROVAL_COUNTDOWN);
         BACKUP_APPROVAL_COUNTDOWN = null;
       }
-      renderBackupApprovalStatusUI('EXPIRED');
+      renderBackupApprovalStatusUI('EXPIRED', data.action_by || data.admin_email);
     }
   } catch (err) {
     console.warn('[Polling backup status error]:', err);
@@ -29619,18 +29612,18 @@ function renderBackupApprovalStatusUI(status, adminEmail) {
       spinner.style.display = 'none';
     }
     title.className = 'font-bold text-xs text-emerald-900 flex items-center gap-1.5';
-    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span><span>Request Approved by Super Admin!</span>';
+    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span><span>Request Approved by Admin!</span>';
     desc.className = 'text-[11px] text-emerald-700 leading-relaxed';
-    desc.innerText = 'Super Admin authorization confirmed! Generating database snapshot and downloading your backup file now...';
+    desc.innerHTML = `Authorization confirmed by Admin (<b class="font-mono text-emerald-900">${adminEmail || 'Super Admin'}</b>)! Unlocking database snapshot and starting file download now...`;
   } else if (status === 'REJECTED') {
     box.className = 'p-4 bg-rose-50 border border-rose-300 rounded-xl flex items-start gap-3 transition-colors';
     if (spinner) {
       spinner.style.display = 'none';
     }
     title.className = 'font-bold text-xs text-rose-900 flex items-center gap-1.5';
-    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-rose-600">block</span><span>Request Rejected by Super Admin</span>';
+    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-rose-600">block</span><span>Request Rejected &amp; Blocked</span>';
     desc.className = 'text-[11px] text-rose-700 leading-relaxed';
-    desc.innerText = 'The Super Admin has rejected authorization for this backup download. The download button has been locked and access is blocked.';
+    desc.innerHTML = `Admin (<b class="font-mono text-rose-900">${adminEmail || 'Super Admin'}</b>) has <b>REJECTED</b> authorization for this backup download. The download button has been locked and access is blocked.`;
   } else if (status === 'EXPIRED') {
     box.className = 'p-4 bg-slate-100 border border-slate-300 rounded-xl flex items-start gap-3 transition-colors';
     if (spinner) {
@@ -29639,7 +29632,7 @@ function renderBackupApprovalStatusUI(status, adminEmail) {
     title.className = 'font-bold text-xs text-slate-800 flex items-center gap-1.5';
     title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-slate-500">history_toggle_off</span><span>Request Expired</span>';
     desc.className = 'text-[11px] text-slate-600 leading-relaxed';
-    desc.innerText = 'The 15-minute authorization window has expired without admin approval. Please initiate a new request.';
+    desc.innerText = 'The authorization window has expired without admin approval. Please initiate a new request.';
   }
 }
 
