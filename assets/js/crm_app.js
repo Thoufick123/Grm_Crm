@@ -38193,32 +38193,6 @@ window.renderBulkRequestBanner = function (req) {
   if (!banner || !req) return;
 
   if (req.status === 'PENDING') {
-    const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof window !== 'undefined' && window.CURRENT_USER) ? window.CURRENT_USER : null);
-    const isAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.role === 'ADMIN';
-
-    // Direct WhatsApp Link to Admin phone provided
-    const rawAdminPhone = req.admin_phone || '+91 99435 57998';
-    const cleanAdmin = String(rawAdminPhone).replace(/[^0-9]/g, '');
-    const targetAdminPhone = cleanAdmin.length === 10 ? ('91' + cleanAdmin) : cleanAdmin;
-    const reqCode = req.request_code || 'BPR';
-    const reqAlertText = '🔔 *NEW BULK PRICE REQUEST*\n\n' +
-      'Request Code: *' + reqCode + '*\n' +
-      'Status: *PENDING APPROVAL* by *' + (req.staff_name || 'Staff') + '*\n' +
-      'Customer: *' + (req.customer_name || 'Customer') + '* (' + (req.customer_phone || '') + ')\n' +
-      'Product: *' + (req.product_name || 'Product') + '* (' + (req.size || 'Free Size') + ') × *' + (req.quantity || 1) + ' pcs*\n' +
-      'Standard Price: ₹' + (req.selling_price || 0) + '/pc → Requested Price: *₹' + (req.requested_price || 0) + '/pc*\n' +
-      'Total Value: *₹' + (req.total_requested_amount || 0) + '*\n\n' +
-      '━━━━━━━━━━━━━━━━━━━━\n' +
-      '👉 *Quick Actions:*\n' +
-      '✅ Reply *1* or *APPROVE ' + reqCode + '* to APPROVE\n' +
-      '❌ Reply *2* or *REJECT ' + reqCode + ' <reason>* to REJECT\n\n' +
-      '🔗 *One-Click Decision Links:*\n' +
-      '✅ *Approve Link:*\n' +
-      'https://wa.me/919943557998?text=APPROVE%20' + encodeURIComponent(reqCode) + '\n\n' +
-      '❌ *Reject Link:*\n' +
-      'https://wa.me/919943557998?text=REJECT%20' + encodeURIComponent(reqCode) + '%20Price%20too%20low%20for%20this%20bulk%20order%20quantity.';
-    const directWaUrl = 'https://wa.me/' + targetAdminPhone + '?text=' + encodeURIComponent(reqAlertText);
-
     banner.className = 'px-4 py-2.5 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100/90 border-b border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs shadow-xs';
     banner.innerHTML = `
       <div class="flex items-start sm:items-center gap-2.5 text-amber-950 min-w-0">
@@ -38240,27 +38214,12 @@ window.renderBulkRequestBanner = function (req) {
         </div>
       </div>
 
-      <div class="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
-        <!-- Direct 1-Click WhatsApp to Admin Phone -->
-        <a href="${directWaUrl}" target="_blank" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition flex items-center gap-1 shadow-xs cursor-pointer hover:shadow">
-          <span class="material-symbols-outlined text-[15px]">chat</span>
-          <span>Direct WhatsApp Admin</span>
-        </a>
-        ${isAdmin ? `
-          <button type="button" onclick="handleApproveBulkPriceRequest('${req.id}')" class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:shadow">
-            <span class="material-symbols-outlined text-[16px]">check_circle</span>
-            <span>Approve (₹${req.requested_price})</span>
-          </button>
-          <button type="button" onclick="openBulkRejectReasonModal('${req.id}')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:shadow">
-            <span class="material-symbols-outlined text-[16px]">cancel</span>
-            <span>Reject</span>
-          </button>
-        ` : `
-          <button type="button" onclick="resendBulkPriceRequest('${req.id}')" class="px-3 py-1.5 bg-amber-200/90 hover:bg-amber-300 text-amber-950 font-bold rounded-xl border border-amber-300 transition flex items-center gap-1 cursor-pointer">
-            <span class="material-symbols-outlined text-[15px]">send</span>
-            <span>Resend Alert</span>
-          </button>
-        `}
+      <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+        <!-- Labels only: Admin decides strictly via WhatsApp reply message -->
+        <span class="px-3 py-1.5 rounded-xl bg-amber-200/90 text-amber-950 border border-amber-300 font-extrabold text-xs flex items-center gap-1.5 shadow-xs">
+          <span class="material-symbols-outlined text-[15px] text-amber-800 animate-pulse">hourglass_top</span>
+          <span>Awaiting Admin WhatsApp Decision</span>
+        </span>
       </div>
     `;
     banner.classList.remove('hidden');
@@ -38273,7 +38232,9 @@ window.renderBulkRequestBanner = function (req) {
         <div>
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="font-bold text-emerald-900">${req.request_code}</span>
-            <span class="px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-950 font-extrabold text-[10px]">APPROVED BY ${(req.approved_by || 'ADMIN').toUpperCase()}</span>
+            <span class="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-950 font-extrabold text-[10px] uppercase border border-emerald-300">
+              APPROVED BY ${(req.approved_by || 'ADMIN').toUpperCase()}
+            </span>
           </div>
           <p class="text-emerald-900 font-medium mt-0.5">
             <b>${req.product_name}</b> (${req.size}) &times; <b>${req.quantity} pcs</b> approved at <strong class="text-emerald-900 font-bold">₹${req.requested_price}/pc</strong> (Total: ₹${req.total_requested_amount})
@@ -38282,6 +38243,10 @@ window.renderBulkRequestBanner = function (req) {
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
+        <span class="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-950 border border-emerald-300 font-extrabold text-xs flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-emerald-700">check_circle</span>
+          <span>APPROVED</span>
+        </span>
         <button type="button" onclick="takeOrderForApprovedBulkRequest('${req.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer">
           <span class="material-symbols-outlined text-[17px]">shopping_bag</span>
           <span>Take Order (${req.quantity} pcs @ ₹${req.requested_price})</span>
@@ -38295,11 +38260,12 @@ window.renderBulkRequestBanner = function (req) {
       <div class="flex items-center gap-2 min-w-0">
         <span class="material-symbols-outlined text-[18px] text-rose-600 shrink-0">cancel</span>
         <div class="min-w-0">
-          <span class="font-bold text-rose-900">${req.request_code} Rejected:</span>
-          <span class="text-rose-800 ml-1">${req.rejection_reason || req.admin_notes || 'Special price declined by Admin.'}</span>
+          <span class="font-bold text-rose-900">${req.request_code}:</span>
+          <span class="px-2 py-0.5 rounded-full bg-rose-200 text-rose-950 font-bold text-[10px] uppercase border border-rose-300 ml-1">REJECTED BY ADMIN</span>
+          <span class="text-rose-800 ml-1 font-medium">${req.rejection_reason || req.admin_notes || 'Special price declined by Admin.'}</span>
         </div>
       </div>
-      <button type="button" onclick="document.getElementById('chat-bulk-price-request-banner').classList.add('hidden')" class="text-rose-500 hover:text-rose-800 p-1 shrink-0 cursor-pointer">
+      <button type="button" onclick="document.getElementById('chat-bulk-price-request-banner').classList.add('hidden')" class="text-rose-500 hover:text-rose-800 p-1 shrink-0 cursor-pointer" title="Dismiss">
         <span class="material-symbols-outlined text-[16px]">close</span>
       </button>
     `;
@@ -38596,47 +38562,27 @@ window.loadBulkRequestsHubList = async function (status) {
           <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-[11px] flex-wrap">
             <span class="text-slate-500 font-medium">Req by <b>${r.staff_name || 'Staff'}</b> &bull; Total Value: <b class="text-slate-900">₹${r.total_requested_amount}</b></span>
 
-            ${isPending ? (() => {
-                const rawAdmin = r.admin_phone || '+91 99435 57998';
-                const cleanAdmin = String(rawAdmin).replace(/[^0-9]/g, '');
-                const targetAdmin = cleanAdmin.length === 10 ? ('91' + cleanAdmin) : cleanAdmin;
-                const rCode = r.request_code || 'BPR';
-                const rText = '🔔 *NEW BULK PRICE REQUEST*\\n\\nRequest Code: *' + rCode + '*\\nCustomer: *' + (r.customer_name || '') + '* (' + (r.customer_phone || '') + ')\\nProduct: *' + (r.product_name || '') + '* (' + (r.size || 'Free Size') + ') × *' + (r.quantity || 1) + ' pcs*\\nRequested Price: *₹' + (r.requested_price || 0) + '/pc* (Total: *₹' + (r.total_requested_amount || 0) + '*)\\n\\n👉 Quick Actions:\\n✅ APPROVE Link: https://wa.me/919943557998?text=APPROVE%20' + encodeURIComponent(rCode) + '\\n❌ REJECT Link: https://wa.me/919943557998?text=REJECT%20' + encodeURIComponent(rCode) + '%20Price%20too%20low%20for%20this%20bulk%20order%20quantity.';
-                const directWaLink = 'https://wa.me/' + targetAdmin + '?text=' + encodeURIComponent(rText);
-                return `
-              <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
-                <a href="${directWaLink}" target="_blank" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-bold transition flex items-center gap-1 text-[11px] cursor-pointer" title="Direct WhatsApp Admin">
-                  <span class="material-symbols-outlined text-[15px] text-emerald-600">chat</span>
-                  <span>Direct WhatsApp</span>
-                </a>`;
-              })() : ''}
             ${isPending ? `
               <div class="flex items-center gap-1.5 shrink-0">
-                ${isAdmin ? `
-                  <button type="button" onclick="handleApproveBulkPriceRequest('${r.id}'); setTimeout(() => window.loadBulkRequestsHubList(), 600);" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition flex items-center gap-1 shadow-sm cursor-pointer">
-                    <span class="material-symbols-outlined text-[15px]">check_circle</span>
-                    <span>Approve</span>
-                  </button>
-                  <button type="button" onclick="openBulkRejectReasonModal('${r.id}')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition flex items-center gap-1 shadow-sm cursor-pointer">
-                    <span class="material-symbols-outlined text-[15px]">cancel</span>
-                    <span>Reject</span>
-                  </button>
-                ` : `
-                  <button type="button" onclick="resendBulkPriceRequest('${r.id}')" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold rounded-xl transition flex items-center gap-1 cursor-pointer">
-                    <span class="material-symbols-outlined text-[15px]">send</span>
-                    <span>Resend Alert</span>
-                  </button>
-                `}
+                <span class="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-950 border border-amber-300 font-bold text-[11px] flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px] text-amber-700 animate-pulse">hourglass_top</span>
+                  <span>Awaiting Admin WhatsApp Decision</span>
+                </span>
               </div>
             ` : (isApproved ? `
-              <span class="text-emerald-700 font-bold text-[11px] flex items-center gap-1">
-                <span class="material-symbols-outlined text-[15px]">verified</span>
-                <span>Approved by ${r.approved_by || 'Admin'}</span>
-              </span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold text-[11px] flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px] text-emerald-700">check_circle</span>
+                  <span>Approved by ${r.approved_by || 'Admin'}</span>
+                </span>
+              </div>
             ` : `
-              <span class="text-rose-700 font-medium text-[11px] truncate max-w-[240px]" title="${r.rejection_reason || ''}">
-                Reason: ${r.rejection_reason || 'Declined'}
-              </span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="px-2.5 py-1 rounded-xl bg-rose-100 text-rose-950 border border-rose-300 font-bold text-[11px] flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px] text-rose-700">cancel</span>
+                  <span>Rejected</span>
+                </span>
+              </div>
             `)}
           </div>
         </div>

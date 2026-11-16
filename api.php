@@ -264,9 +264,19 @@ function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reaso
             "Status: Special price activated. Staff can now take the order.";
     } else {
         $cleanReason = trim($reason ?: ($req['rejection_reason'] ?? 'Price too low for this bulk order quantity amount too low'));
+        $reqPriceFormatted = number_format((float)($req['requested_price'] ?? 0), 2, '.', '');
+        $totalAmtFormatted = number_format((float)($req['total_requested_amount'] ?? 0), 2, '.', '');
+        $sizeStr = !empty($req['size']) ? " ({$req['size']})" : " (Free Size)";
+        $productTitle = trim($req['product_name'] ?? 'Garment Product');
+        $qty = (int)($req['quantity'] ?? 1);
+
         $waText = "❌ *BULK PRICE REQUEST REJECTED*\n\n" .
-            "Request Code: *{$req['request_code']}*\n" .
-            "Reason: *{$cleanReason}*\n\n" .
+            "Request Code: *{$req['request_code']}*\n";
+        if (!empty($req['product_name']) || (float)$reqPriceFormatted > 0) {
+            $waText .= "Product: *{$productTitle}{$sizeStr} × {$qty} pcs*\n" .
+                       "Requested Price: *₹{$reqPriceFormatted}/pc* (Total: *₹{$totalAmtFormatted}*)\n";
+        }
+        $waText .= "Reason: *{$cleanReason}*\n\n" .
             "Staff has been informed of rejection.";
     }
 
@@ -1845,11 +1855,13 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         exit;
     }
     if ($currReq['status'] === 'APPROVED') {
-        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} is already approved."]);
-        exit;
-    }
-    if ($currReq['status'] === 'REJECTED') {
-        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} has already been rejected."]);
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'APPROVED', '', $approvedBy, false);
+        echo json_encode([
+            "status" => "success",
+            "message" => "Request {$currReq['request_code']} is already approved.",
+            "request" => $currReq,
+            "wa_dispatch" => $waDispatch
+        ]);
         exit;
     }
     $sendCount = (int)($currReq['send_count'] ?? 1);
@@ -1887,7 +1899,7 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
 
         // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
         $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
-        $skipAdmin = ($fromChannel === 'whatsapp_cmd');
+        $skipAdmin = false;
         $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'APPROVED', '', $approvedBy, $skipAdmin);
 
         echo json_encode([
@@ -1943,12 +1955,14 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
         exit;
     }
-    if ($currReq['status'] === 'APPROVED') {
-        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} is already approved."]);
-        exit;
-    }
     if ($currReq['status'] === 'REJECTED') {
-        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} has already been rejected."]);
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'REJECTED', $rejectionReason, $rejectedBy, false);
+        echo json_encode([
+            "status" => "success",
+            "message" => "Request {$currReq['request_code']} is already rejected.",
+            "request" => $currReq,
+            "wa_dispatch" => $waDispatch
+        ]);
         exit;
     }
     $sendCount = (int)($currReq['send_count'] ?? 1);
@@ -1992,7 +2006,7 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
 
         // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
         $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
-        $skipAdmin = ($fromChannel === 'whatsapp_cmd');
+        $skipAdmin = false;
         $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'REJECTED', $rejectionReason, $rejectedBy, $skipAdmin);
 
         echo json_encode([
