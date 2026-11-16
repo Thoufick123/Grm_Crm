@@ -1036,7 +1036,7 @@
             <div class="flex items-center gap-2">
               <span
                 class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">campaign</span>
-              <span data-i18n="nav.broadcast">Broadcast Templates</span>
+              <span data-i18n="nav.broadcast">Broadcast Hub</span>
             </div>
             <span
               class="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">Blast</span>
@@ -2711,7 +2711,7 @@
                 title="Refresh dashboard metrics & reload live database state">
                 <span
                   class="material-symbols-outlined text-[16px] text-slate-500 group-hover:text-emerald-600 transition">sync</span>
-                <span>Refresh Dashboard</span>
+                <span>Refresh</span>
               </button>
 
               <!-- Export All Details Button -->
@@ -2868,8 +2868,6 @@
                 <div class="min-w-0 flex-1">
                   <h3 class="font-bold text-slate-900 text-sm truncate" data-i18n="dash.active_conversations">Active WhatsApp
                     Conversations</h3>
-                  <p class="text-xs text-slate-500 truncate" data-i18n="dash.active_conversations_sub">Live feed of pending
-                    customer chats across all staff</p>
                 </div>
                 <button onclick="switchView('inbox')" class="text-xs text-brand-wa font-bold hover:underline flex items-center gap-0.5 cursor-pointer shrink-0 whitespace-nowrap"
                   data-i18n="dash.open_inbox">Open Inbox &rarr;</button>
@@ -2910,26 +2908,26 @@
                 class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-emerald-300 shadow-sm"
                 title="Sync live products & stock from connected WhatsApp Business Account (100% Free)">
                 <span class="material-symbols-outlined text-[18px] text-brand-wa">sync_saved_locally</span>
-                <span>Sync WhatsApp</span>
+                <span>Sync</span>
               </button>
 
               <button onclick="refreshCatalogStockFromAPI()"
                 class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-slate-300"
                 title="Fetch latest stock levels from database">
-                <span class="material-symbols-outlined text-[18px]">sync</span> Refresh Stock
+                <span class="material-symbols-outlined text-[18px]">sync</span>
               </button>
 
               <button onclick="toggleBulkPriceEditMode()" id="btn-toggle-bulk-price"
                 class="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-amber-300 shadow-sm cursor-pointer"
                 title="Select multiple products to bulk update prices">
                 <span class="material-symbols-outlined text-[18px] text-amber-700">price_change</span>
-                <span id="btn-toggle-bulk-price-text">Edit Price (Overall)</span>
+                <span id="btn-toggle-bulk-price-text">Edit Price</span>
               </button>
 
               <button onclick="openAddProductModal()"
                 class="px-4 py-2 bg-brand-wa hover:bg-brand-waDark text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
                 title="Add new garment product using complete catalog flow">
-                <span class="material-symbols-outlined text-[18px]">add_circle</span> + Add Product (Catalog Flow)
+                <span class="material-symbols-outlined text-[18px]">add_circle</span>Add Product
               </button>
             </div>
           </div>
@@ -2937,7 +2935,7 @@
 
 
           <!-- Live Stock Metrics Banner (Image 4 UI style with larger icons) -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5">
             <!-- Card 1: Total Garments (Teal) -->
             <div id="catalog-card-all" onclick="setStockStatusFilter('ALL')"
               class="bg-gradient-to-br from-teal-50/70 via-white to-teal-50/30 p-4 rounded-2xl border border-teal-200 hover:border-teal-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden"
@@ -3033,7 +3031,7 @@
 
             <!-- Card 5: Low Stock Alert (Pink / Rose) -->
             <div id="catalog-card-lowstock" onclick="setStockStatusFilter('LOW_STOCK')"
-              class="bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-4 rounded-2xl border border-rose-200 hover:border-rose-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between col-span-2 sm:col-span-1 relative overflow-hidden"
+              class="bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-4 rounded-2xl border border-rose-200 hover:border-rose-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between col-span-1 sm:col-span-1 relative overflow-hidden"
               title="Click to filter products requiring restock (&le; 5 units)">
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold text-rose-800 uppercase tracking-wider">Low Stock Alert</span>
@@ -6546,10 +6544,11 @@
     <div
       class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white flex items-center justify-between">
-        <div>
+        <div class="min-w-0 pr-3">
           <h3 class="font-bold text-base">Assign Customer Enquiry</h3>
+          <p id="assign-modal-subtitle" class="text-xs text-slate-300 mt-0.5 truncate"></p>
         </div>
-        <button onclick="closeModal('modal-staff-assign')" class="text-slate-400 hover:text-white">
+        <button onclick="closeModal('modal-staff-assign')" class="text-slate-400 hover:text-white shrink-0">
           <span class="material-symbols-outlined text-[24px]">close</span>
         </button>
       </div>
@@ -8184,7 +8183,6 @@
           </div>
           <div>
             <h3 class="font-bold text-base tracking-tight">Record Follow-up Result</h3>
-            <p class="text-xs text-indigo-200/80">Log outcome, record customer feedback &amp; schedule next action</p>
           </div>
         </div>
         <button type="button" onclick="closeModal('modal-followup-outcome')"
@@ -8203,8 +8201,6 @@
           <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-2">
-                <span id="outcome-badge-id"
-                  class="font-mono text-[11px] font-extrabold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">—</span>
                 <strong id="outcome-customer-name" class="text-sm font-bold text-slate-900">—</strong>
               </div>
               <p id="outcome-original-reason" class="text-[11px] text-slate-600 mt-1 line-clamp-1">—</p>
@@ -8332,7 +8328,7 @@
             <button type="submit"
               class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl font-bold shadow-md transition flex items-center gap-1.5 active:scale-95">
               <span class="material-symbols-outlined text-[18px]">check_circle</span>
-              <span>Save &amp; Complete Follow-up</span>
+              <span>Complete Follow-up</span>
             </button>
           </div>
         </div>
@@ -9109,8 +9105,6 @@
                 class="text-[10px] bg-emerald-500/30 text-emerald-200 font-extrabold px-2 py-0.5 rounded-full border border-emerald-400/40">Multi-Channel
                 WA Ready</span>
             </div>
-            <p class="text-xs text-emerald-200/80 mt-0.5">Category hierarchy, attribute swatches, auto-SKU, pricing
-              margins &amp; live WhatsApp dispatch card</p>
           </div>
         </div>
         <button onclick="closeModal('modal-product-edit')"
@@ -9189,9 +9183,8 @@
                 <div class="flex items-center justify-between">
                   <label class="block font-bold text-slate-700 text-[11px] flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px] text-teal-600">local_shipping</span>
-                    <span>Delivery &amp; COD Booking Notice (WhatsApp Footer):</span>
+                    <span>Delivery &amp; COD Booking Notice :</span>
                   </label>
-                  <span class="text-[10px] text-slate-400 font-medium">Included in WhatsApp share card</span>
                 </div>
 
                 <!-- Quick Presets -->
@@ -9242,7 +9235,6 @@
               <div>
                 <div class="flex items-center justify-between mb-1.5">
                   <label class="font-bold text-slate-700">Size / Age Group (Multiple Selection) *:</label>
-                  <span class="text-[10px] text-teal-700 font-bold">Click sizes to select (e.g. M, L, XL)</span>
                 </div>
                 <div id="prod-size-chips-container" class="flex flex-wrap gap-1.5 mb-2">
                   <!-- Populated by JS -->
@@ -9255,9 +9247,7 @@
               <!-- Color Swatches (Multiple Selection) -->
               <div>
                 <div class="flex items-center justify-between mb-1.5">
-                  <label class="font-bold text-slate-700">Color &amp; Visual Swatch (Multiple Selection) *:</label>
-                  <span class="text-[10px] text-amber-700 font-bold">Click colors to select (e.g. Red, Pink,
-                    Maroon)</span>
+                  <label class="font-bold text-slate-700">Color &amp; Visual Swatch *:</label>
                 </div>
                 <div id="prod-color-swatches-container" class="flex flex-wrap gap-1.5 mb-2">
                   <!-- Populated by JS -->
@@ -10176,7 +10166,6 @@
           </div>
           <div>
             <h3 class="font-bold text-base">Quick Warehouse Restock</h3>
-            <p class="text-xs text-blue-200/80">Adjust physical units and log warehouse notes</p>
           </div>
         </div>
         <button onclick="closeModal('modal-quick-stock')" class="text-blue-300 hover:text-white">

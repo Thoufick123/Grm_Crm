@@ -3720,10 +3720,10 @@ var ACTIVE_INBOX_SUBMODULE = (function () {
     const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
     if (rawHash.startsWith('inbox/')) {
       const sub = rawHash.split('/')[1];
-      if (sub === 'chats' || sub === 'autoreply' || sub === 'broadcast') return sub;
+      if (sub === 'chats' || sub === 'autoreply' || sub === 'broadcast' || sub === 'settings' || sub === 'setting') return sub;
     }
     const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_INBOX_SUBMODULE') : null;
-    if (stored === 'chats' || stored === 'autoreply' || stored === 'broadcast') return stored;
+    if (stored === 'chats' || stored === 'autoreply' || stored === 'broadcast' || stored === 'settings' || stored === 'setting') return stored;
   } catch (e) { }
   return 'chats';
 })();
@@ -3902,16 +3902,40 @@ function renderInboxSettingsView() {
 window.renderInboxSettingsView = renderInboxSettingsView;
 
 // Interactive WhatsApp Inbox Dropdown Sidebar Toggle Handler
-function toggleWhatsAppDropdown(targetSubmodule) {
+function toggleWhatsAppDropdown(event, targetSubmodule, arrowOnly) {
+  if (event) {
+    if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (typeof event.preventDefault === 'function' && arrowOnly) event.preventDefault();
+  }
   const subMenu = document.getElementById('inbox-submodules-menu');
   const subnavArrow = document.getElementById('inbox-subnav-arrow');
 
   const shield = document.getElementById('instant-view-shield');
   if (shield) shield.remove();
 
-  if (subMenu) subMenu.classList.remove('hidden');
+  if (!subMenu) return;
+
+  const isCurrentlyOpen = !subMenu.classList.contains('hidden');
+
+  // If arrow was clicked, or already active in inbox and parent button clicked without specific submodule:
+  // Toggle accordion open/closed smoothly without closing sidebar drawer on mobile
+  if (arrowOnly || (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'inbox' && !targetSubmodule)) {
+    if (isCurrentlyOpen) {
+      subMenu.classList.add('hidden');
+      if (subnavArrow) subnavArrow.style.transform = 'rotate(0deg)';
+    } else {
+      subMenu.classList.remove('hidden');
+      if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
+    }
+    return;
+  }
+
+  // If navigating from another module: expand submenu and switch view
+  subMenu.classList.remove('hidden');
   if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
-  switchView('inbox', targetSubmodule || 'chats');
+  if (typeof switchView === 'function') {
+    switchView('inbox', targetSubmodule || 'chats');
+  }
 }
 window.toggleWhatsAppDropdown = toggleWhatsAppDropdown;
 
@@ -7386,6 +7410,7 @@ function quickReassignQueryStaff(queryId, newStaffId) {
   );
   if (typeof playChime === 'function') playChime('inbound');
 }
+window.quickReassignQueryStaff = quickReassignQueryStaff;
 
 // Track which customer profile is currently in Edit Mode (locked by default once saved)
 const CUSTOMER_EDIT_MODES = new Set();
@@ -12021,17 +12046,21 @@ function openStaffAssignModal(queryId) {
     if (typeof showToast === 'function') showToast('Permission Denied', 'Reassigning staff requires Edit permission.', 'lock', 'rose');
     return;
   }
-  let query = (CRM_STATE.queries || []).find(q => q && (
-    q.id === queryId || q.customerId === queryId || q.customer_id === queryId ||
-    ('Q-' + q.customerId) === queryId || ('Q-' + q.customer_id) === queryId
+  let query = (CRM_STATE?.queries || []).find(q => q && (
+    String(q.id) === String(queryId) ||
+    String(q.customerId) === String(queryId) ||
+    String(q.customer_id) === String(queryId) ||
+    ('Q-' + q.customerId) === String(queryId) ||
+    ('Q-' + q.customer_id) === String(queryId) ||
+    (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID && (String(q.customerId) === String(ACTIVE_CUSTOMER_ID) || String(q.customer_id) === String(ACTIVE_CUSTOMER_ID)))
   ));
   let customer = query
-    ? (CRM_STATE.customers || []).find(c => c && (c.id === query.customerId || c.id === query.customer_id))
-    : (CRM_STATE.customers || []).find(c => c && (c.id === queryId || ('Q-' + c.id) === queryId));
+    ? (CRM_STATE?.customers || []).find(c => c && (String(c.id) === String(query.customerId) || String(c.id) === String(query.customer_id)))
+    : (CRM_STATE?.customers || []).find(c => c && (String(c.id) === String(queryId) || ('Q-' + c.id) === String(queryId) || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID && String(c.id) === String(ACTIVE_CUSTOMER_ID))));
 
   if (!query && customer) {
     query = {
-      id: queryId.startsWith('Q-') ? queryId : ('Q-' + customer.id),
+      id: (queryId && String(queryId).startsWith('Q-')) ? queryId : ('Q-' + customer.id),
       customerId: customer.id,
       assignedTo: customer.assignedTo || 'UNASSIGNED',
       status: 'NEW',
@@ -12039,13 +12068,25 @@ function openStaffAssignModal(queryId) {
       queryText: customer.lastMessage || 'Customer Enquiry',
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
+    if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
     CRM_STATE.queries.unshift(query);
   }
-  if (!query) return;
+  if (!query) {
+    console.warn('[openStaffAssignModal] Neither query nor customer found for queryId:', queryId);
+    return;
+  }
 
-  if (!customer) customer = CRM_STATE.customers.find(c => c.id === query.customerId || c.id === query.customer_id);
-  document.getElementById('assign-target-query-id').value = query.id;
-  document.getElementById('assign-modal-subtitle').innerText = `Assign ${query.id} (${customer ? customer.name : 'Customer'}) to a dedicated staff`;
+  if (!customer && CRM_STATE?.customers) {
+    customer = CRM_STATE.customers.find(c => c && (String(c.id) === String(query.customerId) || String(c.id) === String(query.customer_id)));
+  }
+
+  const targetInput = document.getElementById('assign-target-query-id');
+  if (targetInput) targetInput.value = query.id;
+
+  const subtitleEl = document.getElementById('assign-modal-subtitle');
+  if (subtitleEl) {
+    subtitleEl.innerText = `Assign ${query.id} (${customer ? customer.name : 'Customer'}) to a dedicated staff`;
+  }
 
   // Toggle DND communication & inbox restoration option if customer is currently on DND
   const dndContainer = document.getElementById('assign-dnd-options-container');
@@ -12061,21 +12102,25 @@ function openStaffAssignModal(queryId) {
   }
 
   const optionsContainer = document.getElementById('assign-staff-options');
-  optionsContainer.innerHTML = CRM_STATE.staffList.map(staff => `
-    <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
-      <div class="flex items-center gap-3">
-        <input type="radio" name="selected_staff" value="${staff.id}" ${query.assignedTo === staff.id ? 'checked' : ''} class="text-brand-wa focus:ring-brand-wa h-4 w-4">
-        <div>
-          <p class="font-bold text-slate-800 text-xs">${staff.name}</p>
-          <p class="text-[11px] text-slate-500">${staff.role}</p>
+  if (optionsContainer) {
+    const staffList = Array.isArray(CRM_STATE?.staffList) ? CRM_STATE.staffList : [];
+    optionsContainer.innerHTML = staffList.map(staff => `
+      <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+        <div class="flex items-center gap-3">
+          <input type="radio" name="selected_staff" value="${staff.id}" ${query.assignedTo === staff.id ? 'checked' : ''} class="text-brand-wa focus:ring-brand-wa h-4 w-4">
+          <div>
+            <p class="font-bold text-slate-800 text-xs">${staff.name}</p>
+            <p class="text-[11px] text-slate-500">${staff.role || staff.specialization || 'Staff'}</p>
+          </div>
         </div>
-      </div>
-      <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-1 rounded-full">${staff.activeQueries} Active Leads</span>
-    </label>
-  `).join('');
+        <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-1 rounded-full">${staff.activeQueries || 0} Active Leads</span>
+      </label>
+    `).join('');
+  }
 
   openModal('modal-staff-assign');
 }
+window.openStaffAssignModal = openStaffAssignModal;
 
 function handleConfirmAssignment(event) {
   event.preventDefault();
@@ -12181,6 +12226,7 @@ function handleConfirmAssignment(event) {
     updateBadgeCounters();
   }
 }
+window.handleConfirmAssignment = handleConfirmAssignment;
 
 // =========================================================================
 // 6. INBOUND WHATSAPP SIMULATOR & DEV TESTING ACTIONS
@@ -19427,7 +19473,7 @@ function toggleBulkPriceEditMode(forceState) {
     if (btn) {
       btn.classList.remove('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
       btn.classList.add('bg-amber-50', 'text-amber-900', 'border-amber-300');
-      btn.innerHTML = `<span class="material-symbols-outlined text-[15px] text-amber-700">price_change</span> <span>Edit Price (Overall)</span>`;
+      btn.innerHTML = `<span class="material-symbols-outlined text-[15px] text-amber-700">price_change</span> <span></span>`;
     }
     if (tbBtn) {
       tbBtn.classList.remove('bg-amber-600', 'text-white', 'border-amber-700', 'shadow-md');
@@ -29457,19 +29503,6 @@ function renderRolePermissionsMatrix(roleName) {
     `).join('');
   }
 
-  // Sync Role Name Input Field
-  const roleInput = document.getElementById('role-input-name');
-  if (roleInput) {
-    roleInput.value = targetRole || '';
-    if (targetRole === 'Super Admin') {
-      roleInput.setAttribute('disabled', 'true');
-      roleInput.title = 'Super Admin is a permanent system role';
-    } else {
-      roleInput.removeAttribute('disabled');
-      roleInput.title = '';
-    }
-  }
-
   // 2. Count staff assigned to this role
   const assignedStaffCount = (CRM_STATE.staffList || []).filter(s => s.role === targetRole).length;
   const countBadge = document.getElementById('role-staff-count-badge');
@@ -29827,10 +29860,7 @@ window.handleToggleModuleAll = function (moduleKey, isChecked) {
 
 window.applyRolePreset = function (presetType) {
   initRolePermissionsState();
-  const roleInput = document.getElementById('role-input-name');
-  const targetRole = (roleInput && roleInput.value.trim()) ? roleInput.value.trim() : ACTIVE_MATRIX_ROLE;
-
-  if (targetRole === 'Super Admin') {
+  if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
     showToast('Super Admin Locked', 'Super Admin always retains 100% full system access.', 'info', 'purple');
     return;
   }
@@ -29863,30 +29893,9 @@ window.applyRolePreset = function (presetType) {
     }
   });
 
-  if (targetRole) {
-    CRM_STATE.rolePermissions[targetRole] = rolePerms;
-    ACTIVE_MATRIX_ROLE = targetRole;
-    renderRolePermissionsMatrix(targetRole);
-  } else {
-    CRM_MODULE_DEFINITIONS.forEach(mod => {
-      const p = rolePerms[mod.key] || {};
-      const vEl = document.getElementById(`role-mod-view-${mod.key}`);
-      const cEl = document.getElementById(`role-mod-create-${mod.key}`);
-      const eEl = document.getElementById(`role-mod-edit-${mod.key}`);
-      const dEl = document.getElementById(`role-mod-delete-${mod.key}`);
-      const aEl = document.getElementById(`role-mod-all-${mod.key}`);
-      if (vEl) vEl.checked = Boolean(p.view);
-      if (cEl) cEl.checked = Boolean(p.create);
-      if (eEl) eEl.checked = Boolean(p.edit);
-      if (dEl) dEl.checked = Boolean(p.delete);
-      if (aEl) aEl.checked = (p.view && p.create && p.edit && p.delete);
-    });
-    if (typeof updateRoleMatrixHeaderCheckboxes === 'function') {
-      updateRoleMatrixHeaderCheckboxes();
-    }
-  }
-
-  showToast('Preset Applied', `Applied ${presetType.toUpperCase()} permissions preset.`, 'tune', 'blue');
+  CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE] = rolePerms;
+  renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+  showToast('Preset Applied', `Applied ${presetType.toUpperCase()} permissions preset to ${ACTIVE_MATRIX_ROLE}.`, 'tune', 'blue');
 };
 
 window.handleSaveRolePermissions = function () {
@@ -29895,47 +29904,10 @@ window.handleSaveRolePermissions = function () {
     return;
   }
   initRolePermissionsState();
-
-  const roleInput = document.getElementById('role-input-name');
-  const inputVal = roleInput ? roleInput.value.trim() : '';
-  const currentRole = inputVal || ACTIVE_MATRIX_ROLE;
-
-  if (!currentRole) {
-    alert('Please enter a role name to save.');
-    if (roleInput) roleInput.focus();
-    return;
-  }
-
-  // Collect checked permissions from the matrix table in DOM
-  const perms = {};
-  CRM_MODULE_DEFINITIONS.forEach(mod => {
-    if (currentRole === 'Super Admin') {
-      perms[mod.key] = { view: true, create: true, edit: true, delete: true };
-      return;
-    }
-    const vEl = document.getElementById(`role-mod-view-${mod.key}`);
-    const cEl = document.getElementById(`role-mod-create-${mod.key}`);
-    const eEl = document.getElementById(`role-mod-edit-${mod.key}`);
-    const dEl = document.getElementById(`role-mod-delete-${mod.key}`);
-    const isViewOnly = mod.key === 'customers' || mod.key === 'audit' || Boolean(mod.viewOnly);
-    perms[mod.key] = {
-      view: vEl ? Boolean(vEl.checked) : false,
-      create: !isViewOnly && cEl ? Boolean(cEl.checked) : false,
-      edit: !isViewOnly && eEl ? Boolean(eEl.checked) : false,
-      delete: !isViewOnly && dEl ? Boolean(dEl.checked) : false
-    };
-  });
-
-  // Keep sub-modules of inbox (autoreply, broadcast, enquiries) in sync
-  if (perms['inbox']) {
-    ['autoreply', 'broadcast', 'enquiries'].forEach(subKey => {
-      perms[subKey] = Object.assign({}, perms['inbox']);
-    });
-  }
-
-  CRM_STATE.rolePermissions[currentRole] = perms;
-  ACTIVE_MATRIX_ROLE = currentRole;
   saveCRMState();
+
+  const currentRole = ACTIVE_MATRIX_ROLE;
+  const currentPerms = CRM_STATE.rolePermissions[currentRole];
 
   // Persist to MySQL database
   fetch('api.php?action=save_role_permissions', {
@@ -29943,44 +29915,62 @@ window.handleSaveRolePermissions = function () {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       role: currentRole,
-      permissions: perms
+      permissions: currentPerms
     })
   }).then(r => r.json()).then(res => {
     console.log('Role permissions saved to DB:', res);
   }).catch(() => { });
 
-  logAudit('ROLE_PERMISSIONS_SAVED', 'ROLES', `Saved role & permissions for: "${currentRole}"`);
+  logAudit('ROLE_PERMISSIONS_SAVED', 'ROLES', `Updated module action permissions matrix for role: "${currentRole}"`);
 
   // Re-apply live access control to current active user
   if (CURRENT_USER) {
     applyRoleBasedAccessControl(CURRENT_USER);
   }
 
-  updateStaffRoleSelectDropdowns();
-  renderRolePermissionsMatrix(currentRole);
-
   playChime('order');
   showToast(
-    'Role & Permissions Saved!',
-    `Role "${currentRole}" and its module permissions have been saved successfully.`,
+    'Role Permissions Saved!',
+    `Updated View, Create, Edit, and Delete actions for role "${currentRole}".`,
     'verified_user',
     'emerald'
   );
-  alert(`Role "${currentRole}" Successfully Saved!\n\nGranular module actions (View, Create, Edit, Delete) for role "${currentRole}" have been saved to MySQL and applied live.`);
+  alert(`Role Permissions Successfully Saved!\n\nGranular module actions (View, Create, Edit, Delete) for role "${currentRole}" have been saved to MySQL and applied live.`);
 };
 
 window.handleCreateNewRolePrompt = function () {
+  const roleName = prompt('Enter a name for the new Role (e.g. Quality Auditor, Telecaller, Accounts, Whatsapp):');
+  if (!roleName || !roleName.trim()) return;
+
+  const cleanName = roleName.trim();
   initRolePermissionsState();
-  const roleInput = document.getElementById('role-input-name');
-  if (roleInput) {
-    roleInput.removeAttribute('disabled');
-    roleInput.value = '';
-    roleInput.focus();
+
+  if (CRM_STATE.rolePermissions[cleanName]) {
+    alert('A role with this name already exists.');
+    ACTIVE_MATRIX_ROLE = cleanName;
+    renderRolePermissionsMatrix(cleanName);
+    return;
   }
-  ACTIVE_MATRIX_ROLE = '';
-  // Default matrix to view_only for quick onboarding
-  applyRolePreset('view_only');
-  showToast('Create New Role', 'Type the role name in the Role Name input box, adjust module permissions, and click "Save Role".', 'add_circle', 'purple');
+
+  // Create new role with standard module permissions
+  const newPerms = createRoleDefaultPermissions(cleanName, false);
+  CRM_STATE.rolePermissions[cleanName] = newPerms;
+  ACTIVE_MATRIX_ROLE = cleanName;
+
+  // Persist role permissions immediately to MySQL
+  fetch('api.php?action=save_role_permissions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: cleanName, permissions: newPerms })
+  }).then(r => r.json()).then(res => {
+    console.log('[save_role_permissions] Created new role in DB:', res);
+  }).catch(() => { });
+
+  saveCRMState();
+  updateStaffRoleSelectDropdowns();
+  renderRolePermissionsMatrix(cleanName);
+
+  showToast('Role Created!', `New role "${cleanName}" created dynamically. Configure module access below and click Save.`, 'add_circle', 'purple');
 };
 
 window.handleDeleteCurrentRole = function () {
