@@ -241,6 +241,37 @@
     }
     window.toggleSidebar = toggleSidebar;
 
+    // Interactive WhatsApp Inbox Dropdown Sidebar Toggle Handler (Early inline handler)
+    function toggleWhatsAppDropdown(event, targetSubmodule, arrowOnly) {
+      if (event) {
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+        if (typeof event.preventDefault === 'function' && arrowOnly) event.preventDefault();
+      }
+      var subMenu = document.getElementById('inbox-submodules-menu');
+      var subnavArrow = document.getElementById('inbox-subnav-arrow');
+      var shield = document.getElementById('instant-view-shield');
+      if (shield) shield.remove();
+      if (!subMenu) return;
+
+      var isCurrentlyOpen = !subMenu.classList.contains('hidden');
+      if (arrowOnly || (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'inbox' && !targetSubmodule)) {
+        if (isCurrentlyOpen) {
+          subMenu.classList.add('hidden');
+          if (subnavArrow) subnavArrow.style.transform = 'rotate(0deg)';
+        } else {
+          subMenu.classList.remove('hidden');
+          if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
+        }
+        return;
+      }
+      subMenu.classList.remove('hidden');
+      if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
+      if (typeof switchView === 'function') {
+        switchView('inbox', targetSubmodule || 'chats');
+      }
+    }
+    window.toggleWhatsAppDropdown = toggleWhatsAppDropdown;
+
     // Auto-initialize sidebar state on page load (open on desktop >= 1024px unless user collapsed it; ALWAYS closed on mobile < 1024px)
     document.addEventListener('DOMContentLoaded', function () {
       if (window.innerWidth < 1024) {
@@ -987,8 +1018,9 @@
 
       <!-- WhatsApp Inbox Module with Sub-Modules -->
       <div class="space-y-1">
-        <button onclick="switchView('inbox', 'chats');" id="nav-inbox"
-          class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer">
+        <button type="button" onclick="toggleWhatsAppDropdown(event)" id="nav-inbox"
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer"
+          title="Toggle WhatsApp Inbox and submodules">
           <div class="flex items-center gap-3">
             <span
               class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">inbox</span>
@@ -997,8 +1029,8 @@
           <div class="flex items-center gap-1.5">
             <span id="badge-total-unread"
               class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">3</span>
-            <span class="material-symbols-outlined text-[16px] text-white/70 transition-transform duration-200"
-              id="inbox-subnav-arrow">expand_more</span>
+            <span type="button" onclick="toggleWhatsAppDropdown(event, null, true)" class="material-symbols-outlined text-[16px] text-white/70 transition-transform duration-200 hover:text-white hover:bg-white/10 rounded p-0.5 cursor-pointer"
+              id="inbox-subnav-arrow" title="Toggle WhatsApp Sub-Modules">expand_more</span>
           </div>
         </button>
 
@@ -5796,7 +5828,7 @@
       <!-- ======================================================== -->
       <!-- VIEW: PACKING SLIP & SHIPPING LABEL CONFIGURATION        -->
       <!-- ======================================================== -->
-      <section id="view-packing-slip-config" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
+      <section id="view-packing-slip-config" class="h-full overflow-y-auto p-3 sm:p-6 pb-32 sm:pb-8 hidden custom-chat-scroll">
         <div class="max-w-7xl mx-auto space-y-5">
 
           <!-- 1. Header Banner with Action Buttons -->
@@ -6243,21 +6275,28 @@
 
                 <!-- Slip Preview Sheet -->
                 <div
-                  class="bg-slate-100/70 p-3 sm:p-4 rounded-xl border border-slate-200 overflow-x-auto flex justify-center">
+                  class="bg-slate-100/70 p-2 sm:p-4 rounded-xl border border-slate-200 overflow-x-auto flex justify-center">
                   <div id="psc-live-preview-sheet"
-                    class="bg-white shadow-md border border-slate-300 p-4 rounded-lg w-full max-w-[390px] text-slate-800 transition-all duration-200">
+                    class="bg-white shadow-md border border-slate-300 p-2.5 sm:p-4 rounded-lg w-full max-w-[390px] text-slate-800 transition-all duration-200 overflow-hidden">
                     <!-- Injected dynamically by JS -->
                   </div>
                 </div>
 
                 <!-- Preview Actions -->
-                <div class="flex items-center justify-between pt-1">
-                  <span class="text-[11px] text-slate-400">Sample Order Preview</span>
-                  <button type="button" onclick="testPrintPreviewPackingSlip()"
-                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95">
-                    <span class="material-symbols-outlined text-[15px]">print</span>
-                    <span>Test Print</span>
-                  </button>
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+                  <span class="text-[11px] text-slate-500 font-medium">Sample Order Preview</span>
+                  <div class="flex items-center gap-2">
+                    <button type="button" onclick="testPrintPreviewPackingSlip()"
+                      class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95">
+                      <span class="material-symbols-outlined text-[16px]">print</span>
+                      <span>Test Print</span>
+                    </button>
+                    <button type="button" onclick="saveCurrentPackingSlipConfig()"
+                      class="lg:hidden px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95">
+                      <span class="material-symbols-outlined text-[16px]">save</span>
+                      <span>Save</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -9719,8 +9758,6 @@
           </div>
           <div>
             <h3 class="font-bold text-base">Garment Attributes System</h3>
-            <p class="text-xs text-amber-200/80">Manage clickable Size chips, Color swatches &amp; Specifications for
-              1-click product creation</p>
           </div>
         </div>
         <button onclick="closeModal('modal-manage-attributes')"
@@ -9773,7 +9810,7 @@
               class="flex-1 bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-amber-500">
             <button type="submit"
               class="px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl font-bold flex items-center gap-1 transition shadow-sm">
-              <span class="material-symbols-outlined text-[16px]">add</span> Add Size
+              <span class="material-symbols-outlined text-[16px]">add</span> Add
             </button>
           </form>
 
@@ -9795,7 +9832,7 @@
               class="flex-1 bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-amber-500">
             <button type="submit"
               class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold flex items-center gap-1 transition shadow-sm">
-              <span class="material-symbols-outlined text-[16px]">add</span> Add Color
+              <span class="material-symbols-outlined text-[16px]">add</span> Add
             </button>
           </form>
 
@@ -9819,7 +9856,7 @@
               class="flex-1 bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 shadow-sm">
             <button type="submit"
               class="px-4 py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl font-bold flex items-center gap-1 transition shadow-sm shrink-0">
-              <span class="material-symbols-outlined text-[16px]">add</span> Add Spec
+              <span class="material-symbols-outlined text-[16px]">add</span> Add
             </button>
           </form>
 
@@ -9947,7 +9984,6 @@
 
       <!-- Modal Footer -->
       <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-        <p class="text-[11px] text-slate-500">Attributes appear as clickable chips when adding and editing products.</p>
         <button onclick="closeModal('modal-manage-attributes')"
           class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl font-bold transition cursor-pointer">
           Done &amp; Close
