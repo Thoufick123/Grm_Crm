@@ -29281,23 +29281,23 @@ function renderStaffTable() {
     return `
       <tr class="hover:bg-slate-50/80 transition">
         <!-- Staff Info -->
-        <td class="py-3 px-4">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+        <td class="py-3 px-3 sm:px-4 whitespace-nowrap">
+          <div class="flex items-center gap-2.5 sm:gap-3">
+            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
               ${staff.avatar || staff.name.slice(0, 2).toUpperCase()}
             </div>
-            <div>
+            <div class="min-w-0">
               <div class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                <span>${staff.name}</span>
-                <span class="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-normal">${staff.id}</span>
+                <span class="truncate">${staff.name}</span>
+                <span class="text-[9px] sm:text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-normal shrink-0">${staff.id}</span>
               </div>
-              <div class="text-[11px] text-slate-500 font-normal">${staff.email || 'No email registered'}</div>
+              <div class="text-[10px] sm:text-[11px] text-slate-500 font-normal truncate max-w-[150px] sm:max-w-none">${staff.email || 'No email registered'}</div>
             </div>
           </div>
         </td>
 
         <!-- Role & Specialization -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 whitespace-nowrap">
           <div>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${getRoleBadgeClass(staff.role)}">
               ${staff.role}
@@ -29307,37 +29307,37 @@ function renderStaffTable() {
         </td>
 
         <!-- Today Handled -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 text-center whitespace-nowrap">
           <span class="font-bold text-slate-900 text-xs font-mono bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 inline-block">
             ${handled} msgs
           </span>
         </td>
 
         <!-- Active Leads -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 text-center whitespace-nowrap">
           <span class="text-xs font-bold ${activeLeads > 0 ? 'text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200' : 'text-slate-400'}">
-            ${activeLeads} Active Leads
+            ${activeLeads} Leads
           </span>
         </td>
 
         <!-- Converted Orders -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 text-center whitespace-nowrap">
           <span class="text-xs font-bold text-emerald-700 font-mono">
             ${convertedOrders} Orders
           </span>
         </td>
 
         <!-- Status Toggle -->
-        <td class="py-3 px-4">
+        <td class="py-3 px-3 sm:px-4 whitespace-nowrap">
           <button type="button" onclick="handleToggleStaffStatus('${staff.id}')"
             class="px-2.5 py-1 rounded-full text-[10px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer ${isActive ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}">
             <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
-            <span>${isActive ? 'Active (On-Duty)' : 'On Leave'}</span>
+            <span>${isActive ? 'Active' : 'On Leave'}</span>
           </button>
         </td>
 
         <!-- Actions -->
-        <td class="py-3 px-4 text-right">
+        <td class="py-3 px-3 sm:px-4 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1">
             ${canUserPerformAction('staff', 'edit') ? `
             <button type="button" onclick="quickAssignRoleForStaff('${staff.id}')"
