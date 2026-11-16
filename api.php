@@ -5100,12 +5100,17 @@ if ($action === 'request_backup_download') {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // Resolve admin email
-        $adminEmail = 'admin@grmgarments.com';
-        $adminStmt = $pdo->query("SELECT `email` FROM `users` WHERE `role` = 'admin' OR `id` = 'admin' OR `role` LIKE '%Super Admin%' LIMIT 1");
-        if ($adminStmt) {
-            $row = $adminStmt->fetch(PDO::FETCH_ASSOC);
-            if (!empty($row['email'])) $adminEmail = $row['email'];
+        // Resolve admin email (prioritize customizable email passed from frontend)
+        $customEmail = trim($data['custom_admin_email'] ?? $data['target_email'] ?? $data['admin_email'] ?? '');
+        if (!empty($customEmail) && filter_var($customEmail, FILTER_VALIDATE_EMAIL)) {
+            $adminEmail = $customEmail;
+        } else {
+            $adminEmail = 'admin@grmgarments.com';
+            $adminStmt = $pdo->query("SELECT `email` FROM `users` WHERE `role` = 'admin' OR `id` = 'admin' OR `role` LIKE '%Super Admin%' LIMIT 1");
+            if ($adminStmt) {
+                $row = $adminStmt->fetch(PDO::FETCH_ASSOC);
+                if (!empty($row['email'])) $adminEmail = $row['email'];
+            }
         }
 
         $requestCode = 'BK-REQ-' . strtoupper(substr(uniqid(), -6));
@@ -5132,13 +5137,16 @@ if ($action === 'request_backup_download') {
         $approveUrl = $publicBaseUrl . '/api.php?action=verify_backup_request&token=' . $tokenApprove;
         $rejectUrl = $publicBaseUrl . '/api.php?action=verify_backup_request&token=' . $tokenReject;
 
-        // Send Email to Super Admin
-        $subject = "🔒 [Action Required] Database Backup Download Request - " . $requestCode;
+        // Send Email to Super Admin (Support custom subject/notes if provided)
+        $customNotes = trim($data['custom_notes'] ?? $data['notes'] ?? '');
+        $subject = !empty($data['custom_subject']) ? trim($data['custom_subject']) : ("🔒 [Action Required] Database Backup Download Request - " . $requestCode);
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
         $headers .= "From: GRM Garments Security <security@grmgarments.com>\r\n";
-        $headers .= "Reply-To: security@grmgarments.com\r\n";
+        $headers .= "Reply-To: " . $adminEmail . "\r\n";
         $headers .= "X-Mailer: PHP/" . phpversion();
+
+        $notesHtml = !empty($customNotes) ? "<div class='info-row'><span class='info-label'>Request Note:</span><span class='info-val'>" . htmlspecialchars($customNotes) . "</span></div>" : "";
 
         $message = "
 <!DOCTYPE html>
@@ -5174,9 +5182,11 @@ if ($action === 'request_backup_download') {
       <div class='info-box'>
         <div class='info-row'><span class='info-label'>Request Code:</span><span class='info-val'>{$requestCode}</span></div>
         <div class='info-row'><span class='info-label'>Requester:</span><span class='info-val'>{$requesterName} ({$requesterRole})</span></div>
+        <div class='info-row'><span class='info-label'>Target Admin Email:</span><span class='info-val'>{$adminEmail}</span></div>
         <div class='info-row'><span class='info-label'>IP Address:</span><span class='info-val'>{$ip}</span></div>
         <div class='info-row'><span class='info-label'>Requested At:</span><span class='info-val'>" . date('Y-m-d H:i:s') . "</span></div>
         <div class='info-row'><span class='info-label'>Authorization Expires:</span><span class='info-val'>In 15 Minutes</span></div>
+        {$notesHtml}
       </div>
 
       <p>Please choose an action below:</p>
