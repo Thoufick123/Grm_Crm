@@ -29389,7 +29389,7 @@ function handleCreateNewStaff(event) {
   const email = emailEl ? emailEl.value.trim() : '';
   const phone = phoneEl ? phoneEl.value.trim() : '';
   const role = roleEl ? roleEl.value : 'Sales Specialist';
-  const specialization = specEl ? specEl.value : 'General';
+  const specialization = (specEl && specEl.value.trim()) ? specEl.value.trim() : 'General';
   const status = statusEl ? statusEl.value : 'ACTIVE';
   const password = passwordInput && passwordInput.value.trim() ? passwordInput.value.trim() : 'staff123';
 
@@ -30262,7 +30262,7 @@ window.openEditStaffModal = function (staffId) {
   if (nameInput) nameInput.value = staff.name || '';
   if (emailInput) emailInput.value = staff.email || '';
   if (phoneInput) phoneInput.value = staff.phone || '';
-  if (specSelect) specSelect.value = staff.specialization || 'General & All Categories';
+  if (specSelect) specSelect.value = staff.specialization || 'General';
   if (statusSelect) statusSelect.value = (staff.status || 'ACTIVE').toUpperCase();
   if (passInput) passInput.value = '';
   if (subtitle) subtitle.innerText = `Edit details for ${staff.name} (${staff.id})`;
