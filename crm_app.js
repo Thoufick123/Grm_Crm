@@ -26,6 +26,8 @@ function handleReceiptAmountChange(mode, rawValue) {
       expectedAmount += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
     });
     expectedAmount += (parseFloat(ORDER_MODAL_STATE?.shippingCharge) || 0);
+    const discount = Math.max(0, parseFloat(ORDER_MODAL_STATE?.discountAmount || 0) || 0);
+    expectedAmount = Math.max(0, expectedAmount - discount);
     if (expectedAmount === 0 && ORDER_MODAL_STATE?.grandTotal) expectedAmount = ORDER_MODAL_STATE.grandTotal;
   } else {
     expectedAmount = (ORDER_MODAL_STATE?.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
@@ -14167,6 +14169,7 @@ function initOrderModal(customer, items) {
     items: items && items.length > 0 ? items : [],
     paymentMode: 'ONLINE',
     shippingCharge: initialShipping,
+    discountAmount: 0,
     codAdvance: initialAdvance,
     onlineUpiId: '',
     onlineScreenshot: null,
@@ -14179,6 +14182,8 @@ function initOrderModal(customer, items) {
 
   const shipChargeInput = document.getElementById('order-shipping-charge');
   if (shipChargeInput) shipChargeInput.value = initialShipping;
+  const discountInput = document.getElementById('order-discount-amount');
+  if (discountInput) discountInput.value = 0;
   const codAdvInputInit = document.getElementById('order-cod-advance-input');
   if (codAdvInputInit) codAdvInputInit.value = initialAdvance;
 
@@ -14480,6 +14485,36 @@ function setQuickShippingCharge(amount) {
 }
 window.setQuickShippingCharge = setQuickShippingCharge;
 
+function handleOrderDiscountChange(val) {
+  const num = Math.max(0, parseFloat(val || '0') || 0);
+  ORDER_MODAL_STATE.discountAmount = num;
+  updateOrderModalFinancials();
+  if (ORDER_MODAL_STATE.paymentMode === 'ONLINE') {
+    const onlineAmtInput = document.getElementById('order-online-receipt-amount');
+    if (onlineAmtInput && onlineAmtInput.value) {
+      handleReceiptAmountChange('ONLINE', onlineAmtInput.value);
+    }
+  }
+}
+window.handleOrderDiscountChange = handleOrderDiscountChange;
+
+function setQuickOrderDiscount(amount) {
+  const input = document.getElementById('order-discount-amount');
+  if (input) input.value = amount;
+  handleOrderDiscountChange(amount);
+}
+window.setQuickOrderDiscount = setQuickOrderDiscount;
+
+function focusOrderDiscountInput() {
+  const input = document.getElementById('order-discount-amount');
+  if (input) {
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input.focus();
+    input.select();
+  }
+}
+window.focusOrderDiscountInput = focusOrderDiscountInput;
+
 function toggleEditShippingCharge() {
   const box = document.getElementById('shipping-edit-box');
   const input = document.getElementById('order-shipping-charge');
@@ -14558,11 +14593,13 @@ function updateOrderModalFinancials() {
   });
 
   const shipping = parseFloat(ORDER_MODAL_STATE.shippingCharge || 0) || 0;
-  const grandTotal = subtotal + shipping;
+  const discount = Math.max(0, parseFloat(ORDER_MODAL_STATE.discountAmount || 0) || 0);
+  const grandTotal = Math.max(0, (subtotal + shipping) - discount);
   const advance = (ORDER_MODAL_STATE.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
   const codBalance = Math.max(0, grandTotal - advance);
 
   ORDER_MODAL_STATE.subtotal = subtotal;
+  ORDER_MODAL_STATE.discountAmount = discount;
   ORDER_MODAL_STATE.grandTotal = grandTotal;
 
   const grandTotalEl = document.getElementById('order-modal-grand-total');
@@ -14571,6 +14608,10 @@ function updateOrderModalFinancials() {
   const shippingDispEl = document.getElementById('order-modal-shipping-display');
   const shippingSummaryEl = document.getElementById('shipping-display-summary');
   const shippingStatusPill = document.getElementById('shipping-charge-status-pill');
+
+  const discountRowEl = document.getElementById('order-modal-discount-row');
+  const discountDispEl = document.getElementById('order-modal-discount-display');
+  const discountStatusPill = document.getElementById('order-discount-status-pill');
 
   const onlinePayableEl = document.getElementById('online-payable-display');
   const codTotalEl = document.getElementById('cod-total-display');
@@ -14588,6 +14629,7 @@ function updateOrderModalFinancials() {
   const grandTotalStr = '₹' + grandTotal.toLocaleString('en-IN');
   const subtotalStr = '₹' + subtotal.toLocaleString('en-IN');
   const shippingStr = shipping > 0 ? ('₹' + shipping.toLocaleString('en-IN')) : 'Free (₹0)';
+  const discountStr = discount > 0 ? ('-₹' + discount.toLocaleString('en-IN')) : '₹0';
   const advanceStr = '₹' + advance.toLocaleString('en-IN');
   const balanceStr = '₹' + codBalance.toLocaleString('en-IN');
 
@@ -14599,6 +14641,21 @@ function updateOrderModalFinancials() {
   if (shippingStatusPill) {
     shippingStatusPill.innerText = shipping > 0 ? `+ ₹${shipping} Delivery` : 'Free Delivery (₹0)';
     shippingStatusPill.className = shipping > 0 ? 'text-[10px] text-blue-800 bg-blue-100/70 border border-blue-300 px-2 py-0.5 rounded-md font-bold' : 'text-[10px] text-slate-500 font-semibold';
+  }
+
+  if (discount > 0) {
+    if (discountRowEl) discountRowEl.classList.remove('hidden');
+    if (discountDispEl) discountDispEl.innerText = discountStr;
+    if (discountStatusPill) {
+      discountStatusPill.innerText = `-₹${discount} Applied`;
+      discountStatusPill.className = 'text-[10px] text-rose-800 bg-rose-100/80 border border-rose-300 px-2 py-0.5 rounded-md font-bold';
+    }
+  } else {
+    if (discountRowEl) discountRowEl.classList.add('hidden');
+    if (discountStatusPill) {
+      discountStatusPill.innerText = 'No Discount (₹0)';
+      discountStatusPill.className = 'text-[10px] text-slate-500 font-semibold';
+    }
   }
 
   if (onlinePayableEl) onlinePayableEl.innerText = grandTotalStr;
@@ -14739,13 +14796,14 @@ function updateOrderSubmitButtonState() {
   const screenshot = isOnline ? ORDER_MODAL_STATE?.onlineScreenshot : ORDER_MODAL_STATE?.codScreenshot;
   const isMismatch = Boolean(ORDER_MODAL_STATE?.amountMismatch);
 
-  // Accurate total calculation: items subtotal + shipping charge
+  // Accurate total calculation: (items subtotal + shipping charge) - discount
   let subtotal = 0;
   (ORDER_MODAL_STATE?.items || []).forEach(it => subtotal += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
   const shipping = parseFloat(ORDER_MODAL_STATE?.shippingCharge || 0) || 0;
-  const totalAmount = (ORDER_MODAL_STATE?.grandTotal !== undefined && ORDER_MODAL_STATE.grandTotal > 0 && subtotal === 0)
+  const discount = Math.max(0, parseFloat(ORDER_MODAL_STATE?.discountAmount || 0) || 0);
+  const totalAmount = (ORDER_MODAL_STATE?.grandTotal !== undefined && ORDER_MODAL_STATE.grandTotal >= 0)
     ? parseFloat(ORDER_MODAL_STATE.grandTotal)
-    : (subtotal + shipping);
+    : Math.max(0, (subtotal + shipping) - discount);
 
   const codAdvance = (ORDER_MODAL_STATE?.codAdvance !== undefined && ORDER_MODAL_STATE?.codAdvance !== null && !isNaN(ORDER_MODAL_STATE.codAdvance))
     ? parseFloat(ORDER_MODAL_STATE.codAdvance)
@@ -15522,13 +15580,14 @@ function handleCreateOrder(event) {
   let upiId = '';
   let screenshot = null;
 
-  // Compute subtotal, shipping charge, advance & grand total upfront
+  // Compute subtotal, shipping charge, discount, advance & grand total upfront
   let subtotal = 0;
   for (const it of (ORDER_MODAL_STATE.items || [])) {
     subtotal += ((parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
   }
   const shippingCharge = parseFloat(ORDER_MODAL_STATE.shippingCharge || 0) || 0;
-  const grandTotal = subtotal + shippingCharge;
+  const discountAmount = Math.max(0, parseFloat(ORDER_MODAL_STATE.discountAmount || 0) || 0);
+  const grandTotal = Math.max(0, (subtotal + shippingCharge) - discountAmount);
   const advanceAmount = paymentMode === 'COD' ? ((ORDER_MODAL_STATE.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200) : 0;
   const balanceDue = paymentMode === 'COD' ? Math.max(0, grandTotal - advanceAmount) : 0;
 
@@ -15644,6 +15703,8 @@ function handleCreateOrder(event) {
     subtotal: subtotal,
     shippingCharge: shippingCharge,
     shippingAmount: shippingCharge,
+    discountAmount: discountAmount,
+    discount: discountAmount,
     grandTotal: grandTotal,
     codAdvance: codAdvance,
     advancePayment: codAdvance,
@@ -15699,12 +15760,13 @@ function handleCreateOrder(event) {
 
   // Generate WhatsApp chat confirmation message
   const itemsText = ORDER_MODAL_STATE.items.map(i => `• ${i.name} (SKU: ${i.sku}, Size: ${i.size || 'Free Size'}) x${i.qty} — ₹${(i.price * i.qty).toLocaleString('en-IN')}`).join('\n');
+  const discountText = discountAmount > 0 ? `🏷️ *Special Discount:* -₹${discountAmount.toLocaleString('en-IN')}\n` : '';
 
   let confirmMsg = '';
   if (paymentMode === 'ONLINE') {
-    confirmMsg = `🎉 *WHATSAPP ORDER BOOKED & PAID!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n💰 *Total Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Online UPI (PAID ✅)\n🔢 *UPI Ref / UTR:* ${upiId}\n📸 *Payment Receipt:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour order is confirmed and stock reserved for packing. Tracking will be shared once dispatched! 🚚✨`;
+    confirmMsg = `🎉 *WHATSAPP ORDER BOOKED & PAID!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${discountText}💰 *Total Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Online UPI (PAID ✅)\n🔢 *UPI Ref / UTR:* ${upiId}\n📸 *Payment Receipt:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour order is confirmed and stock reserved for packing. Tracking will be shared once dispatched! 🚚✨`;
   } else {
-    confirmMsg = `🎉 *WHATSAPP COD ORDER BOOKED!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${shippingCharge > 0 ? `🚚 *Shipping Charge:* ₹${shippingCharge.toLocaleString('en-IN')}\n` : ''}💰 *Total Order Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Cash On Delivery (COD)\n✅ *Advance Paid:* ₹${advanceAmount.toLocaleString('en-IN')} (UPI Ref: ${upiId})\n💵 *Balance to Pay at Delivery:* *₹${balanceDue.toLocaleString('en-IN')}*\n📸 *Advance Proof:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour COD parcel booking is confirmed! Please keep ₹${balanceDue.toLocaleString('en-IN')} ready for courier at doorstep delivery. 🚚✨`;
+    confirmMsg = `🎉 *WHATSAPP COD ORDER BOOKED!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${shippingCharge > 0 ? `🚚 *Shipping Charge:* ₹${shippingCharge.toLocaleString('en-IN')}\n` : ''}${discountText}💰 *Total Order Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Cash On Delivery (COD)\n✅ *Advance Paid:* ₹${advanceAmount.toLocaleString('en-IN')} (UPI Ref: ${upiId})\n💵 *Balance to Pay at Delivery:* *₹${balanceDue.toLocaleString('en-IN')}*\n📸 *Advance Proof:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour COD parcel booking is confirmed! Please keep ₹${balanceDue.toLocaleString('en-IN')} ready for courier at doorstep delivery. 🚚✨`;
   }
 
   const custId = customer ? customer.id : ACTIVE_CUSTOMER_ID;

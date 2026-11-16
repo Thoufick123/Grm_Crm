@@ -6989,6 +6989,42 @@
             </div>
           </div>
 
+          <!-- 3c. Order Discount / Price Adjustment (Editable Option) -->
+          <div class="bg-gradient-to-r from-slate-50 to-rose-50/40 p-3 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="font-extrabold text-slate-800 flex items-center gap-1.5 text-xs">
+                <span class="material-symbols-outlined text-[16px] text-rose-600">sell</span>
+                <span>Order Discount / Concession (₹):</span>
+              </label>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] text-slate-500 font-semibold" id="order-discount-status-pill">No Discount (₹0)</span>
+                <button type="button" onclick="focusOrderDiscountInput()"
+                  class="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[9.5px] flex items-center gap-0.5 cursor-pointer shadow-2xs transition">
+                  <span class="material-symbols-outlined text-[11px]">edit</span>
+                  <span>Edit</span>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 font-black text-rose-500 text-xs">₹</span>
+                <input type="number" id="order-discount-amount" min="0" step="10" placeholder="0" value="0"
+                  oninput="handleOrderDiscountChange(this.value)"
+                  class="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-black text-slate-900 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition">
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="setQuickOrderDiscount(0)"
+                  class="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold transition cursor-pointer">₹0</button>
+                <button type="button" onclick="setQuickOrderDiscount(50)"
+                  class="px-2 py-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition cursor-pointer">-₹50</button>
+                <button type="button" onclick="setQuickOrderDiscount(100)"
+                  class="px-2 py-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition cursor-pointer">-₹100</button>
+                <button type="button" onclick="setQuickOrderDiscount(200)"
+                  class="px-2 py-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition cursor-pointer">-₹200</button>
+              </div>
+            </div>
+          </div>
+
           <!-- 4. Grand Total Summary Strip -->
           <div
             class="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/50 border border-emerald-200 p-3.5 rounded-xl flex items-center justify-between">
@@ -6998,9 +7034,17 @@
                 <span>Items: <strong id="order-modal-subtotal" class="font-mono">₹0</strong></span>
                 <span>•</span>
                 <span>Shipping: <strong id="order-modal-shipping-display" class="font-mono">Free</strong></span>
+                <span id="order-modal-discount-row" class="hidden">
+                  <span>•</span>
+                  <span>Discount: <strong id="order-modal-discount-display" class="font-mono text-rose-700">-₹0</strong></span>
+                </span>
                 <button type="button" onclick="focusShippingChargeInput()"
                   class="text-blue-700 hover:text-blue-900 underline font-extrabold cursor-pointer inline-flex items-center gap-0.5 ml-1">
                   <span class="material-symbols-outlined text-[12px]">edit</span>Edit Shipping
+                </button>
+                <button type="button" onclick="focusOrderDiscountInput()"
+                  class="text-rose-700 hover:text-rose-900 underline font-extrabold cursor-pointer inline-flex items-center gap-0.5 ml-1">
+                  <span class="material-symbols-outlined text-[12px]">edit</span>Edit Discount
                 </button>
               </p>
             </div>
@@ -11724,7 +11768,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261116_v18"></script>
+  <script src="crm_app.js?v=20261116_v19"></script>
 </body>
 
 </html>
