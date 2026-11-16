@@ -38122,15 +38122,24 @@ window.submitBulkPriceRequest = async function (ev) {
     const data = await res.json();
 
     if (data.status === 'success') {
-      if (data.whatsapp_notification === 'FAILED' || data.whatsapp_notification === 'ERROR') {
-        if (typeof showToast === 'function') {
-          showToast('Request Recorded', `Bulk request ${data.request?.request_code || ''} saved, but WhatsApp notification failed to send. Check WhatsApp line.`, 'warning', 'amber');
-        }
-      } else {
-        if (typeof showToast === 'function') {
-          showToast('WhatsApp Sent to Admin', `Bulk price request sent directly to Admin WhatsApp (${adminPhone})!`, 'send', 'emerald');
+      // 2. Launch Direct WhatsApp to Admin Phone immediately so it never shows only in CRM project
+      const rawAdmin = String(adminPhone || (data.request && data.request.admin_phone) || data.admin_phone || '9943557998');
+      const cleanAdmin = rawAdmin.replace(/[^0-9]/g, '');
+      const targetPhone = cleanAdmin.length === 10 ? ('91' + cleanAdmin) : cleanAdmin;
+      const waUrl = data.direct_whatsapp_url || ('https://wa.me/' + targetPhone + '?text=' + encodeURIComponent(data.alert_message || ''));
+
+      if (waUrl) {
+        try {
+          window.open(waUrl, '_blank');
+        } catch (e) {
+          console.warn('Popup blocked for direct WhatsApp URL:', waUrl);
         }
       }
+
+      if (typeof showToast === 'function') {
+        showToast('Direct WhatsApp Sent', 'Opened direct WhatsApp message to Admin (' + targetPhone + ')!', 'send', 'emerald');
+      }
+
       window.closeBulkPriceRequestModal();
       window.checkActiveCustomerBulkRequests();
       if (typeof updateHeaderBulkRequestsBadge === 'function') {
@@ -38187,6 +38196,29 @@ window.renderBulkRequestBanner = function (req) {
     const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof window !== 'undefined' && window.CURRENT_USER) ? window.CURRENT_USER : null);
     const isAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.role === 'ADMIN';
 
+    // Direct WhatsApp Link to Admin phone provided
+    const rawAdminPhone = req.admin_phone || '+91 99435 57998';
+    const cleanAdmin = String(rawAdminPhone).replace(/[^0-9]/g, '');
+    const targetAdminPhone = cleanAdmin.length === 10 ? ('91' + cleanAdmin) : cleanAdmin;
+    const reqCode = req.request_code || 'BPR';
+    const reqAlertText = '🔔 *NEW BULK PRICE REQUEST*\n\n' +
+      'Request Code: *' + reqCode + '*\n' +
+      'Status: *PENDING APPROVAL* by *' + (req.staff_name || 'Staff') + '*\n' +
+      'Customer: *' + (req.customer_name || 'Customer') + '* (' + (req.customer_phone || '') + ')\n' +
+      'Product: *' + (req.product_name || 'Product') + '* (' + (req.size || 'Free Size') + ') × *' + (req.quantity || 1) + ' pcs*\n' +
+      'Standard Price: ₹' + (req.selling_price || 0) + '/pc → Requested Price: *₹' + (req.requested_price || 0) + '/pc*\n' +
+      'Total Value: *₹' + (req.total_requested_amount || 0) + '*\n\n' +
+      '━━━━━━━━━━━━━━━━━━━━\n' +
+      '👉 *Quick Actions:*\n' +
+      '✅ Reply *1* or *APPROVE ' + reqCode + '* to APPROVE\n' +
+      '❌ Reply *2* or *REJECT ' + reqCode + ' <reason>* to REJECT\n\n' +
+      '🔗 *One-Click Decision Links:*\n' +
+      '✅ *Approve Link:*\n' +
+      'https://wa.me/919943557998?text=APPROVE%20' + encodeURIComponent(reqCode) + '\n\n' +
+      '❌ *Reject Link:*\n' +
+      'https://wa.me/919943557998?text=REJECT%20' + encodeURIComponent(reqCode) + '%20Price%20too%20low%20for%20this%20bulk%20order%20quantity.';
+    const directWaUrl = 'https://wa.me/' + targetAdminPhone + '?text=' + encodeURIComponent(reqAlertText);
+
     banner.className = 'px-4 py-2.5 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100/90 border-b border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs shadow-xs';
     banner.innerHTML = `
       <div class="flex items-start sm:items-center gap-2.5 text-amber-950 min-w-0">
@@ -38208,9 +38240,14 @@ window.renderBulkRequestBanner = function (req) {
         </div>
       </div>
 
-      <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+      <div class="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
+        <!-- Direct 1-Click WhatsApp to Admin Phone -->
+        <a href="${directWaUrl}" target="_blank" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition flex items-center gap-1 shadow-xs cursor-pointer hover:shadow">
+          <span class="material-symbols-outlined text-[15px]">chat</span>
+          <span>Direct WhatsApp Admin</span>
+        </a>
         ${isAdmin ? `
-          <button type="button" onclick="handleApproveBulkPriceRequest('${req.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:shadow">
+          <button type="button" onclick="handleApproveBulkPriceRequest('${req.id}')" class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:shadow">
             <span class="material-symbols-outlined text-[16px]">check_circle</span>
             <span>Approve (₹${req.requested_price})</span>
           </button>
@@ -38219,7 +38256,6 @@ window.renderBulkRequestBanner = function (req) {
             <span>Reject</span>
           </button>
         ` : `
-          <span class="text-amber-800 text-[11px] font-medium hidden md:inline">Sent to Admin WhatsApp (${req.admin_phone || '+91 99435 57998'})</span>
           <button type="button" onclick="resendBulkPriceRequest('${req.id}')" class="px-3 py-1.5 bg-amber-200/90 hover:bg-amber-300 text-amber-950 font-bold rounded-xl border border-amber-300 transition flex items-center gap-1 cursor-pointer">
             <span class="material-symbols-outlined text-[15px]">send</span>
             <span>Resend Alert</span>
@@ -38417,8 +38453,15 @@ window.resendBulkPriceRequest = async function (reqId) {
     });
     const data = await res.json();
     if (data.status === 'success') {
+      if (data.direct_whatsapp_url) {
+        try {
+          window.open(data.direct_whatsapp_url, '_blank');
+        } catch (e) {
+          console.warn('Popup blocked, direct url:', data.direct_whatsapp_url);
+        }
+      }
       if (typeof showToast === 'function') {
-        showToast('Reminder Sent', 'Bulk price request reminder sent to Admin WhatsApp!', 'send', 'emerald');
+        showToast('Reminder Sent', 'Opened direct WhatsApp reminder to Admin (' + (data.admin_phone || '') + ')!', 'send', 'emerald');
       }
     } else {
       if (typeof showToast === 'function') {
@@ -38553,6 +38596,20 @@ window.loadBulkRequestsHubList = async function (status) {
           <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-[11px] flex-wrap">
             <span class="text-slate-500 font-medium">Req by <b>${r.staff_name || 'Staff'}</b> &bull; Total Value: <b class="text-slate-900">₹${r.total_requested_amount}</b></span>
 
+            ${isPending ? (() => {
+                const rawAdmin = r.admin_phone || '+91 99435 57998';
+                const cleanAdmin = String(rawAdmin).replace(/[^0-9]/g, '');
+                const targetAdmin = cleanAdmin.length === 10 ? ('91' + cleanAdmin) : cleanAdmin;
+                const rCode = r.request_code || 'BPR';
+                const rText = '🔔 *NEW BULK PRICE REQUEST*\\n\\nRequest Code: *' + rCode + '*\\nCustomer: *' + (r.customer_name || '') + '* (' + (r.customer_phone || '') + ')\\nProduct: *' + (r.product_name || '') + '* (' + (r.size || 'Free Size') + ') × *' + (r.quantity || 1) + ' pcs*\\nRequested Price: *₹' + (r.requested_price || 0) + '/pc* (Total: *₹' + (r.total_requested_amount || 0) + '*)\\n\\n👉 Quick Actions:\\n✅ APPROVE Link: https://wa.me/919943557998?text=APPROVE%20' + encodeURIComponent(rCode) + '\\n❌ REJECT Link: https://wa.me/919943557998?text=REJECT%20' + encodeURIComponent(rCode) + '%20Price%20too%20low%20for%20this%20bulk%20order%20quantity.';
+                const directWaLink = 'https://wa.me/' + targetAdmin + '?text=' + encodeURIComponent(rText);
+                return `
+              <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
+                <a href="${directWaLink}" target="_blank" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-bold transition flex items-center gap-1 text-[11px] cursor-pointer" title="Direct WhatsApp Admin">
+                  <span class="material-symbols-outlined text-[15px] text-emerald-600">chat</span>
+                  <span>Direct WhatsApp</span>
+                </a>`;
+              })() : ''}
             ${isPending ? `
               <div class="flex items-center gap-1.5 shrink-0">
                 ${isAdmin ? `

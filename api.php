@@ -1670,7 +1670,10 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             $staffPhone = (string)$uStmt->fetchColumn();
         } catch (Exception $e) {}
     }
-    $adminPhone = trim($data['admin_phone'] ?? '+919789660115');
+    $adminPhone = trim($data['admin_phone'] ?? '');
+    if (empty($adminPhone)) {
+        $adminPhone = '+91 99435 57998';
+    }
 
     if (empty($customerName) || empty($productName) || $requestedPrice <= 0 || $quantity <= 0) {
         http_response_code(400);
@@ -1779,14 +1782,19 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             }
         }
 
+        $directAdminWaUrl = !empty($cleanAdminPhone) ? ("https://wa.me/{$cleanAdminPhone}?text=" . rawurlencode($alertMsg)) : '';
+
         echo json_encode([
             "status" => "success",
             "message" => "Bulk price request submitted successfully and sent to Admin for approval",
             "request" => $createdRecord,
             "alert_message" => $alertMsg,
-            "approve_url" => $approveUrl ?? '',
-            "reject_url" => $rejectUrl ?? '',
+            "admin_phone" => $cleanAdminPhone ?? '',
+            "direct_whatsapp_url" => $directAdminWaUrl,
+            "approve_url" => $waApproveUrl ?? '',
+            "reject_url" => $waRejectUrl ?? '',
             "wa_notify" => $waNotifyStatus,
+            "whatsapp_notification" => $waNotifyStatus,
             "bridge_response" => $bridgeResponse
         ]);
         exit;
@@ -2114,11 +2122,16 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         } catch (Exception $e) {}
     }
 
+    $directAdminWaUrl = !empty($cleanPhone) ? ("https://wa.me/{$cleanPhone}?text=" . rawurlencode($alertMsg)) : '';
+
     echo json_encode([
         "status" => "success",
         "message" => "Reminder sent to Admin WhatsApp (Message {$newSendCount} of 3)",
         "send_count" => $newSendCount,
-        "alert_message" => $alertMsg
+        "alert_message" => $alertMsg,
+        "admin_phone" => $cleanPhone ?? '',
+        "direct_whatsapp_url" => $directAdminWaUrl,
+        "wa_sent" => $waSent
     ]);
     exit;
 }
