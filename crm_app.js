@@ -368,123 +368,89 @@ const DEFAULT_ROLE_PERMISSIONS = {
     backup: { view: true, create: true, edit: true, delete: true },
     masking: { view: true, create: true, edit: true, delete: true },
     'packing-slip-config': { view: true, create: true, edit: true, delete: true }
-  },
-  'Admin Manager': {
-    dashboard: { view: true, create: true, edit: true, delete: true },
-    inbox: { view: true, create: true, edit: true, delete: true },
-    enquiries: { view: true, create: true, edit: true, delete: true },
-    followups: { view: true, create: true, edit: true, delete: true },
-    catalog: { view: true, create: true, edit: true, delete: true },
-    orders: { view: true, create: true, edit: true, delete: true },
-    customers: { view: true, create: false, edit: false, delete: false },
-    dnd: { view: true, create: true, edit: true, delete: true },
-    staff: { view: true, create: true, edit: true, delete: false },
-    analytics: { view: true, create: true, edit: true, delete: false },
-    audit: { view: true, create: false, edit: false, delete: false },
-    settings: { view: true, create: true, edit: true, delete: false },
-    backup: { view: true, create: true, edit: false, delete: false },
-    masking: { view: true, create: true, edit: true, delete: true }
-  },
-  'Sales Specialist (Baby Collection)': {
-    inbox: { view: true, create: true, edit: true, delete: false },
-    enquiries: { view: true, create: true, edit: true, delete: false },
-    followups: { view: true, create: true, edit: true, delete: false },
-    catalog: { view: true, create: false, edit: false, delete: false },
-    orders: { view: true, create: true, edit: true, delete: false },
-    customers: { view: true, create: false, edit: false, delete: false },
-    dnd: { view: true, create: true, edit: false, delete: false },
-    staff: { view: false, create: false, edit: false, delete: false },
-    analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: true, create: false, edit: false, delete: false },
-    settings: { view: false, create: false, edit: false, delete: false },
-    backup: { view: false, create: false, edit: false, delete: false },
-    masking: { view: true, create: true, edit: false, delete: false }
-  },
-  'Enquiry Specialist (Maternity & Kids)': {
-    inbox: { view: true, create: true, edit: true, delete: false },
-    enquiries: { view: true, create: true, edit: true, delete: false },
-    followups: { view: true, create: true, edit: true, delete: false },
-    catalog: { view: true, create: false, edit: false, delete: false },
-    orders: { view: false, create: false, edit: false, delete: false },
-    customers: { view: true, create: false, edit: false, delete: false },
-    dnd: { view: true, create: true, edit: false, delete: false },
-    staff: { view: false, create: false, edit: false, delete: false },
-    analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: true, create: false, edit: false, delete: false },
-    settings: { view: false, create: false, edit: false, delete: false },
-    backup: { view: false, create: false, edit: false, delete: false },
-    masking: { view: true, create: true, edit: false, delete: false }
-  },
-  'Order Fulfillment & Support': {
-    inbox: { view: true, create: true, edit: false, delete: false },
-    enquiries: { view: false, create: false, edit: false, delete: false },
-    followups: { view: true, create: false, edit: false, delete: false },
-    catalog: { view: true, create: false, edit: false, delete: false },
-    orders: { view: true, create: true, edit: true, delete: false },
-    customers: { view: true, create: false, edit: false, delete: false },
-    dnd: { view: false, create: false, edit: false, delete: false },
-    staff: { view: false, create: false, edit: false, delete: false },
-    analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: true, create: false, edit: false, delete: false },
-    settings: { view: false, create: false, edit: false, delete: false },
-    backup: { view: false, create: false, edit: false, delete: false },
-    masking: { view: true, create: true, edit: false, delete: false }
-  },
-  'Customer Care Representative': {
-    inbox: { view: true, create: true, edit: false, delete: false },
-    enquiries: { view: true, create: false, edit: true, delete: false },
-    followups: { view: true, create: true, edit: false, delete: false },
-    catalog: { view: true, create: false, edit: false, delete: false },
-    orders: { view: true, create: false, edit: false, delete: false },
-    customers: { view: true, create: false, edit: false, delete: false },
-    dnd: { view: true, create: true, edit: false, delete: false },
-    staff: { view: false, create: false, edit: false, delete: false },
-    analytics: { view: false, create: false, edit: false, delete: false },
-    audit: { view: true, create: false, edit: false, delete: false },
-    settings: { view: false, create: false, edit: false, delete: false },
-    backup: { view: false, create: false, edit: false, delete: false },
-    masking: { view: true, create: true, edit: false, delete: false }
   }
 };
 window.DEFAULT_ROLE_PERMISSIONS = DEFAULT_ROLE_PERMISSIONS;
 
+const LEGACY_HARDCODED_DEMO_ROLES = [
+  'Admin Manager',
+  'Sales Specialist (Baby Collection)',
+  'Enquiry Specialist (Maternity & Kids)',
+  'Order Fulfillment & Support',
+  'Customer Care Representative',
+  'Senior Sales Executive'
+];
+
+function createRoleDefaultPermissions(roleName, isFullAccess = false) {
+  const perms = {};
+  const modules = [
+    'dashboard', 'inbox', 'enquiries', 'followups', 'catalog', 'orders',
+    'customers', 'dnd', 'staff', 'analytics', 'audit', 'settings', 'backup', 'masking', 'packing-slip-config'
+  ];
+  modules.forEach(m => {
+    perms[m] = {
+      view: true,
+      create: isFullAccess,
+      edit: isFullAccess,
+      delete: isFullAccess
+    };
+  });
+  if (perms.customers) { perms.customers.create = false; perms.customers.edit = false; perms.customers.delete = false; }
+  if (perms.audit) { perms.audit.create = false; perms.audit.edit = false; perms.audit.delete = false; }
+  return perms;
+}
+window.createRoleDefaultPermissions = createRoleDefaultPermissions;
+
 function initRolePermissionsState() {
   if (typeof CRM_STATE === 'undefined' || !CRM_STATE) return;
   if (!CRM_STATE.rolePermissions) {
+    CRM_STATE.rolePermissions = {};
     try {
       const stored = localStorage.getItem('CRM_ROLE_PERMISSIONS');
       if (stored) {
-        CRM_STATE.rolePermissions = Object.assign({}, DEFAULT_ROLE_PERMISSIONS, JSON.parse(stored));
-      } else {
-        CRM_STATE.rolePermissions = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
+        CRM_STATE.rolePermissions = JSON.parse(stored) || {};
       }
     } catch (e) {
-      CRM_STATE.rolePermissions = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
+      CRM_STATE.rolePermissions = {};
     }
   }
-  // Sanitize Customer 360 & System Audit Logs to strictly view-only across all roles
-  if (CRM_STATE && CRM_STATE.rolePermissions) {
-    Object.keys(DEFAULT_ROLE_PERMISSIONS).forEach(r => {
-      if (CRM_STATE.rolePermissions[r] && (!CRM_STATE.rolePermissions[r].masking || typeof CRM_STATE.rolePermissions[r].masking !== 'object')) {
-        CRM_STATE.rolePermissions[r].masking = Object.assign({}, DEFAULT_ROLE_PERMISSIONS[r]?.masking || { view: true, create: true, edit: false, delete: false });
-      }
-    });
-    Object.keys(CRM_STATE.rolePermissions).forEach(r => {
-      if (!CRM_STATE.rolePermissions[r].masking || typeof CRM_STATE.rolePermissions[r].masking !== 'object') {
-        CRM_STATE.rolePermissions[r].masking = { view: true, create: true, edit: false, delete: false };
-      }
-      if (CRM_STATE.rolePermissions[r]?.customers) {
-        CRM_STATE.rolePermissions[r].customers.create = false;
-        CRM_STATE.rolePermissions[r].customers.edit = false;
-        CRM_STATE.rolePermissions[r].customers.delete = false;
-      }
-      if (CRM_STATE.rolePermissions[r]?.audit) {
-        CRM_STATE.rolePermissions[r].audit.create = false;
-        CRM_STATE.rolePermissions[r].audit.edit = false;
-        CRM_STATE.rolePermissions[r].audit.delete = false;
-      }
-    });
+
+  // Ensure Super Admin always exists with full access
+  if (!CRM_STATE.rolePermissions['Super Admin']) {
+    CRM_STATE.rolePermissions['Super Admin'] = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS['Super Admin']));
   }
+
+  // Purge legacy hardcoded demo roles UNLESS actively assigned to an existing staff member
+  const assignedRolesInUse = new Set((CRM_STATE.staffList || []).map(s => s && s.role).filter(Boolean));
+  LEGACY_HARDCODED_DEMO_ROLES.forEach(legacyRole => {
+    if (!assignedRolesInUse.has(legacyRole) && CRM_STATE.rolePermissions[legacyRole]) {
+      delete CRM_STATE.rolePermissions[legacyRole];
+    }
+  });
+
+  // Ensure any role held by staff is present in rolePermissions
+  (CRM_STATE.staffList || []).forEach(st => {
+    if (st && st.role && !CRM_STATE.rolePermissions[st.role]) {
+      CRM_STATE.rolePermissions[st.role] = createRoleDefaultPermissions(st.role, false);
+    }
+  });
+
+  // Sanitize permissions across all configured roles
+  Object.keys(CRM_STATE.rolePermissions).forEach(r => {
+    if (!CRM_STATE.rolePermissions[r].masking || typeof CRM_STATE.rolePermissions[r].masking !== 'object') {
+      CRM_STATE.rolePermissions[r].masking = { view: true, create: true, edit: false, delete: false };
+    }
+    if (CRM_STATE.rolePermissions[r]?.customers) {
+      CRM_STATE.rolePermissions[r].customers.create = false;
+      CRM_STATE.rolePermissions[r].customers.edit = false;
+      CRM_STATE.rolePermissions[r].customers.delete = false;
+    }
+    if (CRM_STATE.rolePermissions[r]?.audit) {
+      CRM_STATE.rolePermissions[r].audit.create = false;
+      CRM_STATE.rolePermissions[r].audit.edit = false;
+      CRM_STATE.rolePermissions[r].audit.delete = false;
+    }
+  });
 }
 window.initRolePermissionsState = initRolePermissionsState;
 
@@ -2388,6 +2354,12 @@ function ingestInboundMessage(payload, suppressChime = false) {
   if (query) {
     if (!query.accountId) query.accountId = payloadAccountId;
     if (!query.businessNumber) query.businessNumber = payloadBusinessNum;
+    if (payload.assigned_to && payload.assigned_to !== 'UNASSIGNED') {
+      query.assignedTo = payload.assigned_to;
+      customer.assignedTo = payload.assigned_to;
+    } else if (customer.assignedTo && customer.assignedTo !== 'UNASSIGNED') {
+      query.assignedTo = customer.assignedTo;
+    }
     if (!isDuplicate && !isOutboundMsg) {
       query.unreadCount = (query.unreadCount || 0) + 1;
     }
@@ -2401,13 +2373,14 @@ function ingestInboundMessage(payload, suppressChime = false) {
     // Move query to top of queries array
     CRM_STATE.queries = [query, ...CRM_STATE.queries.filter(q => q.id !== query.id)];
   } else {
+    const initAssigned = (payload.assigned_to && payload.assigned_to !== 'UNASSIGNED') ? payload.assigned_to : (customer.assignedTo || 'UNASSIGNED');
     query = {
       id: `Q-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
       customerId: customer.id,
       accountId: payloadAccountId,
       businessNumber: payloadBusinessNum,
-      assignedTo: payload.assigned_to || 'UNASSIGNED',
-      status: 'NEW',
+      assignedTo: initAssigned,
+      status: (initAssigned !== 'UNASSIGNED') ? 'ASSIGNED' : 'NEW',
       priority: payload.priority || 'HIGH',
       queryText: messageText,
       productSku: null,
@@ -2529,13 +2502,42 @@ function syncInboundMessagesNow(isInitial = false) {
   return fetch(`api.php?action=get_inbound_messages&since=${since}`)
     .then(r => r.json())
     .then(res => {
-      if (res.status === 'success' && res.messages && res.messages.length > 0) {
-        res.messages.forEach(msg => ingestInboundMessage(msg, isInitial));
-        if (res.server_time) {
-          LAST_POLL_EPOCH = Math.max(LAST_POLL_EPOCH, res.server_time);
+      if (res && res.status === 'success') {
+        let hasMsgUpdates = false;
+        if (res.messages && res.messages.length > 0) {
+          res.messages.forEach(msg => ingestInboundMessage(msg, isInitial));
+          hasMsgUpdates = true;
+          if (res.server_time) {
+            LAST_POLL_EPOCH = Math.max(LAST_POLL_EPOCH, res.server_time);
+          }
         }
-        if (ACTIVE_VIEW === 'inbox') {
-          renderInbox();
+        let hasAssignmentUpdates = false;
+        if (Array.isArray(res.assignments) && res.assignments.length > 0) {
+          res.assignments.forEach(asgn => {
+            let q = (CRM_STATE.queries || []).find(qry => qry && (qry.id === asgn.query_id || qry.customerId === asgn.customer_id || qry.customer_id === asgn.customer_id));
+            if (q) {
+              if (q.assignedTo !== asgn.assigned_to) {
+                q.assignedTo = asgn.assigned_to;
+                hasAssignmentUpdates = true;
+              }
+              if (asgn.status && q.status !== asgn.status) {
+                q.status = asgn.status;
+                hasAssignmentUpdates = true;
+              }
+            }
+            let c = (CRM_STATE.customers || []).find(cust => cust && (cust.id === asgn.customer_id || (asgn.phone && (cust.phone === asgn.phone || cust.whatsapp === asgn.phone))));
+            if (c && c.assignedTo !== asgn.assigned_to) {
+              c.assignedTo = asgn.assigned_to;
+              hasAssignmentUpdates = true;
+            }
+          });
+        }
+        if (hasAssignmentUpdates || hasMsgUpdates) {
+          saveCRMState();
+          if (ACTIVE_VIEW === 'inbox') {
+            renderInbox();
+          }
+          updateBadgeCounters();
         }
       }
     })
@@ -3072,9 +3074,9 @@ function initCRMState() {
         CRM_STATE.attributes = data.attributes;
       }
 
-      // 3. Customers (Dynamic database sync)
+      // 3. Customers (Dynamic database sync - Merge without wiping local live leads)
       if (data.customers && Array.isArray(data.customers)) {
-        CRM_STATE.customers = data.customers.map(c => {
+        const dbCusts = data.customers.map(c => {
           const cleanPhone = (c.phone || c.whatsapp || '').replace(/\D/g, '');
           const existingCust = (CRM_STATE.customers || []).find(ec => ec && (ec.id === c.id || (cleanPhone.length >= 10 && (ec.phone || ec.whatsapp || '').replace(/\D/g, '').endsWith(cleanPhone.slice(-10)))));
 
@@ -3118,6 +3120,14 @@ function initCRMState() {
             adminNotes: existingNotes
           };
         });
+        const existingCustMap = new Map();
+        (CRM_STATE.customers || []).forEach(ec => {
+          if (ec && ec.id) existingCustMap.set(String(ec.id), ec);
+        });
+        dbCusts.forEach(dc => {
+          existingCustMap.set(String(dc.id), Object.assign({}, existingCustMap.get(String(dc.id)) || {}, dc));
+        });
+        CRM_STATE.customers = Array.from(existingCustMap.values());
       }
 
       // 4. Orders (Dynamic database sync)
@@ -3151,9 +3161,9 @@ function initCRMState() {
         }));
       }
 
-      // 5. Customer Enquiries & Leads (Dynamic database sync)
+      // 5. Customer Enquiries & Leads (Dynamic database sync - Merge without wiping local in-memory/localStorage leads)
       if (data.queries && Array.isArray(data.queries)) {
-        CRM_STATE.queries = data.queries.map(q => ({
+        const dbQueries = data.queries.map(q => ({
           id: q.id,
           customerId: q.customerId || q.customer_id || '',
           assignedTo: q.assignedTo || q.assigned_to || 'UNASSIGNED',
@@ -3174,6 +3184,17 @@ function initCRMState() {
           statusHistory: Array.isArray(q.statusHistory) ? q.statusHistory : (typeof q.status_history === 'string' ? (JSON.parse(q.status_history || '[]') || []) : []),
           createdAt: q.createdAt || q.created_at || ''
         }));
+        const existingQMap = new Map();
+        (CRM_STATE.queries || []).forEach(eq => {
+          if (eq && (eq.id || eq.customerId)) {
+            existingQMap.set(String(eq.id || eq.customerId), eq);
+          }
+        });
+        dbQueries.forEach(dq => {
+          const key = String(dq.id || dq.customerId);
+          existingQMap.set(key, Object.assign({}, existingQMap.get(key) || {}, dq));
+        });
+        CRM_STATE.queries = Array.from(existingQMap.values());
       }
 
       // 6. Follow-ups (Dynamic database sync - strictly deduplicated & non-mock)
@@ -3278,10 +3299,18 @@ function initCRMState() {
 
       // 13. Role Permissions (Dynamic database sync)
       if (data.rolePermissions && typeof data.rolePermissions === 'object') {
-        CRM_STATE.rolePermissions = Object.assign({}, DEFAULT_ROLE_PERMISSIONS, data.rolePermissions);
+        initRolePermissionsState();
+        Object.keys(data.rolePermissions).forEach(r => {
+          if (r && r.trim()) {
+            CRM_STATE.rolePermissions[r] = data.rolePermissions[r];
+          }
+        });
         try {
           localStorage.setItem('CRM_ROLE_PERMISSIONS', JSON.stringify(CRM_STATE.rolePermissions));
         } catch (e) { }
+        if (typeof updateStaffRoleSelectDropdowns === 'function') {
+          updateStaffRoleSelectDropdowns();
+        }
         if (typeof enforceGranularActionPermissions === 'function') {
           enforceGranularActionPermissions();
         }
@@ -4483,12 +4512,8 @@ function applyRoleBasedAccessControl(user) {
   // Enforce granular actions in views
   enforceGranularActionPermissions();
 
-  // 4. In Staff Mode, default filter Inbox to 'my' assigned queue
-  if (!isAdmin) {
-    setInboxFilter('my');
-  } else {
-    setInboxFilter('all');
-  }
+  // 4. In Staff Mode, default filter Inbox to 'all' (strictly restricted to assigned chats for staff workstation)
+  setInboxFilter('all');
 
   // 5. If currently on a view without view permission, redirect to first allowed view
   if (!canUserPerformAction(ACTIVE_VIEW, 'view')) {
@@ -4653,6 +4678,64 @@ function renderQuickLineSwitcher() {
   container.innerHTML = chipsHtml;
 }
 
+// Helper: Check if a customer card / query is assigned to current logged-in staff
+function isAssignedToCurrentStaff(card, user) {
+  if (!user) return false;
+  const staffIdentifiers = [
+    user.id,
+    user.staffId,
+    user.staff_id,
+    user.username,
+    user.name,
+    user.role,
+    typeof ACTIVE_ROLE !== 'undefined' ? ACTIVE_ROLE : null
+  ].filter(Boolean).map(s => String(s).trim().toLowerCase());
+
+  const assignedVals = [
+    card.assignedTo,
+    card.staff?.id,
+    card.staff?.staffId,
+    card.staff?.staff_id,
+    card.staff?.name,
+    card.staff?.username,
+    card.customer?.assignedTo,
+    card.customer?.assigned_to
+  ].filter(Boolean).map(s => String(s).trim().toLowerCase());
+
+  if (assignedVals.some(v => v && v !== 'unassigned' && staffIdentifiers.includes(v))) {
+    return true;
+  }
+
+  const custId = String(card.customerId || card.customer?.id || '');
+  if (custId) {
+    if (Array.isArray(CRM_STATE?.queries)) {
+      const q = CRM_STATE.queries.find(qry => qry && (
+        qry.customerId === custId || String(qry.customerId) === custId ||
+        qry.customer_id === custId || String(qry.customer_id) === custId
+      ));
+      if (q) {
+        const qAssigned = String(q.assignedTo || q.assigned_to || '').trim().toLowerCase();
+        if (qAssigned && qAssigned !== 'unassigned' && staffIdentifiers.includes(qAssigned)) {
+          return true;
+        }
+      }
+    }
+    if (Array.isArray(CRM_STATE?.followups)) {
+      const hasAssignedFollowup = CRM_STATE.followups.some(f => {
+        if (!f || f.status === 'COMPLETED' || f.status === 'CANCELLED') return false;
+        const fCustId = String(f.customerId || f.customer_id || '');
+        if (fCustId !== custId) return false;
+        const fAssigned = String(f.assignedTo || f.assigned_to || '').trim().toLowerCase();
+        return fAssigned && fAssigned !== 'unassigned' && staffIdentifiers.includes(fAssigned);
+      });
+      if (hasAssignedFollowup) return true;
+    }
+  }
+
+  return false;
+}
+window.isAssignedToCurrentStaff = isAssignedToCurrentStaff;
+
 function renderInboxConversationList() {
   renderQuickLineSwitcher();
   const container = document.getElementById('conversation-list-container');
@@ -4667,8 +4750,34 @@ function renderInboxConversationList() {
   (CRM_STATE.customers || []).forEach(cust => {
     if (cust.name === 'System' || cust.name === 'GRM Linked WhatsApp Device' || cust.name.startsWith('WhatsApp Linked')) return;
 
-    const query = CRM_STATE.queries.find(q => q.customerId === cust.id);
-    const staff = query ? CRM_STATE.staffList.find(s => s.id === query.assignedTo) : null;
+    let query = (CRM_STATE.queries || []).find(q => q && (
+      q.customerId === cust.id || String(q.customerId) === String(cust.id) ||
+      q.customer_id === cust.id || String(q.customer_id) === String(cust.id)
+    ));
+    if (!query && (cust.phone || cust.whatsapp)) {
+      const cleanDigits = (cust.phone || cust.whatsapp).replace(/[^0-9]/g, '');
+      if (cleanDigits.length >= 7) {
+        query = (CRM_STATE.queries || []).find(q => {
+          if (!q) return false;
+          const qCId = String(q.customerId || q.customer_id || '');
+          if (qCId && cleanDigits.endsWith(qCId.replace(/[^0-9]/g, '').slice(-10))) return true;
+          const qCust = (CRM_STATE.customers || []).find(c => c && (c.id === q.customerId || c.id === q.customer_id));
+          const qDigits = (qCust?.phone || qCust?.whatsapp || '').replace(/[^0-9]/g, '');
+          return qDigits.length >= 7 && (cleanDigits.endsWith(qDigits.slice(-10)) || cleanDigits.endsWith(cleanDigits.slice(-10)));
+        });
+      }
+    }
+
+    const assignedStaffId = query?.assignedTo || query?.assigned_to || cust.assignedTo || cust.assigned_to || 'UNASSIGNED';
+    const staff = (assignedStaffId && assignedStaffId !== 'UNASSIGNED')
+      ? (CRM_STATE.staffList || []).find(s => s && (
+          s.id === assignedStaffId ||
+          String(s.id).toLowerCase() === String(assignedStaffId).toLowerCase() ||
+          s.name?.toLowerCase() === String(assignedStaffId).toLowerCase() ||
+          s.username?.toLowerCase() === String(assignedStaffId).toLowerCase()
+        ))
+      : null;
+
     let conv = CRM_STATE.conversations[cust.id] || [];
     // If not found by cust.id, look up by matching phone number
     if (conv.length === 0 && (cust.phone || cust.whatsapp)) {
@@ -4723,7 +4832,7 @@ function renderInboxConversationList() {
       customerId: cust.id,
       customer: cust,
       queryId: query ? query.id : ('Q-' + cust.id),
-      assignedTo: query ? query.assignedTo : 'UNASSIGNED',
+      assignedTo: assignedStaffId,
       staff: staff,
       status: qStatus,
       priority: query ? query.priority : 'NORMAL',
@@ -4751,6 +4860,21 @@ function renderInboxConversationList() {
   } else {
     // When viewing all lines, ONLY show customer threads belonging to active (non-deleted) accounts
     customerCards = customerCards.filter(c => availableAccountIds.includes(c.accountId) || !c.accountId);
+  }
+
+  // Workstation Role Check: Identify Super Admin vs Staff Member
+  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER)
+    ? CURRENT_USER
+    : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null);
+  const isSuperAdminUser = currentUser
+    ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager')))
+    : (ACTIVE_ROLE === 'admin');
+  const isStaffWorkstation = !isSuperAdminUser;
+
+  // STRICT STAFF WORKSTATION RESTRICTION:
+  // When a staff member is logged in, show ONLY customer chats assigned to them by Super Admin!
+  if (isStaffWorkstation) {
+    customerCards = customerCards.filter(card => isAssignedToCurrentStaff(card, currentUser));
   }
 
   // Robust Set of Customer IDs with active or scheduled follow-ups
@@ -4788,26 +4912,11 @@ function renderInboxConversationList() {
   } else if (INBOX_FILTER === 'followup') {
     customerCards = customerCards.filter(isFollowupCard);
   } else if (INBOX_FILTER === 'unassigned') {
-    customerCards = customerCards.filter(c => !c.assignedTo || c.assignedTo === 'UNASSIGNED');
-  } else if (INBOX_FILTER === 'my') {
-    if (ACTIVE_ROLE !== 'admin') {
-      const u = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
-      const myIds = [
-        ACTIVE_ROLE,
-        u?.id,
-        u?.staff_id,
-        u?.staffId,
-        u?.username,
-        u?.name
-      ].filter(Boolean).map(s => String(s).toLowerCase());
-
-      customerCards = customerCards.filter(c => {
-        const assigned = String(c.assignedTo || '').toLowerCase();
-        const staffId = String(c.staff?.id || '').toLowerCase();
-        const staffName = String(c.staff?.name || '').toLowerCase();
-        return myIds.includes(assigned) || myIds.includes(staffId) || myIds.includes(staffName);
-      });
+    if (!isStaffWorkstation) {
+      customerCards = customerCards.filter(c => !c.assignedTo || c.assignedTo === 'UNASSIGNED');
     }
+  } else if (INBOX_FILTER === 'my') {
+    customerCards = customerCards.filter(c => isAssignedToCurrentStaff(c, currentUser));
   } else if (INBOX_FILTER === 'urgent') {
     customerCards = customerCards.filter(c => c.priority === 'URGENT');
   }
@@ -4827,16 +4936,25 @@ function renderInboxConversationList() {
     const accObj = getAvailableWhatsAppAccounts().find(a => a.id === ACTIVE_SEND_ACCOUNT_ID);
     const lineName = accObj ? accObj.label : 'this line';
     let emptyMsg = `No conversations recorded on ${lineName}`;
-    if (INBOX_FILTER === 'new_leads') emptyMsg = `No new leads currently in queue on ${lineName}`;
-    else if (INBOX_FILTER === 'followup') emptyMsg = `No follow-up conversations scheduled on ${lineName}`;
-    else if (INBOX_FILTER === 'unassigned') emptyMsg = `No unassigned conversations on ${lineName}`;
+    if (isStaffWorkstation) {
+      const staffName = currentUser ? (currentUser.name || 'your workstation') : 'your workstation';
+      if (INBOX_FILTER === 'new_leads') emptyMsg = `No new leads currently assigned to ${staffName}.`;
+      else if (INBOX_FILTER === 'followup') emptyMsg = `No follow-ups currently scheduled for ${staffName}.`;
+      else emptyMsg = `No customer chats assigned to ${staffName} yet. Super Admin will assign leads to your workstation.`;
+    } else {
+      if (INBOX_FILTER === 'new_leads') emptyMsg = `No new leads currently in queue on ${lineName}`;
+      else if (INBOX_FILTER === 'followup') emptyMsg = `No follow-up conversations scheduled on ${lineName}`;
+      else if (INBOX_FILTER === 'unassigned') emptyMsg = `No unassigned conversations on ${lineName}`;
+    }
     container.innerHTML = `
       <div class="p-8 text-center text-slate-400">
         <span class="material-symbols-outlined text-[36px] text-slate-300">chat_bubble_outline</span>
         <p class="text-xs font-semibold mt-2">${emptyMsg}</p>
+        ${!isStaffWorkstation ? `
         <button onclick="openInboundSimulatorModal()" class="mt-3 text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-100 transition">
           + Simulate Inbound WhatsApp Message
         </button>
+        ` : ''}
       </div>
     `;
     return;
@@ -4912,16 +5030,21 @@ function renderInboxConversationList() {
             </div>
 
             <!-- Staff Assignment Tag -->
-            ${isUnassigned ? `
+            ${isStaffWorkstation ? `
+              <span class="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px] text-emerald-600">badge</span>
+                ${item.staff ? item.staff.name.split(' ')[0] : (currentUser?.name ? currentUser.name.split(' ')[0] : t('chat.staff_label', 'Staff'))}
+              </span>
+            ` : (isUnassigned ? `
               <button onclick="event.stopPropagation(); openStaffAssignModal('${item.queryId}')" class="text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded-full font-bold shadow-sm flex items-center gap-0.5 cursor-pointer">
                 <span class="material-symbols-outlined text-[12px]">person_add</span> ${t('common.assign', 'Assign')}
               </button>
             ` : `
-              <span class="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+              <button onclick="event.stopPropagation(); openStaffAssignModal('${item.queryId}')" class="text-[10px] text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 cursor-pointer" title="Click to reassign staff">
                 <span class="material-symbols-outlined text-[12px] text-emerald-600">badge</span>
                 ${item.staff ? item.staff.name.split(' ')[0] : t('chat.staff_label', 'Staff')}
-              </span>
-            `}
+              </button>
+            `)}
           </div>
         </div>
       </div>
@@ -7207,18 +7330,40 @@ function quickReassignQueryStaff(queryId, newStaffId) {
     if (typeof showToast === 'function') showToast('Permission Denied', 'Reassigning staff requires Edit permission.', 'lock', 'rose');
     return;
   }
-  const query = CRM_STATE.queries.find(q => q.id === queryId || q.customerId === queryId);
+  let query = (CRM_STATE.queries || []).find(q => q && (
+    q.id === queryId || q.customerId === queryId || q.customer_id === queryId ||
+    ('Q-' + q.customerId) === queryId || ('Q-' + q.customer_id) === queryId
+  ));
+  let customer = query
+    ? (CRM_STATE.customers || []).find(c => c && (c.id === query.customerId || c.id === query.customer_id))
+    : (CRM_STATE.customers || []).find(c => c && (c.id === queryId || ('Q-' + c.id) === queryId));
+
+  if (!query && customer) {
+    query = {
+      id: queryId.startsWith('Q-') ? queryId : ('Q-' + customer.id),
+      customerId: customer.id,
+      assignedTo: newStaffId,
+      status: newStaffId === 'UNASSIGNED' ? 'NEW' : 'IN_PROGRESS',
+      priority: 'NORMAL',
+      queryText: customer.lastMessage || 'Customer Enquiry',
+      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    CRM_STATE.queries.unshift(query);
+  }
   if (!query) return;
 
-  const staff = CRM_STATE.staffList.find(s => s.id === newStaffId);
+  const staff = CRM_STATE.staffList.find(s => s.id === newStaffId || s.name === newStaffId);
   query.assignedTo = newStaffId;
+  if (customer) {
+    customer.assignedTo = newStaffId;
+  }
   if (query.status === 'NEW' && newStaffId !== 'UNASSIGNED') {
     query.status = 'IN_PROGRESS';
   }
 
   logAudit('STAFF_ASSIGNMENT', 'INBOX_PANEL', `Query ${query.id} assigned to ${staff ? staff.name : 'Unassigned'}`);
 
-  const qCust = CRM_STATE.customers.find(c => c.id === query.customerId);
+  const qCust = customer || CRM_STATE.customers.find(c => c.id === query.customerId || c.id === query.customer_id);
   // Asynchronously sync query assignment to MySQL Database
   fetch('api.php?action=assign_query', {
     method: 'POST',
@@ -11881,11 +12026,30 @@ function openStaffAssignModal(queryId) {
     if (typeof showToast === 'function') showToast('Permission Denied', 'Reassigning staff requires Edit permission.', 'lock', 'rose');
     return;
   }
-  const query = CRM_STATE.queries.find(q => q.id === queryId);
+  let query = (CRM_STATE.queries || []).find(q => q && (
+    q.id === queryId || q.customerId === queryId || q.customer_id === queryId ||
+    ('Q-' + q.customerId) === queryId || ('Q-' + q.customer_id) === queryId
+  ));
+  let customer = query
+    ? (CRM_STATE.customers || []).find(c => c && (c.id === query.customerId || c.id === query.customer_id))
+    : (CRM_STATE.customers || []).find(c => c && (c.id === queryId || ('Q-' + c.id) === queryId));
+
+  if (!query && customer) {
+    query = {
+      id: queryId.startsWith('Q-') ? queryId : ('Q-' + customer.id),
+      customerId: customer.id,
+      assignedTo: customer.assignedTo || 'UNASSIGNED',
+      status: 'NEW',
+      priority: 'NORMAL',
+      queryText: customer.lastMessage || 'Customer Enquiry',
+      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    CRM_STATE.queries.unshift(query);
+  }
   if (!query) return;
 
-  const customer = CRM_STATE.customers.find(c => c.id === query.customerId);
-  document.getElementById('assign-target-query-id').value = queryId;
+  if (!customer) customer = CRM_STATE.customers.find(c => c.id === query.customerId || c.id === query.customer_id);
+  document.getElementById('assign-target-query-id').value = query.id;
   document.getElementById('assign-modal-subtitle').innerText = `Assign ${query.id} (${customer ? customer.name : 'Customer'}) to a dedicated staff`;
 
   // Toggle DND communication & inbox restoration option if customer is currently on DND
@@ -11932,13 +12096,34 @@ function handleConfirmAssignment(event) {
   }
 
   const staffId = selectedRadio.value;
-  const staff = CRM_STATE.staffList.find(s => s.id === staffId);
-  const query = CRM_STATE.queries.find(q => q.id === queryId);
-  const customer = query ? CRM_STATE.customers.find(c => c.id === query.customerId) : null;
+  const staff = CRM_STATE.staffList.find(s => s.id === staffId || s.name === staffId);
+  let query = (CRM_STATE.queries || []).find(q => q && (
+    q.id === queryId || q.customerId === queryId || q.customer_id === queryId ||
+    ('Q-' + q.customerId) === queryId || ('Q-' + q.customer_id) === queryId
+  ));
+  let customer = query
+    ? (CRM_STATE.customers || []).find(c => c && (c.id === query.customerId || c.id === query.customer_id))
+    : (CRM_STATE.customers || []).find(c => c && (c.id === queryId || ('Q-' + c.id) === queryId));
+
+  if (!query && customer) {
+    query = {
+      id: queryId.startsWith('Q-') ? queryId : ('Q-' + customer.id),
+      customerId: customer.id,
+      assignedTo: staffId,
+      status: 'ASSIGNED',
+      priority: 'NORMAL',
+      queryText: customer.lastMessage || 'Customer Enquiry',
+      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    CRM_STATE.queries.unshift(query);
+  }
 
   if (query && staff) {
     const oldStaff = query.assignedTo;
     query.assignedTo = staffId;
+    if (customer) {
+      customer.assignedTo = staffId;
+    }
 
     if (shouldReactivateFromDnd) {
       if (customer) {
@@ -29117,7 +29302,7 @@ function renderStaffTable() {
               class="p-1 hover:bg-purple-100 text-purple-700 rounded transition cursor-pointer" title="Reassign Role & Permissions">
               <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
             </button>
-            <button type="button" onclick="handleEditStaffPrompt('${staff.id}')"
+            <button type="button" onclick="openEditStaffModal('${staff.id}')"
               class="p-1 hover:bg-slate-100 text-slate-500 hover:text-slate-900 rounded transition cursor-pointer" title="Edit Staff Details">
               <span class="material-symbols-outlined text-[16px]">edit</span>
             </button>` : ''}
@@ -29265,13 +29450,13 @@ function handleCreateNewStaff(event) {
 // Render Permissions Matrix for selected Role
 function renderRolePermissionsMatrix(roleName) {
   initRolePermissionsState();
-  const targetRole = roleName || ACTIVE_MATRIX_ROLE || 'Sales Specialist (Baby Collection)';
+  const definedRoles = Object.keys(CRM_STATE.rolePermissions || {});
+  const targetRole = roleName || ACTIVE_MATRIX_ROLE || definedRoles.find(r => r !== 'Super Admin') || definedRoles[0] || 'Super Admin';
   ACTIVE_MATRIX_ROLE = targetRole;
 
   // 1. Populate Role Selector
   const roleSelect = document.getElementById('role-matrix-role-select');
   if (roleSelect) {
-    const definedRoles = Object.keys(CRM_STATE.rolePermissions);
     roleSelect.innerHTML = definedRoles.map(r => `
       <option value="${r}" ${r === targetRole ? 'selected' : ''}>${r}</option>
     `).join('');
@@ -29284,17 +29469,17 @@ function renderRolePermissionsMatrix(roleName) {
     countBadge.innerText = `${assignedStaffCount} Staff Assigned`;
   }
 
-  // 3. Delete role button visibility (hide for system roles)
+  // 3. Delete role button visibility (hide for protected Super Admin)
   const btnDeleteRole = document.getElementById('btn-delete-role');
   if (btnDeleteRole) {
-    const isSystemRole = ['Super Admin', 'Admin Manager'].includes(targetRole);
+    const isSystemRole = targetRole === 'Super Admin';
     if (!isSystemRole) btnDeleteRole.classList.remove('hidden');
     else btnDeleteRole.classList.add('hidden');
   }
 
   // 4. Ensure role has permission entry
   if (!CRM_STATE.rolePermissions[targetRole]) {
-    CRM_STATE.rolePermissions[targetRole] = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS['Sales Specialist (Baby Collection)']));
+    CRM_STATE.rolePermissions[targetRole] = createRoleDefaultPermissions(targetRole, targetRole === 'Super Admin');
   }
   const perms = CRM_STATE.rolePermissions[targetRole];
 
@@ -29713,7 +29898,7 @@ window.handleSaveRolePermissions = function () {
 };
 
 window.handleCreateNewRolePrompt = function () {
-  const roleName = prompt('Enter a name for the new Role (e.g. Quality Auditor, Telecaller, Accounts):');
+  const roleName = prompt('Enter a name for the new Role (e.g. Quality Auditor, Telecaller, Accounts, Whatsapp):');
   if (!roleName || !roleName.trim()) return;
 
   const cleanName = roleName.trim();
@@ -29726,25 +29911,30 @@ window.handleCreateNewRolePrompt = function () {
     return;
   }
 
-  // Create new role with default view-only permissions
-  const newPerms = {};
-  CRM_MODULE_DEFINITIONS.forEach(mod => {
-    newPerms[mod.key] = { view: true, create: false, edit: false, delete: false };
-  });
-
+  // Create new role with standard module permissions
+  const newPerms = createRoleDefaultPermissions(cleanName, false);
   CRM_STATE.rolePermissions[cleanName] = newPerms;
   ACTIVE_MATRIX_ROLE = cleanName;
-  saveCRMState();
 
+  // Persist role permissions immediately to MySQL
+  fetch('api.php?action=save_role_permissions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: cleanName, permissions: newPerms })
+  }).then(r => r.json()).then(res => {
+    console.log('[save_role_permissions] Created new role in DB:', res);
+  }).catch(() => { });
+
+  saveCRMState();
   updateStaffRoleSelectDropdowns();
   renderRolePermissionsMatrix(cleanName);
 
-  showToast('Role Created!', `New role "${cleanName}" created. Configure its module permissions below.`, 'add_circle', 'purple');
+  showToast('Role Created!', `New role "${cleanName}" created dynamically. Configure module access below and click Save.`, 'add_circle', 'purple');
 };
 
 window.handleDeleteCurrentRole = function () {
-  if (['Super Admin', 'Admin Manager'].includes(ACTIVE_MATRIX_ROLE)) {
-    alert('System default roles cannot be deleted.');
+  if (ACTIVE_MATRIX_ROLE === 'Super Admin') {
+    alert('Super Admin is a protected system role and cannot be deleted.');
     return;
   }
 
@@ -29758,36 +29948,82 @@ window.handleDeleteCurrentRole = function () {
     return;
   }
 
-  delete CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE];
-  ACTIVE_MATRIX_ROLE = 'Sales Specialist (Baby Collection)';
+  const deletedRole = ACTIVE_MATRIX_ROLE;
+  delete CRM_STATE.rolePermissions[deletedRole];
+
+  // Delete role from MySQL
+  fetch('api.php?action=delete_role_permissions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: deletedRole })
+  }).then(r => r.json()).then(res => {
+    console.log('[delete_role_permissions] Server response:', res);
+  }).catch(() => { });
+
+  const remainingRoles = Object.keys(CRM_STATE.rolePermissions);
+  ACTIVE_MATRIX_ROLE = remainingRoles.find(r => r !== 'Super Admin') || remainingRoles[0] || 'Super Admin';
   saveCRMState();
 
   updateStaffRoleSelectDropdowns();
-  renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+  if (ACTIVE_MATRIX_ROLE) {
+    renderRolePermissionsMatrix(ACTIVE_MATRIX_ROLE);
+  }
 
-  showToast('Role Removed', 'Role was successfully deleted.', 'delete', 'amber');
+  showToast('Role Removed', `Role "${deletedRole}" was successfully deleted.`, 'delete', 'amber');
 };
 
-// 9. Synchronize Role Select Dropdowns across CRM (Add Staff, Role Matrix, Reassign)
+// 9. Synchronize Dynamic Role Select Dropdowns across CRM (Add Staff, Role Matrix, Reassign, Edit Staff)
 function updateStaffRoleSelectDropdowns() {
   initRolePermissionsState();
-  const roles = Object.keys(CRM_STATE.rolePermissions);
+  const allRoles = Object.keys(CRM_STATE.rolePermissions || {}).filter(r => r && r.trim());
 
   const roleAssignSelect = document.getElementById('role-assign-new-role');
   const staffNewRoleSelect = document.getElementById('staff-new-role');
+  const editStaffRoleSelect = document.getElementById('edit-staff-role');
   const roleMatrixSelect = document.getElementById('role-matrix-role-select');
   const staffSelect = document.getElementById('role-assign-staff-select');
 
+  // 1. Role to Assign dropdown: ONLY dynamically created / active roles
   if (roleAssignSelect) {
-    roleAssignSelect.innerHTML = roles.map(r => `<option value="${r}">${r}</option>`).join('');
-  }
-  if (staffNewRoleSelect) {
-    staffNewRoleSelect.innerHTML = roles.map(r => `<option value="${r}">${r}</option>`).join('');
-  }
-  if (roleMatrixSelect && !roleMatrixSelect.value) {
-    roleMatrixSelect.innerHTML = roles.map(r => `<option value="${r}">${r}</option>`).join('');
+    if (allRoles.length === 0) {
+      roleAssignSelect.innerHTML = '<option value="" disabled selected>No created roles yet — Click + Create New Role</option>';
+    } else {
+      roleAssignSelect.innerHTML = allRoles.map(r => `<option value="${r}">${r}</option>`).join('');
+    }
   }
 
+  // 2. Add Staff primary role dropdown: dynamically populated
+  if (staffNewRoleSelect) {
+    if (allRoles.length === 0) {
+      staffNewRoleSelect.innerHTML = '<option value="" disabled selected>No created roles yet — Click + Create New Role</option>';
+    } else {
+      staffNewRoleSelect.innerHTML = allRoles.map(r => `<option value="${r}">${r}</option>`).join('');
+    }
+  }
+
+  // 3. Edit Staff modal role dropdown: dynamically populated
+  if (editStaffRoleSelect) {
+    if (allRoles.length === 0) {
+      editStaffRoleSelect.innerHTML = '<option value="" disabled selected>No created roles yet</option>';
+    } else {
+      editStaffRoleSelect.innerHTML = allRoles.map(r => `<option value="${r}">${r}</option>`).join('');
+    }
+  }
+
+  // 4. Role Matrix selector: dynamically populated
+  if (roleMatrixSelect) {
+    const curVal = roleMatrixSelect.value;
+    if (allRoles.length === 0) {
+      roleMatrixSelect.innerHTML = '<option value="" disabled selected>No created roles</option>';
+    } else {
+      roleMatrixSelect.innerHTML = allRoles.map(r => `<option value="${r}" ${r === ACTIVE_MATRIX_ROLE ? 'selected' : ''}>${r}</option>`).join('');
+      if (curVal && allRoles.includes(curVal)) {
+        roleMatrixSelect.value = curVal;
+      }
+    }
+  }
+
+  // 5. Select staff member dropdown
   if (staffSelect) {
     const staffList = CRM_STATE.staffList || [];
     staffSelect.innerHTML = staffList.map(s => `
@@ -29961,18 +30197,127 @@ function handleDeleteStaff(staffId) {
   showToast('Staff Removed', `${staff.name} was removed from the team roster.`, 'delete', 'amber');
 }
 
-function handleEditStaffPrompt(staffId) {
+window.openEditStaffModal = function (staffId) {
   const staff = (CRM_STATE.staffList || []).find(s => s.id === staffId);
-  if (!staff) return;
-
-  const newPhone = prompt(`Edit Phone / WhatsApp for ${staff.name}:`, staff.phone || '');
-  if (newPhone !== null && newPhone.trim()) {
-    staff.phone = newPhone.trim();
-    saveCRMState();
-    renderStaffTable();
-    if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
-    showToast('Staff Updated', `Updated phone for ${staff.name}.`, 'edit', 'blue');
+  if (!staff) {
+    showToast('Staff Not Found', `Could not find staff member record ${staffId}.`, 'error', 'rose');
+    return;
   }
+
+  // Ensure role dropdowns have the dynamic roles
+  updateStaffRoleSelectDropdowns();
+
+  const idInput = document.getElementById('edit-staff-id');
+  const nameInput = document.getElementById('edit-staff-name');
+  const emailInput = document.getElementById('edit-staff-email');
+  const phoneInput = document.getElementById('edit-staff-phone');
+  const roleSelect = document.getElementById('edit-staff-role');
+  const specSelect = document.getElementById('edit-staff-specialization');
+  const statusSelect = document.getElementById('edit-staff-status');
+  const passInput = document.getElementById('edit-staff-password');
+  const subtitle = document.getElementById('edit-staff-modal-subtitle');
+
+  if (idInput) idInput.value = staff.id;
+  if (nameInput) nameInput.value = staff.name || '';
+  if (emailInput) emailInput.value = staff.email || '';
+  if (phoneInput) phoneInput.value = staff.phone || '';
+  if (specSelect) specSelect.value = staff.specialization || 'General & All Categories';
+  if (statusSelect) statusSelect.value = (staff.status || 'ACTIVE').toUpperCase();
+  if (passInput) passInput.value = '';
+  if (subtitle) subtitle.innerText = `Edit details for ${staff.name} (${staff.id})`;
+
+  if (roleSelect) {
+    if (staff.role && !Array.from(roleSelect.options).some(o => o.value === staff.role)) {
+      const opt = document.createElement('option');
+      opt.value = staff.role;
+      opt.textContent = staff.role;
+      roleSelect.appendChild(opt);
+    }
+    roleSelect.value = staff.role || (roleSelect.options[0] ? roleSelect.options[0].value : '');
+  }
+
+  openModal('modal-edit-staff');
+};
+
+window.handleSaveEditStaff = function (event) {
+  event.preventDefault();
+  const staffId = document.getElementById('edit-staff-id')?.value;
+  const staff = (CRM_STATE.staffList || []).find(s => s.id === staffId);
+  if (!staff) {
+    showToast('Error', 'Staff member record not found.', 'error', 'rose');
+    return;
+  }
+
+  const newName = document.getElementById('edit-staff-name')?.value?.trim();
+  const newEmail = document.getElementById('edit-staff-email')?.value?.trim();
+  const newPhone = document.getElementById('edit-staff-phone')?.value?.trim();
+  const newRole = document.getElementById('edit-staff-role')?.value;
+  const newSpec = document.getElementById('edit-staff-specialization')?.value;
+  const newStatus = document.getElementById('edit-staff-status')?.value;
+  const newPass = document.getElementById('edit-staff-password')?.value?.trim();
+
+  if (!newName || !newPhone) {
+    alert('Please enter staff name and phone number.');
+    return;
+  }
+
+  const oldRole = staff.role;
+  const oldName = staff.name;
+
+  staff.name = newName;
+  staff.email = newEmail;
+  staff.phone = newPhone;
+  staff.role = newRole;
+  staff.specialization = newSpec;
+  staff.status = newStatus;
+  staff.avatar = newName.split(' ').map(n => n[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || 'ST';
+  if (newPass) {
+    staff.password = newPass;
+  }
+
+  // Update in queries if assigned
+  (CRM_STATE.queries || []).forEach(q => {
+    if (q.assignedTo === staffId || q.staffId === staffId) {
+      q.assignedStaffName = newName;
+    }
+  });
+
+  saveCRMState();
+
+  // Persist to MySQL via update_staff
+  fetch('api.php?action=update_staff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: staffId,
+      name: newName,
+      email: newEmail,
+      phone: newPhone,
+      role: newRole,
+      specialization: newSpec,
+      status: newStatus,
+      avatar: staff.avatar,
+      password: newPass || undefined
+    })
+  }).then(r => r.json()).then(res => {
+    console.log('[update_staff] Server sync response:', res);
+  }).catch(err => {
+    console.warn('[update_staff] Background server sync error:', err);
+  });
+
+  logAudit('STAFF_UPDATED', 'STAFF_MODULE', `Updated staff member ${oldName} (${staffId}) details: Role: ${newRole}, Dept: ${newSpec}`);
+
+  closeModal('modal-edit-staff');
+  renderStaffTable();
+  populateAllStaffDropdowns();
+  updateStaffRoleSelectDropdowns();
+  if (typeof renderDashboard === 'function') renderDashboard();
+
+  showToast('Staff Updated!', `Details for ${newName} successfully updated.`, 'check_circle', 'emerald');
+};
+
+function handleEditStaffPrompt(staffId) {
+  openEditStaffModal(staffId);
 }
 
 // 12. Quota View Handlers
@@ -30148,14 +30493,20 @@ function updateBadgeCounters() {
     uCurr?.name
   ].filter(Boolean).map(s => String(s).toLowerCase());
 
-  const myQueueCount = ACTIVE_ROLE === 'admin'
-    ? activeQueries.length
+  const isSuperAdmin = uCurr
+    ? (uCurr.role === 'admin' || uCurr.id === 'admin' || uCurr.role === 'Super Admin' || (uCurr.title && uCurr.title.includes('Admin Manager')))
+    : (ACTIVE_ROLE === 'admin');
+
+  const visibleQueries = isSuperAdmin
+    ? activeQueries
     : activeQueries.filter(q => {
       const assigned = String(q.assignedTo || '').toLowerCase();
       const s = (CRM_STATE.staffList || []).find(st => st.id === q.assignedTo);
       const sName = String(s?.name || '').toLowerCase();
       return myQueueIds.includes(assigned) || myQueueIds.includes(sName);
-    }).length;
+    });
+
+  const myQueueCount = visibleQueries.length;
 
   const bUnassigned = document.getElementById('badge-unassigned-count');
   if (bUnassigned) bUnassigned.innerText = `${unassignedCount} New`;
@@ -30164,7 +30515,7 @@ function updateBadgeCounters() {
   if (bUnread) bUnread.innerText = unreadCount;
 
   const countAll = document.getElementById('count-all');
-  if (countAll) countAll.innerText = activeQueries.length;
+  if (countAll) countAll.innerText = visibleQueries.length;
 
   // Compute dynamic Follow-up and New Leads counts for Inbox filter pills
   const followupCustIds = new Set((CRM_STATE.followups || [])
@@ -30186,10 +30537,10 @@ function updateBadgeCounters() {
   };
 
   const countNewLeads = document.getElementById('count-new-leads');
-  if (countNewLeads) countNewLeads.innerText = activeQueries.filter(isNewLeadQuery).length;
+  if (countNewLeads) countNewLeads.innerText = visibleQueries.filter(isNewLeadQuery).length;
 
   const countFollowup = document.getElementById('count-followup');
-  if (countFollowup) countFollowup.innerText = activeQueries.filter(isFollowupQuery).length;
+  if (countFollowup) countFollowup.innerText = visibleQueries.filter(isFollowupQuery).length;
 
   const countUnassigned = document.getElementById('count-unassigned');
   if (countUnassigned) countUnassigned.innerText = unassignedCount;

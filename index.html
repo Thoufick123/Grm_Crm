@@ -4700,13 +4700,7 @@
                         class="text-rose-500">*</span>:</label>
                     <select id="staff-new-role" required
                       class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
-                      <option value="Sales Specialist (Baby Collection)">Sales Specialist (Baby Collection)</option>
-                      <option value="Enquiry Specialist (Maternity & Kids)">Enquiry Specialist (Maternity & Kids)
-                      </option>
-                      <option value="Order Fulfillment & Support">Order Fulfillment & Support</option>
-                      <option value="Senior Sales Executive">Senior Sales Executive</option>
-                      <option value="Customer Care Representative">Customer Care Representative</option>
-                      <option value="Admin Manager">Admin Manager (Full Control)</option>
+                      <!-- Dynamically populated from created roles -->
                     </select>
                   </div>
                 </div>
@@ -6664,6 +6658,114 @@
           <button type="submit"
             class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[18px]">how_to_reg</span> Confirm Assignment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Staff Member Details -->
+  <div id="modal-edit-staff" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white flex items-center justify-between">
+        <div>
+          <h3 class="font-bold text-base flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald-400 text-[20px]">manage_accounts</span>
+            <span>Edit Staff Member Details</span>
+          </h3>
+          <p id="edit-staff-modal-subtitle" class="text-xs text-slate-300">Update staff details, assigned role, and login access</p>
+        </div>
+        <button type="button" onclick="closeModal('modal-edit-staff')" class="text-slate-400 hover:text-white cursor-pointer">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <form onsubmit="handleSaveEditStaff(event)" class="p-6 space-y-4 text-xs">
+        <input type="hidden" id="edit-staff-id">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Full Name <span class="text-rose-500">*</span>:</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">person</span>
+              <input type="text" id="edit-staff-name" required placeholder="Staff Full Name"
+                class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Email Address:</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">mail</span>
+              <input type="email" id="edit-staff-email" placeholder="staff@grmgarments.com"
+                class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Mobile / WhatsApp Number <span class="text-rose-500">*</span>:</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">phone</span>
+              <input type="text" id="edit-staff-phone" required placeholder="e.g. +91 98765 12345"
+                class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Primary Role <span class="text-rose-500">*</span>:</label>
+            <select id="edit-staff-role" required
+              class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+              <!-- Dynamically populated from created roles -->
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Product Specialization / Department:</label>
+            <select id="edit-staff-specialization"
+              class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+              <option value="Baby Collection">Baby Collection & Frocks</option>
+              <option value="Maternity Wear">Maternity & Feeding Gowns</option>
+              <option value="Kids Wear">Kids Wear & Sets</option>
+              <option value="Girls Festive">Girls Festive Silk Collection</option>
+              <option value="General & All Categories">General (All Categories)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Duty Status:</label>
+            <select id="edit-staff-status"
+              class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+              <option value="ACTIVE">🟢 Active (Ready for Lead Assignment)</option>
+              <option value="ON_LEAVE">⚪ On Leave (Temporary Pause)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-800 mb-1">Reset Password (Optional):</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">lock_reset</span>
+            <input type="password" id="edit-staff-password" placeholder="Leave blank to keep existing password"
+              class="w-full pl-9 pr-10 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+            <button type="button" onclick="togglePasswordVisibility('edit-staff-password', this)"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+              title="Show / hide password">
+              <span class="material-symbols-outlined text-[18px]">visibility</span>
+            </button>
+          </div>
+          <span class="text-[10px] text-slate-400 mt-1 block">Only enter a password if you want to reset the staff member's login password.</span>
+        </div>
+
+        <div class="pt-3 flex items-center justify-end gap-2 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-edit-staff')"
+            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer">Cancel</button>
+          <button type="submit"
+            class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">save</span> Save Staff Details
           </button>
         </div>
       </form>

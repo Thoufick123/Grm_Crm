@@ -702,6 +702,91 @@ if ($action === 'get_role_permissions') {
     }
 }
 
+if ($action === 'delete_role_permissions' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    $roleName = trim($data['role'] ?? '');
+    if (empty($roleName)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Role name is required."]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM `attributes` WHERE `type` = 'role_permissions' AND `value` = ?");
+        $stmt->execute([$roleName]);
+
+        try {
+            $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('ROLE_DELETED', 'ROLES', 'Super Admin', ?, NOW())")
+                ->execute(["Deleted custom role: $roleName"]);
+        } catch (Exception $ae) {}
+
+        echo json_encode(["status" => "success", "message" => "Role successfully deleted from database.", "role" => $roleName]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'update_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $staff = json_decode($input, true);
+
+    $staffId = trim($staff['id'] ?? '');
+    if (empty($staffId) || empty($staff['name']) || empty($staff['phone'])) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Staff ID, name and phone are required."]);
+        exit;
+    }
+
+    try {
+        $avatar = $staff['avatar'] ?? strtoupper(substr($staff['name'], 0, 2));
+        $fields = [
+            "`name` = ?",
+            "`email` = ?",
+            "`phone` = ?",
+            "`role` = ?",
+            "`specialization` = ?",
+            "`status` = ?",
+            "`avatar` = ?"
+        ];
+        $params = [
+            $staff['name'],
+            $staff['email'] ?? '',
+            $staff['phone'],
+            $staff['role'] ?? 'Sales Specialist',
+            $staff['specialization'] ?? 'General',
+            $staff['status'] ?? 'ACTIVE',
+            $avatar
+        ];
+
+        if (!empty($staff['password'])) {
+            $fields[] = "`password` = ?";
+            $params[] = password_hash($staff['password'], PASSWORD_BCRYPT);
+        }
+
+        $params[] = $staffId;
+        $sql = "UPDATE `users` SET " . implode(", ", $fields) . " WHERE `id` = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        try {
+            $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('STAFF_UPDATED', 'STAFF_MODULE', 'Super Admin', ?, NOW())")
+                ->execute(["Updated staff member details: {$staff['name']} ({$staffId})"]);
+        } catch (Exception $ae) {}
+
+        echo json_encode(["status" => "success", "message" => "Staff member details updated in MySQL", "staff" => $staff]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
+
 if ($action === 'update_staff_role' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
     $data = json_decode($input, true);
@@ -2731,11 +2816,29 @@ if ($action === 'get_inbound_messages') {
         }
     }
 
+    $assignments = [];
+    if ($pdo) {
+        try {
+            $qRows = $pdo->query("SELECT q.id, q.customer_id, q.assigned_to, q.status, c.phone, c.name FROM `queries` q LEFT JOIN `customers` c ON q.customer_id = c.id WHERE q.assigned_to IS NOT NULL AND q.assigned_to != 'UNASSIGNED'")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($qRows as $qr) {
+                $assignments[] = [
+                    'query_id' => $qr['id'],
+                    'customer_id' => $qr['customer_id'],
+                    'assigned_to' => $qr['assigned_to'],
+                    'status' => $qr['status'],
+                    'phone' => $qr['phone'] ?? '',
+                    'name' => $qr['name'] ?? ''
+                ];
+            }
+        } catch (Exception $e) {}
+    }
+
     echo json_encode([
         "status" => "success",
         "since" => $since,
         "count" => count($newMessages),
         "messages" => $newMessages,
+        "assignments" => $assignments,
         "server_time" => time()
     ]);
     exit;
@@ -4466,19 +4569,19 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $rawQ = file_get_contents($messagesFile);
                 $qItems = json_decode($rawQ, true) ?: [];
                 $cleanT = preg_replace('/[^0-9]/', '', $targetPhone);
-                if (strlen($cleanT) >= 7) {
-                    $clean10T = substr($cleanT, -10);
-                    $qChanged = false;
-                    foreach ($qItems as &$it) {
-                        $itP = preg_replace('/[^0-9]/', '', $it['sender_phone'] ?? '');
-                        if (str_ends_with($itP, $clean10T)) {
-                            $it['assigned_to'] = $assignedTo;
-                            $qChanged = true;
-                        }
+                $clean10T = strlen($cleanT) >= 7 ? substr($cleanT, -10) : '';
+                $qChanged = false;
+                foreach ($qItems as &$it) {
+                    $itP = preg_replace('/[^0-9]/', '', $it['sender_phone'] ?? '');
+                    $nameMatches = (!empty($cData['name']) && !empty($it['sender_name']) && strtolower(trim($it['sender_name'])) === strtolower(trim($cData['name'])))
+                        || (!empty($customerName) && !empty($it['sender_name']) && strtolower(trim($it['sender_name'])) === strtolower(trim($customerName)));
+                    if (($clean10T && strlen($itP) >= 7 && str_ends_with($itP, $clean10T)) || $nameMatches) {
+                        $it['assigned_to'] = $assignedTo;
+                        $qChanged = true;
                     }
-                    if ($qChanged) {
-                        atomicWriteJson($messagesFile, $qItems);
-                    }
+                }
+                if ($qChanged) {
+                    atomicWriteJson($messagesFile, $qItems);
                 }
             }
 
