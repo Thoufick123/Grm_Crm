@@ -5084,16 +5084,39 @@ function sendDirectSmtpMail($to, $subject, $htmlBody, $plainBody = '', $smtpConf
         }
     }
 
-    // Check .env / environment variables
+    // Direct read from .env file
+    $envFile = __DIR__ . '/.env';
+    if (file_exists($envFile)) {
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line) || str_starts_with($line, '#')) continue;
+            if (strpos($line, '=') !== false) {
+                list($k, $v) = explode('=', $line, 2);
+                $k = trim($k);
+                $v = trim($v, " \t\n\r\0\x0B\"'");
+                if ($k === 'SMTP_HOST') $cfg['host'] = $v;
+                if ($k === 'SMTP_PORT') $cfg['port'] = (int)$v;
+                if ($k === 'SMTP_USER' || $k === 'SMTP_USERNAME') $cfg['username'] = $v;
+                if ($k === 'SMTP_PASS' || $k === 'SMTP_PASSWORD') $cfg['password'] = $v;
+                if ($k === 'SMTP_FROM' || $k === 'SMTP_FROM_EMAIL') $cfg['from_email'] = $v;
+                if ($k === 'SMTP_FROM_NAME') $cfg['from_name'] = $v;
+                if ($k === 'SMTP_ENCRYPTION') $cfg['encryption'] = $v;
+                if ($k === 'SMTP_ENABLED') $cfg['enabled'] = filter_var($v, FILTER_VALIDATE_BOOLEAN);
+            }
+        }
+    }
+
+    // Check environment variables / system $_SERVER
     $envHost = getenv('SMTP_HOST') ?: ($_SERVER['SMTP_HOST'] ?? ($_ENV['SMTP_HOST'] ?? ''));
     if (!empty($envHost)) $cfg['host'] = $envHost;
-    $envUser = getenv('SMTP_USER') ?: ($_SERVER['SMTP_USER'] ?? ($_ENV['SMTP_USER'] ?? ''));
+    $envUser = getenv('SMTP_USER') ?: (getenv('SMTP_USERNAME') ?: ($_SERVER['SMTP_USER'] ?? ($_SERVER['SMTP_USERNAME'] ?? ($_ENV['SMTP_USER'] ?? ''))));
     if (!empty($envUser)) $cfg['username'] = $envUser;
-    $envPass = getenv('SMTP_PASS') ?: ($_SERVER['SMTP_PASS'] ?? ($_ENV['SMTP_PASS'] ?? ''));
+    $envPass = getenv('SMTP_PASS') ?: (getenv('SMTP_PASSWORD') ?: ($_SERVER['SMTP_PASS'] ?? ($_SERVER['SMTP_PASSWORD'] ?? ($_ENV['SMTP_PASS'] ?? ''))));
     if (!empty($envPass)) $cfg['password'] = $envPass;
     $envPort = getenv('SMTP_PORT') ?: ($_SERVER['SMTP_PORT'] ?? ($_ENV['SMTP_PORT'] ?? ''));
     if (!empty($envPort)) $cfg['port'] = (int)$envPort;
-    $envFrom = getenv('SMTP_FROM') ?: ($_SERVER['SMTP_FROM'] ?? ($_ENV['SMTP_FROM'] ?? ''));
+    $envFrom = getenv('SMTP_FROM') ?: (getenv('SMTP_FROM_EMAIL') ?: ($_SERVER['SMTP_FROM'] ?? ($_SERVER['SMTP_FROM_EMAIL'] ?? ($_ENV['SMTP_FROM'] ?? ''))));
     if (!empty($envFrom)) $cfg['from_email'] = $envFrom;
     $envFromName = getenv('SMTP_FROM_NAME') ?: ($_SERVER['SMTP_FROM_NAME'] ?? ($_ENV['SMTP_FROM_NAME'] ?? ''));
     if (!empty($envFromName)) $cfg['from_name'] = $envFromName;
