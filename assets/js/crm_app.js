@@ -2113,6 +2113,13 @@ function initSocketIO() {
       if (typeof checkActiveCustomerBulkRequests === 'function') {
         checkActiveCustomerBulkRequests();
       }
+      if (typeof updateHeaderBulkRequestsBadge === 'function') {
+        updateHeaderBulkRequestsBadge();
+      }
+      const hubModal = document.getElementById('modal-bulk-requests-hub');
+      if (hubModal && !hubModal.classList.contains('hidden') && typeof loadBulkRequestsHubList === 'function') {
+        loadBulkRequestsHubList();
+      }
       if (data && data.status === 'APPROVED') {
         if (typeof showToast === 'function') {
           showToast('Bulk Request Approved', `Admin approved ${data.request?.request_code || 'bulk price request'}! Special price active.`, 'check_circle', 'emerald');
@@ -2120,6 +2127,10 @@ function initSocketIO() {
       } else if (data && data.status === 'REJECTED') {
         if (typeof showToast === 'function') {
           showToast('Bulk Request Rejected', `${data.request?.request_code || 'Bulk request'} was rejected: ${data.reason || 'Price declined'}`, 'cancel', 'rose');
+        }
+      } else if (data && data.status === 'PENDING') {
+        if (typeof showToast === 'function') {
+          showToast('New Bulk Request', `New bulk price request ${data.request?.request_code || ''} received! Pending approval.`, 'price_change', 'amber');
         }
       }
     });
@@ -33357,6 +33368,10 @@ function stopAutomatedBroadcast() {
 function bootstrapCRMApp() {
   initCRMState();
   initAuthSystem();
+  if (typeof updateHeaderBulkRequestsBadge === 'function') {
+    updateHeaderBulkRequestsBadge();
+    setInterval(updateHeaderBulkRequestsBadge, 15000);
+  }
 }
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -38107,6 +38122,9 @@ window.submitBulkPriceRequest = async function (ev) {
       }
       window.closeBulkPriceRequestModal();
       window.checkActiveCustomerBulkRequests();
+      if (typeof updateHeaderBulkRequestsBadge === 'function') {
+        updateHeaderBulkRequestsBadge();
+      }
     } else {
       if (typeof showToast === 'function') {
         showToast('Submission Error', data.message || 'Failed to submit request.', 'error', 'rose');
@@ -38154,10 +38172,51 @@ window.renderBulkRequestBanner = function (req) {
   const banner = document.getElementById('chat-bulk-price-request-banner');
   if (!banner || !req) return;
 
-  // Yellow container and approve/reject buttons deleted from staff and admin panel per user instruction
   if (req.status === 'PENDING') {
-    banner.classList.add('hidden');
-    banner.innerHTML = '';
+    const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof window !== 'undefined' && window.CURRENT_USER) ? window.CURRENT_USER : null);
+    const isAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.role === 'ADMIN';
+
+    banner.className = 'px-4 py-2.5 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100/90 border-b border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs shadow-xs';
+    banner.innerHTML = `
+      <div class="flex items-start sm:items-center gap-2.5 text-amber-950 min-w-0">
+        <div class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-800 shrink-0">
+          <span class="material-symbols-outlined text-[20px] animate-pulse">hourglass_top</span>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="font-extrabold text-amber-950 font-mono tracking-wide">${req.request_code}</span>
+            <span class="px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 font-bold text-[10px] uppercase border border-amber-300">
+              PENDING ADMIN APPROVAL
+            </span>
+            <span class="text-amber-800 text-[11px]">Requested by <b>${req.staff_name || 'Staff'}</b></span>
+          </div>
+          <p class="text-amber-950 font-semibold mt-0.5">
+            <b>${req.product_name}</b> (${req.size}) &times; <b>${req.quantity} pcs</b> &bull; Requested: <strong class="text-amber-950 font-extrabold text-[13px]">₹${req.requested_price}/pc</strong>
+            <span class="text-amber-800 font-normal">(Std: ₹${req.selling_price}/pc)</span> &bull; Total: <strong class="text-amber-950">₹${req.total_requested_amount}</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+        ${isAdmin ? `
+          <button type="button" onclick="handleApproveBulkPriceRequest('${req.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:shadow">
+            <span class="material-symbols-outlined text-[16px]">check_circle</span>
+            <span>Approve (₹${req.requested_price})</span>
+          </button>
+          <button type="button" onclick="openBulkRejectReasonModal('${req.id}')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:shadow">
+            <span class="material-symbols-outlined text-[16px]">cancel</span>
+            <span>Reject</span>
+          </button>
+        ` : `
+          <span class="text-amber-800 text-[11px] font-medium hidden md:inline">Sent to Admin WhatsApp (${req.admin_phone || '+91 99435 57998'})</span>
+          <button type="button" onclick="resendBulkPriceRequest('${req.id}')" class="px-3 py-1.5 bg-amber-200/90 hover:bg-amber-300 text-amber-950 font-bold rounded-xl border border-amber-300 transition flex items-center gap-1 cursor-pointer">
+            <span class="material-symbols-outlined text-[15px]">send</span>
+            <span>Resend Alert</span>
+          </button>
+        `}
+      </div>
+    `;
+    banner.classList.remove('hidden');
     return;
   } else if (req.status === 'APPROVED') {
     banner.className = 'px-4 py-2.5 bg-emerald-50 border-b border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs';
@@ -38221,6 +38280,11 @@ window.handleApproveBulkPriceRequest = async function (reqId) {
         showToast('Request Approved', 'Bulk special price approved! Staff can now take order.', 'check_circle', 'emerald');
       }
       window.checkActiveCustomerBulkRequests();
+      if (typeof updateHeaderBulkRequestsBadge === 'function') updateHeaderBulkRequestsBadge();
+      const hubModal = document.getElementById('modal-bulk-requests-hub');
+      if (hubModal && !hubModal.classList.contains('hidden') && typeof loadBulkRequestsHubList === 'function') {
+        loadBulkRequestsHubList();
+      }
     } else {
       if (typeof showToast === 'function') {
         showToast('Approval Error', data.message || 'Failed to approve request.', 'error', 'rose');
@@ -38286,6 +38350,11 @@ window.submitBulkRejectReason = async function (ev) {
       }
       window.closeBulkRejectReasonModal();
       window.checkActiveCustomerBulkRequests();
+      if (typeof updateHeaderBulkRequestsBadge === 'function') updateHeaderBulkRequestsBadge();
+      const hubModal = document.getElementById('modal-bulk-requests-hub');
+      if (hubModal && !hubModal.classList.contains('hidden') && typeof loadBulkRequestsHubList === 'function') {
+        loadBulkRequestsHubList();
+      }
     } else {
       if (typeof showToast === 'function') {
         showToast('Rejection Error', data.message || 'Failed to reject request.', 'error', 'rose');
@@ -38326,4 +38395,231 @@ window.takeOrderForApprovedBulkRequest = function (reqId) {
   } else if (typeof openConvertOrderModal === 'function') {
     openConvertOrderModal();
   }
+};
+
+window.resendBulkPriceRequest = async function (reqId) {
+  try {
+    const res = await fetch('api.php?action=resend_bulk_price_request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: reqId })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      if (typeof showToast === 'function') {
+        showToast('Reminder Sent', 'Bulk price request reminder sent to Admin WhatsApp!', 'send', 'emerald');
+      }
+    } else {
+      if (typeof showToast === 'function') {
+        showToast('Resend Notice', data.message || 'Failed to resend reminder.', 'warning', 'amber');
+      }
+    }
+  } catch (err) {
+    console.error('Error resending bulk request reminder:', err);
+  }
+};
+
+window.CURRENT_BULK_HUB_FILTER = 'PENDING';
+
+window.openBulkRequestsModal = function () {
+  const modal = document.getElementById('modal-bulk-requests-hub');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    window.loadBulkRequestsHubList(window.CURRENT_BULK_HUB_FILTER || 'PENDING');
+  }
+};
+
+window.closeBulkRequestsModal = function () {
+  const modal = document.getElementById('modal-bulk-requests-hub');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+};
+
+window.filterBulkHubList = function (status) {
+  window.CURRENT_BULK_HUB_FILTER = status;
+  ['pending', 'approved', 'all'].forEach(k => {
+    const btn = document.getElementById('tab-bulk-hub-' + k);
+    if (!btn) return;
+    if (k.toUpperCase() === status.toUpperCase()) {
+      btn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer';
+    } else {
+      btn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition bg-slate-200 hover:bg-slate-300 text-slate-700 cursor-pointer';
+    }
+  });
+  window.loadBulkRequestsHubList(status);
+};
+
+window.loadBulkRequestsHubList = async function (status) {
+  const filter = status || window.CURRENT_BULK_HUB_FILTER || 'PENDING';
+  const listEl = document.getElementById('bulk-requests-hub-list');
+  if (!listEl) return;
+
+  listEl.innerHTML = `
+    <div class="p-8 text-center text-slate-400">
+      <span class="material-symbols-outlined text-[32px] animate-spin mb-2">refresh</span>
+      <p>Loading bulk price requests...</p>
+    </div>
+  `;
+
+  try {
+    const url = filter === 'ALL' ? 'api.php?action=get_bulk_price_requests&limit=50' : `api.php?action=get_bulk_price_requests&status=${encodeURIComponent(filter)}&limit=50`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const requests = (data && data.requests) ? data.requests : [];
+    if (filter === 'PENDING') {
+      const tabBadge = document.getElementById('hub-tab-pending-count');
+      if (tabBadge) tabBadge.innerText = requests.length;
+    }
+
+    if (requests.length === 0) {
+      listEl.innerHTML = `
+        <div class="p-10 text-center">
+          <div class="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mx-auto mb-3">
+            <span class="material-symbols-outlined text-[28px]">price_change</span>
+          </div>
+          <h4 class="font-bold text-slate-800 text-sm">No ${filter === 'ALL' ? '' : filter.toLowerCase()} requests</h4>
+          <p class="text-slate-500 text-xs mt-1">There are currently no bulk price requests matching this view.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof window !== 'undefined' && window.CURRENT_USER) ? window.CURRENT_USER : null);
+    const isAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.role === 'ADMIN';
+
+    let html = '';
+    requests.forEach(r => {
+      const isPending = r.status === 'PENDING';
+      const isApproved = r.status === 'APPROVED';
+
+      const statusBadge = isPending 
+        ? '<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px]">PENDING APPROVAL</span>'
+        : (isApproved 
+          ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-[10px]">APPROVED</span>'
+          : '<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-900 border border-rose-300 font-extrabold text-[10px]">REJECTED</span>');
+
+      html += `
+        <div class="bg-white border ${isPending ? 'border-amber-300 shadow-sm' : 'border-slate-200'} rounded-2xl p-4 transition hover:border-slate-300 space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-extrabold text-slate-900 font-mono text-xs">${r.request_code}</span>
+                ${statusBadge}
+                <span class="text-slate-400 text-[11px]">${r.created_at || ''}</span>
+              </div>
+              <h4 class="font-bold text-slate-800 text-xs mt-1 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px] text-slate-500">person</span>
+                <span>${r.customer_name}</span>
+                <span class="text-slate-500 font-mono text-[11px]">(${r.customer_phone})</span>
+              </h4>
+            </div>
+
+            <button type="button" onclick="openChatFromBulkHub('${r.customer_phone}', '${(r.customer_name || '').replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 rounded-xl font-bold transition flex items-center gap-1 text-[11px] shrink-0 cursor-pointer" title="Open customer WhatsApp chat">
+              <span class="material-symbols-outlined text-[15px] text-brand-wa">chat</span>
+              <span>Open Chat</span>
+            </button>
+          </div>
+
+          <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+            <div>
+              <span class="text-slate-400 block text-[10px] font-bold uppercase">Product & Size</span>
+              <p class="font-bold text-slate-800 truncate">${r.product_name} (${r.size})</p>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px] font-bold uppercase">Quantity</span>
+              <p class="font-extrabold text-slate-900 font-mono">${r.quantity} pcs</p>
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <span class="text-slate-400 block text-[10px] font-bold uppercase">Requested Price</span>
+              <p class="font-extrabold text-indigo-700 font-mono">₹${r.requested_price}/pc <span class="text-slate-400 line-through font-normal text-[10px]">₹${r.selling_price}</span></p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-[11px] flex-wrap">
+            <span class="text-slate-500 font-medium">Req by <b>${r.staff_name || 'Staff'}</b> &bull; Total Value: <b class="text-slate-900">₹${r.total_requested_amount}</b></span>
+
+            ${isPending ? `
+              <div class="flex items-center gap-1.5 shrink-0">
+                ${isAdmin ? `
+                  <button type="button" onclick="handleApproveBulkPriceRequest('${r.id}'); setTimeout(() => window.loadBulkRequestsHubList(), 600);" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition flex items-center gap-1 shadow-sm cursor-pointer">
+                    <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                    <span>Approve</span>
+                  </button>
+                  <button type="button" onclick="openBulkRejectReasonModal('${r.id}')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition flex items-center gap-1 shadow-sm cursor-pointer">
+                    <span class="material-symbols-outlined text-[15px]">cancel</span>
+                    <span>Reject</span>
+                  </button>
+                ` : `
+                  <button type="button" onclick="resendBulkPriceRequest('${r.id}')" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold rounded-xl transition flex items-center gap-1 cursor-pointer">
+                    <span class="material-symbols-outlined text-[15px]">send</span>
+                    <span>Resend Alert</span>
+                  </button>
+                `}
+              </div>
+            ` : (isApproved ? `
+              <span class="text-emerald-700 font-bold text-[11px] flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px]">verified</span>
+                <span>Approved by ${r.approved_by || 'Admin'}</span>
+              </span>
+            ` : `
+              <span class="text-rose-700 font-medium text-[11px] truncate max-w-[240px]" title="${r.rejection_reason || ''}">
+                Reason: ${r.rejection_reason || 'Declined'}
+              </span>
+            `)}
+          </div>
+        </div>
+      `;
+    });
+
+    listEl.innerHTML = html;
+  } catch (e) {
+    console.error('Error loading bulk hub list:', e);
+    listEl.innerHTML = '<div class="p-8 text-center text-rose-500">Failed to load bulk requests.</div>';
+  }
+};
+
+window.openChatFromBulkHub = function (custPhone, custName) {
+  window.closeBulkRequestsModal();
+  if (typeof switchView === 'function') switchView('inbox');
+
+  const cleanTarget = String(custPhone || '').replace(/[^0-9]/g, '');
+  if (CRM_STATE && Array.isArray(CRM_STATE.customers)) {
+    const found = CRM_STATE.customers.find(c => {
+      const p = String(c.whatsapp || c.phone || '').replace(/[^0-9]/g, '');
+      return p && (p === cleanTarget || (cleanTarget.length >= 10 && p.endsWith(cleanTarget.slice(-10))));
+    });
+    if (found && typeof selectCustomerChat === 'function') {
+      selectCustomerChat(found.id);
+      return;
+    }
+  }
+  if (typeof showToast === 'function') {
+    showToast('Customer', `Showing customer: ${custName || custPhone}`, 'info', 'slate');
+  }
+};
+
+window.updateHeaderBulkRequestsBadge = async function () {
+  const badge = document.getElementById('header-bulk-requests-badge');
+  if (!badge) return;
+
+  try {
+    const res = await fetch('api.php?action=get_bulk_price_requests&status=PENDING&limit=20');
+    const data = await res.json();
+    const count = (data && data.count) ? parseInt(data.count, 10) : 0;
+
+    if (count > 0) {
+      badge.innerText = count;
+      badge.classList.remove('hidden');
+      const tabBadge = document.getElementById('hub-tab-pending-count');
+      if (tabBadge) tabBadge.innerText = count;
+    } else {
+      badge.classList.add('hidden');
+      const tabBadge = document.getElementById('hub-tab-pending-count');
+      if (tabBadge) tabBadge.innerText = '0';
+    }
+  } catch (err) {}
 };
