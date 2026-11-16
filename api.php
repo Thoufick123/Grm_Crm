@@ -5102,18 +5102,18 @@ function sendDirectSmtpMail($to, $subject, $htmlBody, $plainBody = '', $smtpConf
         $cfg = array_merge($cfg, $smtpConfig);
     }
 
-    // If host or username or password is missing
-    if (empty($cfg['host']) || empty($cfg['username']) || empty($cfg['password'])) {
+    // If host or username or password is missing or explicitly disabled
+    if ((isset($cfg['enabled']) && $cfg['enabled'] === false) || empty($cfg['host']) || empty($cfg['username']) || empty($cfg['password'])) {
         return ['success' => false, 'error' => 'SMTP credentials not configured'];
     }
 
     $host = trim($cfg['host']);
     $port = (int)($cfg['port'] ?: 465);
     $user = trim($cfg['username']);
-    $pass = trim($cfg['password']);
+    $pass = str_replace(' ', '', trim($cfg['password']));
     $fromEmail = !empty($cfg['from_email']) ? trim($cfg['from_email']) : $user;
     $fromName = !empty($cfg['from_name']) ? trim($cfg['from_name']) : 'GRM CRM Security Shield';
-    $timeout = (int)($cfg['timeout'] ?: 8);
+    $timeout = (int)($cfg['timeout'] ?: 10);
 
     $isSsl = ($port === 465 || strtolower($cfg['encryption'] ?? '') === 'ssl');
     $isTls = ($port === 587 || strtolower($cfg['encryption'] ?? '') === 'tls');
@@ -5245,6 +5245,14 @@ function sendDirectSmtpMail($to, $subject, $htmlBody, $plainBody = '', $smtpConf
         return ['success' => true, 'message' => 'Delivered via Authenticated SMTP'];
     }
     return ['success' => false, 'error' => "SMTP Delivery Failed: " . trim($sendResp)];
+}
+
+if ($action === 'test_smtp') {
+    header('Content-Type: application/json');
+    $to = trim($_GET['to'] ?? 'vanaja15802@gmail.com');
+    $res = sendDirectSmtpMail($to, 'GRM CRM Security - SMTP Test Delivery', '<h2>SMTP Test Successful</h2><p>This email was delivered directly to your inbox via Google Authenticated SMTP.</p>', 'SMTP Test Successful');
+    echo json_encode($res);
+    exit;
 }
 
 // 1. REQUEST BACKUP DOWNLOAD (Triggers Super Admin Email Verification)
