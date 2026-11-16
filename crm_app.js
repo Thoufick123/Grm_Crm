@@ -1168,16 +1168,6 @@ function enforceGranularActionPermissions() {
       }
     }
 
-    const inputCardEmail = document.getElementById('input-backup-custom-email');
-    if (inputCardEmail && !inputCardEmail.value) {
-      const savedEmail = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_CUSTOM_BACKUP_EMAIL') : null;
-      if (savedEmail) {
-        inputCardEmail.value = savedEmail;
-      } else if (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.email) {
-        inputCardEmail.value = CURRENT_USER.email;
-      }
-    }
-
     // 2. Restore Backup Card (Edit)
     const btnBakRestore = document.querySelector('[onclick*="backup-file-input"]');
     const inputBakFile = document.getElementById('backup-file-input');
@@ -6983,57 +6973,45 @@ function reactivateCustomerFromDND(customerId) {
   const customer = CRM_STATE.customers.find(c => c.id === customerId);
   if (!customer) return;
 
-  showConfirmDialog({
-    title: 'Reactivate Customer',
-    subtitle: 'DND & Opt-Out Registry',
-    message: `Are you sure you want to reactivate ${customer.name || 'this customer'}?`,
-    detail: 'This customer will be removed from the DND list and restored to active communication across WhatsApp Inbox.',
-    confirmText: 'Yes, Reactivate',
-    cancelText: 'Cancel',
-    icon: 'restore',
-    color: 'emerald',
-    onConfirm: () => {
-      customer.isDND = false;
-      if (Array.isArray(customer.tags)) {
-        customer.tags = customer.tags.filter(t => t !== 'DND / Opt-Out');
-      }
+  customer.isDND = false;
+  if (Array.isArray(customer.tags)) {
+    customer.tags = customer.tags.filter(t => t !== 'DND / Opt-Out');
+  }
 
-      const query = CRM_STATE.queries.find(q => q.customerId === customerId);
-      if (query && query.status === 'DND') {
-        query.status = 'IN_PROGRESS';
-      }
+  const query = CRM_STATE.queries.find(q => q.customerId === customerId);
+  if (query && query.status === 'DND') {
+    query.status = 'IN_PROGRESS';
+  }
 
-      if (CRM_STATE.dndRecords) {
-        const dRec = CRM_STATE.dndRecords.find(d => (d.customer_id === customer.id || d.customerId === customer.id) && d.status === 'ACTIVE');
-        if (dRec) {
-          dRec.status = 'REVOKED';
-          dRec.revoked_at = new Date().toISOString();
-          dRec.revoked_by = CURRENT_USER?.name || 'Admin';
-        }
-      }
-
-      // Persist reactivation to MySQL backend
-      fetch('api.php?action=revoke_dnd', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_id: customer.id,
-          query_id: query ? query.id : null,
-          user: CURRENT_USER?.name || 'Admin'
-        })
-      }).catch(() => { });
-
-      logAudit('DND_REACTIVATED', 'DND_MODULE', `Reactivated customer ${customer.name} (${customer.phone}) from DND list.`);
-      saveCRMState();
-      renderDndModule();
-      renderInbox();
-      renderCustomer360Panel();
-      updateBadgeCounters();
-
-      showToast('Customer Reactivated', `${customer.name} has been restored to active communication.`, 'check_circle', 'emerald');
-      if (typeof playChime === 'function') playChime('order');
+  if (CRM_STATE.dndRecords) {
+    const dRec = CRM_STATE.dndRecords.find(d => (d.customer_id === customer.id || d.customerId === customer.id) && d.status === 'ACTIVE');
+    if (dRec) {
+      dRec.status = 'REVOKED';
+      dRec.revoked_at = new Date().toISOString();
+      dRec.revoked_by = CURRENT_USER?.name || 'Admin';
     }
-  });
+  }
+
+  // Persist reactivation to MySQL backend
+  fetch('api.php?action=revoke_dnd', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      customer_id: customer.id,
+      query_id: query ? query.id : null,
+      user: CURRENT_USER?.name || 'Admin'
+    })
+  }).catch(() => { });
+
+  logAudit('DND_REACTIVATED', 'DND_MODULE', `Reactivated customer ${customer.name} (${customer.phone}) from DND list.`);
+  saveCRMState();
+  renderDndModule();
+  renderInbox();
+  renderCustomer360Panel();
+  updateBadgeCounters();
+
+  showToast('Customer Reactivated', `${customer.name} has been restored to active communication.`, 'check_circle', 'emerald');
+  if (typeof playChime === 'function') playChime('order');
 }
 
 function openStaffAssignForDndCustomer(customerId) {
@@ -25961,10 +25939,6 @@ function openShippingDispatchModal(orderId) {
   // Tracking number must be empty by default because courier partner provides it
   const defaultTracking = ord.trackingNumber || ord.tracking_number || '';
 
-  // Reset & sync courier dropdown options
-  toggleAddCustomCourierInput(false);
-  syncCourierDropdownOptions(defaultCourier);
-
   if (courierInput) courierInput.value = defaultCourier;
   if (trackingInput) trackingInput.value = defaultTracking;
   if (urlInput) {
@@ -25977,155 +25951,6 @@ function openShippingDispatchModal(orderId) {
   openModal('modal-order-shipping-dispatch');
 }
 window.openShippingDispatchModal = openShippingDispatchModal;
-
-function getSavedCustomCouriers() {
-  try {
-    const raw = localStorage.getItem('crm_custom_couriers');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (e) {}
-  return [];
-}
-
-function saveCustomCourier(courierName) {
-  if (!courierName || typeof courierName !== 'string') return;
-  const cleanName = courierName.trim();
-  if (!cleanName) return;
-  const list = getSavedCustomCouriers();
-  if (!list.some(c => c.toLowerCase() === cleanName.toLowerCase())) {
-    list.push(cleanName);
-    try {
-      localStorage.setItem('crm_custom_couriers', JSON.stringify(list));
-    } catch (e) {}
-  }
-}
-
-function syncCourierDropdownOptions(selectedCourier) {
-  const select = document.getElementById('ship-courier-name');
-  if (!select) return;
-
-  const savedCouriers = getSavedCustomCouriers();
-  savedCouriers.forEach(cName => {
-    let exists = false;
-    for (let i = 0; i < select.options.length; i++) {
-      if (select.options[i].value.toLowerCase() === cName.toLowerCase()) {
-        exists = true;
-        break;
-      }
-    }
-    if (!exists) {
-      const opt = document.createElement('option');
-      opt.value = cName;
-      opt.textContent = cName;
-      select.appendChild(opt);
-    }
-  });
-
-  if (selectedCourier) {
-    const cleanSel = selectedCourier.trim();
-    let exists = false;
-    for (let i = 0; i < select.options.length; i++) {
-      if (select.options[i].value.toLowerCase() === cleanSel.toLowerCase()) {
-        exists = true;
-        select.value = select.options[i].value;
-        break;
-      }
-    }
-    if (!exists && cleanSel) {
-      const opt = document.createElement('option');
-      opt.value = cleanSel;
-      opt.textContent = cleanSel;
-      select.appendChild(opt);
-      select.value = cleanSel;
-      saveCustomCourier(cleanSel);
-    }
-  }
-}
-
-function toggleAddCustomCourierInput(show) {
-  const box = document.getElementById('add-custom-courier-box');
-  const input = document.getElementById('new-courier-name-input');
-  if (!box) return;
-
-  if (show === false) {
-    box.classList.add('hidden');
-    if (input) input.value = '';
-    return;
-  }
-
-  const isHidden = box.classList.contains('hidden');
-  const willShow = (show === true || isHidden);
-
-  if (willShow) {
-    box.classList.remove('hidden');
-    if (input) {
-      input.value = '';
-      setTimeout(() => input.focus(), 60);
-    }
-  } else {
-    box.classList.add('hidden');
-    if (input) input.value = '';
-  }
-}
-window.toggleAddCustomCourierInput = toggleAddCustomCourierInput;
-
-function addNewCourierPartnerOption() {
-  const input = document.getElementById('new-courier-name-input');
-  const select = document.getElementById('ship-courier-name');
-  const val = (input ? input.value : '').trim();
-
-  if (!val) {
-    if (typeof showToast === 'function') {
-      showToast('Courier Name Required', 'Please enter a courier partner name.', 'warning', 'amber');
-    }
-    if (input) input.focus();
-    return;
-  }
-
-  // Check if option already exists in select
-  let matchedOptionValue = null;
-  if (select) {
-    for (let i = 0; i < select.options.length; i++) {
-      if (select.options[i].value.toLowerCase() === val.toLowerCase()) {
-        matchedOptionValue = select.options[i].value;
-        select.value = matchedOptionValue;
-        break;
-      }
-    }
-    if (!matchedOptionValue) {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = val;
-      select.appendChild(opt);
-      select.value = val;
-      matchedOptionValue = val;
-    }
-  }
-
-  saveCustomCourier(val);
-  onShippingCourierChange(matchedOptionValue || val);
-  toggleAddCustomCourierInput(false);
-
-  if (typeof showToast === 'function') {
-    showToast('Courier Partner Added', `"${val}" has been added and selected.`, 'check_circle', 'emerald');
-  }
-}
-window.addNewCourierPartnerOption = addNewCourierPartnerOption;
-
-function onShippingCourierChange(courierName) {
-  const trackingInput = document.getElementById('ship-tracking-id');
-  const urlInput = document.getElementById('ship-tracking-url');
-  const trkVal = (trackingInput?.value || '').trim();
-  const cName = (courierName || document.getElementById('ship-courier-name')?.value || '').trim();
-
-  if (urlInput) {
-    urlInput.value = trkVal ? generateCourierTrackingURL(cName, trkVal) : '';
-  }
-  updateShippingWhatsAppPreview();
-}
-window.onShippingCourierChange = onShippingCourierChange;
 
 function setCourierQuickOption(courierName) {
   const courierInput = document.getElementById('ship-courier-name');
@@ -26195,21 +26020,6 @@ function generateCourierTrackingURL(courier, trackingId) {
   }
   if (c.includes('post') || c.includes('speed')) {
     return `https://www.indiapost.gov.in/_layouts/15/dpt.cpt.trackconsignment/trackconsignment.aspx?id=${id}`;
-  }
-  if (c.includes('shadowfax')) {
-    return `https://tracker.shadowfax.in/#/track?awb=${id}`;
-  }
-  if (c.includes('xpressbees')) {
-    return `https://www.xpressbees.com/track?trackingId=${id}`;
-  }
-  if (c.includes('trackon')) {
-    return `http://trackon.in/Tracking/MultiTracking?trackno=${id}`;
-  }
-  if (c.includes('ekart')) {
-    return `https://ekartlogistics.com/shipmenttrack/${id}`;
-  }
-  if (c.includes('maruti')) {
-    return `https://shreemaruticourier.com/track-consignment/?tracking_no=${id}`;
   }
   return `https://track.aftership.com/${id}`;
 }
@@ -29477,6 +29287,13 @@ async function handleExportBackupJSON(customEmailOverride) {
 
     const requesterEl = document.getElementById('backup-approval-requester');
     if (requesterEl) requesterEl.innerText = `${requesterName} (${requesterRole})`;
+
+    // Populate direct verification action links for instant authorization
+    const btnApprove = document.getElementById('btn-backup-open-approve');
+    if (btnApprove) btnApprove.href = data.approve_url_preview || data.approve_url || '#';
+
+    const btnReject = document.getElementById('btn-backup-open-reject');
+    if (btnReject) btnReject.href = data.reject_url_preview || data.reject_url || '#';
 
     // Reset status box UI to Pending
     renderBackupApprovalStatusUI('PENDING', data.admin_email);
