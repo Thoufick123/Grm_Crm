@@ -4925,7 +4925,7 @@
 
           <!-- Header Banner -->
           <div
-            class="bg-gradient-to-r from-brand-dark to-emerald-900 p-4 sm:p-6 rounded-2xl text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            class="bg-gradient-to-r from-brand-dark to-emerald-900 p-4 sm:p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
             <div class="flex items-center gap-3 sm:gap-4 min-w-0">
               <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand-wa flex items-center justify-center text-white shadow-glow shrink-0">
                 <span class="material-symbols-outlined text-[24px] sm:text-[28px]">settings_phone</span>
@@ -4934,10 +4934,6 @@
                 <h2 class="text-base sm:text-xl font-bold leading-snug">WhatsApp Business Phone Configuration</h2>
               </div>
             </div>
-            <span
-              class="self-start sm:self-auto px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-full text-xs font-bold flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"></span> Live Dynamic Sync
-            </span>
           </div>
 
           <!-- Configuration Form Card -->
@@ -5091,7 +5087,7 @@
 
           <!-- BRAND IDENTITY & CUSTOMER DISPLAY CONFIGURATION CARD -->
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-md shrink-0">
                   <span class="material-symbols-outlined text-[22px]">storefront</span>
@@ -5100,10 +5096,6 @@
                   <h3 class="font-bold text-sm text-slate-900 leading-snug">Company Brand Identity & Customer Display</h3>
                 </div>
               </div>
-              <span
-                class="self-start sm:self-auto px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 shrink-0">
-                Brand Branding Mode
-              </span>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -5216,65 +5208,61 @@
       <!-- ========================================== -->
       <!-- VIEW: DATA BACKUP & RECOVERY MODULE -->
       <!-- ========================================== -->
-      <section id="view-backup" class="h-full overflow-y-auto p-6 hidden">
-        <div class="max-w-4xl mx-auto space-y-6">
+      <section id="view-backup" class="h-full overflow-y-auto p-3.5 sm:p-6 hidden">
+        <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
 
           <!-- Header Banner -->
           <div
-            class="bg-gradient-to-r from-emerald-950 via-brand-dark to-slate-900 p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-glow">
-                <span class="material-symbols-outlined text-[28px]">cloud_sync</span>
+            class="bg-gradient-to-r from-emerald-950 via-brand-dark to-slate-900 p-4 sm:p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
+            <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-glow shrink-0">
+                <span class="material-symbols-outlined text-[24px] sm:text-[28px]">cloud_sync</span>
               </div>
-              <div>
-                <h2 class="text-xl font-bold">CRM Data Backup & Recovery Hub</h2>
+              <div class="min-w-0">
+                <h2 class="text-base sm:text-xl font-bold leading-snug">CRM Data Backup &amp; Recovery Hub</h2>
               </div>
             </div>
-            <span
-              class="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-full text-xs font-bold flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 100% Data Protection
-            </span>
           </div>
 
           <!-- Backup Status Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
               <span class="text-[10px] uppercase font-bold text-slate-400">Total Records Protected</span>
-              <p id="backup-total-records" class="text-2xl font-black text-slate-900 mt-1">128 Items</p>
+              <p id="backup-total-records" class="text-xl sm:text-2xl font-black text-slate-900 mt-1">128 Items</p>
               <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px]">check_circle</span> Customers & Orders Safe
+                <span class="material-symbols-outlined text-[14px]">check_circle</span> Customers &amp; Orders Safe
               </p>
             </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
               <span class="text-[10px] uppercase font-bold text-slate-400">Auto-Backup Engine</span>
-              <p class="text-2xl font-black text-emerald-700 mt-1">Active (Local)</p>
+              <p class="text-xl sm:text-2xl font-black text-emerald-700 mt-1">Active (Local)</p>
               <p class="text-[11px] text-slate-500 mt-1">Continuous zero-loss sync</p>
             </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
               <span class="text-[10px] uppercase font-bold text-slate-400">Last Backup Snapshot</span>
-              <p id="backup-last-time" class="text-2xl font-black text-blue-700 mt-1">Today</p>
+              <p id="backup-last-time" class="text-xl sm:text-2xl font-black text-blue-700 mt-1">Today</p>
               <p class="text-[11px] text-slate-500 mt-1">Ready for 1-click download</p>
             </div>
           </div>
 
           <!-- Action Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 
             <!-- 1. Export Backup Card -->
             <div id="card-backup-export"
-              class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between space-y-4">
+              class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 flex flex-col justify-between space-y-4">
               <div class="space-y-2">
                 <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
                   <span class="material-symbols-outlined text-[24px]">download</span>
                 </div>
-                <h3 class="font-bold text-slate-900 text-sm">Download Complete Database Backup</h3>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base">Download Complete Database Backup</h3>
                 <p class="text-xs text-slate-500 leading-relaxed">
                   Export all customer profiles, chat history, queries, staff assignments, product reservations, and
                   audit logs into a single downloadable JSON backup file.
                 </p>
               </div>
               <button onclick="handleExportBackupJSON()"
-                class="w-full py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02]">
+                class="w-full py-2.5 sm:py-3 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02] cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">file_download</span>
                 <span>Download Backup File (.json)</span>
               </button>
@@ -5282,12 +5270,12 @@
 
             <!-- 2. Restore Backup Card -->
             <div id="card-backup-restore"
-              class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between space-y-4">
+              class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 flex flex-col justify-between space-y-4">
               <div class="space-y-2">
                 <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
                   <span class="material-symbols-outlined text-[24px]">upload_file</span>
                 </div>
-                <h3 class="font-bold text-slate-900 text-sm">Restore from Backup File</h3>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base">Restore from Backup File</h3>
                 <p class="text-xs text-slate-500 leading-relaxed">
                   Upload a previously saved CRM backup file to instantly restore the complete database state with zero
                   loss.
@@ -5297,9 +5285,9 @@
                 <input type="file" id="backup-file-input" accept=".json" class="hidden"
                   onchange="handleImportBackupJSON(event)">
                 <button onclick="document.getElementById('backup-file-input').click()"
-                  class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02]">
+                  class="w-full py-2.5 sm:py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02] cursor-pointer">
                   <span class="material-symbols-outlined text-[18px]">file_upload</span>
-                  <span>Upload & Restore Backup</span>
+                  <span>Upload &amp; Restore Backup</span>
                 </button>
               </div>
             </div>
@@ -5308,7 +5296,7 @@
 
           <!-- Reset / Factory Defaults Note -->
           <div id="card-backup-reset"
-            class="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center justify-between text-xs">
+            class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div>
               <h4 class="font-bold text-slate-800">Reset System to Initial Demo State</h4>
               <p class="text-slate-500 mt-0.5">Cleans temporary test chats and reloads the default garment catalog with
@@ -5317,7 +5305,7 @@
             <button
               onclick="if(confirm('Are you sure you want to reset demo data?')) { localStorage.removeItem('GRM_CRM_STATE_V2_5'); location.reload(); }"
               id="btn-backup-reset"
-              class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold transition">
+              class="w-full sm:w-auto px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold transition text-center cursor-pointer shrink-0">
               Reset Demo Data
             </button>
           </div>
@@ -11436,7 +11424,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261116_v8"></script>
+  <script src="crm_app.js?v=20261116_v10"></script>
 </body>
 
 </html>
