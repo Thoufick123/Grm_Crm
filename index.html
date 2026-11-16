@@ -4766,29 +4766,30 @@
           <!-- ======================================================= -->
           <!-- SUB-DIVISION 3: ASSIGN THE ROLE -->
           <!-- ======================================================= -->
-          <div id="subview-staff-roles" class="space-y-6 hidden">
+          <div id="subview-staff-roles" class="space-y-4 sm:space-y-6 hidden">
 
             <!-- Granular Role-Based Access Control Card -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-6 space-y-4 sm:space-y-6">
 
               <!-- Header -->
               <div
-                class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-                <div class="flex items-center gap-3">
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 pb-3.5 sm:pb-5">
+                <div class="flex items-center gap-2.5 sm:gap-3">
                   <div
-                    class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-600 text-white flex items-center justify-center shadow-md">
-                    <span class="material-symbols-outlined text-[24px]">admin_panel_settings</span>
+                    class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <span class="material-symbols-outlined text-[22px] sm:text-[24px]">admin_panel_settings</span>
                   </div>
                   <div>
-                    <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
-                      <span>Role-Based Access Control &amp; Module Permissions</span>
+                    <h3 class="font-bold text-xs sm:text-base text-slate-900 leading-tight">
+                      Role-Based Access Control &amp; Module Permissions
                     </h3>
+                    <p class="text-[10px] sm:text-xs text-slate-400 mt-0.5">Configure operational permissions per role</p>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 self-start sm:self-auto">
                   <button type="button" onclick="handleDeleteCurrentRole()" id="btn-delete-role"
-                    class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition hidden flex items-center gap-1 cursor-pointer">
+                    class="px-3 py-1.5 sm:py-2 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition hidden flex items-center gap-1 cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">delete</span>
                     <span>Delete Role</span>
                   </button>
@@ -4796,21 +4797,21 @@
               </div>
 
               <!-- Role Creation & Action Presets Bar -->
-              <div class="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div class="bg-slate-50/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
 
                   <!-- Role Name Input & Direct Save Button -->
-                  <div class="flex flex-wrap items-center gap-3">
-                    <div>
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+                    <div class="w-full sm:w-auto">
                       <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                         <span class="material-symbols-outlined text-[15px] text-purple-600">badge</span>
                         <span>Role Name:</span>
                       </label>
-                      <div class="flex items-center gap-2">
+                      <div class="flex items-center gap-2 w-full sm:w-auto">
                         <input type="text" id="role-input-name" placeholder="Enter Role Name (e.g. Telecaller, Support, Whatsapp)"
-                          class="w-64 sm:w-80 px-3.5 py-2 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none transition shadow-2xs">
+                          class="flex-1 min-w-0 sm:w-72 px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none transition shadow-2xs">
                         <button type="button" onclick="handleSaveRolePermissions()"
-                          class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                          class="shrink-0 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap">
                           <span class="material-symbols-outlined text-[16px]">save</span>
                           <span>Save Role</span>
                         </button>
@@ -4818,46 +4819,46 @@
                     </div>
 
                     <!-- Existing Roles Switcher -->
-                    <div class="sm:border-l sm:border-slate-200 sm:pl-3">
+                    <div class="w-full sm:w-auto sm:border-l sm:border-slate-200 sm:pl-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/80">
                       <label class="block text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1">
                         <span class="material-symbols-outlined text-[14px] text-slate-400">tune</span>
                         <span>Select Role:</span>
                       </label>
                       <div class="flex items-center gap-2">
                         <select id="role-matrix-role-select" onchange="handleRoleSelectChange(this.value)"
-                          class="bg-white border border-slate-300 text-slate-800 font-bold text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer shadow-2xs">
+                          class="flex-1 sm:flex-none bg-white border border-slate-300 text-slate-800 font-bold text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer shadow-2xs min-w-0">
                           <!-- Populated dynamically -->
                         </select>
                         <span id="role-staff-count-badge"
-                          class="text-[10px] font-mono font-bold bg-purple-100 text-purple-800 px-2 py-1 rounded-lg border border-purple-200">
-                          0 Staff
+                          class="shrink-0 text-[10px] font-mono font-bold bg-purple-100 text-purple-800 px-2 py-1 rounded-lg border border-purple-200 whitespace-nowrap">
+                          0 Staff Assigned
                         </span>
                       </div>
                     </div>
                   </div>
 
                   <!-- Quick Action Presets -->
-                  <div class="flex items-center gap-1.5 flex-wrap self-start lg:self-center">
-                    <span class="text-[10px] font-bold text-slate-500 uppercase mr-1">Presets:</span>
+                  <div class="flex items-center gap-1.5 flex-wrap w-full lg:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/80">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase mr-1 shrink-0">Presets:</span>
                     <button type="button" onclick="applyRolePreset('all')"
-                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                       title="Grant all actions across all modules">
-                      <span class="material-symbols-outlined text-[12px] text-emerald-600">check_circle</span> All
+                      <span class="material-symbols-outlined text-[13px] text-emerald-600">check_circle</span> All
                     </button>
                     <button type="button" onclick="applyRolePreset('view_only')"
-                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                       title="Read-only access (View only)">
-                      <span class="material-symbols-outlined text-[12px] text-sky-600">visibility</span> View Only
+                      <span class="material-symbols-outlined text-[13px] text-sky-600">visibility</span> View Only
                     </button>
                     <button type="button" onclick="applyRolePreset('sales')"
-                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                       title="Standard Sales Specialist permissions">
-                      <span class="material-symbols-outlined text-[12px] text-purple-600">point_of_sale</span> Sales
+                      <span class="material-symbols-outlined text-[13px] text-purple-600">point_of_sale</span> Sales
                     </button>
                     <button type="button" onclick="applyRolePreset('reset')"
-                      class="px-2.5 py-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      class="px-2.5 py-1.5 bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                       title="Clear all checkboxes">
-                      <span class="material-symbols-outlined text-[12px] text-rose-600">clear_all</span> Clear
+                      <span class="material-symbols-outlined text-[13px] text-rose-600">clear_all</span> Clear
                     </button>
                   </div>
 
@@ -4865,20 +4866,20 @@
               </div>
 
               <!-- GRANULAR MODULE PERMISSIONS MATRIX TABLE -->
-              <div class="overflow-hidden rounded-2xl border border-slate-200 shadow-xs">
-                <table class="w-full text-left text-xs text-slate-700">
+              <div class="overflow-x-auto rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs w-full">
+                <table class="w-full text-left text-xs text-slate-700 min-w-[560px] sm:min-w-full">
                   <thead
-                    class="bg-gradient-to-r from-slate-900 to-slate-800 text-white font-bold text-[11px] uppercase tracking-wider">
+                    class="bg-gradient-to-r from-slate-900 to-slate-800 text-white font-bold text-[10px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap">
                     <tr>
-                      <th class="py-3.5 px-4 w-2/5">
+                      <th class="py-3 px-3.5 sm:py-3.5 sm:px-4 min-w-[200px] w-2/5">
                         <div class="flex items-center gap-2">
                           <span class="material-symbols-outlined text-[16px] text-indigo-400">tune</span>
-                          <span>CRM Module / Operational Section</span>
+                          <span>CRM Module / Section</span>
                         </div>
                       </th>
-                      <th class="py-3.5 px-3 text-center w-1/8">
+                      <th class="py-3 px-2 sm:py-3.5 sm:px-3 text-center min-w-[70px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-sky-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-sky-300 transition select-none"
                           title="Select / Deselect View for all 12 modules">
                           <input type="checkbox" id="role-header-view"
                             onchange="handleToggleActionForAllModules('view', this.checked)"
@@ -4887,9 +4888,9 @@
                           <span>View</span>
                         </label>
                       </th>
-                      <th class="py-3.5 px-3 text-center w-1/8">
+                      <th class="py-3 px-2 sm:py-3.5 sm:px-3 text-center min-w-[70px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-emerald-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-emerald-300 transition select-none"
                           title="Select / Deselect Create for all 12 modules">
                           <input type="checkbox" id="role-header-create"
                             onchange="handleToggleActionForAllModules('create', this.checked)"
@@ -4898,9 +4899,9 @@
                           <span>Create</span>
                         </label>
                       </th>
-                      <th class="py-3.5 px-3 text-center w-1/8">
+                      <th class="py-3 px-2 sm:py-3.5 sm:px-3 text-center min-w-[70px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-amber-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-amber-300 transition select-none"
                           title="Select / Deselect Edit for all 12 modules">
                           <input type="checkbox" id="role-header-edit"
                             onchange="handleToggleActionForAllModules('edit', this.checked)"
@@ -4909,9 +4910,9 @@
                           <span>Edit</span>
                         </label>
                       </th>
-                      <th class="py-3.5 px-3 text-center w-1/8">
+                      <th class="py-3 px-2 sm:py-3.5 sm:px-3 text-center min-w-[70px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-rose-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-rose-300 transition select-none"
                           title="Select / Deselect Delete for all 12 modules">
                           <input type="checkbox" id="role-header-delete"
                             onchange="handleToggleActionForAllModules('delete', this.checked)"
@@ -4920,15 +4921,15 @@
                           <span>Delete</span>
                         </label>
                       </th>
-                      <th class="py-3.5 px-4 text-center w-1/8">
+                      <th class="py-3 px-3 sm:py-3.5 sm:px-4 text-center min-w-[85px]">
                         <label
-                          class="inline-flex items-center justify-center gap-1.5 cursor-pointer hover:text-teal-300 transition select-none"
+                          class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-teal-300 transition select-none"
                           title="Select / Deselect All Actions across all 12 modules">
                           <input type="checkbox" id="role-header-all"
                             onchange="handleToggleActionForAllModules('all', this.checked)"
                             class="w-4 h-4 text-teal-500 rounded border-slate-600 bg-slate-800 focus:ring-teal-400 cursor-pointer">
                           <span class="material-symbols-outlined text-[14px] text-teal-400">select_all</span>
-                          <span>All Actions</span>
+                          <span>All</span>
                         </label>
                       </th>
                     </tr>
@@ -11526,7 +11527,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261116_v13"></script>
+  <script src="crm_app.js?v=20261116_v14"></script>
 </body>
 
 </html>

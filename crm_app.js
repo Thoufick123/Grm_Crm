@@ -29665,10 +29665,10 @@ function renderRolePermissionsMatrix(roleName) {
     return `
       <tr class="hover:bg-slate-50/70 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}">
         <!-- Module Info -->
-        <td class="py-3 px-4">
-          <div class="flex items-center gap-2.5">
-            <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[17px]">${mod.icon}</span>
+        <td class="py-2.5 sm:py-3 px-3 sm:px-4">
+          <div class="flex items-center gap-2 sm:gap-2.5">
+            <span class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[15px] sm:text-[17px]">${mod.icon}</span>
             </span>
             <div class="min-w-0">
               <span class="font-bold text-slate-900 text-xs block truncate">${mod.name}</span>
@@ -29678,7 +29678,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- View Action Checkbox -->
-        <td class="py-3 px-3 text-center">
+        <td class="py-2.5 sm:py-3 px-2 sm:px-3 text-center">
           <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-sky-50 cursor-pointer">
             <input type="checkbox" id="role-mod-view-${mod.key}" ${modPerm.view ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
               onchange="handleToggleModuleAction('${mod.key}', 'view', this.checked)"
@@ -29687,7 +29687,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- Create Action Checkbox (Removed for Customer 360) -->
-        <td class="py-3 px-3 text-center">
+        <td class="py-2.5 sm:py-3 px-2 sm:px-3 text-center">
           ${isViewOnlyMod ? `
             <span class="text-xs text-slate-300 font-bold select-none" title="Create action not applicable for this module">—</span>
           ` : `
@@ -29700,7 +29700,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- Edit Action Checkbox (Removed for Customer 360) -->
-        <td class="py-3 px-3 text-center">
+        <td class="py-2.5 sm:py-3 px-2 sm:px-3 text-center">
           ${isViewOnlyMod ? `
             <span class="text-xs text-slate-300 font-bold select-none" title="Edit action not applicable for this module">—</span>
           ` : `
@@ -29713,7 +29713,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- Delete Action Checkbox (Removed for Customer 360) -->
-        <td class="py-3 px-3 text-center">
+        <td class="py-2.5 sm:py-3 px-2 sm:px-3 text-center">
           ${isViewOnlyMod ? `
             <span class="text-xs text-slate-300 font-bold select-none" title="Delete action not applicable for this module">—</span>
           ` : `
@@ -29726,7 +29726,7 @@ function renderRolePermissionsMatrix(roleName) {
         </td>
 
         <!-- All Actions (Row Master Toggle) -->
-        <td class="py-3 px-4 text-center">
+        <td class="py-2.5 sm:py-3 px-3 sm:px-4 text-center">
           <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-purple-50 cursor-pointer">
             <input type="checkbox" id="role-mod-all-${mod.key}" ${allChecked ? 'checked' : ''} ${isSuperAdmin ? 'disabled checked' : ''}
               onchange="handleToggleModuleAll('${mod.key}', this.checked)"
