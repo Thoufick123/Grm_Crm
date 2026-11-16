@@ -1,0 +1,11 @@
+{
+    "enabled": false,
+    "host": "smtp.hostinger.com",
+    "port": 465,
+    "encryption": "ssl",
+    "username": "",
+    "password": "",
+    "from_email": "",
+    "from_name": "GRM CRM Security Gate",
+    "notes": "To ensure 100% direct inbox delivery in Gmail, set enabled to true with either Hostinger SMTP (smtp.hostinger.com) or Gmail SMTP (smtp.gmail.com with Google App Password)."
+}
