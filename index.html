@@ -4625,19 +4625,27 @@
           <!-- SUB-DIVISION 2: DAILY MESSAGE ALLOCATION & QUOTA (200 TARGET) -->
           <!-- ======================================================= -->
           <!-- ======================================================= -->
-          <div id="subview-staff-create" class="space-y-6 hidden">
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-3xl mx-auto space-y-6">
-              <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md">
-                  <span class="material-symbols-outlined text-[24px]">person_add</span>
+          <div id="subview-staff-create" class="space-y-4 sm:space-y-6 hidden">
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 max-w-3xl mx-auto space-y-4 sm:space-y-6">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3 sm:pb-4">
+                <div class="flex items-center gap-2.5 sm:gap-3">
+                  <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md shrink-0">
+                    <span class="material-symbols-outlined text-[20px] sm:text-[24px]">person_add</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-xs sm:text-sm text-slate-900">Onboard New Staff Member</h3>
+                    <p class="text-[10px] sm:text-[11px] text-slate-400">Add credentials and role assignments</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 class="font-bold text-sm text-slate-900">Onboard New Staff Member</h3>
-                </div>
+                <button type="button" onclick="switchStaffTab('list')"
+                  class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                  title="Back to All Staff">
+                  <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
               </div>
 
-              <form onsubmit="handleCreateNewStaff(event)" class="space-y-5 text-xs">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form onsubmit="handleCreateNewStaff(event)" class="space-y-3.5 sm:space-y-5 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Full Name <span
                         class="text-rose-500">*</span>:</label>
@@ -4645,7 +4653,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">person</span>
                       <input type="text" id="staff-new-name" required placeholder="e.g. Suresh Kumar"
-                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                        class="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
                     </div>
                   </div>
 
@@ -4655,12 +4663,12 @@
                       <span
                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">mail</span>
                       <input type="email" id="staff-new-email" placeholder="e.g. suresh@grmgarments.com"
-                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                        class="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
                     </div>
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Mobile / WhatsApp Number <span
                         class="text-rose-500">*</span>:</label>
@@ -4668,7 +4676,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">phone</span>
                       <input type="text" id="staff-new-phone" required placeholder="e.g. +91 98765 12345"
-                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                        class="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
                     </div>
                   </div>
 
@@ -4676,17 +4684,17 @@
                     <label class="block font-bold text-slate-800 mb-1">Primary Role <span
                         class="text-rose-500">*</span>:</label>
                     <select id="staff-new-role" required
-                      class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                      class="w-full p-2 sm:p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
                       <!-- Dynamically populated from created roles -->
                     </select>
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Product Specialization / Department:</label>
                     <input type="text" id="staff-new-specialization" placeholder="e.g. Sales, Support, Operations, General"
-                      class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa focus:bg-white transition"
+                      class="w-full p-2 sm:p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa focus:bg-white transition"
                       list="staff-dept-suggestions">
                     <datalist id="staff-dept-suggestions">
                       <option value="General"></option>
@@ -4700,7 +4708,7 @@
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Initial Status:</label>
                     <select id="staff-new-status"
-                      class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                      class="w-full p-2 sm:p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
                       <option value="ACTIVE" selected>🟢 Active (Ready for Lead Assignment)</option>
                       <option value="ON_LEAVE">⚪ On Leave (Temporary Pause)</option>
                     </select>
@@ -4708,7 +4716,7 @@
                 </div>
 
                 <!-- Password Row -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-start">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Login Password <span
                         class="text-rose-500">*</span>:</label>
@@ -4717,7 +4725,7 @@
                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">lock</span>
                       <input type="password" id="staff-new-password" required
                         placeholder="Enter login password (e.g. staff123)"
-                        class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
+                        class="w-full pl-9 pr-10 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
                       <button type="button" onclick="togglePasswordVisibility('staff-new-password', this)"
                         class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
                         title="Show / hide password">
@@ -4728,10 +4736,10 @@
                       at login screen (min. 6 chars).</span>
                   </div>
 
-                  <div class="flex items-center">
+                  <div>
                     <div
                       class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-[11px] leading-relaxed w-full">
-                      <div class="font-bold text-slate-700 flex items-center gap-1.5 mb-0.5">
+                      <div class="font-bold text-slate-700 flex items-center gap-1.5 mb-1">
                         <span class="material-symbols-outlined text-[15px] text-emerald-600">security</span>
                         <span>Staff Login Credentials</span>
                       </div>
@@ -4741,13 +4749,13 @@
                   </div>
                 </div>
 
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                <div class="pt-3 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2.5 sm:gap-3">
                   <button type="button" onclick="switchStaffTab('list')"
-                    class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
+                    class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition text-center cursor-pointer">
                     Cancel
                   </button>
                   <button type="submit"
-                    class="px-6 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-xl shadow-md flex items-center gap-1.5 transition hover:scale-105">
+                    class="w-full sm:w-auto px-6 py-2.5 bg-brand-wa hover:bg-brand-waDark text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
                     <span class="material-symbols-outlined text-[18px]">check_circle</span> Onboard & Create Staff
                   </button>
                 </div>
@@ -6709,11 +6717,11 @@
           <span class="text-[10px] text-slate-400 mt-1 block">Only enter a password if you want to reset the staff member's login password.</span>
         </div>
 
-        <div class="pt-3 flex items-center justify-end gap-2 border-t border-slate-200">
+        <div class="pt-3 flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2 border-t border-slate-200">
           <button type="button" onclick="closeModal('modal-edit-staff')"
-            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer">Cancel</button>
+            class="w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer text-center">Cancel</button>
           <button type="submit"
-            class="px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center gap-1.5 transition cursor-pointer">
+            class="w-full sm:w-auto px-5 py-2 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer">
             <span class="material-symbols-outlined text-[18px]">save</span> Save Staff Details
           </button>
         </div>
@@ -8983,6 +8991,65 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL: UNIVERSAL ACTION & DELETE CONFIRMATION POPUP -->
+  <!-- ======================================================= -->
+  <div id="modal-custom-confirm"
+    class="fixed inset-0 z-[120] modal-backdrop hidden flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs"
+    onclick="if(event.target===this)cancelCustomConfirm()">
+    <div
+      class="bg-white w-full max-w-sm sm:max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+
+      <!-- Modal Header -->
+      <div id="custom-confirm-header"
+        class="p-4 sm:p-5 text-white flex items-center justify-between bg-gradient-to-r from-rose-900 via-slate-900 to-rose-950">
+        <div class="flex items-center gap-3 min-w-0">
+          <div id="custom-confirm-icon-box"
+            class="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white shadow-md shrink-0">
+            <span id="custom-confirm-icon" class="material-symbols-outlined text-[24px]">delete</span>
+          </div>
+          <div class="min-w-0">
+            <h3 id="custom-confirm-title" class="font-bold text-sm sm:text-base text-white truncate">Delete Confirmation</h3>
+            <p id="custom-confirm-subtitle" class="text-[11px] text-rose-200/80 truncate">Action requires confirmation</p>
+          </div>
+        </div>
+        <button type="button" onclick="cancelCustomConfirm()"
+          class="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer" title="Cancel & Close">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 sm:p-5 space-y-4 text-xs">
+        <div id="custom-confirm-banner"
+          class="p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-slate-800 flex items-start gap-3">
+          <span id="custom-confirm-banner-icon"
+            class="material-symbols-outlined text-rose-600 text-[22px] shrink-0 mt-0.5">warning</span>
+          <div class="text-xs space-y-1 min-w-0 flex-1">
+            <p id="custom-confirm-message" class="font-bold text-slate-900 leading-snug break-words">
+              Are you sure you want to proceed?
+            </p>
+            <p id="custom-confirm-detail" class="text-slate-600 text-[11px] leading-relaxed break-words hidden"></p>
+          </div>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
+          <button type="button" id="custom-confirm-btn-cancel" onclick="cancelCustomConfirm()"
+            class="flex-1 sm:flex-none px-4 py-2.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold rounded-xl transition cursor-pointer text-center text-xs">
+            Cancel
+          </button>
+          <button type="button" id="custom-confirm-btn-action" onclick="executeCustomConfirm()"
+            class="flex-1 sm:flex-none px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer text-xs">
+            <span id="custom-confirm-action-icon" class="material-symbols-outlined text-[17px]">delete</span>
+            <span id="custom-confirm-action-text">Delete</span>
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -11459,7 +11526,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261116_v11"></script>
+  <script src="crm_app.js?v=20261116_v13"></script>
 </body>
 
 </html>
