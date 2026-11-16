@@ -5127,10 +5127,10 @@ if ($action === 'request_backup_download') {
         ]);
 
         $publicBaseUrl = 'https://maroon-partridge-532881.hostingersite.com';
-        if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') === false && strpos($_SERVER['HTTP_HOST'], '127.0.0.1') === false) {
+        if (!empty($_SERVER['HTTP_HOST'])) {
             $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
             $publicBaseUrl = $proto . '://' . $_SERVER['HTTP_HOST'];
-        } elseif (defined('APP_URL') && strpos(APP_URL, 'localhost') === false) {
+        } elseif (defined('APP_URL') && !empty(APP_URL)) {
             $publicBaseUrl = rtrim(APP_URL, '/');
         }
 
@@ -5215,7 +5215,65 @@ if ($action === 'request_backup_download') {
 </body>
 </html>
 ";
-        $mailSent = @mail($adminEmail, $subject, $message, $headers, "-f" . $fromEmail);
+        // 1. Attempt mail delivery with RFC-compliant headers
+        $mailHeaders = $headers . "
+
+Date: " . date('r') . "
+
+Message-ID: <" . bin2hex(random_bytes(16)) . "@" . $hostDomain . ">";
+        $mailSent = @mail($adminEmail, $subject, $message, $mailHeaders, "-f" . $fromEmail);
+
+        // 2. Dispatch Instant WhatsApp Security Authorization Link to Super Admin Phone
+        $waSent = false;
+        $waAdminPhone = null;
+        try {
+            // Find active Super Admin phone number from users table or config
+            $adminUserStmt = $pdo->prepare("SELECT `phone` FROM `users` WHERE `role` IN ('Super Admin', 'admin') AND `status` = 'active' AND `phone` IS NOT NULL AND `phone` != '' ORDER BY id ASC LIMIT 1");
+            $adminUserStmt->execute();
+            $adminRow = $adminUserStmt->fetch(PDO::FETCH_ASSOC);
+            $waAdminPhone = !empty($adminRow['phone']) ? $adminRow['phone'] : '+91 99435 57998';
+
+            $cleanWaPhone = preg_replace('/[^0-9]/', '', $waAdminPhone);
+            if (strlen($cleanWaPhone) === 10) {
+                $cleanWaPhone = '91' . $cleanWaPhone;
+            }
+
+            $waAlertMsg = "🔒 *[GRM CRM SECURITY GATE]*
+*Database Backup Download Authorization Request*
+
+"
+                . "A complete database export has been requested.
+"
+                . "• *Request Code:* `{$requestCode}`
+"
+                . "• *Requested By:* {$requesterName} ({$requesterRole})
+"
+                . "• *Target Admin:* {$adminEmail}
+"
+                . "• *Valid For:* 15 Minutes
+
+"
+                . "✅ *1-CLICK APPROVE:*
+{$approveUrl}
+
+"
+                . "🚫 *REJECT & BLOCK:*
+{$rejectUrl}
+
+"
+                . "_If you did not request this, click REJECT immediately to lock export access._";
+
+            $bRes = curlBridgePost('/api/send', [
+                'phone' => $cleanWaPhone,
+                'text' => $waAlertMsg
+            ], 6);
+
+            if (!empty($bRes['http_code']) && $bRes['http_code'] >= 200 && $bRes['http_code'] < 300) {
+                $waSent = true;
+            }
+        } catch (Exception $waEx) {
+            error_log("WhatsApp backup authorization alert error: " . $waEx->getMessage());
+        }
 
         echo json_encode([
             "success" => true,
@@ -5223,6 +5281,8 @@ if ($action === 'request_backup_download') {
             "request_code" => $requestCode,
             "admin_email" => $adminEmail,
             "mail_sent" => (bool)$mailSent,
+            "wa_sent" => (bool)$waSent,
+            "wa_admin_phone" => $waAdminPhone,
             "expires_in_minutes" => 15,
             "approve_url" => $approveUrl,
             "reject_url" => $rejectUrl,

@@ -992,26 +992,21 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
                 const isReplaced = statusCode === DisconnectReason.connectionReplaced || statusCode === 440;
                 console.log(`[QR Bridge - ${accountId}] Connection closed (status: ${statusCode}). Logged out: ${isLoggedOut}`);
-                accountObj.status = 'DISCONNECTED';
+                accountObj.status = isLoggedOut ? 'DISCONNECTED' : 'RECONNECTING';
                 accountObj.qrImage = null;
-                accountObj.connectedNumber = null;
-                accountObj.connectedName = null;
+                if (isLoggedOut) {
+                    accountObj.connectedNumber = null;
+                    accountObj.connectedName = null;
+                }
                 accountObj.isStarting = false;
                 broadcastAccountsUpdate();
 
                 if (isLoggedOut) {
-                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Clearing credentials and generating new QR Code...`);
-                    if (fs.existsSync(sessionDir)) {
-                        try {
-                            fs.rmSync(sessionDir, { recursive: true, force: true });
-                        } catch (e) {
-                            console.warn('[Session Clear Notice]:', e.message);
-                        }
-                    }
-                    // Auto-generate fresh QR code for this slot
+                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Marking disconnected...`);
+                    // Preserve session directory unless user explicitly disconnects via API to prevent accidental wipe
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-                    }, 1500);
+                    }, 3000);
                 } else if (isReplaced) {
                     console.warn(`[QR Bridge - ${accountId}] Session replaced by another active connection (status: 440). Pausing auto-reconnect to prevent rapid loop...`);
                     setTimeout(() => {
@@ -1738,13 +1733,10 @@ function initializeAllSessions() {
             return fs.existsSync(credsFile);
         });
 
-        // Clean up empty extra dirs
+        // Keep registered slot directories intact so scanning is never interrupted
         dirs.forEach(dir => {
             if (dir !== 'account_1') {
-                const credsFile = path.join(SESSIONS_BASE_DIR, dir, 'creds.json');
-                if (!fs.existsSync(credsFile)) {
-                    try { fs.rmSync(path.join(SESSIONS_BASE_DIR, dir), { recursive: true, force: true }); } catch (e) { }
-                }
+                // Preserved slot directory
             }
         });
 

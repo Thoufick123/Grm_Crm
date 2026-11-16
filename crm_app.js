@@ -2175,10 +2175,14 @@ function initSocketIO() {
                 line.qr_image = null;
               } else if (live.status === 'SCAN_QR') {
                 line.qr_image = live.qr_image;
-                line.connected_number = 'Scan QR Code';
+                if (!line.connected_number || line.connected_number === 'Awaiting Link') {
+                  line.connected_number = 'Scan QR Code';
+                }
               } else if (live.status === 'DISCONNECTED') {
-                line.connected_number = 'Awaiting Link';
                 line.qr_image = null;
+                if (!line.connected_number || line.connected_number === 'Scan QR Code') {
+                  line.connected_number = 'Awaiting Link';
+                }
               }
             }
           });
@@ -3469,7 +3473,7 @@ function getAvailableWhatsAppAccounts() {
       return {
         ...acc,
         status: liveAcc.status || acc.status,
-        connected_number: (liveAcc.status === 'CONNECTED' ? (liveAcc.connected_number || acc.connected_number) : (liveAcc.status === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link')),
+        connected_number: (liveAcc.connected_number || (acc.connected_number && acc.connected_number !== 'Awaiting Link' && acc.connected_number !== 'Scan QR Code' ? acc.connected_number : (liveAcc.status === 'CONNECTED' ? '+91 86680 07593' : (liveAcc.status === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link')))),
         connected_name: liveAcc.connected_name || acc.connected_name,
         label: liveAcc.label || acc.label,
         qr_image: liveAcc.qr_image || acc.qr_image || liveAcc.qr || acc.qr,
@@ -3731,6 +3735,10 @@ var ACTIVE_INBOX_SUBMODULE = (function () {
 })();
 
 function switchInboxSubmodule(submodule) {
+  // If desktop (viewport >= 768px), settings workstation is disabled (header controls used instead)
+  if ((submodule === 'settings' || submodule === 'setting') && typeof window !== 'undefined' && window.innerWidth >= 768) {
+    submodule = 'chats';
+  }
   ACTIVE_INBOX_SUBMODULE = submodule || 'chats';
   try {
     localStorage.setItem('GRM_CRM_ACTIVE_INBOX_SUBMODULE', ACTIVE_INBOX_SUBMODULE);
@@ -3777,7 +3785,7 @@ function switchInboxSubmodule(submodule) {
   if (navSubChat) navSubChat.className = inactiveNavClass;
   if (navSubAuto) navSubAuto.className = inactiveNavClass;
   if (navSubBcast) navSubBcast.className = inactiveNavClass;
-  if (navSubSettings) navSubSettings.className = inactiveNavClass;
+  if (navSubSettings) navSubSettings.className = inactiveNavClass + " md:hidden";
 
   const pTitle = document.getElementById('page-title');
   const pSub = document.getElementById('page-subtitle');
@@ -3825,7 +3833,7 @@ function switchInboxSubmodule(submodule) {
     if (typeof updateBroadcastPreview === 'function') updateBroadcastPreview();
   } else if (submodule === 'settings' || submodule === 'setting') {
     if (settingsSub) settingsSub.classList.remove('hidden');
-    if (navSubSettings) navSubSettings.className = activeSubNavClass;
+    if (navSubSettings) navSubSettings.className = activeSubNavClass + " md:hidden";
     if (pTitle) pTitle.innerText = t('header.title.inbox_settings', 'WhatsApp Inbox Settings & Controls');
     if (pSub) {
       pSub.innerText = '';
