@@ -420,17 +420,19 @@ function initRolePermissionsState() {
     CRM_STATE.rolePermissions['Super Admin'] = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS['Super Admin']));
   }
 
-  // Purge legacy hardcoded demo roles UNLESS actively assigned to an existing staff member
-  const assignedRolesInUse = new Set((CRM_STATE.staffList || []).map(s => s && s.role).filter(Boolean));
+  // Strictly purge ALL legacy hardcoded demo roles from memory and persistent storage
   LEGACY_HARDCODED_DEMO_ROLES.forEach(legacyRole => {
-    if (!assignedRolesInUse.has(legacyRole) && CRM_STATE.rolePermissions[legacyRole]) {
+    if (CRM_STATE.rolePermissions[legacyRole]) {
       delete CRM_STATE.rolePermissions[legacyRole];
     }
   });
+  try {
+    localStorage.setItem('CRM_ROLE_PERMISSIONS', JSON.stringify(CRM_STATE.rolePermissions));
+  } catch (e) { }
 
-  // Ensure any role held by staff is present in rolePermissions
+  // Ensure any role held by staff (that is not a legacy demo role) is present in rolePermissions
   (CRM_STATE.staffList || []).forEach(st => {
-    if (st && st.role && !CRM_STATE.rolePermissions[st.role]) {
+    if (st && st.role && !LEGACY_HARDCODED_DEMO_ROLES.includes(st.role) && !CRM_STATE.rolePermissions[st.role]) {
       CRM_STATE.rolePermissions[st.role] = createRoleDefaultPermissions(st.role, false);
     }
   });
@@ -29443,8 +29445,8 @@ function handleCreateNewStaff(event) {
 // Render Permissions Matrix for selected Role
 function renderRolePermissionsMatrix(roleName) {
   initRolePermissionsState();
-  const definedRoles = Object.keys(CRM_STATE.rolePermissions || {});
-  const targetRole = roleName || ACTIVE_MATRIX_ROLE || definedRoles.find(r => r !== 'Super Admin') || definedRoles[0] || 'Super Admin';
+  const definedRoles = Object.keys(CRM_STATE.rolePermissions || {}).filter(r => r && r.trim() && !LEGACY_HARDCODED_DEMO_ROLES.includes(r));
+  const targetRole = roleName || (definedRoles.includes(ACTIVE_MATRIX_ROLE) ? ACTIVE_MATRIX_ROLE : (definedRoles.find(r => r !== 'Super Admin') || definedRoles[0] || 'Super Admin'));
   ACTIVE_MATRIX_ROLE = targetRole;
 
   // 1. Populate Role Selector
@@ -29968,7 +29970,7 @@ window.handleDeleteCurrentRole = function () {
 // 9. Synchronize Dynamic Role Select Dropdowns across CRM (Add Staff, Role Matrix, Reassign, Edit Staff)
 function updateStaffRoleSelectDropdowns() {
   initRolePermissionsState();
-  const allRoles = Object.keys(CRM_STATE.rolePermissions || {}).filter(r => r && r.trim());
+  const allRoles = Object.keys(CRM_STATE.rolePermissions || {}).filter(r => r && r.trim() && !LEGACY_HARDCODED_DEMO_ROLES.includes(r));
 
   const roleAssignSelect = document.getElementById('role-assign-new-role');
   const staffNewRoleSelect = document.getElementById('staff-new-role');
