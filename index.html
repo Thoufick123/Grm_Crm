@@ -2711,7 +2711,7 @@
                 title="Refresh dashboard metrics & reload live database state">
                 <span
                   class="material-symbols-outlined text-[16px] text-slate-500 group-hover:text-emerald-600 transition">sync</span>
-                <span>Refresh Dashboard</span>
+                <span>Refresh</span>
               </button>
 
               <!-- Export All Details Button -->
@@ -2868,8 +2868,6 @@
                 <div class="min-w-0 flex-1">
                   <h3 class="font-bold text-slate-900 text-sm truncate" data-i18n="dash.active_conversations">Active WhatsApp
                     Conversations</h3>
-                  <p class="text-xs text-slate-500 truncate" data-i18n="dash.active_conversations_sub">Live feed of pending
-                    customer chats across all staff</p>
                 </div>
                 <button onclick="switchView('inbox')" class="text-xs text-brand-wa font-bold hover:underline flex items-center gap-0.5 cursor-pointer shrink-0 whitespace-nowrap"
                   data-i18n="dash.open_inbox">Open Inbox &rarr;</button>
@@ -2937,7 +2935,7 @@
 
 
           <!-- Live Stock Metrics Banner (Image 4 UI style with larger icons) -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5">
             <!-- Card 1: Total Garments (Teal) -->
             <div id="catalog-card-all" onclick="setStockStatusFilter('ALL')"
               class="bg-gradient-to-br from-teal-50/70 via-white to-teal-50/30 p-4 rounded-2xl border border-teal-200 hover:border-teal-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden"
@@ -3033,7 +3031,7 @@
 
             <!-- Card 5: Low Stock Alert (Pink / Rose) -->
             <div id="catalog-card-lowstock" onclick="setStockStatusFilter('LOW_STOCK')"
-              class="bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-4 rounded-2xl border border-rose-200 hover:border-rose-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between col-span-2 sm:col-span-1 relative overflow-hidden"
+              class="bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-4 rounded-2xl border border-rose-200 hover:border-rose-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between col-span-1 sm:col-span-1 relative overflow-hidden"
               title="Click to filter products requiring restock (&le; 5 units)">
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold text-rose-800 uppercase tracking-wider">Low Stock Alert</span>
