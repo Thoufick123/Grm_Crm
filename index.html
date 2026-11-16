@@ -4508,7 +4508,7 @@
 
           <!-- Header Banner -->
           <div
-            class="bg-gradient-to-r from-slate-900 via-brand-dark to-emerald-950 p-6 rounded-2xl text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+            class="bg-gradient-to-r from-slate-900 via-brand-dark to-emerald-950 p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center text-white shadow-glow">
                 <span class="material-symbols-outlined text-[28px]">badge</span>
@@ -4516,27 +4516,6 @@
               <div>
                 <h2 class="text-xl font-bold">Staff & Team Management Hub</h2>
               </div>
-            </div>
-
-            <!-- Sub-Division Navigation Tabs Strip -->
-            <div
-              class="flex items-center gap-1.5 bg-black/30 p-1.5 rounded-xl border border-white/10 shrink-0 flex-wrap">
-              <button type="button" onclick="switchStaffTab('list')" id="tab-btn-staff-list"
-                class="px-3.5 py-2 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition cursor-pointer">
-                <span class="material-symbols-outlined text-[16px]">groups</span>
-                <span>1. All Staff</span>
-              </button>
-              <button type="button" onclick="switchStaffTab('create')" id="tab-btn-staff-create"
-                class="px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer">
-                <span class="material-symbols-outlined text-[16px]">person_add</span>
-                <span>2. Add Staff</span>
-              </button>
-              <button type="button" onclick="switchStaffTab('roles')" id="tab-btn-staff-roles"
-                class="px-3.5 py-2 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer">
-                <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                <span>3. Role Base</span>
-              </button>
-
             </div>
           </div>
 
@@ -4785,7 +4764,7 @@
                   <button type="button" onclick="handleCreateNewRolePrompt()"
                     class="px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">add_circle</span>
-                    <span>+ Create New Role</span>
+                    <span>+ New Role</span>
                   </button>
                   <button type="button" onclick="handleDeleteCurrentRole()" id="btn-delete-role"
                     class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition hidden flex items-center gap-1 cursor-pointer">
@@ -4795,86 +4774,72 @@
                 </div>
               </div>
 
-              <!-- Quick Role Assignment to Staff Bar -->
-              <div class="bg-purple-50/60 p-4 rounded-xl border border-purple-200/80 space-y-3">
-                <div class="flex items-center justify-between">
-                  <h4 class="font-bold text-xs text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[16px] text-purple-600">switch_account</span>
-                    <span>Assign Role to Staff Member</span>
-                  </h4>
-                  <span class="text-[10px] text-purple-700 font-medium">Instantly updates active staff
-                    capabilities</span>
-                </div>
+              <!-- Role Creation & Action Presets Bar -->
+              <div class="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
 
-                <form onsubmit="handleQuickRoleReassign(event)"
-                  class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs items-end">
-                  <div>
-                    <label class="block font-bold text-slate-700 mb-1">Select Staff Member:</label>
-                    <select id="role-assign-staff-select" required
-                      class="w-full p-2 bg-white border border-purple-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer shadow-2xs">
-                      <!-- Populated dynamically by JS -->
-                    </select>
+                  <!-- Role Name Input & Direct Save Button -->
+                  <div class="flex flex-wrap items-center gap-3">
+                    <div>
+                      <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[15px] text-purple-600">badge</span>
+                        <span>Role Name:</span>
+                      </label>
+                      <div class="flex items-center gap-2">
+                        <input type="text" id="role-input-name" placeholder="Enter Role Name (e.g. Telecaller, Support, Whatsapp)"
+                          class="w-64 sm:w-80 px-3.5 py-2 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none transition shadow-2xs">
+                        <button type="button" onclick="handleSaveRolePermissions()"
+                          class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                          <span class="material-symbols-outlined text-[16px]">save</span>
+                          <span>Save Role</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Existing Roles Switcher -->
+                    <div class="sm:border-l sm:border-slate-200 sm:pl-3">
+                      <label class="block text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px] text-slate-400">tune</span>
+                        <span>Select Role:</span>
+                      </label>
+                      <div class="flex items-center gap-2">
+                        <select id="role-matrix-role-select" onchange="handleRoleSelectChange(this.value)"
+                          class="bg-white border border-slate-300 text-slate-800 font-bold text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer shadow-2xs">
+                          <!-- Populated dynamically -->
+                        </select>
+                        <span id="role-staff-count-badge"
+                          class="text-[10px] font-mono font-bold bg-purple-100 text-purple-800 px-2 py-1 rounded-lg border border-purple-200">
+                          0 Staff
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label class="block font-bold text-slate-700 mb-1">Role to Assign:</label>
-                    <select id="role-assign-new-role" required
-                      class="w-full p-2 bg-white border border-purple-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer shadow-2xs">
-                      <!-- Populated dynamically by JS -->
-                    </select>
-                  </div>
-
-                  <div>
-                    <button type="submit"
-                      class="w-full py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer">
-                      <span class="material-symbols-outlined text-[16px]">verified</span>
-                      <span>Assign Role Now</span>
+                  <!-- Quick Action Presets -->
+                  <div class="flex items-center gap-1.5 flex-wrap self-start lg:self-center">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase mr-1">Presets:</span>
+                    <button type="button" onclick="applyRolePreset('all')"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      title="Grant all actions across all modules">
+                      <span class="material-symbols-outlined text-[12px] text-emerald-600">check_circle</span> All
+                    </button>
+                    <button type="button" onclick="applyRolePreset('view_only')"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      title="Read-only access (View only)">
+                      <span class="material-symbols-outlined text-[12px] text-sky-600">visibility</span> View Only
+                    </button>
+                    <button type="button" onclick="applyRolePreset('sales')"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      title="Standard Sales Specialist permissions">
+                      <span class="material-symbols-outlined text-[12px] text-purple-600">point_of_sale</span> Sales
+                    </button>
+                    <button type="button" onclick="applyRolePreset('reset')"
+                      class="px-2.5 py-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
+                      title="Clear all checkboxes">
+                      <span class="material-symbols-outlined text-[12px] text-rose-600">clear_all</span> Clear
                     </button>
                   </div>
-                </form>
-              </div>
 
-              <!-- Role Selector Bar & Presets Toolbar -->
-              <div
-                class="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <div class="flex items-center gap-3">
-                  <label class="text-xs font-bold text-slate-800 shrink-0 flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[16px] text-indigo-600">shield</span>
-                    <span>Editing Permissions For Role:</span>
-                  </label>
-                  <select id="role-matrix-role-select" onchange="handleRoleSelectChange(this.value)"
-                    class="bg-white border-2 border-indigo-500 text-indigo-950 font-black text-xs rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer shadow-sm">
-                    <!-- Populated dynamically -->
-                  </select>
-                  <span id="role-staff-count-badge"
-                    class="text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-200">
-                    0 Staff
-                  </span>
-                </div>
-
-                <!-- Quick Action Presets -->
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-[10px] font-bold text-slate-500 uppercase mr-1">Presets:</span>
-                  <button type="button" onclick="applyRolePreset('all')"
-                    class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
-                    title="Grant all actions across all modules">
-                    <span class="material-symbols-outlined text-[12px] text-emerald-600">check_circle</span> All
-                  </button>
-                  <button type="button" onclick="applyRolePreset('view_only')"
-                    class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
-                    title="Read-only access (View only)">
-                    <span class="material-symbols-outlined text-[12px] text-sky-600">visibility</span> View Only
-                  </button>
-                  <button type="button" onclick="applyRolePreset('sales')"
-                    class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
-                    title="Standard Sales Specialist permissions">
-                    <span class="material-symbols-outlined text-[12px] text-purple-600">point_of_sale</span> Sales
-                  </button>
-                  <button type="button" onclick="applyRolePreset('reset')"
-                    class="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer"
-                    title="Clear all checkboxes">
-                    <span class="material-symbols-outlined text-[12px] text-rose-600">clear_all</span> Clear
-                  </button>
                 </div>
               </div>
 
@@ -11432,7 +11397,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261116_v4"></script>
+  <script src="crm_app.js?v=20261116_v5"></script>
 </body>
 
 </html>
