@@ -38122,22 +38122,14 @@ window.submitBulkPriceRequest = async function (ev) {
     const data = await res.json();
 
     if (data.status === 'success') {
-      // 2. Launch Direct WhatsApp to Admin Phone immediately so it never shows only in CRM project
-      const rawAdmin = String(adminPhone || (data.request && data.request.admin_phone) || data.admin_phone || '9943557998');
-      const cleanAdmin = rawAdmin.replace(/[^0-9]/g, '');
-      const targetPhone = cleanAdmin.length === 10 ? ('91' + cleanAdmin) : cleanAdmin;
-      const waUrl = data.direct_whatsapp_url || ('https://wa.me/' + targetPhone + '?text=' + encodeURIComponent(data.alert_message || ''));
-
-      if (waUrl) {
-        try {
-          window.open(waUrl, '_blank');
-        } catch (e) {
-          console.warn('Popup blocked for direct WhatsApp URL:', waUrl);
+      if (data.whatsapp_notification === 'FAILED' || data.whatsapp_notification === 'ERROR') {
+        if (typeof showToast === 'function') {
+          showToast('Request Recorded', `Bulk request ${data.request?.request_code || ''} saved, but WhatsApp notification failed to send. Check WhatsApp line.`, 'warning', 'amber');
         }
-      }
-
-      if (typeof showToast === 'function') {
-        showToast('Direct WhatsApp Sent', 'Opened direct WhatsApp message to Admin (' + targetPhone + ')!', 'send', 'emerald');
+      } else {
+        if (typeof showToast === 'function') {
+          showToast('WhatsApp Sent to Admin', `Bulk price request sent directly to Admin WhatsApp (${adminPhone})!`, 'send', 'emerald');
+        }
       }
 
       window.closeBulkPriceRequestModal();
@@ -38419,15 +38411,8 @@ window.resendBulkPriceRequest = async function (reqId) {
     });
     const data = await res.json();
     if (data.status === 'success') {
-      if (data.direct_whatsapp_url) {
-        try {
-          window.open(data.direct_whatsapp_url, '_blank');
-        } catch (e) {
-          console.warn('Popup blocked, direct url:', data.direct_whatsapp_url);
-        }
-      }
       if (typeof showToast === 'function') {
-        showToast('Reminder Sent', 'Opened direct WhatsApp reminder to Admin (' + (data.admin_phone || '') + ')!', 'send', 'emerald');
+        showToast('Reminder Sent', `Bulk price reminder sent to Admin (${data.admin_phone || ''})!`, 'send', 'emerald');
       }
     } else {
       if (typeof showToast === 'function') {
