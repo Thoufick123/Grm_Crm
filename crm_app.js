@@ -3720,10 +3720,10 @@ var ACTIVE_INBOX_SUBMODULE = (function () {
     const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
     if (rawHash.startsWith('inbox/')) {
       const sub = rawHash.split('/')[1];
-      if (sub === 'chats' || sub === 'autoreply' || sub === 'broadcast') return sub;
+      if (sub === 'chats' || sub === 'autoreply' || sub === 'broadcast' || sub === 'settings' || sub === 'setting') return sub;
     }
     const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_ACTIVE_INBOX_SUBMODULE') : null;
-    if (stored === 'chats' || stored === 'autoreply' || stored === 'broadcast') return stored;
+    if (stored === 'chats' || stored === 'autoreply' || stored === 'broadcast' || stored === 'settings' || stored === 'setting') return stored;
   } catch (e) { }
   return 'chats';
 })();
@@ -3902,16 +3902,40 @@ function renderInboxSettingsView() {
 window.renderInboxSettingsView = renderInboxSettingsView;
 
 // Interactive WhatsApp Inbox Dropdown Sidebar Toggle Handler
-function toggleWhatsAppDropdown(targetSubmodule) {
+function toggleWhatsAppDropdown(event, targetSubmodule, arrowOnly) {
+  if (event) {
+    if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (typeof event.preventDefault === 'function' && arrowOnly) event.preventDefault();
+  }
   const subMenu = document.getElementById('inbox-submodules-menu');
   const subnavArrow = document.getElementById('inbox-subnav-arrow');
 
   const shield = document.getElementById('instant-view-shield');
   if (shield) shield.remove();
 
-  if (subMenu) subMenu.classList.remove('hidden');
+  if (!subMenu) return;
+
+  const isCurrentlyOpen = !subMenu.classList.contains('hidden');
+
+  // If arrow was clicked, or already active in inbox and parent button clicked without specific submodule:
+  // Toggle accordion open/closed smoothly without closing sidebar drawer on mobile
+  if (arrowOnly || (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'inbox' && !targetSubmodule)) {
+    if (isCurrentlyOpen) {
+      subMenu.classList.add('hidden');
+      if (subnavArrow) subnavArrow.style.transform = 'rotate(0deg)';
+    } else {
+      subMenu.classList.remove('hidden');
+      if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
+    }
+    return;
+  }
+
+  // If navigating from another module: expand submenu and switch view
+  subMenu.classList.remove('hidden');
   if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
-  switchView('inbox', targetSubmodule || 'chats');
+  if (typeof switchView === 'function') {
+    switchView('inbox', targetSubmodule || 'chats');
+  }
 }
 window.toggleWhatsAppDropdown = toggleWhatsAppDropdown;
 
@@ -19427,7 +19451,7 @@ function toggleBulkPriceEditMode(forceState) {
     if (btn) {
       btn.classList.remove('bg-emerald-700', 'text-white', 'border-emerald-800', 'shadow-md');
       btn.classList.add('bg-amber-50', 'text-amber-900', 'border-amber-300');
-      btn.innerHTML = `<span class="material-symbols-outlined text-[15px] text-amber-700">price_change</span> <span>Edit Price (Overall)</span>`;
+      btn.innerHTML = `<span class="material-symbols-outlined text-[15px] text-amber-700">price_change</span> <span>Edit Price</span>`;
     }
     if (tbBtn) {
       tbBtn.classList.remove('bg-amber-600', 'text-white', 'border-amber-700', 'shadow-md');
