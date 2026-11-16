@@ -28239,50 +28239,195 @@ function renderAuditTable() {
   const tbody = document.getElementById('audit-logs-table-body');
   if (!tbody) return;
 
-  tbody.innerHTML = (CRM_STATE.auditLogs || []).map(log => `
-    <tr class="hover:bg-slate-50">
-      <td class="py-2.5 px-4 text-slate-500">${log.timestamp}</td>
-      <td class="py-2.5 px-4 font-bold text-slate-800">${log.user}</td>
-      <td class="py-2.5 px-4 text-indigo-700 font-semibold">${log.action}</td>
-      <td class="py-2.5 px-4 text-slate-600">${log.module}</td>
-      <td class="py-2.5 px-4 text-slate-700">${log.details}</td>
-    </tr>
-  `).join('');
+  const searchInput = document.getElementById('audit-search-input');
+  const filterModule = document.getElementById('audit-filter-module');
+  const countBadge = document.getElementById('audit-log-count-badge');
+
+  const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  const selectedMod = filterModule ? filterModule.value : 'ALL';
+
+  const rawLogs = Array.isArray(CRM_STATE.auditLogs) ? CRM_STATE.auditLogs : [];
+
+  const filteredLogs = rawLogs.filter(log => {
+    if (!log) return false;
+    const user = String(log.user || log.actor || log.staff || 'Super Admin').toLowerCase();
+    const action = String(log.action || log.action_type || '').toLowerCase();
+    const mod = String(log.module || log.category || '').toUpperCase();
+    const details = String(log.details || log.description || '').toLowerCase();
+
+    if (selectedMod !== 'ALL' && mod !== selectedMod) {
+      return false;
+    }
+
+    if (searchTerm) {
+      return user.includes(searchTerm) || action.includes(searchTerm) || details.includes(searchTerm) || mod.toLowerCase().includes(searchTerm);
+    }
+    return true;
+  });
+
+  if (countBadge) {
+    countBadge.innerText = `${filteredLogs.length} Events Logged`;
+  }
+
+  if (filteredLogs.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="py-8 text-center text-slate-400 font-sans text-xs">
+          <span class="material-symbols-outlined text-[24px] text-slate-300 block mb-1">security</span>
+          No security audit records found.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filteredLogs.map((log, idx) => {
+    // 1. Safe timestamp formatting
+    let rawTs = log.timestamp || log.timestamp_str || log.created_at || log.time;
+    let formattedTs = 'Just now';
+    if (rawTs) {
+      if (typeof rawTs === 'string' && (rawTs.includes('-') || rawTs.includes('T'))) {
+        try {
+          const d = new Date(rawTs);
+          if (!isNaN(d.getTime())) {
+            formattedTs = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          } else {
+            formattedTs = rawTs;
+          }
+        } catch (e) {
+          formattedTs = rawTs;
+        }
+      } else {
+        formattedTs = String(rawTs);
+      }
+    }
+
+    // 2. Safe fields with fallbacks
+    const user = log.user || log.actor || log.staff || 'Super Admin';
+    const action = log.action || log.action_type || 'SYSTEM_ACTION';
+    const mod = (log.module || log.category || 'SYSTEM').toUpperCase();
+    const details = log.details || log.description || 'Activity recorded in system.';
+
+    // Action color badge
+    let actionBadgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    if (action.includes('DELETE') || action.includes('REMOVED')) {
+      actionBadgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+    } else if (action.includes('UPDATE') || action.includes('EDIT')) {
+      actionBadgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+    } else if (action.includes('CREATE') || action.includes('ONBOARD') || action.includes('APPROVED')) {
+      actionBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    }
+
+    return `
+      <tr class="hover:bg-slate-50/70 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}">
+        <td class="py-2.5 px-3 sm:px-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+          <span class="flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[14px] text-slate-400">schedule</span>
+            <span>${formattedTs}</span>
+          </span>
+        </td>
+        <td class="py-2.5 px-3 sm:px-4 font-bold text-slate-800 whitespace-nowrap">
+          <span class="flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center font-sans">
+              ${user.charAt(0).toUpperCase()}
+            </span>
+            <span>${user}</span>
+          </span>
+        </td>
+        <td class="py-2.5 px-3 sm:px-4 whitespace-nowrap">
+          <span class="inline-block px-2 py-0.5 rounded-md border text-[10px] font-bold ${actionBadgeColor}">
+            ${action}
+          </span>
+        </td>
+        <td class="py-2.5 px-3 sm:px-4 whitespace-nowrap">
+          <span class="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
+            ${mod}
+          </span>
+        </td>
+        <td class="py-2.5 px-3 sm:px-4 text-slate-700 font-sans text-xs leading-relaxed min-w-[260px]">
+          ${details}
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function renderAnalyticsView() {
   const container = document.getElementById('analytics-staff-cards');
   if (!container) return;
 
-  container.innerHTML = CRM_STATE.staffList.map(s => {
-    const orders = CRM_STATE.orders.filter(o => o.createdBy.includes(s.name));
-    const revenue = orders.reduce((acc, o) => acc + o.grandTotal, 0);
+  const staffList = CRM_STATE.staffList || [];
+  const orders = CRM_STATE.orders || [];
+
+  let totalRevenue = 0;
+  let totalOrders = 0;
+
+  const cardsHtml = staffList.map(s => {
+    const sName = (s.name || '').trim().toLowerCase();
+    const sOrders = orders.filter(o => {
+      const createdBy = (o.createdBy || o.created_by || '').toLowerCase();
+      const assigned = (o.assignedStaff || o.assignedStaffName || o.staffName || '').toLowerCase();
+      return createdBy.includes(sName) || assigned.includes(sName);
+    });
+
+    const sRevenue = sOrders.reduce((acc, o) => acc + (parseFloat(o.grandTotal || o.grand_total || 0) || 0), 0);
+    const convertedCount = parseInt(s.converted || sOrders.length || 0);
+
+    totalRevenue += sRevenue;
+    totalOrders += sOrders.length;
+
+    const roleName = s.role || 'Staff Member';
+    const deptName = s.specialization || s.department || 'General';
+    const status = s.status || 'ACTIVE';
 
     return `
-      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-base flex items-center justify-center">
-            ${s.avatar}
+      <div class="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm space-y-3.5 hover:shadow-md transition">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-sm sm:text-base flex items-center justify-center shrink-0 shadow-2xs">
+              ${s.avatar || (s.name ? s.name.charAt(0).toUpperCase() : 'S')}
+            </div>
+            <div class="min-w-0">
+              <h4 class="font-bold text-slate-900 text-xs sm:text-sm truncate">${s.name}</h4>
+              <p class="text-[11px] text-slate-500 truncate">${roleName} • <span class="text-purple-600 font-semibold">${deptName}</span></p>
+            </div>
           </div>
-          <div>
-            <h4 class="font-bold text-slate-900 text-sm">${s.name}</h4>
-            <p class="text-xs text-slate-500">${s.role}</p>
+          <span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'}">
+            ${status === 'ACTIVE' ? '🟢 Active' : '⚪ On Leave'}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 sm:gap-3 text-center">
+          <div class="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-100">
+            <span class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase block">Orders Closed</span>
+            <p class="text-base sm:text-xl font-black text-slate-900 font-mono mt-0.5">${convertedCount}</p>
+          </div>
+          <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-2.5 sm:p-3 rounded-xl border border-emerald-200/80">
+            <span class="text-[9px] sm:text-[10px] text-emerald-800 font-bold uppercase block">Sales Revenue</span>
+            <p class="text-base sm:text-xl font-black text-emerald-800 font-mono mt-0.5">₹${sRevenue.toLocaleString('en-IN')}</p>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 text-center">
-          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <span class="text-[10px] text-slate-400 font-bold uppercase">Leads Converted</span>
-            <p class="text-xl font-bold text-emerald-800 mt-0.5">${s.converted}</p>
-          </div>
-          <div class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-3 rounded-xl border border-emerald-200">
-            <span class="text-[10px] text-emerald-800 font-bold uppercase">Sales Revenue</span>
-            <p class="text-xl font-bold text-emerald-800 font-mono mt-0.5">₹${revenue.toLocaleString('en-IN')}</p>
-          </div>
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <span class="flex items-center gap-1 truncate">
+            <span class="material-symbols-outlined text-[14px] text-slate-400">call</span>
+            <span class="font-mono">${s.phone || '-'}</span>
+          </span>
+          <span class="font-mono text-[10px] text-slate-400 shrink-0">ID: ${s.id || '-'}</span>
         </div>
       </div>
     `;
   }).join('');
+
+  container.innerHTML = cardsHtml || `<div class="col-span-full p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs">No staff members found.</div>`;
+
+  const countEl = document.getElementById('kpi-analytics-staff-count');
+  const ordersEl = document.getElementById('kpi-analytics-orders-count');
+  const revEl = document.getElementById('kpi-analytics-revenue-val');
+
+  if (countEl) countEl.innerText = `${staffList.length} Staff`;
+  if (ordersEl) ordersEl.innerText = `${totalOrders} Orders`;
+  if (revEl) revEl.innerText = `₹${totalRevenue.toLocaleString('en-IN')}`;
 }
 
 // =========================================================================

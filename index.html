@@ -4487,46 +4487,120 @@
       <!-- ========================================== -->
       <!-- VIEW: AUDIT TRAIL & LOGS -->
       <!-- ========================================== -->
-      <section id="view-audit" class="h-full overflow-y-auto p-6 hidden">
-        <div class="max-w-7xl mx-auto space-y-6">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900">System Audit Trail & Security Logs</h2>
+      <section id="view-audit" class="h-full overflow-y-auto p-3.5 sm:p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+
+          <!-- Header Banner -->
+          <div
+            class="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-4 sm:p-6 rounded-2xl shadow-md text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-[24px] sm:text-[28px]">security</span>
+              </div>
+              <div>
+                <h2 class="text-base sm:text-xl font-bold tracking-tight">System Audit Trail & Security Logs</h2>
+                <p class="text-xs text-indigo-200/80">Activity timeline of staff actions, security edits & operations</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 self-start sm:self-auto">
+              <span id="audit-log-count-badge" class="px-3 py-1 bg-white/10 border border-white/10 rounded-xl text-xs font-mono font-bold text-indigo-200">
+                0 Events Logged
+              </span>
+            </div>
           </div>
 
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs text-slate-700">
+          <!-- Filter & Search Bar + Table Card -->
+          <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-3 sm:p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 bg-slate-50/50">
+              <div class="relative flex-1 sm:max-w-xs">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                <input type="text" id="audit-search-input" oninput="renderAuditTable()"
+                  placeholder="Filter by staff, action or keyword..."
+                  class="w-full pl-9 pr-3 py-1.5 sm:py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition shadow-2xs">
+              </div>
+
+              <div class="flex items-center gap-2">
+                <select id="audit-filter-module" onchange="renderAuditTable()"
+                  class="bg-white border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl px-2.5 py-1.5 sm:py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-2xs cursor-pointer">
+                  <option value="ALL">All Modules</option>
+                  <option value="STAFF_MODULE">Staff Management</option>
+                  <option value="ROLES">Roles & Permissions</option>
+                  <option value="ORDERS">Orders</option>
+                  <option value="INBOX">WhatsApp Inbox</option>
+                  <option value="CALLING">Calling & Masking</option>
+                  <option value="CATALOG">Catalog</option>
+                  <option value="BACKUP">Data Backup</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Responsive Table Container -->
+            <div class="overflow-x-auto w-full">
+              <table class="w-full text-left text-xs text-slate-700 min-w-[640px] sm:min-w-full">
                 <thead
-                  class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                  class="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider whitespace-nowrap">
                   <tr>
-                    <th class="py-3 px-4">Timestamp</th>
-                    <th class="py-3 px-4">Staff / User</th>
-                    <th class="py-3 px-4">Action</th>
-                    <th class="py-3 px-4">Module / Target</th>
-                    <th class="py-3 px-4">Details</th>
+                    <th class="py-3 px-3 sm:px-4 min-w-[130px]">Timestamp</th>
+                    <th class="py-3 px-3 sm:px-4 min-w-[120px]">Staff / User</th>
+                    <th class="py-3 px-3 sm:px-4 min-w-[150px]">Action</th>
+                    <th class="py-3 px-3 sm:px-4 min-w-[110px]">Module / Target</th>
+                    <th class="py-3 px-3 sm:px-4">Details</th>
                   </tr>
                 </thead>
                 <tbody id="audit-logs-table-body" class="divide-y divide-slate-100 font-mono text-[11px]">
-                  <!-- Populated by JS -->
+                  <!-- Populated dynamically by JavaScript -->
                 </tbody>
               </table>
             </div>
           </div>
+
         </div>
       </section>
 
       <!-- ========================================== -->
       <!-- VIEW: STAFF KPI & REPORTS -->
       <!-- ========================================== -->
-      <section id="view-analytics" class="h-full overflow-y-auto p-6 hidden">
-        <div class="max-w-7xl mx-auto space-y-6">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900">Staff Performance Analytics & Reports</h2>
+      <section id="view-analytics" class="h-full overflow-y-auto p-3.5 sm:p-6 hidden">
+        <div class="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+
+          <!-- Header Banner -->
+          <div
+            class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 p-4 sm:p-6 rounded-2xl shadow-md text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-[24px] sm:text-[28px]">insights</span>
+              </div>
+              <div>
+                <h2 class="text-base sm:text-xl font-bold tracking-tight">Staff Performance Analytics & Reports</h2>
+                <p class="text-xs text-emerald-200/80">Track staff conversions, order closures & revenue generation</p>
+              </div>
+            </div>
+
+            <!-- Quick Summary Badges -->
+            <div class="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-3 text-center sm:text-left">
+              <div class="bg-white/10 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 border border-white/10">
+                <span class="text-[9px] sm:text-[10px] text-emerald-300 font-bold uppercase block">Team Size</span>
+                <span id="kpi-analytics-staff-count" class="text-xs sm:text-sm font-bold font-mono text-white">0 Staff</span>
+              </div>
+              <div class="bg-white/10 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 border border-white/10">
+                <span class="text-[9px] sm:text-[10px] text-emerald-300 font-bold uppercase block">Total Orders</span>
+                <span id="kpi-analytics-orders-count" class="text-xs sm:text-sm font-bold font-mono text-white">0 Orders</span>
+              </div>
+              <div class="bg-white/10 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 border border-white/10">
+                <span class="text-[9px] sm:text-[10px] text-emerald-300 font-bold uppercase block">Total Revenue</span>
+                <span id="kpi-analytics-revenue-val" class="text-xs sm:text-sm font-bold font-mono text-white">₹0</span>
+              </div>
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="analytics-staff-cards">
+          <!-- Staff Cards Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5" id="analytics-staff-cards">
             <!-- Populated by JS -->
           </div>
+
         </div>
       </section>
 
@@ -5301,13 +5375,8 @@
                   audit logs into a single downloadable JSON backup file.
                 </p>
               </div>
-<<<<<<< HEAD
               <button id="btn-download-backup-json" onclick="handleExportBackupJSON()"
-                class="w-full py-2.5 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02]">
-=======
-              <button onclick="handleExportBackupJSON()"
                 class="w-full py-2.5 sm:py-3 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02] cursor-pointer">
->>>>>>> 7ae4403b8e76e8291e0e2cbb76cdb4a43cbc0161
                 <span class="material-symbols-outlined text-[18px]">file_download</span>
                 <span id="btn-download-backup-text">Download Backup File (.json)</span>
               </button>
@@ -11605,11 +11674,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-<<<<<<< HEAD
-  <script src="crm_app.js?v=20261116_v11"></script>
-=======
-  <script src="crm_app.js?v=20261116_v14"></script>
->>>>>>> 7ae4403b8e76e8291e0e2cbb76cdb4a43cbc0161
+  <script src="crm_app.js?v=20261116_v16"></script>
 </body>
 
 </html>
