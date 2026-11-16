@@ -5608,15 +5608,8 @@ function renderChatHeader() {
       </div>
     </div>
 
-    <!-- Actions & Slide-Hide Toggle Button in Header -->
+    <!-- Call and Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
-      
-      <!-- INCOMING WHATSAPP CALL FLOW SIMULATION (TEST INBOUND CALL MASKING) -->
-      <button type="button" onclick="triggerIncomingCallForActiveCustomer('${customer.id}')" class="p-1.5 sm:px-2 sm:py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1 shrink-0 cursor-pointer" title="Simulate Customer Calling into WhatsApp Inbox with Call Masking">
-        <span class="material-symbols-outlined text-[15px] text-amber-600 animate-pulse">ring_volume</span>
-        <span class="hidden xl:inline text-[11px]">Incoming Call</span>
-      </button>
-
       <!-- BRAND-MASKED WHATSAPP CALL BUTTON -->
       <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="${t('customer.call_via', 'Call via')} ${getBrandName()}">
         <span class="material-symbols-outlined text-[15px]">call</span>
@@ -18363,7 +18356,7 @@ async function syncWhatsAppBusinessCatalog() {
     showToast('Catalog Updated', 'Refreshed local inventory and stock from WhatsApp configuration.', 'inventory', 'emerald');
   } finally {
     if (btn) {
-      btn.innerHTML = `<span class="material-symbols-outlined text-[18px] text-brand-wa">sync_saved_locally</span> <span>Sync WhatsApp Catalog (Free)</span>`;
+      btn.innerHTML = `<span class="material-symbols-outlined text-[18px] text-brand-wa">sync_saved_locally</span> <span>Sync WhatsApp</span>`;
       btn.disabled = false;
     }
   }
@@ -36302,65 +36295,6 @@ function exportDashboardSummary(btnEl) {
   }
 }
 window.exportDashboardSummary = exportDashboardSummary;
-
-
-// =========================================================================
-// INBOUND WHATSAPP CALL MASKING ENGINE FOR WHATSAPP INBOX
-// =========================================================================
-async function triggerIncomingCallForActiveCustomer(customerId) {
-  const custId = customerId || ACTIVE_CUSTOMER_ID;
-  const customer = (CRM_STATE?.customers || []).find(c => c && (c.id === custId || String(c.id) === String(custId)));
-  if (!customer) {
-    if (typeof showToast === 'function') showToast('Customer Not Found', 'Please select a customer first.', 'warning', 'amber');
-    return;
-  }
-
-  const rawPhone = customer.whatsapp || customer.phone || '+91 99435 57998';
-  const custName = customer.name || 'Customer';
-  const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
-  const maskedPhone = (cleanDigits.length >= 10)
-    ? '+91 ' + cleanDigits.slice(-10, -8) + '*** ***' + cleanDigits.slice(-2)
-    : (typeof formatDisplayPhone === 'function' ? formatDisplayPhone(rawPhone, customer.id) : rawPhone);
-
-  const virtualNum = (CRM_STATE?.maskingSettings?.virtual_company_number || '+91 99435 57998');
-  const callId = 'CALL-' + Math.floor(1000 + Math.random() * 9000);
-
-  const callData = {
-    call_id: callId,
-    id: callId,
-    customer_id: customer.id,
-    customer_name: custName,
-    customer_phone: rawPhone,
-    masked_phone: maskedPhone,
-    virtual_number: virtualNum,
-    status: 'RINGING',
-    started_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    timeout_seconds: 30,
-    eligible_staff_ids: ['all', 'admin', 'staff_01', 'staff_02', 'staff_03']
-  };
-
-  try {
-    fetch('api.php?action=simulate_incoming_call', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer_name: custName,
-        customer_phone: rawPhone,
-        customer_id: customer.id
-      })
-    }).catch(() => { });
-  } catch (err) { }
-
-  if (typeof showToast === 'function') {
-    showToast('Incoming WhatsApp Call', `${custName} (${maskedPhone}) is calling official WhatsApp line...`, 'ring_volume', 'amber');
-  }
-
-  // Trigger real-time Inbound Ring Alert HUD
-  if (typeof handleSocketIncomingCall === 'function') {
-    handleSocketIncomingCall(callData);
-  }
-}
-window.triggerIncomingCallForActiveCustomer = triggerIncomingCallForActiveCustomer;
 
 
 // =========================================================================
