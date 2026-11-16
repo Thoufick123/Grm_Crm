@@ -2122,16 +2122,26 @@ function initSocketIO() {
       }
       if (data && data.status === 'APPROVED') {
         if (typeof showToast === 'function') {
-          showToast('Bulk Request Approved', `Admin approved ${data.request?.request_code || 'bulk price request'}! Special price active.`, 'check_circle', 'emerald');
+          showToast('✅ Bulk Price Request Approved!', `Admin approved ${data.request?.request_code || 'bulk price request'}! Special price ₹${parseFloat(data.request?.requested_price || 0).toFixed(2)}/pc is now active.`, 'check_circle', 'emerald');
         }
       } else if (data && data.status === 'REJECTED') {
         if (typeof showToast === 'function') {
-          showToast('Bulk Request Rejected', `${data.request?.request_code || 'Bulk request'} was rejected: ${data.reason || 'Price declined'}`, 'cancel', 'rose');
+          showToast('❌ Bulk Price Request Rejected', `${data.request?.request_code || 'Bulk request'} was rejected by Admin. Reason: ${data.reason || data.request?.rejection_reason || 'Price declined'}`, 'cancel', 'rose');
         }
       } else if (data && data.status === 'PENDING') {
         if (typeof showToast === 'function') {
-          showToast('New Bulk Request', `New bulk price request ${data.request?.request_code || ''} received! Pending approval.`, 'price_change', 'amber');
+          showToast('🔔 New Bulk Price Request', `New bulk price request ${data.request?.request_code || ''} received! Pending Admin decision.`, 'price_change', 'amber');
         }
+      }
+    });
+
+    SOCKET_IO.on('notification:new', (notif) => {
+      console.log('⚡ [Socket.IO New In-App Notification]:', notif);
+      if (notif && notif.title && typeof showToast === 'function') {
+        const type = notif.type || 'INFO';
+        const color = (type.includes('APPROV') || type === 'SUCCESS') ? 'emerald' : ((type.includes('REJECT') || type === 'ERROR') ? 'rose' : 'amber');
+        const icon = (type.includes('APPROV') || type === 'SUCCESS') ? 'check_circle' : ((type.includes('REJECT') || type === 'ERROR') ? 'cancel' : 'notifications');
+        showToast(notif.title, notif.message || '', icon, color);
       }
     });
 
@@ -38099,6 +38109,7 @@ window.submitBulkPriceRequest = async function (ev) {
       requested_price: reqPrice,
       staff_id: staffUser.id || 'admin',
       staff_name: staffUser.name || 'Super Admin',
+      staff_phone: staffUser.phone || staffUser.whatsapp || '',
       admin_phone: adminPhone
     };
 

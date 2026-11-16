@@ -10,6 +10,9 @@
  * - Database Backup & Recovery Snapshots
  */
 
+// Universal Timezone Enforcement for India Standard Time (IST, UTC+5:30)
+date_default_timezone_set('Asia/Kolkata');
+
 if (!headers_sent()) {
     header("Content-Type: application/json");
     header("Access-Control-Allow-Origin: *");
@@ -232,6 +235,139 @@ function curlBridgePost($endpoint, $payloadArray, $timeout = 7) {
     $err = curl_error($ch);
     curl_close($ch);
     return ['http_code' => $httpCode, 'response' => $resp, 'error' => $err];
+}
+
+/**
+ * Dispatches WhatsApp Bulk Price Decision Notifications to BOTH Admin and Staff
+ * Content format matches the user's specification (Image 2) with 100% fidelity.
+ */
+function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reason = '', $actor = 'Super Admin', $skipAdmin = false) {
+    if (!$req || empty($req['request_code'])) {
+        return ['status' => 'error', 'message' => 'Invalid request payload'];
+    }
+
+    $decisionUpper = strtoupper(trim($decision));
+    $isApproved = ($decisionUpper === 'APPROVED');
+
+    // 1. Format the message text matching Image 2 exactly
+    if ($isApproved) {
+        $reqPriceFormatted = number_format((float)($req['requested_price'] ?? 0), 2, '.', '');
+        $totalAmtFormatted = number_format((float)($req['total_requested_amount'] ?? 0), 2, '.', '');
+        $sizeStr = !empty($req['size']) ? " ({$req['size']})" : " (Free Size)";
+        $productTitle = trim($req['product_name'] ?? 'Garment Product');
+        $qty = (int)($req['quantity'] ?? 1);
+
+        $waText = "✅ *BULK PRICE REQUEST APPROVED!*\n\n" .
+            "Request Code: *{$req['request_code']}*\n" .
+            "Product: *{$productTitle}{$sizeStr} × {$qty} pcs*\n" .
+            "Approved Price: *₹{$reqPriceFormatted}/pc* (Total: *₹{$totalAmtFormatted}*)\n\n" .
+            "Status: Special price activated. Staff can now take the order.";
+    } else {
+        $cleanReason = trim($reason ?: ($req['rejection_reason'] ?? 'Price too low for this bulk order quantity amount too low'));
+        $waText = "❌ *BULK PRICE REQUEST REJECTED*\n\n" .
+            "Request Code: *{$req['request_code']}*\n" .
+            "Reason: *{$cleanReason}*\n\n" .
+            "Staff has been informed of rejection.";
+    }
+
+    // 2. Resolve Admin Phone
+    $adminPhone = trim($req['admin_phone'] ?? '');
+    if (empty($adminPhone)) {
+        $cfgFile = __DIR__ . '/whatsapp_account_config.json';
+        if (file_exists($cfgFile)) {
+            $cfg = json_decode(file_get_contents($cfgFile), true);
+            if (!empty($cfg['phone_number'])) {
+                $adminPhone = $cfg['phone_number'];
+            }
+        }
+    }
+    if (empty($adminPhone)) {
+        $adminPhone = '+91 99435 57998';
+    }
+
+    $cleanAdmin = preg_replace('/[^0-9]/', '', $adminPhone);
+    if (strlen($cleanAdmin) === 10) $cleanAdmin = '91' . $cleanAdmin;
+
+    // 3. Resolve Staff Phone
+    $staffPhone = trim($req['staff_phone'] ?? '');
+    if (empty($staffPhone) && $pdo && (!empty($req['staff_id']) || !empty($req['staff_name']))) {
+        try {
+            $uStmt = $pdo->prepare("SELECT phone FROM users WHERE id = ? OR username = ? OR name = ? LIMIT 1");
+            $uStmt->execute([$req['staff_id'] ?? '', $req['staff_id'] ?? '', $req['staff_name'] ?? '']);
+            $staffPhone = (string)$uStmt->fetchColumn();
+        } catch (Exception $e) {}
+    }
+
+    $cleanStaff = preg_replace('/[^0-9]/', '', $staffPhone);
+    if (strlen($cleanStaff) === 10) $cleanStaff = '91' . $cleanStaff;
+
+    // 4. Determine list of recipients
+    $targetPhones = [];
+    if (!$skipAdmin && strlen($cleanAdmin) >= 10) {
+        $targetPhones[] = $cleanAdmin;
+    }
+    if (strlen($cleanStaff) >= 10) {
+        $targetPhones[] = $cleanStaff;
+    }
+    $targetPhones = array_unique($targetPhones);
+
+    // 5. Send to each recipient via Bridge
+    $dispatchResults = [];
+    foreach ($targetPhones as $phone) {
+        try {
+            $res = curlBridgePost('/api/send', [
+                'phone' => $phone,
+                'text' => $waText
+            ], 5);
+            $dispatchResults[$phone] = $res['http_code'] ?? 0;
+        } catch (Exception $e) {
+            $dispatchResults[$phone] = 'error: ' . $e->getMessage();
+        }
+    }
+
+    // 6. Broadcast Realtime Socket.IO event to all active CRM screens
+    try {
+        curlBridgePost('/api/bulk_request/event', [
+            'status' => $decisionUpper,
+            'request' => $req,
+            'reason' => $reason
+        ], 3);
+    } catch (Exception $e) {}
+
+    // 7. Record In-App Notification in DB
+    if ($pdo) {
+        try {
+            $notifTitle = $isApproved 
+                ? "Bulk Price Request {$req['request_code']} Approved" 
+                : "Bulk Price Request {$req['request_code']} Rejected";
+            $notifBody = $isApproved
+                ? "Special price ₹" . number_format((float)($req['requested_price'] ?? 0), 2, '.', '') . "/pc activated for customer {$req['customer_name']}."
+                : "Request {$req['request_code']} was rejected by {$actor}. Reason: " . ($cleanReason ?? 'Price declined');
+            
+            $insNotif = $pdo->prepare("
+                INSERT INTO `app_notifications`
+                (`user_id`, `role`, `title`, `message`, `type`, `reference_id`, `is_read`, `created_at`)
+                VALUES (?, 'STAFF', ?, ?, ?, ?, 0, NOW())
+            ");
+            $insNotif->execute([
+                $req['staff_id'] ?: 'all',
+                $notifTitle,
+                $notifBody,
+                $decisionUpper,
+                $req['request_code']
+            ]);
+        } catch (Exception $e) {}
+    }
+
+    return [
+        'status' => 'success',
+        'decision' => $decisionUpper,
+        'message_text' => $waText,
+        'admin_phone' => $cleanAdmin,
+        'staff_phone' => $cleanStaff,
+        'recipients' => $targetPhones,
+        'dispatches' => $dispatchResults
+    ];
 }
 
 $bridgeUrl = getEffectiveBridgeUrl();
@@ -1526,6 +1662,14 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     $requestedPrice = (float)($data['requested_price'] ?? 0);
     $staffId = trim($data['staff_id'] ?? 'admin');
     $staffName = trim($data['staff_name'] ?? 'Super Admin');
+    $staffPhone = trim($data['staff_phone'] ?? '');
+    if (empty($staffPhone) && !empty($staffId)) {
+        try {
+            $uStmt = $pdo->prepare("SELECT phone FROM users WHERE id = ? OR username = ? OR name = ? LIMIT 1");
+            $uStmt->execute([$staffId, $staffId, $staffName]);
+            $staffPhone = (string)$uStmt->fetchColumn();
+        } catch (Exception $e) {}
+    }
     $adminPhone = trim($data['admin_phone'] ?? '+919789660115');
 
     if (empty($customerName) || empty($productName) || $requestedPrice <= 0 || $quantity <= 0) {
@@ -1542,11 +1686,11 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         $linkToken = bin2hex(random_bytes(16));
         $stmt = $pdo->prepare("
             INSERT INTO `bulk_price_requests`
-            (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `admin_phone`, `link_token`, `send_count`, `link_click_count`, `max_sends`, `status`, `created_at`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 3, 'PENDING', NOW())
+            (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `staff_phone`, `admin_phone`, `link_token`, `send_count`, `link_click_count`, `max_sends`, `status`, `created_at`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 3, 'PENDING', NOW())
         ");
         $stmt->execute([
-            $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $adminPhone, $linkToken
+            $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $staffPhone, $adminPhone, $linkToken
         ]);
         $newId = (int)$pdo->lastInsertId();
 
@@ -1557,6 +1701,15 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         try {
             $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `details`) VALUES ('BULK_PRICE_REQUEST', 'PRICING', ?, ?)")
                 ->execute([$staffName, "Created bulk price request $requestCode for $customerName ($productName x $quantity at Rs.$requestedPrice)"]);
+        } catch (Exception $e) {}
+
+        try {
+            $pdo->prepare("INSERT INTO `app_notifications` (`user_id`, `role`, `title`, `message`, `type`, `reference_id`, `is_read`, `created_at`) VALUES ('admin', 'ADMIN', ?, ?, 'BULK_PENDING', ?, 0, NOW())")
+                ->execute([
+                    "New Bulk Price Request: $requestCode",
+                    "Staff $staffName requested Rs.$requestedPrice/pc for $productName x $quantity pcs ($customerName).",
+                    $requestCode
+                ]);
         } catch (Exception $e) {}
 
         $waNotifyStatus = 'NOT_SENT';
@@ -1724,10 +1877,16 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
                 ->execute([$approvedBy, "Approved bulk request {$record['request_code']} for {$record['customer_name']}"]);
         } catch (Exception $e) {}
 
+        // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
+        $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
+        $skipAdmin = ($fromChannel === 'whatsapp_cmd');
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'APPROVED', '', $approvedBy, $skipAdmin);
+
         echo json_encode([
             "status" => "success",
             "message" => "Bulk price request approved successfully! Staff can now take order at the approved price.",
-            "request" => $record
+            "request" => $record,
+            "wa_dispatch" => $waDispatch
         ]);
         exit;
     } catch (Exception $e) {
@@ -1823,10 +1982,16 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 ->execute([$rejectedBy, "Rejected bulk request {$record['request_code']} with reason: $rejectionReason"]);
         } catch (Exception $e) {}
 
+        // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
+        $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
+        $skipAdmin = ($fromChannel === 'whatsapp_cmd');
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'REJECTED', $rejectionReason, $rejectedBy, $skipAdmin);
+
         echo json_encode([
             "status" => "success",
             "message" => "Bulk price request rejected with specified reason.",
-            "request" => $record
+            "request" => $record,
+            "wa_dispatch" => $waDispatch
         ]);
         exit;
     } catch (Exception $e) {
@@ -1955,6 +2120,65 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         "send_count" => $newSendCount,
         "alert_message" => $alertMsg
     ]);
+    exit;
+}
+
+// =========================================================================
+// IN-APP NOTIFICATIONS API (Live notifications for Admin & Staff decisions)
+// =========================================================================
+if ($action === 'get_notifications') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+    $userId = $_GET['user_id'] ?? null;
+    $limit = (int)($_GET['limit'] ?? 50);
+    $unreadOnly = isset($_GET['unread']) && $_GET['unread'] === '1';
+
+    $sql = "SELECT * FROM `app_notifications` WHERE 1=1";
+    $params = [];
+    if (!empty($userId)) {
+        $sql .= " AND (`user_id` = ? OR `user_id` = 'all' OR `user_id` IS NULL)";
+        $params[] = $userId;
+    }
+    if ($unreadOnly) {
+        $sql .= " AND `is_read` = 0";
+    }
+    $sql .= " ORDER BY `id` DESC LIMIT " . $limit;
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $notifs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $unreadCountStmt = $pdo->query("SELECT COUNT(*) FROM `app_notifications` WHERE `is_read` = 0");
+    $unreadCount = $unreadCountStmt ? (int)$unreadCountStmt->fetchColumn() : 0;
+
+    echo json_encode([
+        "status" => "success",
+        "notifications" => $notifs,
+        "unread_count" => $unreadCount
+    ]);
+    exit;
+}
+
+if ($action === 'mark_notification_read' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true) ?: $_POST;
+    $id = (int)($data['id'] ?? 0);
+    $markAll = !empty($data['all']);
+
+    if ($markAll) {
+        $pdo->exec("UPDATE `app_notifications` SET `is_read` = 1 WHERE `is_read` = 0");
+    } elseif ($id > 0) {
+        $pdo->prepare("UPDATE `app_notifications` SET `is_read` = 1 WHERE `id` = ?")->execute([$id]);
+    }
+    echo json_encode(["status" => "success"]);
     exit;
 }
 
@@ -2285,29 +2509,13 @@ HTML;
                 ->execute([$approvedBy, "Approved bulk request {$req['request_code']} for {$req['customer_name']} via WhatsApp One-Click Link"]);
         } catch (Exception $e) {}
 
-        // Broadcast to bridge
+        // Broadcast to bridge & dispatch WhatsApp confirmation to Admin AND Staff
         $updatedReq = array_merge($req, [
             'status' => 'APPROVED',
             'approved_by' => $approvedBy,
             'approved_at' => date('Y-m-d H:i:s')
         ]);
-        try {
-            curlBridgePost('/api/bulk_request/event', ['status' => 'APPROVED', 'request' => $updatedReq], 3);
-        } catch (Exception $e) {}
-
-        // Send exact Image 3 format to Admin WhatsApp
-        if (!empty($req['admin_phone'])) {
-            $cleanAdminP = preg_replace('/[^0-9]/', '', $req['admin_phone']);
-            if (strlen($cleanAdminP) === 10) $cleanAdminP = '91' . $cleanAdminP;
-            $confirmText = "✅ *BULK PRICE REQUEST APPROVED!*\n\n" .
-                "Request Code: *{$req['request_code']}*\n" .
-                "Product: *{$req['product_name']}* ({$req['size']}) × *{$req['quantity']} pcs*\n" .
-                "Approved Price: *₹{$req['requested_price']}/pc* (Total: ₹{$req['total_requested_amount']})\n\n" .
-                "Status: Special price activated. Staff can now take the order.";
-            try {
-                curlBridgePost('/api/send', ['phone' => $cleanAdminP, 'text' => $confirmText], 5);
-            } catch (Exception $e) {}
-        }
+        dispatchBulkDecisionWhatsAppNotifications($pdo, $updatedReq, 'APPROVED', '', $approvedBy);
 
         $renderShell("Approved Successfully", "
             <div class='status-icon icon-success'>✓</div>
@@ -2371,28 +2579,13 @@ HTML;
                     ->execute([$rejectedBy, "Rejected bulk request {$req['request_code']} with reason: $reason via WhatsApp Link"]);
             } catch (Exception $e) {}
 
-            // Broadcast to bridge
+            // Broadcast to bridge & dispatch WhatsApp confirmation to Admin AND Staff
             $updatedReq = array_merge($req, [
                 'status' => 'REJECTED',
                 'rejection_reason' => $reason,
                 'approved_by' => $rejectedBy
             ]);
-            try {
-                curlBridgePost('/api/bulk_request/event', ['status' => 'REJECTED', 'request' => $updatedReq, 'reason' => $reason], 3);
-            } catch (Exception $e) {}
-
-            // Send exact Image 4 format to Admin WhatsApp
-            if (!empty($req['admin_phone'])) {
-                $cleanAdminP = preg_replace('/[^0-9]/', '', $req['admin_phone']);
-                if (strlen($cleanAdminP) === 10) $cleanAdminP = '91' . $cleanAdminP;
-                $rejectText = "❌ *BULK PRICE REQUEST REJECTED*\n\n" .
-                    "Request Code: *{$req['request_code']}*\n" .
-                    "Reason: *{$reason}*\n\n" .
-                    "Staff has been informed of rejection.";
-                try {
-                    curlBridgePost('/api/send', ['phone' => $cleanAdminP, 'text' => $rejectText], 5);
-                } catch (Exception $e) {}
-            }
+            dispatchBulkDecisionWhatsAppNotifications($pdo, $updatedReq, 'REJECTED', $reason, $rejectedBy);
 
             $safeSubReason = htmlspecialchars($reason);
             $renderShell("Request Rejected", "

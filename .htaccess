@@ -44,3 +44,15 @@ Options -Indexes -MultiViews
     ExpiresByType text/css "access plus 1 week"
     ExpiresByType application/javascript "access plus 1 week"
 </IfModule>
+
+# 6. Universal Timezone Configuration (India Standard Time - IST, Asia/Kolkata, UTC+5:30)
+SetEnv TZ Asia/Kolkata
+<IfModule mod_php.c>
+    php_value date.timezone "Asia/Kolkata"
+</IfModule>
+<IfModule mod_php7.c>
+    php_value date.timezone "Asia/Kolkata"
+</IfModule>
+<IfModule mod_php8.c>
+    php_value date.timezone "Asia/Kolkata"
+</IfModule>

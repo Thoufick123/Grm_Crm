@@ -1,9 +1,13 @@
 <?php
 /**
  * GRM WHATSAPP CRM — DATABASE CONNECTION & AUTO-MIGRATION ENGINE
+ * Timezone: Asia/Kolkata (IST, UTC+5:30)
  * Connects to XAMPP MySQL (localhost, root, empty password)
  * Automatically creates database `grm_crm_db` and all necessary tables & seed records on first run.
  */
+
+// Universal Timezone Enforcement for India Standard Time (IST, UTC+5:30)
+date_default_timezone_set('Asia/Kolkata');
 
 // Load .env configuration file if present, with container/system environment variables taking highest priority
 function loadEnvConfig() {
@@ -109,6 +113,9 @@ function getDBConnection() {
                         PDO::ATTR_TIMEOUT => 2,
                     ]
                 );
+                try {
+                    $pdo->exec("SET time_zone = '+05:30'");
+                } catch (Exception $tzEx) {}
             } catch (PDOException $dbNotFound) {
                 // 2. If database doesn't exist yet, connect to server and create it
                 $initPdo = new PDO(
@@ -136,6 +143,9 @@ function getDBConnection() {
                         PDO::ATTR_TIMEOUT => 2,
                     ]
                 );
+                try {
+                    $pdo->exec("SET time_zone = '+05:30'");
+                } catch (Exception $tzEx) {}
             }
 
             // 3. Ensure tables and default seeds exist ONLY IF NOT ALREADY INITIALIZED
@@ -175,6 +185,7 @@ function getDBConnection() {
                                 `total_requested_amount` DECIMAL(10, 2) NOT NULL,
                                 `staff_id` VARCHAR(50) NULL,
                                 `staff_name` VARCHAR(150) NOT NULL,
+                                `staff_phone` VARCHAR(50) NULL,
                                 `admin_phone` VARCHAR(50) NULL,
                                 `link_token` VARCHAR(64) NULL,
                                 `send_count` INT NOT NULL DEFAULT 1,
@@ -204,6 +215,10 @@ function getDBConnection() {
                                     ADD COLUMN `max_sends` INT NOT NULL DEFAULT 3 AFTER `link_click_count`,
                                     ADD INDEX `idx_link_token` (`link_token`);
                                 ");
+                            }
+                            $colStaffPhone = $pdo->query("SHOW COLUMNS FROM `bulk_price_requests` LIKE 'staff_phone'")->fetch();
+                            if (!$colStaffPhone) {
+                                $pdo->exec("ALTER TABLE `bulk_price_requests` ADD COLUMN `staff_phone` VARCHAR(50) NULL AFTER `staff_name`");
                             }
                         } catch (Exception $colEx) {}
                     }
@@ -329,6 +344,30 @@ function getDBConnection() {
                                 INDEX (`token_reject`),
                                 INDEX (`download_token`),
                                 INDEX (`status`)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+                    }
+                } catch (Exception $e) {}
+
+                // Ensure app_notifications table exists
+                try {
+                    $checkNotif = $pdo->query("SHOW TABLES LIKE 'app_notifications'")->fetch();
+                    if (!$checkNotif) {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS `app_notifications` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `user_id` VARCHAR(50) NULL,
+                                `role` VARCHAR(50) NULL,
+                                `title` VARCHAR(255) NOT NULL,
+                                `message` TEXT NOT NULL,
+                                `type` VARCHAR(50) DEFAULT 'INFO',
+                                `reference_id` VARCHAR(100) NULL,
+                                `is_read` TINYINT(1) DEFAULT 0,
+                                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                INDEX (`user_id`),
+                                INDEX (`type`),
+                                INDEX (`is_read`),
+                                INDEX (`created_at`)
                             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
                         ");
                     }

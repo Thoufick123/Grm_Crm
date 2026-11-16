@@ -1,3 +1,6 @@
+// Universal Timezone Enforcement for India Standard Time (IST, UTC+5:30)
+process.env.TZ = 'Asia/Kolkata';
+
 /**
  * GRM WHATSAPP CRM — MULTI-ACCOUNT WEBSOCKET (Socket.IO) & BAILEYS LIVE BRIDGE
  * Features:
@@ -1441,17 +1444,35 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     console.log(`[Bulk Interceptor] Processing WhatsApp APPROVE for ${reqCode || 'latest'} from ${replyTargetJid}`);
                                     const d = await callCrmApi('approve_bulk_price_request', {
                                         request_code: reqCode,
-                                        approved_by: 'Super Admin (via WhatsApp)'
+                                        approved_by: 'Super Admin (via WhatsApp)',
+                                        source: 'whatsapp_cmd'
                                     });
                                     if (d && (d.status === 'success' || (d.message && d.message.includes('already approved')))) {
                                         const r = d.request || {};
-                                        // EXACT Image 1 Format
+                                        // EXACT User Image 2 Approved Layout
+                                        const reqPriceFormatted = parseFloat(r.requested_price || 0).toFixed(2);
+                                        const totalAmtFormatted = parseFloat(r.total_requested_amount || 0).toFixed(2);
+                                        const sizeStr = r.size ? ` (${r.size})` : ' (Free Size)';
                                         const confirmText = `✅ *BULK PRICE REQUEST APPROVED!*\n\n` +
                                             `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
-                                            `Product: *${r.product_name || 'Product'}* (${r.size || 'Free Size'}) × *${r.quantity || 10} pcs*\n` +
-                                            `Approved Price: *₹${r.requested_price}/pc* (Total: ₹${r.total_requested_amount})\n\n` +
+                                            `Product: *${r.product_name || 'Product'}${sizeStr} × ${r.quantity || 1} pcs*\n` +
+                                            `Approved Price: *₹${reqPriceFormatted}/pc* (Total: *₹${totalAmtFormatted}*)\n\n` +
                                             `Status: Special price activated. Staff can now take the order.`;
+                                        // Send to Admin
                                         await sock.sendMessage(replyTargetJid, { text: confirmText });
+                                        // Send to Staff's WhatsApp inbox as well!
+                                        const staffPhone = r.staff_phone || d.wa_dispatch?.staff_phone;
+                                        if (staffPhone) {
+                                            const staffJid = resolveDestinationJid(staffPhone);
+                                            if (staffJid && staffJid !== replyTargetJid) {
+                                                try {
+                                                    await sock.sendMessage(staffJid, { text: confirmText });
+                                                    console.log(`[Bulk Interceptor] Staff notification delivered to ${staffJid}`);
+                                                } catch (errStaff) {
+                                                    console.warn(`[Bulk Interceptor] Could not deliver to staff ${staffJid}:`, errStaff.message);
+                                                }
+                                            }
+                                        }
                                         io.emit('bulk_request:updated', { status: 'APPROVED', request: r });
                                     } else if (d && d.expired) {
                                         const expText = `⚠️ *BULK PRICE REQUEST EXPIRED*\n\n` +
@@ -1471,22 +1492,38 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             } else if (isRejectCmd) {
                                 try {
                                     let reason = messageText.replace(/^2\s*/i, '').replace(/^REJECT:?\s*(BPR-\d+)?\s*/i, '').trim();
-                                    if (!reason) reason = 'Price too low for this bulk order quantity.';
+                                    if (!reason) reason = 'Price too low for this bulk order quantity amount too low';
                                     console.log(`[Bulk Interceptor] Processing WhatsApp REJECT for ${reqCode || 'latest'} (Reason: ${reason}) from ${replyTargetJid}`);
                                     const d = await callCrmApi('reject_bulk_price_request', {
                                         request_code: reqCode,
                                         rejection_reason: reason,
-                                        rejected_by: 'Super Admin (via WhatsApp)'
+                                        rejected_by: 'Super Admin (via WhatsApp)',
+                                        source: 'whatsapp_cmd'
                                     });
                                     if (d && (d.status === 'success' || (d.message && d.message.includes('already rejected')))) {
                                         const r = d.request || {};
-                                        // EXACT Image 1 Format
+                                        // EXACT User Image 2 Rejected Layout
+                                        const cleanReason = (reason || r.rejection_reason || 'Price too low for this bulk order quantity amount too low').trim();
                                         const rejectText = `❌ *BULK PRICE REQUEST REJECTED*\n\n` +
                                             `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
-                                            `Reason: *${reason}*\n\n` +
+                                            `Reason: *${cleanReason}*\n\n` +
                                             `Staff has been informed of rejection.`;
+                                        // Send to Admin
                                         await sock.sendMessage(replyTargetJid, { text: rejectText });
-                                        io.emit('bulk_request:updated', { status: 'REJECTED', request: r, reason: reason });
+                                        // Send to Staff's WhatsApp inbox as well!
+                                        const staffPhone = r.staff_phone || d.wa_dispatch?.staff_phone;
+                                        if (staffPhone) {
+                                            const staffJid = resolveDestinationJid(staffPhone);
+                                            if (staffJid && staffJid !== replyTargetJid) {
+                                                try {
+                                                    await sock.sendMessage(staffJid, { text: rejectText });
+                                                    console.log(`[Bulk Interceptor] Staff rejection notification delivered to ${staffJid}`);
+                                                } catch (errStaff) {
+                                                    console.warn(`[Bulk Interceptor] Could not deliver rejection to staff ${staffJid}:`, errStaff.message);
+                                                }
+                                            }
+                                        }
+                                        io.emit('bulk_request:updated', { status: 'REJECTED', request: r, reason: cleanReason });
                                     } else if (d && d.expired) {
                                         const expText = `⚠️ *BULK PRICE REQUEST EXPIRED*\n\n` +
                                             `Request Code: *${reqCode || 'BPR'}*\n\n` +
