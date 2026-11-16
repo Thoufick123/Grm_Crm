@@ -5359,34 +5359,30 @@ if ($action === 'request_backup_download') {
 
         // Send Email to Super Admin (Support custom subject/notes if provided)
         $customNotes = trim($data['custom_notes'] ?? $data['notes'] ?? '');
-        // Clean transactional subject without spam triggers (avoid [Action Required] and emojis that trigger Gmail Spam)
+        // Clean transactional subject without spam/phishing triggers (e.g. no "Security Authorization", no "Action Required")
         $cleanSubject = !empty($data['custom_subject']) 
             ? trim($data['custom_subject']) 
-            : ("Security Authorization: Database Backup Download Request (Code: " . $requestCode . ")");
+            : ("GRM CRM: Database Backup Verification Code " . $requestCode);
 
         $hostDomain = !empty($_SERVER['HTTP_HOST']) ? preg_replace('/^www\./i', '', $_SERVER['HTTP_HOST']) : 'hostingersite.com';
         $fromEmail = "noreply@" . $hostDomain;
         $boundary = "----=_NextPart_" . md5(uniqid((string)time(), true));
 
-        // Plain Text Fallback Body (Critical for 0 Spam score in Gmail)
-        $plainText = "SECURITY AUTHORIZATION REQUIRED\n"
-            . "Database Backup Download Request\n\n"
-            . "A staff user has requested to download the complete CRM database backup file.\n"
-            . "Your explicit authorization is required to unlock this export.\n\n"
-            . "Request Code: {$requestCode}\n"
+        // Plain Text Fallback Body (Clean transactional format)
+        $plainText = "Hello Administrator,\n\n"
+            . "A request to export a complete database backup has been submitted on GRM Garments CRM.\n\n"
+            . "Verification Code: {$requestCode}\n"
             . "Requester: {$requesterName} ({$requesterRole})\n"
-            . "Target Admin: {$adminEmail}\n"
+            . "Recipient Admin: {$adminEmail}\n"
             . "IP Address: {$ip}\n"
             . "Requested At: " . date('Y-m-d H:i:s') . "\n"
-            . "Authorization Expires: In 60 Minutes\n\n"
-            . "To APPROVE this backup download (1-Click):\n"
-            . "{$approveUrl}\n\n"
-            . "To REJECT & BLOCK this backup download:\n"
-            . "{$rejectUrl}\n\n"
-            . "If you did not initiate or approve this backup request, click REJECT immediately to prevent data extraction.\n\n"
-            . "GRM Garments CRM - Automated Data Protection Shield\n";
+            . "Valid For: 60 Minutes\n\n"
+            . "To approve this export:\n{$approveUrl}\n\n"
+            . "To decline this request:\n{$rejectUrl}\n\n"
+            . "If you did not initiate this request, click Decline to protect your data.\n\n"
+            . "GRM Garments CRM - Tirupur, Tamil Nadu\n";
 
-        $notesHtml = !empty($customNotes) ? "<div class='info-row'><span class='info-label'>Request Note:</span><span class='info-val'>" . htmlspecialchars($customNotes) . "</span></div>" : "";
+        $notesHtml = !empty($customNotes) ? "<tr><td class='lbl'>Request Note:</td><td class='val'>" . htmlspecialchars($customNotes) . "</td></tr>" : "";
 
         $htmlMessage = "
 <!DOCTYPE html>
@@ -5394,58 +5390,64 @@ if ($action === 'request_backup_download') {
 <head>
   <meta charset='UTF-8'>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0f172a; margin: 0; padding: 24px 12px; }
-    .card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-    .header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 24px 20px; text-align: center; }
-    .badge { display: inline-block; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
-    .title { margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; }
-    .body { padding: 24px 20px; color: #334155; font-size: 13px; line-height: 1.6; }
-    .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin: 16px 0; }
-    .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
-    .info-label { color: #64748b; font-weight: 600; }
-    .info-val { color: #0f172a; font-weight: 700; }
-    .btn-table { width: 100%; border-collapse: separate; border-spacing: 10px 0; margin: 24px 0 12px 0; }
-    .btn-approve { display: block; text-align: center; background: #059669; color: #ffffff !important; padding: 14px 18px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 13px; }
-    .btn-reject { display: block; text-align: center; background: #dc2626; color: #ffffff !important; padding: 14px 18px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 13px; }
-    .footer { padding: 16px 20px; background: #f1f5f9; border-top: 1px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 11px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #1e293b; }
+    .email-container { max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .brand-header { padding: 24px 28px 16px; border-bottom: 1px solid #f1f5f9; }
+    .brand-title { font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; }
+    .content-body { padding: 28px; font-size: 14px; line-height: 1.6; color: #334155; }
+    .code-box { background: #f1f5f9; border-radius: 10px; padding: 14px 18px; margin: 20px 0; text-align: center; }
+    .code-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px; }
+    .code-val { font-size: 20px; font-weight: 800; color: #0f172a; font-family: monospace; margin-top: 4px; }
+    .details-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+    .details-table td { padding: 6px 0; }
+    .details-table .lbl { color: #64748b; width: 120px; }
+    .details-table .val { color: #0f172a; font-weight: 600; }
+    .actions-table { width: 100%; border-collapse: separate; border-spacing: 12px 0; margin: 24px 0 16px; }
+    .btn-approve { display: block; text-align: center; background: #059669; color: #ffffff !important; padding: 12px 18px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 13px; }
+    .btn-reject { display: block; text-align: center; background: #f8fafc; color: #64748b !important; border: 1px solid #cbd5e1; padding: 12px 18px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 13px; }
+    .email-footer { padding: 20px 28px; background: #f8fafc; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; text-align: center; }
   </style>
 </head>
 <body>
-  <div class='card'>
-    <div class='header'>
-      <span class='badge'>Security Authorization</span>
-      <h2 class='title'>Database Backup Download Request</h2>
+  <div class='email-container'>
+    <div class='brand-header'>
+      <h2 class='brand-title'>GRM Garments CRM</h2>
     </div>
-    <div class='body'>
-      <p>A staff member has requested to download the complete CRM database backup file. Your explicit authorization is required to unlock this file.</p>
+    <div class='content-body'>
+      <p style='margin-top:0;'>Hello,</p>
+      <p>A request to export a database backup snapshot has been submitted. Please review the details below:</p>
       
-      <div class='info-box'>
-        <div class='info-row'><span class='info-label'>Request Code:</span><span class='info-val'>{$requestCode}</span></div>
-        <div class='info-row'><span class='info-label'>Requester:</span><span class='info-val'>{$requesterName} ({$requesterRole})</span></div>
-        <div class='info-row'><span class='info-label'>Target Admin Email:</span><span class='info-val'>{$adminEmail}</span></div>
-        <div class='info-row'><span class='info-label'>IP Address:</span><span class='info-val'>{$ip}</span></div>
-        <div class='info-row'><span class='info-label'>Requested At:</span><span class='info-val'>" . date('Y-m-d H:i:s') . "</span></div>
-        <div class='info-row'><span class='info-label'>Authorization Expires:</span><span class='info-val'>In 60 Minutes</span></div>
-        {$notesHtml}
+      <div class='code-box'>
+        <div class='code-label'>Verification Code</div>
+        <div class='code-val'>{$requestCode}</div>
       </div>
 
-      <p>Please choose an action below:</p>
+      <table class='details-table'>
+        <tr><td class='lbl'>Requested By:</td><td class='val'>{$requesterName} ({$requesterRole})</td></tr>
+        <tr><td class='lbl'>Recipient:</td><td class='val'>{$adminEmail}</td></tr>
+        <tr><td class='lbl'>IP Address:</td><td class='val'>{$ip}</td></tr>
+        <tr><td class='lbl'>Time:</td><td class='val'>" . date('Y-m-d H:i:s') . "</td></tr>
+        <tr><td class='lbl'>Valid For:</td><td class='val'>60 Minutes</td></tr>
+        {$notesHtml}
+      </table>
 
-      <table class='btn-table'>
+      <table class='actions-table'>
         <tr>
-          <td style='width: 50%;'>
-            <a href='{$approveUrl}' class='btn-approve' target='_blank'>APPROVE DOWNLOAD</a>
+          <td style='width:50%;'>
+            <a href='{$approveUrl}' class='btn-approve' target='_blank'>Approve Backup</a>
           </td>
-          <td style='width: 50%;'>
-            <a href='{$rejectUrl}' class='btn-reject' target='_blank'>REJECT &amp; BLOCK</a>
+          <td style='width:50%;'>
+            <a href='{$rejectUrl}' class='btn-reject' target='_blank'>Decline Request</a>
           </td>
         </tr>
       </table>
 
-      <p style='color: #64748b; font-size: 11px; margin-top: 16px;'>If you did not initiate or approve this backup request, click <strong>REJECT &amp; BLOCK</strong> to prevent data extraction.</p>
+      <p style='font-size: 11px; color: #64748b; margin-top: 20px; line-height: 1.5;'>
+        If you did not initiate this request, click Decline Request to lock export access.
+      </p>
     </div>
-    <div class='footer'>
-      GRM Garments CRM &bull; Automated Data Protection Shield
+    <div class='email-footer'>
+      GRM Garments CRM &bull; Tirupur, Tamil Nadu &bull; Automated System Notification
     </div>
   </div>
 </body>
