@@ -28205,14 +28205,14 @@ function switchSettingsTab(tab) {
   if (tab === 'qr') {
     if (tabQr) tabQr.classList.remove('hidden');
     if (tabManual) tabManual.classList.add('hidden');
-    if (btnQr) btnQr.className = "px-3.5 py-1.5 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition";
-    if (btnManual) btnManual.className = "px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5";
+    if (btnQr) btnQr.className = "w-full px-3.5 py-2.5 bg-brand-wa text-white text-xs font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition text-center cursor-pointer";
+    if (btnManual) btnManual.className = "w-full px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 text-center cursor-pointer";
     fetchQRBridgeStatus();
   } else {
     if (tabQr) tabQr.classList.add('hidden');
     if (tabManual) tabManual.classList.remove('hidden');
-    if (btnQr) btnQr.className = "px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5";
-    if (btnManual) btnManual.className = "px-3.5 py-1.5 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition";
+    if (btnQr) btnQr.className = "w-full px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 text-center cursor-pointer";
+    if (btnManual) btnManual.className = "w-full px-3.5 py-2.5 bg-brand-wa text-white text-xs font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition text-center cursor-pointer";
   }
 }
 
@@ -28360,54 +28360,55 @@ function renderMultiAccountsHub() {
     const isSelectedActive = (ACTIVE_SEND_ACCOUNT_ID === acc.id);
 
     return `
-      <div class="bg-white rounded-2xl border ${isSelectedActive ? 'border-brand-wa ring-2 ring-brand-wa/30 shadow-md' : (isConnected ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-amber-200 shadow-sm')} p-5 space-y-4 flex flex-col justify-between transition-all">
+      <div class="bg-white rounded-2xl border ${isSelectedActive ? 'border-brand-wa ring-2 ring-brand-wa/30 shadow-md' : (isConnected ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-amber-200 shadow-sm')} p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 flex flex-col justify-between transition-all">
         
         <!-- Account Card Header -->
         <div class="flex items-start justify-between gap-2">
-          <div class="flex items-start gap-3 min-w-0 flex-1">
-            <div class="w-10 h-10 rounded-xl ${isConnected ? 'bg-emerald-50 text-emerald-700' : (isScanning ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600')} flex items-center justify-center font-bold text-sm shrink-0">
-              <span class="material-symbols-outlined text-[22px]">${isConnected ? 'phone_android' : (isScanning ? 'qr_code_scanner' : 'sync')}</span>
+          <div class="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${isConnected ? 'bg-emerald-50 text-emerald-700' : (isScanning ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600')} flex items-center justify-center font-bold text-sm shrink-0">
+              <span class="material-symbols-outlined text-[20px] sm:text-[22px]">${isConnected ? 'phone_android' : (isScanning ? 'qr_code_scanner' : 'sync')}</span>
             </div>
             <div class="min-w-0 flex-1">
-              <h4 class="font-bold text-slate-900 text-xs sm:text-sm">${acc.label || ('WhatsApp Phone #' + (index + 1))}</h4>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="font-bold text-slate-900 text-xs sm:text-sm truncate">${acc.label || ('WhatsApp Phone #' + (index + 1))}</h4>
+                <span class="text-[9px] bg-slate-100 text-slate-600 font-mono px-1.5 py-0.5 rounded font-bold shrink-0">${acc.id}</span>
+              </div>
               <div class="flex items-center gap-1.5 flex-wrap mt-1">
                 <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-100 text-emerald-800' : (isScanning ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300 animate-pulse' : 'bg-slate-100 text-slate-800')}">
                   ${isConnected ? '🟢 CONNECTED (LIVE)' : (isScanning ? '🟡 SCAN QR WITH PHONE' : (isConnecting ? '⚪ INITIALIZING...' : '🔴 DISCONNECTED'))}
                 </span>
                 ${isSelectedActive && isConnected ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-brand-wa text-white">⭐ ACTIVE LINE</span>' : ''}
               </div>
-              <p class="text-xs font-mono font-bold text-slate-600 mt-1">${isConnected ? (acc.connected_number || 'Device Linked') : '📱 Scan QR code below with WhatsApp mobile'}</p>
+              <p class="text-[11px] sm:text-xs font-mono font-bold text-slate-600 mt-1 truncate">${isConnected ? (acc.connected_number || 'Device Linked') : '📱 Scan QR code below with WhatsApp mobile'}</p>
             </div>
           </div>
-
-          <span class="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded font-bold shrink-0">${acc.id}</span>
         </div>
 
         <!-- 1. ACTIVE QR CODE DISPLAY (When awaiting mobile scan) -->
         ${isScanning ? `
-          <div class="bg-gradient-to-b from-amber-50/70 to-orange-50/40 p-4 rounded-2xl border-2 border-amber-300/80 flex flex-col items-center justify-center text-center space-y-3 shadow-inner">
+          <div class="bg-gradient-to-b from-amber-50/70 to-orange-50/40 p-3 sm:p-4 rounded-2xl border-2 border-amber-300/80 flex flex-col items-center justify-center text-center space-y-3 shadow-inner">
             <div class="flex items-center gap-2 text-amber-950 font-extrabold text-xs">
               <span class="material-symbols-outlined text-[18px] text-amber-600">smartphone</span>
               <span>Link Your Mobile Device</span>
             </div>
 
             <!-- Crisp QR Code Image -->
-            <div class="p-2.5 bg-white rounded-xl shadow-md border border-amber-200">
-              <img src="${acc.qr_image}" alt="Scan WhatsApp QR" class="w-48 h-48 sm:w-52 sm:h-52 rounded-lg object-contain mx-auto">
+            <div class="p-2 sm:p-2.5 bg-white rounded-xl shadow-md border border-amber-200 max-w-full">
+              <img src="${acc.qr_image}" alt="Scan WhatsApp QR" class="w-44 h-44 sm:w-52 sm:h-52 max-w-full rounded-lg object-contain mx-auto">
             </div>
 
             <!-- Step-by-Step Scan Instructions -->
-            <div class="bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-amber-200/80 text-left text-[11px] text-slate-700 w-full max-w-sm space-y-1">
+            <div class="bg-white/80 backdrop-blur-sm p-2.5 sm:p-3 rounded-xl border border-amber-200/80 text-left text-[11px] text-slate-700 w-full max-w-sm space-y-1">
               <p class="font-bold text-slate-900 text-[11px] mb-1">📲 How to link your phone:</p>
               <div class="flex items-start gap-1.5"><span class="font-bold text-brand-waDark">1.</span><span>Open <b>WhatsApp</b> on your mobile phone.</span></div>
               <div class="flex items-start gap-1.5"><span class="font-bold text-brand-waDark">2.</span><span>Tap <b>Menu (⋮)</b> or <b>Settings</b> &rarr; <b>Linked Devices</b>.</span></div>
               <div class="flex items-start gap-1.5"><span class="font-bold text-brand-waDark">3.</span><span>Tap <b>Link a Device</b> and point camera at this QR code.</span></div>
             </div>
 
-            <div class="flex items-center gap-2 pt-1">
+            <div class="flex items-center gap-2 pt-1 w-full justify-center">
               ${canSettingsCreate ? `
-              <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition shadow-sm">
-                <span class="material-symbols-outlined text-[15px]">refresh</span> Refresh QR Code
+              <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="w-full sm:w-auto px-4 py-2 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-sm cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">refresh</span> Refresh QR Code
               </button>
               ` : '<span class="text-[10px] text-amber-800 font-semibold px-2 py-1 bg-amber-100 rounded-lg">🔒 View-Only: QR refresh restricted</span>'}
             </div>
@@ -28416,31 +28417,31 @@ function renderMultiAccountsHub() {
 
         <!-- 2. CONNECTED SUCCESS BANNER -->
         ${isConnected ? `
-          <div class="bg-emerald-50 p-3.5 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
+          <div class="bg-emerald-50 p-3 sm:p-3.5 rounded-xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
             <div class="flex items-center gap-2.5 text-emerald-950">
-              <span class="material-symbols-outlined text-[22px] text-emerald-600">verified</span>
+              <span class="material-symbols-outlined text-[22px] text-emerald-600 shrink-0">verified</span>
               <div>
                 <p class="font-bold text-xs text-emerald-900">Live Device Linked & Authenticated</p>
               </div>
             </div>
-            <span class="font-mono text-emerald-900 font-extrabold text-xs bg-emerald-200/70 px-2.5 py-1 rounded-lg">${acc.connected_number || '+91 ...'}</span>
+            <span class="font-mono text-emerald-900 font-extrabold text-xs bg-emerald-200/70 px-2.5 py-1 rounded-lg shrink-0 self-start sm:self-auto">${acc.connected_number || '+91 ...'}</span>
           </div>
 
           <!-- PROMINENT CONNECT & OPEN INBOX BUTTON -->
           <div class="pt-1">
-            <button type="button" onclick="connectAndOpenWhatsAppChats('${acc.id}', '${acc.connected_number}', '${acc.label || 'WhatsApp Line'}')" class="w-full py-2.5 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-[0.99]" title="Connect this WhatsApp number and open live conversations">
+            <button type="button" onclick="connectAndOpenWhatsAppChats('${acc.id}', '${acc.connected_number}', '${acc.label || 'WhatsApp Line'}')" class="w-full py-2.5 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-[0.99] text-center" title="Connect this WhatsApp number and open live conversations">
               <span class="material-symbols-outlined text-[18px]">chat</span>
-              <span>Open Live Conversations (${acc.connected_number || 'Connected Line'})</span>
+              <span class="truncate">Open Live Conversations</span>
             </button>
           </div>
         ` : ''}
 
         <!-- 3. DISCONNECTED / INITIALIZING STATE BUTTON -->
         ${(!isConnected && !isScanning) ? `
-          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center space-y-2.5">
+          <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center space-y-2.5">
             <p class="text-xs font-bold text-slate-700">${isConnecting ? 'Connecting to WhatsApp Socket...' : 'Device not linked. Click below to generate scan QR code.'}</p>
             ${canSettingsCreate ? `
-            <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="px-4 py-2 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow flex items-center gap-2 transition">
+            <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow flex items-center justify-center gap-2 transition cursor-pointer">
               <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
               <span>Generate QR Code to Link Phone</span>
             </button>

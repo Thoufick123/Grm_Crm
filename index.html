@@ -4952,71 +4952,71 @@
           </div>
         </div>
       </section>
-      <section id="view-settings" class="h-full overflow-y-auto p-6 hidden">
-        <div class="max-w-4xl mx-auto space-y-6">
+      <section id="view-settings" class="h-full overflow-y-auto p-3.5 sm:p-6 hidden">
+        <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
 
           <!-- Header Banner -->
           <div
-            class="bg-gradient-to-r from-brand-dark to-emerald-900 p-6 rounded-2xl text-white shadow-lg flex items-center justify-between">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-2xl bg-brand-wa flex items-center justify-center text-white shadow-glow">
-                <span class="material-symbols-outlined text-[28px]">settings_phone</span>
+            class="bg-gradient-to-r from-brand-dark to-emerald-900 p-4 sm:p-6 rounded-2xl text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand-wa flex items-center justify-center text-white shadow-glow shrink-0">
+                <span class="material-symbols-outlined text-[24px] sm:text-[28px]">settings_phone</span>
               </div>
-              <div>
-                <h2 class="text-xl font-bold">WhatsApp Business Phone Configuration</h2>
+              <div class="min-w-0">
+                <h2 class="text-base sm:text-xl font-bold leading-snug">WhatsApp Business Phone Configuration</h2>
               </div>
             </div>
             <span
-              class="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-full text-xs font-bold flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Live Dynamic Sync
+              class="self-start sm:self-auto px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-full text-xs font-bold flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"></span> Live Dynamic Sync
             </span>
           </div>
 
           <!-- Configuration Form Card -->
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6">
 
             <!-- Integration Mode Tabs -->
-            <div class="flex items-center gap-2 border-b border-slate-200 pb-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 border-b border-slate-200 pb-3">
               <button type="button" onclick="switchSettingsTab('qr')" id="tab-btn-qr"
-                class="px-3.5 py-1.5 bg-brand-wa text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition">
-                <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
-                <span>Method 3: Link Phone via QR Code (Free & Live)</span>
+                class="w-full px-3.5 py-2.5 bg-brand-wa text-white text-xs font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition text-center cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
+                <span>Method 3: Link Phone via QR Code</span>
               </button>
               <button type="button" onclick="switchSettingsTab('manual')" id="tab-btn-manual"
-                class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-[16px]">tune</span>
-                <span>Manual Meta API / Webhook Settings</span>
+                class="w-full px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 text-center cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">tune</span>
+                <span>Manual Meta API / Webhook</span>
               </button>
             </div>
 
             <!-- TAB 1: LIVE QR CODE LINKED DEVICE (METHOD 3) -->
-            <div id="settings-tab-qr" class="space-y-6">
+            <div id="settings-tab-qr" class="space-y-4 sm:space-y-6">
               <!-- Multi-Account Header & Action Strip -->
               <div
-                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-emerald-950 via-brand-dark to-slate-900 rounded-2xl border border-emerald-500/40 text-white shadow-md">
-                <div class="flex items-center gap-3">
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 bg-gradient-to-r from-emerald-950 via-brand-dark to-slate-900 rounded-2xl border border-emerald-500/40 text-white shadow-md">
+                <div class="flex items-center gap-3 min-w-0">
                   <div
-                    class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-glow">
-                    <span class="material-symbols-outlined text-[24px]">phonelink_ring</span>
+                    class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-glow shrink-0">
+                    <span class="material-symbols-outlined text-[22px] sm:text-[24px]">phonelink_ring</span>
                   </div>
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <h3 class="font-bold text-sm">Linked WhatsApp Numbers (Multi-Account Hub)</h3>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h3 class="font-bold text-xs sm:text-sm">Linked WhatsApp Numbers</h3>
                       <span id="badge-multi-accounts-count"
-                        class="bg-emerald-400 text-slate-900 text-[10px] font-extrabold px-2 py-0.2 rounded-full">1
-                        Active</span>
+                        class="bg-emerald-400 text-slate-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0">1 Active</span>
                     </div>
+                    <p class="text-[10px] text-emerald-300/80">Multi-Account Hub</p>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
                   <button type="button" onclick="addNewWhatsAppAccountSlot()"
-                    class="px-3.5 py-2 bg-brand-wa hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-glow flex items-center gap-1.5 transition">
+                    class="flex-1 sm:flex-initial justify-center px-3.5 py-2 bg-brand-wa hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-glow flex items-center gap-1.5 transition cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">add_to_photos</span>
-                    <span>+ Link Another Phone (Add QR)</span>
+                    <span class="truncate">+ Link Another Phone</span>
                   </button>
                   <button type="button" onclick="fetchQRBridgeStatus()"
-                    class="p-2 bg-emerald-900/80 hover:bg-emerald-800 text-emerald-300 rounded-xl transition"
+                    class="p-2 bg-emerald-900/80 hover:bg-emerald-800 text-emerald-300 rounded-xl transition cursor-pointer shrink-0"
                     title="Refresh Accounts">
                     <span class="material-symbols-outlined text-[18px]">sync</span>
                   </button>
@@ -5030,13 +5030,12 @@
 
               <!-- Quick Status Strip -->
               <div
-                class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center justify-between text-xs">
-                <div class="flex items-center gap-2">
-                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                  <span class="font-bold text-emerald-900" id="qr-bridge-status-text">Bridge Status: Multi-Account
-                    Socket Active (Port 3000)</span>
+                class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0"></span>
+                  <span class="font-bold text-emerald-900 truncate" id="qr-bridge-status-text">Bridge Status: Multi-Account Socket Active (Port 3000)</span>
                 </div>
-                <span class="text-[11px] text-emerald-700 font-mono font-semibold">Method 3 Open Standard</span>
+                <span class="text-[11px] text-emerald-700 font-mono font-semibold shrink-0">Method 3 Open Standard</span>
               </div>
             </div>
 
@@ -5123,18 +5122,18 @@
           </div>
 
           <!-- BRAND IDENTITY & CUSTOMER DISPLAY CONFIGURATION CARD -->
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-md">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-4">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-md shrink-0">
                   <span class="material-symbols-outlined text-[22px]">storefront</span>
                 </div>
-                <div>
-                  <h3 class="font-bold text-sm text-slate-900">Company Brand Identity & Customer Display</h3>
+                <div class="min-w-0">
+                  <h3 class="font-bold text-sm text-slate-900 leading-snug">Company Brand Identity & Customer Display</h3>
                 </div>
               </div>
               <span
-                class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200">
+                class="self-start sm:self-auto px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 shrink-0">
                 Brand Branding Mode
               </span>
             </div>
@@ -11473,7 +11472,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261116_v7"></script>
+  <script src="crm_app.js?v=20261116_v8"></script>
 </body>
 
 </html>
