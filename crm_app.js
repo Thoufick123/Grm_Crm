@@ -26927,11 +26927,11 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   // 3. Sender Block
   const senderHtml = c.showSenderAddress ? `
     <div class="p-2 sm:p-2.5 rounded-lg border border-slate-300 bg-slate-50/70 text-[11px] space-y-1 flex-1 min-w-0 overflow-hidden">
-      <div class="text-[9px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-1 border-b border-slate-200 pb-0.5 min-w-0">
+      <div class="text-[9px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-1 border-b border-slate-200 pb-0.5 min-w-0 overflow-hidden">
         <span class="material-symbols-outlined text-[13px] shrink-0">warehouse</span>
-        <span class="truncate">DISPATCH / RETURN TO:</span>
+        <span class="truncate font-black">DISPATCH TO:</span>
       </div>
-      <div class="font-bold text-slate-900 truncate">${c.brandName || 'GRM Garments Warehouse'}</div>
+      <div class="font-bold text-slate-900 truncate text-xs sm:text-sm">${c.brandName || 'GRM Garments Warehouse'}</div>
       <div class="text-slate-700 whitespace-pre-line text-[10px] leading-tight break-words">${c.senderAddress || 'Warehouse Address'}</div>
       ${c.showPhone && c.phone ? `<div class="text-[10px] font-mono text-slate-700 truncate whitespace-nowrap">Phone: ${c.phone}</div>` : ''}
     </div>
@@ -26946,12 +26946,12 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
 
   const customerHtml = `
     <div class="p-2 sm:p-2.5 rounded-lg border-2 border-slate-900 bg-white text-[11px] space-y-1 flex-1 min-w-0 overflow-hidden shadow-2xs">
-      <div class="text-[9px] font-black uppercase text-blue-900 tracking-wider flex items-center justify-between border-b border-slate-200 pb-0.5 gap-1 min-w-0">
-        <span class="flex items-center gap-1 min-w-0 truncate">
+      <div class="text-[9px] font-black uppercase text-blue-900 tracking-wider flex items-center justify-between border-b border-slate-200 pb-0.5 gap-1 min-w-0 overflow-hidden">
+        <div class="flex items-center gap-1 min-w-0 truncate">
           <span class="material-symbols-outlined text-[13px] shrink-0">local_shipping</span>
-          <span class="truncate"><span class="hidden sm:inline">SHIP TO (CUSTOMER):</span><span class="sm:hidden">SHIP TO:</span></span>
-        </span>
-        <span class="font-bold text-slate-500 text-[8px] sm:text-[9px] shrink-0">PRIORITY</span>
+          <span class="truncate font-black">SHIP TO:</span>
+        </div>
+        <span class="font-black text-slate-700 bg-slate-100 border border-slate-300 text-[8px] px-1 py-0.5 rounded shrink-0">PRIORITY</span>
       </div>
       <div class="font-extrabold text-xs sm:text-sm text-slate-950 uppercase truncate">${order.customerName || 'Customer'}</div>
       ${c.showCustomerPhone && order.customerPhone ? `<div class="font-mono font-bold text-slate-900 text-[11px] sm:text-xs truncate whitespace-nowrap">📞 ${order.customerPhone}</div>` : ''}
@@ -28923,7 +28923,41 @@ function renderBackupView() {
   if (lastTimeEl) lastTimeEl.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// =========================================================================
+// BACKUP EMAIL APPROVAL & VERIFICATION CONTROLLER
+// =========================================================================
+var BACKUP_APPROVAL_POLLER = null;
+var BACKUP_APPROVAL_COUNTDOWN = null;
+var CURRENT_BACKUP_REQUEST_CODE = null;
+var IS_BACKUP_DOWNLOAD_LOCKED = false;
+
+function closeBackupApprovalModal() {
+  const modal = document.getElementById('modal-backup-email-approval');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+  if (BACKUP_APPROVAL_POLLER) {
+    clearInterval(BACKUP_APPROVAL_POLLER);
+    BACKUP_APPROVAL_POLLER = null;
+  }
+  if (BACKUP_APPROVAL_COUNTDOWN) {
+    clearInterval(BACKUP_APPROVAL_COUNTDOWN);
+    BACKUP_APPROVAL_COUNTDOWN = null;
+  }
+}
+
 async function handleExportBackupJSON() {
+  // If download has been rejected and permanently locked
+  if (IS_BACKUP_DOWNLOAD_LOCKED) {
+    if (typeof showToast === 'function') {
+      showToast('🚫 Download Blocked', 'Super Admin rejected authorization for this backup export. Download access is locked.', 'block', 'rose');
+    } else {
+      alert('Download Blocked: Super Admin rejected authorization for this backup export.');
+    }
+    return;
+  }
+
   const _isSuperAdminExp = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
   if (!_isSuperAdminExp && typeof canUserPerformAction === 'function') {
     if (!canUserPerformAction('backup', 'create')) {
@@ -28931,29 +28965,239 @@ async function handleExportBackupJSON() {
       return;
     }
   }
-  showToast('Generating Backup...', 'Creating snapshot of MySQL database and CRM records...', 'cloud_download', 'sky');
 
+  const requesterId = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.id) ? CURRENT_USER.id : 1;
+  const requesterName = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) ? CURRENT_USER.name : 'Super Admin';
+  const requesterRole = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.role) ? CURRENT_USER.role : 'Super Admin';
+
+  if (typeof showToast === 'function') {
+    showToast('Requesting Authorization...', 'Sending approval request to Super Admin email...', 'mark_email_unread', 'sky');
+  }
+
+  try {
+    const res = await fetch('api.php?action=request_backup_download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requester_id: requesterId,
+        requester_name: requesterName,
+        requester_role: requesterRole
+      })
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      alert('Failed to initiate backup authorization request: ' + (data.error || 'Unknown error'));
+      return;
+    }
+
+    CURRENT_BACKUP_REQUEST_CODE = data.request_code;
+
+    // Open modal
+    const modal = document.getElementById('modal-backup-email-approval');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    // Populate modal fields
+    const reqCodeEl = document.getElementById('backup-approval-req-code');
+    if (reqCodeEl) reqCodeEl.innerText = data.request_code;
+
+    const emailEl = document.getElementById('backup-approval-admin-email');
+    if (emailEl) emailEl.innerText = data.admin_email || 'admin@grmgarments.com';
+
+    const requesterEl = document.getElementById('backup-approval-requester');
+    if (requesterEl) requesterEl.innerText = `${requesterName} (${requesterRole})`;
+
+    // Reset status box UI to Pending
+    renderBackupApprovalStatusUI('PENDING', data.admin_email);
+
+    // Start 15-minute countdown timer
+    let remainingSeconds = (data.expires_in_minutes || 15) * 60;
+    if (BACKUP_APPROVAL_COUNTDOWN) clearInterval(BACKUP_APPROVAL_COUNTDOWN);
+    const timerEl = document.getElementById('backup-timer-countdown');
+    BACKUP_APPROVAL_COUNTDOWN = setInterval(() => {
+      remainingSeconds--;
+      if (remainingSeconds <= 0) {
+        clearInterval(BACKUP_APPROVAL_COUNTDOWN);
+        BACKUP_APPROVAL_COUNTDOWN = null;
+        if (timerEl) timerEl.innerText = '00:00 (Expired)';
+        renderBackupApprovalStatusUI('EXPIRED');
+      } else {
+        const m = Math.floor(remainingSeconds / 60);
+        const s = remainingSeconds % 60;
+        if (timerEl) timerEl.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+    }, 1000);
+
+    // Start polling every 3 seconds
+    if (BACKUP_APPROVAL_POLLER) clearInterval(BACKUP_APPROVAL_POLLER);
+    BACKUP_APPROVAL_POLLER = setInterval(() => {
+      pollBackupApprovalStatus(data.request_code);
+    }, 3000);
+
+  } catch (err) {
+    console.error('[Backup Request Error]:', err);
+    alert('Failed to connect to server for backup authorization: ' + err.message);
+  }
+}
+
+async function pollBackupApprovalStatus(requestCode) {
+  if (!requestCode) return;
+  try {
+    const res = await fetch(`api.php?action=check_backup_request_status&request_code=${encodeURIComponent(requestCode)}`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    if (data.status === 'APPROVED') {
+      if (BACKUP_APPROVAL_POLLER) {
+        clearInterval(BACKUP_APPROVAL_POLLER);
+        BACKUP_APPROVAL_POLLER = null;
+      }
+      if (BACKUP_APPROVAL_COUNTDOWN) {
+        clearInterval(BACKUP_APPROVAL_COUNTDOWN);
+        BACKUP_APPROVAL_COUNTDOWN = null;
+      }
+      renderBackupApprovalStatusUI('APPROVED');
+
+      // Trigger authorized file download
+      await executeAuthorizedBackupDownload(data.download_token);
+
+      // Auto close modal after 3.5 seconds
+      setTimeout(() => {
+        closeBackupApprovalModal();
+      }, 3500);
+
+    } else if (data.status === 'REJECTED') {
+      if (BACKUP_APPROVAL_POLLER) {
+        clearInterval(BACKUP_APPROVAL_POLLER);
+        BACKUP_APPROVAL_POLLER = null;
+      }
+      if (BACKUP_APPROVAL_COUNTDOWN) {
+        clearInterval(BACKUP_APPROVAL_COUNTDOWN);
+        BACKUP_APPROVAL_COUNTDOWN = null;
+      }
+      IS_BACKUP_DOWNLOAD_LOCKED = true;
+      renderBackupApprovalStatusUI('REJECTED');
+
+      // Disable/Lock download backup button on the view
+      lockBackupDownloadButtonUI();
+
+      if (typeof showToast === 'function') {
+        showToast('🚫 Request Rejected', 'Super Admin rejected this backup download request. Access has been locked.', 'block', 'rose');
+      }
+
+    } else if (data.status === 'EXPIRED') {
+      if (BACKUP_APPROVAL_POLLER) {
+        clearInterval(BACKUP_APPROVAL_POLLER);
+        BACKUP_APPROVAL_POLLER = null;
+      }
+      if (BACKUP_APPROVAL_COUNTDOWN) {
+        clearInterval(BACKUP_APPROVAL_COUNTDOWN);
+        BACKUP_APPROVAL_COUNTDOWN = null;
+      }
+      renderBackupApprovalStatusUI('EXPIRED');
+    }
+  } catch (err) {
+    console.warn('[Polling backup status error]:', err);
+  }
+}
+
+async function checkBackupApprovalStatusNow() {
+  if (!CURRENT_BACKUP_REQUEST_CODE) return;
+  if (typeof showToast === 'function') {
+    showToast('Checking Status...', 'Verifying authorization status with server...', 'refresh', 'sky');
+  }
+  await pollBackupApprovalStatus(CURRENT_BACKUP_REQUEST_CODE);
+}
+
+function renderBackupApprovalStatusUI(status, adminEmail) {
+  const box = document.getElementById('backup-approval-status-box');
+  const spinner = document.getElementById('backup-approval-spinner');
+  const title = document.getElementById('backup-approval-title');
+  const desc = document.getElementById('backup-approval-desc');
+  if (!box || !title || !desc) return;
+
+  if (status === 'PENDING') {
+    box.className = 'p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3 transition-colors';
+    if (spinner) {
+      spinner.style.display = '';
+      spinner.className = 'w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin flex-shrink-0 mt-0.5';
+    }
+    title.className = 'font-bold text-xs text-amber-900';
+    title.innerText = 'Waiting for Admin Email Approval...';
+    desc.className = 'text-[11px] text-amber-700 leading-relaxed';
+    desc.innerHTML = `A security verification email with Approve & Reject links has been sent to the Super Admin (<b class="font-mono text-amber-900">${adminEmail || 'admin'}</b>). As soon as the Admin approves, your download will begin automatically.`;
+  } else if (status === 'APPROVED') {
+    box.className = 'p-4 bg-emerald-50 border border-emerald-300 rounded-xl flex items-start gap-3 transition-colors';
+    if (spinner) {
+      spinner.style.display = 'none';
+    }
+    title.className = 'font-bold text-xs text-emerald-900 flex items-center gap-1.5';
+    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span><span>Request Approved by Super Admin!</span>';
+    desc.className = 'text-[11px] text-emerald-700 leading-relaxed';
+    desc.innerText = 'Super Admin authorization confirmed! Generating database snapshot and downloading your backup file now...';
+  } else if (status === 'REJECTED') {
+    box.className = 'p-4 bg-rose-50 border border-rose-300 rounded-xl flex items-start gap-3 transition-colors';
+    if (spinner) {
+      spinner.style.display = 'none';
+    }
+    title.className = 'font-bold text-xs text-rose-900 flex items-center gap-1.5';
+    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-rose-600">block</span><span>Request Rejected by Super Admin</span>';
+    desc.className = 'text-[11px] text-rose-700 leading-relaxed';
+    desc.innerText = 'The Super Admin has rejected authorization for this backup download. The download button has been locked and access is blocked.';
+  } else if (status === 'EXPIRED') {
+    box.className = 'p-4 bg-slate-100 border border-slate-300 rounded-xl flex items-start gap-3 transition-colors';
+    if (spinner) {
+      spinner.style.display = 'none';
+    }
+    title.className = 'font-bold text-xs text-slate-800 flex items-center gap-1.5';
+    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-slate-500">history_toggle_off</span><span>Request Expired</span>';
+    desc.className = 'text-[11px] text-slate-600 leading-relaxed';
+    desc.innerText = 'The 15-minute authorization window has expired without admin approval. Please initiate a new request.';
+  }
+}
+
+function lockBackupDownloadButtonUI() {
+  const btn = document.getElementById('btn-download-backup-json');
+  const btnText = document.getElementById('btn-download-backup-text');
+  if (btn) {
+    btn.disabled = true;
+    btn.className = 'w-full py-2.5 bg-rose-600 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 cursor-not-allowed opacity-80';
+  }
+  if (btnText) {
+    btnText.innerText = 'Download Blocked (Rejected by Admin)';
+  }
+}
+
+async function executeAuthorizedBackupDownload(downloadToken) {
   try {
     let backupBlob = null;
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
     let filename = `grm_crm_backup_${dateStr}.json`;
 
-    // 1. Fetch complete backup from backend MySQL database engine
+    // 1. Fetch complete backup from backend MySQL database engine using the approved token
     try {
-      const resp = await fetch('api.php?action=backup_db');
+      const resp = await fetch(`api.php?action=backup_db&download_token=${encodeURIComponent(downloadToken || '')}`);
       if (resp.ok) {
         const dbData = await resp.json();
         // Enrich with current in-memory CRM_STATE as well for a 100% complete hybrid backup
-        dbData.crm_state = CRM_STATE;
+        if (typeof CRM_STATE !== 'undefined') {
+          dbData.crm_state = CRM_STATE;
+        }
         backupBlob = new Blob([JSON.stringify(dbData, null, 2)], { type: 'application/json' });
+      } else {
+        const errResp = await resp.json();
+        console.warn('Backend rejected backup download:', errResp);
       }
     } catch (apiErr) {
       console.warn('Backend MySQL backup request error, falling back to local snapshot:', apiErr);
     }
 
     // 2. Fallback: Client-side CRM_STATE snapshot if backend was unreachable
-    if (!backupBlob) {
+    if (!backupBlob && typeof CRM_STATE !== 'undefined') {
       const backupPayload = {
         version: '2.5.0',
         exported_at: now.toISOString(),
@@ -28964,7 +29208,12 @@ async function handleExportBackupJSON() {
       backupBlob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
     }
 
-    // 3. Safe download using Blob ObjectURL (handles unlimited file size safely in all browsers)
+    if (!backupBlob) {
+      alert('Error: Could not retrieve database backup file.');
+      return;
+    }
+
+    // 3. Safe download using Blob ObjectURL
     const downloadUrl = URL.createObjectURL(backupBlob);
     const downloadAnchor = document.createElement('a');
     downloadAnchor.style.display = 'none';
@@ -28982,12 +29231,18 @@ async function handleExportBackupJSON() {
     const lastTimeEl = document.getElementById('backup-last-time');
     if (lastTimeEl) lastTimeEl.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    logAudit('DATABASE_BACKUP_EXPORTED', 'BACKUP', `Exported full database backup file: ${filename}`);
-    saveCRMState();
-    showToast('Database Backup Downloaded!', `Successfully exported ${filename} to your device.`, 'cloud_download', 'emerald');
+    if (typeof logAudit === 'function') {
+      logAudit('DATABASE_BACKUP_EXPORTED', 'BACKUP', `Exported full database backup file: ${filename} with Super Admin approval.`);
+    }
+    if (typeof saveCRMState === 'function') {
+      saveCRMState();
+    }
+    if (typeof showToast === 'function') {
+      showToast('Database Backup Downloaded!', `Successfully exported ${filename} to your device.`, 'cloud_download', 'emerald');
+    }
   } catch (err) {
-    console.error('[Backup Export Error]:', err);
-    alert('Error exporting database backup: ' + err.message);
+    console.error('[Backup Authorized Download Error]:', err);
+    alert('Error downloading backup file: ' + err.message);
   }
 }
 
@@ -29097,6 +29352,8 @@ async function handleImportBackupJSON(event) {
 // Bind explicitly to window scope for HTML onclick access
 window.handleExportBackupJSON = handleExportBackupJSON;
 window.handleImportBackupJSON = handleImportBackupJSON;
+window.closeBackupApprovalModal = closeBackupApprovalModal;
+window.checkBackupApprovalStatusNow = checkBackupApprovalStatusNow;
 
 // =========================================================================
 // 13.5. STAFF MANAGEMENT & GRANULAR ROLE-BASED ACCESS CONTROL (RBAC) ENGINE
@@ -35857,90 +36114,188 @@ function renderActiveCallsQueueTable(activeCalls) {
 
 function renderCallSessionsTable(sessions) {
   const tbody = document.getElementById('masking-sessions-tbody');
-  if (!tbody) return;
+  const mobileList = document.getElementById('masking-sessions-mobile-list');
 
   if (!sessions || sessions.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-slate-400 font-medium">No call sessions recorded yet. Start an In-CRM call from any customer profile to view call history.</td></tr>';
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="8" class="py-10 text-center text-slate-400 font-medium">No call sessions recorded yet. Start an In-CRM call from any customer profile to view call history.</td></tr>';
+    }
+    if (mobileList) {
+      mobileList.innerHTML = '<div class="py-10 text-center text-slate-400 font-medium text-xs">No call sessions recorded yet.</div>';
+    }
     return;
   }
 
-  tbody.innerHTML = sessions.map(call => {
-    const statusClass = call.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-      call.status === 'CONNECTED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-        call.status === 'RINGING' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
-          call.status === 'MISSED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-            'bg-slate-50 text-slate-700 border-slate-200';
+  // 1. Desktop Table Rows (Visible on md and up)
+  if (tbody) {
+    tbody.innerHTML = sessions.map(call => {
+      const statusClass = call.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+        call.status === 'CONNECTED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+          call.status === 'RINGING' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
+            call.status === 'MISSED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+              'bg-slate-50 text-slate-700 border-slate-200';
 
-    let totalSeconds = parseInt(call.duration_seconds || 0);
-    if (totalSeconds <= 0) {
-      if (call.started_at && call.ended_at) {
-        totalSeconds = Math.max(0, Math.floor((new Date(call.ended_at).getTime() - new Date(call.started_at).getTime()) / 1000));
-      } else if (call.status === 'CONNECTED' && call.started_at) {
-        totalSeconds = Math.max(0, Math.floor((Date.now() - new Date(call.started_at).getTime()) / 1000));
-      } else if (call.status === 'COMPLETED' && call.started_at) {
-        totalSeconds = Math.max(15, Math.floor((Date.now() - new Date(call.started_at).getTime()) / 1000));
+      let totalSeconds = parseInt(call.duration_seconds || 0);
+      if (totalSeconds <= 0) {
+        if (call.started_at && call.ended_at) {
+          totalSeconds = Math.max(0, Math.floor((new Date(call.ended_at).getTime() - new Date(call.started_at).getTime()) / 1000));
+        } else if (call.status === 'CONNECTED' && call.started_at) {
+          totalSeconds = Math.max(0, Math.floor((Date.now() - new Date(call.started_at).getTime()) / 1000));
+        } else if (call.status === 'COMPLETED' && call.started_at) {
+          totalSeconds = Math.max(15, Math.floor((Date.now() - new Date(call.started_at).getTime()) / 1000));
+        }
       }
-    }
-    const durMins = Math.floor(totalSeconds / 60);
-    const durSecs = totalSeconds % 60;
-    let durFormatted = String(durMins).padStart(2, '0') + ':' + String(durSecs).padStart(2, '0');
+      const durMins = Math.floor(totalSeconds / 60);
+      const durSecs = totalSeconds % 60;
+      let durFormatted = String(durMins).padStart(2, '0') + ':' + String(durSecs).padStart(2, '0');
 
-    if (call.status === 'RINGING' && totalSeconds === 0) {
-      durFormatted = '<span class="text-amber-600 font-mono text-[11px] font-bold animate-pulse">Ringing...</span>';
-    } else if (call.status === 'CONNECTED') {
-      durFormatted = `<span class="text-emerald-700 font-mono text-xs font-bold">${durFormatted}</span> <span class="text-[9px] text-emerald-600 font-semibold">(Live)</span>`;
-    }
+      if (call.status === 'RINGING' && totalSeconds === 0) {
+        durFormatted = '<span class="text-amber-600 font-mono text-[11px] font-bold animate-pulse">Ringing...</span>';
+      } else if (call.status === 'CONNECTED') {
+        durFormatted = `<span class="text-emerald-700 font-mono text-xs font-bold">${durFormatted}</span> <span class="text-[9px] text-emerald-600 font-semibold">(Live)</span>`;
+      }
 
-    const createdDate = call.created_at ? new Date(call.created_at).toLocaleString() : 'Recent';
+      const createdDate = call.created_at ? new Date(call.created_at).toLocaleString() : 'Recent';
 
-    return `
-      <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-        <td class="py-3 px-4 font-mono font-bold text-slate-800">
-          <div>${call.id || 'CALL-000'}</div>
-          <span class="text-[10px] text-slate-400 font-normal">${createdDate}</span>
-        </td>
-        <td class="py-3 px-4">
-          <div class="font-bold text-slate-900">${call.customer_name || 'Customer'}</div>
-          <div class="text-[11px] font-mono text-slate-500">${call.masked_phone || formatDisplayPhone(call.customer_phone || '')}</div>
-        </td>
-        <td class="py-3 px-4 font-mono font-bold text-emerald-700">
-          ${call.virtual_number || '+91 99435 57998'}
-        </td>
-        <td class="py-3 px-4">
-          <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-semibold text-[11px]">
-            ${call.assigned_staff_name || 'Unassigned'}
-          </span>
-        </td>
-        <td class="py-3 px-4 font-mono font-bold text-slate-700">
-          ${durFormatted}
-        </td>
-        <td class="py-3 px-4">
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusClass}">
-            ${call.status || 'COMPLETED'}
-          </span>
-        </td>
-        <td class="py-3 px-4 max-w-xs truncate text-slate-600 text-[11px]">
-          ${call.outcome_notes || 'Call completed normally'}
-        </td>
-        <td class="py-3 px-4 text-right whitespace-nowrap">
-          ${(call.recording_url || call.recording_status === 'COMPLETED') ? `
-            <button type="button" onclick="openCallAudioPlayerModal('${call.id}', '${(call.customer_name || 'Customer').replace(/'/g, "\\'")}', '${call.masked_phone || ''}', '${(call.assigned_staff_name || 'Staff').replace(/'/g, "\\'")}', '${durFormatted}')"
-              class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition cursor-pointer inline-flex items-center gap-1 shadow-2xs mr-1"
-              title="Play Two-Way Call Recording">
-              <span class="material-symbols-outlined text-[14px]">play_circle</span>
-              <span>Listen</span>
+      return `
+        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+          <td class="py-3 px-4 font-mono font-bold text-slate-800">
+            <div>${call.id || 'CALL-000'}</div>
+            <span class="text-[10px] text-slate-400 font-normal">${createdDate}</span>
+          </td>
+          <td class="py-3 px-4">
+            <div class="font-bold text-slate-900">${call.customer_name || 'Customer'}</div>
+            <div class="text-[11px] font-mono text-slate-500">${call.masked_phone || formatDisplayPhone(call.customer_phone || '')}</div>
+          </td>
+          <td class="py-3 px-4 font-mono font-bold text-emerald-700">
+            ${call.virtual_number || '+91 99435 57998'}
+          </td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-semibold text-[11px]">
+              ${call.assigned_staff_name || 'Unassigned'}
+            </span>
+          </td>
+          <td class="py-3 px-4 font-mono font-bold text-slate-700">
+            ${durFormatted}
+          </td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusClass}">
+              ${call.status || 'COMPLETED'}
+            </span>
+          </td>
+          <td class="py-3 px-4 max-w-xs truncate text-slate-600 text-[11px]">
+            ${call.outcome_notes || 'Call completed normally'}
+          </td>
+          <td class="py-3 px-4 text-right whitespace-nowrap">
+            ${(call.recording_url || call.recording_status === 'COMPLETED') ? `
+              <button type="button" onclick="openCallAudioPlayerModal('${call.id}', '${(call.customer_name || 'Customer').replace(/'/g, "\\'")}', '${call.masked_phone || ''}', '${(call.assigned_staff_name || 'Staff').replace(/'/g, "\\'")}', '${durFormatted}')"
+                class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition cursor-pointer inline-flex items-center gap-1 shadow-2xs mr-1"
+                title="Play Two-Way Call Recording">
+                <span class="material-symbols-outlined text-[14px]">play_circle</span>
+                <span>Listen</span>
+              </button>
+            ` : ''}
+            <button type="button" onclick="openCallDetailsModal('${call.id}')"
+              class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition cursor-pointer inline-flex items-center gap-1 active:scale-95 shadow-2xs"
+              title="View Assignment History, Activity Logs & Audit Trail">
+              <span class="material-symbols-outlined text-[14px]">visibility</span>
+              <span>View</span>
             </button>
-          ` : ''}
-          <button type="button" onclick="openCallDetailsModal('${call.id}')"
-            class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition cursor-pointer inline-flex items-center gap-1"
-            title="View Assignment History, Activity Logs & Audit Trail">
-            <span class="material-symbols-outlined text-[14px]">visibility</span>
-            <span>Audit</span>
-          </button>
-        </td>
-      </tr>
-    `;
-  }).join('');
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // 2. Mobile Responsive Card List (Visible on screens < md, all details visible!)
+  if (mobileList) {
+    mobileList.innerHTML = sessions.map(call => {
+      const statusClass = call.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+        call.status === 'CONNECTED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+          call.status === 'RINGING' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
+            call.status === 'MISSED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+              'bg-slate-50 text-slate-700 border-slate-200';
+
+      let totalSeconds = parseInt(call.duration_seconds || 0);
+      if (totalSeconds <= 0) {
+        if (call.started_at && call.ended_at) {
+          totalSeconds = Math.max(0, Math.floor((new Date(call.ended_at).getTime() - new Date(call.started_at).getTime()) / 1000));
+        } else if (call.status === 'CONNECTED' && call.started_at) {
+          totalSeconds = Math.max(0, Math.floor((Date.now() - new Date(call.started_at).getTime()) / 1000));
+        } else if (call.status === 'COMPLETED' && call.started_at) {
+          totalSeconds = Math.max(15, Math.floor((Date.now() - new Date(call.started_at).getTime()) / 1000));
+        }
+      }
+      const durMins = Math.floor(totalSeconds / 60);
+      const durSecs = totalSeconds % 60;
+      let durFormatted = String(durMins).padStart(2, '0') + ':' + String(durSecs).padStart(2, '0');
+
+      if (call.status === 'RINGING' && totalSeconds === 0) {
+        durFormatted = '<span class="text-amber-600 font-mono text-[11px] font-bold animate-pulse">Ringing...</span>';
+      } else if (call.status === 'CONNECTED') {
+        durFormatted = `<span class="text-emerald-700 font-mono text-xs font-bold">${durFormatted}</span> <span class="text-[9px] text-emerald-600 font-semibold">(Live)</span>`;
+      }
+
+      const createdDate = call.created_at ? new Date(call.created_at).toLocaleString() : 'Recent';
+
+      return `
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2.5">
+          <!-- Top Row: ID + Status + Duration -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-black text-xs text-slate-900">${call.id || 'CALL-000'}</span>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${statusClass}">
+                ${call.status || 'COMPLETED'}
+              </span>
+            </div>
+            <div class="font-mono font-bold text-xs text-slate-700 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-slate-400">timer</span>
+              <span>${durFormatted}</span>
+            </div>
+          </div>
+
+          <!-- Customer & Date Info -->
+          <div class="flex items-start justify-between gap-2 border-t border-b border-slate-100 py-2">
+            <div>
+              <div class="font-bold text-xs text-slate-900">${call.customer_name || 'Customer'}</div>
+              <div class="text-[11px] font-mono text-slate-500">${call.masked_phone || formatDisplayPhone(call.customer_phone || '')}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] text-slate-400 font-medium">${createdDate}</div>
+              <div class="text-[10px] font-semibold text-emerald-700 font-mono mt-0.5">${call.virtual_number || '+91 99435 57998'}</div>
+            </div>
+          </div>
+
+          <!-- Staff & Outcome Notes -->
+          <div class="flex items-center justify-between text-xs gap-2">
+            <div class="flex items-center gap-1 text-slate-600 min-w-0 truncate">
+              <span class="material-symbols-outlined text-[14px] text-slate-400 shrink-0">badge</span>
+              <span class="text-[11px] font-bold text-slate-800 truncate">${call.assigned_staff_name || 'Unassigned'}</span>
+            </div>
+            <div class="text-[10px] text-slate-500 truncate max-w-[170px] text-right italic">
+              "${call.outcome_notes || 'Call completed normally'}"
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+            ${(call.recording_url || call.recording_status === 'COMPLETED') ? `
+              <button type="button" onclick="openCallAudioPlayerModal('${call.id}', '${(call.customer_name || 'Customer').replace(/'/g, "\\'")}', '${call.masked_phone || ''}', '${(call.assigned_staff_name || 'Staff').replace(/'/g, "\\'")}', '${durFormatted}')"
+                class="flex-1 py-1.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-2xs">
+                <span class="material-symbols-outlined text-[15px]">play_circle</span>
+                <span>Listen Audio</span>
+              </button>
+            ` : ''}
+            <button type="button" onclick="openCallDetailsModal('${call.id}')"
+              class="flex-1 py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-2xs">
+              <span class="material-symbols-outlined text-[15px]">visibility</span>
+              <span>View &amp; Audit</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 }
 window.renderCallSessionsTable = renderCallSessionsTable;
 
@@ -35992,17 +36347,29 @@ window.closeCallAudioPlayerModal = closeCallAudioPlayerModal;
 async function openCallDetailsModal(callId) {
   if (!callId) return;
   try {
-    const res = await fetch(`api.php?action=get_call_details&call_id=${encodeURIComponent(callId)}`);
-    const data = await res.json();
-    if (!data || data.status !== 'success') {
-      showToast('Error', data?.message || 'Could not fetch call details.', 'error', 'rose');
-      return;
+    let data = null;
+    try {
+      const res = await fetch(`api.php?action=get_call_details&call_id=${encodeURIComponent(callId)}`);
+      data = await res.json();
+    } catch (fetchErr) {
+      console.warn('API get_call_details fetch warning:', fetchErr);
     }
 
-    const s = data.session || {};
-    const assignments = data.assignments || [];
-    const logs = data.activity_logs || [];
-    const notes = data.staff_notes || [];
+    const fallbackSession = (typeof WINDOW_CALL_SESSIONS !== 'undefined' && Array.isArray(WINDOW_CALL_SESSIONS))
+      ? WINDOW_CALL_SESSIONS.find(c => c.id === callId)
+      : null;
+
+    if (!data || data.status !== 'success') {
+      if (!fallbackSession) {
+        showToast('Error', data?.message || 'Could not fetch call details.', 'error', 'rose');
+        return;
+      }
+    }
+
+    const s = (data && data.status === 'success' && data.session) ? data.session : (fallbackSession || { id: callId });
+    const assignments = (data && data.assignments) ? data.assignments : [];
+    const logs = (data && data.activity_logs) ? data.activity_logs : [];
+    const notes = (data && data.staff_notes) ? data.staff_notes : [];
 
     // Populate Overview
     const elId = document.getElementById('detail-call-id');

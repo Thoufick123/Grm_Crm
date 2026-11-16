@@ -231,6 +231,109 @@ function getDBConnection() {
                         ");
                     }
                 } catch (Exception $e) {}
+
+                // Ensure call_staff_notes, call_recordings & call_recording_access_logs tables exist
+                try {
+                    $checkNotes = $pdo->query("SHOW TABLES LIKE 'call_staff_notes'")->fetch();
+                    if (!$checkNotes) {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS `call_staff_notes` (
+                                `note_id` VARCHAR(60) PRIMARY KEY,
+                                `call_id` VARCHAR(50) NOT NULL,
+                                `staff_id` VARCHAR(50) NOT NULL,
+                                `staff_name` VARCHAR(100) DEFAULT NULL,
+                                `target_staff_id` VARCHAR(50) DEFAULT NULL,
+                                `target_staff_name` VARCHAR(100) DEFAULT NULL,
+                                `note_summary` TEXT NOT NULL,
+                                `handover_status` ENUM('NONE', 'ASSIGNED', 'ACKNOWLEDGED', 'RESOLVED') DEFAULT 'NONE',
+                                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                INDEX(`call_id`),
+                                INDEX(`staff_id`),
+                                INDEX(`target_staff_id`),
+                                INDEX(`created_at`)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+                    }
+                } catch (Exception $e) {}
+
+                try {
+                    $checkRec = $pdo->query("SHOW TABLES LIKE 'call_recordings'")->fetch();
+                    if (!$checkRec) {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS `call_recordings` (
+                                `recording_id` VARCHAR(60) PRIMARY KEY,
+                                `call_id` VARCHAR(50) NOT NULL,
+                                `recording_reference` TEXT NOT NULL,
+                                `recording_status` ENUM('Processing', 'Completed', 'Failed', 'Unavailable') DEFAULT 'Unavailable',
+                                `file_size_bytes` BIGINT DEFAULT 0,
+                                `duration_seconds` INT DEFAULT 0,
+                                `audio_format` VARCHAR(20) DEFAULT 'mp3',
+                                `storage_disk` VARCHAR(50) DEFAULT 'local',
+                                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                INDEX(`call_id`),
+                                INDEX(`recording_status`),
+                                INDEX(`created_at`)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+                    }
+                } catch (Exception $e) {}
+
+                try {
+                    $checkAccess = $pdo->query("SHOW TABLES LIKE 'call_recording_access_logs'")->fetch();
+                    if (!$checkAccess) {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS `call_recording_access_logs` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `recording_id` VARCHAR(60) DEFAULT NULL,
+                                `call_id` VARCHAR(50) NOT NULL,
+                                `actor_id` VARCHAR(50) NOT NULL,
+                                `actor_name` VARCHAR(100) DEFAULT NULL,
+                                `action_type` ENUM('STREAM_PLAY', 'DOWNLOAD', 'DELETE', 'EXPORT') NOT NULL,
+                                `ip_address` VARCHAR(50) DEFAULT NULL,
+                                `user_agent` TEXT DEFAULT NULL,
+                                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                INDEX(`recording_id`),
+                                INDEX(`call_id`),
+                                INDEX(`actor_id`),
+                                INDEX(`action_type`)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+                    }
+                } catch (Exception $e) {}
+
+                // Ensure backup_download_requests table exists for Admin Email Approval
+                try {
+                    $checkBdr = $pdo->query("SHOW TABLES LIKE 'backup_download_requests'")->fetch();
+                    if (!$checkBdr) {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS `backup_download_requests` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `request_code` VARCHAR(50) NOT NULL UNIQUE,
+                                `requester_id` VARCHAR(50) NOT NULL,
+                                `requester_name` VARCHAR(150) NOT NULL,
+                                `requester_role` VARCHAR(100) NOT NULL,
+                                `requester_ip` VARCHAR(60) NULL,
+                                `admin_email` VARCHAR(150) NOT NULL,
+                                `token_approve` VARCHAR(64) NOT NULL UNIQUE,
+                                `token_reject` VARCHAR(64) NOT NULL UNIQUE,
+                                `download_token` VARCHAR(64) NULL,
+                                `status` ENUM('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED') DEFAULT 'PENDING',
+                                `action_at` DATETIME NULL,
+                                `action_by` VARCHAR(150) NULL,
+                                `downloaded_at` DATETIME NULL,
+                                `download_count` INT NOT NULL DEFAULT 0,
+                                `expires_at` DATETIME NOT NULL,
+                                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                INDEX (`request_code`),
+                                INDEX (`token_approve`),
+                                INDEX (`token_reject`),
+                                INDEX (`download_token`),
+                                INDEX (`status`)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+                    }
+                } catch (Exception $e) {}
+
                 if ($needSchemaInit) {
                     initializeDatabaseSchema($pdo);
                 }

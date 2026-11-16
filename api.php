@@ -5057,7 +5057,352 @@ if ($action === 'delete_broadcast_template' && $_SERVER['REQUEST_METHOD'] === 'P
 // =========================================================================
 // 10. DATABASE BACKUP & RESTORE ENGINE (MySQL Zero-Loss Snapshot & Restore)
 // =========================================================================
+
+// 1. REQUEST BACKUP DOWNLOAD (Triggers Super Admin Email Verification)
+if ($action === 'request_backup_download') {
+    header('Content-Type: application/json');
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true) ?: [];
+
+    $requesterId = trim($data['requester_id'] ?? 'staff');
+    $requesterName = trim($data['requester_name'] ?? 'Staff Member');
+    $requesterRole = trim($data['requester_role'] ?? 'Staff');
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+
+        // Ensure table exists
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `backup_download_requests` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `request_code` VARCHAR(50) NOT NULL UNIQUE,
+                `requester_id` VARCHAR(50) NOT NULL,
+                `requester_name` VARCHAR(150) NOT NULL,
+                `requester_role` VARCHAR(100) NOT NULL,
+                `requester_ip` VARCHAR(60) NULL,
+                `admin_email` VARCHAR(150) NOT NULL,
+                `token_approve` VARCHAR(64) NOT NULL UNIQUE,
+                `token_reject` VARCHAR(64) NOT NULL UNIQUE,
+                `download_token` VARCHAR(64) NULL,
+                `status` ENUM('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED') DEFAULT 'PENDING',
+                `action_at` DATETIME NULL,
+                `action_by` VARCHAR(150) NULL,
+                `downloaded_at` DATETIME NULL,
+                `download_count` INT NOT NULL DEFAULT 0,
+                `expires_at` DATETIME NOT NULL,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX (`request_code`),
+                INDEX (`token_approve`),
+                INDEX (`token_reject`),
+                INDEX (`download_token`),
+                INDEX (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+
+        // Resolve admin email
+        $adminEmail = 'admin@grmgarments.com';
+        $adminStmt = $pdo->query("SELECT `email` FROM `users` WHERE `role` = 'admin' OR `id` = 'admin' OR `role` LIKE '%Super Admin%' LIMIT 1");
+        if ($adminStmt) {
+            $row = $adminStmt->fetch(PDO::FETCH_ASSOC);
+            if (!empty($row['email'])) $adminEmail = $row['email'];
+        }
+
+        $requestCode = 'BK-REQ-' . strtoupper(substr(uniqid(), -6));
+        $tokenApprove = bin2hex(random_bytes(24));
+        $tokenReject = bin2hex(random_bytes(24));
+
+        $stmt = $pdo->prepare("
+            INSERT INTO `backup_download_requests`
+            (`request_code`, `requester_id`, `requester_name`, `requester_role`, `requester_ip`, `admin_email`, `token_approve`, `token_reject`, `status`, `expires_at`, `created_at`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', DATE_ADD(NOW(), INTERVAL 15 MINUTE), NOW())
+        ");
+        $stmt->execute([
+            $requestCode, $requesterId, $requesterName, $requesterRole, $ip, $adminEmail, $tokenApprove, $tokenReject
+        ]);
+
+        $publicBaseUrl = 'https://maroon-partridge-532881.hostingersite.com';
+        if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') === false && strpos($_SERVER['HTTP_HOST'], '127.0.0.1') === false) {
+            $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $publicBaseUrl = $proto . '://' . $_SERVER['HTTP_HOST'];
+        } elseif (defined('APP_URL') && strpos(APP_URL, 'localhost') === false) {
+            $publicBaseUrl = rtrim(APP_URL, '/');
+        }
+
+        $approveUrl = $publicBaseUrl . '/api.php?action=verify_backup_request&token=' . $tokenApprove;
+        $rejectUrl = $publicBaseUrl . '/api.php?action=verify_backup_request&token=' . $tokenReject;
+
+        // Send Email to Super Admin
+        $subject = "🔒 [Action Required] Database Backup Download Request - " . $requestCode;
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $headers .= "From: GRM Garments Security <security@grmgarments.com>\r\n";
+        $headers .= "Reply-To: security@grmgarments.com\r\n";
+        $headers .= "X-Mailer: PHP/" . phpversion();
+
+        $message = "
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='UTF-8'>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0f172a; margin: 0; padding: 24px 12px; }
+    .card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 24px 20px; text-align: center; }
+    .badge { display: inline-block; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+    .title { margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; }
+    .body { padding: 24px 20px; color: #334155; font-size: 13px; line-height: 1.6; }
+    .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin: 16px 0; }
+    .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+    .info-label { color: #64748b; font-weight: 600; }
+    .info-val { color: #0f172a; font-weight: 700; }
+    .btn-table { width: 100%; border-collapse: separate; border-spacing: 10px 0; margin: 24px 0 12px 0; }
+    .btn-approve { display: block; text-align: center; background: #059669; color: #ffffff !important; padding: 14px 18px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 13px; }
+    .btn-reject { display: block; text-align: center; background: #dc2626; color: #ffffff !important; padding: 14px 18px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 13px; }
+    .footer { padding: 16px 20px; background: #f1f5f9; border-top: 1px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class='card'>
+    <div class='header'>
+      <span class='badge'>Security Authorization</span>
+      <h2 class='title'>Database Backup Download Request</h2>
+    </div>
+    <div class='body'>
+      <p>A user has requested to download the complete CRM database backup file. Your explicit email authorization is required to unlock this file.</p>
+      
+      <div class='info-box'>
+        <div class='info-row'><span class='info-label'>Request Code:</span><span class='info-val'>{$requestCode}</span></div>
+        <div class='info-row'><span class='info-label'>Requester:</span><span class='info-val'>{$requesterName} ({$requesterRole})</span></div>
+        <div class='info-row'><span class='info-label'>IP Address:</span><span class='info-val'>{$ip}</span></div>
+        <div class='info-row'><span class='info-label'>Requested At:</span><span class='info-val'>" . date('Y-m-d H:i:s') . "</span></div>
+        <div class='info-row'><span class='info-label'>Authorization Expires:</span><span class='info-val'>In 15 Minutes</span></div>
+      </div>
+
+      <p>Please choose an action below:</p>
+
+      <table class='btn-table'>
+        <tr>
+          <td style='width: 50%;'>
+            <a href='{$approveUrl}' class='btn-approve' target='_blank'>✅ APPROVE DOWNLOAD</a>
+          </td>
+          <td style='width: 50%;'>
+            <a href='{$rejectUrl}' class='btn-reject' target='_blank'>🚫 REJECT &amp; BLOCK</a>
+          </td>
+        </tr>
+      </table>
+
+      <p style='color: #64748b; font-size: 11px; margin-top: 16px;'>If you did not initiate or approve this backup request, click <strong>REJECT &amp; BLOCK</strong> to prevent data extraction.</p>
+    </div>
+    <div class='footer'>
+      GRM Garments CRM &bull; Automated Data Protection Shield &bull; Hostinger Secure Mailer
+    </div>
+  </div>
+</body>
+</html>
+";
+        @mail($adminEmail, $subject, $message, $headers);
+
+        echo json_encode([
+            "status" => "success",
+            "request_code" => $requestCode,
+            "admin_email" => $adminEmail,
+            "expires_in_minutes" => 15,
+            "approve_url_preview" => $approveUrl,
+            "reject_url_preview" => $rejectUrl
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+// 2. CHECK BACKUP REQUEST STATUS (Polled by CRM Modal)
+if ($action === 'check_backup_request_status') {
+    header('Content-Type: application/json');
+    $code = trim($_GET['request_code'] ?? '');
+    if (empty($code)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "request_code required"]);
+        exit;
+    }
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        $stmt = $pdo->prepare("SELECT * FROM `backup_download_requests` WHERE `request_code` = ? LIMIT 1");
+        $stmt->execute([$code]);
+        $req = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$req) {
+            echo json_encode(["status" => "not_found", "request_status" => "NOT_FOUND"]);
+            exit;
+        }
+
+        // Check if expired
+        if ($req['status'] === 'PENDING' && strtotime($req['expires_at']) < time()) {
+            $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'EXPIRED' WHERE `id` = ?")->execute([$req['id']]);
+            $req['status'] = 'EXPIRED';
+        }
+
+        echo json_encode([
+            "status" => "success",
+            "request_status" => $req['status'],
+            "download_token" => ($req['status'] === 'APPROVED') ? $req['download_token'] : null,
+            "action_at" => $req['action_at'],
+            "action_by" => $req['action_by']
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+// 3. VERIFY BACKUP REQUEST (Webhook accessed when Admin clicks email button)
+if ($action === 'verify_backup_request') {
+    $token = trim($_GET['token'] ?? '');
+    if (empty($token)) {
+        die("Invalid verification link.");
+    }
+
+    try {
+        if (!$pdo) die("Database connection error");
+
+        $stmt = $pdo->prepare("SELECT * FROM `backup_download_requests` WHERE `token_approve` = ? OR `token_reject` = ? LIMIT 1");
+        $stmt->execute([$token, $token]);
+        $req = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$req) {
+            die("Verification token not found or already invalidated.");
+        }
+
+        $isApprove = ($token === $req['token_approve']);
+        $now = time();
+        $isExpired = (strtotime($req['expires_at']) < $now);
+
+        if ($req['status'] === 'PENDING') {
+            if ($isExpired) {
+                $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'EXPIRED' WHERE `id` = ?")->execute([$req['id']]);
+                $req['status'] = 'EXPIRED';
+            } elseif ($isApprove) {
+                $downloadToken = bin2hex(random_bytes(24));
+                $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'APPROVED', `download_token` = ?, `action_at` = NOW(), `action_by` = ? WHERE `id` = ?")
+                    ->execute([$downloadToken, $req['admin_email'], $req['id']]);
+                $req['status'] = 'APPROVED';
+
+                try {
+                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('BACKUP_DOWNLOAD_APPROVED', 'SECURITY', ?, ?, NOW())");
+                    $audit->execute([$req['admin_email'], "Approved database backup download for {$req['requester_name']} (Code: {$req['request_code']})"]);
+                } catch (Exception $ae) {}
+            } else {
+                $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'REJECTED', `download_token` = NULL, `action_at` = NOW(), `action_by` = ? WHERE `id` = ?")
+                    ->execute([$req['admin_email'], $req['id']]);
+                $req['status'] = 'REJECTED';
+
+                try {
+                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('BACKUP_DOWNLOAD_REJECTED', 'SECURITY', ?, ?, NOW())");
+                    $audit->execute([$req['admin_email'], "REJECTED and BLOCKED database backup download requested by {$req['requester_name']} (Code: {$req['request_code']})"]);
+                } catch (Exception $ae) {}
+            }
+        }
+
+        $statusBadge = $req['status'] === 'APPROVED' ? 'bg-emerald-500' : ($req['status'] === 'REJECTED' ? 'bg-rose-500' : 'bg-slate-500');
+        $title = $req['status'] === 'APPROVED' ? 'Backup Download Approved' : ($req['status'] === 'REJECTED' ? 'Backup Download Blocked' : 'Request ' . $req['status']);
+        $icon = $req['status'] === 'APPROVED' ? 'check_circle' : ($req['status'] === 'REJECTED' ? 'block' : 'info');
+        $themeColor = $req['status'] === 'APPROVED' ? '#059669' : ($req['status'] === 'REJECTED' ? '#dc2626' : '#64748b');
+
+        echo <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{$title} — GRM CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f172a; color: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { width: 100%; max-width: 440px; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); overflow: hidden; text-align: center; }
+    .header { background: {$themeColor}; color: #ffffff; padding: 32px 20px; }
+    .icon { font-size: 56px; }
+    .title { font-size: 20px; font-weight: 800; margin-top: 10px; }
+    .body { padding: 28px 24px; font-size: 13px; color: #334155; line-height: 1.6; }
+    .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin: 16px 0; text-align: left; font-size: 12px; }
+    .meta-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .meta-lbl { color: #64748b; font-weight: 600; }
+    .meta-val { color: #0f172a; font-weight: 700; font-family: monospace; }
+    .footer { padding: 16px; background: #f1f5f9; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <span class="material-symbols-outlined icon">{$icon}</span>
+      <h2 class="title">{$title}</h2>
+    </div>
+    <div class="body">
+      <p>
+HTML;
+        if ($req['status'] === 'APPROVED') {
+            echo "You have successfully <strong>APPROVED</strong> this database backup request. The requester's CRM window has now unlocked the backup file.";
+        } elseif ($req['status'] === 'REJECTED') {
+            echo "You have <strong>REJECTED &amp; BLOCKED</strong> this backup download request. Access to the database backup file has been forbidden.";
+        } else {
+            echo "This authorization request is currently marked as <strong>{$req['status']}</strong>.";
+        }
+
+        echo <<<HTML
+      </p>
+
+      <div class="meta-box">
+        <div class="meta-row"><span class="meta-lbl">Request Code:</span><span class="meta-val">{$req['request_code']}</span></div>
+        <div class="meta-row"><span class="meta-lbl">Requester:</span><span class="meta-val">{$req['requester_name']}</span></div>
+        <div class="meta-row"><span class="meta-lbl">Status:</span><span class="meta-val" style="color: {$themeColor};">{$req['status']}</span></div>
+        <div class="meta-row"><span class="meta-lbl">Recorded Time:</span><span class="meta-val">{$req['created_at']}</span></div>
+      </div>
+
+      <p style="font-size: 11px; color: #64748b;">You can safely close this browser window.</p>
+    </div>
+    <div class="footer">
+      GRM Garments CRM &bull; Security &amp; Access Control
+    </div>
+  </div>
+</body>
+</html>
+HTML;
+    } catch (Exception $e) {
+        die("Error: " . $e->getMessage());
+    }
+    exit;
+}
+
+// 4. DOWNLOAD DATABASE BACKUP FILE (Guarded by Approved Token)
 if ($action === 'backup_db') {
+    $downloadToken = trim($_GET['download_token'] ?? '');
+    $isAuthorized = false;
+    $authReq = null;
+
+    if (!empty($downloadToken)) {
+        try {
+            $authStmt = $pdo->prepare("SELECT * FROM `backup_download_requests` WHERE `download_token` = ? AND `status` = 'APPROVED' AND `expires_at` > NOW() LIMIT 1");
+            $authStmt->execute([$downloadToken]);
+            $authReq = $authStmt->fetch(PDO::FETCH_ASSOC);
+            if ($authReq) {
+                $isAuthorized = true;
+                $pdo->prepare("UPDATE `backup_download_requests` SET `download_count` = `download_count` + 1, `downloaded_at` = NOW() WHERE `id` = ?")->execute([$authReq['id']]);
+            }
+        } catch (Exception $e) {}
+    }
+
+    if (!$isAuthorized) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode([
+            "status" => "error",
+            "message" => "Admin Email Authorization Required: Database backup cannot be downloaded without Super Admin email approval or authorization has expired/been rejected."
+        ]);
+        exit;
+    }
     try {
         $stateResponse = [];
         $tables = [
@@ -6004,24 +6349,83 @@ if ($action === 'get_call_details') {
         $session['duration_seconds'] = $dur;
 
         // Fetch staff assignment history
-        $assignStmt = $pdo->prepare("SELECT * FROM `call_assignments` WHERE `call_session_id` = ? ORDER BY `assigned_at` ASC");
-        $assignStmt->execute([$callId]);
-        $assignments = $assignStmt->fetchAll(PDO::FETCH_ASSOC);
+        $assignments = [];
+        try {
+            $assignStmt = $pdo->prepare("SELECT * FROM `call_assignments` WHERE `call_session_id` = ? ORDER BY `assigned_at` ASC");
+            $assignStmt->execute([$callId]);
+            $assignments = $assignStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $assignments = [];
+        }
 
         // Fetch call activity logs
-        $logStmt = $pdo->prepare("SELECT * FROM `call_activity_logs` WHERE `call_session_id` = ? ORDER BY `created_at` ASC");
-        $logStmt->execute([$callId]);
-        $activityLogs = $logStmt->fetchAll(PDO::FETCH_ASSOC);
+        $activityLogs = [];
+        try {
+            $logStmt = $pdo->prepare("SELECT * FROM `call_activity_logs` WHERE `call_session_id` = ? ORDER BY `created_at` ASC");
+            $logStmt->execute([$callId]);
+            $activityLogs = $logStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $activityLogs = [];
+        }
 
         // Fetch staff notes
-        $noteStmt = $pdo->prepare("SELECT * FROM `call_staff_notes` WHERE `call_id` = ? ORDER BY `created_at` ASC");
-        $noteStmt->execute([$callId]);
-        $staffNotes = $noteStmt->fetchAll(PDO::FETCH_ASSOC);
+        $staffNotes = [];
+        try {
+            $noteStmt = $pdo->prepare("SELECT * FROM `call_staff_notes` WHERE `call_id` = ? ORDER BY `created_at` ASC");
+            $noteStmt->execute([$callId]);
+            $staffNotes = $noteStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            // Auto-create call_staff_notes table if not exists
+            try {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS `call_staff_notes` (
+                        `note_id` VARCHAR(60) PRIMARY KEY,
+                        `call_id` VARCHAR(50) NOT NULL,
+                        `staff_id` VARCHAR(50) NOT NULL,
+                        `staff_name` VARCHAR(100) DEFAULT NULL,
+                        `target_staff_id` VARCHAR(50) DEFAULT NULL,
+                        `target_staff_name` VARCHAR(100) DEFAULT NULL,
+                        `note_summary` TEXT NOT NULL,
+                        `handover_status` ENUM('NONE', 'ASSIGNED', 'ACKNOWLEDGED', 'RESOLVED') DEFAULT 'NONE',
+                        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        INDEX(`call_id`),
+                        INDEX(`staff_id`),
+                        INDEX(`target_staff_id`),
+                        INDEX(`created_at`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                ");
+            } catch (Exception $ex) {}
+            $staffNotes = [];
+        }
 
         // Fetch recordings
-        $recStmt = $pdo->prepare("SELECT * FROM `call_recordings` WHERE `call_id` = ? ORDER BY `created_at` ASC");
-        $recStmt->execute([$callId]);
-        $recordings = $recStmt->fetchAll(PDO::FETCH_ASSOC);
+        $recordings = [];
+        try {
+            $recStmt = $pdo->prepare("SELECT * FROM `call_recordings` WHERE `call_id` = ? ORDER BY `created_at` ASC");
+            $recStmt->execute([$callId]);
+            $recordings = $recStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            // Auto-create call_recordings table if not exists
+            try {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS `call_recordings` (
+                        `recording_id` VARCHAR(60) PRIMARY KEY,
+                        `call_id` VARCHAR(50) NOT NULL,
+                        `recording_reference` TEXT NOT NULL,
+                        `recording_status` ENUM('Processing', 'Completed', 'Failed', 'Unavailable') DEFAULT 'Unavailable',
+                        `file_size_bytes` BIGINT DEFAULT 0,
+                        `duration_seconds` INT DEFAULT 0,
+                        `audio_format` VARCHAR(20) DEFAULT 'mp3',
+                        `storage_disk` VARCHAR(50) DEFAULT 'local',
+                        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        INDEX(`call_id`),
+                        INDEX(`recording_status`),
+                        INDEX(`created_at`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                ");
+            } catch (Exception $ex) {}
+            $recordings = [];
+        }
 
         echo json_encode([
             "status" => "success",
