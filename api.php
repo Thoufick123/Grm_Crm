@@ -5140,10 +5140,14 @@ if ($action === 'request_backup_download') {
         // Send Email to Super Admin (Support custom subject/notes if provided)
         $customNotes = trim($data['custom_notes'] ?? $data['notes'] ?? '');
         $subject = !empty($data['custom_subject']) ? trim($data['custom_subject']) : ("🔒 [Action Required] Database Backup Download Request - " . $requestCode);
+        // Resolve host domain for legitimate sender to avoid SPF/DMARC rejection by Gmail
+        $hostDomain = !empty($_SERVER['HTTP_HOST']) ? preg_replace('/^www\./i', '', $_SERVER['HTTP_HOST']) : 'hostingersite.com';
+        $fromEmail = "noreply@" . $hostDomain;
+
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $headers .= "From: GRM Garments Security <security@grmgarments.com>\r\n";
-        $headers .= "Reply-To: " . $adminEmail . "\r\n";
+        $headers .= "From: GRM CRM Security Shield <{$fromEmail}>\r\n";
+        $headers .= "Reply-To: {$fromEmail}\r\n";
         $headers .= "X-Mailer: PHP/" . phpversion();
 
         $notesHtml = !empty($customNotes) ? "<div class='info-row'><span class='info-label'>Request Note:</span><span class='info-val'>" . htmlspecialchars($customNotes) . "</span></div>" : "";
@@ -5211,14 +5215,17 @@ if ($action === 'request_backup_download') {
 </body>
 </html>
 ";
-        @mail($adminEmail, $subject, $message, $headers);
+        $mailSent = @mail($adminEmail, $subject, $message, $headers, "-f" . $fromEmail);
 
         echo json_encode([
             "success" => true,
             "status" => "success",
             "request_code" => $requestCode,
             "admin_email" => $adminEmail,
+            "mail_sent" => (bool)$mailSent,
             "expires_in_minutes" => 15,
+            "approve_url" => $approveUrl,
+            "reject_url" => $rejectUrl,
             "approve_url_preview" => $approveUrl,
             "reject_url_preview" => $rejectUrl
         ]);
