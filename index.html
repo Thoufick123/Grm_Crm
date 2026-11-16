@@ -5376,10 +5376,10 @@
                   audit logs into a single downloadable JSON backup file.
                 </p>
               </div>
-              <button onclick="handleExportBackupJSON()"
+              <button id="btn-download-backup-json" onclick="handleExportBackupJSON()"
                 class="w-full py-2.5 sm:py-3 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02] cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">file_download</span>
-                <span>Download Backup File (.json)</span>
+                <span id="btn-download-backup-text">Download Backup File (.json)</span>
               </button>
             </div>
 
@@ -5432,10 +5432,10 @@
       <!-- ========================================================================= -->
       <!-- CALL & NUMBER MASKING MODULE (#view-masking) -->
       <!-- ========================================================================= -->
-      <section id="view-masking" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
+      <section id="view-masking" class="h-full overflow-y-auto p-3 sm:p-6 pb-32 sm:pb-8 hidden custom-chat-scroll">
         <div class="max-w-6xl mx-auto space-y-6">
 
-          <!-- Header Banner with Inbound Simulation Button -->
+          <!-- Header Banner with Status & Refresh -->
           <div
             class="bg-gradient-to-r from-amber-950 via-slate-900 to-emerald-950 p-6 rounded-2xl text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 border border-amber-500/30">
             <div class="flex items-center gap-4">
@@ -5448,12 +5448,6 @@
               </div>
             </div>
             <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <button type="button" onclick="triggerSimulatedIncomingCall()"
-                class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
-                title="Simulate an incoming customer call to test atomic staff claiming">
-                <span class="material-symbols-outlined text-[16px]">ring_volume</span>
-                <span>+ Simulate Inbound Call</span>
-              </button>
               <span
                 class="px-3 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 rounded-xl text-xs font-bold flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -5762,9 +5756,15 @@
               </div>
             </div>
 
-            <!-- Table Container -->
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs text-slate-600">
+            <!-- Table & Card Container -->
+            <div class="overflow-x-auto custom-chat-scroll">
+              <!-- Mobile Card List View (Visible on screens < md) -->
+              <div id="masking-sessions-mobile-list" class="md:hidden p-3 space-y-3">
+                <div class="py-8 text-center text-slate-400 text-xs">Loading call sessions from database...</div>
+              </div>
+
+              <!-- Desktop Table View (Visible on screens >= md) -->
+              <table class="hidden md:table w-full text-left text-xs text-slate-600">
                 <thead class="bg-slate-50 text-[11px] uppercase font-bold text-slate-500 border-b border-slate-200">
                   <tr>
                     <th class="py-3 px-4">Session ID / Date</th>
@@ -6061,13 +6061,13 @@
                       <span class="text-[10px] text-teal-600 font-bold">Single Row / Columns</span>
                     </label>
                     <select id="psc-logo-position" onchange="onPackingSlipLogoPosChange()"
-                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="single_col1">Single Row: Column 1 Left (Logo Left, Brand Right)</option>
-                      <option value="single_col2">Single Row: Column 2 Right (Brand Left, Logo Right)</option>
-                      <option value="single_center">Single Row: Center Inline (Logo &amp; Brand Side-by-Side)</option>
-                      <option value="left">Stacked: Column 1 (Logo on Top Left)</option>
-                      <option value="center">Stacked: Center (Logo on Top Center)</option>
-                      <option value="right">Stacked: Column 2 (Logo on Top Right)</option>
+                      class="w-full max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+                      <option value="single_col1">Row: Col 1 Left (Logo Left)</option>
+                      <option value="single_col2">Row: Col 2 Right (Logo Right)</option>
+                      <option value="single_center">Row: Center (Side-by-Side)</option>
+                      <option value="left">Stacked: Top Left</option>
+                      <option value="center">Stacked: Top Center</option>
+                      <option value="right">Stacked: Top Right</option>
                     </select>
                   </div>
 
@@ -6078,13 +6078,13 @@
                       <span class="text-[10px] text-teal-600 font-bold">Single Row / Columns</span>
                     </label>
                     <select id="psc-header-align" onchange="onPackingSlipHeaderAlignChange()"
-                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="right">Single Row: Column 2 Right (Brand Right, Logo Left)</option>
-                      <option value="left">Single Row: Column 1 Left (Brand Left, Logo Right)</option>
-                      <option value="center">Single Row: Center Inline (Logo &amp; Brand Side-by-Side)</option>
-                      <option value="stacked_left">Stacked: Column 1 (Brand Below Logo - Left)</option>
-                      <option value="stacked_center">Stacked: Center (Brand Below Logo - Center)</option>
-                      <option value="stacked_right">Stacked: Column 2 (Brand Below Logo - Right)</option>
+                      class="w-full max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+                      <option value="right">Row: Col 2 Right (Brand Right)</option>
+                      <option value="left">Row: Col 1 Left (Brand Left)</option>
+                      <option value="center">Row: Center (Side-by-Side)</option>
+                      <option value="stacked_left">Stacked: Below Logo (Left)</option>
+                      <option value="stacked_center">Stacked: Below Logo (Center)</option>
+                      <option value="stacked_right">Stacked: Below Logo (Right)</option>
                     </select>
                   </div>
 
@@ -6095,12 +6095,12 @@
                       <span class="text-[10px] text-amber-700 font-bold">Dispatch Box</span>
                     </label>
                     <select id="psc-sender-position" onchange="onPackingSlipConfigFieldChange()"
-                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="left">Single Row: Column 1 Left (Sender Left, Customer Right)</option>
-                      <option value="right">Single Row: Column 2 Right (Customer Left, Sender Right)</option>
-                      <option value="center">Single Row: Center (Full Width Inline)</option>
-                      <option value="top">Stacked: Full Width Top (Above Customer Box)</option>
-                      <option value="bottom">Stacked: Full Width Bottom (Below Items Table)</option>
+                      class="w-full max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+                      <option value="left">Row: Col 1 Left (Sender Left)</option>
+                      <option value="right">Row: Col 2 Right (Sender Right)</option>
+                      <option value="center">Row: Center (Full Width)</option>
+                      <option value="top">Stacked: Top (Above Customer)</option>
+                      <option value="bottom">Stacked: Bottom (Below Items)</option>
                     </select>
                   </div>
 
@@ -6111,12 +6111,12 @@
                       <span class="text-[10px] text-blue-700 font-bold">Delivery Box</span>
                     </label>
                     <select id="psc-customer-position" onchange="onPackingSlipConfigFieldChange()"
-                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="right">Single Row: Column 2 Right (Customer Right - Recommended)</option>
-                      <option value="left">Single Row: Column 1 Left (Customer Left, Sender Right)</option>
-                      <option value="center">Single Row: Center (Full Width Inline)</option>
-                      <option value="top">Stacked: Full Width Top (Above Sender Box)</option>
-                      <option value="bottom">Stacked: Full Width Bottom (Below Items Table)</option>
+                      class="w-full max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+                      <option value="right">Row: Col 2 Right (Customer Right)</option>
+                      <option value="left">Row: Col 1 Left (Customer Left)</option>
+                      <option value="center">Row: Center (Full Width)</option>
+                      <option value="top">Stacked: Top (Above Sender)</option>
+                      <option value="bottom">Stacked: Bottom (Below Items)</option>
                     </select>
                   </div>
 
@@ -6127,11 +6127,11 @@
                       <span class="text-[10px] text-purple-700 font-bold">Badge Bar</span>
                     </label>
                     <select id="psc-meta-position" onchange="onPackingSlipConfigFieldChange()"
-                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="above">Single Row: Above Items Table (Full Width)</option>
-                      <option value="below">Single Row: Below Items Table (Full Width)</option>
-                      <option value="top">Stacked: Top (Immediately Below Header)</option>
-                      <option value="bottom">Stacked: Bottom (Above Packer Signature)</option>
+                      class="w-full max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+                      <option value="above">Row: Above Items Table</option>
+                      <option value="below">Row: Below Items Table</option>
+                      <option value="top">Stacked: Below Header</option>
+                      <option value="bottom">Stacked: Above Signature</option>
                     </select>
                   </div>
 
@@ -6142,11 +6142,11 @@
                       <span class="text-[10px] text-slate-600 font-bold">Instructions</span>
                     </label>
                     <select id="psc-notes-position" onchange="onPackingSlipConfigFieldChange()"
-                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="bottom">Single Row: Bottom (Footer - Recommended)</option>
-                      <option value="top">Single Row: Top (Below Header)</option>
-                      <option value="below_items">Single Row: Below Items Table</option>
-                      <option value="stacked_bottom">Stacked: Bottom (Above Packer Signature)</option>
+                      class="w-full max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+                      <option value="bottom">Row: Bottom Footer (Recommended)</option>
+                      <option value="top">Row: Top (Below Header)</option>
+                      <option value="below_items">Row: Below Items Table</option>
+                      <option value="stacked_bottom">Stacked: Above Signature</option>
                     </select>
                   </div>
 
@@ -6157,13 +6157,13 @@
                       <span class="text-[10px] text-amber-700 font-bold">Courier Placement</span>
                     </label>
                     <select id="psc-courier-position" onchange="onPackingSlipConfigFieldChange()"
-                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="right">Single Row: Column 2 Right (Brand Right, Logo Left)</option>
-                      <option value="left">Single Row: Column 1 Left (Brand Left, Logo Right)</option>
-                      <option value="center">Single Row: Center Inline (Logo &amp; Brand Side-by-Side)</option>
-                      <option value="stacked_left">Stacked: Column 1 (Brand Below Logo - Left)</option>
-                      <option value="stacked_center">Stacked: Center (Brand Below Logo - Center)</option>
-                      <option value="stacked_right">Stacked: Column 2 (Brand Below Logo - Right)</option>
+                      class="w-full max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+                      <option value="right">Row: Col 2 Right (Courier Right)</option>
+                      <option value="left">Row: Col 1 Left (Courier Left)</option>
+                      <option value="center">Row: Center (Inline)</option>
+                      <option value="stacked_left">Stacked: Top Left</option>
+                      <option value="stacked_center">Stacked: Center</option>
+                      <option value="stacked_right">Stacked: Top Right</option>
                     </select>
                   </div>
 
@@ -6174,13 +6174,13 @@
                       <span class="text-[10px] text-indigo-700 font-bold">Identifier Placement</span>
                     </label>
                     <select id="psc-barcode-position" onchange="onPackingSlipConfigFieldChange()"
-                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500">
-                      <option value="right">Single Row: Column 2 Right (Brand Right, Logo Left)</option>
-                      <option value="left">Single Row: Column 1 Left (Brand Left, Logo Right)</option>
-                      <option value="center">Single Row: Center Inline (Logo &amp; Brand Side-by-Side)</option>
-                      <option value="stacked_left">Stacked: Column 1 (Brand Below Logo - Left)</option>
-                      <option value="stacked_center">Stacked: Center (Brand Below Logo - Center)</option>
-                      <option value="stacked_right">Stacked: Column 2 (Brand Below Logo - Right)</option>
+                      class="w-full max-w-full truncate px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+                      <option value="right">Row: Col 2 Right (Barcode Right)</option>
+                      <option value="left">Row: Col 1 Left (Barcode Left)</option>
+                      <option value="center">Row: Center (Inline)</option>
+                      <option value="stacked_left">Stacked: Top Left</option>
+                      <option value="stacked_center">Stacked: Center</option>
+                      <option value="stacked_right">Stacked: Top Right</option>
                     </select>
                   </div>
 
@@ -11597,12 +11597,85 @@
     </div>
   </div>
 
+  <!-- ======================================================= -->
+  <!-- MODAL: BACKUP DOWNLOAD ADMIN EMAIL APPROVAL DISPATCHER -->
+  <!-- ======================================================= -->
+  <div id="modal-backup-email-approval" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-fadeIn">
+      <!-- Header -->
+      <div class="p-5 bg-gradient-to-r from-slate-900 via-brand-dark to-emerald-950 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shadow-sm">
+            <span class="material-symbols-outlined text-[22px]">mark_email_unread</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm tracking-tight">Admin Authorization Required</h3>
+            <p class="text-[11px] text-emerald-300 font-medium">Database Export Security Gate</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeBackupApprovalModal()" class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 space-y-4">
+        <!-- Status Box -->
+        <div id="backup-approval-status-box" class="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+          <div id="backup-approval-spinner" class="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin flex-shrink-0 mt-0.5"></div>
+          <div class="space-y-1">
+            <h4 id="backup-approval-title" class="font-bold text-xs text-amber-900">Waiting for Admin Email Approval...</h4>
+            <p id="backup-approval-desc" class="text-[11px] text-amber-700 leading-relaxed">
+              A security verification request has been sent to the Super Admin's email (<span id="backup-approval-admin-email" class="font-bold font-mono">admin@grmgarments.com</span>). The backup file will download automatically as soon as the Admin clicks <b>[Approve]</b>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Request Details -->
+        <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2 text-xs">
+          <div class="flex items-center justify-between text-slate-600">
+            <span class="text-slate-500 font-medium">Request Code:</span>
+            <span id="backup-approval-req-code" class="font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">REQ-BACKUP-0000</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-600">
+            <span class="text-slate-500 font-medium">Requested By:</span>
+            <span id="backup-approval-requester" class="font-semibold text-slate-800">Super Admin (admin)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-600">
+            <span class="text-slate-500 font-medium">Valid For:</span>
+            <span id="backup-approval-timer" class="font-bold text-emerald-600 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">timer</span>
+              <span id="backup-timer-countdown">15:00</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Explanatory note -->
+        <div class="text-[11px] text-slate-500 leading-normal flex items-start gap-1.5">
+          <span class="material-symbols-outlined text-[15px] text-slate-400 mt-0.5 flex-shrink-0">info</span>
+          <span>If the Super Admin clicks <b>[Reject]</b> in the email, the backup request will be immediately terminated and download access will be locked.</span>
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+        <button type="button" onclick="checkBackupApprovalStatusNow()" class="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-2xs">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+          <span>Check Status Now</span>
+        </button>
+        <button type="button" onclick="closeBackupApprovalModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition">
+          Close Window
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- LOAD WEBRTC VOICE & AUDIO RECORDING ENGINE -->
   <script src="assets/js/voice-recorder.js"></script>
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261116_v17"></script>
+  <script src="crm_app.js?v=20261116_v16"></script>
 </body>
 
 </html>
