@@ -5374,6 +5374,19 @@
                   Export all customer profiles, chat history, queries, staff assignments, product reservations, and
                   audit logs into a single downloadable JSON backup file.
                 </p>
+                <!-- Customizable Target Admin Email Input -->
+                <div class="pt-2">
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                    <span class="flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px] text-emerald-600">mark_email_read</span>
+                      <span>Admin Verification Email:</span>
+                    </span>
+                    <span class="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-semibold border border-emerald-200">Customizable</span>
+                  </label>
+                  <input id="input-backup-custom-email" type="email" placeholder="e.g. admin@grmgarments.com"
+                    class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition font-mono font-medium text-slate-800" />
+                  <p class="text-[10px] text-slate-400 mt-1">Approval link will be sent to this email address to authorize download.</p>
+                </div>
               </div>
               <button id="btn-download-backup-json" onclick="handleExportBackupJSON()"
                 class="w-full py-2.5 sm:py-3 bg-brand-wa hover:bg-brand-waDark text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02] cursor-pointer">
@@ -11646,6 +11659,37 @@
               <span class="material-symbols-outlined text-[14px]">timer</span>
               <span id="backup-timer-countdown">15:00</span>
             </span>
+          </div>
+        </div>
+
+        <!-- Target Email Customization Box in Modal -->
+        <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-700 font-bold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[15px] text-emerald-600">outgoing_mail</span>
+              <span>Verification Email Sent To:</span>
+            </span>
+            <button type="button" onclick="toggleEditBackupEmail()" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-0.5 cursor-pointer hover:underline">
+              <span class="material-symbols-outlined text-[13px]">edit</span>
+              <span id="btn-toggle-edit-email-text">Change Email</span>
+            </button>
+          </div>
+          
+          <div id="backup-email-display-view" class="flex items-center justify-between">
+            <span id="backup-approval-admin-email-badge" class="font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-emerald-200">admin@grmgarments.com</span>
+            <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Sent</span>
+            </span>
+          </div>
+
+          <div id="backup-email-edit-view" class="hidden pt-1 items-center gap-2">
+            <input id="input-modal-backup-custom-email" type="email" placeholder="Enter custom recipient email..."
+              class="flex-1 px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+            <button type="button" onclick="resendBackupApprovalToCustomEmail()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 cursor-pointer shadow-xs">
+              <span class="material-symbols-outlined text-[13px]">send</span>
+              <span>Resend</span>
+            </button>
           </div>
         </div>
 

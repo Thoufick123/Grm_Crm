@@ -1168,6 +1168,16 @@ function enforceGranularActionPermissions() {
       }
     }
 
+    const inputCardEmail = document.getElementById('input-backup-custom-email');
+    if (inputCardEmail && !inputCardEmail.value) {
+      const savedEmail = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_CRM_CUSTOM_BACKUP_EMAIL') : null;
+      if (savedEmail) {
+        inputCardEmail.value = savedEmail;
+      } else if (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.email) {
+        inputCardEmail.value = CURRENT_USER.email;
+      }
+    }
+
     // 2. Restore Backup Card (Edit)
     const btnBakRestore = document.querySelector('[onclick*="backup-file-input"]');
     const inputBakFile = document.getElementById('backup-file-input');
@@ -29206,7 +29216,7 @@ function closeBackupApprovalModal() {
   }
 }
 
-async function handleExportBackupJSON() {
+async function handleExportBackupJSON(customEmailOverride) {
   // If download has been rejected and permanently locked
   if (IS_BACKUP_DOWNLOAD_LOCKED) {
     if (typeof showToast === 'function') {
@@ -29229,8 +29239,11 @@ async function handleExportBackupJSON() {
   const requesterName = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) ? CURRENT_USER.name : 'Super Admin';
   const requesterRole = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.role) ? CURRENT_USER.role : 'Super Admin';
 
+  const inputCardEmail = document.getElementById('input-backup-custom-email');
+  const targetEmail = (customEmailOverride || (inputCardEmail ? inputCardEmail.value.trim() : '') || (typeof localStorage !== 'undefined' ? localStorage.getItem('GRM_CRM_CUSTOM_BACKUP_EMAIL') : '') || '').trim();
+
   if (typeof showToast === 'function') {
-    showToast('Requesting Authorization...', 'Sending approval request to Super Admin email...', 'mark_email_unread', 'sky');
+    showToast('Requesting Authorization...', targetEmail ? `Sending approval request to ${targetEmail}...` : 'Sending approval request to Super Admin email...', 'mark_email_unread', 'sky');
   }
 
   try {
@@ -29240,7 +29253,8 @@ async function handleExportBackupJSON() {
       body: JSON.stringify({
         requester_id: requesterId,
         requester_name: requesterName,
-        requester_role: requesterRole
+        requester_role: requesterRole,
+        custom_admin_email: targetEmail
       })
     });
 
@@ -29252,6 +29266,10 @@ async function handleExportBackupJSON() {
     }
 
     CURRENT_BACKUP_REQUEST_CODE = data.request_code;
+
+    if (data.admin_email) {
+      try { localStorage.setItem('GRM_CRM_CUSTOM_BACKUP_EMAIL', data.admin_email); } catch (e) {}
+    }
 
     // Open modal
     const modal = document.getElementById('modal-backup-email-approval');
@@ -29266,6 +29284,16 @@ async function handleExportBackupJSON() {
 
     const emailEl = document.getElementById('backup-approval-admin-email');
     if (emailEl) emailEl.innerText = data.admin_email || 'admin@grmgarments.com';
+
+    const emailBadge = document.getElementById('backup-approval-admin-email-badge');
+    if (emailBadge) emailBadge.innerText = data.admin_email || 'admin@grmgarments.com';
+
+    const inputModalEmail = document.getElementById('input-modal-backup-custom-email');
+    if (inputModalEmail) inputModalEmail.value = data.admin_email || targetEmail || '';
+
+    if (inputCardEmail && data.admin_email) {
+      inputCardEmail.value = data.admin_email;
+    }
 
     const requesterEl = document.getElementById('backup-approval-requester');
     if (requesterEl) requesterEl.innerText = `${requesterName} (${requesterRole})`;
@@ -29420,6 +29448,60 @@ function renderBackupApprovalStatusUI(status, adminEmail) {
     desc.className = 'text-[11px] text-slate-600 leading-relaxed';
     desc.innerText = 'The 15-minute authorization window has expired without admin approval. Please initiate a new request.';
   }
+}
+
+function toggleEditBackupEmail() {
+  const editView = document.getElementById('backup-email-edit-view');
+  const btnText = document.getElementById('btn-toggle-edit-email-text');
+  if (!editView) return;
+  const isHidden = editView.classList.contains('hidden');
+  if (isHidden) {
+    editView.classList.remove('hidden');
+    editView.classList.add('flex');
+    if (btnText) btnText.innerText = 'Cancel';
+    const input = document.getElementById('input-modal-backup-custom-email');
+    if (input) {
+      const currentEmail = document.getElementById('backup-approval-admin-email');
+      if (currentEmail && currentEmail.innerText) input.value = currentEmail.innerText.trim();
+      input.focus();
+    }
+  } else {
+    editView.classList.add('hidden');
+    editView.classList.remove('flex');
+    if (btnText) btnText.innerText = 'Change Email';
+  }
+}
+
+async function resendBackupApprovalToCustomEmail() {
+  const input = document.getElementById('input-modal-backup-custom-email');
+  if (!input) return;
+  const email = input.value.trim();
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    alert('Please enter a valid email address (e.g. name@example.com).');
+    return;
+  }
+
+  try { localStorage.setItem('GRM_CRM_CUSTOM_BACKUP_EMAIL', email); } catch (e) {}
+
+  const inputCardEmail = document.getElementById('input-backup-custom-email');
+  if (inputCardEmail) inputCardEmail.value = email;
+
+  toggleEditBackupEmail();
+  if (typeof showToast === 'function') {
+    showToast('Resending Verification...', 'Sending new approval link to ' + email, 'mark_email_read', 'emerald');
+  }
+
+  // Clear existing poller and countdown
+  if (BACKUP_APPROVAL_POLLER) {
+    clearInterval(BACKUP_APPROVAL_POLLER);
+    BACKUP_APPROVAL_POLLER = null;
+  }
+  if (BACKUP_APPROVAL_COUNTDOWN) {
+    clearInterval(BACKUP_APPROVAL_COUNTDOWN);
+    BACKUP_APPROVAL_COUNTDOWN = null;
+  }
+
+  await handleExportBackupJSON(email);
 }
 
 function lockBackupDownloadButtonUI() {
@@ -29617,6 +29699,8 @@ window.handleExportBackupJSON = handleExportBackupJSON;
 window.handleImportBackupJSON = handleImportBackupJSON;
 window.closeBackupApprovalModal = closeBackupApprovalModal;
 window.checkBackupApprovalStatusNow = checkBackupApprovalStatusNow;
+window.toggleEditBackupEmail = toggleEditBackupEmail;
+window.resendBackupApprovalToCustomEmail = resendBackupApprovalToCustomEmail;
 
 // =========================================================================
 // 13.5. STAFF MANAGEMENT & GRANULAR ROLE-BASED ACCESS CONTROL (RBAC) ENGINE
