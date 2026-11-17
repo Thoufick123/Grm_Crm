@@ -761,7 +761,7 @@ function broadcastAccountsUpdate() {
 
 
 function resolveCrmBaseUrl() {
-    let url = process.env.CRM_URL || process.env.APP_URL || 'https://mediumturquoise-dugong-987946.hostingersite.com';
+    let url = process.env.CRM_URL || process.env.APP_URL || 'https://maroon-partridge-532881.hostingersite.com';
     if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url;
     }
@@ -777,7 +777,7 @@ function getPublicBaseUrl() {
         if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
         return u.replace(/\/+$/, '');
     }
-    return 'https://mediumturquoise-dugong-987946.hostingersite.com';
+    return 'https://maroon-partridge-532881.hostingersite.com';
 }
 
 // Fast CRM API Dispatcher with instant CRM_BASE_URL priority
@@ -804,6 +804,9 @@ async function callCrmApi(action, postData) {
             if (resp.ok) {
                 const data = await resp.json();
                 if (data) {
+                    if (action === 'sync_bridge_url') {
+                        console.log(`📡 [CRM Sync] ${action} -> ${base}:`, data?.message || data?.status || 'OK');
+                    }
                     return data;
                 }
             }
@@ -861,6 +864,20 @@ async function syncTunnelToCrm() {
                 if (res && res.status === 'success') {
                     console.log(`✅ [Tunnel Auto-Sync] Successfully synced bridge URL to CRM!`);
                 }
+
+                // Periodically ensure Hostinger CRM reflects all active connected WhatsApp accounts
+                for (const [accId, accObj] of accounts.entries()) {
+                    if (accObj.status === 'CONNECTED' && accObj.connectedNumber) {
+                        await callCrmApi('sync_account_status', {
+                            account_slot: accId,
+                            status: 'CONNECTED',
+                            phone_number: accObj.connectedNumber,
+                            qr_code: null,
+                            connected_name: accObj.connectedName,
+                            label: accObj.label
+                        }).catch(() => {});
+                    }
+                }
             }
         }
     } catch (e) {
@@ -869,6 +886,25 @@ async function syncTunnelToCrm() {
 }
 setTimeout(syncTunnelToCrm, 3000);
 setInterval(syncTunnelToCrm, 5 * 60 * 1000);
+
+// Active Live Connection Keeper: Continuously ensure Hostinger reflects all active WhatsApp sessions
+setInterval(async () => {
+    for (const [accId, accObj] of accounts.entries()) {
+        if (accObj.status === 'CONNECTED' && accObj.connectedNumber) {
+            const res = await callCrmApi('sync_account_status', {
+                account_slot: accId,
+                status: 'CONNECTED',
+                phone_number: accObj.connectedNumber,
+                qr_code: null,
+                connected_name: accObj.connectedName,
+                label: accObj.label
+            }).catch(e => ({ err: e.message }));
+            console.log(`[Status Keeper] ${accId} (${accObj.connectedNumber}) -> synced:`, res?.message || res?.status);
+        } else {
+            console.log(`[Status Keeper] ${accId} not connected: status=${accObj.status}, num=${accObj.connectedNumber}`);
+        }
+    }
+}, 5000);
 
 console.log(`🚀 [Hostinger Mode]: WhatsApp Bridge connected to CRM at ${CRM_BASE_URL}`);
 
@@ -1000,6 +1036,10 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
     try {
         const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+        if (state.creds?.me?.id && !state.creds.registered) {
+            state.creds.registered = true;
+            try { await saveCreds(); } catch (e) {}
+        }
         const { version } = await fetchLatestBaileysVersion();
 
         const sock = makeWASocket({
@@ -1024,6 +1064,10 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             const { connection, lastDisconnect, qr } = update;
 
             if (qr) {
+                if (accountObj.status === 'CONNECTED' || Boolean(state.creds?.me?.id)) {
+                    console.log(`[QR Bridge - ${accountId}] Ignoring spurious QR code since session is already authenticated for ${state.creds?.me?.id || accountObj.connectedNumber}.`);
+                    return;
+                }
                 console.log(`[QR Bridge - ${accountId}] New QR Code generated for ${label}.`);
                 try {
                     accountObj.qrImage = await qrcode.toDataURL(qr);
@@ -1103,6 +1147,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     account_slot: accountId,
                     status: 'CONNECTED',
                     phone_number: accountObj.connectedNumber,
+                    qr_code: null,
                     connected_name: accountObj.connectedName,
                     label: label
                 }).catch(() => {});
