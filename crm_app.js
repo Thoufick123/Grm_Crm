@@ -3469,8 +3469,8 @@ function getAvailableWhatsAppAccounts() {
       return {
         ...acc,
         status: liveAcc.status || acc.status,
-        connected_number: (liveAcc.status === 'CONNECTED' ? (liveAcc.connected_number || acc.connected_number) : (liveAcc.status === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link')),
-        connected_name: liveAcc.connected_name || acc.connected_name,
+        connected_number: (liveAcc.status === 'CONNECTED' ? (liveAcc.connected_number || liveAcc.phone || acc.connected_number) : (liveAcc.status === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link')),
+        connected_name: liveAcc.connected_name || liveAcc.name || acc.connected_name,
         label: liveAcc.label || acc.label,
         qr_image: liveAcc.qr_image || acc.qr_image || liveAcc.qr || acc.qr,
         qr: liveAcc.qr_image || liveAcc.qr || acc.qr
@@ -28705,13 +28705,36 @@ function fetchQRBridgeStatus(btnEl) {
                 const live = MULTI_ACCOUNTS_STATE.find(a => a.id === line.id);
                 if (live) {
                   line.status = live.status;
-                  line.connected_number = live.phone || line.connected_number;
+                  if (live.status === 'CONNECTED') {
+                    line.connected_number = live.phone || line.connected_number;
+                    line.qr_image = null;
+                  } else if (live.status === 'SCAN_QR') {
+                    line.qr_image = live.qr_image;
+                    line.connected_number = 'Scan QR Code';
+                  } else {
+                    line.connected_number = 'Awaiting Link';
+                    line.qr_image = null;
+                  }
                 }
               });
             }
           }
           if (data.whatsappAccount) {
             CRM_STATE.whatsappAccount = Object.assign(CRM_STATE.whatsappAccount || {}, data.whatsappAccount);
+          }
+          const primary = (MULTI_ACCOUNTS_STATE || []).find(a => a.id === 'account_1') || (MULTI_ACCOUNTS_STATE || [])[0];
+          if (primary) {
+            if (primary.status === 'CONNECTED' && primary.phone) {
+              CRM_STATE.whatsappAccount.phoneNumber = primary.phone;
+              CRM_STATE.whatsappAccount.status = 'CONNECTED';
+            } else if (primary.status === 'SCAN_QR' || primary.status === 'DISCONNECTED') {
+              CRM_STATE.whatsappAccount.status = primary.status;
+            }
+            updateQRBridgeUI({
+              connection: primary.status,
+              connected_number: primary.phone,
+              qr_image: primary.qr_image
+            });
           }
           saveCRMState();
           updateConfiguredPhoneDisplays();

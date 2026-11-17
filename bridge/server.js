@@ -705,7 +705,7 @@ function broadcastAccountsUpdate() {
 
 
 function resolveCrmBaseUrl() {
-    let url = process.env.CRM_URL || process.env.APP_URL || 'http://127.0.0.1:8000';
+    let url = process.env.CRM_URL || process.env.APP_URL || 'https://mediumturquoise-dugong-987946.hostingersite.com';
     if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url;
     }
@@ -713,7 +713,7 @@ function resolveCrmBaseUrl() {
 }
 const CRM_BASE_URL = resolveCrmBaseUrl();
 
-// Dynamic Public Base URL Resolver (Detects Cloudflare Tunnel or Public URL)
+// Dynamic Public Base URL Resolver (Hostinger CRM Base)
 function getPublicBaseUrl() {
     if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL.replace(/\/+$/, '');
     if (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1')) {
@@ -721,23 +721,7 @@ function getPublicBaseUrl() {
         if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
         return u.replace(/\/+$/, '');
     }
-
-    // Read live Cloudflare tunnel URL from PM2 logs if active
-    try {
-        const userProfile = process.env.USERPROFILE || 'C:\\Users\\ADMIN';
-        const cfLog = path.join(userProfile, '.pm2', 'logs', 'cf-tunnel-error.log');
-        if (fs.existsSync(cfLog)) {
-            const lines = fs.readFileSync(cfLog, 'utf8').split('\n');
-            for (let i = lines.length - 1; i >= 0; i--) {
-                const line = lines[i];
-                if (line.includes('dest=') || line.includes('error=')) continue;
-                const m = line.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
-                if (m) return m[0];
-            }
-        }
-    } catch (e) {}
-
-    return 'http://localhost:8000';
+    return 'https://mediumturquoise-dugong-987946.hostingersite.com';
 }
 
 // Fast CRM API Dispatcher with instant CRM_BASE_URL priority
@@ -794,41 +778,8 @@ initVoiceSignaling({ app, io, callCrmApi });
 // Forward inbound WhatsApp message to CRM PHP API for persistent file storage
 
 
-let _lastSyncedTunnelUrl = null;
-async function autoSyncTunnelUrlToHostinger() {
-    try {
-        const logPath = path.join(process.env.USERPROFILE || process.env.HOME || '', '.pm2', 'logs', 'cf-tunnel-error.log');
-        if (!fs.existsSync(logPath)) return;
-        const logContent = fs.readFileSync(logPath, 'utf8');
-        const matches = [...logContent.matchAll(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/g)];
-        if (matches.length === 0) return;
-        const latestUrl = matches[matches.length - 1][0];
-
-        if (latestUrl && latestUrl !== _lastSyncedTunnelUrl) {
-            _lastSyncedTunnelUrl = latestUrl;
-            console.log(`📡 [Auto-Tunnel Sync] Found live Cloudflare URL: ${latestUrl}`);
-            if (typeof fetch === 'function') {
-                const res = await fetch(`${CRM_BASE_URL}/api.php?action=sync_bridge_url`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        bridge_url: latestUrl,
-                        secret: 'GRM_BRIDGE_AUTO_SYNC_2026'
-                    })
-                });
-                const data = await res.json();
-                if (data && data.status === 'success') {
-                    _lastSyncedTunnelUrl = latestUrl;
-                    console.log(`✅ [Auto-Tunnel Sync] Successfully updated Hostinger CRM bridge URL to: ${latestUrl}`);
-                }
-            }
-        }
-    } catch (e) {
-        // Silent catch
-    }
-}
-setTimeout(autoSyncTunnelUrlToHostinger, 2000);
-setInterval(autoSyncTunnelUrlToHostinger, 15000);
+// Hostinger Direct Mode: Cloudflare tunnel syncing disabled as requested
+console.log(`🚀 [Hostinger Mode]: WhatsApp Bridge connected to CRM at ${CRM_BASE_URL}`);
 
 async function forwardToCRM(data) {
     try {
@@ -965,7 +916,13 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             logger: pino({ level: 'silent' }),
             printQRInTerminal: false,
             auth: state,
-            browser: [`GRM CRM (${label})`, 'Chrome', '124.0.0.0']
+            browser: [`GRM CRM (${label})`, 'Chrome', '124.0.0.0'],
+            syncFullHistory: false, // Prevents loading heavy history that crashes or times out after 2 min
+            keepAliveIntervalMs: 15000, // Send keep-alive every 15s to keep socket alive
+            connectTimeoutMs: 60000,
+            defaultQueryTimeoutMs: 60000,
+            generateHighQualityLinkPreview: false,
+            retryRequestDelayMs: 250
         });
 
         accountObj.sock = sock;
@@ -982,6 +939,13 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     accountObj.status = 'SCAN_QR';
                     accountObj.isStarting = false;
                     broadcastAccountsUpdate();
+                    // Sync QR code to Hostinger CRM API
+                    callCrmApi('sync_account_status', {
+                        account_slot: accountId,
+                        status: 'SCAN_QR',
+                        qr_code: accountObj.qrImage,
+                        label: label
+                    }).catch(() => {});
                 } catch (err) {
                     console.error('QR Generate Error:', err);
                 }
@@ -998,6 +962,14 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 accountObj.connectedName = null;
                 accountObj.isStarting = false;
                 broadcastAccountsUpdate();
+
+                // Notify Hostinger CRM of disconnection
+                callCrmApi('sync_account_status', {
+                    account_slot: accountId,
+                    status: 'DISCONNECTED',
+                    phone_number: null,
+                    label: label
+                }).catch(() => {});
 
                 if (isLoggedOut) {
                     console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Clearing credentials and generating new QR Code...`);
@@ -1018,10 +990,10 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         initAccountSession(accountId, label);
                     }, 15000);
                 } else {
-                    // Reconnect on network drops
+                    // Reconnect on network drops / keep-alive hiccups without clearing session
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-                    }, 5000);
+                    }, 4000);
                 }
             } else if (connection === 'open') {
                 accountObj.status = 'CONNECTED';
@@ -1036,6 +1008,15 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                 console.log(`[QR Bridge - ${accountId}] Connected Successfully: ${accountObj.connectedNumber} (${accountObj.connectedName})`);
                 broadcastAccountsUpdate();
+
+                // Persist CONNECTED status directly to Hostinger CRM database & config
+                callCrmApi('sync_account_status', {
+                    account_slot: accountId,
+                    status: 'CONNECTED',
+                    phone_number: accountObj.connectedNumber,
+                    connected_name: accountObj.connectedName,
+                    label: label
+                }).catch(() => {});
             }
         });
 
@@ -2069,6 +2050,10 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
 
         if (accounts.has(targetId)) {
             const acc = accounts.get(targetId);
+            // If already connected, do not wipe session! Keep active connection
+            if (acc.status === 'CONNECTED' && acc.connectedNumber) {
+                return res.json({ status: 'success', message: `Account ${targetId} is already connected (${acc.connectedNumber}).` });
+            }
             if (acc.sock) {
                 try { await acc.sock.logout(); } catch (e) { }
                 try { acc.sock.end(); } catch (e) { }

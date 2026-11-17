@@ -266,8 +266,43 @@ if ($action === 'get_state' || $action === 'get_all') {
         }
 
         // 1. WhatsApp Account Config
-        $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` ORDER BY `id` ASC");
-        $waAccounts = $waStmt->fetchAll();
+        $waAccounts = [];
+        if ($pdo) {
+            try {
+                $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` ORDER BY `id` ASC");
+                $waAccounts = $waStmt->fetchAll();
+            } catch (Exception $e) {}
+        }
+        // Merge with json config if available
+        if (file_exists($configFile)) {
+            $cfgData = json_decode(file_get_contents($configFile), true);
+            if (!empty($cfgData['connected_lines']) && is_array($cfgData['connected_lines'])) {
+                foreach ($cfgData['connected_lines'] as $line) {
+                    $found = false;
+                    foreach ($waAccounts as &$wa) {
+                        if (($wa['account_slot'] ?? '') === ($line['id'] ?? '')) {
+                            if (!empty($line['qr_code']) && empty($wa['qr_code'])) {
+                                $wa['qr_code'] = $line['qr_code'];
+                            }
+                            if (!empty($line['status']) && ($line['status'] === 'SCAN_QR' || $line['status'] === 'CONNECTED')) {
+                                $wa['status'] = $line['status'];
+                            }
+                            $found = true;
+                            break;
+                        }
+                    }
+                    if (!$found) {
+                        $waAccounts[] = [
+                            'account_slot' => $line['id'],
+                            'display_name' => $line['label'] ?? $line['id'],
+                            'phone_number' => $line['phone_number'] ?? '',
+                            'status' => $line['status'] ?? 'DISCONNECTED',
+                            'qr_code' => $line['qr_code'] ?? null
+                        ];
+                    }
+                }
+            }
+        }
         $primaryWA = $waAccounts[0] ?? [
             'id' => 1,
             'business_name' => 'GRM Garments Business Hub',
@@ -921,13 +956,20 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Update MySQL
     if ($pdo) {
+        $slotId = $postData['account_id'] ?? $postData['accountId'] ?? $postData['account_slot'] ?? 'account_1';
         try {
             $stmt = $pdo->prepare("
-                UPDATE `whatsapp_accounts` 
-                SET `phone_number` = ?, `business_name` = ?, `display_name` = ?, `brand_name` = ?
-                WHERE `account_slot` = 'account_1'
+                INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`)
+                VALUES (?, ?, ?, ?, ?, 'CONNECTED')
+                ON DUPLICATE KEY UPDATE 
+                    `phone_number` = VALUES(`phone_number`),
+                    `business_name` = VALUES(`business_name`),
+                    `display_name` = VALUES(`display_name`),
+                    `brand_name` = VALUES(`brand_name`),
+                    `status` = 'CONNECTED'
             ");
             $stmt->execute([
+                $slotId,
                 $updatedConfig['phone_number'],
                 $updatedConfig['business_name'] ?? 'GRM Garments',
                 $updatedConfig['display_name'] ?? 'GRM Garments Official',
@@ -954,6 +996,80 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         "message" => "WhatsApp Phone Number and Brand Configuration saved and synced with Live Bridge", 
         "data" => $updatedConfig
     ]);
+    exit;
+}
+
+// =========================================================================
+// SYNC ACCOUNT STATUS (From WhatsApp Bridge to Hostinger Database)
+// =========================================================================
+if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true) ?: $_POST;
+    $slotId = $data['account_slot'] ?? $data['account_id'] ?? 'account_1';
+    $status = strtoupper($data['status'] ?? 'DISCONNECTED');
+    $phoneNumber = $data['phone_number'] ?? null;
+    $qrCode = $data['qr_code'] ?? null;
+    $connectedName = $data['connected_name'] ?? null;
+    $label = $data['label'] ?? ($slotId === 'account_1' ? 'Primary WhatsApp' : 'WhatsApp Line');
+
+    // 1. Update config file
+    $cfg = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    if (!isset($cfg['connected_lines']) || !is_array($cfg['connected_lines'])) {
+        $cfg['connected_lines'] = [];
+    }
+    $found = false;
+    foreach ($cfg['connected_lines'] as &$line) {
+        if (($line['id'] ?? '') === $slotId) {
+            $line['status'] = $status;
+            if ($phoneNumber) $line['phone_number'] = $phoneNumber;
+            if ($qrCode) $line['qr_code'] = $qrCode;
+            if ($status === 'CONNECTED') unset($line['qr_code']);
+            $line['label'] = $label;
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
+        $cfg['connected_lines'][] = [
+            'id' => $slotId,
+            'label' => $label,
+            'phone_number' => $phoneNumber ?: 'Awaiting Link',
+            'status' => $status,
+            'qr_code' => $qrCode
+        ];
+    }
+    if ($slotId === 'account_1') {
+        $cfg['status'] = $status;
+        if ($phoneNumber) $cfg['phone_number'] = $phoneNumber;
+    }
+    $cfg['last_sync'] = date("Y-m-d H:i:s");
+    atomicWriteJson($configFile, $cfg);
+
+    // 2. Update MySQL database
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`, `qr_code`)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                    `status` = VALUES(`status`),
+                    `phone_number` = COALESCE(VALUES(`phone_number`), `phone_number`),
+                    `qr_code` = VALUES(`qr_code`),
+                    `display_name` = COALESCE(VALUES(`display_name`), `display_name`)
+            ");
+            $stmt->execute([
+                $slotId,
+                $phoneNumber ?: '+91 99435 57998',
+                'GRM Garments Business Hub',
+                $label,
+                $label,
+                $status,
+                $status === 'CONNECTED' ? null : $qrCode
+            ]);
+        } catch (Exception $e) {}
+    }
+
+    echo json_encode(["status" => "success", "message" => "Account $slotId status synced: $status"]);
     exit;
 }
 
@@ -1567,7 +1683,7 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 $cleanAdminPhone = '91' . $cleanAdminPhone;
             }
             // Determine public base URL for mobile WhatsApp links
-            $publicBaseUrl = 'https://maroon-partridge-532881.hostingersite.com';
+            $publicBaseUrl = 'https://mediumturquoise-dugong-987946.hostingersite.com';
             if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') === false && strpos($_SERVER['HTTP_HOST'], '127.0.0.1') === false) {
                 $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
                 $publicBaseUrl = $proto . '://' . $_SERVER['HTTP_HOST'];
@@ -1894,7 +2010,7 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         $pdo->prepare("UPDATE `bulk_price_requests` SET `link_token` = ? WHERE `id` = ?")->execute([$linkToken, $req['id']]);
     }
 
-    $publicBaseUrl = 'https://maroon-partridge-532881.hostingersite.com';
+    $publicBaseUrl = 'https://mediumturquoise-dugong-987946.hostingersite.com';
     if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') === false && strpos($_SERVER['HTTP_HOST'], '127.0.0.1') === false) {
         $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $publicBaseUrl = $proto . '://' . $_SERVER['HTTP_HOST'];
@@ -5126,7 +5242,7 @@ if ($action === 'request_backup_download') {
             $requestCode, $requesterId, $requesterName, $requesterRole, $ip, $adminEmail, $tokenApprove, $tokenReject
         ]);
 
-        $publicBaseUrl = 'https://maroon-partridge-532881.hostingersite.com';
+        $publicBaseUrl = 'https://mediumturquoise-dugong-987946.hostingersite.com';
         if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') === false && strpos($_SERVER['HTTP_HOST'], '127.0.0.1') === false) {
             $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
             $publicBaseUrl = $proto . '://' . $_SERVER['HTTP_HOST'];

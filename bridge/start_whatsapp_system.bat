@@ -1,22 +1,12 @@
 @echo off
-title GRM WhatsApp Complete System Launcher
-color 0E
+title GRM WhatsApp Complete System Launcher (Hostinger Direct)
+color 0A
 echo ========================================================
-echo   GRM WHATSAPP LIVE CLOUD SYSTEM (1-CLICK LAUNCHER)
-echo ========================================================
-echo.
-echo 1. Starting Baileys WebSocket Bridge (Port 3000)...
-start "GRM WhatsApp Bridge" cmd /k "cd /d %~dp0 && node server.js"
-
-timeout /t 3 /nobreak >nul
-
-echo 2. Starting Cloudflare Public Tunnel...
-start "Cloudflare HTTPS Tunnel" cmd /k "cd /d %~dp0 && cloudflared.exe tunnel --url http://localhost:3000"
-
-echo.
-echo ========================================================
-echo   BOTH SERVICES ARE NOW RUNNING IN SEPARATE WINDOWS!
-echo   Look at the Cloudflare window for your https:// URL.
+echo   GRM WHATSAPP LIVE HOSTINGER SYSTEM (1-CLICK LAUNCHER)
+echo   Connected to: https://mediumturquoise-dugong-987946.hostingersite.com
 echo ========================================================
 echo.
+echo Starting Baileys WhatsApp Bridge (Direct Hostinger Sync)...
+cd /d "%~dp0"
+node server.js
 pause

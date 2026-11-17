@@ -384,10 +384,17 @@ function initializeDatabaseSchema($pdo) {
             `waba_id` VARCHAR(100) NULL,
             `provider` VARCHAR(50) DEFAULT 'META_CLOUD_API',
             `status` VARCHAR(50) DEFAULT 'CONNECTED',
+            `qr_code` MEDIUMTEXT NULL,
             `webhook_url` VARCHAR(255) NULL,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
+    try {
+        $hasQrCol = $pdo->query("SHOW COLUMNS FROM `whatsapp_accounts` LIKE 'qr_code'")->fetch();
+        if (!$hasQrCol) {
+            $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `qr_code` MEDIUMTEXT NULL AFTER `status`");
+        }
+    } catch (Exception $e) {}
 
     // 3b. Customer Requirements Table
     $pdo->exec("
