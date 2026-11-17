@@ -1,4 +1,30 @@
 // =========================================================================
+// UNIVERSAL TOAST SUPPRESSION SHIELD
+// Guaranteed zero on-screen floating toast banners: all alerts route strictly to Notification Center
+// =========================================================================
+(function suppressToastContainerGlobally() {
+  try {
+    const styleId = 'grm-suppress-toasts-css';
+    if (typeof document !== 'undefined' && !document.getElementById(styleId)) {
+      const styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      styleEl.textContent = '#toast-container, .crm-toast-item { display: none !important; visibility: hidden !important; pointer-events: none !important; height: 0 !important; width: 0 !important; opacity: 0 !important; }';
+      (document.head || document.documentElement).appendChild(styleEl);
+    }
+    if (typeof document !== 'undefined') {
+      const container = document.getElementById('toast-container');
+      if (container) {
+        container.style.setProperty('display', 'none', 'important');
+        container.style.setProperty('visibility', 'hidden', 'important');
+        container.innerHTML = '';
+      }
+      const stale = document.querySelectorAll('.crm-toast-item');
+      stale.forEach(el => el.remove());
+    }
+  } catch (e) { }
+})();
+
+// =========================================================================
 // LIGHTWEIGHT UI STRING HELPER (Native English Default)
 // =========================================================================
 if (typeof window.t !== 'function') {
@@ -4090,6 +4116,34 @@ if (Array.isArray(window.PENDING_APP_NOTIFICATIONS) && window.PENDING_APP_NOTIFI
   const pending = window.PENDING_APP_NOTIFICATIONS.splice(0, window.PENDING_APP_NOTIFICATIONS.length);
   pending.forEach(item => addAppNotification(item));
 }
+
+// Universal Notification Dispatcher: Strictly suppresses any on-screen floating toast boxes
+// and routes every alert, status update, and message directly to the Notifications Center (Bell Icon)
+window.showToast = function (title, message, icon = 'info', color = 'emerald', duration = 2800) {
+  if (!title && !message) return;
+
+  // 1. Immediately wipe and suppress any toast containers from DOM
+  try {
+    const container = document.getElementById('toast-container');
+    if (container) {
+      container.style.setProperty('display', 'none', 'important');
+      container.style.setProperty('visibility', 'hidden', 'important');
+      container.style.setProperty('pointer-events', 'none', 'important');
+      container.innerHTML = '';
+    }
+    const staleToasts = document.querySelectorAll('.crm-toast-item');
+    staleToasts.forEach(t => t.remove());
+  } catch (e) { }
+
+  // 2. Route message directly into Header Notification Center
+  addAppNotification({
+    title: title || 'System Notification',
+    message: message || '',
+    type: 'alerts',
+    icon: icon || 'notifications',
+    color: color || 'emerald'
+  });
+};
 
 function updateNotificationBadge() {
   const list = getAppNotifications();

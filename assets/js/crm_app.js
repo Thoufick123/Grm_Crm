@@ -1,4 +1,30 @@
 // =========================================================================
+// UNIVERSAL TOAST SUPPRESSION SHIELD
+// Guaranteed zero on-screen floating toast banners: all alerts route strictly to Notification Center
+// =========================================================================
+(function suppressToastContainerGlobally() {
+  try {
+    const styleId = 'grm-suppress-toasts-css';
+    if (typeof document !== 'undefined' && !document.getElementById(styleId)) {
+      const styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      styleEl.textContent = '#toast-container, .crm-toast-item { display: none !important; visibility: hidden !important; pointer-events: none !important; height: 0 !important; width: 0 !important; opacity: 0 !important; }';
+      (document.head || document.documentElement).appendChild(styleEl);
+    }
+    if (typeof document !== 'undefined') {
+      const container = document.getElementById('toast-container');
+      if (container) {
+        container.style.setProperty('display', 'none', 'important');
+        container.style.setProperty('visibility', 'hidden', 'important');
+        container.innerHTML = '';
+      }
+      const stale = document.querySelectorAll('.crm-toast-item');
+      stale.forEach(el => el.remove());
+    }
+  } catch (e) { }
+})();
+
+// =========================================================================
 // LIGHTWEIGHT UI STRING HELPER (Native English Default)
 // =========================================================================
 if (typeof window.t !== 'function') {
