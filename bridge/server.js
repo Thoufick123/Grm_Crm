@@ -204,7 +204,6 @@ let BRAND_TAGLINE = 'Premium Kids & Maternity Wear';
 
 // Autonomous Server-Side Auto-Responder Configuration & Cache
 const lastAutoReplyMap = new Map();
-const customerCategoryState = new Map(); // senderPhone -> categoryId ('1', '2', etc.)
 let autoReplyConfig = {
     enabled: true,
     cooldownMinutes: 0, // 0 = Instant reply on every message
@@ -212,349 +211,60 @@ let autoReplyConfig = {
 };
 let autoReplyRules = [];
 
-const PRODUCTS_CATALOG = {
-    '1': {
-        categoryName: 'Baby Collection (0–3 Years)',
-        categoryIcon: '👗',
-        items: [
-            {
-                num: '1',
-                name: 'Embroidered Cotton Baby Frock (Pink)',
-                size: '2–3 Years',
-                color: 'Pink',
-                price: 599,
-                stock: 12,
-                sku: 'BF-001-PK',
-                image: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=800&auto=format&fit=crop&q=80',
-                desc: '100% Breathable Combed Cotton with fine needle embroidery. Soft inner lining, skin-friendly for babies.'
-            },
-            {
-                num: '2',
-                name: 'Embroidered Cotton Baby Frock (Sunshine Yellow)',
-                size: '1–2 Years',
-                color: 'Sunshine Yellow',
-                price: 599,
-                stock: 8,
-                sku: 'BF-001-YL',
-                image: 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=800&auto=format&fit=crop&q=80',
-                desc: 'Bright festive yellow frock with contrast floral yoke and flared hem.'
-            }
-        ]
-    },
-    '2': {
-        categoryName: 'Maternity & Feeding Wear',
-        categoryIcon: '🤰',
-        items: [
-            {
-                num: '1',
-                name: 'Pure Cotton Tiered Feeding Gown',
-                size: 'L / XL',
-                color: 'Sky Blue',
-                price: 1299,
-                stock: 10,
-                sku: 'MD-102-BL',
-                image: 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=800&auto=format&fit=crop&q=80',
-                desc: 'Concealed double invisible feeding zips. 100% pure premium mulmul cotton, ultra-comfortable.'
-            },
-            {
-                num: '2',
-                name: 'Maternity Tiered Cotton Floral Dress',
-                size: 'M / L',
-                color: 'Blush Pink',
-                price: 1450,
-                stock: 14,
-                sku: 'MD-103-PK',
-                image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80',
-                desc: 'Graceful floral flare with maternity empire waist and comfortable all-day fit.'
-            }
-        ]
-    },
-    '3': {
-        categoryName: 'Newborn Gift Sets (0–6 Months)',
-        categoryIcon: '🎁',
-        items: [
-            {
-                num: '1',
-                name: 'Newborn 5-Piece Organic Romper Gift Set',
-                size: '0–6 Months',
-                color: 'Pure White / Mint',
-                price: 799,
-                stock: 15,
-                sku: 'BB-301-WH',
-                image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=800&auto=format&fit=crop&q=80',
-                desc: 'Includes 1 Full Romper, 1 Bib, 1 Cap, 1 Pair Booties & Mittens in luxury gift box.'
-            },
-            {
-                num: '2',
-                name: 'Newborn Organic Muslin Swaddle & Cap Set',
-                size: '0–6 Months',
-                color: 'Pastel Mint',
-                price: 499,
-                stock: 20,
-                sku: 'BB-302-SW',
-                image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80',
-                desc: 'Pack of 2 ultra-soft 100% organic cotton muslin swaddles with matching adjustable knot cap.'
-            }
-        ]
-    },
-    '4': {
-        categoryName: 'Kids Everyday Wear (4–5 Years)',
-        categoryIcon: '👕',
-        items: [
-            {
-                num: '1',
-                name: 'Kids Organic Cotton T-Shirt Set (Pack of 3)',
-                size: '4–5 Years',
-                color: 'Multi Yellow / Green / Blue',
-                price: 450,
-                stock: 25,
-                sku: 'KD-204-YL',
-                image: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=800&auto=format&fit=crop&q=80',
-                desc: 'Pack of 3 everyday Bio-washed cotton round-neck tees for active kids.'
-            },
-            {
-                num: '2',
-                name: 'Kids Denim Shorts & Cotton Tee Combo',
-                size: '4–5 Years',
-                color: 'Navy & White',
-                price: 599,
-                stock: 18,
-                sku: 'KD-205-BL',
-                image: 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=800&auto=format&fit=crop&q=80',
-                desc: 'Breathable soft denim shorts paired with printed combed cotton crew neck tee.'
-            }
-        ]
-    },
-    '5': {
-        categoryName: 'Wholesale & Bulk Bundles',
-        categoryIcon: '📦',
-        items: [
-            {
-                num: '1',
-                name: 'Wholesale Baby Rompers Bulk Box (50 Pcs Assorted)',
-                size: '0–24 Months',
-                color: 'Assorted Prints',
-                price: 8500,
-                stock: 18,
-                sku: 'WS-701-BX',
-                image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800&auto=format&fit=crop&q=80',
-                desc: 'Master carton containing 50 individual polybag packed baby rompers ready for resale.'
-            },
-            {
-                num: '2',
-                name: 'Wholesale Pure Cotton Frocks Bundle (25 Pcs)',
-                size: '2–5 Years',
-                color: 'Multi Pastel Colors',
-                price: 7200,
-                stock: 12,
-                sku: 'WS-702-BX',
-                image: 'https://images.unsplash.com/photo-1471286174890-9c112ffca56a?w=800&auto=format&fit=crop&q=80',
-                desc: '25 premium partywear and daily cotton frocks with retail hangers.'
-            }
-        ]
-    },
-    '6': {
-        categoryName: 'Festive & VIP Silk Collection',
-        categoryIcon: '🥻',
-        items: [
-            {
-                num: '1',
-                name: 'Girls Festive Silk Lehenga Choli',
-                size: '6–7 Years',
-                color: 'Ruby Red & Gold',
-                price: 899,
-                stock: 6,
-                sku: 'GL-505-RD',
-                image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=800&auto=format&fit=crop&q=80',
-                desc: 'Art silk lehenga with golden zari border and matching stitched choli.'
-            },
-            {
-                num: '2',
-                name: 'Handcrafted Kanjivaram Silk Pattu Pavadai Set',
-                size: '3–4 Years',
-                color: 'Emerald Green & Gold',
-                price: 2499,
-                stock: 8,
-                sku: 'VIP-901-GL',
-                image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80',
-                desc: 'Traditional South Indian pure zari pattu pavadai with rich pallu pattern.'
-            }
-        ]
-    }
-};
-
-function getStockAutoReplyTemplate(customerName) {
-    const brand = BRAND_NAME || 'GRM Garments Official';
-    const cName = customerName ? customerName.split(' ')[0] : 'there';
-
-    return {
-        text: `✨ *${brand}* ✨\nHello *${cName}*! 👋 Welcome to our store.\n\n👗 *Ready-Stock Collections:*\n1️⃣ Baby Collection (0–3Y) — *₹599*\n2️⃣ Maternity & Feeding — *₹1,299*\n3️⃣ Newborn Gift Sets (0–6M) — *₹799*\n4️⃣ Kids Daily Wear (4–5Y) — *₹450*\n5️⃣ Wholesale Bundles — *₹7,200*\n6️⃣ Festive Silk Sets — *₹899*\n\n💬 *Reply with 1 to 6* to see photos & sizes!`
-    };
-}
-
-function getCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber) {
-    const keys = [senderKey, senderNumber, senderJid, cleanNumber, (senderNumber || '').replace(/[^0-9]/g, ''), (cleanNumber || '').replace(/[^0-9]/g, '')];
-    for (const k of keys) {
-        if (k && customerCategoryState.has(k)) return customerCategoryState.get(k);
-    }
-    return null;
-}
-
-function setCustomerCategory(stateObj, senderKey, senderNumber, senderJid, cleanNumber) {
-    const keys = [senderKey, senderNumber, senderJid, cleanNumber, (senderNumber || '').replace(/[^0-9]/g, ''), (cleanNumber || '').replace(/[^0-9]/g, '')];
-    for (const k of keys) {
-        if (k) customerCategoryState.set(k, stateObj);
-    }
-}
-
-function clearCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber) {
-    const keys = [senderKey, senderNumber, senderJid, cleanNumber, (senderNumber || '').replace(/[^0-9]/g, ''), (cleanNumber || '').replace(/[^0-9]/g, '')];
-    for (const k of keys) {
-        if (k) customerCategoryState.delete(k);
-    }
-}
-
+// Dynamic Auto-Reply Engine: ONLY rules configured in Auto-Reply Module are matched & sent
 function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, senderJid, cleanNumber) {
     const brand = BRAND_NAME || 'GRM Garments Official';
     const name = custName ? custName.split(' ')[0] : 'there';
-    const key = cleanMsg.trim().toLowerCase();
+    const key = (cleanMsg || '').trim().toLowerCase();
+    if (!key) return null;
 
-    // 1. Check for Reset / Main Menu / Direct Greetings
-    if (key === '0' || key === 'menu' || key === 'catalog' || key === 'catalogue' || key === 'main' || key === 'home' || key === 'hi' || key === 'hii' || key === 'hiii' || key === 'hello' || key === 'start') {
-        clearCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber);
-        return getStockAutoReplyTemplate(custName);
-    }
-
-    const state = getCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber);
-    const activeCatId = typeof state === 'object' ? state?.catId : state;
-    const isAwaitingProduct = typeof state === 'object' ? Boolean(state?.awaitingProduct) : false;
-
-    // 2. If customer is currently viewing a Category Menu and awaiting product choice:
-    if (activeCatId && isAwaitingProduct && PRODUCTS_CATALOG[activeCatId]) {
-        const catData = PRODUCTS_CATALOG[activeCatId];
-        const itemIdx = parseInt(key) - 1;
-
-        // If user replies with a valid product number inside this category (e.g., 1 or 2)
-        if (/^[1-9]$/.test(key) && !isNaN(itemIdx) && catData.items[itemIdx]) {
-            const item = catData.items[itemIdx];
-            console.log(`[Auto-Reply Engine] 🎯 Customer chosen Item #${key} (${item.name}) from Active Category #${activeCatId} (${catData.categoryName})`);
-
-            // Mark product viewed (reset awaitingProduct so next number 1-6 can select a category or view other items)
-            setCustomerCategory({ catId: activeCatId, awaitingProduct: false, lastProductSku: item.sku }, senderKey, senderNumber, senderJid, cleanNumber);
-
-            return {
-                type: 'image',
-                image: item.image,
-                caption: `${catData.categoryIcon} *${item.name}*\n━━━━━━━━━━━━━━━━━━━━\n💰 Price: *₹${item.price}* (All Taxes Incl.)\n📏 Available Size: *${item.size}*\n🎨 Color: *${item.color}*\n📦 Ready Stock: *${item.stock} Units* (Ready to Dispatch)\n🏷️ SKU: \`${item.sku}\`\n\n📝 *Details:*\n${item.desc}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *To Order:* Reply with your *Quantity & Delivery Address* to reserve your parcel!\n(Reply *1* to *6* to browse other collections, or *0* for Main Menu)`
-            };
-        }
-    }
-
-    // 3. Dynamic Admin-Configured Pre-set Template Rules (e.g. Feeding Kurti, Baby Frocks, Store Address, etc.)
     loadBrandConfig(); // Always ensure latest rules from whatsapp_account_config.json
-    if (Array.isArray(autoReplyRules) && autoReplyRules.length > 0) {
-        for (const rule of autoReplyRules) {
-            if (rule.enabled === false) continue;
-            const keywords = Array.isArray(rule.keywords)
-                ? rule.keywords
-                : (typeof rule.keywords === 'string' ? rule.keywords.split(',').map(k => k.trim()) : []);
+    if (!Array.isArray(autoReplyRules) || autoReplyRules.length === 0) {
+        return null;
+    }
 
-            // Check both keywords AND the template rule name / question title
-            const allTriggers = [...keywords];
-            if (rule.name && typeof rule.name === 'string') allTriggers.push(rule.name);
+    for (const rule of autoReplyRules) {
+        if (rule.enabled === false) continue;
+        if (rule.autoSend === false) continue;
 
-            let matched = false;
-            let matchedKw = '';
-            for (const kw of allTriggers) {
-                const cleanKw = (kw || '').trim().toLowerCase();
-                if (!cleanKw) continue;
-                if (rule.matchType === 'exact') {
-                    if (key === cleanKw) { matched = true; matchedKw = cleanKw; break; }
-                } else {
-                    if (key.includes(cleanKw) || cleanKw.includes(key)) { matched = true; matchedKw = cleanKw; break; }
-                }
+        const keywords = Array.isArray(rule.keywords)
+            ? rule.keywords
+            : (typeof rule.keywords === 'string' ? rule.keywords.split(',').map(k => k.trim()) : []);
+
+        const allTriggers = [...keywords];
+        if (rule.name && typeof rule.name === 'string') allTriggers.push(rule.name);
+
+        let matched = false;
+        let matchedKw = '';
+        for (const kw of allTriggers) {
+            const cleanKw = (kw || '').trim().toLowerCase();
+            if (!cleanKw) continue;
+            if (rule.matchType === 'exact') {
+                if (key === cleanKw) { matched = true; matchedKw = cleanKw; break; }
+            } else {
+                if (key.includes(cleanKw) || cleanKw.includes(key)) { matched = true; matchedKw = cleanKw; break; }
             }
+        }
 
-            if (matched) {
-                console.log(`[Auto-Reply Engine] 🎯 Matched Rule "${rule.name}" (kw: "${matchedKw}") for customer: "${cleanMsg}"`);
-                const catId = rule.categoryId ? String(rule.categoryId) : null;
-                let customText = (rule.replyText || '')
-                    .replace(/{customer_name}/g, name)
-                    .replace(/{brand_name}/g, brand)
-                    .replace(/{business_phone}/g, senderNumber || '+91 86680 07593');
+        if (matched) {
+            console.log(`[Auto-Reply Engine] 🎯 Matched Auto-Module Rule "${rule.name}" (kw: "${matchedKw}") for customer: "${cleanMsg}"`);
+            let customText = (rule.replyText || '')
+                .replace(/{customer_name}/g, name)
+                .replace(/{brand_name}/g, brand)
+                .replace(/{business_phone}/g, senderNumber || cleanNumber || '');
 
-                if (catId && PRODUCTS_CATALOG[catId] && (rule.actionType === 'category_reply' || rule.actionType === 'category_and_text')) {
-                    setCustomerCategory({ catId: catId, awaitingProduct: true }, senderKey, senderNumber, senderJid, cleanNumber);
-                    const cat = PRODUCTS_CATALOG[catId];
-                    const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
-                    const itemsText = cat.items.map((it, idx) => {
-                        return `${numEmojis[idx] || (idx + 1 + '.')} *${it.name}*\n   💰 *₹${it.price}* | 📏 Size: *${it.size}* | ✅ *${it.stock} Pcs Ready*`;
-                    }).join('\n\n');
-                    const replyNumbersText = cat.items.length > 1 ? `1 to ${cat.items.length}` : '1';
-
-                    let fullText = '';
-                    if (rule.actionType === 'category_and_text' && customText.trim()) {
-                        fullText = `${customText}\n\n━━━━━━━━━━━━━━━━━━━━\n${cat.categoryIcon} *${cat.categoryName} Ready Stock:*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *Reply with ${replyNumbersText}* to view photos & sizes!\n(Reply *0* for Main Menu)`;
-                    } else {
-                        fullText = `${cat.categoryIcon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Here are our ready-stock items:\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *Reply with ${replyNumbersText}* to view the photo, sizes & order!\n(Reply *0* to return to Main Menu)`;
-                    }
-
-                    return {
-                        type: 'text',
-                        ruleId: rule.id,
-                        ruleName: rule.name,
-                        text: fullText
-                    };
-                } else if (customText) {
-                    return {
-                        type: 'text',
-                        ruleId: rule.id,
-                        ruleName: rule.name,
-                        text: customText
-                    };
-                }
+            if (customText.trim()) {
+                return {
+                    type: 'text',
+                    ruleId: rule.id,
+                    ruleName: rule.name,
+                    text: customText
+                };
             }
         }
     }
 
-    // 4. Fallback Category selection (1 to 6 or keywords)
-    let selectedCat = null;
-    if (key === '1') selectedCat = '1';
-    else if (key === '2') selectedCat = '2';
-    else if (key === '3') selectedCat = '3';
-    else if (key === '4') selectedCat = '4';
-    else if (key === '5') selectedCat = '5';
-    else if (key === '6') selectedCat = '6';
-    // Keyword fallback
-    else if (key.includes('wholesale') || key.includes('bulk') || key.includes('bundle')) selectedCat = '5';
-    else if (key.includes('maternity') || key.includes('feeding') || key.includes('gown')) selectedCat = '2';
-    else if (key.includes('baby') || key.includes('frock')) selectedCat = '1';
-    else if (key.includes('newborn') || key.includes('gift') || key.includes('born')) selectedCat = '3';
-    else if (key.includes('kids') || key.includes('tshirt') || key.includes('daily')) selectedCat = '4';
-    else if (key.includes('festive') || key.includes('silk') || key.includes('pattu') || key.includes('lehenga')) selectedCat = '6';
-
-    // If Category selected (1 to 6)
-    if (selectedCat && PRODUCTS_CATALOG[selectedCat]) {
-        // Set state to active category and awaitingProduct = true
-        setCustomerCategory({ catId: selectedCat, awaitingProduct: true }, senderKey, senderNumber, senderJid, cleanNumber);
-
-        const cat = PRODUCTS_CATALOG[selectedCat];
-        const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣'];
-
-        let itemsText = cat.items.map((it, idx) => {
-            return `${numEmojis[idx] || (idx + 1 + '.')} *${it.name}*\n   💰 *₹${it.price}* | 📏 Size: *${it.size}* | ✅ *${it.stock} Pcs Ready*`;
-        }).join('\n\n');
-
-        const replyNumbersText = cat.items.length > 1 ? `1 to ${cat.items.length}` : '1';
-        console.log(`[Auto-Reply Engine] 📂 Customer opened Category #${selectedCat} (${cat.categoryName})`);
-
-        return {
-            type: 'text',
-            ruleName: `Category #${selectedCat}`,
-            text: `${cat.categoryIcon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${name}! 👋 Here are our ready-stock items:\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *Reply with ${replyNumbersText}* to view the photo, sizes & order!\n(Reply *0* to return to Main Menu)`
-        };
-    }
-
+    // No hardcoded fallback templates! If no auto-module rule matches, return null
     return null;
 }
 
@@ -1739,21 +1449,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 replyObj = getInteractiveResponse(cleanMsg, senderName, senderKey, senderNumber, senderJid, cleanNumber);
                             }
 
-                            // 2. Greetings and full catalog triggers (matches "hi", "hiiiii...", "hello...", "heyyy...", etc.)
-                            const isGreetingOrMenu = /^h+i+/i.test(cleanMsg) ||
-                                /^h+e+y+/i.test(cleanMsg) ||
-                                /^h+e+l+l+o+/i.test(cleanMsg) ||
-                                /^(vanakkam|namaste|start|menu|catalog|catalogue|stock|price|rate|help|order)/i.test(cleanMsg) ||
-                                cleanMsg.length <= 20 ||
-                                lastMenuEpoch === 0;
-
-                            if (!replyObj && isGreetingOrMenu && isMenuCooldownPassed) {
-                                clearCustomerCategory(senderKey, senderNumber, senderJid, cleanNumber);
-                                replyObj = getStockAutoReplyTemplate(senderName);
-                                lastAutoReplyMap.set(senderNumber, Date.now());
-                                lastAutoReplyMap.set(cleanNumber, Date.now());
-                                if (senderJid) lastAutoReplyMap.set(senderJid, Date.now());
-                            }
+                            // Only auto-module rules are sent; no hardcoded greeting or catalog fallback
 
                             if (replyObj) {
                                 setTimeout(async () => {
