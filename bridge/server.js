@@ -551,51 +551,27 @@ initVoiceSignaling({ app, io, callCrmApi });
 // Forward inbound WhatsApp message to CRM PHP API for persistent file storage
 
 
-// Auto-detect and synchronize Cloudflare Tunnel URL to CRM so Hostinger can always reach Baileys
-async function syncTunnelToCrm() {
+// Ensure Hostinger CRM reflects all active connected WhatsApp accounts
+async function syncAccountStatusToCrm() {
     try {
-        const userProfile = process.env.USERPROFILE || 'C:\\Users\\ADMIN';
-        const cfLog = path.join(userProfile, '.pm2', 'logs', 'cf-tunnel-error.log');
-        if (fs.existsSync(cfLog)) {
-            const lines = fs.readFileSync(cfLog, 'utf8').split('\n');
-            let tunnelUrl = null;
-            for (let i = lines.length - 1; i >= 0; i--) {
-                const line = lines[i];
-                if (line.includes('dest=') || line.includes('error=')) continue;
-                const m = line.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
-                if (m) { tunnelUrl = m[0]; break; }
-            }
-            if (tunnelUrl) {
-                console.log(`📡 [Tunnel Auto-Sync] Active Cloudflare tunnel: ${tunnelUrl}`);
-                const res = await callCrmApi('sync_bridge_url', {
-                    bridge_url: tunnelUrl,
-                    secret: 'GRM_BRIDGE_AUTO_SYNC_2026'
-                });
-                if (res && res.status === 'success') {
-                    console.log(`✅ [Tunnel Auto-Sync] Successfully synced bridge URL to CRM!`);
-                }
-
-                // Periodically ensure Hostinger CRM reflects all active connected WhatsApp accounts
-                for (const [accId, accObj] of accounts.entries()) {
-                    if (accObj.status === 'CONNECTED' && accObj.connectedNumber) {
-                        await callCrmApi('sync_account_status', {
-                            account_slot: accId,
-                            status: 'CONNECTED',
-                            phone_number: accObj.connectedNumber,
-                            qr_code: null,
-                            connected_name: accObj.connectedName,
-                            label: accObj.label
-                        }).catch(() => {});
-                    }
-                }
+        for (const [accId, accObj] of accounts.entries()) {
+            if (accObj.status === 'CONNECTED' && accObj.connectedNumber) {
+                await callCrmApi('sync_account_status', {
+                    account_slot: accId,
+                    status: 'CONNECTED',
+                    phone_number: accObj.connectedNumber,
+                    qr_code: null,
+                    connected_name: accObj.connectedName,
+                    label: accObj.label
+                }).catch(() => {});
             }
         }
     } catch (e) {
-        console.warn('Could not sync tunnel URL to CRM:', e.message);
+        console.warn('Could not sync account status to CRM:', e.message);
     }
 }
-setTimeout(syncTunnelToCrm, 3000);
-setInterval(syncTunnelToCrm, 5 * 60 * 1000);
+setTimeout(syncAccountStatusToCrm, 3000);
+setInterval(syncAccountStatusToCrm, 5 * 60 * 1000);
 
 // Active Live Connection Keeper: Continuously ensure Hostinger reflects all active WhatsApp sessions
 setInterval(async () => {

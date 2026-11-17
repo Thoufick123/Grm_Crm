@@ -2037,13 +2037,20 @@ function renderCurrentView() {
 // Initialize Realtime WebSocket (Socket.IO) Connection
 // Dynamic Bridge URL Resolver (supports local and Render deployment)
 function getBridgeBaseUrl() {
-  if (typeof window !== 'undefined' && window.BRIDGE_URL) return window.BRIDGE_URL;
+  if (typeof window !== 'undefined' && window.BRIDGE_URL && !window.BRIDGE_URL.includes('trycloudflare.com')) {
+    return window.BRIDGE_URL.replace(/\/+$/, '');
+  }
   const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_BRIDGE_URL') : null;
-  if (stored) return stored.replace(/\/+$/, '');
-  if (typeof CRM_STATE !== 'undefined' && CRM_STATE?.settings?.bridgeUrl) {
+  if (stored && !stored.includes('trycloudflare.com')) {
+    return stored.replace(/\/+$/, '');
+  } else if (stored && stored.includes('trycloudflare.com')) {
+    try { localStorage.removeItem('GRM_BRIDGE_URL'); } catch (e) { }
+  }
+  if (typeof CRM_STATE !== 'undefined' && CRM_STATE?.settings?.bridgeUrl && !CRM_STATE.settings.bridgeUrl.includes('trycloudflare.com')) {
     return CRM_STATE.settings.bridgeUrl.replace(/\/+$/, '');
   }
-  return 'http://localhost:3000';
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  return isLocal ? 'http://localhost:3000' : 'https://mediumturquoise-dugong-987946.hostingersite.com';
 }
 window.getBridgeBaseUrl = getBridgeBaseUrl;
 
@@ -28656,8 +28663,10 @@ function fetchQRBridgeStatus(btnEl) {
         renderQuickLineSwitcher();
         renderPhoneSwitcherDropdown();
         if (icon) icon.classList.remove('animate-spin');
-        if (btnEl) btnEl.disabled = false;
-        showToast('WhatsApp Lines Refreshed', 'Live multi-account connection status checked.', 'sync', 'emerald');
+        if (btnEl) {
+          btnEl.disabled = false;
+          showToast('WhatsApp Lines Refreshed', 'Live multi-account connection status checked.', 'sync', 'emerald');
+        }
       });
   } else {
     // Hosted server fallback (e.g. Hostinger / MariaDB)
@@ -28698,8 +28707,10 @@ function fetchQRBridgeStatus(btnEl) {
         renderQuickLineSwitcher();
         renderPhoneSwitcherDropdown();
         if (icon) icon.classList.remove('animate-spin');
-        if (btnEl) btnEl.disabled = false;
-        showToast('WhatsApp Lines Refreshed', 'Connected lines synchronized with database.', 'sync', 'emerald');
+        if (btnEl) {
+          btnEl.disabled = false;
+          showToast('WhatsApp Lines Refreshed', 'Connected lines synchronized with database.', 'sync', 'emerald');
+        }
       });
   }
 }
