@@ -4177,8 +4177,14 @@ function updateNotificationBadge() {
 function toggleNotificationsDropdown(event) {
   if (event) event.stopPropagation();
   const dropdown = document.getElementById('notifications-dropdown');
-  const btn = document.getElementById('header-notif-btn') || document.getElementById('header-notif-btn-mobile');
   if (!dropdown) return;
+
+  const isMobile = (typeof window !== 'undefined') && window.innerWidth < 640;
+  const btn = (event && event.currentTarget)
+    ? event.currentTarget
+    : (isMobile
+        ? (document.getElementById('header-notif-btn-mobile') || document.getElementById('header-notif-btn'))
+        : (document.getElementById('header-notif-btn') || document.getElementById('header-notif-btn-mobile')));
 
   const isHidden = dropdown.classList.contains('hidden');
   if (isHidden) {
@@ -4186,15 +4192,26 @@ function toggleNotificationsDropdown(event) {
     renderNotificationsList();
     dropdown.classList.remove('hidden');
 
-    // Dynamic viewport positioning
-    if (btn) {
+    if (isMobile) {
+      const rect = btn ? btn.getBoundingClientRect() : { bottom: 48 };
+      const topPos = Math.max(52, (rect && rect.bottom ? rect.bottom + 6 : 52));
+      dropdown.style.position = 'fixed';
+      dropdown.style.top = topPos + 'px';
+      dropdown.style.right = '10px';
+      dropdown.style.left = 'auto';
+      dropdown.style.width = 'calc(100vw - 20px)';
+      dropdown.style.maxWidth = '380px';
+      dropdown.style.maxHeight = '78vh';
+      dropdown.style.zIndex = '999999';
+    } else if (btn) {
       const rect = btn.getBoundingClientRect();
       const dropWidth = Math.min(380, window.innerWidth - 24);
       dropdown.style.position = 'fixed';
       dropdown.style.top = (rect.bottom + 8) + 'px';
       dropdown.style.width = dropWidth + 'px';
       dropdown.style.maxWidth = 'calc(100vw - 24px)';
-      dropdown.style.zIndex = '99999';
+      dropdown.style.maxHeight = '80vh';
+      dropdown.style.zIndex = '999999';
 
       let leftPos = rect.right - dropWidth;
       if (leftPos < 12) leftPos = 12;
@@ -4208,11 +4225,13 @@ function toggleNotificationsDropdown(event) {
     closeNotificationsDropdown();
   }
 }
+window.toggleNotificationsDropdown = toggleNotificationsDropdown;
 
 function closeNotificationsDropdown() {
   const dropdown = document.getElementById('notifications-dropdown');
   if (dropdown) dropdown.classList.add('hidden');
 }
+window.closeNotificationsDropdown = closeNotificationsDropdown;
 
 function setNotifFilter(filter, event) {
   if (event) event.stopPropagation();
@@ -4366,10 +4385,13 @@ document.addEventListener('click', (e) => {
     closePhoneSwitcherDropdown();
   }
 
-  const notifWrapper = document.getElementById('header-notifications-wrapper');
+  const notifDropdown = document.getElementById('notifications-dropdown');
+  const notifBtn = document.getElementById('header-notif-btn');
   const notifMobileBtn = document.getElementById('header-notif-btn-mobile');
-  if (notifWrapper && !notifWrapper.contains(e.target) && (!notifMobileBtn || !notifMobileBtn.contains(e.target))) {
-    closeNotificationsDropdown();
+  if (notifDropdown && !notifDropdown.classList.contains('hidden')) {
+    if (!notifDropdown.contains(e.target) && (!notifBtn || !notifBtn.contains(e.target)) && (!notifMobileBtn || !notifMobileBtn.contains(e.target))) {
+      closeNotificationsDropdown();
+    }
   }
 });
 
@@ -4672,8 +4694,13 @@ function toggleSidebar(forceState) {
   if (shouldOpen) {
     sidebar.classList.remove('sidebar-hidden');
     sidebar.classList.add('sidebar-visible');
+    const nav = sidebar.querySelector('nav');
+    if (nav && typeof window !== 'undefined' && window.innerWidth < 1024) {
+      nav.scrollTop = 0;
+    }
     if (backdrop) {
       backdrop.classList.remove('hidden');
+      backdrop.style.display = 'block';
       requestAnimationFrame(() => {
         backdrop.classList.remove('opacity-0');
         backdrop.classList.add('opacity-100');

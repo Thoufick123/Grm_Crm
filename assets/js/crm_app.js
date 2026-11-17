@@ -4052,8 +4052,13 @@ function toggleSidebar(forceState) {
   if (shouldOpen) {
     sidebar.classList.remove('sidebar-hidden');
     sidebar.classList.add('sidebar-visible');
+    const nav = sidebar.querySelector('nav');
+    if (nav && typeof window !== 'undefined' && window.innerWidth < 1024) {
+      nav.scrollTop = 0;
+    }
     if (backdrop) {
       backdrop.classList.remove('hidden');
+      backdrop.style.display = 'block';
       requestAnimationFrame(() => {
         backdrop.classList.remove('opacity-0');
         backdrop.classList.add('opacity-100');

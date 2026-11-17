@@ -207,8 +207,11 @@
       if (shouldOpen) {
         sidebar.classList.remove('sidebar-hidden');
         sidebar.classList.add('sidebar-visible');
+        var nav = sidebar.querySelector('nav');
+        if (nav && window.innerWidth < 1024) nav.scrollTop = 0;
         if (backdrop) {
           backdrop.classList.remove('hidden');
+          backdrop.style.display = 'block';
           requestAnimationFrame(function () {
             backdrop.classList.remove('opacity-0');
             backdrop.classList.add('opacity-100');
@@ -699,12 +702,15 @@
         bottom: 0;
         left: 0;
         height: 100vh !important;
-        max-width: 85vw;
-        z-index: 70 !important;
+        height: 100dvh !important;
+        width: 300px !important;
+        max-width: 86vw !important;
+        z-index: 75 !important;
         transform: translateX(-100%) !important;
         opacity: 0 !important;
         pointer-events: none !important;
         visibility: hidden !important;
+        box-shadow: 4px 0 28px rgba(0, 0, 0, 0.45) !important;
       }
 
       #app-sidebar.sidebar-visible {
@@ -719,6 +725,10 @@
         opacity: 0 !important;
         pointer-events: none !important;
         visibility: hidden !important;
+      }
+
+      #sidebar-backdrop {
+        z-index: 70 !important;
       }
     }
 
@@ -1071,14 +1081,15 @@
 
   <!-- Sidebar Backdrop Overlay (Mobile & Tablet) -->
   <div id="sidebar-backdrop" onclick="toggleSidebar(false)"
-    class="fixed inset-0 bg-black/60 backdrop-blur-xs z-[65] hidden transition-opacity duration-300 opacity-0 cursor-pointer lg:hidden">
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden transition-opacity duration-300 opacity-0 cursor-pointer lg:hidden"
+    style="background-color: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);">
   </div>
 
   <!-- ========================================================================= -->
   <!-- 1. LEFT NAVIGATION SIDEBAR -->
   <!-- ========================================================================= -->
   <aside id="app-sidebar"
-    class="sidebar-hidden lg:sidebar-visible w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-[70] select-none transition-all duration-300 ease-in-out relative">
+    class="sidebar-hidden lg:sidebar-visible w-[290px] sm:w-[320px] lg:w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-[75] select-none transition-all duration-300 ease-in-out relative">
     <!-- Main Sidebar Right Edge Resizer Handle (Drag with Mouse to Resize) -->
     <div id="resizer-app-sidebar"
       class="absolute top-0 -right-1 w-2.5 h-full hover:bg-emerald-500/50 active:bg-emerald-500 cursor-col-resize z-50 transition-colors select-none group hidden lg:block"
@@ -1102,7 +1113,7 @@
       </div>
       <!-- Close Sidebar Button (Direct Inside Sidebar) -->
       <button type="button" onclick="toggleSidebar(false)"
-        class="p-1.5 text-slate-400 hover:text-white hover:bg-emerald-800/60 rounded-xl transition cursor-pointer flex items-center justify-center shrink-0"
+        class="w-8 h-8 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 border border-emerald-500/30 text-emerald-300 hover:text-white transition flex items-center justify-center cursor-pointer shrink-0"
         title="Close Sidebar Menu">
         <span class="material-symbols-outlined text-[20px]">close</span>
       </button>
@@ -1202,13 +1213,13 @@
 
       <button onclick="switchView('followups')" id="nav-followups"
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
           <span
-            class="material-symbols-outlined text-[20px] text-amber-400 group-hover:scale-110 transition">schedule</span>
-          <span data-i18n="nav.followups">Follow-up Due</span>
+            class="material-symbols-outlined text-[20px] text-amber-400 group-hover:scale-110 transition shrink-0">schedule</span>
+          <span class="truncate" data-i18n="nav.followups">Follow-up Due</span>
         </div>
         <span id="badge-followup-count"
-          class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">0
+          class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">0
           Today</span>
       </button>
 
@@ -1226,37 +1237,37 @@
         <!-- 1. WhatsApp Dashboard (Standalone Single Module) -->
         <button type="button" onclick="switchOrdersSubmodule('dashboard')" id="nav-orders-dashboard"
           class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
             <span
-              class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">analytics</span>
-            <span class="font-bold">WhatsApp Dashboard</span>
+              class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition shrink-0">analytics</span>
+            <span class="font-bold truncate">WhatsApp Dashboard</span>
           </div>
           <span id="badge-orders-dash-active"
-            class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">Live</span>
+            class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">Live</span>
         </button>
 
         <!-- 2. WhatsApp Orders (Standalone Single Module) -->
         <button type="button" onclick="switchOrdersSubmodule('history')" id="nav-orders"
           class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
             <span
-              class="material-symbols-outlined text-[20px] text-lime-400 group-hover:scale-110 transition">shopping_bag</span>
-            <span class="font-bold" data-i18n="nav.orders">WhatsApp Orders</span>
+              class="material-symbols-outlined text-[20px] text-lime-400 group-hover:scale-110 transition shrink-0">shopping_bag</span>
+            <span class="font-bold truncate" data-i18n="nav.orders">WhatsApp Orders</span>
           </div>
           <span id="badge-orders-count"
-            class="bg-lime-500/20 text-lime-300 border border-lime-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+            class="bg-lime-500/20 text-lime-300 border border-lime-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">0</span>
         </button>
 
         <!-- 3. Packing Slip & Labels (Placed below WhatsApp Orders) -->
         <button type="button" onclick="switchView('packing-slip-config')" id="nav-packing-slip-config"
           class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav"
           title="Customize Packing Slip & Shipping Label Template">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
             <span
-              class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">local_shipping</span>
-            <span class="font-bold">Packing Slip</span>
+              class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition shrink-0">local_shipping</span>
+            <span class="font-bold truncate">Packing Slip</span>
           </div>
-          <span class="material-symbols-outlined text-[14px] text-teal-400">tune</span>
+          <span class="material-symbols-outlined text-[14px] text-teal-400 shrink-0">tune</span>
         </button>
         <!-- Backward-compatibility elements for legacy queries -->
         <span id="nav-sub-orders-dashboard" class="hidden"></span>
@@ -1266,22 +1277,24 @@
 
       <button onclick="switchView('customers')" id="nav-customers"
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
           <span
-            class="material-symbols-outlined text-[20px] text-purple-400 group-hover:scale-110 transition">groups</span>
-          <span data-i18n="nav.customers">Customer 360</span>
+            class="material-symbols-outlined text-[20px] text-purple-400 group-hover:scale-110 transition shrink-0">groups</span>
+          <span class="truncate" data-i18n="nav.customers">Customer 360</span>
         </div>
       </button>
 
       <!-- DND / OPT-OUT CUSTOMERS MODULE -->
       <button onclick="switchView('dnd')" id="nav-dnd"
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
           <span
-            class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition">do_not_disturb_on</span>
-          <span data-i18n="nav.dnd">DND / Opt-Out List</span>
+            class="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition shrink-0">do_not_disturb_on</span>
+          <span class="truncate" data-i18n="nav.dnd">DND / Opt-Out List</span>
         </div>
         <span id="badge-dnd-count"
+          class="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">0</span>
+      </button>
           class="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
       </button>
 
@@ -1314,13 +1327,13 @@
       <button onclick="switchView('masking')" id="nav-masking"
         class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group admin-only-nav"
         title="In-CRM Softphone Call Masking & Lead Privacy Protection">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
           <span
-            class="material-symbols-outlined text-[20px] text-orange-400 group-hover:scale-110 transition">phone_locked</span>
-          <span data-i18n="nav.masking">Call &amp; Number Masking</span>
+            class="material-symbols-outlined text-[20px] text-orange-400 group-hover:scale-110 transition shrink-0">phone_locked</span>
+          <span class="truncate" data-i18n="nav.masking">Call &amp; Number Masking</span>
         </div>
         <span id="badge-nav-masking-status"
-          class="bg-orange-500/20 text-orange-300 border border-orange-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">Active</span>
+          class="bg-orange-500/20 text-orange-300 border border-orange-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">Active</span>
       </button>
 
       <!-- STAFF MANAGEMENT MODULE WITH 3 SUB-ITEMS (Admin Only) -->
@@ -1487,62 +1500,6 @@
               <span id="header-notif-count">0</span>
             </span>
           </button>
-
-          <!-- Notifications Dropdown Flyout -->
-          <div id="notifications-dropdown"
-            class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[110] text-xs">
-            <div class="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-2xl">
-              <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-[15px]">notifications</span>
-                </div>
-                <p class="font-extrabold text-slate-900 text-xs sm:text-sm">Notifications</p>
-                <span id="notif-dropdown-unread-pill" class="text-[10px] bg-rose-100 text-rose-700 font-extrabold px-2 py-0.5 rounded-full">0 New</span>
-              </div>
-              <div class="flex items-center gap-2 text-[11px]">
-                <button type="button" onclick="markAllNotificationsAsRead(event)"
-                  class="font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer">
-                  Mark all read
-                </button>
-                <span class="text-slate-300">|</span>
-                <button type="button" onclick="clearAllNotifications(event)"
-                  class="font-bold text-slate-400 hover:text-rose-600 hover:underline cursor-pointer">
-                  Clear
-                </button>
-              </div>
-            </div>
-
-            <!-- Category Filter Tabs -->
-            <div class="flex items-center gap-1 px-3 py-1.5 bg-slate-50 border-b border-slate-100 text-[11px] font-semibold">
-              <button type="button" onclick="setNotifFilter('all', event)" id="notif-tab-all"
-                class="px-2.5 py-1 rounded-lg bg-white shadow-xs text-slate-900 font-bold border border-slate-200 cursor-pointer">All</button>
-              <button type="button" onclick="setNotifFilter('chats', event)" id="notif-tab-chats"
-                class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Chats</button>
-              <button type="button" onclick="setNotifFilter('calls', event)" id="notif-tab-calls"
-                class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Calls</button>
-              <button type="button" onclick="setNotifFilter('alerts', event)" id="notif-tab-alerts"
-                class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Alerts</button>
-            </div>
-
-            <!-- Dynamic Notification List -->
-            <div id="notifications-list-container" class="max-h-[360px] sm:max-h-[400px] overflow-y-auto divide-y divide-slate-100 custom-chat-scroll">
-              <!-- Rendered dynamically by JS -->
-            </div>
-
-            <!-- Footer: Quick Actions -->
-            <div class="p-2 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between gap-2">
-              <button type="button" onclick="switchView('inbox'); closeNotificationsDropdown();"
-                class="flex-1 py-1.5 px-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer">
-                <span class="material-symbols-outlined text-[15px] text-emerald-600">chat</span>
-                <span>Open Inbox</span>
-              </button>
-              <button type="button" onclick="switchView('enquiries'); closeNotificationsDropdown();"
-                class="flex-1 py-1.5 px-2 bg-white hover:bg-indigo-50 text-indigo-800 border border-slate-200 hover:border-indigo-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer">
-                <span class="material-symbols-outlined text-[15px] text-indigo-600">assignment</span>
-                <span>View Enquiries</span>
-              </button>
-            </div>
-          </div>
         </div>
 
         <!-- Interactive Multi-WhatsApp Number Switcher Dropdown -->
@@ -1614,6 +1571,62 @@
           <span class="material-symbols-outlined text-[15px] sm:text-[16px]">logout</span>
           <span data-i18n="header.logout">Logout</span>
         </button>
+      </div>
+
+      <!-- Notifications Dropdown Flyout (Shared for Both Mobile & Desktop) -->
+      <div id="notifications-dropdown"
+        class="hidden fixed right-2.5 sm:right-6 top-14 w-[calc(100vw-20px)] sm:w-96 max-w-[calc(100vw-20px)] sm:max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[999999] text-xs">
+        <div class="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-2xl">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[15px]">notifications</span>
+            </div>
+            <p class="font-extrabold text-slate-900 text-xs sm:text-sm">Notifications</p>
+            <span id="notif-dropdown-unread-pill" class="text-[10px] bg-rose-100 text-rose-700 font-extrabold px-2 py-0.5 rounded-full">0 New</span>
+          </div>
+          <div class="flex items-center gap-2 text-[11px]">
+            <button type="button" onclick="markAllNotificationsAsRead(event)"
+              class="font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer">
+              Mark all read
+            </button>
+            <span class="text-slate-300">|</span>
+            <button type="button" onclick="clearAllNotifications(event)"
+              class="font-bold text-slate-400 hover:text-rose-600 hover:underline cursor-pointer">
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Filter Tabs -->
+        <div class="flex items-center gap-1 px-3 py-1.5 bg-slate-50 border-b border-slate-100 text-[11px] font-semibold">
+          <button type="button" onclick="setNotifFilter('all', event)" id="notif-tab-all"
+            class="px-2.5 py-1 rounded-lg bg-white shadow-xs text-slate-900 font-bold border border-slate-200 cursor-pointer">All</button>
+          <button type="button" onclick="setNotifFilter('chats', event)" id="notif-tab-chats"
+            class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Chats</button>
+          <button type="button" onclick="setNotifFilter('calls', event)" id="notif-tab-calls"
+            class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Calls</button>
+          <button type="button" onclick="setNotifFilter('alerts', event)" id="notif-tab-alerts"
+            class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Alerts</button>
+        </div>
+
+        <!-- Dynamic Notification List -->
+        <div id="notifications-list-container" class="max-h-[360px] sm:max-h-[400px] overflow-y-auto divide-y divide-slate-100 custom-chat-scroll">
+          <!-- Rendered dynamically by JS -->
+        </div>
+
+        <!-- Footer: Quick Actions -->
+        <div class="p-2 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between gap-2">
+          <button type="button" onclick="switchView('inbox'); closeNotificationsDropdown();"
+            class="flex-1 py-1.5 px-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer">
+            <span class="material-symbols-outlined text-[15px] text-emerald-600">chat</span>
+            <span>Open Inbox</span>
+          </button>
+          <button type="button" onclick="switchView('enquiries'); closeNotificationsDropdown();"
+            class="flex-1 py-1.5 px-2 bg-white hover:bg-indigo-50 text-indigo-800 border border-slate-200 hover:border-indigo-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer">
+            <span class="material-symbols-outlined text-[15px] text-indigo-600">assignment</span>
+            <span>View Enquiries</span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -11904,7 +11917,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261117_v29"></script>
+  <script src="crm_app.js?v=20261117_v30"></script>
 </body>
 
 </html>
