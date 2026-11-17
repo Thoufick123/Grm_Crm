@@ -39183,7 +39183,19 @@ window.openBulkForwardModal = function () {
   const texts = [];
   const allMessages = (CRM_STATE && CRM_STATE.messages) ? CRM_STATE.messages : [];
 
+  // Preserve natural top-to-bottom chat order for multiple forwarded messages
+  const orderedMsgIds = [];
+  document.querySelectorAll('.chat-message-row').forEach(row => {
+    const mId = row.getAttribute('data-msg-id');
+    if (mId && window.SELECTED_CHAT_MESSAGES.has(mId)) {
+      orderedMsgIds.push(mId);
+    }
+  });
   window.SELECTED_CHAT_MESSAGES.forEach(mId => {
+    if (!orderedMsgIds.includes(mId)) orderedMsgIds.push(mId);
+  });
+
+  orderedMsgIds.forEach(mId => {
     let t = (window.ACTIVE_CHAT_MESSAGES_MAP && window.ACTIVE_CHAT_MESSAGES_MAP[mId]) || '';
     if (!t) {
       const found = allMessages.find(m => String(m.id) === String(mId));
@@ -39204,6 +39216,8 @@ window.openBulkForwardModal = function () {
     return;
   }
 
+  // Store individual messages array so each sends as its own separate WhatsApp message
+  window.CURRENT_FORWARD_TEXTS = texts;
   const combined = texts.join('\n\n');
   window.CURRENT_FORWARD_TEXT = combined;
   window.FORWARD_SELECTED_CONTACTS.clear();
@@ -39281,6 +39295,7 @@ window.openForwardMessageModal = function (msgId, ev) {
   }
 
   window.CURRENT_FORWARD_TEXT = text;
+  window.CURRENT_FORWARD_TEXTS = [text];
   window.FORWARD_SELECTED_CONTACTS.clear();
   window.updateForwardSelectedUI();
 
@@ -39304,8 +39319,12 @@ window.openForwardMessageModal = function (msgId, ev) {
 
 window.closeForwardMessageModal = function () {
   window.CURRENT_FORWARD_TEXT = '';
+  window.CURRENT_FORWARD_TEXTS = [];
   window.FORWARD_SELECTED_CONTACTS.clear();
   window.updateForwardSelectedUI();
+  if (typeof window.cancelBulkMessageSelect === 'function') {
+    window.cancelBulkMessageSelect();
+  }
 
   if (typeof closeModal === 'function') {
     closeModal('modal-forward-message');
@@ -39439,8 +39458,11 @@ window.renderForwardContactList = function (query) {
 };
 
 window.executeForwardToCustomer = async function (phone, customerName) {
-  const text = window.CURRENT_FORWARD_TEXT;
-  if (!text) {
+  const textsToSend = (Array.isArray(window.CURRENT_FORWARD_TEXTS) && window.CURRENT_FORWARD_TEXTS.length > 0)
+    ? window.CURRENT_FORWARD_TEXTS
+    : (window.CURRENT_FORWARD_TEXT ? [window.CURRENT_FORWARD_TEXT] : []);
+
+  if (textsToSend.length === 0) {
     if (typeof showToast === 'function') showToast('Forward Failed', 'Message content is empty.', 'error', 'rose');
     return;
   }
@@ -39452,38 +39474,54 @@ window.executeForwardToCustomer = async function (phone, customerName) {
   }
 
   try {
-    // Direct REST API send to bridge and save to DB
-    const res = await fetch('api.php?action=send_message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phone: cleanPhone,
-        text: text,
-        message: text,
-        sender_name: (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) || 'Super Admin'
-      })
-    });
-    const data = await res.json();
-    if (data && (data.status === 'success' || data.success)) {
-      if (typeof showToast === 'function') {
-        showToast('Message Forwarded', `Directly sent to ${customerName || cleanPhone}!`, 'check_circle', 'emerald');
+    let sentCount = 0;
+    for (let i = 0; i < textsToSend.length; i++) {
+      const msgItem = textsToSend[i];
+      if (!msgItem || !msgItem.trim()) continue;
+
+      if (i > 0) {
+        await new Promise(r => setTimeout(r, 350));
       }
-    } else {
-      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-        SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: text });
+
+      // Direct REST API send to bridge and save to DB
+      const res = await fetch('api.php?action=send_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          text: msgItem,
+          message: msgItem,
+          sender_name: (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) || 'Super Admin'
+        })
+      });
+      const data = await res.json().catch(() => null);
+      if (data && (data.status === 'success' || data.success)) {
+        sentCount++;
+      } else {
+        if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+          SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: msgItem });
+          sentCount++;
+        }
       }
-      if (typeof showToast === 'function') {
-        showToast('Message Forwarded', `Dispatched to ${customerName || cleanPhone}`, 'check_circle', 'emerald');
-      }
+    }
+
+    if (typeof showToast === 'function') {
+      const msgLabel = textsToSend.length > 1 ? `${sentCount} separate messages` : 'Message';
+      showToast('Forwarded Successfully', `${msgLabel} directly sent to ${customerName || cleanPhone}!`, 'check_circle', 'emerald');
     }
     window.closeForwardMessageModal();
   } catch (err) {
     console.error('Error forwarding message:', err);
-    if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-      SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: text });
+    for (let i = 0; i < textsToSend.length; i++) {
+      const msgItem = textsToSend[i];
+      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+        if (i > 0) await new Promise(r => setTimeout(r, 250));
+        SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: msgItem });
+      }
     }
     if (typeof showToast === 'function') {
-      showToast('Message Forwarded', `Dispatched to ${customerName || cleanPhone}`, 'check_circle', 'emerald');
+      const msgLabel = textsToSend.length > 1 ? `${textsToSend.length} messages` : 'Message';
+      showToast('Forwarded', `${msgLabel} dispatched to ${customerName || cleanPhone}`, 'check_circle', 'emerald');
     }
     window.closeForwardMessageModal();
   }
@@ -39495,8 +39533,11 @@ window.executeForwardToSelectedContacts = async function () {
     return;
   }
 
-  const text = window.CURRENT_FORWARD_TEXT;
-  if (!text) {
+  const textsToSend = (Array.isArray(window.CURRENT_FORWARD_TEXTS) && window.CURRENT_FORWARD_TEXTS.length > 0)
+    ? window.CURRENT_FORWARD_TEXTS
+    : (window.CURRENT_FORWARD_TEXT ? [window.CURRENT_FORWARD_TEXT] : []);
+
+  if (textsToSend.length === 0) {
     if (typeof showToast === 'function') showToast('Forward Failed', 'Message content is empty.', 'error', 'rose');
     return;
   }
@@ -39509,39 +39550,52 @@ window.executeForwardToSelectedContacts = async function () {
     if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
     if (!cleanPhone) continue;
 
-    try {
-      // 1. Direct send via backend REST API & Baileys Bridge
-      const res = await fetch('api.php?action=send_message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          text: text,
-          message: text,
-          sender_name: (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) || 'Super Admin'
-        })
-      });
-      const data = await res.json();
-      if (data && (data.status === 'success' || data.success)) {
-        successCount++;
-      } else {
+    let contactDelivered = false;
+    for (let i = 0; i < textsToSend.length; i++) {
+      const msgItem = textsToSend[i];
+      if (!msgItem || !msgItem.trim()) continue;
+
+      if (i > 0) {
+        await new Promise(r => setTimeout(r, 350));
+      }
+
+      try {
+        // Direct send via backend REST API & Baileys Bridge
+        const res = await fetch('api.php?action=send_message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: cleanPhone,
+            text: msgItem,
+            message: msgItem,
+            sender_name: (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) || 'Super Admin'
+          })
+        });
+        const data = await res.json().catch(() => null);
+        if (data && (data.status === 'success' || data.success)) {
+          contactDelivered = true;
+        } else {
+          if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+            SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: msgItem });
+            contactDelivered = true;
+          }
+        }
+      } catch (e) {
+        console.warn('Error forwarding to ' + phone, e);
         if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-          SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: text });
-          successCount++;
+          SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: msgItem });
+          contactDelivered = true;
         }
       }
-    } catch (e) {
-      console.warn('Error forwarding to ' + phone, e);
-      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-        SOCKET_IO.emit('whatsapp:send', { phone: cleanPhone, text: text });
-        successCount++;
-      }
     }
+
+    if (contactDelivered) successCount++;
   }
 
   if (successCount > 0) {
     if (typeof showToast === 'function') {
-      showToast('Forwarded Successfully', `Directly sent to ${successCount} recipient(s)!`, 'send', 'emerald');
+      const msgCountText = textsToSend.length > 1 ? `${textsToSend.length} separate messages each` : 'Message';
+      showToast('Forwarded Successfully', `${msgCountText} sent to ${successCount} recipient(s)!`, 'send', 'emerald');
     }
   } else {
     if (typeof showToast === 'function') {
