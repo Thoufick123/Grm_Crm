@@ -451,9 +451,37 @@ function initializeDatabaseSchema($pdo) {
             `unread_count` INT DEFAULT 0,
             `last_message` TEXT NULL,
             `status_notes` TEXT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
+    try {
+        $hasUpdatedCol = $pdo->query("SHOW COLUMNS FROM `queries` LIKE 'updated_at'")->fetch();
+        if (!$hasUpdatedCol) {
+            $pdo->exec("ALTER TABLE `queries` ADD COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, ADD INDEX `idx_queries_updated_at` (`updated_at`)");
+        }
+        // Targeted Compound Indexing for Queries
+        $existingQIndexes = $pdo->query("SHOW INDEX FROM `queries`")->fetchAll(PDO::FETCH_ASSOC);
+        $qIdxNames = array_column($existingQIndexes, 'Key_name');
+        if (!in_array('idx_queries_status_assigned', $qIdxNames)) {
+            $pdo->exec("ALTER TABLE `queries` ADD INDEX `idx_queries_status_assigned` (`status`, `assigned_to`)");
+        }
+        if (!in_array('idx_queries_assigned_updated', $qIdxNames)) {
+            $pdo->exec("ALTER TABLE `queries` ADD INDEX `idx_queries_assigned_updated` (`assigned_to`, `updated_at`)");
+        }
+    } catch (Exception $e) {}
+    try {
+        $hasMsgUpdatedCol = $pdo->query("SHOW COLUMNS FROM `messages` LIKE 'updated_at'")->fetch();
+        if (!$hasMsgUpdatedCol) {
+            $pdo->exec("ALTER TABLE `messages` ADD COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, ADD INDEX `idx_messages_updated_at` (`updated_at`)");
+        }
+        // Targeted Compound Indexing for Messages
+        $existingMIndexes = $pdo->query("SHOW INDEX FROM `messages`")->fetchAll(PDO::FETCH_ASSOC);
+        $mIdxNames = array_column($existingMIndexes, 'Key_name');
+        if (!in_array('idx_messages_cust_id', $mIdxNames)) {
+            $pdo->exec("ALTER TABLE `messages` ADD INDEX `idx_messages_cust_id` (`customer_id`, `id` DESC)");
+        }
+    } catch (Exception $e) {}
 
     // 5. Chat Conversations & Messages Table (All WhatsApp Values Stored)
     $pdo->exec("
