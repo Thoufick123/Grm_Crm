@@ -4940,7 +4940,7 @@ function switchView(viewName, subName, isFromHistory = false) {
   if (viewName === 'inbox') {
     switchInboxSubmodule(subName || ACTIVE_INBOX_SUBMODULE || 'chats');
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      if (typeof mobileBackToConversations === 'function') {
+      if (!ACTIVE_CUSTOMER_ID && typeof mobileBackToConversations === 'function') {
         mobileBackToConversations();
       }
     }

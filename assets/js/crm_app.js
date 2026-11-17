@@ -4269,7 +4269,7 @@ function switchView(viewName, subName) {
   if (viewName === 'inbox') {
     switchInboxSubmodule(subName || ACTIVE_INBOX_SUBMODULE || 'chats');
     if (typeof window !== 'undefined' && window.innerWidth < 768 && !ACTIVE_CUSTOMER_ID) {
-      if (typeof mobileBackToConversations === 'function') mobileBackToConversations();
+      if (!ACTIVE_CUSTOMER_ID && typeof mobileBackToConversations === 'function') mobileBackToConversations();
     }
     renderInbox();
   }
