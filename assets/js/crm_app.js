@@ -27283,7 +27283,17 @@ function generateOrderPackingSlipHtml(order, cfg, isPreview = false) {
   }
 
   // 6. Ordered Items Table
-  const items = order.items || [];
+  let items = order.items || [];
+  if (typeof items === 'string') {
+    try { items = JSON.parse(items); } catch(e) { items = []; }
+  }
+  if (!Array.isArray(items)) {
+    if (order.items_json && typeof order.items_json === 'string') {
+      try { items = JSON.parse(order.items_json); } catch(e) { items = []; }
+    } else {
+      items = [];
+    }
+  }
   let itemsRowsHtml = '';
   let totalQty = 0;
 
@@ -27487,9 +27497,9 @@ window.testPrintPreviewPackingSlip = testPrintPreviewPackingSlip;
 
 // Opens packing slip modal for a single order
 function openOrderPackingSlipModal(orderId) {
-  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
+  const ord = (CRM_STATE?.orders || []).find(o => String(o.id) === String(orderId));
   if (!ord) {
-    showToast('Order Not Found', 'Could not locate order ' + orderId, 'error', 'rose');
+    if (typeof showToast === 'function') showToast('Order Not Found', 'Could not locate order ' + orderId, 'error', 'rose');
     return;
   }
   const cfg = getPackingSlipConfig();
@@ -27541,10 +27551,17 @@ function openBatchPackingSlipsModal() {
 window.openBatchPackingSlipsModal = openBatchPackingSlipsModal;
 
 function openPackingSlipModalWithContent(ordersList, cfg, titleText) {
+  let modal = document.getElementById('modal-order-packing-slip');
+  if (!modal) {
+    const tpl = document.getElementById('tpl-modal-order-packing-slip');
+    if (tpl && tpl.content) {
+      document.body.appendChild(tpl.content.cloneNode(true));
+      modal = document.getElementById('modal-order-packing-slip');
+    }
+  }
   const container = document.getElementById('packing-slip-printable-container');
   const titleEl = document.getElementById('packing-slip-modal-title');
   const countBadge = document.getElementById('packing-slip-badge-count');
-  const modal = document.getElementById('modal-order-packing-slip');
 
   if (!container || !modal) return;
 
@@ -27554,7 +27571,11 @@ function openPackingSlipModalWithContent(ordersList, cfg, titleText) {
   const slipsHtml = ordersList.map(ord => generateOrderPackingSlipHtml(ord, cfg)).join('');
   container.innerHTML = slipsHtml;
 
-  modal.classList.remove('hidden');
+  if (typeof openModal === 'function') {
+    openModal('modal-order-packing-slip');
+  } else {
+    modal.classList.remove('hidden');
+  }
 }
 
 function setPackingSlipModalPaperFormat(fmt) {
@@ -27604,8 +27625,20 @@ function printPackingSlipDocument() {
 window.printPackingSlipDocument = printPackingSlipDocument;
 
 function openOrderInvoiceModal(orderId) {
-  const ord = (CRM_STATE?.orders || []).find(o => o.id === orderId);
-  if (!ord) return;
+  const ord = (CRM_STATE?.orders || []).find(o => String(o.id) === String(orderId));
+  if (!ord) {
+    if (typeof showToast === 'function') showToast('Order Not Found', 'Could not locate order ' + orderId, 'error', 'rose');
+    return;
+  }
+
+  let modal = document.getElementById('modal-order-invoice');
+  if (!modal) {
+    const tpl = document.getElementById('tpl-modal-order-invoice');
+    if (tpl && tpl.content) {
+      document.body.appendChild(tpl.content.cloneNode(true));
+      modal = document.getElementById('modal-order-invoice');
+    }
+  }
 
   const content = document.getElementById('invoice-printable-content');
   if (!content) return;
@@ -27613,6 +27646,18 @@ function openOrderInvoiceModal(orderId) {
   const grandTotal = parseFloat(ord.grandTotal || ord.grand_total || 0);
   const staff = ord.staffName || ord.staff_name || ord.createdBy || 'Super Admin';
   const normStatus = normalizeOrderStatus(ord.orderStatus || ord.order_status);
+
+  let items = ord.items || [];
+  if (typeof items === 'string') {
+    try { items = JSON.parse(items); } catch(e) { items = []; }
+  }
+  if (!Array.isArray(items)) {
+    if (ord.items_json && typeof ord.items_json === 'string') {
+      try { items = JSON.parse(ord.items_json); } catch(e) { items = []; }
+    } else {
+      items = [];
+    }
+  }
 
   content.innerHTML = `
     <div class="border border-slate-200 rounded-2xl p-6 bg-white space-y-6 shadow-sm">
@@ -27676,14 +27721,18 @@ function openOrderInvoiceModal(orderId) {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            ${(ord.items || []).map(it => `
+            ${items.length === 0 ? `
               <tr>
-                <td class="py-2.5 px-3 font-bold text-slate-800">${it.name}</td>
-                <td class="py-2.5 px-3 font-mono text-[11px] text-slate-500">${it.sku || 'N/A'}</td>
-                <td class="py-2.5 px-3 text-slate-600">${it.size || 'Standard'}</td>
-                <td class="py-2.5 px-3 text-center font-bold">${it.qty || 1}</td>
-                <td class="py-2.5 px-3 text-right font-mono">₹${parseFloat(it.price || 0).toLocaleString('en-IN')}</td>
-                <td class="py-2.5 px-3 text-right font-mono font-bold">₹${((it.price || 0) * (it.qty || 1)).toLocaleString('en-IN')}</td>
+                <td colspan="6" class="py-3 px-3 text-center text-slate-400 italic">No item details recorded</td>
+              </tr>
+            ` : items.map(it => `
+              <tr>
+                <td class="py-2.5 px-3 font-bold text-slate-800">${it.name || it.title || it.product_name || 'Garment Item'}</td>
+                <td class="py-2.5 px-3 font-mono text-[11px] text-slate-500">${it.sku || it.item_sku || 'N/A'}</td>
+                <td class="py-2.5 px-3 text-slate-600">${it.size || it.item_size || 'Standard'}</td>
+                <td class="py-2.5 px-3 text-center font-bold">${it.qty || it.quantity || 1}</td>
+                <td class="py-2.5 px-3 text-right font-mono">₹${parseFloat(it.price || it.unit_price || 0).toLocaleString('en-IN')}</td>
+                <td class="py-2.5 px-3 text-right font-mono font-bold">₹${((parseFloat(it.price || it.unit_price || 0)) * (parseInt(it.qty || it.quantity || 1) || 1)).toLocaleString('en-IN')}</td>
               </tr>
             `).join('')}
           </tbody>
