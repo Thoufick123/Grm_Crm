@@ -1606,19 +1606,28 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                         await sock.sendMessage(replyTargetJid, { text: confirmText });
                                         console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to ${replyTargetJid}`);
 
-                                        // Send to Staff WhatsApp inbox as well!
+                                        // Send to Staff WhatsApp inbox only if staff is a different person from sender (prevents duplicate messages)
                                         const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
                                         if (staffPhone) {
                                             const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
+                                            const cleanStaff10 = cleanStaffDigits.slice(-10);
+                                            const cleanSender10 = String(senderNumber || replyTargetJid || '').replace(/[^0-9]/g, '').slice(-10);
                                             const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
                                             const staffJid = resolveDestinationJid(cleanStaffPhone);
-                                            if (staffJid && staffJid !== replyTargetJid) {
+                                            const canonicalReplyJid = resolveDestinationJid(replyTargetJid) || replyTargetJid;
+
+                                            const isSameRecipient = (cleanStaff10 && cleanSender10 && cleanStaff10 === cleanSender10) ||
+                                                                    (staffJid && (staffJid === replyTargetJid || staffJid === canonicalReplyJid));
+
+                                            if (staffJid && !isSameRecipient) {
                                                 try {
                                                     await sock.sendMessage(staffJid, { text: confirmText });
                                                     console.log(`[Bulk Interceptor] Staff notification delivered to ${staffJid}`);
                                                 } catch (errStaff) {
                                                     console.warn(`[Bulk Interceptor] Could not deliver to staff ${staffJid}:`, errStaff.message);
                                                 }
+                                            } else {
+                                                console.log(`[Bulk Interceptor] Skipping duplicate dispatch to staff ${staffPhone}: sender and staff are the same recipient.`);
                                             }
                                         }
                                     }
@@ -1676,19 +1685,28 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                         await sock.sendMessage(replyTargetJid, { text: rejectText });
                                         console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to ${replyTargetJid}`);
 
-                                        // Send to Staff's WhatsApp inbox as well!
+                                        // Send to Staff's WhatsApp inbox only if staff is a different person from sender (prevents duplicate messages)
                                         const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
                                         if (staffPhone) {
                                             const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
+                                            const cleanStaff10 = cleanStaffDigits.slice(-10);
+                                            const cleanSender10 = String(senderNumber || replyTargetJid || '').replace(/[^0-9]/g, '').slice(-10);
                                             const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
                                             const staffJid = resolveDestinationJid(cleanStaffPhone);
-                                            if (staffJid && staffJid !== replyTargetJid) {
+                                            const canonicalReplyJid = resolveDestinationJid(replyTargetJid) || replyTargetJid;
+
+                                            const isSameRecipient = (cleanStaff10 && cleanSender10 && cleanStaff10 === cleanSender10) ||
+                                                                    (staffJid && (staffJid === replyTargetJid || staffJid === canonicalReplyJid));
+
+                                            if (staffJid && !isSameRecipient) {
                                                 try {
                                                     await sock.sendMessage(staffJid, { text: rejectText });
                                                     console.log(`[Bulk Interceptor] Staff rejection notification delivered to ${staffJid}`);
                                                 } catch (errStaff) {
                                                     console.warn(`[Bulk Interceptor] Could not deliver rejection to staff ${staffJid}:`, errStaff.message);
                                                 }
+                                            } else {
+                                                console.log(`[Bulk Interceptor] Skipping duplicate dispatch to staff ${staffPhone}: sender and staff are the same recipient.`);
                                             }
                                         }
                                     }
