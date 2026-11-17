@@ -65,6 +65,58 @@ const io = new Server(server, {
     }
 });
 
+// --- Server-Sent Events (SSE) Client Registry & Broadcaster ---
+const sseClients = new Set();
+
+function broadcastSSE(event, data) {
+    const payload = `event: ${event}\ndata: ${JSON.stringify(data || {})}\n\n`;
+    for (const client of sseClients) {
+        try {
+            client.write(payload);
+        } catch (err) {
+            sseClients.delete(client);
+        }
+    }
+}
+
+// Hook into io.emit to mirror all bridge events to connected SSE listeners
+const originalIoEmit = io.emit.bind(io);
+io.emit = function (event, ...args) {
+    originalIoEmit(event, ...args);
+    try {
+        broadcastSSE(event, args[0] !== undefined ? args[0] : {});
+    } catch (e) {}
+    return true;
+};
+
+// Express SSE Endpoint (Accessible at /events and /api/events)
+app.get(['/events', '/api/events'], (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream; charset=UTF-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (res.flushHeaders) res.flushHeaders();
+
+    res.write('retry: 2000\n\n');
+    res.write(': bridge_sse_connected\n\n');
+
+    sseClients.add(res);
+
+    const pingInterval = setInterval(() => {
+        try {
+            res.write(': ping\n\n');
+        } catch (e) {
+            clearInterval(pingInterval);
+            sseClients.delete(res);
+        }
+    }, 15000);
+
+    req.on('close', () => {
+        clearInterval(pingInterval);
+        sseClients.delete(res);
+    });
+});
+
 // Prevent unhandled Baileys network drops from crashing bridge process
 process.on('uncaughtException', (err) => {
     console.warn('[Bridge Safe Catch - uncaughtException]:', err.message);

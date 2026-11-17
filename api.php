@@ -213,6 +213,57 @@ if (isset($_GET['action']) && $_GET['action'] === 'reset_customer_payment') {
 $configFile = __DIR__ . '/whatsapp_account_config.json';
 $messagesFile = __DIR__ . '/live_messages_queue.json';
 
+/**
+ * High-Speed 60-Second Query/Config Cache Helper (APCu / Fast File-backed)
+ */
+function getCachedConfigItem($cacheKey, $fetchCallback, $ttlSeconds = 60) {
+    if (function_exists('apcu_fetch')) {
+        $success = false;
+        $val = apcu_fetch('grm_crm_' . $cacheKey, $success);
+        if ($success && $val !== false) {
+            return $val;
+        }
+        $fresh = $fetchCallback();
+        apcu_store('grm_crm_' . $cacheKey, $fresh, $ttlSeconds);
+        return $fresh;
+    }
+    $cacheDir = __DIR__ . '/uploads/cache';
+    if (!is_dir($cacheDir)) {
+        @mkdir($cacheDir, 0755, true);
+    }
+    $cacheFile = $cacheDir . '/' . md5($cacheKey) . '.json';
+    if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $ttlSeconds) {
+        $cached = json_decode(@file_get_contents($cacheFile), true);
+        if ($cached !== null) {
+            return $cached;
+        }
+    }
+    $fresh = $fetchCallback();
+    @file_put_contents($cacheFile, json_encode($fresh));
+    return $fresh;
+}
+
+function invalidateConfigCache($cacheKey = null) {
+    if (function_exists('apcu_delete')) {
+        if ($cacheKey) {
+            apcu_delete('grm_crm_' . $cacheKey);
+        } else {
+            apcu_clear_cache();
+        }
+    }
+    $cacheDir = __DIR__ . '/uploads/cache';
+    if (is_dir($cacheDir)) {
+        if ($cacheKey) {
+            @unlink($cacheDir . '/' . md5($cacheKey) . '.json');
+        } else {
+            $files = glob($cacheDir . '/*.json');
+            if ($files) {
+                foreach ($files as $f) @unlink($f);
+            }
+        }
+    }
+}
+
 function getEffectiveBridgeUrl() {
     static $resolved = null;
     if ($resolved !== null) return $resolved;
@@ -423,6 +474,9 @@ if ($action === 'get_state' || $action === 'get_all') {
             throw new Exception("Database connection unavailable");
         }
 
+        $scope = isset($_GET['scope']) ? strtolower(trim($_GET['scope'])) : (isset($_GET['view']) ? strtolower(trim($_GET['view'])) : 'full');
+        $isInboxScope = ($scope === 'inbox');
+
         // 1. WhatsApp Account Config
         $waAccounts = [];
         if ($pdo) {
@@ -481,9 +535,12 @@ if ($action === 'get_state' || $action === 'get_all') {
         $staffStmt = $pdo->query("SELECT * FROM `users` WHERE `id` != 'admin' ORDER BY `created_at` ASC");
         $staffList = $staffStmt->fetchAll();
 
-        // 3. Products
-        $pStmt = $pdo->query("SELECT * FROM `products` ORDER BY `id` ASC");
-        $products = $pStmt->fetchAll();
+        // 3. Products (Lazy loaded on-demand for catalog/inventory)
+        $products = [];
+        if (!$isInboxScope) {
+            $pStmt = $pdo->query("SELECT * FROM `products` ORDER BY `id` ASC");
+            $products = $pStmt->fetchAll();
+        }
 
         // 4. Customers
         $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` ASC");
@@ -563,36 +620,39 @@ if ($action === 'get_state' || $action === 'get_all') {
             ];
         }
 
-        // 7. Orders
-        $oStmt = $pdo->query("SELECT * FROM `orders` ORDER BY `created_at` DESC");
-        $orders = $oStmt->fetchAll();
-        foreach ($orders as &$o) {
-            if (!empty($o['items_json']) && is_string($o['items_json'])) {
-                $o['items'] = json_decode($o['items_json'], true) ?: [];
+        // 7. Orders (Lazy loaded on-demand for Orders module / Executive Dashboard)
+        $orders = [];
+        if (!$isInboxScope) {
+            $oStmt = $pdo->query("SELECT * FROM `orders` ORDER BY `created_at` DESC");
+            $orders = $oStmt->fetchAll();
+            foreach ($orders as &$o) {
+                if (!empty($o['items_json']) && is_string($o['items_json'])) {
+                    $o['items'] = json_decode($o['items_json'], true) ?: [];
+                }
+                $o['queryId'] = $o['query_id'] ?? '';
+                $o['customerId'] = $o['customer_id'] ?? '';
+                $o['customerName'] = $o['customer_name'] ?? 'Customer';
+                $o['customerPhone'] = $o['customer_phone'] ?? '';
+                $o['shippingAddress'] = $o['shipping_address'] ?? '';
+                $o['grandTotal'] = (float)($o['grand_total'] ?? 0);
+                $o['codAdvance'] = (float)($o['cod_advance'] ?? ($o['advance_payment'] ?? 0));
+                $o['codBalanceDue'] = (float)($o['cod_balance_due'] ?? ($o['balance_amount'] ?? 0));
+                $o['shippingAmount'] = (float)($o['shipping_amount'] ?? 0);
+                $o['shippingCharge'] = (float)($o['shipping_amount'] ?? 0);
+                $o['advancePayment'] = (float)($o['advance_payment'] ?? ($o['cod_advance'] ?? 0));
+                $o['balanceAmount'] = (float)($o['balance_amount'] ?? ($o['cod_balance_due'] ?? 0));
+                $o['paymentMethod'] = $o['payment_method'] ?? 'COD';
+                $o['paymentStatus'] = $o['payment_status'] ?? 'PENDING';
+                $o['upiTransactionId'] = $o['upi_transaction_id'] ?? '';
+                $o['paymentScreenshot'] = $o['payment_screenshot'] ?? '';
+                $o['orderStatus'] = $o['order_status'] ?? 'PLACED';
+                $o['staffId'] = $o['staff_id'] ?? ($o['created_by'] ?? 'staff_01');
+                $o['staffName'] = $o['staff_name'] ?? ($o['created_by'] ?? 'Super Admin');
+                $o['createdBy'] = $o['created_by'] ?? ($o['staff_name'] ?? 'Staff');
+                $o['trackingNumber'] = $o['tracking_number'] ?? '';
+                $o['courierName'] = $o['courier_name'] ?? '';
+                $o['createdAt'] = $o['created_at'] ?? '';
             }
-            $o['queryId'] = $o['query_id'] ?? '';
-            $o['customerId'] = $o['customer_id'] ?? '';
-            $o['customerName'] = $o['customer_name'] ?? 'Customer';
-            $o['customerPhone'] = $o['customer_phone'] ?? '';
-            $o['shippingAddress'] = $o['shipping_address'] ?? '';
-            $o['grandTotal'] = (float)($o['grand_total'] ?? 0);
-            $o['codAdvance'] = (float)($o['cod_advance'] ?? ($o['advance_payment'] ?? 0));
-            $o['codBalanceDue'] = (float)($o['cod_balance_due'] ?? ($o['balance_amount'] ?? 0));
-            $o['shippingAmount'] = (float)($o['shipping_amount'] ?? 0);
-            $o['shippingCharge'] = (float)($o['shipping_amount'] ?? 0);
-            $o['advancePayment'] = (float)($o['advance_payment'] ?? ($o['cod_advance'] ?? 0));
-            $o['balanceAmount'] = (float)($o['balance_amount'] ?? ($o['cod_balance_due'] ?? 0));
-            $o['paymentMethod'] = $o['payment_method'] ?? 'COD';
-            $o['paymentStatus'] = $o['payment_status'] ?? 'PENDING';
-            $o['upiTransactionId'] = $o['upi_transaction_id'] ?? '';
-            $o['paymentScreenshot'] = $o['payment_screenshot'] ?? '';
-            $o['orderStatus'] = $o['order_status'] ?? 'PLACED';
-            $o['staffId'] = $o['staff_id'] ?? ($o['created_by'] ?? 'staff_01');
-            $o['staffName'] = $o['staff_name'] ?? ($o['created_by'] ?? 'Super Admin');
-            $o['createdBy'] = $o['created_by'] ?? ($o['staff_name'] ?? 'Staff');
-            $o['trackingNumber'] = $o['tracking_number'] ?? '';
-            $o['courierName'] = $o['courier_name'] ?? '';
-            $o['createdAt'] = $o['created_at'] ?? '';
         }
 
         // 8. Followups (Normalized with lifecycle & RBAC fields)
@@ -631,107 +691,140 @@ if ($action === 'get_state' || $action === 'get_all') {
             ];
         }, $rawFollowups);
 
-        // 9. Audit Logs
-        $aStmt = $pdo->query("SELECT * FROM `audit_logs` ORDER BY `id` DESC LIMIT 100");
-        $auditLogs = $aStmt->fetchAll();
+        // 9. Audit Logs (Loaded for full scope or audit tab)
+        $auditLogs = [];
+        if (!$isInboxScope) {
+            try {
+                $aStmt = $pdo->query("SELECT * FROM `audit_logs` ORDER BY `id` DESC LIMIT 100");
+                $auditLogs = $aStmt->fetchAll();
+            } catch (Exception $e) {}
+        }
 
         // 9.1 Dedicated DND Records Table
         $dndRecords = [];
-        try {
-            $dndStmt = $pdo->query("SELECT * FROM `dnd_records` ORDER BY `created_at` DESC");
-            $dndRecords = $dndStmt->fetchAll();
-        } catch (Exception $e) {}
+        if (!$isInboxScope) {
+            try {
+                $dndStmt = $pdo->query("SELECT * FROM `dnd_records` ORDER BY `created_at` DESC");
+                $dndRecords = $dndStmt->fetchAll();
+            } catch (Exception $e) {}
+        }
 
-        // 10. Categories, Subcategories & Attributes (Website Catalog Workflow)
+        // 10. Categories, Subcategories & Attributes (60-Second Query Cache)
         $rolePermissions = [];
         $categories = [];
         $subcategories = [];
         $attributes = ['sizes' => [], 'colors' => [], 'fabrics' => [], 'specifications' => [], 'custom' => []];
-        try {
-            $catStmt = $pdo->query("SELECT * FROM `categories` ORDER BY `display_order` ASC, `name` ASC");
-            $categories = $catStmt->fetchAll();
-
-            $subStmt = $pdo->query("SELECT * FROM `subcategories` ORDER BY `name` ASC");
-            $subcategories = $subStmt->fetchAll();
-
-            $attrStmt = $pdo->query("SELECT * FROM `attributes` ORDER BY `id` ASC");
-            $rawAttrs = $attrStmt->fetchAll();
-            foreach ($rawAttrs as $ra) {
-                $type = $ra['type'] ?? '';
-                if ($type === 'size') $attributes['sizes'][] = $ra['value'];
-                else if ($type === 'color') $attributes['colors'][] = $ra['value'];
-                else if ($type === 'fabric') $attributes['fabrics'][] = $ra['value'];
-                else if ($type === 'role_permissions') {
-                    $decoded = json_decode($ra['extra'] ?? '', true);
-                    if ($decoded) {
-                        $rolePermissions[$ra['value']] = $decoded;
-                    }
-                } else if ($type === 'specification') {
-                    $extraStr = $ra['extra'] ?? '';
-                    if (strpos($extraStr, ',') !== false) {
-                        $parts = array_filter(array_map('trim', explode(',', $extraStr)));
-                        foreach ($parts as $pIdx => $part) {
-                            $attributes['specifications'][] = [
-                                'id' => (int)$ra['id'] * 1000 + $pIdx,
-                                'label' => $ra['value'],
-                                'content' => $part
-                            ];
-                        }
-                    } else {
-                        $attributes['specifications'][] = [
-                            'id' => (int)$ra['id'],
-                            'label' => $ra['value'],
-                            'content' => $extraStr
-                        ];
-                    }
-                } else if ($type === 'attribute_type') {
-                    $attrName = trim($ra['value']);
-                    if (!empty($attrName) && !isset($attributes['custom'][$attrName])) {
-                        $attributes['custom'][$attrName] = [];
-                    }
-                } else if ($type === 'attribute_value' || $type === 'custom') {
-                    $attrName = trim($ra['extra'] ?: 'Custom');
-                    if (!isset($attributes['custom'][$attrName])) {
-                        $attributes['custom'][$attrName] = [];
-                    }
-                    if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
-                        $attributes['custom'][$attrName][] = $ra['value'];
-                    }
-                } else {
-                    $attrName = trim($ra['extra'] ?: ucfirst($ra['type']));
-                    if (!empty($attrName)) {
-                        if (!isset($attributes['custom'][$attrName])) {
-                            $attributes['custom'][$attrName] = [];
-                        }
-                        if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
-                            $attributes['custom'][$attrName][] = $ra['value'];
-                        }
-                    }
-                }
-            }
-        } catch (Exception $e) {}
-
-        // Auto-reply rules
         $arRules = [];
-        try {
-            $arRules = $pdo->query("SELECT * FROM `auto_reply_rules` ORDER BY `created_at` ASC")->fetchAll();
-            foreach ($arRules as &$r) {
-                if (!empty($r['keywords']) && is_string($r['keywords'])) {
-                    $r['keywords'] = json_decode($r['keywords'], true) ?: [$r['keywords']];
-                }
-                $r['actionType'] = $r['action_type'] ?? ($r['actionType'] ?? 'custom_text');
-                $r['categoryId'] = $r['category_id'] ?? ($r['categoryId'] ?? null);
-                $r['replyText'] = $r['reply_text'] ?? ($r['replyText'] ?? '');
-                $r['enabled'] = isset($r['enabled']) ? (bool)$r['enabled'] : true;
-                $r['autoSend'] = isset($r['auto_send']) ? (bool)$r['auto_send'] : true;
-            }
-        } catch (Exception $e) {}
-
-        // Broadcast templates
         $bcTemplates = [];
-        try {
-            $bcTemplates = $pdo->query("SELECT * FROM `broadcast_templates` ORDER BY `created_at` ASC")->fetchAll();
-        } catch (Exception $e) {}
+
+        if (!$isInboxScope) {
+            $cachedConfig = getCachedConfigItem('catalog_and_rules_cache', function() use ($pdo) {
+                $cRolePermissions = [];
+                $cCategories = [];
+                $cSubcategories = [];
+                $cAttributes = ['sizes' => [], 'colors' => [], 'fabrics' => [], 'specifications' => [], 'custom' => []];
+
+                try {
+                    $catStmt = $pdo->query("SELECT * FROM `categories` ORDER BY `display_order` ASC, `name` ASC");
+                    $cCategories = $catStmt->fetchAll();
+
+                    $subStmt = $pdo->query("SELECT * FROM `subcategories` ORDER BY `name` ASC");
+                    $cSubcategories = $subStmt->fetchAll();
+
+                    $attrStmt = $pdo->query("SELECT * FROM `attributes` ORDER BY `id` ASC");
+                    $rawAttrs = $attrStmt->fetchAll();
+                    foreach ($rawAttrs as $ra) {
+                        $type = $ra['type'] ?? '';
+                        if ($type === 'size') $cAttributes['sizes'][] = $ra['value'];
+                        else if ($type === 'color') $cAttributes['colors'][] = $ra['value'];
+                        else if ($type === 'fabric') $cAttributes['fabrics'][] = $ra['value'];
+                        else if ($type === 'role_permissions') {
+                            $decoded = json_decode($ra['extra'] ?? '', true);
+                            if ($decoded) {
+                                $cRolePermissions[$ra['value']] = $decoded;
+                            }
+                        } else if ($type === 'specification') {
+                            $extraStr = $ra['extra'] ?? '';
+                            if (strpos($extraStr, ',') !== false) {
+                                $parts = array_filter(array_map('trim', explode(',', $extraStr)));
+                                foreach ($parts as $pIdx => $part) {
+                                    $cAttributes['specifications'][] = [
+                                        'id' => (int)$ra['id'] * 1000 + $pIdx,
+                                        'label' => $ra['value'],
+                                        'content' => $part
+                                    ];
+                                }
+                            } else {
+                                $cAttributes['specifications'][] = [
+                                    'id' => (int)$ra['id'],
+                                    'label' => $ra['value'],
+                                    'content' => $extraStr
+                                ];
+                            }
+                        } else if ($type === 'attribute_type') {
+                            $attrName = trim($ra['value']);
+                            if (!empty($attrName) && !isset($cAttributes['custom'][$attrName])) {
+                                $cAttributes['custom'][$attrName] = [];
+                            }
+                        } else if ($type === 'attribute_value' || $type === 'custom') {
+                            $attrName = trim($ra['extra'] ?: 'Custom');
+                            if (!isset($cAttributes['custom'][$attrName])) {
+                                $cAttributes['custom'][$attrName] = [];
+                            }
+                            if (!empty($ra['value']) && !in_array($ra['value'], $cAttributes['custom'][$attrName])) {
+                                $cAttributes['custom'][$attrName][] = $ra['value'];
+                            }
+                        } else {
+                            $attrName = trim($ra['extra'] ?: ucfirst($ra['type']));
+                            if (!empty($attrName)) {
+                                if (!isset($cAttributes['custom'][$attrName])) {
+                                    $cAttributes['custom'][$attrName] = [];
+                                }
+                                if (!empty($ra['value']) && !in_array($ra['value'], $cAttributes['custom'][$attrName])) {
+                                    $cAttributes['custom'][$attrName][] = $ra['value'];
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception $e) {}
+
+                $cArRules = [];
+                try {
+                    $cArRules = $pdo->query("SELECT * FROM `auto_reply_rules` ORDER BY `created_at` ASC")->fetchAll();
+                    foreach ($cArRules as &$r) {
+                        if (!empty($r['keywords']) && is_string($r['keywords'])) {
+                            $r['keywords'] = json_decode($r['keywords'], true) ?: [$r['keywords']];
+                        }
+                        $r['actionType'] = $r['action_type'] ?? ($r['actionType'] ?? 'custom_text');
+                        $r['categoryId'] = $r['category_id'] ?? ($r['categoryId'] ?? null);
+                        $r['replyText'] = $r['reply_text'] ?? ($r['replyText'] ?? '');
+                        $r['enabled'] = isset($r['enabled']) ? (bool)$r['enabled'] : true;
+                        $r['autoSend'] = isset($r['auto_send']) ? (bool)$r['auto_send'] : true;
+                    }
+                } catch (Exception $e) {}
+
+                $cBcTemplates = [];
+                try {
+                    $cBcTemplates = $pdo->query("SELECT * FROM `broadcast_templates` ORDER BY `created_at` ASC")->fetchAll();
+                } catch (Exception $e) {}
+
+                return [
+                    'rolePermissions' => $cRolePermissions,
+                    'categories' => $cCategories,
+                    'subcategories' => $cSubcategories,
+                    'attributes' => $cAttributes,
+                    'arRules' => $cArRules,
+                    'bcTemplates' => $cBcTemplates
+                ];
+            }, 60);
+
+            $rolePermissions = $cachedConfig['rolePermissions'] ?? [];
+            $categories = $cachedConfig['categories'] ?? [];
+            $subcategories = $cachedConfig['subcategories'] ?? [];
+            $attributes = $cachedConfig['attributes'] ?? $attributes;
+            $arRules = $cachedConfig['arRules'] ?? [];
+            $bcTemplates = $cachedConfig['bcTemplates'] ?? [];
+        }
 
         echo json_encode([
             "status" => "success",
@@ -3274,10 +3367,16 @@ if ($action === 'sync_inbox_queue_to_db') {
     exit;
 }
 
+if ($action === 'sse_stream') {
+    require __DIR__ . '/sse.php';
+    exit;
+}
+
 if ($action === 'get_inbound_messages') {
     $since = isset($_GET['since']) ? (int)$_GET['since'] : 0;
     $newMessages = [];
 
+    // 1. Inbound messages from live queue JSON file
     if (file_exists($messagesFile)) {
         $rawQueue = file_get_contents($messagesFile);
         $queue = json_decode($rawQueue, true) ?: [];
@@ -3288,10 +3387,37 @@ if ($action === 'get_inbound_messages') {
         }
     }
 
+    // 2. High-speed delta query for newly updated / assigned leads
     $assignments = [];
     if ($pdo) {
         try {
-            $qRows = $pdo->query("SELECT q.id, q.customer_id, q.assigned_to, q.status, c.phone, c.name FROM `queries` q LEFT JOIN `customers` c ON q.customer_id = c.id WHERE q.assigned_to IS NOT NULL AND q.assigned_to != 'UNASSIGNED'")->fetchAll(PDO::FETCH_ASSOC);
+            if ($since > 0) {
+                // High-speed Delta Query: Only fetch records updated since client's last poll epoch
+                $stmt = $pdo->prepare("
+                    SELECT q.id, q.customer_id, q.assigned_to, q.status, c.phone, c.name 
+                    FROM `queries` q 
+                    LEFT JOIN `customers` c ON q.customer_id = c.id 
+                    WHERE q.assigned_to IS NOT NULL 
+                      AND q.assigned_to != 'UNASSIGNED' 
+                      AND (
+                        (q.updated_at IS NOT NULL AND q.updated_at >= FROM_UNIXTIME(:since1)) 
+                        OR (q.created_at IS NOT NULL AND q.created_at >= FROM_UNIXTIME(:since2))
+                      )
+                    LIMIT 100
+                ");
+                $stmt->execute([':since1' => $since, ':since2' => $since]);
+                $qRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                // Initial Load: Fetch current active assignments
+                $qRows = $pdo->query("
+                    SELECT q.id, q.customer_id, q.assigned_to, q.status, c.phone, c.name 
+                    FROM `queries` q 
+                    LEFT JOIN `customers` c ON q.customer_id = c.id 
+                    WHERE q.assigned_to IS NOT NULL 
+                      AND q.assigned_to != 'UNASSIGNED'
+                ")->fetchAll(PDO::FETCH_ASSOC);
+            }
+
             foreach ($qRows as $qr) {
                 $assignments[] = [
                     'query_id' => $qr['id'],
@@ -3302,7 +3428,65 @@ if ($action === 'get_inbound_messages') {
                     'name' => $qr['name'] ?? ''
                 ];
             }
-        } catch (Exception $e) {}
+        } catch (Exception $e) {
+            // Graceful fallback if updated_at column is not yet present on older schema
+            try {
+                $fallbackRows = $pdo->query("SELECT q.id, q.customer_id, q.assigned_to, q.status, c.phone, c.name FROM `queries` q LEFT JOIN `customers` c ON q.customer_id = c.id WHERE q.assigned_to IS NOT NULL AND q.assigned_to != 'UNASSIGNED'")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($fallbackRows as $qr) {
+                    $assignments[] = [
+                        'query_id' => $qr['id'],
+                        'customer_id' => $qr['customer_id'],
+                        'assigned_to' => $qr['assigned_to'],
+                        'status' => $qr['status'],
+                        'phone' => $qr['phone'] ?? '',
+                        'name' => $qr['name'] ?? ''
+                    ];
+                }
+            } catch (Exception $ex) {}
+        }
+
+        // 3. Delta query from MySQL messages table if new messages arrived directly
+        if ($since > 0) {
+            try {
+                $mStmt = $pdo->prepare("
+                    SELECT m.*, c.name as customer_name, c.phone as customer_phone 
+                    FROM `messages` m
+                    LEFT JOIN `customers` c ON m.customer_id = c.id
+                    WHERE (m.timestamp_epoch > :since1 OR (m.created_at IS NOT NULL AND m.created_at >= FROM_UNIXTIME(:since2)))
+                    ORDER BY m.id ASC LIMIT 50
+                ");
+                $mStmt->execute([':since1' => $since, ':since2' => $since]);
+                $dbMsgs = $mStmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($dbMsgs as $dm) {
+                    $uid = (string)($dm['message_uid'] ?: $dm['id']);
+                    $alreadyInQueue = false;
+                    foreach ($newMessages as $nm) {
+                        if (($nm['id'] ?? '') === $uid || ($nm['message_uid'] ?? '') === $uid) {
+                            $alreadyInQueue = true;
+                            break;
+                        }
+                    }
+                    if (!$alreadyInQueue) {
+                        $newMessages[] = [
+                            'id' => $uid,
+                            'message_uid' => $uid,
+                            'customer_id' => $dm['customer_id'],
+                            'sender' => $dm['sender'],
+                            'sender_name' => $dm['sender_name'] ?? ($dm['sender'] === 'bot' ? 'Bot (Auto-Reply)' : ($dm['sender'] === 'staff' ? 'Super Admin' : 'Customer')),
+                            'direction' => $dm['direction'] ?? ($dm['sender'] === 'customer' ? 'inbound' : 'outbound'),
+                            'text' => $dm['text'],
+                            'type' => $dm['media_type'] ?: 'text',
+                            'media_url' => $dm['media_url'],
+                            'duration' => (float)($dm['audio_duration'] ?: 8),
+                            'timestamp_epoch' => (int)($dm['timestamp_epoch'] ?? strtotime($dm['created_at'])),
+                            'time' => $dm['time_str'],
+                            'status' => $dm['status'] ?: 'DELIVERED',
+                            'account_id' => $dm['account_id'] ?? 'account_1'
+                        ];
+                    }
+                }
+            } catch (Exception $e) {}
+        }
     }
 
     echo json_encode([
@@ -4519,6 +4703,23 @@ if ($action === 'reassign_order_staff' && $_SERVER['REQUEST_METHOD'] === 'POST')
 
     echo json_encode(["status" => "success", "message" => "Order staff reassigned successfully", "staff_id" => $staffId, "staff_name" => $staffName]);
     exit;
+}
+
+if ($action === 'get_products') {
+    try {
+        if (!$pdo) {
+            echo json_encode(["status" => "success", "products" => []]);
+            exit;
+        }
+        $stmt = $pdo->query("SELECT * FROM `products` ORDER BY `id` ASC");
+        $products = $stmt->fetchAll();
+        echo json_encode(["status" => "success", "products" => $products]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
 }
 
 if ($action === 'get_orders') {
