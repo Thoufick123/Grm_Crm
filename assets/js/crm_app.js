@@ -25613,9 +25613,9 @@ function setOrderHistoryStatusFilter(status) {
     const btn = document.getElementById(`filter-btn-status-${b}`);
     if (btn) {
       if (b === status) {
-        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white cursor-pointer shadow-xs";
+        btn.className = "shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white cursor-pointer shadow-xs";
       } else {
-        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer";
+        btn.className = "shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer";
       }
     }
   });
@@ -25637,7 +25637,8 @@ window.filterOrdersHistoryTable = filterOrdersHistoryTable;
 function renderOrdersHistoryTable() {
   if (typeof updateOrdersPipelineUI === 'function') updateOrdersPipelineUI();
   const tbody = document.getElementById('orders-table-body');
-  if (!tbody) return;
+  const mobileContainer = document.getElementById('orders-mobile-cards-container');
+  if (!tbody && !mobileContainer) return;
 
   const orders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
   const searchInput = document.getElementById('order-history-search');
@@ -25684,6 +25685,15 @@ function renderOrdersHistoryTable() {
     }
 
     if (searchVal) {
+      let itms = ord.items || [];
+      if (typeof itms === 'string') {
+        try { itms = JSON.parse(itms); } catch(e) { itms = []; }
+      }
+      if (!Array.isArray(itms) && ord.items_json && typeof ord.items_json === 'string') {
+        try { itms = JSON.parse(ord.items_json); } catch(e) { itms = []; }
+      }
+      const itemNames = (Array.isArray(itms) ? itms : []).map(i => i.name || i.title || '').join(' ');
+
       const searchTarget = [
         ord.id,
         ord.customerName,
@@ -25692,7 +25702,7 @@ function renderOrdersHistoryTable() {
         ord.createdBy,
         ord.shippingAddress,
         ord.upiTransactionId,
-        (ord.items || []).map(i => i.name).join(' ')
+        itemNames
       ].join(' ').toLowerCase();
 
       if (!searchTarget.includes(searchVal)) return false;
@@ -25702,282 +25712,527 @@ function renderOrdersHistoryTable() {
   });
 
   if (filteredOrders.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" class="py-12 text-center text-slate-400">
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400">
+            <span class="material-symbols-outlined text-[36px] block mb-2 text-slate-300">receipt_long</span>
+            <p class="font-bold text-slate-600">No matching orders found</p>
+            <p class="text-xs text-slate-400 mt-0.5">Try adjusting your status filter or search query.</p>
+          </td>
+        </tr>
+      `;
+    }
+    if (mobileContainer) {
+      mobileContainer.innerHTML = `
+        <div class="py-10 px-4 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
           <span class="material-symbols-outlined text-[36px] block mb-2 text-slate-300">receipt_long</span>
           <p class="font-bold text-slate-600">No matching orders found</p>
           <p class="text-xs text-slate-400 mt-0.5">Try adjusting your status filter or search query.</p>
-        </td>
-      </tr>
-    `;
+        </div>
+      `;
+    }
     return;
   }
 
-  tbody.innerHTML = filteredOrders.map(ord => {
-    const normStatus = normalizeOrderStatus(ord.orderStatus || ord.order_status);
-    const isOnline = ord.paymentMethod === 'ONLINE_UPI' || ord.paymentMethod === 'UPI' || ord.payment_method === 'ONLINE_UPI' || ord.payment_method === 'UPI';
-    const isCod = ord.paymentMethod === 'COD' || ord.payment_method === 'COD';
-    const grandTotal = parseFloat(ord.grandTotal || ord.grand_total) || 0;
-    const codAdv = parseFloat(ord.codAdvance || ord.cod_advance) || 200;
-    const codDue = ord.codBalanceDue !== undefined ? parseFloat(ord.codBalanceDue) : Math.max(0, grandTotal - codAdv);
+  // Render Desktop Table Rows
+  if (tbody) {
+    tbody.innerHTML = filteredOrders.map(ord => {
+      let ordItems = ord.items || [];
+      if (typeof ordItems === 'string') {
+        try { ordItems = JSON.parse(ordItems); } catch(e) { ordItems = []; }
+      }
+      if (!Array.isArray(ordItems) && ord.items_json && typeof ord.items_json === 'string') {
+        try { ordItems = JSON.parse(ord.items_json); } catch(e) { ordItems = []; }
+      }
+      if (!Array.isArray(ordItems)) ordItems = [];
 
-    let amountHtml = '';
-    if (isCod) {
-      amountHtml = `
-        <div class="font-mono font-bold text-slate-900 text-xs">₹${grandTotal.toLocaleString('en-IN')}</div>
-        <div class="text-[10px] text-amber-800 font-semibold flex items-center gap-1 mt-0.5 flex-wrap">
-          <span class="bg-emerald-100 text-emerald-800 px-1 rounded font-bold">₹${codAdv} Adv</span>
-          <span>&bull;</span>
-          <span class="bg-amber-100 text-amber-900 px-1 rounded font-bold">₹${codDue.toLocaleString('en-IN')} Due</span>
-        </div>
-      `;
-    } else {
-      amountHtml = `
-        <div class="font-mono font-bold text-emerald-800 text-xs">₹${grandTotal.toLocaleString('en-IN')}</div>
-        <div class="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[13px]">check_circle</span>
-          <span>100% Paid Online</span>
-        </div>
-      `;
-    }
+      const normStatus = normalizeOrderStatus(ord.orderStatus || ord.order_status);
+      const isOnline = ord.paymentMethod === 'ONLINE_UPI' || ord.paymentMethod === 'UPI' || ord.payment_method === 'ONLINE_UPI' || ord.payment_method === 'UPI';
+      const isCod = ord.paymentMethod === 'COD' || ord.payment_method === 'COD';
+      const grandTotal = parseFloat(ord.grandTotal || ord.grand_total) || 0;
+      const codAdv = parseFloat(ord.codAdvance || ord.cod_advance) || 200;
+      const codDue = ord.codBalanceDue !== undefined ? parseFloat(ord.codBalanceDue) : Math.max(0, grandTotal - codAdv);
 
-    const badgeColor = isOnline ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-900 border-amber-300';
-    const badgeLabel = isOnline ? '🟢 ONLINE (PAID)' : '🟠 COD (₹200 ADV)';
+      let amountHtml = '';
+      if (isCod) {
+        amountHtml = `
+          <div class="font-mono font-bold text-slate-900 text-xs">₹${grandTotal.toLocaleString('en-IN')}</div>
+          <div class="text-[10px] text-amber-800 font-semibold flex items-center gap-1 mt-0.5 flex-wrap">
+            <span class="bg-emerald-100 text-emerald-800 px-1 rounded font-bold">₹${codAdv} Adv</span>
+            <span>&bull;</span>
+            <span class="bg-amber-100 text-amber-900 px-1 rounded font-bold">₹${codDue.toLocaleString('en-IN')} Due</span>
+          </div>
+        `;
+      } else {
+        amountHtml = `
+          <div class="font-mono font-bold text-emerald-800 text-xs">₹${grandTotal.toLocaleString('en-IN')}</div>
+          <div class="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[13px]">check_circle</span>
+            <span>100% Paid Online</span>
+          </div>
+        `;
+      }
 
-    const paymentHtml = `
-      <div class="space-y-1">
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${badgeColor}">
-            ${badgeLabel}
-          </span>
-          ${ord.paymentScreenshot ? `
-            <button type="button" onclick="openOrderReceiptLightbox('${ord.id}')" class="p-0.5 rounded border border-slate-200 hover:border-emerald-400 bg-white transition group relative cursor-pointer" title="Click to view payment proof">
-              <img src="${ord.paymentScreenshot}" alt="Proof" class="w-6 h-6 rounded object-cover">
-              <span class="material-symbols-outlined absolute -bottom-1 -right-1 text-[9px] bg-black/70 text-white rounded-full p-0.5">zoom_in</span>
-            </button>
+      const badgeColor = isOnline ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-900 border-amber-300';
+      const badgeLabel = isOnline ? '🟢 ONLINE (PAID)' : '🟠 COD (₹200 ADV)';
+
+      const paymentHtml = `
+        <div class="space-y-1">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${badgeColor}">
+              ${badgeLabel}
+            </span>
+            ${ord.paymentScreenshot ? `
+              <button type="button" onclick="if(typeof openOrderReceiptLightbox==='function') openOrderReceiptLightbox('${ord.id}')" class="p-0.5 rounded border border-slate-200 hover:border-emerald-400 bg-white transition group relative cursor-pointer" title="Click to view payment proof">
+                <img src="${ord.paymentScreenshot}" alt="Proof" class="w-6 h-6 rounded object-cover">
+                <span class="material-symbols-outlined absolute -bottom-1 -right-1 text-[9px] bg-black/70 text-white rounded-full p-0.5">zoom_in</span>
+              </button>
+            ` : ''}
+          </div>
+          ${ord.upiTransactionId ? `
+            <div class="flex items-center gap-1 text-[10px] font-mono text-slate-600">
+              <span class="text-slate-400">UTR:</span>
+              <span class="font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 px-1 rounded cursor-pointer" onclick="navigator.clipboard.writeText('${ord.upiTransactionId}'); if(typeof showToast==='function') showToast('Copied', 'UPI UTR copied to clipboard', 'content_copy', 'emerald')" title="Click to copy UTR">${ord.upiTransactionId}</span>
+            </div>
           ` : ''}
         </div>
-        ${ord.upiTransactionId ? `
-          <div class="flex items-center gap-1 text-[10px] font-mono text-slate-600">
-            <span class="text-slate-400">UTR:</span>
-            <span class="font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 px-1 rounded cursor-pointer" onclick="navigator.clipboard.writeText('${ord.upiTransactionId}'); showToast('Copied', 'UPI UTR copied to clipboard', 'content_copy', 'emerald')" title="Click to copy UTR">${ord.upiTransactionId}</span>
-          </div>
-        ` : ''}
-      </div>
-    `;
+      `;
 
-    // Status Badge & Selector
-    let statusBadgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
-    let statusIcon = 'receipt';
-    let displayStatusLabel = '1. Placed';
-    if (normStatus === 'PACKED') {
-      statusBadgeClass = 'bg-purple-100 text-purple-800 border-purple-200';
-      statusIcon = 'inventory_2';
-      displayStatusLabel = '2. Packed';
-    } else if (normStatus === 'SHIPPED') {
-      statusBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
-      statusIcon = 'local_shipping';
-      displayStatusLabel = '3. Shipped';
-    } else if (normStatus === 'OUT_FOR_DELIVERY') {
-      statusBadgeClass = 'bg-orange-100 text-orange-900 border-orange-300';
-      statusIcon = 'two_wheeler';
-      displayStatusLabel = '4. Out for Delivery';
-    } else if (normStatus === 'DELIVERED') {
-      statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      statusIcon = 'verified';
-      displayStatusLabel = '5. Delivered';
-    } else if (normStatus === 'CANCELLED') {
-      statusBadgeClass = 'bg-rose-100 text-rose-800 border-rose-200';
-      statusIcon = 'cancel';
-      displayStatusLabel = 'Cancelled';
-    }
+      let statusBadgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+      let statusIcon = 'receipt';
+      let displayStatusLabel = '1. Placed';
+      if (normStatus === 'PACKED') {
+        statusBadgeClass = 'bg-purple-100 text-purple-800 border-purple-200';
+        statusIcon = 'inventory_2';
+        displayStatusLabel = '2. Packed';
+      } else if (normStatus === 'SHIPPED') {
+        statusBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
+        statusIcon = 'local_shipping';
+        displayStatusLabel = '3. Shipped';
+      } else if (normStatus === 'OUT_FOR_DELIVERY') {
+        statusBadgeClass = 'bg-orange-100 text-orange-900 border-orange-300';
+        statusIcon = 'two_wheeler';
+        displayStatusLabel = '4. Out for Delivery';
+      } else if (normStatus === 'DELIVERED') {
+        statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        statusIcon = 'verified';
+        displayStatusLabel = '5. Delivered';
+      } else if (normStatus === 'CANCELLED') {
+        statusBadgeClass = 'bg-rose-100 text-rose-800 border-rose-200';
+        statusIcon = 'cancel';
+        displayStatusLabel = 'Cancelled';
+      }
 
-    const staffDisplayName = ord.staffName || ord.staff_name || ord.createdBy || ord.created_by || 'Super Admin';
-    const staffAvatar = staffDisplayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SA';
+      const staffDisplayName = ord.staffName || ord.staff_name || ord.createdBy || ord.created_by || 'Super Admin';
+      const staffAvatar = staffDisplayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SA';
 
-    return `
-      <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
-        <!-- 1. Order ID & Date -->
-        <td class="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">
-          <div class="flex items-center gap-1.5">
-            <span class="text-xs text-brand-wa font-black">${ord.id}</span>
-            <button onclick="navigator.clipboard.writeText('${ord.id}'); showToast('Copied', 'Order ID copied', 'content_copy', 'emerald')" class="text-slate-400 hover:text-slate-600 cursor-pointer" title="Copy Order ID">
-              <span class="material-symbols-outlined text-[14px]">content_copy</span>
-            </button>
-          </div>
-          <div class="text-[10px] font-normal text-slate-400 mt-0.5">${ord.createdAt || 'Recent'}</div>
-        </td>
-
-        <!-- 2. Customer Details -->
-        <td class="py-3.5 px-4">
-          <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-200">
-              ${(ord.customerName || 'CU').slice(0, 2).toUpperCase()}
+      return `
+        <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
+          <!-- 1. Order ID & Date -->
+          <td class="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-brand-wa font-black">${ord.id}</span>
+              <button onclick="navigator.clipboard.writeText('${ord.id}'); if(typeof showToast==='function') showToast('Copied', 'Order ID copied', 'content_copy', 'emerald')" class="text-slate-400 hover:text-slate-600 cursor-pointer" title="Copy Order ID">
+                <span class="material-symbols-outlined text-[14px]">content_copy</span>
+              </button>
             </div>
-            <div>
-              <div class="font-extrabold text-slate-900 text-xs">${ord.customerName}</div>
-              <div class="text-[10px] font-mono text-slate-500">${ord.customerPhone || ord.customer_phone || ''}</div>
-              ${ord.shippingAddress ? `<div class="text-[10px] text-slate-400 truncate max-w-[200px]" title="${ord.shippingAddress}">📍 ${ord.shippingAddress}</div>` : ''}
-            </div>
-          </div>
-        </td>
+            <div class="text-[10px] font-normal text-slate-400 mt-0.5">${ord.createdAt || 'Recent'}</div>
+          </td>
 
-        <!-- 3. Which Staff Taken That Order (With Live Reassignment) -->
-        <td class="py-3 px-4 whitespace-nowrap">
-          <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-700 to-indigo-900 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
-              ${staffAvatar}
-            </div>
-            <div>
-              <div class="font-extrabold text-slate-900 text-xs">${staffDisplayName}</div>
-              <div class="text-[10px] text-indigo-700 font-medium flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                <span>Booking Specialist</span>
+          <!-- 2. Customer Details -->
+          <td class="py-3.5 px-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-200">
+                ${(ord.customerName || 'CU').slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div class="font-extrabold text-slate-900 text-xs">${ord.customerName || 'Customer'}</div>
+                <div class="text-[10px] font-mono text-slate-500">${ord.customerPhone || ord.customer_phone || ''}</div>
+                ${ord.shippingAddress ? `<div class="text-[10px] text-slate-400 truncate max-w-[200px]" title="${ord.shippingAddress}">📍 ${ord.shippingAddress}</div>` : ''}
               </div>
             </div>
-          </div>
-          ${canUserPerformAction('orders', 'edit') ? `
-          <!-- Inline Quick Staff Reassignment Dropdown -->
-          <div class="mt-1.5 flex items-center gap-1.5">
-            <span class="text-[9px] text-slate-400 font-extrabold uppercase">Credit:</span>
-            <select onchange="reassignOrderStaff('${ord.id}', this.value)" class="text-[10px] font-bold bg-indigo-50/80 hover:bg-indigo-100 text-indigo-950 border border-indigo-200/90 rounded-md px-1.5 py-0.5 outline-none cursor-pointer" title="Reassign order credit to another staff specialist">
-              ${(() => {
-          const sList = [...(CRM_STATE?.staffList || [])];
-          if (!sList.some(s => s.id === 'admin')) sList.push({ id: 'admin', name: 'Super Admin' });
-          const curId = ord.staffId || ord.staff_id || (staffDisplayName.includes('Admin') ? 'admin' : '');
-          return sList.map(s => `<option value="${s.id}" ${s.id === curId || s.name === staffDisplayName ? 'selected' : ''}>${s.name}</option>`).join('');
-        })()}
-            </select>
-          </div>` : ''}
-        </td>
+          </td>
 
-        <!-- 4. Ordered Items (Product Thumbnail, Name, Qty Stepper, Size & Price) -->
-        <td class="py-3 px-4 text-slate-700 text-xs min-w-[240px] max-w-md">
-          <div class="space-y-1.5">
-            ${(ord.items || []).map(i => {
-          const matchedProd = (CRM_STATE?.products || []).find(p => p.sku === i.sku || p.name === i.name);
-          const fallbackImg = 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=120&auto=format&fit=crop&q=60';
-          const imgUrl = i.image || matchedProd?.image || matchedProd?.imageUrl || (matchedProd?.images && matchedProd.images[0]) || fallbackImg;
-          const safeImg = (imgUrl || '').replace(/'/g, "\\'");
-          const safeName = (i.name || 'Garment Item').replace(/"/g, '&quot;');
-          const unitPrice = parseFloat(i.price || matchedProd?.price || 0);
-          const qty = parseInt(i.qty || 1);
-          const lineTotal = unitPrice * qty;
+          <!-- 3. Which Staff Taken That Order -->
+          <td class="py-3 px-4 whitespace-nowrap">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-700 to-indigo-900 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                ${staffAvatar}
+              </div>
+              <div>
+                <div class="font-extrabold text-slate-900 text-xs">${staffDisplayName}</div>
+                <div class="text-[10px] text-indigo-700 font-medium flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  <span>Booking Specialist</span>
+                </div>
+              </div>
+            </div>
+            ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'edit')) ? `
+            <!-- Inline Quick Staff Reassignment Dropdown -->
+            <div class="mt-1.5 flex items-center gap-1.5">
+              <span class="text-[9px] text-slate-400 font-extrabold uppercase">Credit:</span>
+              <select onchange="reassignOrderStaff('${ord.id}', this.value)" class="text-[10px] font-bold bg-indigo-50/80 hover:bg-indigo-100 text-indigo-950 border border-indigo-200/90 rounded-md px-1.5 py-0.5 outline-none cursor-pointer" title="Reassign order credit to another staff specialist">
+                ${(() => {
+                  const sList = [...(CRM_STATE?.staffList || [])];
+                  if (!sList.some(s => s.id === 'admin')) sList.push({ id: 'admin', name: 'Super Admin' });
+                  const curId = ord.staffId || ord.staff_id || (staffDisplayName.includes('Admin') ? 'admin' : '');
+                  return sList.map(s => `<option value="${s.id}" ${s.id === curId || s.name === staffDisplayName ? 'selected' : ''}>${s.name}</option>`).join('');
+                })()}
+              </select>
+            </div>` : ''}
+          </td>
 
-          return `
-                <div class="flex items-center gap-2.5 p-1.5 bg-slate-50/90 hover:bg-slate-100/90 rounded-xl border border-slate-200/80 transition">
-                  <!-- Product Image Thumbnail -->
-                  <div class="relative shrink-0">
-                    <img src="${imgUrl}" alt="${safeName}" class="w-11 h-11 rounded-lg object-cover border border-slate-200 shadow-2xs bg-white cursor-pointer hover:scale-105 transition" onclick="openImageLightbox('${safeImg}', '${safeName}')" onerror="this.onerror=null; this.src='${fallbackImg}';">
-                    <span class="absolute -top-1.5 -right-1.5 bg-emerald-700 text-white font-black text-[9px] px-1.5 py-0.2 rounded-full font-mono shadow-xs">x${qty}</span>
+          <!-- 4. Ordered Items -->
+          <td class="py-3 px-4 text-slate-700 text-xs min-w-[240px] max-w-md">
+            <div class="space-y-1.5">
+              ${ordItems.map(i => {
+                const matchedProd = (CRM_STATE?.products || []).find(p => p.sku === i.sku || p.name === i.name);
+                const fallbackImg = 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=120&auto=format&fit=crop&q=60';
+                const imgUrl = i.image || matchedProd?.image || matchedProd?.imageUrl || (matchedProd?.images && matchedProd.images[0]) || fallbackImg;
+                const safeImg = (imgUrl || '').replace(/'/g, "\\'");
+                const safeName = (i.name || 'Garment Item').replace(/"/g, '&quot;');
+                const unitPrice = parseFloat(i.price || matchedProd?.price || 0);
+                const qty = parseInt(i.qty || 1);
+                const lineTotal = unitPrice * qty;
+
+                return `
+                  <div class="flex items-center gap-2.5 p-1.5 bg-slate-50/90 hover:bg-slate-100/90 rounded-xl border border-slate-200/80 transition">
+                    <div class="relative shrink-0">
+                      <img src="${imgUrl}" alt="${safeName}" class="w-11 h-11 rounded-lg object-cover border border-slate-200 shadow-2xs bg-white cursor-pointer hover:scale-105 transition" onclick="if(typeof openImageLightbox==='function') openImageLightbox('${safeImg}', '${safeName}')" onerror="this.onerror=null; this.src='${fallbackImg}';">
+                      <span class="absolute -top-1.5 -right-1.5 bg-emerald-700 text-white font-black text-[9px] px-1.5 py-0.2 rounded-full font-mono shadow-xs">x${qty}</span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="font-extrabold text-slate-900 text-xs truncate" title="${safeName}">${safeName}</div>
+                      <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 flex-wrap">
+                        <span class="font-mono bg-white px-1.5 py-0.2 rounded border border-slate-200 font-bold text-slate-700">${i.sku || 'SKU'}</span>
+                        ${i.size ? `<span class="bg-indigo-50 text-indigo-700 px-1 rounded font-bold">${i.size}</span>` : ''}
+                        ${unitPrice > 0 ? `<span class="font-mono font-bold text-emerald-800 ml-auto">₹${lineTotal.toLocaleString('en-IN')}</span>` : ''}
+                      </div>
+                    </div>
                   </div>
-                  <!-- Product Details -->
+                `;
+              }).join('')}
+            </div>
+          </td>
+
+          <!-- 5. Payment Details -->
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            ${amountHtml}
+            ${paymentHtml}
+          </td>
+
+          <!-- 6. Order Status -->
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            <div class="space-y-1.5">
+              <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${statusBadgeClass} inline-flex items-center gap-1 shadow-2xs">
+                <span class="material-symbols-outlined text-[13px]">${statusIcon}</span>
+                <span>${displayStatusLabel}</span>
+              </span>
+
+              ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'edit')) ? `
+              <div>
+                ${(() => {
+                  const stageMap = { 'PLACED': 1, 'PACKED': 2, 'SHIPPED': 3, 'OUT_FOR_DELIVERY': 4, 'DELIVERED': 5 };
+                  const curStep = stageMap[normStatus] || 1;
+                  const stages = [
+                    { val: 'PLACED', label: '1. Placed', step: 1 },
+                    { val: 'PACKED', label: '2. Packed', step: 2 },
+                    { val: 'SHIPPED', label: '3. Shipped', step: 3 },
+                    { val: 'OUT_FOR_DELIVERY', label: '4. Out for Delivery', step: 4 },
+                    { val: 'DELIVERED', label: '5. Delivered', step: 5 }
+                  ];
+                  return `
+                    <select onchange="handleOrderStatusChange('${ord.id}', this.value, this)" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded px-1.5 py-0.5 outline-none cursor-pointer">
+                      ${stages.map(s => {
+                        const isSelected = (normStatus === s.val);
+                        const isDisabled = (s.step < curStep || s.step > curStep + 1);
+                        return `<option value="${s.val}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled style="color:#94a3b8;background-color:#f1f5f9;"' : ''}>${s.label}</option>`;
+                      }).join('')}
+                    </select>
+                  `;
+                })()}
+              </div>
+              ` : ''}
+              ${(normStatus === 'SHIPPED' || normStatus === 'OUT_FOR_DELIVERY') ? `
+                <div class="mt-1 flex items-center gap-1 flex-wrap">
+                  <span class="text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1" title="Courier: ${ord.courierName || 'Courier'}">
+                    <span class="material-symbols-outlined text-[11px]">local_shipping</span>
+                    ${ord.courierName || 'Courier'}: <strong class="font-mono">${ord.trackingNumber || 'N/A'}</strong>
+                  </span>
+                  ${ord.shippingUrl ? `
+                    <a href="${ord.shippingUrl}" target="_blank" class="text-[9px] font-extrabold text-emerald-700 hover:text-emerald-900 hover:underline inline-flex items-center gap-0.5 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded cursor-pointer" title="Open live parcel tracking">
+                      Track <span class="material-symbols-outlined text-[10px]">open_in_new</span>
+                    </a>
+                  ` : ''}
+                </div>
+              ` : ''}
+            </div>
+          </td>
+
+          <!-- 7. Actions -->
+          <td class="py-3.5 px-4 text-right whitespace-nowrap">
+            <div class="flex items-center justify-end gap-1.5">
+              ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'edit')) ? `
+              <button type="button" onclick="openEditOrderModal('${ord.id}')" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-blue-300" title="Edit Order Details">
+                <span class="material-symbols-outlined text-[14px]">edit</span>
+                <span class="text-[11px]">Edit</span>
+              </button>
+              ` : ''}
+
+              <!-- View Packing Slip -->
+              <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-teal-300" title="View &amp; Print Packing Slip">
+                <span class="material-symbols-outlined text-[14px]">local_shipping</span>
+                <span class="text-[11px]">Slip</span>
+              </button>
+
+              <!-- View Invoice -->
+              <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-300" title="View Tax Invoice &amp; Packing Slip">
+                <span class="material-symbols-outlined text-[14px]">receipt_long</span>
+                <span class="text-[11px]">Invoice</span>
+              </button>
+
+              <!-- Chat -->
+              <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-emerald-300" title="Chat on WhatsApp">
+                <span class="material-symbols-outlined text-[14px]">chat</span>
+                <span class="hidden sm:inline text-[11px]">Chat</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Render Mobile Cards View (< md)
+  if (mobileContainer) {
+    mobileContainer.innerHTML = filteredOrders.map(ord => {
+      let ordItems = ord.items || [];
+      if (typeof ordItems === 'string') {
+        try { ordItems = JSON.parse(ordItems); } catch(e) { ordItems = []; }
+      }
+      if (!Array.isArray(ordItems) && ord.items_json && typeof ord.items_json === 'string') {
+        try { ordItems = JSON.parse(ord.items_json); } catch(e) { ordItems = []; }
+      }
+      if (!Array.isArray(ordItems)) ordItems = [];
+
+      const normStatus = normalizeOrderStatus(ord.orderStatus || ord.order_status);
+      const isOnline = ord.paymentMethod === 'ONLINE_UPI' || ord.paymentMethod === 'UPI' || ord.payment_method === 'ONLINE_UPI' || ord.payment_method === 'UPI';
+      const isCod = ord.paymentMethod === 'COD' || ord.payment_method === 'COD';
+      const grandTotal = parseFloat(ord.grandTotal || ord.grand_total) || 0;
+      const codAdv = parseFloat(ord.codAdvance || ord.cod_advance) || 200;
+      const codDue = ord.codBalanceDue !== undefined ? parseFloat(ord.codBalanceDue) : Math.max(0, grandTotal - codAdv);
+
+      let statusBadgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+      let statusIcon = 'receipt';
+      let displayStatusLabel = '1. Placed';
+      if (normStatus === 'PACKED') {
+        statusBadgeClass = 'bg-purple-100 text-purple-800 border-purple-200';
+        statusIcon = 'inventory_2';
+        displayStatusLabel = '2. Packed';
+      } else if (normStatus === 'SHIPPED') {
+        statusBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
+        statusIcon = 'local_shipping';
+        displayStatusLabel = '3. Shipped';
+      } else if (normStatus === 'OUT_FOR_DELIVERY') {
+        statusBadgeClass = 'bg-orange-100 text-orange-900 border-orange-300';
+        statusIcon = 'two_wheeler';
+        displayStatusLabel = '4. Out for Delivery';
+      } else if (normStatus === 'DELIVERED') {
+        statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        statusIcon = 'verified';
+        displayStatusLabel = '5. Delivered';
+      } else if (normStatus === 'CANCELLED') {
+        statusBadgeClass = 'bg-rose-100 text-rose-800 border-rose-200';
+        statusIcon = 'cancel';
+        displayStatusLabel = 'Cancelled';
+      }
+
+      const staffDisplayName = ord.staffName || ord.staff_name || ord.createdBy || ord.created_by || 'Super Admin';
+      const staffAvatar = staffDisplayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SA';
+
+      const badgeColor = isOnline ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-900 border-amber-300';
+      const badgeLabel = isOnline ? '🟢 ONLINE (PAID)' : '🟠 COD (₹200 ADV)';
+
+      const stageMap = { 'PLACED': 1, 'PACKED': 2, 'SHIPPED': 3, 'OUT_FOR_DELIVERY': 4, 'DELIVERED': 5 };
+      const curStep = stageMap[normStatus] || 1;
+      const stages = [
+        { val: 'PLACED', label: '1. Placed', step: 1 },
+        { val: 'PACKED', label: '2. Packed', step: 2 },
+        { val: 'SHIPPED', label: '3. Shipped', step: 3 },
+        { val: 'OUT_FOR_DELIVERY', label: '4. Out for Delivery', step: 4 },
+        { val: 'DELIVERED', label: '5. Delivered', step: 5 }
+      ];
+
+      return `
+        <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm space-y-3">
+          <!-- Card Header: ID, Date & Status Pill -->
+          <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs text-brand-wa font-black font-mono">${ord.id}</span>
+                <button type="button" onclick="navigator.clipboard.writeText('${ord.id}'); if(typeof showToast==='function') showToast('Copied', 'Order ID copied', 'content_copy', 'emerald')" class="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer">
+                  <span class="material-symbols-outlined text-[13px]">content_copy</span>
+                </button>
+              </div>
+              <div class="text-[10px] text-slate-400 font-normal mt-0.5">${ord.createdAt || 'Recent'}</div>
+            </div>
+            <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${statusBadgeClass} inline-flex items-center gap-1 shrink-0">
+              <span class="material-symbols-outlined text-[12px]">${statusIcon}</span>
+              <span>${displayStatusLabel}</span>
+            </span>
+          </div>
+
+          <!-- Customer & Staff Row -->
+          <div class="grid grid-cols-2 gap-2 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100 text-xs">
+            <!-- Customer -->
+            <div class="min-w-0">
+              <div class="text-[10px] uppercase font-bold text-slate-400">Customer</div>
+              <div class="font-extrabold text-slate-900 truncate mt-0.5">${ord.customerName || 'Customer'}</div>
+              <div class="text-[10px] font-mono text-slate-500">${ord.customerPhone || ord.customer_phone || ''}</div>
+              ${ord.shippingAddress ? `<div class="text-[10px] text-slate-400 truncate mt-0.5" title="${ord.shippingAddress}">📍 ${ord.shippingAddress}</div>` : ''}
+            </div>
+
+            <!-- Staff Specialist -->
+            <div class="min-w-0 border-l border-slate-200/80 pl-2.5">
+              <div class="text-[10px] uppercase font-bold text-slate-400">Staff Taken</div>
+              <div class="flex items-center gap-1.5 mt-0.5">
+                <div class="w-5 h-5 rounded-md bg-indigo-700 text-white font-bold text-[9px] flex items-center justify-center shrink-0">
+                  ${staffAvatar}
+                </div>
+                <div class="font-bold text-slate-800 text-[11px] truncate">${staffDisplayName}</div>
+              </div>
+              ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'edit')) ? `
+                <div class="mt-1">
+                  <select onchange="reassignOrderStaff('${ord.id}', this.value)" class="text-[9px] font-bold bg-white text-indigo-950 border border-indigo-200 rounded px-1 py-0.5 w-full outline-none cursor-pointer">
+                    ${(() => {
+                      const sList = [...(CRM_STATE?.staffList || [])];
+                      if (!sList.some(s => s.id === 'admin')) sList.push({ id: 'admin', name: 'Super Admin' });
+                      const curId = ord.staffId || ord.staff_id || (staffDisplayName.includes('Admin') ? 'admin' : '');
+                      return sList.map(s => `<option value="${s.id}" ${s.id === curId || s.name === staffDisplayName ? 'selected' : ''}>${s.name}</option>`).join('');
+                    })()}
+                  </select>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Items Ordered Section -->
+          <div class="space-y-1.5">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ordered Items (${ordItems.length})</div>
+            ${ordItems.map(i => {
+              const matchedProd = (CRM_STATE?.products || []).find(p => p.sku === i.sku || p.name === i.name);
+              const fallbackImg = 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=120&auto=format&fit=crop&q=60';
+              const imgUrl = i.image || matchedProd?.image || matchedProd?.imageUrl || (matchedProd?.images && matchedProd.images[0]) || fallbackImg;
+              const safeImg = (imgUrl || '').replace(/'/g, "\\'");
+              const safeName = (i.name || 'Garment Item').replace(/"/g, '&quot;');
+              const unitPrice = parseFloat(i.price || matchedProd?.price || 0);
+              const qty = parseInt(i.qty || 1);
+              const lineTotal = unitPrice * qty;
+
+              return `
+                <div class="flex items-center gap-2.5 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                  <div class="relative shrink-0">
+                    <img src="${imgUrl}" alt="${safeName}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 bg-white cursor-pointer" onclick="if(typeof openImageLightbox==='function') openImageLightbox('${safeImg}', '${safeName}')" onerror="this.onerror=null; this.src='${fallbackImg}';">
+                    <span class="absolute -top-1.5 -right-1.5 bg-emerald-700 text-white font-black text-[9px] px-1 py-0.2 rounded-full font-mono">x${qty}</span>
+                  </div>
                   <div class="min-w-0 flex-1">
-                    <div class="font-extrabold text-slate-900 text-xs truncate" title="${safeName}">${safeName}</div>
+                    <div class="font-extrabold text-slate-900 text-xs truncate">${safeName}</div>
                     <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 flex-wrap">
-                      <span class="font-mono bg-white px-1.5 py-0.2 rounded border border-slate-200 font-bold text-slate-700">${i.sku || 'SKU'}</span>
+                      <span class="font-mono bg-white px-1 rounded border border-slate-200 font-bold text-slate-700">${i.sku || 'SKU'}</span>
                       ${i.size ? `<span class="bg-indigo-50 text-indigo-700 px-1 rounded font-bold">${i.size}</span>` : ''}
                       ${unitPrice > 0 ? `<span class="font-mono font-bold text-emerald-800 ml-auto">₹${lineTotal.toLocaleString('en-IN')}</span>` : ''}
                     </div>
                   </div>
                 </div>
               `;
-        }).join('')}
+            }).join('')}
           </div>
-        </td>
 
-        <!-- 5. Payment Details -->
-        <td class="py-3.5 px-4 whitespace-nowrap">
-          ${amountHtml}
-          ${paymentHtml}
-        </td>
-
-        <!-- 6. Order Status (Placed, Packed, Shipped, Delivered) with Quick Selector -->
-        <td class="py-3.5 px-4 whitespace-nowrap">
-          <div class="space-y-1.5">
-            <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${statusBadgeClass} inline-flex items-center gap-1 shadow-2xs">
-              <span class="material-symbols-outlined text-[13px]">${statusIcon}</span>
-              <span>${displayStatusLabel}</span>
-            </span>
-
-            ${canUserPerformAction('orders', 'edit') ? `
-            <!-- Quick Status Transition Selector (Strict Sequential) -->
+          <!-- Payment & Totals Summary -->
+          <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 flex-wrap">
             <div>
-              ${(() => {
-          const stageMap = { 'PLACED': 1, 'PACKED': 2, 'SHIPPED': 3, 'OUT_FOR_DELIVERY': 4, 'DELIVERED': 5 };
-          const curStep = stageMap[normStatus] || 1;
-          const stages = [
-            { val: 'PLACED', label: '1. Placed', step: 1 },
-            { val: 'PACKED', label: '2. Packed', step: 2 },
-            { val: 'SHIPPED', label: '3. Shipped', step: 3 },
-            { val: 'OUT_FOR_DELIVERY', label: '4. Out for Delivery', step: 4 },
-            { val: 'DELIVERED', label: '5. Delivered', step: 5 }
-          ];
-          return `
-                  <select onchange="handleOrderStatusChange('${ord.id}', this.value, this)" class="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded px-1.5 py-0.5 outline-none cursor-pointer">
-                    ${stages.map(s => {
-            const isSelected = (normStatus === s.val);
-            const isDisabled = (s.step < curStep || s.step > curStep + 1);
-            return `<option value="${s.val}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled style="color:#94a3b8;background-color:#f1f5f9;"' : ''}>${s.label}</option>`;
-          }).join('')}
-                  </select>
-                `;
-        })()}
+              <div class="text-[10px] text-slate-400 font-bold uppercase">Total Amount</div>
+              <div class="font-mono font-black text-slate-900 text-sm">₹${grandTotal.toLocaleString('en-IN')}</div>
+              ${isCod ? `
+                <div class="text-[10px] text-amber-800 font-semibold flex items-center gap-1 mt-0.5">
+                  <span class="bg-emerald-100 text-emerald-800 px-1 rounded font-bold">₹${codAdv} Adv</span>
+                  <span>&bull;</span>
+                  <span class="bg-amber-100 text-amber-900 px-1 rounded font-bold">₹${codDue.toLocaleString('en-IN')} Due</span>
+                </div>
+              ` : ''}
             </div>
-            ` : ''}
-            ${(normStatus === 'SHIPPED' || normStatus === 'OUT_FOR_DELIVERY') ? `
-              <div class="mt-1 flex items-center gap-1 flex-wrap">
-                <span class="text-[9px] font-bold bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1" title="Courier: ${ord.courierName || 'Courier'}">
-                  <span class="material-symbols-outlined text-[11px]">local_shipping</span>
-                  ${ord.courierName || 'Courier'}: <strong class="font-mono">${ord.trackingNumber || 'N/A'}</strong>
+
+            <div class="flex flex-col items-end gap-1">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${badgeColor}">
+                  ${badgeLabel}
                 </span>
-                ${ord.shippingUrl ? `
-                  <a href="${ord.shippingUrl}" target="_blank" class="text-[9px] font-extrabold text-emerald-700 hover:text-emerald-900 hover:underline inline-flex items-center gap-0.5 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded cursor-pointer" title="Open live parcel tracking">
-                    Track <span class="material-symbols-outlined text-[10px]">open_in_new</span>
-                  </a>
+                ${ord.paymentScreenshot ? `
+                  <button type="button" onclick="if(typeof openOrderReceiptLightbox==='function') openOrderReceiptLightbox('${ord.id}')" class="p-0.5 rounded border border-slate-200 bg-white" title="View receipt">
+                    <img src="${ord.paymentScreenshot}" alt="Proof" class="w-6 h-6 rounded object-cover">
+                  </button>
                 ` : ''}
-
               </div>
+              ${ord.upiTransactionId ? `
+                <div class="text-[9px] font-mono text-slate-600">
+                  <span class="text-slate-400">UTR:</span>
+                  <span class="font-bold bg-white px-1 rounded border border-slate-200 cursor-pointer" onclick="navigator.clipboard.writeText('${ord.upiTransactionId}'); if(typeof showToast==='function') showToast('Copied', 'UPI UTR copied to clipboard', 'content_copy', 'emerald')">${ord.upiTransactionId}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Status Selector & Tracking (if applicable) -->
+          <div class="flex items-center justify-between gap-2 pt-1">
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+              <span class="text-[10px] font-bold text-slate-400 uppercase shrink-0">Stage:</span>
+              ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'edit')) ? `
+                <select onchange="handleOrderStatusChange('${ord.id}', this.value, this)" class="text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 rounded-lg px-2 py-1 outline-none w-full cursor-pointer">
+                  ${stages.map(s => {
+                    const isSelected = (normStatus === s.val);
+                    const isDisabled = (s.step < curStep || s.step > curStep + 1);
+                    return `<option value="${s.val}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled style="color:#94a3b8;background-color:#f1f5f9;"' : ''}>${s.label}</option>`;
+                  }).join('')}
+                </select>
+              ` : `<span class="text-xs font-bold text-slate-700">${displayStatusLabel}</span>`}
+            </div>
+
+            ${(normStatus === 'SHIPPED' || normStatus === 'OUT_FOR_DELIVERY') && ord.shippingUrl ? `
+              <a href="${ord.shippingUrl}" target="_blank" class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg shrink-0 flex items-center gap-0.5">
+                Track <span class="material-symbols-outlined text-[11px]">open_in_new</span>
+              </a>
             ` : ''}
           </div>
-        </td>
 
-        <!-- 7. Actions (Sticky right column so Edit & Delete are always visible on any screen width) -->
-        <td class="py-3.5 px-4 text-right whitespace-nowrap">
-          <div class="flex items-center justify-end gap-1.5">
-            <!-- Edit Order -->
-            ${canUserPerformAction('orders', 'edit') ? `
-            <button type="button" onclick="openEditOrderModal('${ord.id}')" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-blue-300" title="Edit Order Details">
-              <span class="material-symbols-outlined text-[14px]">edit</span>
-              <span class="text-[11px]">Edit</span>
-            </button>
-            ` : ''}
+          <!-- Action Buttons Bar -->
+          <div class="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100">
+            ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'edit')) ? `
+              <button type="button" onclick="openEditOrderModal('${ord.id}')" class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-blue-200">
+                <span class="material-symbols-outlined text-[15px]">edit</span>
+                <span>Edit</span>
+              </button>
+            ` : `<div class="hidden"></div>`}
 
-
-
-            <!-- View Packing Slip -->
-            <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-teal-300" title="View &amp; Print Packing Slip">
-              <span class="material-symbols-outlined text-[14px]">local_shipping</span>
-              <span class="text-[11px]">Slip</span>
+            <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="py-1.5 px-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-teal-200">
+              <span class="material-symbols-outlined text-[15px]">local_shipping</span>
+              <span>Slip</span>
             </button>
 
-            <!-- View Invoice -->
-            <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-300" title="View Tax Invoice &amp; Packing Slip">
-              <span class="material-symbols-outlined text-[14px]">receipt_long</span>
-              <span class="text-[11px]">Invoice</span>
+            <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-slate-200">
+              <span class="material-symbols-outlined text-[15px]">receipt_long</span>
+              <span>Invoice</span>
             </button>
 
-            <!-- Chat -->
-            <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-emerald-300" title="Chat on WhatsApp">
-              <span class="material-symbols-outlined text-[14px]">chat</span>
-              <span class="hidden sm:inline text-[11px]">Chat</span>
+            <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-emerald-200">
+              <span class="material-symbols-outlined text-[15px]">chat</span>
+              <span>Chat</span>
             </button>
           </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
+        </div>
+      `;
+    }).join('');
+  }
 }
 window.renderOrdersHistoryTable = renderOrdersHistoryTable;
 

@@ -3487,7 +3487,7 @@
       <!-- VIEW: ORDERS (DASHBOARD & ORDER HISTORY)   -->
       <!-- ========================================== -->
       <section id="view-orders" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
-        <div class="max-w-7xl mx-auto min-w-0 space-y-4 sm:space-y-5">
+        <div class="max-w-7xl mx-auto min-w-0 space-y-4 sm:space-y-5 pb-28 sm:pb-8">
 
           <!-- 1. TOP COMMAND BAR: TITLE, SUBMODULE SWITCHER & ACTIONS -->
           <div
@@ -3711,10 +3711,10 @@
                 </span>
               </div>
 
-              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div class="flex overflow-x-auto pb-2 sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 custom-scrollbar snap-x snap-mandatory">
                 <!-- 1. Placed -->
                 <div onclick="filterOrderHistoryByStatus('PLACED')"
-                  class="bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-4 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
+                  class="min-w-[150px] sm:min-w-0 shrink-0 snap-start bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-3.5 sm:p-4 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-black text-blue-900 flex items-center gap-1.5 uppercase tracking-wider">
                       <span class="w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-blue-300/50"></span>
@@ -3739,7 +3739,7 @@
 
                 <!-- 2. Packed -->
                 <div onclick="filterOrderHistoryByStatus('PACKED')"
-                  class="bg-gradient-to-br from-purple-50/70 via-white to-purple-50/30 p-4 rounded-2xl border border-purple-200 hover:border-purple-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
+                  class="min-w-[150px] sm:min-w-0 shrink-0 snap-start bg-gradient-to-br from-purple-50/70 via-white to-purple-50/30 p-3.5 sm:p-4 rounded-2xl border border-purple-200 hover:border-purple-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-black text-purple-900 flex items-center gap-1.5 uppercase tracking-wider">
                       <span class="w-2.5 h-2.5 rounded-full bg-purple-600 ring-2 ring-purple-300/50"></span>
@@ -3764,7 +3764,7 @@
 
                 <!-- 3. Shipped -->
                 <div onclick="filterOrderHistoryByStatus('SHIPPED')"
-                  class="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-4 rounded-2xl border border-amber-200 hover:border-amber-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
+                  class="min-w-[150px] sm:min-w-0 shrink-0 snap-start bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-3.5 sm:p-4 rounded-2xl border border-amber-200 hover:border-amber-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-black text-amber-900 flex items-center gap-1.5 uppercase tracking-wider">
                       <span class="w-2.5 h-2.5 rounded-full bg-amber-600 ring-2 ring-amber-300/50"></span>
@@ -3789,7 +3789,7 @@
 
                 <!-- 4. Out for Delivery -->
                 <div onclick="filterOrderHistoryByStatus('OUT_FOR_DELIVERY')"
-                  class="bg-gradient-to-br from-orange-50/70 via-white to-orange-50/30 p-4 rounded-2xl border border-orange-200 hover:border-orange-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
+                  class="min-w-[150px] sm:min-w-0 shrink-0 snap-start bg-gradient-to-br from-orange-50/70 via-white to-orange-50/30 p-3.5 sm:p-4 rounded-2xl border border-orange-200 hover:border-orange-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-black text-orange-900 flex items-center gap-1.5 uppercase tracking-wider">
                       <span class="w-2.5 h-2.5 rounded-full bg-orange-600 ring-2 ring-orange-300/50"></span>
@@ -3814,7 +3814,7 @@
 
                 <!-- 5. Delivered -->
                 <div onclick="filterOrderHistoryByStatus('DELIVERED')"
-                  class="bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
+                  class="min-w-[150px] sm:min-w-0 shrink-0 snap-start bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-3.5 sm:p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden">
                   <div class="flex items-center justify-between">
                     <span
                       class="text-xs font-black text-emerald-900 flex items-center gap-1.5 uppercase tracking-wider">
@@ -3853,32 +3853,32 @@
               </div>
 
               <!-- Quick Status Pills -->
-              <div class="grid grid-cols-2 sm:flex sm:items-center sm:flex-wrap gap-1.5 w-full min-w-0">
+              <div class="flex overflow-x-auto pb-1 sm:flex-wrap gap-1.5 w-full min-w-0 custom-scrollbar">
                 <button type="button" onclick="setOrderHistoryStatusFilter('ALL')" id="filter-btn-status-ALL"
-                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white cursor-pointer text-center justify-center">
+                  class="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white cursor-pointer text-center justify-center shadow-xs">
                   All (<span id="count-filter-all">0</span>)
                 </button>
                 <button type="button" onclick="setOrderHistoryStatusFilter('PLACED')" id="filter-btn-status-PLACED"
-                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-blue-100 cursor-pointer text-center">
+                  class="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-blue-100 cursor-pointer text-center">
                   Placed (<span id="count-filter-placed">0</span>)
                 </button>
                 <button type="button" onclick="setOrderHistoryStatusFilter('PACKED')" id="filter-btn-status-PACKED"
-                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-purple-100 cursor-pointer text-center">
+                  class="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-purple-100 cursor-pointer text-center">
                   Packed (<span id="count-filter-packed">0</span>)
                 </button>
                 <button type="button" onclick="setOrderHistoryStatusFilter('SHIPPED')" id="filter-btn-status-SHIPPED"
-                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-amber-100 cursor-pointer text-center">
+                  class="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-amber-100 cursor-pointer text-center">
                   Shipped (<span id="count-filter-shipped">0</span>)
                 </button>
                 <button type="button" onclick="setOrderHistoryStatusFilter('OUT_FOR_DELIVERY')"
                   id="filter-btn-status-OUT_FOR_DELIVERY"
-                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-orange-100 cursor-pointer text-center">
+                  class="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-orange-100 cursor-pointer text-center">
                   Out for Delivery (<span id="count-filter-out-for-delivery">0</span>)
                 </button>
 
                 <button type="button" onclick="setOrderHistoryStatusFilter('DELIVERED')"
                   id="filter-btn-status-DELIVERED"
-                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-emerald-100 cursor-pointer text-center">
+                  class="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-emerald-100 cursor-pointer text-center">
                   Delivered (<span id="count-filter-delivered">0</span>)
                 </button>
               </div>
@@ -3905,9 +3905,10 @@
               </div>
             </div>
 
-            <!-- Orders History Table -->
+            <!-- Orders History Table & Responsive Mobile Cards Container -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div class="overflow-x-auto">
+              <!-- Desktop Table View (md and up) -->
+              <div class="hidden md:block overflow-x-auto">
                 <table class="w-full min-w-[1100px] text-left text-xs text-slate-700">
                   <thead
                     class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
@@ -3925,6 +3926,11 @@
                     <!-- Populated by JS -->
                   </tbody>
                 </table>
+              </div>
+
+              <!-- Mobile Order Cards View (< md) -->
+              <div id="orders-mobile-cards-container" class="md:hidden divide-y divide-slate-100 p-2 sm:p-3 space-y-3">
+                <!-- Populated by JS -->
               </div>
             </div>
           </div>
@@ -11909,7 +11915,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261117_v32"></script>
+  <script src="crm_app.js?v=20261117_v34"></script>
 </body>
 
 </html>
