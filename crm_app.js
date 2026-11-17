@@ -38065,7 +38065,10 @@ window.calculateBulkRequestTotals = function () {
 };
 
 window.submitBulkPriceRequest = async function (ev) {
-  if (ev) ev.preventDefault();
+  if (ev) {
+    ev.preventDefault();
+    if (ev.stopPropagation) ev.stopPropagation();
+  }
 
   const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
   const custName = customer ? (customer.name || 'Customer') : 'Walk-in Customer';
@@ -38124,7 +38127,7 @@ window.submitBulkPriceRequest = async function (ev) {
     if (data.status === 'success') {
       if (data.whatsapp_notification === 'FAILED' || data.whatsapp_notification === 'ERROR') {
         if (typeof showToast === 'function') {
-          showToast('Request Recorded', `Bulk request ${data.request?.request_code || ''} saved, but WhatsApp notification failed to send. Check WhatsApp line.`, 'warning', 'amber');
+          showToast('Request Saved (WhatsApp Disconnected)', `Bulk request ${data.request?.request_code || ''} saved, but WhatsApp line is not connected. Please scan QR in WhatsApp Settings.`, 'warning', 'amber');
         }
       } else {
         if (typeof showToast === 'function') {

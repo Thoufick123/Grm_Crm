@@ -11528,7 +11528,7 @@
       </div>
 
       <!-- Body Form -->
-      <form id="form-bulk-price-request" onsubmit="submitBulkPriceRequest(event)" class="p-6 space-y-4 text-xs">
+      <form id="form-bulk-price-request" onsubmit="event.preventDefault(); submitBulkPriceRequest(event); return false;" class="p-6 space-y-4 text-xs">
         <!-- Customer Info Strip -->
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
           <div>
@@ -11770,7 +11770,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261116_v19"></script>
+  <script src="crm_app.js?v=20261117_v25"></script>
 </body>
 
 </html>

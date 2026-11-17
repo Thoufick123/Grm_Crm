@@ -1792,7 +1792,7 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             }
         }
 
-        $directAdminWaUrl = !empty($cleanAdminPhone) ? ("https://wa.me/{$cleanAdminPhone}?text=" . rawurlencode($alertMsg)) : '';
+        $directAdminWaUrl = '';
 
         echo json_encode([
             "status" => "success",
@@ -1800,7 +1800,7 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             "request" => $createdRecord,
             "alert_message" => $alertMsg,
             "admin_phone" => $cleanAdminPhone ?? '',
-            "direct_whatsapp_url" => $directAdminWaUrl,
+            "direct_whatsapp_url" => null,
             "approve_url" => $waApproveUrl ?? '',
             "reject_url" => $waRejectUrl ?? '',
             "wa_notify" => $waNotifyStatus,
@@ -2136,7 +2136,7 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         } catch (Exception $e) {}
     }
 
-    $directAdminWaUrl = !empty($cleanPhone) ? ("https://wa.me/{$cleanPhone}?text=" . rawurlencode($alertMsg)) : '';
+    $directAdminWaUrl = '';
 
     echo json_encode([
         "status" => "success",
@@ -2144,7 +2144,7 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         "send_count" => $newSendCount,
         "alert_message" => $alertMsg,
         "admin_phone" => $cleanPhone ?? '',
-        "direct_whatsapp_url" => $directAdminWaUrl,
+        "direct_whatsapp_url" => null,
         "wa_sent" => $waSent
     ]);
     exit;
