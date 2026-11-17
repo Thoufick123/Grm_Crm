@@ -445,6 +445,13 @@ if ($action === 'get_state' || $action === 'get_all') {
                             if (!empty($line['status']) && ($line['status'] === 'SCAN_QR' || $line['status'] === 'CONNECTED')) {
                                 $wa['status'] = $line['status'];
                             }
+                            if (($line['status'] ?? '') === 'CONNECTED') {
+                                $wa['status'] = 'CONNECTED';
+                                $wa['qr_code'] = null;
+                                if (!empty($line['phone_number'])) {
+                                    $wa['phone_number'] = $line['phone_number'];
+                                }
+                            }
                             $found = true;
                             break;
                         }
@@ -1188,6 +1195,20 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     if (!isset($cfg['connected_lines']) || !is_array($cfg['connected_lines'])) {
         $cfg['connected_lines'] = [];
     }
+
+    // Guard: Prevent rogue/unauthenticated SCAN_QR requests from overwriting an already CONNECTED account
+    $isForce = !empty($data['force']) || !empty($data['force_disconnect']);
+    if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isForce) {
+        foreach ($cfg['connected_lines'] as $existingLine) {
+            if (($existingLine['id'] ?? '') === $slotId && ($existingLine['status'] ?? '') === 'CONNECTED') {
+                echo json_encode([
+                    "status" => "success",
+                    "message" => "Account $slotId is already active and CONNECTED. Ignoring unforced $status update."
+                ]);
+                exit;
+            }
+        }
+    }
     $found = false;
     foreach ($cfg['connected_lines'] as &$line) {
         if (($line['id'] ?? '') === $slotId) {
@@ -1220,23 +1241,39 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     if ($pdo) {
         try {
             $stmt = $pdo->prepare("
-                INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`, `qr_code`)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
-                    `status` = VALUES(`status`),
-                    `phone_number` = COALESCE(VALUES(`phone_number`), `phone_number`),
-                    `qr_code` = VALUES(`qr_code`),
-                    `display_name` = COALESCE(VALUES(`display_name`), `display_name`)
+                UPDATE `whatsapp_accounts` 
+                SET `status` = ?, 
+                    `phone_number` = COALESCE(?, `phone_number`), 
+                    `qr_code` = ?, 
+                    `display_name` = COALESCE(?, `display_name`) 
+                WHERE `account_slot` = ?
             ");
             $stmt->execute([
-                $slotId,
-                $phoneNumber ?: '+91 99435 57998',
-                'GRM Garments Business Hub',
-                $label,
-                $label,
                 $status,
-                $status === 'CONNECTED' ? null : $qrCode
+                $phoneNumber ?: null,
+                $status === 'CONNECTED' ? null : $qrCode,
+                $label,
+                $slotId
             ]);
+            if ($stmt->rowCount() === 0) {
+                $check = $pdo->prepare("SELECT `id` FROM `whatsapp_accounts` WHERE `account_slot` = ? LIMIT 1");
+                $check->execute([$slotId]);
+                if (!$check->fetch()) {
+                    $ins = $pdo->prepare("
+                        INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`, `qr_code`)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ");
+                    $ins->execute([
+                        $slotId,
+                        $phoneNumber ?: '+91 99435 57998',
+                        'GRM Garments Business Hub',
+                        $label,
+                        $label,
+                        $status,
+                        $status === 'CONNECTED' ? null : $qrCode
+                    ]);
+                }
+            }
         } catch (Exception $e) {}
     }
 

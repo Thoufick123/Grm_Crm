@@ -28776,8 +28776,9 @@ function fetchQRBridgeStatus(btnEl) {
 
   const bUrl = getBridgeBaseUrl();
   const isLocalHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const canDirectFetchBridge = Boolean(bUrl && (isLocalHost || bUrl.startsWith('https://')));
 
-  if (isLocalHost && bUrl) {
+  if (canDirectFetchBridge) {
     fetch(`${bUrl}/api/qr/status`)
       .then(r => r.json())
       .then(res => {
