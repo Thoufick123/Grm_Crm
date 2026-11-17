@@ -46,7 +46,8 @@ const {
     useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
-    downloadMediaMessage
+    downloadMediaMessage,
+    Browsers
 } = require('@whiskeysockets/baileys');
 
 const app = express();
@@ -954,13 +955,13 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             logger: pino({ level: 'silent' }),
             printQRInTerminal: false,
             auth: state,
-            browser: [`GRM CRM (${label})`, 'Chrome', '124.0.0.0'],
+            browser: Browsers.windows('Desktop'),
             syncFullHistory: false, // Prevents loading heavy history that crashes or times out after 2 min
-            keepAliveIntervalMs: 15000, // Send keep-alive every 15s to keep socket alive
+            keepAliveIntervalMs: 25000, // Send keep-alive every 25s to keep socket alive stably
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
             generateHighQualityLinkPreview: false,
-            retryRequestDelayMs: 250
+            retryRequestDelayMs: 500
         });
 
         accountObj.sock = sock;
@@ -1003,13 +1004,16 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 accountObj.isStarting = false;
                 broadcastAccountsUpdate();
 
-                // Notify Hostinger CRM of disconnection
-                callCrmApi('sync_account_status', {
-                    account_slot: accountId,
-                    status: 'DISCONNECTED',
-                    phone_number: null,
-                    label: label
-                }).catch(() => {});
+                // ONLY notify Hostinger CRM of disconnection if the session was truly logged out on phone!
+                // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) to prevent accidental unlinking.
+                if (isLoggedOut) {
+                    callCrmApi('sync_account_status', {
+                        account_slot: accountId,
+                        status: 'DISCONNECTED',
+                        phone_number: null,
+                        label: label
+                    }).catch(() => {});
+                }
 
                 if (isLoggedOut) {
                     console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Marking disconnected...`);
@@ -2148,7 +2152,7 @@ app.post('/api/accounts/add', (req, res) => {
 
 app.post('/api/accounts/refresh_qr', async (req, res) => {
     try {
-        const { accountId } = req.body;
+        const { accountId, forceReset } = req.body;
         const targetId = accountId || 'account_1';
         const label = accounts.get(targetId)?.label || (targetId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Business`);
 
@@ -2159,18 +2163,19 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
                 return res.json({ status: 'success', message: `Account ${targetId} is already connected (${acc.connectedNumber}).` });
             }
             if (acc.sock) {
-                try { await acc.sock.logout(); } catch (e) { }
                 try { acc.sock.end(); } catch (e) { }
             }
         }
 
         const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
-        if (fs.existsSync(sessionDir)) {
+        
+        // Only wipe credentials if explicitly requested with forceReset=true
+        if (forceReset && fs.existsSync(sessionDir)) {
             try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) { }
         }
 
         initAccountSession(targetId, label);
-        res.json({ status: 'success', message: `Generating fresh QR for ${targetId}` });
+        res.json({ status: 'success', message: `Refreshing connection for ${targetId}` });
     } catch (e) {
         res.status(500).json({ status: 'error', message: e.message });
     }
