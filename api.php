@@ -522,6 +522,36 @@ if ($action === 'get_state' || $action === 'get_all') {
                 }
             }
         }
+
+        // Ensure all 5 default WhatsApp account slots are present in $waAccounts
+        $defaultWaSlots = [
+            'account_1' => ['display_name' => 'Primary WhatsApp', 'brand_name' => 'GRM Garments Central'],
+            'account_2' => ['display_name' => 'Line 2: Blue Berry Kids & Maternity', 'brand_name' => 'Blue Berry 💙'],
+            'account_3' => ['display_name' => 'Line 3: Customer Support & Enquiries', 'brand_name' => 'GRM Support Desk'],
+            'account_4' => ['display_name' => 'Line 4: Wholesale & Bulk Orders', 'brand_name' => 'GRM Wholesale Desk'],
+            'account_5' => ['display_name' => 'Line 5: VIP Fast-Track & Dispatch', 'brand_name' => 'GRM VIP Desk']
+        ];
+
+        foreach ($defaultWaSlots as $slotKey => $slotMeta) {
+            $slotFound = false;
+            foreach ($waAccounts as $existingSlot) {
+                if (($existingSlot['account_slot'] ?? '') === $slotKey) {
+                    $slotFound = true;
+                    break;
+                }
+            }
+            if (!$slotFound) {
+                $waAccounts[] = [
+                    'account_slot' => $slotKey,
+                    'display_name' => $slotMeta['display_name'],
+                    'brand_name' => $slotMeta['brand_name'],
+                    'business_name' => $slotMeta['display_name'],
+                    'phone_number' => '',
+                    'status' => 'DISCONNECTED',
+                    'qr_code' => null
+                ];
+            }
+        }
         $primaryWA = $waAccounts[0] ?? [
             'id' => 1,
             'business_name' => 'GRM Garments Business Hub',

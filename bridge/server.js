@@ -433,10 +433,20 @@ function loadBrandConfig() {
 }
 loadBrandConfig();
 
+const DEFAULT_ACCOUNT_DEFINITIONS = [
+    { id: 'account_1', label: 'Primary WhatsApp (account_1)' },
+    { id: 'account_2', label: 'Line 2: Blue Berry Kids & Maternity (account_2)' },
+    { id: 'account_3', label: 'Line 3: Customer Support & Enquiries (account_3)' },
+    { id: 'account_4', label: 'Line 4: Wholesale & Bulk Orders (account_4)' },
+    { id: 'account_5', label: 'Line 5: VIP Fast-Track & Dispatch (account_5)' }
+];
+
 // Helper to get all accounts summary
 function getAccountsSummary() {
     const list = [];
+    const seen = new Set();
     for (const [id, acc] of accounts.entries()) {
+        seen.add(id);
         list.push({
             id: acc.id,
             label: acc.label,
@@ -446,6 +456,20 @@ function getAccountsSummary() {
             qr_image: acc.qrImage,
             last_active: acc.lastActive
         });
+    }
+    // Always include all 5 default accounts if not yet actively started
+    for (const def of DEFAULT_ACCOUNT_DEFINITIONS) {
+        if (!seen.has(def.id)) {
+            list.push({
+                id: def.id,
+                label: def.label,
+                status: 'DISCONNECTED',
+                connected_number: null,
+                connected_name: null,
+                qr_image: null,
+                last_active: null
+            });
+        }
     }
     return list;
 }
@@ -1946,7 +1970,8 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
     try {
         const { accountId, forceReset } = req.body;
         const targetId = accountId || 'account_1';
-        const label = accounts.get(targetId)?.label || (targetId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Business`);
+        const defaultDef = DEFAULT_ACCOUNT_DEFINITIONS.find(d => d.id === targetId);
+        const label = accounts.get(targetId)?.label || (defaultDef ? defaultDef.label : (targetId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Business`));
 
         if (accounts.has(targetId)) {
             const acc = accounts.get(targetId);

@@ -3790,17 +3790,45 @@ function getAvailableWhatsAppAccounts() {
     }
   ];
 
-  let accountsList = [];
-  if (Array.isArray(CRM_STATE?.whatsappLines) && CRM_STATE.whatsappLines.length > 0) {
-    accountsList = JSON.parse(JSON.stringify(CRM_STATE.whatsappLines));
-  } else {
-    accountsList = JSON.parse(JSON.stringify(defaultAccounts));
-    if (CRM_STATE) CRM_STATE.whatsappLines = accountsList;
+  // Map any existing slots saved in CRM_STATE
+  const existingMap = new Map();
+  if (Array.isArray(CRM_STATE?.whatsappLines)) {
+    CRM_STATE.whatsappLines.forEach(acc => {
+      if (acc && acc.id) existingMap.set(acc.id, acc);
+    });
   }
 
-  // Filter out any explicitly deleted slots
-  if (Array.isArray(CRM_STATE?.deletedSlots) && CRM_STATE.deletedSlots.length > 0) {
-    accountsList = accountsList.filter(acc => !CRM_STATE.deletedSlots.includes(acc.id));
+  // Always ensure all 5 default accounts exist with their saved or default data
+  let accountsList = defaultAccounts.map(def => {
+    const existing = existingMap.get(def.id);
+    if (!existing) return JSON.parse(JSON.stringify(def));
+    return {
+      ...def,
+      ...existing,
+      id: def.id,
+      label: existing.label || def.label,
+      brand_name: existing.brand_name || def.brand_name,
+      connected_number: existing.connected_number || def.connected_number,
+      status: existing.status || def.status,
+      qr_image: existing.qr_image || null
+    };
+  });
+
+  // Append any additional custom account slots (e.g. account_6, etc.)
+  if (Array.isArray(CRM_STATE?.whatsappLines)) {
+    CRM_STATE.whatsappLines.forEach(acc => {
+      if (acc && acc.id && !defaultAccounts.some(d => d.id === acc.id)) {
+        accountsList.push(JSON.parse(JSON.stringify(acc)));
+      }
+    });
+  }
+
+  // Clear any default slots (account_1 to account_5) from deletedSlots so all 5 are always guaranteed to be visible
+  if (Array.isArray(CRM_STATE?.deletedSlots)) {
+    CRM_STATE.deletedSlots = CRM_STATE.deletedSlots.filter(id => !defaultAccounts.some(d => d.id === id));
+    if (CRM_STATE.deletedSlots.length > 0) {
+      accountsList = accountsList.filter(acc => !CRM_STATE.deletedSlots.includes(acc.id));
+    }
   }
 
   // Merge with live MULTI_ACCOUNTS_STATE if available
@@ -3818,6 +3846,10 @@ function getAvailableWhatsAppAccounts() {
         qr: liveAcc.qr_image || liveAcc.qr || acc.qr
       };
     });
+  }
+
+  if (CRM_STATE) {
+    CRM_STATE.whatsappLines = accountsList;
   }
 
   return accountsList;
@@ -29903,7 +29935,7 @@ function renderMultiAccountsHub() {
               ` : ''
       )}
 
-            ${(acc.id !== 'account_1' && canSettingsDelete) ? `
+            ${(!['account_1', 'account_2', 'account_3', 'account_4', 'account_5'].includes(acc.id) && canSettingsDelete) ? `
               <button type="button" onclick="deleteWhatsAppAccountSlot('${acc.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Delete account slot">
                 <span class="material-symbols-outlined text-[14px]">delete</span> Delete Slot
               </button>
@@ -29990,14 +30022,22 @@ function generateFreshAccountQR(accountId) {
   showToast('Generating QR Code...', 'Initializing fresh WhatsApp session for scanning.', 'qr_code_scanner', 'emerald');
 
   // Immediately mark account as CONNECTING in UI so user sees instant feedback
-  if (Array.isArray(MULTI_ACCOUNTS_STATE)) {
-    const acc = MULTI_ACCOUNTS_STATE.find(a => a.id === targetId);
-    if (acc) {
-      acc.status = 'CONNECTING';
-      acc.qr_image = null;
-      renderMultiAccountsHub();
+  if (!Array.isArray(MULTI_ACCOUNTS_STATE)) MULTI_ACCOUNTS_STATE = [];
+  let acc = MULTI_ACCOUNTS_STATE.find(a => a.id === targetId);
+  if (acc) {
+    acc.status = 'CONNECTING';
+    acc.qr_image = null;
+  } else {
+    MULTI_ACCOUNTS_STATE.push({ id: targetId, status: 'CONNECTING', qr_image: null });
+  }
+  if (Array.isArray(CRM_STATE?.whatsappLines)) {
+    const line = CRM_STATE.whatsappLines.find(a => a.id === targetId);
+    if (line) {
+      line.status = 'CONNECTING';
+      line.qr_image = null;
     }
   }
+  renderMultiAccountsHub();
 
   fetch(`${getBridgeBaseUrl()}/api/accounts/refresh_qr`, {
     method: 'POST',
@@ -30070,8 +30110,8 @@ function deleteWhatsAppAccountSlot(accountId) {
       return;
     }
   }
-  if (accountId === 'account_1') {
-    showToast('Cannot Delete Primary Line', 'Line 1 is the primary business number and cannot be deleted.', 'warning', 'rose');
+  if (['account_1', 'account_2', 'account_3', 'account_4', 'account_5'].includes(accountId)) {
+    showToast('Core Slot Cannot Be Deleted', 'Default business lines 1 through 5 cannot be removed. You can Disconnect or Refresh QR instead.', 'warning', 'amber');
     return;
   }
 
