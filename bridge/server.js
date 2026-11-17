@@ -46,7 +46,8 @@ const {
     useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
-    downloadMediaMessage
+    downloadMediaMessage,
+    Browsers
 } = require('@whiskeysockets/baileys');
 
 const app = express();
@@ -837,7 +838,38 @@ initVoiceSignaling({ app, io, callCrmApi });
 // Forward inbound WhatsApp message to CRM PHP API for persistent file storage
 
 
-// Hostinger Direct Mode: Cloudflare tunnel syncing disabled as requested
+// Auto-detect and synchronize Cloudflare Tunnel URL to CRM so Hostinger can always reach Baileys
+async function syncTunnelToCrm() {
+    try {
+        const userProfile = process.env.USERPROFILE || 'C:\\Users\\ADMIN';
+        const cfLog = path.join(userProfile, '.pm2', 'logs', 'cf-tunnel-error.log');
+        if (fs.existsSync(cfLog)) {
+            const lines = fs.readFileSync(cfLog, 'utf8').split('\n');
+            let tunnelUrl = null;
+            for (let i = lines.length - 1; i >= 0; i--) {
+                const line = lines[i];
+                if (line.includes('dest=') || line.includes('error=')) continue;
+                const m = line.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+                if (m) { tunnelUrl = m[0]; break; }
+            }
+            if (tunnelUrl) {
+                console.log(`📡 [Tunnel Auto-Sync] Active Cloudflare tunnel: ${tunnelUrl}`);
+                const res = await callCrmApi('sync_bridge_url', {
+                    bridge_url: tunnelUrl,
+                    secret: 'GRM_BRIDGE_AUTO_SYNC_2026'
+                });
+                if (res && res.status === 'success') {
+                    console.log(`✅ [Tunnel Auto-Sync] Successfully synced bridge URL to CRM!`);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Could not sync tunnel URL to CRM:', e.message);
+    }
+}
+setTimeout(syncTunnelToCrm, 3000);
+setInterval(syncTunnelToCrm, 5 * 60 * 1000);
+
 console.log(`🚀 [Hostinger Mode]: WhatsApp Bridge connected to CRM at ${CRM_BASE_URL}`);
 
 async function forwardToCRM(data) {
@@ -975,13 +1007,13 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             logger: pino({ level: 'silent' }),
             printQRInTerminal: false,
             auth: state,
-            browser: [`GRM CRM (${label})`, 'Chrome', '124.0.0.0'],
+            browser: Browsers.windows('Desktop'),
             syncFullHistory: false, // Prevents loading heavy history that crashes or times out after 2 min
-            keepAliveIntervalMs: 15000, // Send keep-alive every 15s to keep socket alive
+            keepAliveIntervalMs: 25000, // Send keep-alive every 25s to keep socket alive stably
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
             generateHighQualityLinkPreview: false,
-            retryRequestDelayMs: 250
+            retryRequestDelayMs: 500
         });
 
         accountObj.sock = sock;
@@ -1024,13 +1056,16 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 accountObj.isStarting = false;
                 broadcastAccountsUpdate();
 
-                // Notify Hostinger CRM of disconnection
-                callCrmApi('sync_account_status', {
-                    account_slot: accountId,
-                    status: 'DISCONNECTED',
-                    phone_number: null,
-                    label: label
-                }).catch(() => {});
+                // ONLY notify Hostinger CRM of disconnection if the session was truly logged out on phone!
+                // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) to prevent accidental unlinking.
+                if (isLoggedOut) {
+                    callCrmApi('sync_account_status', {
+                        account_slot: accountId,
+                        status: 'DISCONNECTED',
+                        phone_number: null,
+                        label: label
+                    }).catch(() => {});
+                }
 
                 if (isLoggedOut) {
                     console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Marking disconnected...`);
@@ -1519,22 +1554,26 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                                     confirmText += `Status: Special price activated. Staff can now take the order.`;
 
-                                    // Send to Admin in same chat
-                                    await sock.sendMessage(replyTargetJid, { text: confirmText });
-                                    console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to ${replyTargetJid}`);
+                                    // Send to WhatsApp chat only if not already dispatched by API (prevents duplicate messages)
+                                    const alreadyDispatched = d && d.wa_dispatch && d.wa_dispatch.dispatched_by_api === true;
+                                    if (!alreadyDispatched) {
+                                        // Send to Admin in same chat
+                                        await sock.sendMessage(replyTargetJid, { text: confirmText });
+                                        console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to ${replyTargetJid}`);
 
-                                    // Send to Staff WhatsApp inbox as well!
-                                    const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
-                                    if (staffPhone) {
-                                        const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
-                                        const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
-                                        const staffJid = resolveDestinationJid(cleanStaffPhone);
-                                        if (staffJid && staffJid !== replyTargetJid) {
-                                            try {
-                                                await sock.sendMessage(staffJid, { text: confirmText });
-                                                console.log(`[Bulk Interceptor] Staff notification delivered to ${staffJid}`);
-                                            } catch (errStaff) {
-                                                console.warn(`[Bulk Interceptor] Could not deliver to staff ${staffJid}:`, errStaff.message);
+                                        // Send to Staff WhatsApp inbox as well!
+                                        const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
+                                        if (staffPhone) {
+                                            const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
+                                            const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
+                                            const staffJid = resolveDestinationJid(cleanStaffPhone);
+                                            if (staffJid && staffJid !== replyTargetJid) {
+                                                try {
+                                                    await sock.sendMessage(staffJid, { text: confirmText });
+                                                    console.log(`[Bulk Interceptor] Staff notification delivered to ${staffJid}`);
+                                                } catch (errStaff) {
+                                                    console.warn(`[Bulk Interceptor] Could not deliver to staff ${staffJid}:`, errStaff.message);
+                                                }
                                             }
                                         }
                                     }
@@ -1585,22 +1624,26 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     rejectText += `Reason: *${cleanReason}*\n\n` +
                                                   `Staff has been informed of rejection.`;
 
-                                    // Send to Admin in same chat
-                                    await sock.sendMessage(replyTargetJid, { text: rejectText });
-                                    console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to ${replyTargetJid}`);
+                                    // Send to WhatsApp chat only if not already dispatched by API (prevents duplicate messages)
+                                    const alreadyDispatched = d && d.wa_dispatch && d.wa_dispatch.dispatched_by_api === true;
+                                    if (!alreadyDispatched) {
+                                        // Send to Admin in same chat
+                                        await sock.sendMessage(replyTargetJid, { text: rejectText });
+                                        console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to ${replyTargetJid}`);
 
-                                    // Send to Staff's WhatsApp inbox as well!
-                                    const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
-                                    if (staffPhone) {
-                                        const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
-                                        const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
-                                        const staffJid = resolveDestinationJid(cleanStaffPhone);
-                                        if (staffJid && staffJid !== replyTargetJid) {
-                                            try {
-                                                await sock.sendMessage(staffJid, { text: rejectText });
-                                                console.log(`[Bulk Interceptor] Staff rejection notification delivered to ${staffJid}`);
-                                            } catch (errStaff) {
-                                                console.warn(`[Bulk Interceptor] Could not deliver rejection to staff ${staffJid}:`, errStaff.message);
+                                        // Send to Staff's WhatsApp inbox as well!
+                                        const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
+                                        if (staffPhone) {
+                                            const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
+                                            const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
+                                            const staffJid = resolveDestinationJid(cleanStaffPhone);
+                                            if (staffJid && staffJid !== replyTargetJid) {
+                                                try {
+                                                    await sock.sendMessage(staffJid, { text: rejectText });
+                                                    console.log(`[Bulk Interceptor] Staff rejection notification delivered to ${staffJid}`);
+                                                } catch (errStaff) {
+                                                    console.warn(`[Bulk Interceptor] Could not deliver rejection to staff ${staffJid}:`, errStaff.message);
+                                                }
                                             }
                                         }
                                     }
@@ -2161,7 +2204,7 @@ app.post('/api/accounts/add', (req, res) => {
 
 app.post('/api/accounts/refresh_qr', async (req, res) => {
     try {
-        const { accountId } = req.body;
+        const { accountId, forceReset } = req.body;
         const targetId = accountId || 'account_1';
         const label = accounts.get(targetId)?.label || (targetId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Business`);
 
@@ -2172,18 +2215,19 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
                 return res.json({ status: 'success', message: `Account ${targetId} is already connected (${acc.connectedNumber}).` });
             }
             if (acc.sock) {
-                try { await acc.sock.logout(); } catch (e) { }
                 try { acc.sock.end(); } catch (e) { }
             }
         }
 
         const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
-        if (fs.existsSync(sessionDir)) {
+        
+        // Only wipe credentials if explicitly requested with forceReset=true
+        if (forceReset && fs.existsSync(sessionDir)) {
             try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) { }
         }
 
         initAccountSession(targetId, label);
-        res.json({ status: 'success', message: `Generating fresh QR for ${targetId}` });
+        res.json({ status: 'success', message: `Refreshing connection for ${targetId}` });
     } catch (e) {
         res.status(500).json({ status: 'error', message: e.message });
     }

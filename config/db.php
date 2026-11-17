@@ -56,11 +56,7 @@ define('DB_USER', $envConfig['DB_USER']);
 define('DB_PASS', $envConfig['DB_PASS']);
 define('DB_NAME', $envConfig['DB_NAME']);
 define('DB_PORT', (int)$envConfig['DB_PORT']);
-// Priority: If BRIDGE_URL is explicitly defined in .env and is not the default localhost, prioritize it over stale cache files
-$envBridgeUrl = (!empty($envConfig['BRIDGE_URL']) && $envConfig['BRIDGE_URL'] !== 'http://localhost:3000') 
-    ? rtrim($envConfig['BRIDGE_URL'], '/') 
-    : null;
-
+// Extract dynamic bridge URL from whatsapp_account_config.json
 $dynamicBridgeUrl = null;
 $cfgFileForBridge = dirname(__DIR__) . '/whatsapp_account_config.json';
 if (file_exists($cfgFileForBridge)) {
@@ -69,7 +65,32 @@ if (file_exists($cfgFileForBridge)) {
         $dynamicBridgeUrl = rtrim($cfgDataForBridge['bridge_url'], '/');
     }
 }
-define('BRIDGE_URL', $envBridgeUrl ?? $dynamicBridgeUrl ?? ($envConfig['BRIDGE_URL'] ?? 'http://localhost:3000'));
+
+// Prevent web hosting Apache domains (*.hostingersite.com) from being treated as Node.js bridge
+$isWebHostUrl = function($url) {
+    if (empty($url)) return true;
+    $host = parse_url($url, PHP_URL_HOST) ?: '';
+    if (str_ends_with(strtolower($host), 'hostingersite.com')) return true;
+    if (!empty($_SERVER['HTTP_HOST']) && strtolower($host) === strtolower($_SERVER['HTTP_HOST'])) return true;
+    return false;
+};
+
+$envBridgeUrl = (!empty($envConfig['BRIDGE_URL']) && !$isWebHostUrl($envConfig['BRIDGE_URL']) && $envConfig['BRIDGE_URL'] !== 'http://localhost:3000') 
+    ? rtrim($envConfig['BRIDGE_URL'], '/') 
+    : null;
+
+$activeBridge = null;
+if ($dynamicBridgeUrl && !$isWebHostUrl($dynamicBridgeUrl)) {
+    $activeBridge = $dynamicBridgeUrl;
+} elseif ($envBridgeUrl) {
+    $activeBridge = $envBridgeUrl;
+} else {
+    $activeBridge = (!empty($envConfig['BRIDGE_URL']) && !$isWebHostUrl($envConfig['BRIDGE_URL'])) 
+        ? rtrim($envConfig['BRIDGE_URL'], '/') 
+        : 'http://localhost:3000';
+}
+
+define('BRIDGE_URL', $activeBridge);
 
 // Sanitize APP_URL (ensure https:// or http:// protocol is present)
 $appUrl = $envConfig['APP_URL'] ?? 'http://localhost:8080';
@@ -137,6 +158,11 @@ function getDBConnection() {
                     ]
                 );
             }
+
+            // Sync MySQL session timezone with Indian Standard Time (+05:30)
+            try {
+                $pdo->exec("SET time_zone = '+05:30';");
+            } catch (Exception $tzEx) {}
 
             // 3. Ensure tables and default seeds exist ONLY IF NOT ALREADY INITIALIZED
             // Running 47 DDL CREATE TABLE queries on every HTTP request creates massive table lock contention and socket exhaustion.

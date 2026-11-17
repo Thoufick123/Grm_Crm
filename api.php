@@ -176,6 +176,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'translate_text') {
 require_once __DIR__ . '/config/db.php';
 
 if (!headers_sent() && session_status() === PHP_SESSION_NONE) {
+    ini_set('session.gc_maxlifetime', 2592000); // 30-day session duration
+    session_set_cookie_params([
+        'lifetime' => 2592000,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
     @session_start();
 }
 
@@ -292,7 +299,7 @@ function curlBridgePost($endpoint, $payloadArray, $timeout = 7) {
  * Dispatches WhatsApp Bulk Price Decision Notifications to BOTH Admin and Staff
  * Content format matches the user's specification (Image 2) with 100% fidelity.
  */
-function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reason = '', $actor = 'Super Admin', $skipAdmin = false) {
+function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reason = '', $actor = 'Super Admin', $skipAdmin = false, $skipWhatsApp = false) {
     if (!$req || empty($req['request_code'])) {
         return ['status' => 'error', 'message' => 'Invalid request payload'];
     }
@@ -372,18 +379,22 @@ function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reaso
     }
     $targetPhones = array_unique($targetPhones);
 
-    // 5. Send to each recipient via Bridge
+    // 5. Send to each recipient via Bridge (skipped if command already came from WhatsApp chat session)
     $dispatchResults = [];
-    foreach ($targetPhones as $phone) {
-        try {
-            $res = curlBridgePost('/api/send', [
-                'phone' => $phone,
-                'text' => $waText
-            ], 5);
-            $dispatchResults[$phone] = $res['http_code'] ?? 0;
-        } catch (Exception $e) {
-            $dispatchResults[$phone] = 'error: ' . $e->getMessage();
+    if (!$skipWhatsApp) {
+        foreach ($targetPhones as $phone) {
+            try {
+                $res = curlBridgePost('/api/send', [
+                    'phone' => $phone,
+                    'text' => $waText
+                ], 5);
+                $dispatchResults[$phone] = $res['http_code'] ?? 0;
+            } catch (Exception $e) {
+                $dispatchResults[$phone] = 'error: ' . $e->getMessage();
+            }
         }
+    } else {
+        $dispatchResults['notice'] = 'handled_directly_in_baileys_chat';
     }
 
     // 6. Broadcast Realtime Socket.IO event to all active CRM screens
@@ -422,6 +433,7 @@ function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reaso
 
     return [
         'status' => 'success',
+        'dispatched_by_api' => !$skipWhatsApp,
         'decision' => $decisionUpper,
         'message_text' => $waText,
         'admin_phone' => $cleanAdmin,
@@ -1167,6 +1179,19 @@ if ($action === 'sync_bridge_url' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $currentConfig['last_bridge_sync'] = date("Y-m-d H:i:s");
     atomicWriteJson($configFile, $currentConfig);
 
+    // Also update .env file if it exists
+    $envPath = dirname(__DIR__) . '/.env';
+    if (!file_exists($envPath)) $envPath = __DIR__ . '/.env';
+    if (file_exists($envPath)) {
+        $envContent = file_get_contents($envPath);
+        if (preg_match('/^BRIDGE_URL=.*/m', $envContent)) {
+            $envContent = preg_replace('/^BRIDGE_URL=.*/m', 'BRIDGE_URL=' . $currentConfig['bridge_url'], $envContent);
+        } else {
+            $envContent .= "\nBRIDGE_URL=" . $currentConfig['bridge_url'];
+        }
+        @file_put_contents($envPath, $envContent);
+    }
+
     echo json_encode([
         "status" => "success",
         "message" => "Bridge URL synchronized successfully",
@@ -1542,6 +1567,37 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Strict 10-digit validation for WhatsApp Phone (Required)
+    $rawPhone = preg_replace('/[^0-9]/', '', $data['phone'] ?? ($data['whatsapp'] ?? ''));
+    if (strlen($rawPhone) === 12 && str_starts_with($rawPhone, '91')) {
+        $rawPhone = substr($rawPhone, 2);
+    } elseif (strlen($rawPhone) === 11 && str_starts_with($rawPhone, '0')) {
+        $rawPhone = substr($rawPhone, 1);
+    }
+    if (strlen($rawPhone) !== 10) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "WhatsApp Phone must be exactly 10 digits (0-9 only)"]);
+        exit;
+    }
+
+    // Strict 10-digit validation for Alternative Phone (Optional, but if supplied must be 10 digits)
+    $rawAltPhone = preg_replace('/[^0-9]/', '', $data['alt_phone'] ?? ($data['altPhone'] ?? ''));
+    if (!empty($rawAltPhone)) {
+        if (strlen($rawAltPhone) === 12 && str_starts_with($rawAltPhone, '91')) {
+            $rawAltPhone = substr($rawAltPhone, 2);
+        } elseif (strlen($rawAltPhone) === 11 && str_starts_with($rawAltPhone, '0')) {
+            $rawAltPhone = substr($rawAltPhone, 1);
+        }
+        if (strlen($rawAltPhone) !== 10) {
+            http_response_code(400);
+            echo json_encode(["status" => "error", "message" => "Alternative phone must be exactly 10 digits (0-9 only)"]);
+            exit;
+        }
+    }
+
+    $phoneToSave = '+91 ' . substr($rawPhone, 0, 5) . ' ' . substr($rawPhone, 5);
+    $altPhoneToSave = !empty($rawAltPhone) ? ('+91 ' . substr($rawAltPhone, 0, 5) . ' ' . substr($rawAltPhone, 5)) : '';
+
     if ($pdo) {
         try {
             $stmt = $pdo->prepare("
@@ -1551,9 +1607,9 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmt->execute([
                 $data['name'] ?? '',
-                $data['phone'] ?? '',
-                $data['whatsapp'] ?? ($data['phone'] ?? ''),
-                $data['alt_phone'] ?? ($data['altPhone'] ?? ''),
+                $phoneToSave,
+                $phoneToSave,
+                $altPhoneToSave,
                 $data['email'] ?? null,
                 $data['gender'] ?? null,
                 $data['age'] ?? null,
@@ -2070,8 +2126,11 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
         exit;
     }
+    $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
+    $skipWhatsApp = ($fromChannel === 'whatsapp_cmd');
+
     if ($currReq['status'] === 'APPROVED') {
-        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'APPROVED', '', $approvedBy, false);
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'APPROVED', '', $approvedBy, false, $skipWhatsApp);
         echo json_encode([
             "status" => "success",
             "message" => "Request {$currReq['request_code']} is already approved.",
@@ -2114,9 +2173,8 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         } catch (Exception $e) {}
 
         // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
-        $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
-        $skipAdmin = false;
-        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'APPROVED', '', $approvedBy, $skipAdmin);
+        // If from WhatsApp command, skip extra /api/send call since Baileys sends confirmation directly
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'APPROVED', '', $approvedBy, false, $skipWhatsApp);
 
         echo json_encode([
             "status" => "success",
@@ -2171,8 +2229,11 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
         exit;
     }
+    $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
+    $skipWhatsApp = ($fromChannel === 'whatsapp_cmd');
+
     if ($currReq['status'] === 'REJECTED') {
-        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'REJECTED', $rejectionReason, $rejectedBy, false);
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'REJECTED', $rejectionReason, $rejectedBy, false, $skipWhatsApp);
         echo json_encode([
             "status" => "success",
             "message" => "Request {$currReq['request_code']} is already rejected.",
@@ -2221,9 +2282,8 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         } catch (Exception $e) {}
 
         // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
-        $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
-        $skipAdmin = false;
-        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'REJECTED', $rejectionReason, $rejectedBy, $skipAdmin);
+        // If from WhatsApp command, skip extra /api/send call since Baileys sends confirmation directly
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'REJECTED', $rejectionReason, $rejectedBy, false, $skipWhatsApp);
 
         echo json_encode([
             "status" => "success",
@@ -2991,10 +3051,28 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if ($response && $httpCode === 200) {
-        echo $response;
+    if ($response && $httpCode >= 200 && $httpCode < 300) {
+        $decRes = json_decode($response, true);
+        if ($decRes && ($decRes['status'] ?? '') === 'success') {
+            echo $response;
+            exit;
+        }
+        http_response_code($httpCode ?: 400);
+        echo json_encode([
+            "status" => "error",
+            "message" => $decRes['message'] ?? "WhatsApp bridge rejected delivery",
+            "bridge_response" => $decRes
+        ]);
+        exit;
     } else {
-        echo json_encode(["status" => "success", "message" => "Message sent and stored locally", "simulated" => true]);
+        http_response_code(502);
+        echo json_encode([
+            "status" => "error",
+            "message" => "WhatsApp Bridge unreachable at " . getEffectiveBridgeUrl() . ". Message could not be sent to WhatsApp.",
+            "http_code" => $httpCode,
+            "curl_error" => $bRes['error'] ?? ''
+        ]);
+        exit;
     }
     exit;
 }
@@ -5894,14 +5972,16 @@ if ($action === 'request_backup_download') {
         $requestCode = 'BK-REQ-' . strtoupper(substr(uniqid(), -6));
         $tokenApprove = bin2hex(random_bytes(24));
         $tokenReject = bin2hex(random_bytes(24));
+        $nowStr = date('Y-m-d H:i:s');
+        $expiresAtStr = date('Y-m-d H:i:s', time() + 3600); // 60 minutes in IST
 
         $stmt = $pdo->prepare("
             INSERT INTO `backup_download_requests`
             (`request_code`, `requester_id`, `requester_name`, `requester_role`, `requester_ip`, `admin_email`, `token_approve`, `token_reject`, `status`, `expires_at`, `created_at`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', DATE_ADD(NOW(), INTERVAL 60 MINUTE), NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)
         ");
         $stmt->execute([
-            $requestCode, $requesterId, $requesterName, $requesterRole, $ip, $adminEmail, $tokenApprove, $tokenReject
+            $requestCode, $requesterId, $requesterName, $requesterRole, $ip, $adminEmail, $tokenApprove, $tokenReject, $expiresAtStr, $nowStr
         ]);
 
         $publicBaseUrl = 'https://mediumturquoise-dugong-987946.hostingersite.com';
@@ -6150,10 +6230,37 @@ if ($action === 'check_backup_request_status') {
             exit;
         }
 
-        // Check if expired
-        if ($req['status'] === 'PENDING' && strtotime($req['expires_at']) < time()) {
+        // Check if expired with timezone-resilient safeguards
+        $now = time();
+        $createdTs = !empty($req['created_at']) ? strtotime($req['created_at']) : 0;
+        $expiresTs = !empty($req['expires_at']) ? strtotime($req['expires_at']) : 0;
+
+        // A request cannot expire if created within the last 60 minutes (3600 seconds)
+        $isExpired = false;
+        if ($expiresTs > 0 && $expiresTs < $now) {
+            if ($createdTs > 0 && ($now - $createdTs) < 3600) {
+                // Safeguard against server clock skew / UTC timezone mismatch
+                $isExpired = false;
+            } else {
+                $isExpired = true;
+            }
+        }
+
+        if ($req['status'] === 'PENDING' && $isExpired) {
             $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'EXPIRED' WHERE `id` = ?")->execute([$req['id']]);
             $req['status'] = 'EXPIRED';
+        }
+
+        // Accurately compute remaining seconds for modal countdown
+        $remainingSecs = 0;
+        if ($req['status'] === 'PENDING') {
+            if ($expiresTs > $now) {
+                $remainingSecs = max(0, $expiresTs - $now);
+            } elseif ($createdTs > 0) {
+                $remainingSecs = max(0, 3600 - ($now - $createdTs));
+            } else {
+                $remainingSecs = 3600;
+            }
         }
 
         echo json_encode([
@@ -6162,6 +6269,7 @@ if ($action === 'check_backup_request_status') {
             "request_code" => $req['request_code'],
             "request_status" => $req['status'],
             "requestStatus" => $req['status'],
+            "remaining_seconds" => $remainingSecs,
             "download_token" => ($req['status'] === 'APPROVED') ? $req['download_token'] : null,
             "action_at" => $req['action_at'],
             "action_by" => $req['action_by'],
@@ -6255,44 +6363,67 @@ HTML;
 
         $isApprove = ($token === $req['token_approve']);
         $now = time();
-        $isExpired = (strtotime($req['expires_at']) < $now);
+        $createdTs = !empty($req['created_at']) ? strtotime($req['created_at']) : 0;
+        $expiresTs = !empty($req['expires_at']) ? strtotime($req['expires_at']) : 0;
 
-        if ($req['status'] === 'PENDING') {
+        // Timezone-resilient expiration check: Cannot expire within 60 minutes of creation
+        $isExpired = false;
+        if ($expiresTs > 0 && $expiresTs < $now) {
+            if ($createdTs > 0 && ($now - $createdTs) < 3600) {
+                $isExpired = false;
+            } else {
+                $isExpired = true;
+            }
+        }
+
+        // Allow approval if PENDING, OR if marked EXPIRED by timezone skew within valid window
+        $canProcess = ($req['status'] === 'PENDING') || ($req['status'] === 'EXPIRED' && !$isExpired);
+
+        if ($canProcess) {
             if ($isExpired) {
                 $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'EXPIRED' WHERE `id` = ?")->execute([$req['id']]);
                 $req['status'] = 'EXPIRED';
             } elseif ($isApprove) {
                 $downloadToken = bin2hex(random_bytes(24));
-                $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'APPROVED', `download_token` = ?, `action_at` = NOW(), `action_by` = ? WHERE `id` = ?")
-                    ->execute([$downloadToken, $req['admin_email'], $req['id']]);
+                $newExpiresAt = date('Y-m-d H:i:s', time() + 3600); // Fresh 60-minute download validity
+                $nowStr = date('Y-m-d H:i:s');
+                $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'APPROVED', `download_token` = ?, `expires_at` = ?, `action_at` = ?, `action_by` = ? WHERE `id` = ?")
+                    ->execute([$downloadToken, $newExpiresAt, $nowStr, $req['admin_email'], $req['id']]);
                 $req['status'] = 'APPROVED';
+                $req['download_token'] = $downloadToken;
 
                 // Audit log: Admin approval
                 try {
                     $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOAD_APPROVED', 'BACKUP_DOWNLOAD_APPROVED', 'SECURITY', 'SECURITY', ?, ?, ?, ?, NOW())");
                     $desc = "Approved database backup download for staff: {$req['requester_name']} ({$req['requester_role']}) - Request Code: {$req['request_code']}";
-                    $audit->execute([$req['admin_email'], $req['admin_email'], $desc, $desc, date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
+                    $audit->execute([$req['admin_email'], $req['admin_email'], $desc, $desc, $nowStr, $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
                 } catch (Exception $ae) {}
             } else {
-                $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'REJECTED', `download_token` = NULL, `action_at` = NOW(), `action_by` = ? WHERE `id` = ?")
-                    ->execute([$req['admin_email'], $req['id']]);
+                $nowStr = date('Y-m-d H:i:s');
+                $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'REJECTED', `download_token` = NULL, `action_at` = ?, `action_by` = ? WHERE `id` = ?")
+                    ->execute([$nowStr, $req['admin_email'], $req['id']]);
                 $req['status'] = 'REJECTED';
 
                 // Audit log: Admin rejection
                 try {
                     $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOAD_REJECTED', 'BACKUP_DOWNLOAD_REJECTED', 'SECURITY', 'SECURITY', ?, ?, ?, ?, NOW())");
                     $desc = "REJECTED and BLOCKED database backup download requested by staff: {$req['requester_name']} ({$req['requester_role']}) - Request Code: {$req['request_code']}";
-                    $audit->execute([$req['admin_email'], $req['admin_email'], $desc, $desc, date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
+                    $audit->execute([$req['admin_email'], $req['admin_email'], $desc, $desc, $nowStr, $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
                 } catch (Exception $ae) {}
             }
         }
 
         if ($req['status'] === 'APPROVED') {
+            $directDownloadBtn = '';
+            if (!empty($req['download_token'])) {
+                $directUrl = "api.php?action=backup_db&download_token=" . urlencode($req['download_token']);
+                $directDownloadBtn = "<div style='margin-top:18px;'><a href='{$directUrl}' style='display:inline-block;padding:12px 24px;background:#059669;color:#ffffff;text-decoration:none;font-weight:700;border-radius:12px;font-size:13px;box-shadow:0 10px 15px -3px rgba(5,150,105,0.3);'>📥 Download Backup File (.json) Now</a></div>";
+            }
             renderVerifyHtmlPage(
                 "Backup Download Approved",
                 "check_circle",
                 "#059669",
-                "You have successfully <strong>APPROVED</strong> this database backup request. The requester's CRM window will immediately begin downloading the backup file.",
+                "You have successfully <strong>APPROVED</strong> this database backup request. The requester's CRM window will immediately begin downloading the backup file." . $directDownloadBtn,
                 [
                     "Request Code" => $req['request_code'],
                     "Staff Requester" => $req['requester_name'] . " (" . $req['requester_role'] . ")",
@@ -6343,20 +6474,29 @@ if ($action === 'backup_db') {
 
     if (!empty($downloadToken)) {
         try {
-            $authStmt = $pdo->prepare("SELECT * FROM `backup_download_requests` WHERE `download_token` = ? AND `status` = 'APPROVED' AND `expires_at` > NOW() LIMIT 1");
+            $authStmt = $pdo->prepare("SELECT * FROM `backup_download_requests` WHERE `download_token` = ? AND `status` = 'APPROVED' LIMIT 1");
             $authStmt->execute([$downloadToken]);
             $authReq = $authStmt->fetch(PDO::FETCH_ASSOC);
             if ($authReq) {
-                $isAuthorized = true;
-                $newCount = intval($authReq['download_count'] ?? 0) + 1;
-                $pdo->prepare("UPDATE `backup_download_requests` SET `download_count` = ?, `downloaded_at` = NOW() WHERE `id` = ?")->execute([$newCount, $authReq['id']]);
+                $now = time();
+                $expTs = !empty($authReq['expires_at']) ? strtotime($authReq['expires_at']) : 0;
+                $actTs = !empty($authReq['action_at']) ? strtotime($authReq['action_at']) : 0;
+                $createdTs = !empty($authReq['created_at']) ? strtotime($authReq['created_at']) : 0;
 
-                // Audit log: Track which admin authorized, which staff downloaded, and total download count
-                try {
-                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOADED', 'DATABASE_BACKUP_EXPORTED', 'BACKUP', 'SECURITY', ?, ?, ?, ?, NOW())");
-                    $desc = "Database backup downloaded by staff: {$authReq['requester_name']} ({$authReq['requester_role']}) - Authorized by Admin: {$authReq['action_by']} (Download #{$newCount}, Request Code: {$authReq['request_code']})";
-                    $audit->execute([$authReq['requester_name'], $authReq['requester_name'], $desc, $desc, date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
-                } catch (Exception $ae) {}
+                // Authorized if expires_at is in future OR approved within last 2 hours OR created within last 2 hours
+                if (($expTs > $now) || ($actTs > 0 && ($now - $actTs) < 7200) || ($createdTs > 0 && ($now - $createdTs) < 7200)) {
+                    $isAuthorized = true;
+                    $newCount = intval($authReq['download_count'] ?? 0) + 1;
+                    $nowStr = date('Y-m-d H:i:s');
+                    $pdo->prepare("UPDATE `backup_download_requests` SET `download_count` = ?, `downloaded_at` = ? WHERE `id` = ?")->execute([$newCount, $nowStr, $authReq['id']]);
+
+                    // Audit log: Track which admin authorized, which staff downloaded, and total download count
+                    try {
+                        $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOADED', 'DATABASE_BACKUP_EXPORTED', 'BACKUP', 'SECURITY', ?, ?, ?, ?, NOW())");
+                        $desc = "Database backup downloaded by staff: {$authReq['requester_name']} ({$authReq['requester_role']}) - Authorized by Admin: {$authReq['action_by']} (Download #{$newCount}, Request Code: {$authReq['request_code']})";
+                        $audit->execute([$authReq['requester_name'], $authReq['requester_name'], $desc, $desc, $nowStr, $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
+                    } catch (Exception $ae) {}
+                }
             }
         } catch (Exception $e) {}
     }
