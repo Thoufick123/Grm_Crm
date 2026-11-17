@@ -1467,22 +1467,26 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                                     confirmText += `Status: Special price activated. Staff can now take the order.`;
 
-                                    // Send to Admin in same chat
-                                    await sock.sendMessage(replyTargetJid, { text: confirmText });
-                                    console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to ${replyTargetJid}`);
+                                    // Send to WhatsApp chat only if not already dispatched by API (prevents duplicate messages)
+                                    const alreadyDispatched = d && d.wa_dispatch && d.wa_dispatch.dispatched_by_api === true;
+                                    if (!alreadyDispatched) {
+                                        // Send to Admin in same chat
+                                        await sock.sendMessage(replyTargetJid, { text: confirmText });
+                                        console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to ${replyTargetJid}`);
 
-                                    // Send to Staff WhatsApp inbox as well!
-                                    const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
-                                    if (staffPhone) {
-                                        const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
-                                        const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
-                                        const staffJid = resolveDestinationJid(cleanStaffPhone);
-                                        if (staffJid && staffJid !== replyTargetJid) {
-                                            try {
-                                                await sock.sendMessage(staffJid, { text: confirmText });
-                                                console.log(`[Bulk Interceptor] Staff notification delivered to ${staffJid}`);
-                                            } catch (errStaff) {
-                                                console.warn(`[Bulk Interceptor] Could not deliver to staff ${staffJid}:`, errStaff.message);
+                                        // Send to Staff WhatsApp inbox as well!
+                                        const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
+                                        if (staffPhone) {
+                                            const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
+                                            const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
+                                            const staffJid = resolveDestinationJid(cleanStaffPhone);
+                                            if (staffJid && staffJid !== replyTargetJid) {
+                                                try {
+                                                    await sock.sendMessage(staffJid, { text: confirmText });
+                                                    console.log(`[Bulk Interceptor] Staff notification delivered to ${staffJid}`);
+                                                } catch (errStaff) {
+                                                    console.warn(`[Bulk Interceptor] Could not deliver to staff ${staffJid}:`, errStaff.message);
+                                                }
                                             }
                                         }
                                     }
@@ -1533,22 +1537,26 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     rejectText += `Reason: *${cleanReason}*\n\n` +
                                                   `Staff has been informed of rejection.`;
 
-                                    // Send to Admin in same chat
-                                    await sock.sendMessage(replyTargetJid, { text: rejectText });
-                                    console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to ${replyTargetJid}`);
+                                    // Send to WhatsApp chat only if not already dispatched by API (prevents duplicate messages)
+                                    const alreadyDispatched = d && d.wa_dispatch && d.wa_dispatch.dispatched_by_api === true;
+                                    if (!alreadyDispatched) {
+                                        // Send to Admin in same chat
+                                        await sock.sendMessage(replyTargetJid, { text: rejectText });
+                                        console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to ${replyTargetJid}`);
 
-                                    // Send to Staff's WhatsApp inbox as well!
-                                    const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
-                                    if (staffPhone) {
-                                        const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
-                                        const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
-                                        const staffJid = resolveDestinationJid(cleanStaffPhone);
-                                        if (staffJid && staffJid !== replyTargetJid) {
-                                            try {
-                                                await sock.sendMessage(staffJid, { text: rejectText });
-                                                console.log(`[Bulk Interceptor] Staff rejection notification delivered to ${staffJid}`);
-                                            } catch (errStaff) {
-                                                console.warn(`[Bulk Interceptor] Could not deliver rejection to staff ${staffJid}:`, errStaff.message);
+                                        // Send to Staff's WhatsApp inbox as well!
+                                        const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
+                                        if (staffPhone) {
+                                            const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
+                                            const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
+                                            const staffJid = resolveDestinationJid(cleanStaffPhone);
+                                            if (staffJid && staffJid !== replyTargetJid) {
+                                                try {
+                                                    await sock.sendMessage(staffJid, { text: rejectText });
+                                                    console.log(`[Bulk Interceptor] Staff rejection notification delivered to ${staffJid}`);
+                                                } catch (errStaff) {
+                                                    console.warn(`[Bulk Interceptor] Could not deliver rejection to staff ${staffJid}:`, errStaff.message);
+                                                }
                                             }
                                         }
                                     }

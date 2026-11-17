@@ -248,7 +248,7 @@ function curlBridgePost($endpoint, $payloadArray, $timeout = 7) {
  * Dispatches WhatsApp Bulk Price Decision Notifications to BOTH Admin and Staff
  * Content format matches the user's specification (Image 2) with 100% fidelity.
  */
-function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reason = '', $actor = 'Super Admin', $skipAdmin = false) {
+function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reason = '', $actor = 'Super Admin', $skipAdmin = false, $skipWhatsApp = false) {
     if (!$req || empty($req['request_code'])) {
         return ['status' => 'error', 'message' => 'Invalid request payload'];
     }
@@ -328,18 +328,22 @@ function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reaso
     }
     $targetPhones = array_unique($targetPhones);
 
-    // 5. Send to each recipient via Bridge
+    // 5. Send to each recipient via Bridge (skipped if command already came from WhatsApp chat session)
     $dispatchResults = [];
-    foreach ($targetPhones as $phone) {
-        try {
-            $res = curlBridgePost('/api/send', [
-                'phone' => $phone,
-                'text' => $waText
-            ], 5);
-            $dispatchResults[$phone] = $res['http_code'] ?? 0;
-        } catch (Exception $e) {
-            $dispatchResults[$phone] = 'error: ' . $e->getMessage();
+    if (!$skipWhatsApp) {
+        foreach ($targetPhones as $phone) {
+            try {
+                $res = curlBridgePost('/api/send', [
+                    'phone' => $phone,
+                    'text' => $waText
+                ], 5);
+                $dispatchResults[$phone] = $res['http_code'] ?? 0;
+            } catch (Exception $e) {
+                $dispatchResults[$phone] = 'error: ' . $e->getMessage();
+            }
         }
+    } else {
+        $dispatchResults['notice'] = 'handled_directly_in_baileys_chat';
     }
 
     // 6. Broadcast Realtime Socket.IO event to all active CRM screens
@@ -378,6 +382,7 @@ function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reaso
 
     return [
         'status' => 'success',
+        'dispatched_by_api' => !$skipWhatsApp,
         'decision' => $decisionUpper,
         'message_text' => $waText,
         'admin_phone' => $cleanAdmin,
@@ -1984,8 +1989,11 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
         exit;
     }
+    $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
+    $skipWhatsApp = ($fromChannel === 'whatsapp_cmd');
+
     if ($currReq['status'] === 'APPROVED') {
-        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'APPROVED', '', $approvedBy, false);
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'APPROVED', '', $approvedBy, false, $skipWhatsApp);
         echo json_encode([
             "status" => "success",
             "message" => "Request {$currReq['request_code']} is already approved.",
@@ -2028,9 +2036,8 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         } catch (Exception $e) {}
 
         // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
-        $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
-        $skipAdmin = false;
-        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'APPROVED', '', $approvedBy, $skipAdmin);
+        // If from WhatsApp command, skip extra /api/send call since Baileys sends confirmation directly
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'APPROVED', '', $approvedBy, false, $skipWhatsApp);
 
         echo json_encode([
             "status" => "success",
@@ -2085,8 +2092,11 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
         exit;
     }
+    $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
+    $skipWhatsApp = ($fromChannel === 'whatsapp_cmd');
+
     if ($currReq['status'] === 'REJECTED') {
-        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'REJECTED', $rejectionReason, $rejectedBy, false);
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'REJECTED', $rejectionReason, $rejectedBy, false, $skipWhatsApp);
         echo json_encode([
             "status" => "success",
             "message" => "Request {$currReq['request_code']} is already rejected.",
@@ -2135,9 +2145,8 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         } catch (Exception $e) {}
 
         // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
-        $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
-        $skipAdmin = false;
-        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'REJECTED', $rejectionReason, $rejectedBy, $skipAdmin);
+        // If from WhatsApp command, skip extra /api/send call since Baileys sends confirmation directly
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'REJECTED', $rejectionReason, $rejectedBy, false, $skipWhatsApp);
 
         echo json_encode([
             "status" => "success",
