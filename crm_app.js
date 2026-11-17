@@ -4774,7 +4774,7 @@ function loadCatalogOnDemand(force = false) {
 }
 window.loadCatalogOnDemand = loadCatalogOnDemand;
 
-function switchView(viewName, subName) {
+function switchView(viewName, subName, isFromHistory = false) {
   window.switchView = switchView;
   // Clear instant-view-shield if present to allow instant view transitions
   const shield = document.getElementById('instant-view-shield');
@@ -4795,9 +4795,19 @@ function switchView(viewName, subName) {
   ACTIVE_VIEW = viewName;
   try {
     localStorage.setItem('GRM_CRM_ACTIVE_VIEW', viewName);
-    if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+    if (typeof window !== 'undefined' && window.history) {
       const targetHash = subName ? ('#' + viewName + '/' + subName) : ('#' + viewName);
-      window.history.replaceState(null, '', targetHash);
+      if (isFromHistory) {
+        if (window.history.replaceState) {
+          window.history.replaceState({ page: 'grm_crm', isRoot: false, view: viewName, sub: subName, hash: targetHash }, '', targetHash);
+        }
+      } else {
+        if (window.history.pushState && window.location.hash !== targetHash) {
+          window.history.pushState({ page: 'grm_crm', isRoot: false, view: viewName, sub: subName, hash: targetHash }, '', targetHash);
+        } else if (window.history.replaceState) {
+          window.history.replaceState({ page: 'grm_crm', isRoot: false, view: viewName, sub: subName, hash: targetHash }, '', targetHash);
+        }
+      }
     }
   } catch (e) { }
   const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
@@ -4940,30 +4950,123 @@ function switchView(viewName, subName) {
   }
 }
 
-window.addEventListener('hashchange', () => {
-  const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
-  const hashParts = rawHash.split('/');
-  const mainHash = hashParts[0];
-  const subHash = hashParts[1];
-  const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
-  if (mainHash && validViews.includes(mainHash)) {
-    let needsSwitch = false;
-    if (mainHash !== ACTIVE_VIEW) {
-      needsSwitch = true;
-    } else if (mainHash === 'orders' && subHash && subHash !== (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' ? ACTIVE_ORDERS_SUBMODULE : 'dashboard')) {
-      needsSwitch = true;
-    } else if (mainHash === 'inbox' && subHash && subHash !== (typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' ? ACTIVE_INBOX_SUBMODULE : 'chats')) {
-      needsSwitch = true;
-    } else if (mainHash === 'staff' && subHash && subHash !== (typeof ACTIVE_STAFF_TAB !== 'undefined' ? ACTIVE_STAFF_TAB : 'list')) {
-      needsSwitch = true;
-    } else if (mainHash === 'customers' && subHash && subHash !== (typeof ACTIVE_CUSTOMERS_SUBMODULE !== 'undefined' ? ACTIVE_CUSTOMERS_SUBMODULE : 'list')) {
-      needsSwitch = true;
+// =========================================================================
+// SPA BROWSER HISTORY GUARD & NAVIGATION CONTROLLER
+// Traps browser Back button (←) so it never exits the CRM or loads Chrome New Tab!
+// =========================================================================
+var _CRM_SUPPRESS_HASH_EVENT = false;
+
+function initBrowserHistoryGuard() {
+  if (typeof window === 'undefined' || !window.history || !window.history.pushState) return;
+  if (window._CRM_HISTORY_GUARD_INITIALIZED) return;
+  window._CRM_HISTORY_GUARD_INITIALIZED = true;
+
+  const currentHash = (window.location && window.location.hash) ? window.location.hash : '#dashboard';
+  const initialView = currentHash.replace('#', '').split('/')[0] || 'dashboard';
+
+  // 1. Establish initial history buffer: Root anchor + Operational navigable layer
+  try {
+    window.history.replaceState({ page: 'grm_crm', isRoot: true, view: initialView, hash: currentHash }, '', currentHash);
+    window.history.pushState({ page: 'grm_crm', isRoot: false, view: initialView, hash: currentHash }, '', currentHash);
+  } catch (e) { }
+
+  // 2. Intercept browser left arrow (Back button) popstate event
+  window.addEventListener('popstate', (e) => {
+    _CRM_SUPPRESS_HASH_EVENT = true;
+    setTimeout(() => { _CRM_SUPPRESS_HASH_EVENT = false; }, 200);
+
+    // Guard A: Check if any popup modal is open and close it first
+    const openModals = document.querySelectorAll(
+      '#modal-followup-export:not(.hidden), #modal-inbound-simulator:not(.hidden), #modal-quick-role-assign:not(.hidden), #modal-broadcast-scheduler:not(.hidden), #modal-autoreply-editor:not(.hidden), #modal-customer-requirements:not(.hidden), #modal-staff-editor:not(.hidden), #modal-order-editor:not(.hidden), #modal-export-custom:not(.hidden), #modal-call-simulator:not(.hidden), [id^="modal-"]:not(.hidden)'
+    );
+    let modalClosed = false;
+    openModals.forEach(m => {
+      if (m.id && m.id.startsWith('modal-') && !m.classList.contains('hidden')) {
+        m.classList.add('hidden');
+        modalClosed = true;
+      }
+    });
+    if (modalClosed) {
+      window.history.pushState({ page: 'grm_crm', isRoot: false, view: ACTIVE_VIEW, hash: window.location.hash }, '', window.location.hash);
+      return;
     }
-    if (needsSwitch) {
-      switchView(mainHash, subHash);
+
+    // Guard B: On mobile screen, if inside an active customer chat, return to conversation list
+    if (window.innerWidth < 768 && ACTIVE_VIEW === 'inbox') {
+      const centerPanel = document.getElementById('chat-center-panel');
+      if (centerPanel && !centerPanel.classList.contains('hidden')) {
+        if (typeof mobileBackToConversations === 'function') {
+          mobileBackToConversations();
+          window.history.pushState({ page: 'grm_crm', isRoot: false, view: 'inbox', sub: 'chats', hash: '#inbox/chats' }, '', '#inbox/chats');
+          return;
+        }
+      }
     }
-  }
-});
+
+    // Guard C: SPA View Back-Navigation
+    const state = e.state;
+    const rawHash = (window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+    const hashParts = rawHash.split('/');
+    const targetView = (state && state.view) ? state.view : (hashParts[0] || 'dashboard');
+    const targetSub = (state && state.sub) ? state.sub : (hashParts[1] || null);
+
+    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
+    
+    // If navigating back to another view:
+    if (validViews.includes(targetView) && (targetView !== ACTIVE_VIEW || targetSub)) {
+      switchView(targetView, targetSub, true);
+      // Ensure we keep a root safety buffer so clicking Back again doesn't dump to New Tab
+      if (state && state.isRoot) {
+        window.history.pushState({ page: 'grm_crm', isRoot: false, view: targetView, sub: targetSub, hash: window.location.hash }, '', window.location.hash);
+      }
+      return;
+    }
+
+    // Guard D: Root Protection
+    // If user is at dashboard or root, NEVER let the browser exit to Chrome's New Tab!
+    if (!state || state.isRoot || ACTIVE_VIEW === 'dashboard' || targetView === 'dashboard') {
+      if (ACTIVE_VIEW !== 'dashboard') {
+        switchView('dashboard', null, true);
+      }
+      window.history.pushState({ page: 'grm_crm', isRoot: false, view: 'dashboard', hash: '#dashboard' }, '', '#dashboard');
+      if (typeof showToast === 'function') {
+        showToast('GRM CRM Active', 'You are at the home dashboard. To exit, click "Logout" at top-right.', 'shield', 'emerald');
+      }
+    }
+  });
+
+  // Handle direct manual hash edits or anchor links
+  window.addEventListener('hashchange', () => {
+    if (_CRM_SUPPRESS_HASH_EVENT) return;
+    const rawHash = (window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
+    const hashParts = rawHash.split('/');
+    const mainHash = hashParts[0];
+    const subHash = hashParts[1];
+    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
+    if (mainHash && validViews.includes(mainHash)) {
+      let needsSwitch = false;
+      if (mainHash !== ACTIVE_VIEW) {
+        needsSwitch = true;
+      } else if (mainHash === 'orders' && subHash && subHash !== (typeof ACTIVE_ORDERS_SUBMODULE !== 'undefined' ? ACTIVE_ORDERS_SUBMODULE : 'dashboard')) {
+        needsSwitch = true;
+      } else if (mainHash === 'inbox' && subHash && subHash !== (typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' ? ACTIVE_INBOX_SUBMODULE : 'chats')) {
+        needsSwitch = true;
+      } else if (mainHash === 'staff' && subHash && subHash !== (typeof ACTIVE_STAFF_TAB !== 'undefined' ? ACTIVE_STAFF_TAB : 'list')) {
+        needsSwitch = true;
+      } else if (mainHash === 'customers' && subHash && subHash !== (typeof ACTIVE_CUSTOMERS_SUBMODULE !== 'undefined' ? ACTIVE_CUSTOMERS_SUBMODULE : 'list')) {
+        needsSwitch = true;
+      }
+      if (needsSwitch) {
+        switchView(mainHash, subHash, true);
+      }
+    }
+  });
+}
+
+// Auto-initialize browser history guard immediately
+if (typeof window !== 'undefined') {
+  initBrowserHistoryGuard();
+}
 
 // =========================================================================
 // 2. AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC) SYSTEM
@@ -5810,6 +5913,9 @@ function selectCustomerChat(customerId) {
 
   // On mobile (< 768px), transition from conversation list view to active chat view
   if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (window.history && window.history.pushState) {
+      window.history.pushState({ page: 'grm_crm', isRoot: false, view: 'inbox', sub: 'chats', customerId: customerId, isMobileChat: true }, '', '#inbox/chats');
+    }
     const leftPanel = document.getElementById('inbox-left-panel');
     const centerPanel = document.getElementById('chat-center-panel');
     const mobileBottomBar = document.getElementById('mobile-bottom-app-bar');
@@ -34240,6 +34346,9 @@ function stopAutomatedBroadcast() {
 function bootstrapCRMApp() {
   initCRMState();
   initAuthSystem();
+  if (typeof initBrowserHistoryGuard === 'function') {
+    initBrowserHistoryGuard();
+  }
   if (typeof updateHeaderBulkRequestsBadge === 'function') {
     updateHeaderBulkRequestsBadge();
     setInterval(updateHeaderBulkRequestsBadge, 15000);
