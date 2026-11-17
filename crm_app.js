@@ -7713,20 +7713,17 @@ function handleCancelQueryEdit(queryId) {
 }
 window.handleCancelQueryEdit = handleCancelQueryEdit;
 
-// Helper to extract clean 10-digit phone number (removing +91 or leading 0s)
+// Helper to extract clean 10-digit phone number (removing +91 or leading 0)
 function extract10Digits(val) {
   if (!val) return '';
   let digits = String(val).replace(/[^0-9]/g, '');
   if (digits.length === 12 && digits.startsWith('91')) {
     return digits.slice(2);
   }
-  if (digits.length > 10 && digits.startsWith('91')) {
-    return digits.slice(2, 12);
+  if (digits.length === 11 && digits.startsWith('0')) {
+    return digits.slice(1);
   }
-  if (digits.length > 10 && digits.startsWith('0')) {
-    digits = digits.replace(/^0+/, '');
-  }
-  return digits.length > 10 ? digits.slice(-10) : digits;
+  return digits;
 }
 window.extract10Digits = extract10Digits;
 

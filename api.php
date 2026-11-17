@@ -1476,8 +1476,11 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Strict 10-digit validation for WhatsApp Phone (Required)
     $rawPhone = preg_replace('/[^0-9]/', '', $data['phone'] ?? ($data['whatsapp'] ?? ''));
-    if (strlen($rawPhone) === 12 && str_starts_with($rawPhone, '91')) $rawPhone = substr($rawPhone, 2);
-    if (strlen($rawPhone) > 10) $rawPhone = substr($rawPhone, -10);
+    if (strlen($rawPhone) === 12 && str_starts_with($rawPhone, '91')) {
+        $rawPhone = substr($rawPhone, 2);
+    } elseif (strlen($rawPhone) === 11 && str_starts_with($rawPhone, '0')) {
+        $rawPhone = substr($rawPhone, 1);
+    }
     if (strlen($rawPhone) !== 10) {
         http_response_code(400);
         echo json_encode(["status" => "error", "message" => "WhatsApp Phone must be exactly 10 digits (0-9 only)"]);
@@ -1487,8 +1490,11 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     // Strict 10-digit validation for Alternative Phone (Optional, but if supplied must be 10 digits)
     $rawAltPhone = preg_replace('/[^0-9]/', '', $data['alt_phone'] ?? ($data['altPhone'] ?? ''));
     if (!empty($rawAltPhone)) {
-        if (strlen($rawAltPhone) === 12 && str_starts_with($rawAltPhone, '91')) $rawAltPhone = substr($rawAltPhone, 2);
-        if (strlen($rawAltPhone) > 10) $rawAltPhone = substr($rawAltPhone, -10);
+        if (strlen($rawAltPhone) === 12 && str_starts_with($rawAltPhone, '91')) {
+            $rawAltPhone = substr($rawAltPhone, 2);
+        } elseif (strlen($rawAltPhone) === 11 && str_starts_with($rawAltPhone, '0')) {
+            $rawAltPhone = substr($rawAltPhone, 1);
+        }
         if (strlen($rawAltPhone) !== 10) {
             http_response_code(400);
             echo json_encode(["status" => "error", "message" => "Alternative phone must be exactly 10 digits (0-9 only)"]);
