@@ -1086,6 +1086,19 @@ if ($action === 'sync_bridge_url' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $currentConfig['last_bridge_sync'] = date("Y-m-d H:i:s");
     atomicWriteJson($configFile, $currentConfig);
 
+    // Also update .env file if it exists
+    $envPath = dirname(__DIR__) . '/.env';
+    if (!file_exists($envPath)) $envPath = __DIR__ . '/.env';
+    if (file_exists($envPath)) {
+        $envContent = file_get_contents($envPath);
+        if (preg_match('/^BRIDGE_URL=.*/m', $envContent)) {
+            $envContent = preg_replace('/^BRIDGE_URL=.*/m', 'BRIDGE_URL=' . $currentConfig['bridge_url'], $envContent);
+        } else {
+            $envContent .= "\nBRIDGE_URL=" . $currentConfig['bridge_url'];
+        }
+        @file_put_contents($envPath, $envContent);
+    }
+
     echo json_encode([
         "status" => "success",
         "message" => "Bridge URL synchronized successfully",
@@ -1461,6 +1474,31 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Strict 10-digit validation for WhatsApp Phone (Required)
+    $rawPhone = preg_replace('/[^0-9]/', '', $data['phone'] ?? ($data['whatsapp'] ?? ''));
+    if (strlen($rawPhone) === 12 && str_starts_with($rawPhone, '91')) $rawPhone = substr($rawPhone, 2);
+    if (strlen($rawPhone) > 10) $rawPhone = substr($rawPhone, -10);
+    if (strlen($rawPhone) !== 10) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "WhatsApp Phone must be exactly 10 digits (0-9 only)"]);
+        exit;
+    }
+
+    // Strict 10-digit validation for Alternative Phone (Optional, but if supplied must be 10 digits)
+    $rawAltPhone = preg_replace('/[^0-9]/', '', $data['alt_phone'] ?? ($data['altPhone'] ?? ''));
+    if (!empty($rawAltPhone)) {
+        if (strlen($rawAltPhone) === 12 && str_starts_with($rawAltPhone, '91')) $rawAltPhone = substr($rawAltPhone, 2);
+        if (strlen($rawAltPhone) > 10) $rawAltPhone = substr($rawAltPhone, -10);
+        if (strlen($rawAltPhone) !== 10) {
+            http_response_code(400);
+            echo json_encode(["status" => "error", "message" => "Alternative phone must be exactly 10 digits (0-9 only)"]);
+            exit;
+        }
+    }
+
+    $phoneToSave = '+91 ' . substr($rawPhone, 0, 5) . ' ' . substr($rawPhone, 5);
+    $altPhoneToSave = !empty($rawAltPhone) ? ('+91 ' . substr($rawAltPhone, 0, 5) . ' ' . substr($rawAltPhone, 5)) : '';
+
     if ($pdo) {
         try {
             $stmt = $pdo->prepare("
@@ -1470,9 +1508,9 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmt->execute([
                 $data['name'] ?? '',
-                $data['phone'] ?? '',
-                $data['whatsapp'] ?? ($data['phone'] ?? ''),
-                $data['alt_phone'] ?? ($data['altPhone'] ?? ''),
+                $phoneToSave,
+                $phoneToSave,
+                $altPhoneToSave,
                 $data['email'] ?? null,
                 $data['gender'] ?? null,
                 $data['age'] ?? null,
@@ -2914,10 +2952,28 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if ($response && $httpCode === 200) {
-        echo $response;
+    if ($response && $httpCode >= 200 && $httpCode < 300) {
+        $decRes = json_decode($response, true);
+        if ($decRes && ($decRes['status'] ?? '') === 'success') {
+            echo $response;
+            exit;
+        }
+        http_response_code($httpCode ?: 400);
+        echo json_encode([
+            "status" => "error",
+            "message" => $decRes['message'] ?? "WhatsApp bridge rejected delivery",
+            "bridge_response" => $decRes
+        ]);
+        exit;
     } else {
-        echo json_encode(["status" => "success", "message" => "Message sent and stored locally", "simulated" => true]);
+        http_response_code(502);
+        echo json_encode([
+            "status" => "error",
+            "message" => "WhatsApp Bridge unreachable at " . getEffectiveBridgeUrl() . ". Message could not be sent to WhatsApp.",
+            "http_code" => $httpCode,
+            "curl_error" => $bRes['error'] ?? ''
+        ]);
+        exit;
     }
     exit;
 }

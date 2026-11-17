@@ -7713,6 +7713,23 @@ function handleCancelQueryEdit(queryId) {
 }
 window.handleCancelQueryEdit = handleCancelQueryEdit;
 
+// Helper to extract clean 10-digit phone number (removing +91 or leading 0s)
+function extract10Digits(val) {
+  if (!val) return '';
+  let digits = String(val).replace(/[^0-9]/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return digits.slice(2);
+  }
+  if (digits.length > 10 && digits.startsWith('91')) {
+    return digits.slice(2, 12);
+  }
+  if (digits.length > 10 && digits.startsWith('0')) {
+    digits = digits.replace(/^0+/, '');
+  }
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+window.extract10Digits = extract10Digits;
+
 // Save Customer Details from Right-Side Panel Form
 function handleQuickCustomerSave(event, customerId) {
   if (event) event.preventDefault();
@@ -7736,14 +7753,54 @@ function handleQuickCustomerSave(event, customerId) {
   const notesInput = document.getElementById('cust-edit-notes');
 
   const newName = nameInput ? nameInput.value.trim() : customer.name;
-  const newPhone = phoneInput ? phoneInput.value.trim() : (customer.whatsapp || customer.phone);
-  const newAltPhone = altPhoneInput ? altPhoneInput.value.trim() : (customer.altPhone || customer.alt_phone || '');
+  const rawPhone = phoneInput ? phoneInput.value.trim() : (customer.whatsapp || customer.phone || '');
+  const rawAltPhone = altPhoneInput ? altPhoneInput.value.trim() : (customer.altPhone || customer.alt_phone || '');
   const newAge = ageInput ? ageInput.value.trim() : (customer.age || '');
   const newGender = genderInput ? genderInput.value : (customer.gender || '');
   const newEmail = emailInput ? emailInput.value.trim() : (customer.email || '');
   const newAddress = addressInput ? addressInput.value.trim() : (customer.address || '');
   const newAltAddress = altAddressInput ? altAddressInput.value.trim() : (customer.altAddress || customer.alt_address || '');
   const newNotes = notesInput ? notesInput.value.trim() : (customer.notes || '');
+
+  // Reset any previous validation error styling
+  if (phoneInput) phoneInput.classList.remove('border-rose-500', 'ring-2', 'ring-rose-300');
+  if (altPhoneInput) altPhoneInput.classList.remove('border-rose-500', 'ring-2', 'ring-rose-300');
+
+  // 1. WhatsApp Phone Validation (Must be numbers only and exactly 10 digits)
+  const corePhone = extract10Digits(rawPhone);
+  if (!corePhone || corePhone.length !== 10) {
+    if (phoneInput) {
+      phoneInput.focus();
+      phoneInput.classList.add('border-rose-500', 'ring-2', 'ring-rose-300');
+    }
+    if (typeof showToast === 'function') {
+      showToast('Validation Error', 'WhatsApp Phone must be exactly 10 digits (numbers only).', 'error', 'rose');
+    } else {
+      alert('WhatsApp Phone must be exactly 10 digits (numbers only).');
+    }
+    return;
+  }
+
+  // 2. Alternative Phone Validation (Optional, but if entered must be numbers only and exactly 10 digits)
+  let coreAltPhone = '';
+  if (rawAltPhone && rawAltPhone.trim() !== '') {
+    coreAltPhone = extract10Digits(rawAltPhone);
+    if (!coreAltPhone || coreAltPhone.length !== 10) {
+      if (altPhoneInput) {
+        altPhoneInput.focus();
+        altPhoneInput.classList.add('border-rose-500', 'ring-2', 'ring-rose-300');
+      }
+      if (typeof showToast === 'function') {
+        showToast('Validation Error', 'Alternative Number must be exactly 10 digits (numbers only).', 'error', 'rose');
+      } else {
+        alert('Alternative Number must be exactly 10 digits (numbers only).');
+      }
+      return;
+    }
+  }
+
+  const newPhone = formatPhoneNumberPretty(corePhone);
+  const newAltPhone = coreAltPhone ? formatPhoneNumberPretty(coreAltPhone) : '';
 
   customer.name = newName;
   customer.phone = newPhone;
@@ -8990,6 +9047,12 @@ function renderCustomer360Panel() {
   const valName = (draft && draft.name !== undefined) ? draft.name : (customer.name || '');
   const valPhone = (draft && draft.phone !== undefined) ? draft.phone : (customer.whatsapp || customer.phone || '');
   const valAltPhone = (draft && draft.altPhone !== undefined) ? draft.altPhone : (customer.altPhone || customer.alt_phone || '');
+  const displayInputPhone = isEditing 
+    ? extract10Digits(valPhone) 
+    : (formatPhoneNumberPretty(valPhone) || valPhone);
+  const displayInputAltPhone = isEditing 
+    ? extract10Digits(valAltPhone) 
+    : (valAltPhone ? formatPhoneNumberPretty(valAltPhone) : '');
   const valGender = (draft && draft.gender !== undefined) ? draft.gender : (customer.gender || '');
   const cleanSavedAddr = (customer.address && customer.address !== 'Online WhatsApp Customer') ? customer.address : '';
   const valAddress = (draft && draft.address !== undefined) ? draft.address : cleanSavedAddr;
@@ -9088,14 +9151,18 @@ function renderCustomer360Panel() {
         <!-- Phone Number (Auto-Fetched from WhatsApp Message) -->
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide">${t('customer.phone', 'WhatsApp Phone *:')}</label>
+            <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px] text-emerald-600">call</span>
+              <span>${t('customer.phone', 'WhatsApp Phone *:')}</span>
+              ${isEditing ? `<span class="text-[9px] text-emerald-700 font-mono font-bold">(10 Digits)</span>` : ''}
+            </label>
             <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ${t('customer.auto_fetched', 'Auto-Fetched')}
             </span>
           </div>
           <div class="relative">
             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-emerald-600">call</span>
-            <input type="text" id="cust-edit-phone" value="${valPhone}" ${isEditing ? '' : 'disabled'} required placeholder="+91 98765 43210" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-emerald-950 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-bold">
+            <input type="${isEditing ? 'tel' : 'text'}" ${isEditing ? 'inputmode="numeric" maxlength="10" pattern="[0-9]{10}" oninput="this.value = this.value.replace(/[^0-9]/g, \'\').slice(0, 10);"' : ''} id="cust-edit-phone" value="${displayInputPhone}" ${isEditing ? '' : 'disabled'} required placeholder="10-digit WhatsApp number" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-emerald-950 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-bold">
           </div>
         </div>
 
@@ -9105,12 +9172,13 @@ function renderCustomer360Panel() {
             <label class="font-bold text-slate-700 text-[10px] uppercase tracking-wide flex items-center gap-1">
               <span class="material-symbols-outlined text-[13px] text-slate-500">phone_iphone</span>
               <span>Alternative Number:</span>
+              ${isEditing ? `<span class="text-[9px] text-slate-500 font-mono font-normal">(10 Digits)</span>` : ''}
             </label>
             <span class="text-[9px] text-slate-400 font-medium">Secondary</span>
           </div>
           <div class="relative">
             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-slate-400">ring_volume</span>
-            <input type="text" id="cust-edit-alt-phone" value="${valAltPhone}" ${isEditing ? '' : 'disabled'} placeholder="Secondary Mobile / Landline" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-medium">
+            <input type="${isEditing ? 'tel' : 'text'}" ${isEditing ? 'inputmode="numeric" maxlength="10" pattern="[0-9]{10}" oninput="this.value = this.value.replace(/[^0-9]/g, \'\').slice(0, 10);"' : ''} id="cust-edit-alt-phone" value="${displayInputAltPhone}" ${isEditing ? '' : 'disabled'} placeholder="10-digit alternate mobile" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-medium">
           </div>
         </div>
 
@@ -33331,11 +33399,13 @@ async function startAutomatedBroadcast() {
   if (progDetail) progDetail.innerText = `Starting automated dispatch loop (${delaySec}s delay)...`;
 
   let sentCount = 0;
+  let deliveredCount = 0;
+  let failedCount = 0;
 
   for (let i = 0; i < recipients.length; i++) {
     if (BROADCAST_CANCEL_FLAG) {
       if (progStatus) progStatus.innerText = 'Broadcast Stopped by User';
-      if (progDetail) progDetail.innerText = `Stopped after sending ${sentCount} of ${recipients.length} messages.`;
+      if (progDetail) progDetail.innerText = `Stopped after sending ${sentCount} of ${recipients.length} messages (${deliveredCount} delivered, ${failedCount} failed).`;
       break;
     }
 
@@ -33359,28 +33429,13 @@ async function startAutomatedBroadcast() {
         text: personalizedText,
         time: timeStr,
         timestamp: Date.now(),
-        status: 'DELIVERED',
+        status: 'PENDING',
         isBroadcast: true,
         media_type: attachedBroadcastImage ? 'image' : null,
         media_url: attachedBroadcastImage || null
       };
 
       CRM_STATE.conversations[customer.id].push(newMsg);
-
-      // Persist the dispatched broadcast message to MySQL database
-      fetch('api.php?action=send_message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_id: customer.id,
-          phone: customer.whatsapp || customer.phone,
-          text: personalizedText,
-          media_url: attachedBroadcastImage,
-          type: attachedBroadcastImage ? 'image' : 'text',
-          status: 'DELIVERED',
-          isBroadcast: true
-        })
-      }).catch(err => console.warn('Could not persist broadcast message to DB:', err));
 
       // Update query summary in list
       const query = (CRM_STATE.queries || []).find(q => q.customerId === customer.id);
@@ -33396,10 +33451,19 @@ async function startAutomatedBroadcast() {
       const targetJid = customer.jid || null;
       const targetAccId = customer.accountId || (account && account.id) || 'account_1';
 
+      let isDelivered = false;
       try {
-        await dispatchWhatsAppOutbound(targetPhone, personalizedText, newMsg, targetJid, targetAccId, true, attachedBroadcastImage, customer.id);
+        isDelivered = await dispatchWhatsAppOutbound(targetPhone, personalizedText, newMsg, targetJid, targetAccId, true, attachedBroadcastImage, customer.id);
       } catch (sendErr) {
         console.warn('[Broadcast Send Error for ' + (customer.name || targetPhone) + ']:', sendErr);
+      }
+
+      if (isDelivered) {
+        deliveredCount++;
+        newMsg.status = 'DELIVERED';
+      } else {
+        failedCount++;
+        newMsg.status = 'FAILED';
       }
     }
 
@@ -33408,7 +33472,7 @@ async function startAutomatedBroadcast() {
 
     if (progPct) progPct.innerText = `${pct}%`;
     if (progBar) progBar.style.width = `${pct}%`;
-    if (progDetail) progDetail.innerText = `Sent to ${customer.name || 'Recipient'} (${customer.phone || customer.whatsapp}) [${sentCount}/${recipients.length}]`;
+    if (progDetail) progDetail.innerText = `Sent: ${sentCount}/${recipients.length} | Delivered: ${deliveredCount}${failedCount > 0 ? ` | Failed: ${failedCount}` : ''}`;
 
     // Audio chime feedback
     if (typeof playChime === 'function') {
@@ -33446,11 +33510,17 @@ async function startAutomatedBroadcast() {
   if (delayInput) delayInput.disabled = false;
 
   if (!BROADCAST_CANCEL_FLAG) {
-    if (progStatus) progStatus.innerText = '✅ Broadcast Completed Successfully!';
-    if (progDetail) progDetail.innerText = `All ${sentCount} messages delivered to recipients.`;
-    showToast('Broadcast Complete', `Personalized template delivered to ${sentCount} recipients!`, 'campaign', 'emerald');
+    if (failedCount === 0) {
+      if (progStatus) progStatus.innerText = '✅ Broadcast Completed Successfully!';
+      if (progDetail) progDetail.innerText = `All ${deliveredCount} messages delivered to recipients\' WhatsApp.`;
+      showToast('Broadcast Complete', `All ${deliveredCount} messages delivered!`, 'campaign', 'emerald');
+    } else {
+      if (progStatus) progStatus.innerText = `⚠️ Broadcast Finished (${deliveredCount} Delivered, ${failedCount} Failed)`;
+      if (progDetail) progDetail.innerText = `${deliveredCount} delivered, ${failedCount} failed. Please ensure WhatsApp QR Bridge is connected.`;
+      showToast('Broadcast Notice', `${deliveredCount} delivered, ${failedCount} failed to send. Check WhatsApp Bridge.`, 'warning', 'amber');
+    }
   } else {
-    showToast('Broadcast Stopped', `Broadcast paused after sending ${sentCount} messages.`, 'stop_circle', 'amber');
+    showToast('Broadcast Stopped', `Broadcast paused after sending ${sentCount} messages (${deliveredCount} delivered, ${failedCount} failed).`, 'stop_circle', 'amber');
   }
 }
 

@@ -785,7 +785,38 @@ initVoiceSignaling({ app, io, callCrmApi });
 // Forward inbound WhatsApp message to CRM PHP API for persistent file storage
 
 
-// Hostinger Direct Mode: Cloudflare tunnel syncing disabled as requested
+// Auto-detect and synchronize Cloudflare Tunnel URL to CRM so Hostinger can always reach Baileys
+async function syncTunnelToCrm() {
+    try {
+        const userProfile = process.env.USERPROFILE || 'C:\\Users\\ADMIN';
+        const cfLog = path.join(userProfile, '.pm2', 'logs', 'cf-tunnel-error.log');
+        if (fs.existsSync(cfLog)) {
+            const lines = fs.readFileSync(cfLog, 'utf8').split('\n');
+            let tunnelUrl = null;
+            for (let i = lines.length - 1; i >= 0; i--) {
+                const line = lines[i];
+                if (line.includes('dest=') || line.includes('error=')) continue;
+                const m = line.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+                if (m) { tunnelUrl = m[0]; break; }
+            }
+            if (tunnelUrl) {
+                console.log(`📡 [Tunnel Auto-Sync] Active Cloudflare tunnel: ${tunnelUrl}`);
+                const res = await callCrmApi('sync_bridge_url', {
+                    bridge_url: tunnelUrl,
+                    secret: 'GRM_BRIDGE_AUTO_SYNC_2026'
+                });
+                if (res && res.status === 'success') {
+                    console.log(`✅ [Tunnel Auto-Sync] Successfully synced bridge URL to CRM!`);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Could not sync tunnel URL to CRM:', e.message);
+    }
+}
+setTimeout(syncTunnelToCrm, 3000);
+setInterval(syncTunnelToCrm, 5 * 60 * 1000);
+
 console.log(`🚀 [Hostinger Mode]: WhatsApp Bridge connected to CRM at ${CRM_BASE_URL}`);
 
 async function forwardToCRM(data) {
