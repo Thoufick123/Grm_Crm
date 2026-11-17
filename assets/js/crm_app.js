@@ -5969,62 +5969,9 @@ function renderChatMessages() {
         .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-teal-600 hover:text-teal-800 font-bold underline break-all inline-flex items-center gap-0.5">$1 <span class="material-symbols-outlined text-[11px]">open_in_new</span></a>')
         .replace(/\n/g, '<br>');
 
-      const isStockMenu = msg.text && (
-        msg.text.includes('Ready-Stock Collections:') ||
-        msg.text.includes('Reply with 1 to 6') ||
-        msg.text.includes('Live Stock') ||
-        msg.text.includes('Category Number') ||
-        msg.text.includes('Baby Collection (0-3 Years)') ||
-        msg.text.includes('Click any category button') ||
-        msg.text.includes('How to Order / Inquire:')
-      );
-
-      let buttonsHtml = '';
-      if (isStockMenu) {
-        buttonsHtml = `
-          <div class="mt-3 pt-2.5 border-t border-emerald-200/70 space-y-1.5">
-            <div class="flex items-center justify-between text-[10px] font-bold text-emerald-900">
-              <span class="flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px] text-emerald-600">touch_app</span>
-                <span>Click any option to view ready stock:</span>
-              </span>
-              <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-mono">1-Click View</span>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-1.5 pt-0.5">
-              <button type="button" onclick="triggerCategorySelection('1', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
-                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">1</span>
-                <span class="truncate">Baby Collection</span>
-              </button>
-              <button type="button" onclick="triggerCategorySelection('2', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
-                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">2</span>
-                <span class="truncate">Maternity Wear</span>
-              </button>
-              <button type="button" onclick="triggerCategorySelection('3', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
-                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">3</span>
-                <span class="truncate">Newborn Gift Sets</span>
-              </button>
-              <button type="button" onclick="triggerCategorySelection('4', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
-                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">4</span>
-                <span class="truncate">Kids Everyday</span>
-              </button>
-              <button type="button" onclick="triggerCategorySelection('5', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
-                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">5</span>
-                <span class="truncate">Wholesale Bundles</span>
-              </button>
-              <button type="button" onclick="triggerCategorySelection('6', '${ACTIVE_CUSTOMER_ID}')" class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-slate-800 hover:text-emerald-950 rounded-xl border border-emerald-300 hover:border-emerald-500 font-bold text-[11px] text-left transition flex items-center gap-1.5 shadow-2xs group cursor-pointer">
-                <span class="w-5 h-5 rounded-lg bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 transition">6</span>
-                <span class="truncate">Festive Silk Sets</span>
-              </button>
-            </div>
-          </div>
-        `;
-      }
-
       contentHtml = `
         <div class="space-y-1">
           <p class="text-xs leading-relaxed font-normal break-words [overflow-wrap:anywhere] whitespace-pre-line">${formattedMsg}</p>
-          ${buttonsHtml}
         </div>
       `;
     }
@@ -10700,13 +10647,7 @@ function insertQuickReply(type) {
 // =========================================================================
 
 function getDefaultStockAutoReplyTemplate() {
-  return `✨ *{brand_name}* ✨
-Hello *{customer_name}*! 👋 Welcome to our store.
-
-👗 *Ready-Stock Collections:*
-{stock_categories}
-
-💬 *Reply with 1 to 6* to see photos & sizes!`;
+  return "";
 }
 
 // Dynamically aggregates live stock in ultra-compact format without Read More truncation
@@ -10785,7 +10726,7 @@ function getSpecificCategoryStockCard(categoryName, customer) {
   return `👗 *${brand} • ${categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${custName}! 👋 Here are our ready-stock items:\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 *Reply with ${replyCount}* to view the photo, sizes & order!\n(Reply *0* for Main Menu)`;
 }
 
-// Inbound Automated Response Dispatcher
+// Inbound Automated Response Dispatcher (Offline / Simulator Mode - ONLY Auto-Module Rules)
 function handleAutomatedInboundResponse(customer, messageText, payload) {
   if (!customer || !CRM_STATE?.autoReplySettings?.enabled) return;
 
@@ -10798,38 +10739,45 @@ function handleAutomatedInboundResponse(customer, messageText, payload) {
   const isCooldownOver = cooldownMs === 0 || (now - lastAutoReply) >= cooldownMs;
 
   let replyText = null;
-  let responseType = 'STOCK_MENU';
+  let responseType = 'AUTOMODULE_RULE';
 
-  // 1. Keyword-based interactive category responses (if enabled)
-  if (settings.keywordMatching !== false) {
-    if (text === '1' || text === 'baby' || text.includes('baby collection') || text.includes('frock')) {
-      replyText = getSpecificCategoryStockCard('Baby Collection', customer);
-      responseType = 'CATEGORY_BABY';
-    } else if (text === '2' || text === 'maternity' || text.includes('feeding') || text.includes('gown')) {
-      replyText = getSpecificCategoryStockCard('Maternity', customer);
-      responseType = 'CATEGORY_MATERNITY';
-    } else if (text === '3' || text === 'newborn' || text.includes('romper') || text.includes('gift set')) {
-      replyText = getSpecificCategoryStockCard('Newborn', customer);
-      responseType = 'CATEGORY_NEWBORN';
-    } else if (text === '4' || text === 'kids' || text.includes('t-shirt') || text.includes('tshirt')) {
-      replyText = getSpecificCategoryStockCard('Kids', customer);
-      responseType = 'CATEGORY_KIDS';
-    } else if (text === '5' || text === 'wholesale' || text.includes('bulk') || text.includes('bundle')) {
-      replyText = getSpecificCategoryStockCard('Wholesale', customer);
-      responseType = 'CATEGORY_WHOLESALE';
-    } else if (text === '6' || text === 'festive' || text.includes('lehenga') || text.includes('pattu') || text.includes('silk')) {
-      replyText = getSpecificCategoryStockCard('Girls Festive', customer);
-      responseType = 'CATEGORY_FESTIVE';
+  // Match ONLY rules configured in Auto-Reply Module (CRM_STATE.autoReplyRules)
+  if (settings.keywordMatching !== false && Array.isArray(CRM_STATE?.autoReplyRules)) {
+    for (const rule of CRM_STATE.autoReplyRules) {
+      if (rule.enabled === false || rule.autoSend === false) continue;
+      const kws = Array.isArray(rule.keywords)
+        ? rule.keywords
+        : (typeof rule.keywords === 'string' ? rule.keywords.split(',').map(k => k.trim()) : []);
+      const allTriggers = [...kws];
+      if (rule.name) allTriggers.push(rule.name);
+
+      let matched = false;
+      for (const kw of allTriggers) {
+        const cleanKw = (kw || '').trim().toLowerCase();
+        if (!cleanKw) continue;
+        if (rule.matchType === 'exact') {
+          if (text === cleanKw) { matched = true; break; }
+        } else {
+          if (text.includes(cleanKw) || cleanKw.includes(text)) { matched = true; break; }
+        }
+      }
+
+      if (matched) {
+        const brand = getBrandName();
+        const cName = customer ? customer.name.split(' ')[0] : 'there';
+        const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '';
+        replyText = (rule.replyText || '')
+          .replace(/{customer_name}/g, cName)
+          .replace(/{brand_name}/g, brand)
+          .replace(/{business_phone}/g, phone);
+        responseType = rule.name || 'AUTOMODULE_RULE';
+        break;
+      }
     }
   }
 
-  // 2. If no specific keyword matched, check if cooldown is over to send the main Stock Category Menu
-  if (!replyText && isCooldownOver) {
-    replyText = buildStockAutoReplyMessage(customer);
-    responseType = 'STOCK_MENU';
-  }
-
-  if (!replyText) return;
+  // If no rule in Auto-Reply Module matched or cooldown active, do NOT send anything
+  if (!replyText || !isCooldownOver) return;
 
   // Record auto-reply timestamp to enforce cooldown
   customer.lastAutoReplyEpoch = now;
@@ -10852,7 +10800,7 @@ function handleAutomatedInboundResponse(customer, messageText, payload) {
   // Update query status to AUTOMATED_REPLIED
   const query = CRM_STATE.queries.find(q => q.customerId === customer.id);
   if (query) {
-    query.lastMessage = `Bot: "Stock Menu & Categories Sent"`;
+    query.lastMessage = `Bot: "${responseType}"`;
   }
 
   saveCRMState();
@@ -10863,9 +10811,7 @@ function handleAutomatedInboundResponse(customer, messageText, payload) {
     if (stream) stream.scrollTop = stream.scrollHeight;
   }
 
-  // Note: Outbound delivery is autonomously handled by bridge/server.js to prevent duplicate sends
-  // The server emits the bot response back to all connected CRM clients for instant rendering
-  console.log(`[Auto-Reply Bot] Server handling auto-reply response (${responseType}) for ${customer.name}`);
+  console.log(`[Auto-Reply Bot] Handled auto-module reply (${responseType}) for ${customer.name}`);
 }
 
 // 1-Click Share Stock Category Menu from Chat Quick Action Tray
@@ -11511,23 +11457,6 @@ function applyPresetTemplateToComposer(ruleId, autoSend = false) {
 
   let finalMsg = customText;
 
-  if (rule.categoryId && (rule.actionType === 'category_reply' || rule.actionType === 'category_and_text')) {
-    const cat = GRM_BOT_CATALOG?.[rule.categoryId];
-    if (cat) {
-      const itemsList = Object.values(cat.items || {}).map((it, idx) => {
-        const cleanPrice = String(it.price || '').replace(/^₹/, '');
-        const stockCount = it.stock ?? 12;
-        return `${idx + 1}️⃣ *${it.name}*\n   💰 ₹${cleanPrice} | Size: ${it.size} | Stock: ${stockCount} Pcs Ready`;
-      }).join('\n\n');
-
-      if (rule.actionType === 'category_and_text' && customText.trim()) {
-        finalMsg = `${customText}\n\n━━━━━━━━━━━━━━━━━━━━\n${cat.icon} *${cat.categoryName} Ready Stock:*\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
-      } else {
-        finalMsg = `${cat.icon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${cName}! 👋 Here are our ready-stock items:\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
-      }
-    }
-  }
-
   const inputEl = document.getElementById('chat-input-text');
   if (inputEl) {
     inputEl.value = finalMsg;
@@ -11612,23 +11541,6 @@ function testMatchAutoReplyQuestion() {
     .replace(/{business_phone}/g, phone);
 
   let fullMsg = customText;
-  if (matchedRule.categoryId && (matchedRule.actionType === 'category_reply' || matchedRule.actionType === 'category_and_text')) {
-    const cat = GRM_BOT_CATALOG?.[matchedRule.categoryId];
-    if (cat) {
-      const itemsList = Object.values(cat.items || {}).map((it, idx) => {
-        const cleanPrice = String(it.price || '').replace(/^₹/, '');
-        const stockCount = it.stock ?? 12;
-        return `${idx + 1}️⃣ *${it.name}*\n   💰 ₹${cleanPrice} | Size: ${it.size} | Stock: ${stockCount} Pcs Ready`;
-      }).join('\n\n');
-
-      if (matchedRule.actionType === 'category_and_text' && customText.trim()) {
-        fullMsg = `${customText}\n\n━━━━━━━━━━━━━━━━━━━━\n${cat.icon} *${cat.categoryName} Ready Stock:*\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
-      } else {
-        fullMsg = `${cat.icon} *${brand} • ${cat.categoryName}*\n━━━━━━━━━━━━━━━━━━━━\nHello ${cName}! 👋 Here are our ready-stock items:\n\n${itemsList}\n\n━━━━━━━━━━━━━━━━━━━━\n💬 Reply with *1 or 2* to view photos & order!`;
-      }
-    }
-  }
-
   let formattedPreview = fullMsg
     .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
     .replace(/_(.*?)_/g, '<em>$1</em>')
