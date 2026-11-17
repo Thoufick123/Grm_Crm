@@ -1412,12 +1412,83 @@ var ACTIVE_SEND_ACCOUNT_ID = window.ACTIVE_SEND_ACCOUNT_ID || 'account_1';
 var REVEALED_CUSTOMERS = window.REVEALED_CUSTOMERS || new Set(); // Stores customer IDs whose numbers are temporarily revealed
 
 function getCurrentUser() {
-  if (CURRENT_USER) return CURRENT_USER;
-  if (ACTIVE_ROLE === 'admin') return { name: 'Super Admin', role: 'admin', title: 'Admin Manager' };
-  const staff = (CRM_STATE?.staffList || []).find(s => s.id === ACTIVE_ROLE);
-  if (staff) return staff;
-  return { name: 'Sales Specialist', role: ACTIVE_ROLE || 'staff_01' };
+  let user = null;
+  if (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) {
+    user = CURRENT_USER;
+  } else if (typeof window !== 'undefined' && window.CURRENT_USER) {
+    user = window.CURRENT_USER;
+  } else if (typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) {
+    user = CRM_AUTH_SESSION;
+  } else if (typeof window !== 'undefined' && window.CRM_AUTH_SESSION) {
+    user = window.CRM_AUTH_SESSION;
+  } else {
+    try {
+      const sessionStr = localStorage.getItem('GRM_CRM_SESSION') || sessionStorage.getItem('GRM_CRM_SESSION');
+      if (sessionStr) {
+        user = JSON.parse(sessionStr);
+        CURRENT_USER = user;
+      }
+    } catch (e) { }
+  }
+
+  if (!user) {
+    if (typeof ACTIVE_ROLE !== 'undefined' && ACTIVE_ROLE && ACTIVE_ROLE !== 'admin') {
+      const staff = (CRM_STATE?.staffList || []).find(s => s.id === ACTIVE_ROLE);
+      if (staff) user = { ...staff };
+      else user = { name: 'Sales Specialist', role: ACTIVE_ROLE, id: ACTIVE_ROLE, staffId: ACTIVE_ROLE };
+    } else {
+      user = { id: 'admin', staffId: 'admin', username: 'admin', role: 'admin', name: 'Super Admin' };
+    }
+  }
+
+  if (!user.id) user.id = user.staffId || user.role || user.username || 'admin';
+  if (!user.staffId) user.staffId = user.id;
+  if (!user.name) user.name = (user.role === 'admin' || user.id === 'admin') ? 'Super Admin' : 'Staff Specialist';
+  return user;
 }
+
+// Global Staff Filter Helper for RBAC Isolation across Dashboard & Follow-ups
+function getStaffFilterContext() {
+  const user = getCurrentUser();
+  const isAdmin = Boolean(!user || user.role === 'admin' || user.id === 'admin' || user.staffId === 'admin' || user.role === 'Super Admin' || (user.title && user.title.includes('Admin Manager')));
+
+  if (isAdmin) {
+    return {
+      isAdmin: true,
+      staffId: 'admin',
+      staffName: 'Super Admin',
+      staffRole: 'Super Admin',
+      username: 'admin',
+      isStaffMatch: () => true
+    };
+  }
+
+  const staffId = String(user.staffId || user.id || user.role || 'staff_01');
+  const staffName = String(user.name || 'Staff').trim();
+  const staffUsername = String(user.username || '').trim().toLowerCase();
+  const staffNameLower = staffName.toLowerCase();
+
+  const isStaffMatch = (val) => {
+    if (!val) return false;
+    const str = String(val).trim().toLowerCase();
+    if (str === staffId.toLowerCase()) return true;
+    if (staffUsername && str === staffUsername) return true;
+    if (str === staffNameLower) return true;
+    if (str.length > 2 && staffNameLower.includes(str)) return true;
+    if (staffNameLower.length > 2 && str.includes(staffNameLower)) return true;
+    return false;
+  };
+
+  return {
+    isAdmin: false,
+    staffId,
+    staffName,
+    staffRole: user.title || user.role || 'Sales Specialist',
+    username: staffUsername,
+    isStaffMatch
+  };
+}
+window.getStaffFilterContext = getStaffFilterContext;
 
 // =========================================================================
 // NUMBER MASKING ENGINE (DATA PRIVACY & LEAD PROTECTION)
@@ -4983,6 +5054,7 @@ function handleLoginSubmit(event) {
       const staffPass = staff.password || 'staff123';
       if (staffPass === p) {
         matchedAccount = {
+          id: staff.id,
           username: u,
           password: p,
           role: staff.id,
@@ -34433,8 +34505,8 @@ function clearPayPendingDateFilter() {
 // DIRECT 1-CLICK INSTANT EXPORT ENGINE (ADMIN & STAFF AUTOMATIC EXPORT)
 // =========================================================================
 function autoExportAllFollowups(targetMode = null) {
-  const currentUser = getCurrentUser();
-  const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
+  const staffCtx = (typeof getStaffFilterContext === 'function') ? getStaffFilterContext() : { isAdmin: true, staffId: 'admin', staffName: 'Super Admin', isStaffMatch: () => true };
+  const isAdmin = staffCtx.isAdmin;
 
   // Determine mode: Follow-ups or Payment Pending
   const currentHubMode = (typeof ACTIVE_FOLLOWUP_HUB_MODE !== 'undefined' ? ACTIVE_FOLLOWUP_HUB_MODE : 'FOLLOWUPS');
@@ -34455,12 +34527,15 @@ function autoExportAllFollowups(targetMode = null) {
   if (isAdmin) {
     records = [...rawList];
   } else {
-    records = rawList.filter(fu => fu.assignedTo === currentUser.id || fu.assignedTo === currentUser.staffId);
-  }
-
-  if (!records || records.length === 0) {
-    showToast('No Records Found', `No ${isPay ? 'payment pending' : 'follow-up'} records available to export.`, 'warning', 'amber');
-    return;
+    records = rawList.filter(fu => {
+      if (staffCtx.isStaffMatch(fu.assignedTo) || staffCtx.isStaffMatch(fu.assigned_to)) return true;
+      const matchingQuery = (CRM_STATE.queries || []).find(q => 
+        (fu.queryId && (q.id === fu.queryId || q.id === fu.query_id)) ||
+        (fu.customerId && (q.customerId === fu.customerId || q.customer_id === fu.customerId || String(q.customerId) === String(fu.customerId)))
+      );
+      if (matchingQuery && (staffCtx.isStaffMatch(matchingQuery.assignedTo) || staffCtx.isStaffMatch(matchingQuery.assigned_to))) return true;
+      return false;
+    });
   }
 
   // Sort: closest scheduled / due date first
@@ -34529,77 +34604,89 @@ function autoExportAllFollowups(targetMode = null) {
 
   const rows = [headers.map(escapeCSV).join(',')];
 
-  records.forEach(r => {
-    const cust = (CRM_STATE.customers || []).find(c => c.id === r.customerId || c.phone === r.customerPhone);
-    const phone = cust ? cust.phone : (r.customerPhone || '');
-    const city = cust ? (cust.city || cust.location || '') : '';
-    const staff = (CRM_STATE.staffList || CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || (r.assignedTo === 'admin' ? 'Super Admin' : (r.assignedTo || 'Unassigned'));
+  if (!records || records.length === 0) {
+    const emptyRow = new Array(headers.length).fill('');
+    emptyRow[0] = 'NO_SCHEDULED_RECORDS';
+    emptyRow[1] = isAdmin ? 'Super Admin' : staffCtx.staffName;
+    emptyRow[2] = isAdmin
+      ? `No ${isPay ? 'payment pending' : 'follow-up'} records found in system as of ${dateStr}.`
+      : `No scheduled ${isPay ? 'payment pending' : 'follow-up'} records found for staff ${staffCtx.staffName} (${staffCtx.staffId}) as of ${dateStr}.`;
+    rows.push(emptyRow.map(escapeCSV).join(','));
+  } else {
+    records.forEach(r => {
+      const cust = (CRM_STATE.customers || []).find(c => c.id === r.customerId || c.phone === r.customerPhone);
+      const phone = cust ? cust.phone : (r.customerPhone || '');
+      const city = cust ? (cust.city || cust.location || '') : '';
+      const staff = (CRM_STATE.staffList || CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || (r.assignedTo === 'admin' ? 'Super Admin' : (r.assignedTo || 'Unassigned'));
 
-    // Linked order details
-    let orderId = '';
-    let orderTotal = '';
-    let orderStatus = '';
-    const linkedOrder = (CRM_STATE.orders || []).find(o => (r.queryId && o.queryId === r.queryId) || (r.customerId && o.customerId === r.customerId) || (r.orderId && o.id === r.orderId));
-    if (linkedOrder) {
-      orderId = linkedOrder.id || '';
-      orderTotal = linkedOrder.grandTotal || linkedOrder.totalAmount || '';
-      orderStatus = linkedOrder.orderStatus || linkedOrder.status || '';
-    }
+      // Linked order details
+      let orderId = '';
+      let orderTotal = '';
+      let orderStatus = '';
+      const linkedOrder = (CRM_STATE.orders || []).find(o => (r.queryId && o.queryId === r.queryId) || (r.customerId && o.customerId === r.customerId) || (r.orderId && o.id === r.orderId));
+      if (linkedOrder) {
+        orderId = linkedOrder.id || '';
+        orderTotal = linkedOrder.grandTotal || linkedOrder.totalAmount || '';
+        orderStatus = linkedOrder.orderStatus || linkedOrder.status || '';
+      }
 
-    if (isPay) {
-      rows.push([
-        escapeCSV(r.customerId || ''),
-        escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
-        escapeCSV(phone),
-        escapeCSV(city),
-        escapeCSV(r.quotedItems || ''),
-        escapeCSV(parseFloat(r.paymentAmount) || 0),
-        escapeCSV(r.paymentMode || 'UPI'),
-        escapeCSV(r.paymentDueDate || r.date || ''),
-        escapeCSV(r.time || ''),
-        escapeCSV(r.paymentNotes || r.reason || ''),
-        escapeCSV(staff),
-        escapeCSV(r.status || 'PENDING'),
-        escapeCSV(r.outcome || 'PENDING'),
-        escapeCSV(orderId),
-        escapeCSV(orderTotal),
-        escapeCSV(orderStatus),
-        escapeCSV(r.createdAt || '')
-      ].join(','));
-    } else {
-      const hasPay = (r.isPaymentPending === true || r.isPaymentPending === 1 || r.isPaymentPending === '1' || r.is_payment_pending == 1);
-      rows.push([
-        escapeCSV(r.customerId || ''),
-        escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
-        escapeCSV(phone),
-        escapeCSV(city),
-        escapeCSV(r.date || ''),
-        escapeCSV(r.time || ''),
-        escapeCSV(r.reason || ''),
-        escapeCSV(r.priority || 'NORMAL'),
-        escapeCSV(staff),
-        escapeCSV(r.status || 'PENDING'),
-        escapeCSV(r.outcome || 'PENDING'),
-        escapeCSV(r.outcomeNotes || ''),
-        escapeCSV(hasPay ? 'YES' : 'NO'),
-        escapeCSV(hasPay ? (parseFloat(r.paymentAmount) || 0) : 0),
-        escapeCSV(hasPay ? (r.paymentMode || 'UPI') : ''),
-        escapeCSV(hasPay ? (r.paymentDueDate || '') : ''),
-        escapeCSV(r.quotedItems || ''),
-        escapeCSV(r.paymentNotes || ''),
-        escapeCSV(orderId),
-        escapeCSV(orderTotal),
-        escapeCSV(orderStatus),
-        escapeCSV(r.createdAt || '')
-      ].join(','));
-    }
-  });
+      if (isPay) {
+        rows.push([
+          escapeCSV(r.customerId || ''),
+          escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
+          escapeCSV(phone),
+          escapeCSV(city),
+          escapeCSV(r.quotedItems || ''),
+          escapeCSV(parseFloat(r.paymentAmount) || 0),
+          escapeCSV(r.paymentMode || 'UPI'),
+          escapeCSV(r.paymentDueDate || r.date || ''),
+          escapeCSV(r.time || ''),
+          escapeCSV(r.paymentNotes || r.reason || ''),
+          escapeCSV(staff),
+          escapeCSV(r.status || 'PENDING'),
+          escapeCSV(r.outcome || 'PENDING'),
+          escapeCSV(orderId),
+          escapeCSV(orderTotal),
+          escapeCSV(orderStatus),
+          escapeCSV(r.createdAt || '')
+        ].join(','));
+      } else {
+        const hasPay = (r.isPaymentPending === true || r.isPaymentPending === 1 || r.isPaymentPending === '1' || r.is_payment_pending == 1);
+        rows.push([
+          escapeCSV(r.customerId || ''),
+          escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
+          escapeCSV(phone),
+          escapeCSV(city),
+          escapeCSV(r.date || ''),
+          escapeCSV(r.time || ''),
+          escapeCSV(r.reason || ''),
+          escapeCSV(r.priority || 'NORMAL'),
+          escapeCSV(staff),
+          escapeCSV(r.status || 'PENDING'),
+          escapeCSV(r.outcome || 'PENDING'),
+          escapeCSV(r.outcomeNotes || ''),
+          escapeCSV(hasPay ? 'YES' : 'NO'),
+          escapeCSV(hasPay ? (parseFloat(r.paymentAmount) || 0) : 0),
+          escapeCSV(hasPay ? (r.paymentMode || 'UPI') : ''),
+          escapeCSV(hasPay ? (r.paymentDueDate || '') : ''),
+          escapeCSV(r.quotedItems || ''),
+          escapeCSV(r.paymentNotes || ''),
+          escapeCSV(orderId),
+          escapeCSV(orderTotal),
+          escapeCSV(orderStatus),
+          escapeCSV(r.createdAt || '')
+        ].join(','));
+      }
+    });
+  }
 
   const csvContent = "\uFEFF" + rows.join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const downloadLink = document.createElement('a');
-  const filename = isPay ? `GRM_All_Payment_Pending_Export_${dateStr}.csv` : `GRM_All_Followups_Export_${dateStr}.csv`;
+  const filename = isPay
+    ? (isAdmin ? `GRM_All_Payment_Pending_Export_${dateStr}.csv` : `GRM_Staff_Payment_Pending_Export_${staffCtx.staffId}_${dateStr}.csv`)
+    : (isAdmin ? `GRM_All_Followups_Export_${dateStr}.csv` : `GRM_Staff_Followups_Export_${staffCtx.staffId}_${dateStr}.csv`);
   downloadLink.href = url;
   downloadLink.setAttribute('download', filename);
   document.body.appendChild(downloadLink);
@@ -34607,8 +34694,8 @@ function autoExportAllFollowups(targetMode = null) {
   document.body.removeChild(downloadLink);
   URL.revokeObjectURL(url);
 
-  const actorRole = isAdmin ? 'Super Admin' : (currentUser.name || 'Staff');
-  logAudit(isPay ? 'ALL_PAYMENTS_AUTO_EXPORTED' : 'ALL_FOLLOWUPS_AUTO_EXPORTED', 'EXPORT', `${actorRole} automatically exported all ${records.length} records to ${filename}`);
+  const actorRole = isAdmin ? 'Super Admin' : `${staffCtx.staffName} (${staffCtx.staffId})`;
+  logAudit(isPay ? 'ALL_PAYMENTS_AUTO_EXPORTED' : 'ALL_FOLLOWUPS_AUTO_EXPORTED', 'EXPORT', `${actorRole} exported ${records.length} records to ${filename}`);
 
   if (typeof playMessageChime === 'function') {
     try { playMessageChime(); } catch (e) { }
@@ -34616,7 +34703,9 @@ function autoExportAllFollowups(targetMode = null) {
 
   showToast(
     isAdmin ? 'All Records Exported (Admin)' : 'Follow-up Report Exported',
-    `Successfully exported all ${records.length} ${isPay ? 'payment pending' : 'follow-up'} records to ${filename}.`,
+    records.length === 0
+      ? `Downloaded ${filename} (0 records currently scheduled)`
+      : `Successfully exported ${records.length} ${isPay ? 'payment pending' : 'follow-up'} records to ${filename}.`,
     'download_done',
     'emerald'
   );
@@ -34685,6 +34774,23 @@ function openFollowupExportModal(mode) {
 
   // Set date preset to ALL by default
   setExportDatePreset('ALL');
+
+  // RBAC isolation for Staff Workstations
+  const staffCtx = (typeof getStaffFilterContext === 'function') ? getStaffFilterContext() : { isAdmin: true };
+  const staffFilterEl = document.getElementById('export-staff-filter');
+  if (staffFilterEl) {
+    if (!staffCtx.isAdmin) {
+      staffFilterEl.innerHTML = `<option value="${staffCtx.staffId}" selected>👤 ${staffCtx.staffName} (${staffCtx.staffId})</option>`;
+      staffFilterEl.disabled = true;
+    } else {
+      staffFilterEl.disabled = false;
+      if (CRM_STATE && CRM_STATE.staffList) {
+        staffFilterEl.innerHTML = '<option value="ALL">👥 All Staff Members</option>' +
+          CRM_STATE.staffList.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('') +
+          '<option value="admin">Super Admin</option>';
+      }
+    }
+  }
 
   // Open modal
   if (typeof openModal === 'function') {
@@ -34834,8 +34940,8 @@ function onExportDateInputChange() {
 window.onExportDateInputChange = onExportDateInputChange;
 
 function getFilteredExportRecords() {
-  const currentUser = getCurrentUser();
-  const isAdmin = (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.staffId === 'admin');
+  const staffCtx = (typeof getStaffFilterContext === 'function') ? getStaffFilterContext() : { isAdmin: true, staffId: 'admin', staffName: 'Super Admin', isStaffMatch: () => true };
+  const isAdmin = staffCtx.isAdmin;
   const staffFilter = document.getElementById('export-staff-filter')?.value || 'ALL';
   const statusFilter = document.getElementById('export-status-filter')?.value || 'ALL';
   const sortOrder = document.getElementById('export-sort-order')?.value || 'DUE_ASC';
@@ -34854,7 +34960,15 @@ function getFilteredExportRecords() {
 
   // 2. RBAC & Staff filter
   if (!isAdmin) {
-    rawList = rawList.filter(fu => fu.assignedTo === currentUser.id || fu.assignedTo === currentUser.staffId);
+    rawList = rawList.filter(fu => {
+      if (staffCtx.isStaffMatch(fu.assignedTo) || staffCtx.isStaffMatch(fu.assigned_to)) return true;
+      const matchingQuery = (CRM_STATE.queries || []).find(q => 
+        (fu.queryId && (q.id === fu.queryId || q.id === fu.query_id)) ||
+        (fu.customerId && (q.customerId === fu.customerId || q.customer_id === fu.customerId || String(q.customerId) === String(fu.customerId)))
+      );
+      if (matchingQuery && (staffCtx.isStaffMatch(matchingQuery.assignedTo) || staffCtx.isStaffMatch(matchingQuery.assigned_to))) return true;
+      return false;
+    });
   } else if (staffFilter !== 'ALL') {
     rawList = rawList.filter(fu => fu.assignedTo === staffFilter);
   }
@@ -35086,11 +35200,9 @@ function updateFollowupExportPreview() {
 window.updateFollowupExportPreview = updateFollowupExportPreview;
 
 function handleExportFollowupsCSV() {
+  const staffCtx = (typeof getStaffFilterContext === 'function') ? getStaffFilterContext() : { isAdmin: true, staffId: 'admin', staffName: 'Super Admin', isStaffMatch: () => true };
+  const isAdmin = staffCtx.isAdmin;
   const records = getFilteredExportRecords();
-  if (!records || records.length === 0) {
-    showToast('No Records to Export', 'Please adjust date range or filter selection.', 'warning', 'amber');
-    return;
-  }
 
   const includeOrders = document.getElementById('export-include-order-details')?.checked ?? true;
   const isPay = (EXPORT_HUB_MODE === 'PAYMENT_PENDING');
@@ -35145,70 +35257,82 @@ function handleExportFollowupsCSV() {
 
   const rows = [headers.map(escapeCSV).join(',')];
 
-  records.forEach(r => {
-    const cust = (CRM_STATE.customers || []).find(c => c.id === r.customerId);
-    const phone = cust ? cust.phone : (r.customerPhone || '');
-    const city = cust ? (cust.city || cust.location || '') : '';
-    const staff = (CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || r.assignedTo || 'Unassigned';
+  if (!records || records.length === 0) {
+    const emptyRow = new Array(headers.length).fill('');
+    emptyRow[0] = 'NO_RECORDS';
+    emptyRow[1] = isAdmin ? 'Super Admin' : staffCtx.staffName;
+    emptyRow[2] = isAdmin
+      ? `No matching ${isPay ? 'payment pending' : 'follow-up'} records found in selected filters.`
+      : `No scheduled ${isPay ? 'payment pending' : 'follow-up'} records found for staff ${staffCtx.staffName} (${staffCtx.staffId}) matching selected filters.`;
+    rows.push(emptyRow.map(escapeCSV).join(','));
+  } else {
+    records.forEach(r => {
+      const cust = (CRM_STATE.customers || []).find(c => c.id === r.customerId);
+      const phone = cust ? cust.phone : (r.customerPhone || '');
+      const city = cust ? (cust.city || cust.location || '') : '';
+      const staff = (CRM_STATE.staff || []).find(s => s.id === r.assignedTo)?.name || r.assignedTo || 'Unassigned';
 
-    // Linked order details
-    let orderId = '';
-    let orderTotal = '';
-    let orderStatus = '';
-    if (includeOrders) {
-      const linkedOrder = (CRM_STATE.orders || []).find(o => o.customerId === r.customerId || (r.orderId && o.id === r.orderId));
-      if (linkedOrder) {
-        orderId = linkedOrder.id || '';
-        orderTotal = linkedOrder.grandTotal || linkedOrder.totalAmount || '';
-        orderStatus = linkedOrder.orderStatus || linkedOrder.status || '';
+      // Linked order details
+      let orderId = '';
+      let orderTotal = '';
+      let orderStatus = '';
+      if (includeOrders) {
+        const linkedOrder = (CRM_STATE.orders || []).find(o => o.customerId === r.customerId || (r.orderId && o.id === r.orderId));
+        if (linkedOrder) {
+          orderId = linkedOrder.id || '';
+          orderTotal = linkedOrder.grandTotal || linkedOrder.totalAmount || '';
+          orderStatus = linkedOrder.orderStatus || linkedOrder.status || '';
+        }
       }
-    }
 
-    if (isPay) {
-      rows.push([
-        escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
-        escapeCSV(phone),
-        escapeCSV(city),
-        escapeCSV(r.quotedItems || ''),
-        escapeCSV(parseFloat(r.paymentAmount) || 0),
-        escapeCSV(r.paymentMode || 'UPI'),
-        escapeCSV(r.paymentDueDate || r.date || ''),
-        escapeCSV(r.time || ''),
-        escapeCSV(r.paymentNotes || r.reason || ''),
-        escapeCSV(staff),
-        escapeCSV(r.status || 'PENDING'),
-        escapeCSV(r.outcome || 'PENDING'),
-        escapeCSV(orderId),
-        escapeCSV(orderTotal),
-        escapeCSV(orderStatus),
-        escapeCSV(r.createdAt || '')
-      ].join(','));
-    } else {
-      rows.push([
-        escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
-        escapeCSV(phone),
-        escapeCSV(city),
-        escapeCSV(r.date || ''),
-        escapeCSV(r.time || ''),
-        escapeCSV(r.reason || ''),
-        escapeCSV(r.priority || 'NORMAL'),
-        escapeCSV(staff),
-        escapeCSV(r.status || 'PENDING'),
-        escapeCSV(r.outcome || 'PENDING'),
-        escapeCSV(r.outcomeNotes || ''),
-        escapeCSV(orderId),
-        escapeCSV(orderTotal),
-        escapeCSV(orderStatus),
-        escapeCSV(r.createdAt || '')
-      ].join(','));
-    }
-  });
+      if (isPay) {
+        rows.push([
+          escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
+          escapeCSV(phone),
+          escapeCSV(city),
+          escapeCSV(r.quotedItems || ''),
+          escapeCSV(parseFloat(r.paymentAmount) || 0),
+          escapeCSV(r.paymentMode || 'UPI'),
+          escapeCSV(r.paymentDueDate || r.date || ''),
+          escapeCSV(r.time || ''),
+          escapeCSV(r.paymentNotes || r.reason || ''),
+          escapeCSV(staff),
+          escapeCSV(r.status || 'PENDING'),
+          escapeCSV(r.outcome || 'PENDING'),
+          escapeCSV(orderId),
+          escapeCSV(orderTotal),
+          escapeCSV(orderStatus),
+          escapeCSV(r.createdAt || '')
+        ].join(','));
+      } else {
+        rows.push([
+          escapeCSV(r.customerName || (cust ? cust.name : 'Customer')),
+          escapeCSV(phone),
+          escapeCSV(city),
+          escapeCSV(r.date || ''),
+          escapeCSV(r.time || ''),
+          escapeCSV(r.reason || ''),
+          escapeCSV(r.priority || 'NORMAL'),
+          escapeCSV(staff),
+          escapeCSV(r.status || 'PENDING'),
+          escapeCSV(r.outcome || 'PENDING'),
+          escapeCSV(r.outcomeNotes || ''),
+          escapeCSV(orderId),
+          escapeCSV(orderTotal),
+          escapeCSV(orderStatus),
+          escapeCSV(r.createdAt || '')
+        ].join(','));
+      }
+    });
+  }
 
   const csvContent = "\uFEFF" + rows.join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const downloadLink = document.createElement('a');
-  const filename = isPay ? `GRM_Payment_Pending_Report_${dateStr}.csv` : `GRM_Followups_Report_${dateStr}.csv`;
+  const filename = isPay
+    ? (isAdmin ? `GRM_Payment_Pending_Report_${dateStr}.csv` : `GRM_Staff_Payment_Pending_Report_${staffCtx.staffId}_${dateStr}.csv`)
+    : (isAdmin ? `GRM_Followups_Report_${dateStr}.csv` : `GRM_Staff_Followups_Report_${staffCtx.staffId}_${dateStr}.csv`);
   downloadLink.href = url;
   downloadLink.setAttribute('download', filename);
   document.body.appendChild(downloadLink);
@@ -35216,8 +35340,15 @@ function handleExportFollowupsCSV() {
   document.body.removeChild(downloadLink);
   URL.revokeObjectURL(url);
 
-  logAudit(isPay ? 'PAYMENT_REPORT_EXPORTED' : 'FOLLOWUP_REPORT_EXPORTED', 'EXPORT', `Exported ${records.length} records to ${filename}`);
-  showToast('Report Downloaded', `Successfully exported ${records.length} records to ${filename}`, 'download_done', 'emerald');
+  logAudit(isPay ? 'PAYMENT_REPORT_EXPORTED' : 'FOLLOWUP_REPORT_EXPORTED', 'EXPORT', `${isAdmin ? 'Super Admin' : staffCtx.staffName} exported ${records.length} records to ${filename}`);
+  showToast(
+    'Report Downloaded',
+    records.length === 0
+      ? `Downloaded ${filename} (0 records match selected filter)`
+      : `Successfully exported ${records.length} records to ${filename}`,
+    'download_done',
+    'emerald'
+  );
 }
 window.handleExportFollowupsCSV = handleExportFollowupsCSV;
 
@@ -38240,6 +38371,106 @@ function exportDashboardSummary(btnEl) {
     const dateFormatted = now.toISOString().slice(0, 10);
     const timeFormatted = now.toLocaleTimeString();
 
+    const staffCtx = (typeof getStaffFilterContext === 'function') ? getStaffFilterContext() : { isAdmin: true, staffId: 'admin', staffName: 'Super Admin', isStaffMatch: () => true };
+
+    // RBAC: If Staff is logged in, export only this staff specialist's details
+    if (!staffCtx.isAdmin) {
+      const staffId = staffCtx.staffId;
+      const staffName = staffCtx.staffName;
+      const staffRole = staffCtx.staffRole || 'Sales Specialist';
+
+      const scopedQueries = (CRM_STATE.queries || []).filter(q => staffCtx.isStaffMatch(q.assignedTo) || staffCtx.isStaffMatch(q.assigned_to));
+      const scopedOrders = (CRM_STATE.orders || []).filter(o => {
+        if (staffCtx.isStaffMatch(o.staffId) || staffCtx.isStaffMatch(o.staff_id) || staffCtx.isStaffMatch(o.staffName) || staffCtx.isStaffMatch(o.staff_name)) return true;
+        const matchingQuery = scopedQueries.find(q => q && (q.customerId === o.customerId || String(q.customerId) === String(o.customerId)));
+        return Boolean(matchingQuery);
+      });
+      const scopedFollowups = (CRM_STATE.followups || []).filter(fu => {
+        if (!fu || fu.id === 'FU-2026-00108' || fu.id === 'FU-2026-00107' || (fu.reason && fu.reason.includes('ytfdw'))) return false;
+        if (staffCtx.isStaffMatch(fu.assignedTo) || staffCtx.isStaffMatch(fu.assigned_to)) return true;
+        const matchingQuery = scopedQueries.find(q => q && (
+          (fu.queryId && (q.id === fu.queryId || q.id === fu.query_id)) ||
+          (fu.customerId && (q.customerId === fu.customerId || q.customer_id === fu.customerId || String(q.customerId) === String(fu.customerId)))
+        ));
+        return Boolean(matchingQuery);
+      });
+
+      const totalRevenue = scopedOrders.reduce((acc, o) => acc + (parseFloat(o.grandTotal) || 0), 0);
+      const pendingQueries = scopedQueries.filter(q => q.status === 'NEW' || q.status === 'OPEN').length;
+
+      let csv = '\uFEFF';
+      csv += '=======================================================\r\n';
+      csv += 'GRM WHATSAPP CRM - STAFF WORKSTATION SUMMARY REPORT\r\n';
+      csv += `Export Generated:,"${dateFormatted} ${timeFormatted}"\r\n`;
+      csv += `Staff Member:,"${staffName} (${staffId})"\r\n`;
+      csv += `Role:,"${staffRole}"\r\n`;
+      csv += '=======================================================\r\n\r\n';
+
+      csv += '--- MY WORKSTATION KPI METRICS ---\r\n';
+      csv += 'Metric Name,Current Value,Status\r\n';
+      csv += `"My Assigned Enquiries",${scopedQueries.length},"Assigned to ${staffName}"\r\n`;
+      csv += `"My Pending Inquiries",${pendingQueries},"Pending Response"\r\n`;
+      csv += `"My Booked Orders",${scopedOrders.length},"Verified Staff Sales"\r\n`;
+      csv += `"My Verified Revenue (INR)",${totalRevenue},"Booked Sales Volume"\r\n`;
+      csv += `"My Scheduled Follow-ups",${scopedFollowups.length},"Active Customer Reminders"\r\n\r\n`;
+
+      csv += '--- MY STAFF SPECIALIST SNAPSHOT ---\r\n';
+      csv += 'Staff ID,Staff Name,Role,Status,Active Leads,Orders Converted\r\n';
+      csv += `"${staffId}","${staffName.replace(/"/g, '""')}","${staffRole.replace(/"/g, '""')}","ACTIVE",${scopedQueries.length},${scopedOrders.length}\r\n\r\n`;
+
+      csv += '--- MY BOOKED SALES ORDERS ---\r\n';
+      csv += 'Order ID,Customer Name,Customer Phone,Grand Total (INR),Payment Method,Payment Status,Order Status,Date Created\r\n';
+      if (scopedOrders.length === 0) {
+        csv += `"NO_ORDERS","No booked orders for ${staffName.replace(/"/g, '""')}","—",0,"—","—","—","${dateFormatted}"\r\n`;
+      } else {
+        scopedOrders.forEach(o => {
+          csv += `"${o.id || ''}","${(o.customerName || '').replace(/"/g, '""')}","${o.customerPhone || ''}",${o.grandTotal || 0},"${o.paymentMethod || 'COD'}","${o.paymentStatus || 'PENDING'}","${o.orderStatus || 'PLACED'}","${o.createdAt || ''}"\r\n`;
+        });
+      }
+      csv += '\r\n';
+
+      csv += '--- MY ACTIVE CUSTOMER ENQUIRIES ---\r\n';
+      csv += 'Query ID,Customer Name,Phone,Status,Priority,Latest Message,Created At\r\n';
+      if (scopedQueries.length === 0) {
+        csv += `"NO_ENQUIRIES","No customer enquiries assigned to ${staffName.replace(/"/g, '""')}","—","—","—","—","${dateFormatted}"\r\n`;
+      } else {
+        scopedQueries.forEach(q => {
+          const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
+          const custName = cust ? cust.name : 'Customer';
+          const custPhone = cust ? (cust.phone || cust.whatsapp || '') : '';
+          const msg = (q.queryText || q.lastMessage || '').replace(/"/g, '""').replace(/\r?\n/g, ' ');
+          csv += `"${q.id || ''}","${custName.replace(/"/g, '""')}","${custPhone}","${q.status || 'NEW'}","${q.priority || 'NORMAL'}","${msg}","${q.createdAt || ''}"\r\n`;
+        });
+      }
+      csv += '\r\n';
+
+      csv += '--- MY SCHEDULED CUSTOMER FOLLOW-UPS ---\r\n';
+      csv += 'Follow-up ID,Customer Name,Scheduled Date,Scheduled Time,Status,Priority,Reason\r\n';
+      if (scopedFollowups.length === 0) {
+        csv += `"NO_FOLLOWUPS","No follow-ups scheduled for ${staffName.replace(/"/g, '""')}","—","—","—","—","${dateFormatted}"\r\n`;
+      } else {
+        scopedFollowups.forEach(f => {
+          csv += `"${f.id || ''}","${(f.customerName || '').replace(/"/g, '""')}","${f.dateStr || f.date || ''}","${f.timeStr || f.time || ''}","${f.status || 'PENDING'}","${f.priority || 'NORMAL'}","${(f.reason || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"\r\n`;
+        });
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.setAttribute('download', `GRM_Dashboard_Staff_Report_${staffId}_${dateFormatted}.csv`);
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      if (typeof showToast === 'function') {
+        showToast('Dashboard Exported', `Downloaded GRM_Dashboard_Staff_Report_${staffId}_${dateFormatted}.csv`, 'download_done', 'emerald');
+      }
+      return;
+    }
+
+    // --- ADMIN PANEL CODE (UNTOUCHED) ---
     const totalEnquiries = (CRM_STATE.queries || []).length;
     const unassignedQueries = (CRM_STATE.queries || []).filter(q => q.assignedTo === 'UNASSIGNED').length;
     const totalOrders = (CRM_STATE.orders || []).length;
@@ -38337,95 +38568,231 @@ function exportDashboardPDF(btnEl) {
     const dateFormatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const timeFormatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    const totalEnquiries = (CRM_STATE.queries || []).length;
-    const unassignedQueries = (CRM_STATE.queries || []).filter(q => q.assignedTo === 'UNASSIGNED').length;
-    const totalOrders = (CRM_STATE.orders || []).length;
-    const totalRevenue = (CRM_STATE.orders || []).reduce((acc, o) => acc + (parseFloat(o.grandTotal) || 0), 0);
-    const totalFollowups = (CRM_STATE.followups || []).length;
-    const totalStaff = (CRM_STATE.staffList || []).length;
-    const activeStaff = (CRM_STATE.staffList || []).filter(s => s && s.status !== 'INACTIVE').length;
+    const staffCtx = (typeof getStaffFilterContext === 'function') ? getStaffFilterContext() : { isAdmin: true, staffId: 'admin', staffName: 'Super Admin', isStaffMatch: () => true };
+    const isAdmin = staffCtx.isAdmin;
     const activePhone = CRM_STATE.activeWhatsAppPhone || (CRM_STATE.availableWhatsAppAccounts && CRM_STATE.availableWhatsAppAccounts[0] ? CRM_STATE.availableWhatsAppAccounts[0].phone : '+91 99435 57998');
-    const exportedBy = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) ? CURRENT_USER.name : 'Super Admin';
 
-    // 1. Staff Rows
-    const staffRows = (CRM_STATE.staffList || []).map(s => `
-      <tr>
-        <td style="font-weight:700; color:#0f172a;">${escapeHtml(s.name || 'Staff')}</td>
-        <td style="color:#475569;">${escapeHtml(s.role || 'Sales Specialist')}</td>
-        <td>
-          <span class="badge ${s.status === 'INACTIVE' ? 'badge-slate' : 'badge-emerald'}">
-            ${escapeHtml(s.status || 'ACTIVE')}
-          </span>
-        </td>
-        <td style="text-align:center; font-weight:700; color:#1d4ed8;">${s.activeQueries || 0}</td>
-        <td style="text-align:center; font-weight:700; color:#059669;">${s.converted || 0}</td>
-        <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(s.phone || '—')}</td>
-      </tr>
-    `).join('') || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">No staff members listed.</td></tr>';
+    let totalEnquiries, unassignedQueries, totalOrders, totalRevenue, totalFollowups, totalStaff, activeStaff, exportedBy;
+    let staffRows, orderRows, queryRows, followupRows;
+    let reportDocTitle = `GRM_Dashboard_Executive_Report_${now.toISOString().slice(0, 10)}`;
+    let reportHeading = 'Executive Dashboard & Operations Hub';
+    let reportSubheading = 'Performance Metrics, Customer Inquiries, Staff Rosters & Sales Summary';
+    let kpi2Title = 'Unassigned Queries';
+    let kpi2Sub = '⚠ Action Required by Admin';
+    let kpi5Title = 'Staff Team';
+    let kpi5Sub = '';
+    let sec1Title = '1. Staff Performance Snapshot';
+    let sec1Sub = '';
+    let sec2Title = '2. Recent Booked Sales Orders';
+    let sec2Sub = '';
+    let sec3Title = '3. Active Customer Enquiries & Lead Pipeline';
+    let sec3Sub = '';
+    let sec4Title = '4. Scheduled Customer Follow-ups';
+    let sec4Sub = '';
 
-    // 2. Orders Rows
-    const orderRows = (CRM_STATE.orders || []).slice(0, 50).map(o => `
-      <tr>
-        <td style="font-family:monospace; font-weight:700; color:#334155; font-size:11px;">${escapeHtml(o.id || '')}</td>
-        <td style="font-weight:700; color:#0f172a;">${escapeHtml(o.customerName || 'Customer')}</td>
-        <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(o.customerPhone || '—')}</td>
-        <td style="text-align:right; font-weight:800; color:#0f172a;">₹${(parseFloat(o.grandTotal) || 0).toLocaleString('en-IN')}</td>
-        <td style="color:#475569;">${escapeHtml(o.paymentMethod || 'COD')}</td>
-        <td>
-          <span class="badge ${o.orderStatus === 'DELIVERED' ? 'badge-emerald' : o.orderStatus === 'CANCELLED' ? 'badge-rose' : 'badge-amber'}">
-            ${escapeHtml(o.orderStatus || 'PLACED')}
-          </span>
-        </td>
-        <td style="color:#64748b; font-size:11px;">${escapeHtml(o.createdAt || '—')}</td>
-      </tr>
-    `).join('') || '<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:16px;">No booked sales orders.</td></tr>';
+    if (!isAdmin) {
+      // --- STAFF ISOLATED REPORT ---
+      const staffId = staffCtx.staffId;
+      const staffName = staffCtx.staffName;
+      const staffRole = staffCtx.staffRole || 'Sales Specialist';
+      exportedBy = `${staffName} (${staffId})`;
 
-    // 3. Customer Enquiries Rows
-    const queryRows = (CRM_STATE.queries || []).slice(0, 50).map(q => {
-      const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
-      const cName = cust ? cust.name : 'Customer';
-      const cPhone = cust ? (cust.phone || cust.whatsapp || '') : '';
-      const snippet = (q.queryText || q.lastMessage || '').slice(0, 70);
-      return `
+      reportDocTitle = `GRM_Staff_Report_${staffId}_${now.toISOString().slice(0, 10)}`;
+      reportHeading = 'Staff Workstation Dashboard Report';
+      reportSubheading = `Performance Metrics, Inquiries, Orders & Follow-ups for ${staffName} (${staffId})`;
+
+      const scopedQueries = (CRM_STATE.queries || []).filter(q => staffCtx.isStaffMatch(q.assignedTo) || staffCtx.isStaffMatch(q.assigned_to));
+      const scopedOrders = (CRM_STATE.orders || []).filter(o => {
+        if (staffCtx.isStaffMatch(o.staffId) || staffCtx.isStaffMatch(o.staff_id) || staffCtx.isStaffMatch(o.staffName) || staffCtx.isStaffMatch(o.staff_name)) return true;
+        const matchingQuery = scopedQueries.find(q => q && (q.customerId === o.customerId || String(q.customerId) === String(o.customerId)));
+        return Boolean(matchingQuery);
+      });
+      const scopedFollowups = (CRM_STATE.followups || []).filter(fu => {
+        if (!fu || fu.id === 'FU-2026-00108' || fu.id === 'FU-2026-00107' || (fu.reason && fu.reason.includes('ytfdw'))) return false;
+        if (staffCtx.isStaffMatch(fu.assignedTo) || staffCtx.isStaffMatch(fu.assigned_to)) return true;
+        const matchingQuery = scopedQueries.find(q => q && (
+          (fu.queryId && (q.id === fu.queryId || q.id === fu.query_id)) ||
+          (fu.customerId && (q.customerId === fu.customerId || q.customer_id === fu.customerId || String(q.customerId) === String(fu.customerId)))
+        ));
+        return Boolean(matchingQuery);
+      });
+
+      totalEnquiries = scopedQueries.length;
+      unassignedQueries = scopedQueries.filter(q => q.status === 'NEW' || q.status === 'OPEN').length;
+      totalOrders = scopedOrders.length;
+      totalRevenue = scopedOrders.reduce((acc, o) => acc + (parseFloat(o.grandTotal) || 0), 0);
+      totalFollowups = scopedFollowups.length;
+      totalStaff = 1;
+      activeStaff = 1;
+
+      kpi2Title = 'Pending Enquiries';
+      kpi2Sub = '⏳ Pending Staff Response';
+      kpi5Title = 'Staff Specialist';
+      kpi5Sub = `👤 ${staffName}`;
+
+      sec1Title = '1. My Staff Specialist Snapshot';
+      sec1Sub = `1 active workstation profile (${staffName})`;
+      sec2Title = '2. My Booked Sales Orders';
+      sec2Sub = `${scopedOrders.length} orders recorded`;
+      sec3Title = '3. My Assigned Customer Inquiries';
+      sec3Sub = `${scopedQueries.length} inquiries assigned`;
+      sec4Title = '4. My Scheduled Customer Follow-ups';
+      sec4Sub = `${scopedFollowups.length} follow-ups scheduled`;
+
+      staffRows = `
         <tr>
-          <td style="font-weight:700; color:#0f172a;">${escapeHtml(cName)}</td>
-          <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(cPhone)}</td>
-          <td>
-            <span class="badge ${q.assignedTo === 'UNASSIGNED' ? 'badge-amber' : 'badge-blue'}">
-              ${escapeHtml(q.assignedTo || 'UNASSIGNED')}
-            </span>
-          </td>
-          <td>
-            <span class="badge ${q.status === 'NEW' ? 'badge-emerald' : 'badge-slate'}">
-              ${escapeHtml(q.status || 'NEW')}
-            </span>
-          </td>
-          <td style="color:#475569; font-size:11px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(snippet)}</td>
-          <td style="color:#94a3b8; font-family:monospace; font-size:11px;">${escapeHtml(q.createdAt || '')}</td>
+          <td style="font-weight:700; color:#0f172a;">${escapeHtml(staffName)}</td>
+          <td style="color:#475569;">${escapeHtml(staffRole)}</td>
+          <td><span class="badge badge-emerald">ACTIVE</span></td>
+          <td style="text-align:center; font-weight:700; color:#1d4ed8;">${scopedQueries.length}</td>
+          <td style="text-align:center; font-weight:700; color:#059669;">${scopedOrders.length}</td>
+          <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(staffId)}</td>
         </tr>
       `;
-    }).join('') || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">No inquiries recorded.</td></tr>';
 
-    // 4. Followups Rows
-    const followupRows = (CRM_STATE.followups || []).slice(0, 30).map(f => `
-      <tr>
-        <td style="font-weight:700; color:#0f172a;">${escapeHtml(f.customerName || 'Customer')}</td>
-        <td style="color:#475569;">${escapeHtml(f.assignedTo || 'Unassigned')}</td>
-        <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(f.dateStr || f.date || '')} ${escapeHtml(f.timeStr || f.time || '')}</td>
-        <td>
-          <span class="badge ${f.priority === 'HIGH' ? 'badge-rose' : 'badge-amber'}">
-            ${escapeHtml(f.priority || 'NORMAL')}
-          </span>
-        </td>
-        <td style="color:#475569;">${escapeHtml(f.reason || 'Follow-up reminder')}</td>
-      </tr>
-    `).join('') || '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:16px;">No scheduled follow-ups.</td></tr>';
+      orderRows = scopedOrders.slice(0, 50).map(o => `
+        <tr>
+          <td style="font-family:monospace; font-weight:700; color:#334155; font-size:11px;">${escapeHtml(o.id || '')}</td>
+          <td style="font-weight:700; color:#0f172a;">${escapeHtml(o.customerName || 'Customer')}</td>
+          <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(o.customerPhone || '—')}</td>
+          <td style="text-align:right; font-weight:800; color:#0f172a;">₹${(parseFloat(o.grandTotal) || 0).toLocaleString('en-IN')}</td>
+          <td style="color:#475569;">${escapeHtml(o.paymentMethod || 'COD')}</td>
+          <td>
+            <span class="badge ${o.orderStatus === 'DELIVERED' ? 'badge-emerald' : o.orderStatus === 'CANCELLED' ? 'badge-rose' : 'badge-amber'}">
+              ${escapeHtml(o.orderStatus || 'PLACED')}
+            </span>
+          </td>
+          <td style="color:#64748b; font-size:11px;">${escapeHtml(o.createdAt || '—')}</td>
+        </tr>
+      `).join('') || `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:16px;">No booked sales orders for ${escapeHtml(staffName)}.</td></tr>`;
+
+      queryRows = scopedQueries.slice(0, 50).map(q => {
+        const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
+        const cName = cust ? cust.name : 'Customer';
+        const cPhone = cust ? (cust.phone || cust.whatsapp || '') : '';
+        const snippet = (q.queryText || q.lastMessage || '').slice(0, 70);
+        return `
+          <tr>
+            <td style="font-weight:700; color:#0f172a;">${escapeHtml(cName)}</td>
+            <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(cPhone)}</td>
+            <td><span class="badge badge-blue">${escapeHtml(staffName)}</span></td>
+            <td><span class="badge ${q.status === 'NEW' ? 'badge-emerald' : 'badge-slate'}">${escapeHtml(q.status || 'NEW')}</span></td>
+            <td style="color:#475569; font-size:11px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(snippet)}</td>
+            <td style="color:#94a3b8; font-family:monospace; font-size:11px;">${escapeHtml(q.createdAt || '')}</td>
+          </tr>
+        `;
+      }).join('') || `<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">No inquiries currently assigned to ${escapeHtml(staffName)}.</td></tr>`;
+
+      followupRows = scopedFollowups.slice(0, 30).map(f => `
+        <tr>
+          <td style="font-weight:700; color:#0f172a;">${escapeHtml(f.customerName || 'Customer')}</td>
+          <td style="color:#475569;">${escapeHtml(staffName)}</td>
+          <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(f.dateStr || f.date || '')} ${escapeHtml(f.timeStr || f.time || '')}</td>
+          <td>
+            <span class="badge ${f.priority === 'HIGH' ? 'badge-rose' : 'badge-amber'}">
+              ${escapeHtml(f.priority || 'NORMAL')}
+            </span>
+          </td>
+          <td style="color:#475569;">${escapeHtml(f.reason || 'Follow-up reminder')}</td>
+        </tr>
+      `).join('') || `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:16px;">No scheduled follow-ups for ${escapeHtml(staffName)}.</td></tr>`;
+
+    } else {
+      // --- ADMIN EXECUTIVE REPORT (UNTOUCHED CODE) ---
+      totalEnquiries = (CRM_STATE.queries || []).length;
+      unassignedQueries = (CRM_STATE.queries || []).filter(q => q.assignedTo === 'UNASSIGNED').length;
+      totalOrders = (CRM_STATE.orders || []).length;
+      totalRevenue = (CRM_STATE.orders || []).reduce((acc, o) => acc + (parseFloat(o.grandTotal) || 0), 0);
+      totalFollowups = (CRM_STATE.followups || []).length;
+      totalStaff = (CRM_STATE.staffList || []).length;
+      activeStaff = (CRM_STATE.staffList || []).filter(s => s && s.status !== 'INACTIVE').length;
+      exportedBy = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) ? CURRENT_USER.name : 'Super Admin';
+      kpi5Sub = `👤 ${activeStaff} Active Specialists`;
+      sec1Sub = `${(CRM_STATE.staffList || []).length} registered team members`;
+      sec2Sub = `${(CRM_STATE.orders || []).length} total orders recorded`;
+      sec3Sub = `Top ${(CRM_STATE.queries || []).slice(0, 50).length} of ${totalEnquiries} inquiries`;
+      sec4Sub = `${(CRM_STATE.followups || []).length} follow-ups scheduled`;
+
+      // 1. Staff Rows
+      staffRows = (CRM_STATE.staffList || []).map(s => `
+        <tr>
+          <td style="font-weight:700; color:#0f172a;">${escapeHtml(s.name || 'Staff')}</td>
+          <td style="color:#475569;">${escapeHtml(s.role || 'Sales Specialist')}</td>
+          <td>
+            <span class="badge ${s.status === 'INACTIVE' ? 'badge-slate' : 'badge-emerald'}">
+              ${escapeHtml(s.status || 'ACTIVE')}
+            </span>
+          </td>
+          <td style="text-align:center; font-weight:700; color:#1d4ed8;">${s.activeQueries || 0}</td>
+          <td style="text-align:center; font-weight:700; color:#059669;">${s.converted || 0}</td>
+          <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(s.phone || '—')}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">No staff members listed.</td></tr>';
+
+      // 2. Orders Rows
+      orderRows = (CRM_STATE.orders || []).slice(0, 50).map(o => `
+        <tr>
+          <td style="font-family:monospace; font-weight:700; color:#334155; font-size:11px;">${escapeHtml(o.id || '')}</td>
+          <td style="font-weight:700; color:#0f172a;">${escapeHtml(o.customerName || 'Customer')}</td>
+          <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(o.customerPhone || '—')}</td>
+          <td style="text-align:right; font-weight:800; color:#0f172a;">₹${(parseFloat(o.grandTotal) || 0).toLocaleString('en-IN')}</td>
+          <td style="color:#475569;">${escapeHtml(o.paymentMethod || 'COD')}</td>
+          <td>
+            <span class="badge ${o.orderStatus === 'DELIVERED' ? 'badge-emerald' : o.orderStatus === 'CANCELLED' ? 'badge-rose' : 'badge-amber'}">
+              ${escapeHtml(o.orderStatus || 'PLACED')}
+            </span>
+          </td>
+          <td style="color:#64748b; font-size:11px;">${escapeHtml(o.createdAt || '—')}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:16px;">No booked sales orders.</td></tr>';
+
+      // 3. Customer Enquiries Rows
+      queryRows = (CRM_STATE.queries || []).slice(0, 50).map(q => {
+        const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
+        const cName = cust ? cust.name : 'Customer';
+        const cPhone = cust ? (cust.phone || cust.whatsapp || '') : '';
+        const snippet = (q.queryText || q.lastMessage || '').slice(0, 70);
+        return `
+          <tr>
+            <td style="font-weight:700; color:#0f172a;">${escapeHtml(cName)}</td>
+            <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(cPhone)}</td>
+            <td>
+              <span class="badge ${q.assignedTo === 'UNASSIGNED' ? 'badge-amber' : 'badge-blue'}">
+                ${escapeHtml(q.assignedTo || 'UNASSIGNED')}
+              </span>
+            </td>
+            <td>
+              <span class="badge ${q.status === 'NEW' ? 'badge-emerald' : 'badge-slate'}">
+                ${escapeHtml(q.status || 'NEW')}
+              </span>
+            </td>
+            <td style="color:#475569; font-size:11px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(snippet)}</td>
+            <td style="color:#94a3b8; font-family:monospace; font-size:11px;">${escapeHtml(q.createdAt || '')}</td>
+          </tr>
+        `;
+      }).join('') || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">No inquiries recorded.</td></tr>';
+
+      // 4. Followups Rows
+      followupRows = (CRM_STATE.followups || []).slice(0, 30).map(f => `
+        <tr>
+          <td style="font-weight:700; color:#0f172a;">${escapeHtml(f.customerName || 'Customer')}</td>
+          <td style="color:#475569;">${escapeHtml(f.assignedTo || 'Unassigned')}</td>
+          <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(f.dateStr || f.date || '')} ${escapeHtml(f.timeStr || f.time || '')}</td>
+          <td>
+            <span class="badge ${f.priority === 'HIGH' ? 'badge-rose' : 'badge-amber'}">
+              ${escapeHtml(f.priority || 'NORMAL')}
+            </span>
+          </td>
+          <td style="color:#475569;">${escapeHtml(f.reason || 'Follow-up reminder')}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:16px;">No scheduled follow-ups.</td></tr>';
+    }
 
     const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>GRM_Dashboard_Executive_Report_${now.toISOString().slice(0, 10)}</title>
+  <title>${reportDocTitle}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #1e293b; background: #f8fafc; padding: 24px; line-height: 1.4; }
@@ -38478,10 +38845,10 @@ function exportDashboardPDF(btnEl) {
         <div class="brand-logo">GRM</div>
         <div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <h1 style="font-size:18px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">Executive Dashboard & Operations Hub</h1>
+            <h1 style="font-size:18px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">${reportHeading}</h1>
             <span class="badge badge-emerald">LIVE REPORT</span>
           </div>
-          <p style="font-size:11px; color:#64748b; margin-top:2px;">Performance Metrics, Customer Inquiries, Staff Rosters & Sales Summary</p>
+          <p style="font-size:11px; color:#64748b; margin-top:2px;">${reportSubheading}</p>
         </div>
       </div>
       <div class="report-meta">
@@ -38494,32 +38861,32 @@ function exportDashboardPDF(btnEl) {
     <!-- 6 KPI Summary Cards Grid -->
     <div class="kpi-grid">
       <div class="kpi-card card-blue">
-        <div class="kpi-title">Total Enquiries</div>
+        <div class="kpi-title">${isAdmin ? 'Total Enquiries' : 'My Enquiries'}</div>
         <div class="kpi-value">${totalEnquiries}</div>
         <div class="kpi-sub">✓ 100% Inbound Capture</div>
       </div>
       <div class="kpi-card card-amber">
-        <div class="kpi-title">Unassigned Queries</div>
+        <div class="kpi-title">${kpi2Title}</div>
         <div class="kpi-value">${unassignedQueries}</div>
-        <div class="kpi-sub">⚠ Action Required by Admin</div>
+        <div class="kpi-sub">${kpi2Sub}</div>
       </div>
       <div class="kpi-card card-purple">
-        <div class="kpi-title">Orders Booked</div>
+        <div class="kpi-title">${isAdmin ? 'Orders Booked' : 'My Booked Orders'}</div>
         <div class="kpi-value">${totalOrders}</div>
         <div class="kpi-sub">🛍 Total Booked Sales</div>
       </div>
       <div class="kpi-card card-emerald">
-        <div class="kpi-title">Verified Revenue</div>
+        <div class="kpi-title">${isAdmin ? 'Verified Revenue' : 'My Revenue'}</div>
         <div class="kpi-value">₹${totalRevenue.toLocaleString('en-IN')}</div>
         <div class="kpi-sub">✓ Verified Sales Volume</div>
       </div>
       <div class="kpi-card card-indigo">
-        <div class="kpi-title">Staff Team</div>
+        <div class="kpi-title">${kpi5Title}</div>
         <div class="kpi-value">${totalStaff}</div>
-        <div class="kpi-sub">👤 ${activeStaff} Active Specialists</div>
+        <div class="kpi-sub">${kpi5Sub}</div>
       </div>
       <div class="kpi-card card-yellow">
-        <div class="kpi-title">Scheduled Follow-ups</div>
+        <div class="kpi-title">${isAdmin ? 'Scheduled Follow-ups' : 'My Follow-ups'}</div>
         <div class="kpi-value">${totalFollowups}</div>
         <div class="kpi-sub">⏰ Active Customer Reminders</div>
       </div>
@@ -38528,8 +38895,8 @@ function exportDashboardPDF(btnEl) {
     <!-- Section 1: Staff Performance Snapshot -->
     <div class="avoid-break" style="margin-bottom:24px;">
       <div class="section-title">
-        <span>1. Staff Performance Snapshot</span>
-        <span class="section-subtitle">${(CRM_STATE.staffList || []).length} registered team members</span>
+        <span>${sec1Title}</span>
+        <span class="section-subtitle">${sec1Sub}</span>
       </div>
       <div class="table-box">
         <table>
@@ -38553,8 +38920,8 @@ function exportDashboardPDF(btnEl) {
     <!-- Section 2: Booked Sales Orders -->
     <div class="avoid-break" style="margin-bottom:24px;">
       <div class="section-title">
-        <span>2. Recent Booked Sales Orders</span>
-        <span class="section-subtitle">${(CRM_STATE.orders || []).length} total orders recorded</span>
+        <span>${sec2Title}</span>
+        <span class="section-subtitle">${sec2Sub}</span>
       </div>
       <div class="table-box">
         <table>
@@ -38579,8 +38946,8 @@ function exportDashboardPDF(btnEl) {
     <!-- Section 3: Active WhatsApp Customer Inquiries & Queue -->
     <div class="avoid-break" style="margin-bottom:24px;">
       <div class="section-title">
-        <span>3. Active Customer Enquiries & Lead Pipeline</span>
-        <span class="section-subtitle">Top ${(CRM_STATE.queries || []).slice(0, 50).length} of ${totalEnquiries} inquiries</span>
+        <span>${sec3Title}</span>
+        <span class="section-subtitle">${sec3Sub}</span>
       </div>
       <div class="table-box">
         <table>
@@ -38604,8 +38971,8 @@ function exportDashboardPDF(btnEl) {
     <!-- Section 4: Scheduled Customer Follow-ups -->
     <div class="avoid-break" style="margin-bottom:24px;">
       <div class="section-title">
-        <span>4. Scheduled Customer Follow-ups</span>
-        <span class="section-subtitle">${(CRM_STATE.followups || []).length} follow-ups scheduled</span>
+        <span>${sec4Title}</span>
+        <span class="section-subtitle">${sec4Sub}</span>
       </div>
       <div class="table-box">
         <table>
@@ -38627,7 +38994,7 @@ function exportDashboardPDF(btnEl) {
 
     <!-- Footer -->
     <div class="report-footer">
-      <div>GRM WhatsApp CRM Operations System • Confidential Executive Summary</div>
+      <div>GRM WhatsApp CRM Operations System • ${isAdmin ? 'Confidential Executive Summary' : 'Staff Workstation Report'}</div>
       <div>Generated on ${dateFormatted} at ${timeFormatted}</div>
     </div>
   </div>
