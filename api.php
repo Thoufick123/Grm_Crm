@@ -1528,6 +1528,13 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     $staffName = trim($data['staff_name'] ?? 'Super Admin');
     $adminPhone = trim($data['admin_phone'] ?? '+919789660115');
 
+    // Strict RBAC check: Staff in view-only mode cannot create bulk price requests
+    if (isset($data['is_view_only']) && $data['is_view_only']) {
+        http_response_code(403);
+        echo json_encode(["status" => "error", "message" => "Permission Denied: Staff in view-only mode cannot submit bulk price requests."]);
+        exit;
+    }
+
     if (empty($customerName) || empty($productName) || $requestedPrice <= 0 || $quantity <= 0) {
         http_response_code(400);
         echo json_encode(["status" => "error", "message" => "Customer name, product name, quantity and requested price are required."]);

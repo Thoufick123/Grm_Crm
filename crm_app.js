@@ -1013,22 +1013,55 @@ function enforceGranularActionPermissions() {
       }
     }
 
-    // Send Button
-    const sendBtn = document.getElementById('btn-send-message');
-    if (sendBtn) {
-      sendBtn.style.display = canSendMsg ? '' : 'none';
+    // Send Button (Handle both btn-send-chat and btn-send-message)
+    ['btn-send-chat', 'btn-send-message'].forEach(id => {
+      const sendBtn = document.getElementById(id);
+      if (sendBtn) {
+        sendBtn.style.display = canSendMsg ? '' : 'none';
+        sendBtn.disabled = !canSendMsg;
+      }
+    });
+
+    // Voice Recording (Microphone) Button — strictly restrict in view-only mode
+    const voiceRecordBtn = document.getElementById('btn-voice-record');
+    if (voiceRecordBtn) {
+      voiceRecordBtn.style.display = canSendMsg ? '' : 'none';
+      voiceRecordBtn.disabled = !canSendMsg;
+      if (!canSendMsg) {
+        voiceRecordBtn.setAttribute('disabled', 'disabled');
+        voiceRecordBtn.classList.add('cursor-not-allowed', 'opacity-40');
+      } else {
+        voiceRecordBtn.removeAttribute('disabled');
+        voiceRecordBtn.classList.remove('cursor-not-allowed', 'opacity-40');
+      }
     }
 
     // Stock & Share Button
     const stockShareBtn = document.getElementById('btn-stock-share');
     if (stockShareBtn) {
       stockShareBtn.style.display = canSendMsg ? '' : 'none';
+      stockShareBtn.disabled = !canSendMsg;
+    }
+
+    // Bulk Special Price Request Button — strictly restrict in staff view-only mode
+    const bulkPriceReqBtn = document.getElementById('btn-bulk-price-request');
+    if (bulkPriceReqBtn) {
+      bulkPriceReqBtn.style.display = canSendMsg ? '' : 'none';
+      bulkPriceReqBtn.disabled = !canSendMsg;
+      if (!canSendMsg) {
+        bulkPriceReqBtn.setAttribute('disabled', 'disabled');
+        bulkPriceReqBtn.classList.add('cursor-not-allowed', 'opacity-40');
+      } else {
+        bulkPriceReqBtn.removeAttribute('disabled');
+        bulkPriceReqBtn.classList.remove('cursor-not-allowed', 'opacity-40');
+      }
     }
 
     // Photo Upload Button
     const photoUploadBtn = document.getElementById('btn-chat-photo-upload');
     if (photoUploadBtn) {
       photoUploadBtn.style.display = canSendMsg ? '' : 'none';
+      photoUploadBtn.disabled = !canSendMsg;
     }
     const photoUploadInput = document.getElementById('chat-image-file-input');
     if (photoUploadInput) {
@@ -35024,6 +35057,17 @@ function startFreshSpeechRecognizer() {
 }
 
 window.toggleVoiceRecording = async function () {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin' || CURRENT_USER.id === 'admin'));
+  const canSendMsg = isSuperAdmin || (typeof canUserPerformAction === 'function' && canUserPerformAction('inbox', 'create'));
+  if (!canSendMsg) {
+    if (typeof showToast === 'function') {
+      showToast('🔒 View-Only Mode', 'Voice recording is restricted in staff view-only mode.', 'warning', 'rose');
+    } else {
+      alert('🔒 View-Only Mode: Voice recording is restricted.');
+    }
+    return;
+  }
+
   const panel = document.getElementById('voice-record-panel');
   if (!panel) return;
 
@@ -37909,6 +37953,17 @@ window.executeForwardToCustomPhone = function () {
 window.CURRENT_BULK_REQUEST = null;
 
 window.openBulkPriceRequestModal = function () {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin' || CURRENT_USER.id === 'admin'));
+  const canSendMsg = isSuperAdmin || (typeof canUserPerformAction === 'function' && canUserPerformAction('inbox', 'create'));
+  if (!canSendMsg) {
+    if (typeof showToast === 'function') {
+      showToast('🔒 View-Only Mode', 'Price requests are strictly restricted in view-only mode.', 'block', 'rose');
+    } else {
+      alert('🔒 View-Only Mode: Price requests are strictly restricted.');
+    }
+    return;
+  }
+
   const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
   const custName = customer ? (customer.name || 'Customer') : 'Walk-in Customer';
   const custPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
@@ -37979,6 +38034,17 @@ window.calculateBulkRequestTotals = function () {
 window.submitBulkPriceRequest = async function (ev) {
   if (ev) ev.preventDefault();
 
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin' || CURRENT_USER.id === 'admin'));
+  const canSendMsg = isSuperAdmin || (typeof canUserPerformAction === 'function' && canUserPerformAction('inbox', 'create'));
+  if (!canSendMsg) {
+    if (typeof showToast === 'function') {
+      showToast('🔒 View-Only Mode', 'Submitting price requests is strictly restricted in view-only mode.', 'block', 'rose');
+    } else {
+      alert('🔒 View-Only Mode: Submitting price requests is strictly restricted.');
+    }
+    return;
+  }
+
   const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
   const custName = customer ? (customer.name || 'Customer') : 'Walk-in Customer';
   const custPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
@@ -38021,7 +38087,8 @@ window.submitBulkPriceRequest = async function (ev) {
       requested_price: reqPrice,
       staff_id: staffUser.id || 'admin',
       staff_name: staffUser.name || 'Super Admin',
-      admin_phone: adminPhone
+      admin_phone: adminPhone,
+      is_view_only: !canSendMsg
     };
 
     // 1. Save to Database & Dispatch Single Official WhatsApp Alert via Backend Bridge

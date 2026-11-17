@@ -1013,22 +1013,55 @@ function enforceGranularActionPermissions() {
       }
     }
 
-    // Send Button
-    const sendBtn = document.getElementById('btn-send-message');
-    if (sendBtn) {
-      sendBtn.style.display = canSendMsg ? '' : 'none';
+    // Send Button (Handle both btn-send-chat and btn-send-message)
+    ['btn-send-chat', 'btn-send-message'].forEach(id => {
+      const sendBtn = document.getElementById(id);
+      if (sendBtn) {
+        sendBtn.style.display = canSendMsg ? '' : 'none';
+        sendBtn.disabled = !canSendMsg;
+      }
+    });
+
+    // Voice Recording (Microphone) Button — strictly restrict in view-only mode
+    const voiceRecordBtn = document.getElementById('btn-voice-record');
+    if (voiceRecordBtn) {
+      voiceRecordBtn.style.display = canSendMsg ? '' : 'none';
+      voiceRecordBtn.disabled = !canSendMsg;
+      if (!canSendMsg) {
+        voiceRecordBtn.setAttribute('disabled', 'disabled');
+        voiceRecordBtn.classList.add('cursor-not-allowed', 'opacity-40');
+      } else {
+        voiceRecordBtn.removeAttribute('disabled');
+        voiceRecordBtn.classList.remove('cursor-not-allowed', 'opacity-40');
+      }
     }
 
     // Stock & Share Button
     const stockShareBtn = document.getElementById('btn-stock-share');
     if (stockShareBtn) {
       stockShareBtn.style.display = canSendMsg ? '' : 'none';
+      stockShareBtn.disabled = !canSendMsg;
+    }
+
+    // Bulk Special Price Request Button — strictly restrict in staff view-only mode
+    const bulkPriceReqBtn = document.getElementById('btn-bulk-price-request');
+    if (bulkPriceReqBtn) {
+      bulkPriceReqBtn.style.display = canSendMsg ? '' : 'none';
+      bulkPriceReqBtn.disabled = !canSendMsg;
+      if (!canSendMsg) {
+        bulkPriceReqBtn.setAttribute('disabled', 'disabled');
+        bulkPriceReqBtn.classList.add('cursor-not-allowed', 'opacity-40');
+      } else {
+        bulkPriceReqBtn.removeAttribute('disabled');
+        bulkPriceReqBtn.classList.remove('cursor-not-allowed', 'opacity-40');
+      }
     }
 
     // Photo Upload Button
     const photoUploadBtn = document.getElementById('btn-chat-photo-upload');
     if (photoUploadBtn) {
       photoUploadBtn.style.display = canSendMsg ? '' : 'none';
+      photoUploadBtn.disabled = !canSendMsg;
     }
     const photoUploadInput = document.getElementById('chat-image-file-input');
     if (photoUploadInput) {
@@ -1304,6 +1337,106 @@ function enforceGranularActionPermissions() {
         el.style.display = 'none';
       }
     });
+  }
+
+  // 10. Packing Slip & Label Configuration Module Actions
+  const canPackView = isSuperAdmin || canUserPerformAction('packing-slip-config', 'view');
+  const canPackCreate = isSuperAdmin || canUserPerformAction('packing-slip-config', 'create');
+  const canPackEdit = isSuperAdmin || canUserPerformAction('packing-slip-config', 'edit');
+  const canModifyPackingSlip = isSuperAdmin || canPackEdit || canPackCreate;
+
+  // Sidebar navigation visibility
+  const navPackSlip = document.getElementById('nav-packing-slip-config');
+  if (navPackSlip) {
+    if (canPackView) navPackSlip.classList.remove('hidden');
+    else navPackSlip.classList.add('hidden');
+  }
+
+  // Customize Template button inside Packing Slip Modal
+  document.querySelectorAll('button[onclick*="packing-slip-config"]').forEach(btn => {
+    btn.style.display = canPackView ? '' : 'none';
+  });
+
+  const packConfigContainer = document.getElementById('view-packing-slip-config');
+  if (packConfigContainer) {
+    // If user lacks view permission and attempts to stay on packing-slip-config, redirect
+    if (!canPackView && (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'packing-slip-config')) {
+      if (typeof switchView === 'function') switchView('inbox');
+      return;
+    }
+
+    // Top action buttons: Reset Defaults and Save Configuration
+    const btnSavePack = packConfigContainer.querySelector('button[onclick*="saveCurrentPackingSlipConfig"]');
+    const btnResetPack = packConfigContainer.querySelector('button[onclick*="resetPackingSlipConfigToDefault"]');
+
+    if (btnSavePack) {
+      btnSavePack.style.display = canModifyPackingSlip ? '' : 'none';
+      btnSavePack.disabled = !canModifyPackingSlip;
+    }
+    if (btnResetPack) {
+      btnResetPack.style.display = canModifyPackingSlip ? '' : 'none';
+      btnResetPack.disabled = !canModifyPackingSlip;
+    }
+
+    // Logo controls
+    const logoFileInput = document.getElementById('psc-logo-file-input');
+    const btnRemoveLogo = document.getElementById('psc-btn-remove-logo');
+    if (logoFileInput) {
+      logoFileInput.disabled = !canModifyPackingSlip;
+      if (!canModifyPackingSlip) {
+        logoFileInput.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        logoFileInput.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+    if (btnRemoveLogo && !canModifyPackingSlip) {
+      btnRemoveLogo.style.display = 'none';
+    }
+
+    // Disable/enable all inputs, selects, textareas inside #view-packing-slip-config
+    const formControls = packConfigContainer.querySelectorAll('input:not(#psc-logo-file-input), select, textarea');
+    formControls.forEach(el => {
+      el.disabled = !canModifyPackingSlip;
+      if (!canModifyPackingSlip) {
+        el.classList.add('cursor-not-allowed', 'opacity-70');
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') {
+          el.classList.add('bg-slate-100');
+        }
+      } else {
+        el.classList.remove('cursor-not-allowed', 'opacity-70', 'bg-slate-100');
+      }
+    });
+
+    // View-Only Notice Banner
+    let banner = document.getElementById('psc-view-only-banner');
+    if (!canModifyPackingSlip) {
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'psc-view-only-banner';
+        banner.className = 'p-3.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-2xs';
+        banner.innerHTML = `
+          <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-[18px]">lock</span>
+          </div>
+          <div class="flex-1">
+            <span class="font-bold">View-Only Mode:</span> Your staff role has read-only access to the Packing Slip &amp; Shipping Label template. Modifying layout positions, brand details, logo, or resetting defaults is restricted.
+          </div>
+        `;
+        const innerContainer = packConfigContainer.querySelector('.max-w-7xl');
+        if (innerContainer) {
+          const firstChild = innerContainer.firstElementChild;
+          if (firstChild && firstChild.nextSibling) {
+            innerContainer.insertBefore(banner, firstChild.nextSibling);
+          } else {
+            innerContainer.prepend(banner);
+          }
+        }
+      } else {
+        banner.style.display = '';
+      }
+    } else if (banner) {
+      banner.style.display = 'none';
+    }
   }
 }
 window.enforceGranularActionPermissions = enforceGranularActionPermissions;
@@ -26466,6 +26599,13 @@ function getPackingSlipConfig() {
 window.getPackingSlipConfig = getPackingSlipConfig;
 
 function savePackingSlipConfig(cfg) {
+  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
+      return false;
+    }
+  }
   try {
     localStorage.setItem('GRM_PACKING_SLIP_CONFIG', JSON.stringify(cfg));
     return true;
@@ -26503,6 +26643,16 @@ function getSamplePackingSlipOrder() {
 }
 
 function handlePackingSlipLogoUpload(event) {
+  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
+      if (event && event.target) event.target.value = '';
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Uploading company logo is restricted for your role.', 'warning', 'rose');
+      return;
+    }
+  }
+
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
@@ -26535,6 +26685,15 @@ function handlePackingSlipLogoUpload(event) {
 window.handlePackingSlipLogoUpload = handlePackingSlipLogoUpload;
 
 function removePackingSlipLogo() {
+  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Removing company logo is restricted for your role.', 'warning', 'rose');
+      return;
+    }
+  }
+
   const imgEl = document.getElementById('psc-logo-preview-img');
   const placeholder = document.getElementById('psc-logo-placeholder-icon');
   const removeBtn = document.getElementById('psc-btn-remove-logo');
@@ -26654,6 +26813,14 @@ function onPackingSlipConfigFieldChange() {
 window.onPackingSlipConfigFieldChange = onPackingSlipConfigFieldChange;
 
 function saveCurrentPackingSlipConfig() {
+  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Modifying packing slip configuration is restricted for your role.', 'warning', 'rose');
+      return;
+    }
+  }
   const formCfg = readCurrentPackingSlipForm();
   savePackingSlipConfig(formCfg);
   updatePackingSlipLivePreview();
@@ -26671,6 +26838,9 @@ function refreshPackingSlipConfig(btnEl) {
   try {
     renderPackingSlipConfigPage();
     updatePackingSlipLivePreview();
+    if (typeof enforceGranularActionPermissions === 'function') {
+      enforceGranularActionPermissions();
+    }
   } catch (err) {
     console.warn('[refreshPackingSlipConfig] Error:', err);
   } finally {
@@ -26684,6 +26854,14 @@ function refreshPackingSlipConfig(btnEl) {
 window.refreshPackingSlipConfig = refreshPackingSlipConfig;
 
 function resetPackingSlipConfigToDefault() {
+  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
+  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
+    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
+      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Resetting packing slip defaults is restricted for your role.', 'warning', 'rose');
+      return;
+    }
+  }
   showConfirmDialog({
     title: 'Reset Packing Slip Defaults',
     subtitle: 'Label Configuration',
@@ -26785,6 +26963,9 @@ function renderPackingSlipConfigPage() {
   }
 
   updatePackingSlipLivePreview();
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
+  }
 }
 window.renderPackingSlipConfigPage = renderPackingSlipConfigPage;
 
@@ -35024,6 +35205,17 @@ function startFreshSpeechRecognizer() {
 }
 
 window.toggleVoiceRecording = async function () {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin' || CURRENT_USER.id === 'admin'));
+  const canSendMsg = isSuperAdmin || (typeof canUserPerformAction === 'function' && canUserPerformAction('inbox', 'create'));
+  if (!canSendMsg) {
+    if (typeof showToast === 'function') {
+      showToast('🔒 View-Only Mode', 'Voice recording is restricted in staff view-only mode.', 'warning', 'rose');
+    } else {
+      alert('🔒 View-Only Mode: Voice recording is restricted.');
+    }
+    return;
+  }
+
   const panel = document.getElementById('voice-record-panel');
   if (!panel) return;
 
@@ -37909,6 +38101,17 @@ window.executeForwardToCustomPhone = function () {
 window.CURRENT_BULK_REQUEST = null;
 
 window.openBulkPriceRequestModal = function () {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin' || CURRENT_USER.id === 'admin'));
+  const canSendMsg = isSuperAdmin || (typeof canUserPerformAction === 'function' && canUserPerformAction('inbox', 'create'));
+  if (!canSendMsg) {
+    if (typeof showToast === 'function') {
+      showToast('🔒 View-Only Mode', 'Price requests are strictly restricted in view-only mode.', 'block', 'rose');
+    } else {
+      alert('🔒 View-Only Mode: Price requests are strictly restricted.');
+    }
+    return;
+  }
+
   const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
   const custName = customer ? (customer.name || 'Customer') : 'Walk-in Customer';
   const custPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
@@ -37979,6 +38182,17 @@ window.calculateBulkRequestTotals = function () {
 window.submitBulkPriceRequest = async function (ev) {
   if (ev) ev.preventDefault();
 
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin' || CURRENT_USER.id === 'admin'));
+  const canSendMsg = isSuperAdmin || (typeof canUserPerformAction === 'function' && canUserPerformAction('inbox', 'create'));
+  if (!canSendMsg) {
+    if (typeof showToast === 'function') {
+      showToast('🔒 View-Only Mode', 'Submitting price requests is strictly restricted in view-only mode.', 'block', 'rose');
+    } else {
+      alert('🔒 View-Only Mode: Submitting price requests is strictly restricted.');
+    }
+    return;
+  }
+
   const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
   const custName = customer ? (customer.name || 'Customer') : 'Walk-in Customer';
   const custPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
@@ -38021,7 +38235,8 @@ window.submitBulkPriceRequest = async function (ev) {
       requested_price: reqPrice,
       staff_id: staffUser.id || 'admin',
       staff_name: staffUser.name || 'Super Admin',
-      admin_phone: adminPhone
+      admin_phone: adminPhone,
+      is_view_only: !canSendMsg
     };
 
     // 1. Save to Database & Dispatch Single Official WhatsApp Alert via Backend Bridge
