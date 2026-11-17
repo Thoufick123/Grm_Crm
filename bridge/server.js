@@ -1331,9 +1331,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     { logger: pino({ level: 'silent' }) }
                                 );
                                 if (audioBuffer) {
-                                    const mime = rawMsg.audioMessage.mimetype || 'audio/ogg; codecs=opus';
-                                    mediaUrl = `data:${mime};base64,${audioBuffer.toString('base64')}`;
-                                    console.log(`[Audio Message Downloaded] Size: ${audioBuffer.length} bytes from ${senderName}`);
+                                    const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'voice');
+                                    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                                    const fileName = `voice_${Date.now()}_${Math.floor(Math.random() * 1000)}.ogg`;
+                                    fs.writeFileSync(path.join(uploadsDir, fileName), audioBuffer);
+                                    mediaUrl = `uploads/voice/${fileName}`;
+                                    console.log(`[Audio Message Saved] ${mediaUrl} (${audioBuffer.length} bytes) from ${senderName}`);
                                 }
                             } catch (err) {
                                 console.error('[Audio Download Error]:', err.message);
@@ -1351,9 +1354,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     { logger: pino({ level: 'silent' }) }
                                 );
                                 if (imgBuffer) {
-                                    const mime = rawMsg.imageMessage.mimetype || 'image/jpeg';
-                                    mediaUrl = `data:${mime};base64,${imgBuffer.toString('base64')}`;
-                                    console.log(`[Image Downloaded] Size: ${imgBuffer.length} bytes from ${senderName}`);
+                                    const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'media');
+                                    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                                    const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+                                    fs.writeFileSync(path.join(uploadsDir, fileName), imgBuffer);
+                                    mediaUrl = `uploads/media/${fileName}`;
+                                    console.log(`[Image Saved] ${mediaUrl} (${imgBuffer.length} bytes) from ${senderName}`);
                                 }
                             } catch (err) {
                                 console.error('[Image Download Error]:', err.message);
