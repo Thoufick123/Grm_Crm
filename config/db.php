@@ -66,11 +66,11 @@ if (file_exists($cfgFileForBridge)) {
     }
 }
 
-// Prevent web hosting Apache domains (*.hostingersite.com) from being treated as Node.js bridge
+// Validate bridge URL: Prevent self-referencing Apache domain loops while supporting Hostinger Node.js bridge
 $isWebHostUrl = function($url) {
     if (empty($url)) return true;
     $host = parse_url($url, PHP_URL_HOST) ?: '';
-    if (str_ends_with(strtolower($host), 'hostingersite.com')) return true;
+    // Only reject if it's pointing to the exact same host as the CRM web app to prevent self-loop
     if (!empty($_SERVER['HTTP_HOST']) && strtolower($host) === strtolower($_SERVER['HTTP_HOST'])) return true;
     return false;
 };
@@ -87,7 +87,7 @@ if ($dynamicBridgeUrl && !$isWebHostUrl($dynamicBridgeUrl)) {
 } else {
     $activeBridge = (!empty($envConfig['BRIDGE_URL']) && !$isWebHostUrl($envConfig['BRIDGE_URL'])) 
         ? rtrim($envConfig['BRIDGE_URL'], '/') 
-        : 'http://localhost:3000';
+        : 'https://mediumturquoise-dugong-987946.hostingersite.com';
 }
 
 define('BRIDGE_URL', $activeBridge);

@@ -1181,6 +1181,11 @@ if ($action === 'sync_bridge_url' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if (strpos($newBridgeUrl, 'trycloudflare.com') !== false) {
+        echo json_encode(["status" => "ignored", "message" => "Cloudflare tunnels are retired; Hostinger Node.js bridge is active."]);
+        exit;
+    }
+
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
     $currentConfig['bridge_url'] = rtrim($newBridgeUrl, '/');
     $currentConfig['last_bridge_sync'] = date("Y-m-d H:i:s");

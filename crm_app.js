@@ -2108,13 +2108,20 @@ function renderCurrentView() {
 // Initialize Realtime WebSocket (Socket.IO) Connection
 // Dynamic Bridge URL Resolver (supports local and Render deployment)
 function getBridgeBaseUrl() {
-  if (typeof window !== 'undefined' && window.BRIDGE_URL) return window.BRIDGE_URL;
+  if (typeof window !== 'undefined' && window.BRIDGE_URL && !window.BRIDGE_URL.includes('trycloudflare.com')) {
+    return window.BRIDGE_URL.replace(/\/+$/, '');
+  }
   const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_BRIDGE_URL') : null;
-  if (stored) return stored.replace(/\/+$/, '');
-  if (typeof CRM_STATE !== 'undefined' && CRM_STATE?.settings?.bridgeUrl) {
+  if (stored && !stored.includes('trycloudflare.com')) {
+    return stored.replace(/\/+$/, '');
+  } else if (stored && stored.includes('trycloudflare.com')) {
+    try { localStorage.removeItem('GRM_BRIDGE_URL'); } catch (e) { }
+  }
+  if (typeof CRM_STATE !== 'undefined' && CRM_STATE?.settings?.bridgeUrl && !CRM_STATE.settings.bridgeUrl.includes('trycloudflare.com')) {
     return CRM_STATE.settings.bridgeUrl.replace(/\/+$/, '');
   }
-  return 'http://localhost:3000';
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  return isLocal ? 'http://localhost:3000' : 'https://mediumturquoise-dugong-987946.hostingersite.com';
 }
 window.getBridgeBaseUrl = getBridgeBaseUrl;
 
@@ -3302,7 +3309,7 @@ function initCRMState() {
           updateConfiguredPhoneDisplays();
           saveCRMState();
         }
-        if (res.data.bridge_url) {
+        if (res.data.bridge_url && !res.data.bridge_url.includes('trycloudflare.com')) {
           window.BRIDGE_URL = res.data.bridge_url;
           try { localStorage.setItem('GRM_BRIDGE_URL', res.data.bridge_url); } catch (e) { }
           if (CRM_STATE) {
@@ -4020,6 +4027,34 @@ function saveAppNotifications() {
   } catch (e) { }
 }
 
+function triggerBellPingAnimation() {
+  try {
+    const bells = [
+      document.getElementById('header-notif-bell-icon'),
+      document.getElementById('header-notif-bell-icon-mobile')
+    ].filter(Boolean);
+
+    bells.forEach(bell => {
+      bell.classList.remove('bell-ring-anim');
+      void bell.offsetWidth; // force DOM reflow to re-trigger CSS keyframe
+      bell.classList.add('bell-ring-anim');
+    });
+
+    const pings = [
+      document.getElementById('header-notif-ping'),
+      document.getElementById('header-notif-ping-mobile')
+    ].filter(Boolean);
+
+    pings.forEach(ping => {
+      ping.classList.add('animate-bounce');
+      setTimeout(() => {
+        try { ping.classList.remove('animate-bounce'); } catch (e) { }
+      }, 1200);
+    });
+  } catch (e) { }
+}
+window.triggerBellPingAnimation = triggerBellPingAnimation;
+
 function addAppNotification(item) {
   if (!item || !item.title) return;
   const list = getAppNotifications();
@@ -4027,7 +4062,7 @@ function addAppNotification(item) {
     id: item.id || ('notif_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
     title: item.title,
     message: item.message || '',
-    type: item.type || 'chats', // 'chats', 'calls', 'alerts'
+    type: item.type || 'alerts', // 'chats', 'calls', 'alerts'
     icon: item.icon || (item.type === 'calls' ? 'call' : (item.type === 'chats' ? 'chat' : 'notifications')),
     color: item.color || (item.type === 'calls' ? 'blue' : (item.type === 'chats' ? 'emerald' : 'amber')),
     timestamp: item.timestamp || Date.now(),
@@ -4040,12 +4075,20 @@ function addAppNotification(item) {
   if (list.length > 60) list.length = 60; // Keep latest 60 items
   saveAppNotifications();
   updateNotificationBadge();
+  triggerBellPingAnimation();
 
   // If dropdown flyout is open, re-render in real time
   const dropdown = document.getElementById('notifications-dropdown');
   if (dropdown && !dropdown.classList.contains('hidden')) {
     renderNotificationsList();
   }
+}
+window.addAppNotification = addAppNotification;
+
+// Drain any notifications pushed before crm_app.js initialization
+if (Array.isArray(window.PENDING_APP_NOTIFICATIONS) && window.PENDING_APP_NOTIFICATIONS.length > 0) {
+  const pending = window.PENDING_APP_NOTIFICATIONS.splice(0, window.PENDING_APP_NOTIFICATIONS.length);
+  pending.forEach(item => addAppNotification(item));
 }
 
 function updateNotificationBadge() {
@@ -18874,9 +18917,11 @@ function refreshFollowupsState(btnEl) {
       if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
 
       if (icon) icon.classList.remove('animate-spin');
-      if (btnEl) btnEl.disabled = false;
-      const count = (CRM_STATE?.followups || []).length;
-      showToast('Follow-ups Synchronized', `${count} follow-up records live from database.`, 'check_circle', 'emerald');
+      if (btnEl) {
+        btnEl.disabled = false;
+        const count = (CRM_STATE?.followups || []).length;
+        showToast('Follow-ups Synchronized', `${count} follow-up records live from database.`, 'check_circle', 'emerald');
+      }
     });
 }
 window.refreshFollowupsState = refreshFollowupsState;
@@ -28578,9 +28623,11 @@ function refreshOrdersFromDB(btnEl) {
       if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
 
       if (icon) icon.classList.remove('animate-spin');
-      if (btnEl) btnEl.disabled = false;
-      const total = (CRM_STATE?.orders || []).length;
-      showToast('Orders Synced', `${total} orders loaded from database.`, 'sync', 'emerald');
+      if (btnEl) {
+        btnEl.disabled = false;
+        const total = (CRM_STATE?.orders || []).length;
+        showToast('Orders Synced', `${total} orders loaded from database.`, 'sync', 'emerald');
+      }
     });
 }
 window.refreshOrdersFromDB = refreshOrdersFromDB;
@@ -29533,8 +29580,10 @@ function fetchQRBridgeStatus(btnEl) {
         renderQuickLineSwitcher();
         renderPhoneSwitcherDropdown();
         if (icon) icon.classList.remove('animate-spin');
-        if (btnEl) btnEl.disabled = false;
-        showToast('WhatsApp Lines Refreshed', 'Live multi-account connection status checked.', 'sync', 'emerald');
+        if (btnEl) {
+          btnEl.disabled = false;
+          showToast('WhatsApp Lines Refreshed', 'Live multi-account connection status checked.', 'sync', 'emerald');
+        }
       });
   } else {
     // Hosted server fallback (e.g. Hostinger / MariaDB)
@@ -29598,8 +29647,10 @@ function fetchQRBridgeStatus(btnEl) {
         renderQuickLineSwitcher();
         renderPhoneSwitcherDropdown();
         if (icon) icon.classList.remove('animate-spin');
-        if (btnEl) btnEl.disabled = false;
-        showToast('WhatsApp Lines Refreshed', 'Connected lines synchronized with database.', 'sync', 'emerald');
+        if (btnEl) {
+          btnEl.disabled = false;
+          showToast('WhatsApp Lines Refreshed', 'Connected lines synchronized with database.', 'sync', 'emerald');
+        }
       });
   }
 }
@@ -38375,10 +38426,9 @@ function refreshDashboardData(btnEl) {
     if (btnEl) {
       if (icon) icon.classList.remove('animate-spin');
       btnEl.disabled = false;
-    }
-
-    if (typeof showToast === 'function') {
-      showToast('Dashboard Refreshed', 'Latest staff count, revenue, orders & inquiries loaded.', 'sync', 'emerald');
+      if (typeof showToast === 'function') {
+        showToast('Dashboard Refreshed', 'Latest staff count, revenue, orders & inquiries loaded.', 'sync', 'emerald');
+      }
     }
   });
 }
