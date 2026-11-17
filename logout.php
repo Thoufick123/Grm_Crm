@@ -3,6 +3,7 @@
  * GRM WHATSAPP CRM — LOGOUT CONTROLLER
  * Clears PHP session, auth cookies, and redirects cleanly to login.php.
  */
+date_default_timezone_set('Asia/Kolkata');
 session_start();
 $_SESSION = [];
 

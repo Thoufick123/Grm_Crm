@@ -26,6 +26,8 @@ function handleReceiptAmountChange(mode, rawValue) {
       expectedAmount += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
     });
     expectedAmount += (parseFloat(ORDER_MODAL_STATE?.shippingCharge) || 0);
+    const discount = Math.max(0, parseFloat(ORDER_MODAL_STATE?.discountAmount || 0) || 0);
+    expectedAmount = Math.max(0, expectedAmount - discount);
     if (expectedAmount === 0 && ORDER_MODAL_STATE?.grandTotal) expectedAmount = ORDER_MODAL_STATE.grandTotal;
   } else {
     expectedAmount = (ORDER_MODAL_STATE?.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
@@ -1338,106 +1340,6 @@ function enforceGranularActionPermissions() {
       }
     });
   }
-
-  // 10. Packing Slip & Label Configuration Module Actions
-  const canPackView = isSuperAdmin || canUserPerformAction('packing-slip-config', 'view');
-  const canPackCreate = isSuperAdmin || canUserPerformAction('packing-slip-config', 'create');
-  const canPackEdit = isSuperAdmin || canUserPerformAction('packing-slip-config', 'edit');
-  const canModifyPackingSlip = isSuperAdmin || canPackEdit || canPackCreate;
-
-  // Sidebar navigation visibility
-  const navPackSlip = document.getElementById('nav-packing-slip-config');
-  if (navPackSlip) {
-    if (canPackView) navPackSlip.classList.remove('hidden');
-    else navPackSlip.classList.add('hidden');
-  }
-
-  // Customize Template button inside Packing Slip Modal
-  document.querySelectorAll('button[onclick*="packing-slip-config"]').forEach(btn => {
-    btn.style.display = canPackView ? '' : 'none';
-  });
-
-  const packConfigContainer = document.getElementById('view-packing-slip-config');
-  if (packConfigContainer) {
-    // If user lacks view permission and attempts to stay on packing-slip-config, redirect
-    if (!canPackView && (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'packing-slip-config')) {
-      if (typeof switchView === 'function') switchView('inbox');
-      return;
-    }
-
-    // Top action buttons: Reset Defaults and Save Configuration
-    const btnSavePack = packConfigContainer.querySelector('button[onclick*="saveCurrentPackingSlipConfig"]');
-    const btnResetPack = packConfigContainer.querySelector('button[onclick*="resetPackingSlipConfigToDefault"]');
-
-    if (btnSavePack) {
-      btnSavePack.style.display = canModifyPackingSlip ? '' : 'none';
-      btnSavePack.disabled = !canModifyPackingSlip;
-    }
-    if (btnResetPack) {
-      btnResetPack.style.display = canModifyPackingSlip ? '' : 'none';
-      btnResetPack.disabled = !canModifyPackingSlip;
-    }
-
-    // Logo controls
-    const logoFileInput = document.getElementById('psc-logo-file-input');
-    const btnRemoveLogo = document.getElementById('psc-btn-remove-logo');
-    if (logoFileInput) {
-      logoFileInput.disabled = !canModifyPackingSlip;
-      if (!canModifyPackingSlip) {
-        logoFileInput.classList.add('opacity-50', 'cursor-not-allowed');
-      } else {
-        logoFileInput.classList.remove('opacity-50', 'cursor-not-allowed');
-      }
-    }
-    if (btnRemoveLogo && !canModifyPackingSlip) {
-      btnRemoveLogo.style.display = 'none';
-    }
-
-    // Disable/enable all inputs, selects, textareas inside #view-packing-slip-config
-    const formControls = packConfigContainer.querySelectorAll('input:not(#psc-logo-file-input), select, textarea');
-    formControls.forEach(el => {
-      el.disabled = !canModifyPackingSlip;
-      if (!canModifyPackingSlip) {
-        el.classList.add('cursor-not-allowed', 'opacity-70');
-        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') {
-          el.classList.add('bg-slate-100');
-        }
-      } else {
-        el.classList.remove('cursor-not-allowed', 'opacity-70', 'bg-slate-100');
-      }
-    });
-
-    // View-Only Notice Banner
-    let banner = document.getElementById('psc-view-only-banner');
-    if (!canModifyPackingSlip) {
-      if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'psc-view-only-banner';
-        banner.className = 'p-3.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-2xs';
-        banner.innerHTML = `
-          <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-            <span class="material-symbols-outlined text-[18px]">lock</span>
-          </div>
-          <div class="flex-1">
-            <span class="font-bold">View-Only Mode:</span> Your staff role has read-only access to the Packing Slip &amp; Shipping Label template. Modifying layout positions, brand details, logo, or resetting defaults is restricted.
-          </div>
-        `;
-        const innerContainer = packConfigContainer.querySelector('.max-w-7xl');
-        if (innerContainer) {
-          const firstChild = innerContainer.firstElementChild;
-          if (firstChild && firstChild.nextSibling) {
-            innerContainer.insertBefore(banner, firstChild.nextSibling);
-          } else {
-            innerContainer.prepend(banner);
-          }
-        }
-      } else {
-        banner.style.display = '';
-      }
-    } else if (banner) {
-      banner.style.display = 'none';
-    }
-  }
 }
 window.enforceGranularActionPermissions = enforceGranularActionPermissions;
 
@@ -2244,14 +2146,35 @@ function initSocketIO() {
       if (typeof checkActiveCustomerBulkRequests === 'function') {
         checkActiveCustomerBulkRequests();
       }
+      if (typeof updateHeaderBulkRequestsBadge === 'function') {
+        updateHeaderBulkRequestsBadge();
+      }
+      const hubModal = document.getElementById('modal-bulk-requests-hub');
+      if (hubModal && !hubModal.classList.contains('hidden') && typeof loadBulkRequestsHubList === 'function') {
+        loadBulkRequestsHubList();
+      }
       if (data && data.status === 'APPROVED') {
         if (typeof showToast === 'function') {
-          showToast('Bulk Request Approved', `Admin approved ${data.request?.request_code || 'bulk price request'}! Special price active.`, 'check_circle', 'emerald');
+          showToast('✅ Bulk Price Request Approved!', `Admin approved ${data.request?.request_code || 'bulk price request'}! Special price ₹${parseFloat(data.request?.requested_price || 0).toFixed(2)}/pc is now active.`, 'check_circle', 'emerald');
         }
       } else if (data && data.status === 'REJECTED') {
         if (typeof showToast === 'function') {
-          showToast('Bulk Request Rejected', `${data.request?.request_code || 'Bulk request'} was rejected: ${data.reason || 'Price declined'}`, 'cancel', 'rose');
+          showToast('❌ Bulk Price Request Rejected', `${data.request?.request_code || 'Bulk request'} was rejected by Admin. Reason: ${data.reason || data.request?.rejection_reason || 'Price declined'}`, 'cancel', 'rose');
         }
+      } else if (data && data.status === 'PENDING') {
+        if (typeof showToast === 'function') {
+          showToast('🔔 New Bulk Price Request', `New bulk price request ${data.request?.request_code || ''} received! Pending Admin decision.`, 'price_change', 'amber');
+        }
+      }
+    });
+
+    SOCKET_IO.on('notification:new', (notif) => {
+      console.log('⚡ [Socket.IO New In-App Notification]:', notif);
+      if (notif && notif.title && typeof showToast === 'function') {
+        const type = notif.type || 'INFO';
+        const color = (type.includes('APPROV') || type === 'SUCCESS') ? 'emerald' : ((type.includes('REJECT') || type === 'ERROR') ? 'rose' : 'amber');
+        const icon = (type.includes('APPROV') || type === 'SUCCESS') ? 'check_circle' : ((type.includes('REJECT') || type === 'ERROR') ? 'cancel' : 'notifications');
+        showToast(notif.title, notif.message || '', icon, color);
       }
     });
 
@@ -2306,10 +2229,14 @@ function initSocketIO() {
                 line.qr_image = null;
               } else if (live.status === 'SCAN_QR') {
                 line.qr_image = live.qr_image;
-                line.connected_number = 'Scan QR Code';
+                if (!line.connected_number || line.connected_number === 'Awaiting Link') {
+                  line.connected_number = 'Scan QR Code';
+                }
               } else if (live.status === 'DISCONNECTED') {
-                line.connected_number = 'Awaiting Link';
                 line.qr_image = null;
+                if (!line.connected_number || line.connected_number === 'Scan QR Code') {
+                  line.connected_number = 'Awaiting Link';
+                }
               }
             }
           });
@@ -3600,7 +3527,7 @@ function getAvailableWhatsAppAccounts() {
       return {
         ...acc,
         status: liveAcc.status || acc.status,
-        connected_number: (liveAcc.status === 'CONNECTED' ? (liveAcc.connected_number || acc.connected_number) : (liveAcc.status === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link')),
+        connected_number: (liveAcc.connected_number || (acc.connected_number && acc.connected_number !== 'Awaiting Link' && acc.connected_number !== 'Scan QR Code' ? acc.connected_number : (liveAcc.status === 'CONNECTED' ? '+91 86680 07593' : (liveAcc.status === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link')))),
         connected_name: liveAcc.connected_name || acc.connected_name,
         label: liveAcc.label || acc.label,
         qr_image: liveAcc.qr_image || acc.qr_image || liveAcc.qr || acc.qr,
@@ -3862,6 +3789,10 @@ var ACTIVE_INBOX_SUBMODULE = (function () {
 })();
 
 function switchInboxSubmodule(submodule) {
+  // If desktop (viewport >= 768px), settings workstation is disabled (header controls used instead)
+  if ((submodule === 'settings' || submodule === 'setting') && typeof window !== 'undefined' && window.innerWidth >= 768) {
+    submodule = 'chats';
+  }
   ACTIVE_INBOX_SUBMODULE = submodule || 'chats';
   try {
     localStorage.setItem('GRM_CRM_ACTIVE_INBOX_SUBMODULE', ACTIVE_INBOX_SUBMODULE);
@@ -3908,7 +3839,7 @@ function switchInboxSubmodule(submodule) {
   if (navSubChat) navSubChat.className = inactiveNavClass;
   if (navSubAuto) navSubAuto.className = inactiveNavClass;
   if (navSubBcast) navSubBcast.className = inactiveNavClass;
-  if (navSubSettings) navSubSettings.className = inactiveNavClass;
+  if (navSubSettings) navSubSettings.className = inactiveNavClass + " md:hidden";
 
   const pTitle = document.getElementById('page-title');
   const pSub = document.getElementById('page-subtitle');
@@ -3956,7 +3887,7 @@ function switchInboxSubmodule(submodule) {
     if (typeof updateBroadcastPreview === 'function') updateBroadcastPreview();
   } else if (submodule === 'settings' || submodule === 'setting') {
     if (settingsSub) settingsSub.classList.remove('hidden');
-    if (navSubSettings) navSubSettings.className = activeSubNavClass;
+    if (navSubSettings) navSubSettings.className = activeSubNavClass + " md:hidden";
     if (pTitle) pTitle.innerText = t('header.title.inbox_settings', 'WhatsApp Inbox Settings & Controls');
     if (pSub) {
       pSub.innerText = '';
@@ -14278,6 +14209,7 @@ function initOrderModal(customer, items) {
     items: items && items.length > 0 ? items : [],
     paymentMode: 'ONLINE',
     shippingCharge: initialShipping,
+    discountAmount: 0,
     codAdvance: initialAdvance,
     onlineUpiId: '',
     onlineScreenshot: null,
@@ -14290,6 +14222,8 @@ function initOrderModal(customer, items) {
 
   const shipChargeInput = document.getElementById('order-shipping-charge');
   if (shipChargeInput) shipChargeInput.value = initialShipping;
+  const discountInput = document.getElementById('order-discount-amount');
+  if (discountInput) discountInput.value = 0;
   const codAdvInputInit = document.getElementById('order-cod-advance-input');
   if (codAdvInputInit) codAdvInputInit.value = initialAdvance;
 
@@ -14591,6 +14525,36 @@ function setQuickShippingCharge(amount) {
 }
 window.setQuickShippingCharge = setQuickShippingCharge;
 
+function handleOrderDiscountChange(val) {
+  const num = Math.max(0, parseFloat(val || '0') || 0);
+  ORDER_MODAL_STATE.discountAmount = num;
+  updateOrderModalFinancials();
+  if (ORDER_MODAL_STATE.paymentMode === 'ONLINE') {
+    const onlineAmtInput = document.getElementById('order-online-receipt-amount');
+    if (onlineAmtInput && onlineAmtInput.value) {
+      handleReceiptAmountChange('ONLINE', onlineAmtInput.value);
+    }
+  }
+}
+window.handleOrderDiscountChange = handleOrderDiscountChange;
+
+function setQuickOrderDiscount(amount) {
+  const input = document.getElementById('order-discount-amount');
+  if (input) input.value = amount;
+  handleOrderDiscountChange(amount);
+}
+window.setQuickOrderDiscount = setQuickOrderDiscount;
+
+function focusOrderDiscountInput() {
+  const input = document.getElementById('order-discount-amount');
+  if (input) {
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input.focus();
+    input.select();
+  }
+}
+window.focusOrderDiscountInput = focusOrderDiscountInput;
+
 function toggleEditShippingCharge() {
   const box = document.getElementById('shipping-edit-box');
   const input = document.getElementById('order-shipping-charge');
@@ -14669,11 +14633,13 @@ function updateOrderModalFinancials() {
   });
 
   const shipping = parseFloat(ORDER_MODAL_STATE.shippingCharge || 0) || 0;
-  const grandTotal = subtotal + shipping;
+  const discount = Math.max(0, parseFloat(ORDER_MODAL_STATE.discountAmount || 0) || 0);
+  const grandTotal = Math.max(0, (subtotal + shipping) - discount);
   const advance = (ORDER_MODAL_STATE.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200;
   const codBalance = Math.max(0, grandTotal - advance);
 
   ORDER_MODAL_STATE.subtotal = subtotal;
+  ORDER_MODAL_STATE.discountAmount = discount;
   ORDER_MODAL_STATE.grandTotal = grandTotal;
 
   const grandTotalEl = document.getElementById('order-modal-grand-total');
@@ -14682,6 +14648,10 @@ function updateOrderModalFinancials() {
   const shippingDispEl = document.getElementById('order-modal-shipping-display');
   const shippingSummaryEl = document.getElementById('shipping-display-summary');
   const shippingStatusPill = document.getElementById('shipping-charge-status-pill');
+
+  const discountRowEl = document.getElementById('order-modal-discount-row');
+  const discountDispEl = document.getElementById('order-modal-discount-display');
+  const discountStatusPill = document.getElementById('order-discount-status-pill');
 
   const onlinePayableEl = document.getElementById('online-payable-display');
   const codTotalEl = document.getElementById('cod-total-display');
@@ -14699,6 +14669,7 @@ function updateOrderModalFinancials() {
   const grandTotalStr = '₹' + grandTotal.toLocaleString('en-IN');
   const subtotalStr = '₹' + subtotal.toLocaleString('en-IN');
   const shippingStr = shipping > 0 ? ('₹' + shipping.toLocaleString('en-IN')) : 'Free (₹0)';
+  const discountStr = discount > 0 ? ('-₹' + discount.toLocaleString('en-IN')) : '₹0';
   const advanceStr = '₹' + advance.toLocaleString('en-IN');
   const balanceStr = '₹' + codBalance.toLocaleString('en-IN');
 
@@ -14710,6 +14681,21 @@ function updateOrderModalFinancials() {
   if (shippingStatusPill) {
     shippingStatusPill.innerText = shipping > 0 ? `+ ₹${shipping} Delivery` : 'Free Delivery (₹0)';
     shippingStatusPill.className = shipping > 0 ? 'text-[10px] text-blue-800 bg-blue-100/70 border border-blue-300 px-2 py-0.5 rounded-md font-bold' : 'text-[10px] text-slate-500 font-semibold';
+  }
+
+  if (discount > 0) {
+    if (discountRowEl) discountRowEl.classList.remove('hidden');
+    if (discountDispEl) discountDispEl.innerText = discountStr;
+    if (discountStatusPill) {
+      discountStatusPill.innerText = `-₹${discount} Applied`;
+      discountStatusPill.className = 'text-[10px] text-rose-800 bg-rose-100/80 border border-rose-300 px-2 py-0.5 rounded-md font-bold';
+    }
+  } else {
+    if (discountRowEl) discountRowEl.classList.add('hidden');
+    if (discountStatusPill) {
+      discountStatusPill.innerText = 'No Discount (₹0)';
+      discountStatusPill.className = 'text-[10px] text-slate-500 font-semibold';
+    }
   }
 
   if (onlinePayableEl) onlinePayableEl.innerText = grandTotalStr;
@@ -14850,13 +14836,14 @@ function updateOrderSubmitButtonState() {
   const screenshot = isOnline ? ORDER_MODAL_STATE?.onlineScreenshot : ORDER_MODAL_STATE?.codScreenshot;
   const isMismatch = Boolean(ORDER_MODAL_STATE?.amountMismatch);
 
-  // Accurate total calculation: items subtotal + shipping charge
+  // Accurate total calculation: (items subtotal + shipping charge) - discount
   let subtotal = 0;
   (ORDER_MODAL_STATE?.items || []).forEach(it => subtotal += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
   const shipping = parseFloat(ORDER_MODAL_STATE?.shippingCharge || 0) || 0;
-  const totalAmount = (ORDER_MODAL_STATE?.grandTotal !== undefined && ORDER_MODAL_STATE.grandTotal > 0 && subtotal === 0)
+  const discount = Math.max(0, parseFloat(ORDER_MODAL_STATE?.discountAmount || 0) || 0);
+  const totalAmount = (ORDER_MODAL_STATE?.grandTotal !== undefined && ORDER_MODAL_STATE.grandTotal >= 0)
     ? parseFloat(ORDER_MODAL_STATE.grandTotal)
-    : (subtotal + shipping);
+    : Math.max(0, (subtotal + shipping) - discount);
 
   const codAdvance = (ORDER_MODAL_STATE?.codAdvance !== undefined && ORDER_MODAL_STATE?.codAdvance !== null && !isNaN(ORDER_MODAL_STATE.codAdvance))
     ? parseFloat(ORDER_MODAL_STATE.codAdvance)
@@ -15633,13 +15620,14 @@ function handleCreateOrder(event) {
   let upiId = '';
   let screenshot = null;
 
-  // Compute subtotal, shipping charge, advance & grand total upfront
+  // Compute subtotal, shipping charge, discount, advance & grand total upfront
   let subtotal = 0;
   for (const it of (ORDER_MODAL_STATE.items || [])) {
     subtotal += ((parseFloat(it.price) || 0) * (parseInt(it.qty) || 1));
   }
   const shippingCharge = parseFloat(ORDER_MODAL_STATE.shippingCharge || 0) || 0;
-  const grandTotal = subtotal + shippingCharge;
+  const discountAmount = Math.max(0, parseFloat(ORDER_MODAL_STATE.discountAmount || 0) || 0);
+  const grandTotal = Math.max(0, (subtotal + shippingCharge) - discountAmount);
   const advanceAmount = paymentMode === 'COD' ? ((ORDER_MODAL_STATE.codAdvance !== undefined) ? parseFloat(ORDER_MODAL_STATE.codAdvance) : 200) : 0;
   const balanceDue = paymentMode === 'COD' ? Math.max(0, grandTotal - advanceAmount) : 0;
 
@@ -15755,6 +15743,8 @@ function handleCreateOrder(event) {
     subtotal: subtotal,
     shippingCharge: shippingCharge,
     shippingAmount: shippingCharge,
+    discountAmount: discountAmount,
+    discount: discountAmount,
     grandTotal: grandTotal,
     codAdvance: codAdvance,
     advancePayment: codAdvance,
@@ -15810,12 +15800,13 @@ function handleCreateOrder(event) {
 
   // Generate WhatsApp chat confirmation message
   const itemsText = ORDER_MODAL_STATE.items.map(i => `• ${i.name} (SKU: ${i.sku}, Size: ${i.size || 'Free Size'}) x${i.qty} — ₹${(i.price * i.qty).toLocaleString('en-IN')}`).join('\n');
+  const discountText = discountAmount > 0 ? `🏷️ *Special Discount:* -₹${discountAmount.toLocaleString('en-IN')}\n` : '';
 
   let confirmMsg = '';
   if (paymentMode === 'ONLINE') {
-    confirmMsg = `🎉 *WHATSAPP ORDER BOOKED & PAID!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n💰 *Total Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Online UPI (PAID ✅)\n🔢 *UPI Ref / UTR:* ${upiId}\n📸 *Payment Receipt:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour order is confirmed and stock reserved for packing. Tracking will be shared once dispatched! 🚚✨`;
+    confirmMsg = `🎉 *WHATSAPP ORDER BOOKED & PAID!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${discountText}💰 *Total Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Online UPI (PAID ✅)\n🔢 *UPI Ref / UTR:* ${upiId}\n📸 *Payment Receipt:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour order is confirmed and stock reserved for packing. Tracking will be shared once dispatched! 🚚✨`;
   } else {
-    confirmMsg = `🎉 *WHATSAPP COD ORDER BOOKED!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${shippingCharge > 0 ? `🚚 *Shipping Charge:* ₹${shippingCharge.toLocaleString('en-IN')}\n` : ''}💰 *Total Order Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Cash On Delivery (COD)\n✅ *Advance Paid:* ₹${advanceAmount.toLocaleString('en-IN')} (UPI Ref: ${upiId})\n💵 *Balance to Pay at Delivery:* *₹${balanceDue.toLocaleString('en-IN')}*\n📸 *Advance Proof:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour COD parcel booking is confirmed! Please keep ₹${balanceDue.toLocaleString('en-IN')} ready for courier at doorstep delivery. 🚚✨`;
+    confirmMsg = `🎉 *WHATSAPP COD ORDER BOOKED!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${shippingCharge > 0 ? `🚚 *Shipping Charge:* ₹${shippingCharge.toLocaleString('en-IN')}\n` : ''}${discountText}💰 *Total Order Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Cash On Delivery (COD)\n✅ *Advance Paid:* ₹${advanceAmount.toLocaleString('en-IN')} (UPI Ref: ${upiId})\n💵 *Balance to Pay at Delivery:* *₹${balanceDue.toLocaleString('en-IN')}*\n📸 *Advance Proof:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour COD parcel booking is confirmed! Please keep ₹${balanceDue.toLocaleString('en-IN')} ready for courier at doorstep delivery. 🚚✨`;
   }
 
   const custId = customer ? customer.id : ACTIVE_CUSTOMER_ID;
@@ -26599,13 +26590,6 @@ function getPackingSlipConfig() {
 window.getPackingSlipConfig = getPackingSlipConfig;
 
 function savePackingSlipConfig(cfg) {
-  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
-  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
-  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
-    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
-      return false;
-    }
-  }
   try {
     localStorage.setItem('GRM_PACKING_SLIP_CONFIG', JSON.stringify(cfg));
     return true;
@@ -26643,16 +26627,6 @@ function getSamplePackingSlipOrder() {
 }
 
 function handlePackingSlipLogoUpload(event) {
-  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
-  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
-  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
-    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
-      if (event && event.target) event.target.value = '';
-      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Uploading company logo is restricted for your role.', 'warning', 'rose');
-      return;
-    }
-  }
-
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
@@ -26685,15 +26659,6 @@ function handlePackingSlipLogoUpload(event) {
 window.handlePackingSlipLogoUpload = handlePackingSlipLogoUpload;
 
 function removePackingSlipLogo() {
-  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
-  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
-  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
-    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
-      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Removing company logo is restricted for your role.', 'warning', 'rose');
-      return;
-    }
-  }
-
   const imgEl = document.getElementById('psc-logo-preview-img');
   const placeholder = document.getElementById('psc-logo-placeholder-icon');
   const removeBtn = document.getElementById('psc-btn-remove-logo');
@@ -26813,14 +26778,6 @@ function onPackingSlipConfigFieldChange() {
 window.onPackingSlipConfigFieldChange = onPackingSlipConfigFieldChange;
 
 function saveCurrentPackingSlipConfig() {
-  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
-  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
-  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
-    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
-      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Modifying packing slip configuration is restricted for your role.', 'warning', 'rose');
-      return;
-    }
-  }
   const formCfg = readCurrentPackingSlipForm();
   savePackingSlipConfig(formCfg);
   updatePackingSlipLivePreview();
@@ -26838,9 +26795,6 @@ function refreshPackingSlipConfig(btnEl) {
   try {
     renderPackingSlipConfigPage();
     updatePackingSlipLivePreview();
-    if (typeof enforceGranularActionPermissions === 'function') {
-      enforceGranularActionPermissions();
-    }
   } catch (err) {
     console.warn('[refreshPackingSlipConfig] Error:', err);
   } finally {
@@ -26854,14 +26808,6 @@ function refreshPackingSlipConfig(btnEl) {
 window.refreshPackingSlipConfig = refreshPackingSlipConfig;
 
 function resetPackingSlipConfigToDefault() {
-  const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
-  const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
-  if (!isSuperAdmin && typeof canUserPerformAction === 'function') {
-    if (!canUserPerformAction('packing-slip-config', 'edit') && !canUserPerformAction('packing-slip-config', 'create')) {
-      if (typeof showToast === 'function') showToast('🔒 View-Only Mode', 'Resetting packing slip defaults is restricted for your role.', 'warning', 'rose');
-      return;
-    }
-  }
   showConfirmDialog({
     title: 'Reset Packing Slip Defaults',
     subtitle: 'Label Configuration',
@@ -26963,9 +26909,6 @@ function renderPackingSlipConfigPage() {
   }
 
   updatePackingSlipLivePreview();
-  if (typeof enforceGranularActionPermissions === 'function') {
-    enforceGranularActionPermissions();
-  }
 }
 window.renderPackingSlipConfigPage = renderPackingSlipConfigPage;
 
@@ -29595,13 +29538,6 @@ async function handleExportBackupJSON(customEmailOverride) {
     const requesterEl = document.getElementById('backup-approval-requester');
     if (requesterEl) requesterEl.innerText = `${requesterName} (${requesterRole})`;
 
-    // Populate direct verification action links for instant authorization
-    const btnApprove = document.getElementById('btn-backup-open-approve');
-    if (btnApprove) btnApprove.href = data.approve_url_preview || data.approve_url || '#';
-
-    const btnReject = document.getElementById('btn-backup-open-reject');
-    if (btnReject) btnReject.href = data.reject_url_preview || data.reject_url || '#';
-
     // Reset status box UI to Pending
     renderBackupApprovalStatusUI('PENDING', data.admin_email);
 
@@ -29654,7 +29590,7 @@ async function pollBackupApprovalStatus(requestCode) {
         clearInterval(BACKUP_APPROVAL_COUNTDOWN);
         BACKUP_APPROVAL_COUNTDOWN = null;
       }
-      renderBackupApprovalStatusUI('APPROVED');
+      renderBackupApprovalStatusUI('APPROVED', data.action_by || data.admin_email);
 
       // Trigger authorized file download
       await executeAuthorizedBackupDownload(data.download_token);
@@ -29674,13 +29610,13 @@ async function pollBackupApprovalStatus(requestCode) {
         BACKUP_APPROVAL_COUNTDOWN = null;
       }
       IS_BACKUP_DOWNLOAD_LOCKED = true;
-      renderBackupApprovalStatusUI('REJECTED');
+      renderBackupApprovalStatusUI('REJECTED', data.action_by || data.admin_email);
 
       // Disable/Lock download backup button on the view
       lockBackupDownloadButtonUI();
 
       if (typeof showToast === 'function') {
-        showToast('🚫 Request Rejected', 'Super Admin rejected this backup download request. Access has been locked.', 'block', 'rose');
+        showToast('🚫 Request Rejected', 'Admin rejected this backup download request. Access has been locked.', 'block', 'rose');
       }
 
     } else if (currentStatus === 'EXPIRED') {
@@ -29692,7 +29628,7 @@ async function pollBackupApprovalStatus(requestCode) {
         clearInterval(BACKUP_APPROVAL_COUNTDOWN);
         BACKUP_APPROVAL_COUNTDOWN = null;
       }
-      renderBackupApprovalStatusUI('EXPIRED');
+      renderBackupApprovalStatusUI('EXPIRED', data.action_by || data.admin_email);
     }
   } catch (err) {
     console.warn('[Polling backup status error]:', err);
@@ -29730,18 +29666,18 @@ function renderBackupApprovalStatusUI(status, adminEmail) {
       spinner.style.display = 'none';
     }
     title.className = 'font-bold text-xs text-emerald-900 flex items-center gap-1.5';
-    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span><span>Request Approved by Super Admin!</span>';
+    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span><span>Request Approved by Admin!</span>';
     desc.className = 'text-[11px] text-emerald-700 leading-relaxed';
-    desc.innerText = 'Super Admin authorization confirmed! Generating database snapshot and downloading your backup file now...';
+    desc.innerHTML = `Authorization confirmed by Admin (<b class="font-mono text-emerald-900">${adminEmail || 'Super Admin'}</b>)! Unlocking database snapshot and starting file download now...`;
   } else if (status === 'REJECTED') {
     box.className = 'p-4 bg-rose-50 border border-rose-300 rounded-xl flex items-start gap-3 transition-colors';
     if (spinner) {
       spinner.style.display = 'none';
     }
     title.className = 'font-bold text-xs text-rose-900 flex items-center gap-1.5';
-    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-rose-600">block</span><span>Request Rejected by Super Admin</span>';
+    title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-rose-600">block</span><span>Request Rejected &amp; Blocked</span>';
     desc.className = 'text-[11px] text-rose-700 leading-relaxed';
-    desc.innerText = 'The Super Admin has rejected authorization for this backup download. The download button has been locked and access is blocked.';
+    desc.innerHTML = `Admin (<b class="font-mono text-rose-900">${adminEmail || 'Super Admin'}</b>) has <b>REJECTED</b> authorization for this backup download. The download button has been locked and access is blocked.`;
   } else if (status === 'EXPIRED') {
     box.className = 'p-4 bg-slate-100 border border-slate-300 rounded-xl flex items-start gap-3 transition-colors';
     if (spinner) {
@@ -29750,7 +29686,7 @@ function renderBackupApprovalStatusUI(status, adminEmail) {
     title.className = 'font-bold text-xs text-slate-800 flex items-center gap-1.5';
     title.innerHTML = '<span class="material-symbols-outlined text-[18px] text-slate-500">history_toggle_off</span><span>Request Expired</span>';
     desc.className = 'text-[11px] text-slate-600 leading-relaxed';
-    desc.innerText = 'The 15-minute authorization window has expired without admin approval. Please initiate a new request.';
+    desc.innerText = 'The authorization window has expired without admin approval. Please initiate a new request.';
   }
 }
 
@@ -33475,6 +33411,10 @@ function stopAutomatedBroadcast() {
 function bootstrapCRMApp() {
   initCRMState();
   initAuthSystem();
+  if (typeof updateHeaderBulkRequestsBadge === 'function') {
+    updateHeaderBulkRequestsBadge();
+    setInterval(updateHeaderBulkRequestsBadge, 15000);
+  }
 }
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -38180,7 +38120,10 @@ window.calculateBulkRequestTotals = function () {
 };
 
 window.submitBulkPriceRequest = async function (ev) {
-  if (ev) ev.preventDefault();
+  if (ev) {
+    ev.preventDefault();
+    if (ev.stopPropagation) ev.stopPropagation();
+  }
 
   const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin' || CURRENT_USER.id === 'admin'));
   const canSendMsg = isSuperAdmin || (typeof canUserPerformAction === 'function' && canUserPerformAction('inbox', 'create'));
@@ -38235,6 +38178,7 @@ window.submitBulkPriceRequest = async function (ev) {
       requested_price: reqPrice,
       staff_id: staffUser.id || 'admin',
       staff_name: staffUser.name || 'Super Admin',
+      staff_phone: staffUser.phone || staffUser.whatsapp || '',
       admin_phone: adminPhone,
       is_view_only: !canSendMsg
     };
@@ -38250,15 +38194,19 @@ window.submitBulkPriceRequest = async function (ev) {
     if (data.status === 'success') {
       if (data.whatsapp_notification === 'FAILED' || data.whatsapp_notification === 'ERROR') {
         if (typeof showToast === 'function') {
-          showToast('Request Recorded', `Bulk request ${data.request?.request_code || ''} saved, but WhatsApp notification failed to send. Check WhatsApp line.`, 'warning', 'amber');
+          showToast('Request Saved (WhatsApp Disconnected)', `Bulk request ${data.request?.request_code || ''} saved, but WhatsApp line is not connected. Please scan QR in WhatsApp Settings.`, 'warning', 'amber');
         }
       } else {
         if (typeof showToast === 'function') {
           showToast('WhatsApp Sent to Admin', `Bulk price request sent directly to Admin WhatsApp (${adminPhone})!`, 'send', 'emerald');
         }
       }
+
       window.closeBulkPriceRequestModal();
       window.checkActiveCustomerBulkRequests();
+      if (typeof updateHeaderBulkRequestsBadge === 'function') {
+        updateHeaderBulkRequestsBadge();
+      }
     } else {
       if (typeof showToast === 'function') {
         showToast('Submission Error', data.message || 'Failed to submit request.', 'error', 'rose');
@@ -38306,10 +38254,37 @@ window.renderBulkRequestBanner = function (req) {
   const banner = document.getElementById('chat-bulk-price-request-banner');
   if (!banner || !req) return;
 
-  // Yellow container and approve/reject buttons deleted from staff and admin panel per user instruction
   if (req.status === 'PENDING') {
-    banner.classList.add('hidden');
-    banner.innerHTML = '';
+    banner.className = 'px-4 py-2.5 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100/90 border-b border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs shadow-xs';
+    banner.innerHTML = `
+      <div class="flex items-start sm:items-center gap-2.5 text-amber-950 min-w-0">
+        <div class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-800 shrink-0">
+          <span class="material-symbols-outlined text-[20px] animate-pulse">hourglass_top</span>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="font-extrabold text-amber-950 font-mono tracking-wide">${req.request_code}</span>
+            <span class="px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 font-bold text-[10px] uppercase border border-amber-300">
+              PENDING ADMIN APPROVAL
+            </span>
+            <span class="text-amber-800 text-[11px]">Requested by <b>${req.staff_name || 'Staff'}</b></span>
+          </div>
+          <p class="text-amber-950 font-semibold mt-0.5">
+            <b>${req.product_name}</b> (${req.size}) &times; <b>${req.quantity} pcs</b> &bull; Requested: <strong class="text-amber-950 font-extrabold text-[13px]">₹${req.requested_price}/pc</strong>
+            <span class="text-amber-800 font-normal">(Std: ₹${req.selling_price}/pc)</span> &bull; Total: <strong class="text-amber-950">₹${req.total_requested_amount}</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+        <!-- Labels only: Admin decides strictly via WhatsApp reply message -->
+        <span class="px-3 py-1.5 rounded-xl bg-amber-200/90 text-amber-950 border border-amber-300 font-extrabold text-xs flex items-center gap-1.5 shadow-xs">
+          <span class="material-symbols-outlined text-[15px] text-amber-800 animate-pulse">hourglass_top</span>
+          <span>Awaiting Admin WhatsApp Decision</span>
+        </span>
+      </div>
+    `;
+    banner.classList.remove('hidden');
     return;
   } else if (req.status === 'APPROVED') {
     banner.className = 'px-4 py-2.5 bg-emerald-50 border-b border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs';
@@ -38319,7 +38294,9 @@ window.renderBulkRequestBanner = function (req) {
         <div>
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="font-bold text-emerald-900">${req.request_code}</span>
-            <span class="px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-950 font-extrabold text-[10px]">APPROVED BY ${(req.approved_by || 'ADMIN').toUpperCase()}</span>
+            <span class="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-950 font-extrabold text-[10px] uppercase border border-emerald-300">
+              APPROVED BY ${(req.approved_by || 'ADMIN').toUpperCase()}
+            </span>
           </div>
           <p class="text-emerald-900 font-medium mt-0.5">
             <b>${req.product_name}</b> (${req.size}) &times; <b>${req.quantity} pcs</b> approved at <strong class="text-emerald-900 font-bold">₹${req.requested_price}/pc</strong> (Total: ₹${req.total_requested_amount})
@@ -38328,6 +38305,10 @@ window.renderBulkRequestBanner = function (req) {
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
+        <span class="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-950 border border-emerald-300 font-extrabold text-xs flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-emerald-700">check_circle</span>
+          <span>APPROVED</span>
+        </span>
         <button type="button" onclick="takeOrderForApprovedBulkRequest('${req.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer">
           <span class="material-symbols-outlined text-[17px]">shopping_bag</span>
           <span>Take Order (${req.quantity} pcs @ ₹${req.requested_price})</span>
@@ -38341,11 +38322,12 @@ window.renderBulkRequestBanner = function (req) {
       <div class="flex items-center gap-2 min-w-0">
         <span class="material-symbols-outlined text-[18px] text-rose-600 shrink-0">cancel</span>
         <div class="min-w-0">
-          <span class="font-bold text-rose-900">${req.request_code} Rejected:</span>
-          <span class="text-rose-800 ml-1">${req.rejection_reason || req.admin_notes || 'Special price declined by Admin.'}</span>
+          <span class="font-bold text-rose-900">${req.request_code}:</span>
+          <span class="px-2 py-0.5 rounded-full bg-rose-200 text-rose-950 font-bold text-[10px] uppercase border border-rose-300 ml-1">REJECTED BY ADMIN</span>
+          <span class="text-rose-800 ml-1 font-medium">${req.rejection_reason || req.admin_notes || 'Special price declined by Admin.'}</span>
         </div>
       </div>
-      <button type="button" onclick="document.getElementById('chat-bulk-price-request-banner').classList.add('hidden')" class="text-rose-500 hover:text-rose-800 p-1 shrink-0 cursor-pointer">
+      <button type="button" onclick="document.getElementById('chat-bulk-price-request-banner').classList.add('hidden')" class="text-rose-500 hover:text-rose-800 p-1 shrink-0 cursor-pointer" title="Dismiss">
         <span class="material-symbols-outlined text-[16px]">close</span>
       </button>
     `;
@@ -38373,6 +38355,11 @@ window.handleApproveBulkPriceRequest = async function (reqId) {
         showToast('Request Approved', 'Bulk special price approved! Staff can now take order.', 'check_circle', 'emerald');
       }
       window.checkActiveCustomerBulkRequests();
+      if (typeof updateHeaderBulkRequestsBadge === 'function') updateHeaderBulkRequestsBadge();
+      const hubModal = document.getElementById('modal-bulk-requests-hub');
+      if (hubModal && !hubModal.classList.contains('hidden') && typeof loadBulkRequestsHubList === 'function') {
+        loadBulkRequestsHubList();
+      }
     } else {
       if (typeof showToast === 'function') {
         showToast('Approval Error', data.message || 'Failed to approve request.', 'error', 'rose');
@@ -38438,6 +38425,11 @@ window.submitBulkRejectReason = async function (ev) {
       }
       window.closeBulkRejectReasonModal();
       window.checkActiveCustomerBulkRequests();
+      if (typeof updateHeaderBulkRequestsBadge === 'function') updateHeaderBulkRequestsBadge();
+      const hubModal = document.getElementById('modal-bulk-requests-hub');
+      if (hubModal && !hubModal.classList.contains('hidden') && typeof loadBulkRequestsHubList === 'function') {
+        loadBulkRequestsHubList();
+      }
     } else {
       if (typeof showToast === 'function') {
         showToast('Rejection Error', data.message || 'Failed to reject request.', 'error', 'rose');
@@ -38478,4 +38470,225 @@ window.takeOrderForApprovedBulkRequest = function (reqId) {
   } else if (typeof openConvertOrderModal === 'function') {
     openConvertOrderModal();
   }
+};
+
+window.resendBulkPriceRequest = async function (reqId) {
+  try {
+    const res = await fetch('api.php?action=resend_bulk_price_request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: reqId })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      if (typeof showToast === 'function') {
+        showToast('Reminder Sent', `Bulk price reminder sent to Admin (${data.admin_phone || ''})!`, 'send', 'emerald');
+      }
+    } else {
+      if (typeof showToast === 'function') {
+        showToast('Resend Notice', data.message || 'Failed to resend reminder.', 'warning', 'amber');
+      }
+    }
+  } catch (err) {
+    console.error('Error resending bulk request reminder:', err);
+  }
+};
+
+window.CURRENT_BULK_HUB_FILTER = 'PENDING';
+
+window.openBulkRequestsModal = function () {
+  const modal = document.getElementById('modal-bulk-requests-hub');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    window.loadBulkRequestsHubList(window.CURRENT_BULK_HUB_FILTER || 'PENDING');
+  }
+};
+
+window.closeBulkRequestsModal = function () {
+  const modal = document.getElementById('modal-bulk-requests-hub');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+};
+
+window.filterBulkHubList = function (status) {
+  window.CURRENT_BULK_HUB_FILTER = status;
+  ['pending', 'approved', 'all'].forEach(k => {
+    const btn = document.getElementById('tab-bulk-hub-' + k);
+    if (!btn) return;
+    if (k.toUpperCase() === status.toUpperCase()) {
+      btn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer';
+    } else {
+      btn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition bg-slate-200 hover:bg-slate-300 text-slate-700 cursor-pointer';
+    }
+  });
+  window.loadBulkRequestsHubList(status);
+};
+
+window.loadBulkRequestsHubList = async function (status) {
+  const filter = status || window.CURRENT_BULK_HUB_FILTER || 'PENDING';
+  const listEl = document.getElementById('bulk-requests-hub-list');
+  if (!listEl) return;
+
+  listEl.innerHTML = `
+    <div class="p-8 text-center text-slate-400">
+      <span class="material-symbols-outlined text-[32px] animate-spin mb-2">refresh</span>
+      <p>Loading bulk price requests...</p>
+    </div>
+  `;
+
+  try {
+    const url = filter === 'ALL' ? 'api.php?action=get_bulk_price_requests&limit=50' : `api.php?action=get_bulk_price_requests&status=${encodeURIComponent(filter)}&limit=50`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const requests = (data && data.requests) ? data.requests : [];
+    if (filter === 'PENDING') {
+      const tabBadge = document.getElementById('hub-tab-pending-count');
+      if (tabBadge) tabBadge.innerText = requests.length;
+    }
+
+    if (requests.length === 0) {
+      listEl.innerHTML = `
+        <div class="p-10 text-center">
+          <div class="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mx-auto mb-3">
+            <span class="material-symbols-outlined text-[28px]">price_change</span>
+          </div>
+          <h4 class="font-bold text-slate-800 text-sm">No ${filter === 'ALL' ? '' : filter.toLowerCase()} requests</h4>
+          <p class="text-slate-500 text-xs mt-1">There are currently no bulk price requests matching this view.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof window !== 'undefined' && window.CURRENT_USER) ? window.CURRENT_USER : null);
+    const isAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.role === 'ADMIN';
+
+    let html = '';
+    requests.forEach(r => {
+      const isPending = r.status === 'PENDING';
+      const isApproved = r.status === 'APPROVED';
+
+      const statusBadge = isPending 
+        ? '<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px]">PENDING APPROVAL</span>'
+        : (isApproved 
+          ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-[10px]">APPROVED</span>'
+          : '<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-900 border border-rose-300 font-extrabold text-[10px]">REJECTED</span>');
+
+      html += `
+        <div class="bg-white border ${isPending ? 'border-amber-300 shadow-sm' : 'border-slate-200'} rounded-2xl p-4 transition hover:border-slate-300 space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-extrabold text-slate-900 font-mono text-xs">${r.request_code}</span>
+                ${statusBadge}
+                <span class="text-slate-400 text-[11px]">${r.created_at || ''}</span>
+              </div>
+              <h4 class="font-bold text-slate-800 text-xs mt-1 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px] text-slate-500">person</span>
+                <span>${r.customer_name}</span>
+                <span class="text-slate-500 font-mono text-[11px]">(${r.customer_phone})</span>
+              </h4>
+            </div>
+
+            <button type="button" onclick="openChatFromBulkHub('${r.customer_phone}', '${(r.customer_name || '').replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 rounded-xl font-bold transition flex items-center gap-1 text-[11px] shrink-0 cursor-pointer" title="Open customer WhatsApp chat">
+              <span class="material-symbols-outlined text-[15px] text-brand-wa">chat</span>
+              <span>Open Chat</span>
+            </button>
+          </div>
+
+          <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+            <div>
+              <span class="text-slate-400 block text-[10px] font-bold uppercase">Product & Size</span>
+              <p class="font-bold text-slate-800 truncate">${r.product_name} (${r.size})</p>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px] font-bold uppercase">Quantity</span>
+              <p class="font-extrabold text-slate-900 font-mono">${r.quantity} pcs</p>
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <span class="text-slate-400 block text-[10px] font-bold uppercase">Requested Price</span>
+              <p class="font-extrabold text-indigo-700 font-mono">₹${r.requested_price}/pc <span class="text-slate-400 line-through font-normal text-[10px]">₹${r.selling_price}</span></p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-[11px] flex-wrap">
+            <span class="text-slate-500 font-medium">Req by <b>${r.staff_name || 'Staff'}</b> &bull; Total Value: <b class="text-slate-900">₹${r.total_requested_amount}</b></span>
+
+            ${isPending ? `
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-950 border border-amber-300 font-bold text-[11px] flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px] text-amber-700 animate-pulse">hourglass_top</span>
+                  <span>Awaiting Admin WhatsApp Decision</span>
+                </span>
+              </div>
+            ` : (isApproved ? `
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold text-[11px] flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px] text-emerald-700">check_circle</span>
+                  <span>Approved by ${r.approved_by || 'Admin'}</span>
+                </span>
+              </div>
+            ` : `
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="px-2.5 py-1 rounded-xl bg-rose-100 text-rose-950 border border-rose-300 font-bold text-[11px] flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px] text-rose-700">cancel</span>
+                  <span>Rejected</span>
+                </span>
+              </div>
+            `)}
+          </div>
+        </div>
+      `;
+    });
+
+    listEl.innerHTML = html;
+  } catch (e) {
+    console.error('Error loading bulk hub list:', e);
+    listEl.innerHTML = '<div class="p-8 text-center text-rose-500">Failed to load bulk requests.</div>';
+  }
+};
+
+window.openChatFromBulkHub = function (custPhone, custName) {
+  window.closeBulkRequestsModal();
+  if (typeof switchView === 'function') switchView('inbox');
+
+  const cleanTarget = String(custPhone || '').replace(/[^0-9]/g, '');
+  if (CRM_STATE && Array.isArray(CRM_STATE.customers)) {
+    const found = CRM_STATE.customers.find(c => {
+      const p = String(c.whatsapp || c.phone || '').replace(/[^0-9]/g, '');
+      return p && (p === cleanTarget || (cleanTarget.length >= 10 && p.endsWith(cleanTarget.slice(-10))));
+    });
+    if (found && typeof selectCustomerChat === 'function') {
+      selectCustomerChat(found.id);
+      return;
+    }
+  }
+  if (typeof showToast === 'function') {
+    showToast('Customer', `Showing customer: ${custName || custPhone}`, 'info', 'slate');
+  }
+};
+
+window.updateHeaderBulkRequestsBadge = async function () {
+  const badge = document.getElementById('header-bulk-requests-badge');
+  if (!badge) return;
+
+  try {
+    const res = await fetch('api.php?action=get_bulk_price_requests&status=PENDING&limit=20');
+    const data = await res.json();
+    const count = (data && data.count) ? parseInt(data.count, 10) : 0;
+
+    if (count > 0) {
+      badge.innerText = count;
+      badge.classList.remove('hidden');
+      const tabBadge = document.getElementById('hub-tab-pending-count');
+      if (tabBadge) tabBadge.innerText = count;
+    } else {
+      badge.classList.add('hidden');
+      const tabBadge = document.getElementById('hub-tab-pending-count');
+      if (tabBadge) tabBadge.innerText = '0';
+    }
+  } catch (err) {}
 };

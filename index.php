@@ -3,6 +3,7 @@
  * GRM WHATSAPP CRM — MAIN APPLICATION DASHBOARD (PHP + HTML INTEGRATION)
  * Enforces server-side authentication, loads initial database state, and renders the application view.
  */
+date_default_timezone_set('Asia/Kolkata');
 ini_set('session.gc_maxlifetime', 2592000); // 30-day session duration
 session_set_cookie_params([
     'lifetime' => 2592000,

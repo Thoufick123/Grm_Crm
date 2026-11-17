@@ -1,3 +1,6 @@
+// Universal Timezone Enforcement for India Standard Time (IST, UTC+5:30)
+process.env.TZ = 'Asia/Kolkata';
+
 /**
  * GRM WHATSAPP CRM — MULTI-ACCOUNT WEBSOCKET (Socket.IO) & BAILEYS LIVE BRIDGE
  * Features:
@@ -743,6 +746,9 @@ function getPublicBaseUrl() {
 // Fast CRM API Dispatcher with instant CRM_BASE_URL priority
 async function callCrmApi(action, postData) {
     const candidateUrls = [
+        process.env.CRM_URL,
+        process.env.APP_URL,
+        'https://maroon-partridge-532881.hostingersite.com',
         CRM_BASE_URL,
         'http://localhost:8000',
         'http://127.0.0.1:8000',
@@ -751,11 +757,12 @@ async function callCrmApi(action, postData) {
 
     for (const base of candidateUrls) {
         try {
+            const isGet = !postData || Object.keys(postData).length === 0;
             const resp = await fetch(`${base}/api.php?action=${action}`, {
-                method: 'POST',
+                method: isGet ? 'GET' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(postData),
-                signal: AbortSignal.timeout(1500)
+                body: isGet ? undefined : JSON.stringify(postData),
+                signal: AbortSignal.timeout(8000)
             });
             if (resp.ok) {
                 const data = await resp.json();
@@ -764,7 +771,7 @@ async function callCrmApi(action, postData) {
                 }
             }
         } catch (e) {
-            // try next base
+            // try next candidate
         }
     }
     return null;
@@ -992,26 +999,21 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
                 const isReplaced = statusCode === DisconnectReason.connectionReplaced || statusCode === 440;
                 console.log(`[QR Bridge - ${accountId}] Connection closed (status: ${statusCode}). Logged out: ${isLoggedOut}`);
-                accountObj.status = 'DISCONNECTED';
+                accountObj.status = isLoggedOut ? 'DISCONNECTED' : 'RECONNECTING';
                 accountObj.qrImage = null;
-                accountObj.connectedNumber = null;
-                accountObj.connectedName = null;
+                if (isLoggedOut) {
+                    accountObj.connectedNumber = null;
+                    accountObj.connectedName = null;
+                }
                 accountObj.isStarting = false;
                 broadcastAccountsUpdate();
 
                 if (isLoggedOut) {
-                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Clearing credentials and generating new QR Code...`);
-                    if (fs.existsSync(sessionDir)) {
-                        try {
-                            fs.rmSync(sessionDir, { recursive: true, force: true });
-                        } catch (e) {
-                            console.warn('[Session Clear Notice]:', e.message);
-                        }
-                    }
-                    // Auto-generate fresh QR code for this slot
+                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Marking disconnected...`);
+                    // Preserve session directory unless user explicitly disconnects via API to prevent accidental wipe
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-                    }, 1500);
+                    }, 3000);
                 } else if (isReplaced) {
                     console.warn(`[QR Bridge - ${accountId}] Session replaced by another active connection (status: 440). Pausing auto-reconnect to prevent rapid loop...`);
                     setTimeout(() => {
@@ -1439,36 +1441,65 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         if (isApproveCmd || isRejectCmd) {
                             const codeMatch = messageText.match(/BPR-\d+/i);
                             const reqCode = codeMatch ? codeMatch[0].toUpperCase() : null;
-                            const replyTargetJid = resolveDestinationJid(senderNumber || senderJid) || senderJid;
+                            const replyTargetJid = msg.key?.remoteJid || resolveDestinationJid(senderNumber || senderJid) || senderJid;
 
                             if (isApproveCmd) {
                                 try {
                                     console.log(`[Bulk Interceptor] Processing WhatsApp APPROVE for ${reqCode || 'latest'} from ${replyTargetJid}`);
-                                    const d = await callCrmApi('approve_bulk_price_request', {
+                                    let d = await callCrmApi('approve_bulk_price_request', {
                                         request_code: reqCode,
-                                        approved_by: 'Super Admin (via WhatsApp)'
+                                        approved_by: 'Super Admin (via WhatsApp)',
+                                        source: 'whatsapp_cmd'
                                     });
-                                    if (d && (d.status === 'success' || (d.message && d.message.includes('already approved')))) {
-                                        const r = d.request || {};
-                                        // EXACT Image 1 Format
-                                        const confirmText = `✅ *BULK PRICE REQUEST APPROVED!*\n\n` +
-                                            `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
-                                            `Product: *${r.product_name || 'Product'}* (${r.size || 'Free Size'}) × *${r.quantity || 10} pcs*\n` +
-                                            `Approved Price: *₹${r.requested_price}/pc* (Total: ₹${r.total_requested_amount})\n\n` +
-                                            `Status: Special price activated. Staff can now take the order.`;
-                                        await sock.sendMessage(replyTargetJid, { text: confirmText });
-                                        io.emit('bulk_request:updated', { status: 'APPROVED', request: r });
-                                    } else if (d && d.expired) {
-                                        const expText = `⚠️ *BULK PRICE REQUEST EXPIRED*\n\n` +
-                                            `Request Code: *${reqCode || 'BPR'}*\n\n` +
-                                            `Notice: This request was valid for up to 3 message sends only and has expired.\n` +
-                                            `Approval is no longer allowed. Please submit a new bulk price request.`;
-                                        await sock.sendMessage(replyTargetJid, { text: expText });
-                                    } else if (d && d.message) {
-                                        await sock.sendMessage(replyTargetJid, { text: `ℹ️ ${d.message}` });
-                                    } else {
-                                        await sock.sendMessage(replyTargetJid, { text: `✅ *BULK PRICE REQUEST APPROVED!*\n\nRequest Code: *${reqCode || 'BPR'}*\nStatus: Special price activated. Staff can now take the order.` });
+
+                                    // If request details are missing, fetch from CRM database
+                                    if (!d || !d.request || !d.request.product_name) {
+                                        try {
+                                            const getRes = await callCrmApi(`get_bulk_price_requests&code=${encodeURIComponent(reqCode || '')}`, {});
+                                            if (getRes && getRes.requests && getRes.requests.length > 0) {
+                                                d = d || {};
+                                                d.request = getRes.requests[0];
+                                            }
+                                        } catch (e) {}
                                     }
+
+                                    const r = (d && d.request) ? d.request : {};
+                                    const reqPriceFormatted = parseFloat(r.requested_price || 0).toFixed(2);
+                                    const totalAmtFormatted = parseFloat(r.total_requested_amount || 0).toFixed(2);
+                                    const sizeStr = r.size ? ` (${r.size})` : ' (Free Size)';
+                                    const prodName = r.product_name || 'Garment Product';
+                                    const qty = r.quantity || 1;
+
+                                    let confirmText = `✅ *BULK PRICE REQUEST APPROVED!*\n\n` +
+                                        `Request Code: *${r.request_code || reqCode || 'BPR'}*\n`;
+
+                                    if (parseFloat(reqPriceFormatted) > 0 || r.product_name) {
+                                        confirmText += `Product: *${prodName}${sizeStr} × ${qty} pcs*\n` +
+                                                       `Approved Price: *₹${reqPriceFormatted}/pc* (Total: *₹${totalAmtFormatted}*)\n\n`;
+                                    }
+
+                                    confirmText += `Status: Special price activated. Staff can now take the order.`;
+
+                                    // Send to Admin in same chat
+                                    await sock.sendMessage(replyTargetJid, { text: confirmText });
+                                    console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to ${replyTargetJid}`);
+
+                                    // Send to Staff WhatsApp inbox as well!
+                                    const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
+                                    if (staffPhone) {
+                                        const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
+                                        const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
+                                        const staffJid = resolveDestinationJid(cleanStaffPhone);
+                                        if (staffJid && staffJid !== replyTargetJid) {
+                                            try {
+                                                await sock.sendMessage(staffJid, { text: confirmText });
+                                                console.log(`[Bulk Interceptor] Staff notification delivered to ${staffJid}`);
+                                            } catch (errStaff) {
+                                                console.warn(`[Bulk Interceptor] Could not deliver to staff ${staffJid}:`, errStaff.message);
+                                            }
+                                        }
+                                    }
+                                    io.emit('bulk_request:updated', { status: 'APPROVED', request: r });
                                 } catch (e) {
                                     console.error('[Bulk Approve via WhatsApp Error]:', e.message);
                                 }
@@ -1476,40 +1507,71 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             } else if (isRejectCmd) {
                                 try {
                                     let reason = messageText.replace(/^2\s*/i, '').replace(/^REJECT:?\s*(BPR-\d+)?\s*/i, '').trim();
-                                    if (!reason) reason = 'Price too low for this bulk order quantity.';
+                                    if (!reason) reason = 'Price too low for this bulk order quantity amount too low';
                                     console.log(`[Bulk Interceptor] Processing WhatsApp REJECT for ${reqCode || 'latest'} (Reason: ${reason}) from ${replyTargetJid}`);
-                                    const d = await callCrmApi('reject_bulk_price_request', {
+                                    let d = await callCrmApi('reject_bulk_price_request', {
                                         request_code: reqCode,
                                         rejection_reason: reason,
-                                        rejected_by: 'Super Admin (via WhatsApp)'
+                                        rejected_by: 'Super Admin (via WhatsApp)',
+                                        source: 'whatsapp_cmd'
                                     });
-                                    if (d && (d.status === 'success' || (d.message && d.message.includes('already rejected')))) {
-                                        const r = d.request || {};
-                                        // EXACT Image 1 Format
-                                        const rejectText = `❌ *BULK PRICE REQUEST REJECTED*\n\n` +
-                                            `Request Code: *${r.request_code || reqCode || 'BPR'}*\n` +
-                                            `Reason: *${reason}*\n\n` +
-                                            `Staff has been informed of rejection.`;
-                                        await sock.sendMessage(replyTargetJid, { text: rejectText });
-                                        io.emit('bulk_request:updated', { status: 'REJECTED', request: r, reason: reason });
-                                    } else if (d && d.expired) {
-                                        const expText = `⚠️ *BULK PRICE REQUEST EXPIRED*\n\n` +
-                                            `Request Code: *${reqCode || 'BPR'}*\n\n` +
-                                            `Notice: This request was valid for up to 3 message sends only and has expired.\n` +
-                                            `Rejection is no longer allowed. Please submit a new bulk price request.`;
-                                        await sock.sendMessage(replyTargetJid, { text: expText });
-                                    } else if (d && d.message) {
-                                        await sock.sendMessage(replyTargetJid, { text: `ℹ️ ${d.message}` });
-                                    } else {
-                                        await sock.sendMessage(replyTargetJid, { text: `❌ *BULK PRICE REQUEST REJECTED*\n\nRequest Code: *${reqCode || 'BPR'}*\nReason: *${reason}*\n\nStaff has been informed of rejection.` });
+
+                                    // If request details are missing, fetch from CRM database
+                                    if (!d || !d.request || !d.request.product_name) {
+                                        try {
+                                            const getRes = await callCrmApi(`get_bulk_price_requests&code=${encodeURIComponent(reqCode || '')}`, {});
+                                            if (getRes && getRes.requests && getRes.requests.length > 0) {
+                                                d = d || {};
+                                                d.request = getRes.requests[0];
+                                            }
+                                        } catch (e) {}
                                     }
+
+                                    const r = (d && d.request) ? d.request : {};
+                                    const cleanReason = (reason || r.rejection_reason || 'Price too low for this bulk order quantity amount too low').trim();
+                                    const sizeStr = r.size ? ` (${r.size})` : ' (Free Size)';
+                                    const prodName = r.product_name || 'Garment Product';
+                                    const qty = r.quantity || 1;
+                                    const reqPriceFormatted = parseFloat(r.requested_price || 0).toFixed(2);
+                                    const totalAmtFormatted = parseFloat(r.total_requested_amount || 0).toFixed(2);
+
+                                    let rejectText = `❌ *BULK PRICE REQUEST REJECTED*\n\n` +
+                                        `Request Code: *${r.request_code || reqCode || 'BPR'}*\n`;
+
+                                    if (parseFloat(reqPriceFormatted) > 0 || r.product_name) {
+                                        rejectText += `Product: *${prodName}${sizeStr} × ${qty} pcs*\n` +
+                                                      `Requested Price: *₹${reqPriceFormatted}/pc* (Total: *₹${totalAmtFormatted}*)\n`;
+                                    }
+
+                                    rejectText += `Reason: *${cleanReason}*\n\n` +
+                                                  `Staff has been informed of rejection.`;
+
+                                    // Send to Admin in same chat
+                                    await sock.sendMessage(replyTargetJid, { text: rejectText });
+                                    console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to ${replyTargetJid}`);
+
+                                    // Send to Staff's WhatsApp inbox as well!
+                                    const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
+                                    if (staffPhone) {
+                                        const cleanStaffDigits = String(staffPhone).replace(/[^0-9]/g, '');
+                                        const cleanStaffPhone = cleanStaffDigits.length === 10 ? ('91' + cleanStaffDigits) : cleanStaffDigits;
+                                        const staffJid = resolveDestinationJid(cleanStaffPhone);
+                                        if (staffJid && staffJid !== replyTargetJid) {
+                                            try {
+                                                await sock.sendMessage(staffJid, { text: rejectText });
+                                                console.log(`[Bulk Interceptor] Staff rejection notification delivered to ${staffJid}`);
+                                            } catch (errStaff) {
+                                                console.warn(`[Bulk Interceptor] Could not deliver rejection to staff ${staffJid}:`, errStaff.message);
+                                            }
+                                        }
+                                    }
+                                    io.emit('bulk_request:updated', { status: 'REJECTED', request: r, reason: cleanReason });
                                 } catch (e) {
                                     console.error('[Bulk Reject via WhatsApp Error]:', e.message);
                                 }
                                 continue;
                             }
                         }
-
                         const payload = {
                             id: msgId || ('msg_' + Date.now()),
                             sender_name: senderName,
@@ -1738,13 +1800,10 @@ function initializeAllSessions() {
             return fs.existsSync(credsFile);
         });
 
-        // Clean up empty extra dirs
+        // Keep registered slot directories intact so scanning is never interrupted
         dirs.forEach(dir => {
             if (dir !== 'account_1') {
-                const credsFile = path.join(SESSIONS_BASE_DIR, dir, 'creds.json');
-                if (!fs.existsSync(credsFile)) {
-                    try { fs.rmSync(path.join(SESSIONS_BASE_DIR, dir), { recursive: true, force: true }); } catch (e) { }
-                }
+                // Preserved slot directory
             }
         });
 
