@@ -29460,6 +29460,7 @@ function renderBackupView() {
 // =========================================================================
 var BACKUP_APPROVAL_POLLER = null;
 var BACKUP_APPROVAL_COUNTDOWN = null;
+var BACKUP_APPROVAL_REMAINING_SECS = 0;
 var CURRENT_BACKUP_REQUEST_CODE = null;
 var IS_BACKUP_DOWNLOAD_LOCKED = false;
 
@@ -29564,20 +29565,28 @@ async function handleExportBackupJSON(customEmailOverride) {
     // Reset status box UI to Pending
     renderBackupApprovalStatusUI('PENDING', data.admin_email);
 
-    // Start 15-minute countdown timer
-    let remainingSeconds = (data.expires_in_minutes || 15) * 60;
+    // Start 60-minute countdown timer (server authoritative)
+    BACKUP_APPROVAL_REMAINING_SECS = (typeof data.remaining_seconds === 'number' && data.remaining_seconds > 0)
+      ? data.remaining_seconds
+      : ((data.expires_in_minutes || 60) * 60);
+
     if (BACKUP_APPROVAL_COUNTDOWN) clearInterval(BACKUP_APPROVAL_COUNTDOWN);
     const timerEl = document.getElementById('backup-timer-countdown');
+    if (timerEl) {
+      const initM = Math.floor(BACKUP_APPROVAL_REMAINING_SECS / 60);
+      const initS = BACKUP_APPROVAL_REMAINING_SECS % 60;
+      timerEl.innerText = `${String(initM).padStart(2, '0')}:${String(initS).padStart(2, '0')}`;
+    }
     BACKUP_APPROVAL_COUNTDOWN = setInterval(() => {
-      remainingSeconds--;
-      if (remainingSeconds <= 0) {
+      BACKUP_APPROVAL_REMAINING_SECS--;
+      if (BACKUP_APPROVAL_REMAINING_SECS <= 0) {
         clearInterval(BACKUP_APPROVAL_COUNTDOWN);
         BACKUP_APPROVAL_COUNTDOWN = null;
         if (timerEl) timerEl.innerText = '00:00 (Expired)';
         renderBackupApprovalStatusUI('EXPIRED');
       } else {
-        const m = Math.floor(remainingSeconds / 60);
-        const s = remainingSeconds % 60;
+        const m = Math.floor(BACKUP_APPROVAL_REMAINING_SECS / 60);
+        const s = BACKUP_APPROVAL_REMAINING_SECS % 60;
         if (timerEl) timerEl.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
       }
     }, 1000);
@@ -29603,6 +29612,13 @@ async function pollBackupApprovalStatus(requestCode) {
     if (!isOk) return;
 
     const currentStatus = (data.request_status || data.requestStatus || (data.status !== 'success' ? data.status : '') || '').toUpperCase();
+
+    // Smoothly resync timer if server reports remaining_seconds
+    if (currentStatus === 'PENDING' && typeof data.remaining_seconds === 'number' && data.remaining_seconds > 0) {
+      if (Math.abs(BACKUP_APPROVAL_REMAINING_SECS - data.remaining_seconds) > 5) {
+        BACKUP_APPROVAL_REMAINING_SECS = data.remaining_seconds;
+      }
+    }
 
     if (currentStatus === 'APPROVED') {
       if (BACKUP_APPROVAL_POLLER) {

@@ -138,6 +138,11 @@ function getDBConnection() {
                 );
             }
 
+            // Sync MySQL session timezone with Indian Standard Time (+05:30)
+            try {
+                $pdo->exec("SET time_zone = '+05:30';");
+            } catch (Exception $tzEx) {}
+
             // 3. Ensure tables and default seeds exist ONLY IF NOT ALREADY INITIALIZED
             // Running 47 DDL CREATE TABLE queries on every HTTP request creates massive table lock contention and socket exhaustion.
             static $schemaChecked = false;
