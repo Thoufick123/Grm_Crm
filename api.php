@@ -508,8 +508,8 @@ if ($action === 'get_state' || $action === 'get_all') {
             $q['statusNotes'] = $q['status_notes'] ?? '';
         }
 
-        // 6. Conversations map grouped by customer_id (All WhatsApp Fields Included)
-        $mStmt = $pdo->query("SELECT * FROM `messages` ORDER BY `created_at` ASC");
+        // 6. Conversations map grouped by customer_id (High-Speed Recent Snippets)
+        $mStmt = $pdo->query("SELECT * FROM (SELECT * FROM `messages` ORDER BY `id` DESC LIMIT 300) sub ORDER BY `id` ASC");
         $allMessages = $mStmt->fetchAll();
         $conversations = [];
         foreach ($allMessages as $msg) {
@@ -2955,15 +2955,29 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         "received_at" => $receivedAt
     ];
 
-    // Append to live queue file
+    // Clean media_url if base64 before putting into queue
+    if (!empty($msgEntry['media_url']) && str_starts_with($msgEntry['media_url'], 'data:')) {
+        $mMatch = [];
+        if (preg_match('/^data:([a-zA-Z0-9\/\+;=-]+);base64,(.+)$/', $msgEntry['media_url'], $mMatch)) {
+            $isImg = strpos($mMatch[1], 'image') !== false;
+            $ext = $isImg ? 'jpg' : (strpos($mMatch[1], 'audio') !== false ? 'ogg' : 'bin');
+            $dir = $isImg ? (__DIR__ . '/uploads/media') : (__DIR__ . '/uploads/voice');
+            if (!file_exists($dir)) @mkdir($dir, 0777, true);
+            $fileName = 'media_' . time() . '_' . substr(uniqid(), -5) . '.' . $ext;
+            file_put_contents($dir . '/' . $fileName, base64_decode($mMatch[2]));
+            $msgEntry['media_url'] = ($isImg ? 'uploads/media/' : 'uploads/voice/') . $fileName;
+        }
+    }
+
+    // Append to live queue file (capped to last 50 items for ultra-fast polling)
     $queue = [];
     if (file_exists($messagesFile)) {
         $rawQueue = file_get_contents($messagesFile);
         $queue = json_decode($rawQueue, true) ?: [];
     }
     $queue[] = $msgEntry;
-    if (count($queue) > 200) {
-        $queue = array_slice($queue, -200);
+    if (count($queue) > 50) {
+        $queue = array_slice($queue, -50);
     }
     atomicWriteJson($messagesFile, $queue);
 
@@ -3066,7 +3080,7 @@ if ($action === 'get_customer_messages') {
     }
     $msgs = [];
     if ($pdo && !empty($cid)) {
-        $stmt = $pdo->prepare("SELECT * FROM messages WHERE customer_id = ? ORDER BY id ASC");
+        $stmt = $pdo->prepare("SELECT * FROM (SELECT * FROM `messages` WHERE `customer_id` = ? ORDER BY `id` DESC LIMIT 200) sub ORDER BY `id` ASC");
         $stmt->execute([$cid]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $r) {
