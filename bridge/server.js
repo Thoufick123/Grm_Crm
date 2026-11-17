@@ -287,7 +287,9 @@ async function getImageBuffer(url) {
                     path.resolve(__dirname, '..', relPath),
                     path.resolve(__dirname, relPath),
                     path.resolve(process.cwd(), relPath),
-                    path.resolve(process.cwd(), '..', relPath)
+                    path.resolve(process.cwd(), '..', relPath),
+                    path.resolve('D:\\CRM_APP\\Grm_Crm', relPath),
+                    path.resolve('D:\\CRM_APP', relPath)
                 ];
                 for (const c of candidates) {
                     if (fs.existsSync(c) && fs.statSync(c).isFile()) {
@@ -303,7 +305,9 @@ async function getImageBuffer(url) {
             const candidates = [
                 path.resolve(__dirname, '..', cleanPath),
                 path.resolve(__dirname, cleanPath),
-                path.resolve(process.cwd(), cleanPath)
+                path.resolve(process.cwd(), cleanPath),
+                path.resolve('D:\\CRM_APP\\Grm_Crm', cleanPath),
+                path.resolve('D:\\CRM_APP', cleanPath)
             ];
             for (const candidate of candidates) {
                 if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
@@ -1576,10 +1580,11 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
         const imgBuf = await getImageBuffer(mediaUrl);
         if (imgBuf) {
             try {
-                sent = await activeAcc.sock.sendMessage(jid, {
-                    image: imgBuf,
-                    caption: finalText
-                });
+                const sendOptions = { image: imgBuf };
+                if (finalText && finalText.trim() && finalText !== '[Photo Attachment]') {
+                    sendOptions.caption = finalText.trim();
+                }
+                sent = await activeAcc.sock.sendMessage(jid, sendOptions);
             } catch (err) {
                 console.warn('[Image Send Failed, Falling back to Text]:', err.message);
             }
@@ -2314,11 +2319,11 @@ app.post('/api/send', async (req, res) => {
         if (!phone && !jid) {
             return res.status(400).json({ status: 'error', message: 'Phone or JID is required' });
         }
-        if (!text) {
-            return res.status(400).json({ status: 'error', message: 'Text is required' });
+        if (!text && !mediaUrl && !media_url) {
+            return res.status(400).json({ status: 'error', message: 'Text or media is required' });
         }
 
-        let finalTextToSend = text;
+        let finalTextToSend = text || '';
         let activeAcc = (accountId && accounts.has(accountId) && accounts.get(accountId).sock) ? accounts.get(accountId) : null;
         if (!activeAcc) {
             for (const acc of accounts.values()) {

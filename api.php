@@ -3034,10 +3034,13 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(["status" => "error", "message" => "Phone or JID is required"]);
         exit;
     }
-    if (empty($text)) {
+    if (empty($text) && empty($mediaUrl)) {
         http_response_code(400);
-        echo json_encode(["status" => "error", "message" => "Text is required"]);
+        echo json_encode(["status" => "error", "message" => "Text or media is required"]);
         exit;
+    }
+    if (empty($text) && !empty($mediaUrl)) {
+        $text = '[Photo Attachment]';
     }
 
     // Call Node.js Baileys Bridge
@@ -3046,8 +3049,9 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'text' => $text,
         'jid' => $postData['jid'] ?? null,
         'accountId' => $postData['accountId'] ?? null,
-        'mediaUrl' => $mediaUrl
-    ], 7);
+        'mediaUrl' => $mediaUrl,
+        'media_url' => $mediaUrl
+    ], 10);
     $response = $bRes['response'];
     $httpCode = $bRes['http_code'];
 
