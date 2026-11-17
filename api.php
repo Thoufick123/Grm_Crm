@@ -10,6 +10,9 @@
  * - Database Backup & Recovery Snapshots
  */
 
+// Universal Timezone Enforcement for India Standard Time (IST, UTC+5:30)
+date_default_timezone_set('Asia/Kolkata');
+
 if (!headers_sent()) {
     header("Content-Type: application/json");
     header("Access-Control-Allow-Origin: *");
@@ -232,6 +235,149 @@ function curlBridgePost($endpoint, $payloadArray, $timeout = 7) {
     $err = curl_error($ch);
     curl_close($ch);
     return ['http_code' => $httpCode, 'response' => $resp, 'error' => $err];
+}
+
+/**
+ * Dispatches WhatsApp Bulk Price Decision Notifications to BOTH Admin and Staff
+ * Content format matches the user's specification (Image 2) with 100% fidelity.
+ */
+function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reason = '', $actor = 'Super Admin', $skipAdmin = false) {
+    if (!$req || empty($req['request_code'])) {
+        return ['status' => 'error', 'message' => 'Invalid request payload'];
+    }
+
+    $decisionUpper = strtoupper(trim($decision));
+    $isApproved = ($decisionUpper === 'APPROVED');
+
+    // 1. Format the message text matching Image 2 exactly
+    if ($isApproved) {
+        $reqPriceFormatted = number_format((float)($req['requested_price'] ?? 0), 2, '.', '');
+        $totalAmtFormatted = number_format((float)($req['total_requested_amount'] ?? 0), 2, '.', '');
+        $sizeStr = !empty($req['size']) ? " ({$req['size']})" : " (Free Size)";
+        $productTitle = trim($req['product_name'] ?? 'Garment Product');
+        $qty = (int)($req['quantity'] ?? 1);
+
+        $waText = "✅ *BULK PRICE REQUEST APPROVED!*\n\n" .
+            "Request Code: *{$req['request_code']}*\n" .
+            "Product: *{$productTitle}{$sizeStr} × {$qty} pcs*\n" .
+            "Approved Price: *₹{$reqPriceFormatted}/pc* (Total: *₹{$totalAmtFormatted}*)\n\n" .
+            "Status: Special price activated. Staff can now take the order.";
+    } else {
+        $cleanReason = trim($reason ?: ($req['rejection_reason'] ?? 'Price too low for this bulk order quantity amount too low'));
+        $reqPriceFormatted = number_format((float)($req['requested_price'] ?? 0), 2, '.', '');
+        $totalAmtFormatted = number_format((float)($req['total_requested_amount'] ?? 0), 2, '.', '');
+        $sizeStr = !empty($req['size']) ? " ({$req['size']})" : " (Free Size)";
+        $productTitle = trim($req['product_name'] ?? 'Garment Product');
+        $qty = (int)($req['quantity'] ?? 1);
+
+        $waText = "❌ *BULK PRICE REQUEST REJECTED*\n\n" .
+            "Request Code: *{$req['request_code']}*\n";
+        if (!empty($req['product_name']) || (float)$reqPriceFormatted > 0) {
+            $waText .= "Product: *{$productTitle}{$sizeStr} × {$qty} pcs*\n" .
+                       "Requested Price: *₹{$reqPriceFormatted}/pc* (Total: *₹{$totalAmtFormatted}*)\n";
+        }
+        $waText .= "Reason: *{$cleanReason}*\n\n" .
+            "Staff has been informed of rejection.";
+    }
+
+    // 2. Resolve Admin Phone
+    $adminPhone = trim($req['admin_phone'] ?? '');
+    if (empty($adminPhone)) {
+        $cfgFile = __DIR__ . '/whatsapp_account_config.json';
+        if (file_exists($cfgFile)) {
+            $cfg = json_decode(file_get_contents($cfgFile), true);
+            if (!empty($cfg['phone_number'])) {
+                $adminPhone = $cfg['phone_number'];
+            }
+        }
+    }
+    if (empty($adminPhone)) {
+        $adminPhone = '+91 99435 57998';
+    }
+
+    $cleanAdmin = preg_replace('/[^0-9]/', '', $adminPhone);
+    if (strlen($cleanAdmin) === 10) $cleanAdmin = '91' . $cleanAdmin;
+
+    // 3. Resolve Staff Phone
+    $staffPhone = trim($req['staff_phone'] ?? '');
+    if (empty($staffPhone) && $pdo && (!empty($req['staff_id']) || !empty($req['staff_name']))) {
+        try {
+            $uStmt = $pdo->prepare("SELECT phone FROM users WHERE id = ? OR username = ? OR name = ? LIMIT 1");
+            $uStmt->execute([$req['staff_id'] ?? '', $req['staff_id'] ?? '', $req['staff_name'] ?? '']);
+            $staffPhone = (string)$uStmt->fetchColumn();
+        } catch (Exception $e) {}
+    }
+
+    $cleanStaff = preg_replace('/[^0-9]/', '', $staffPhone);
+    if (strlen($cleanStaff) === 10) $cleanStaff = '91' . $cleanStaff;
+
+    // 4. Determine list of recipients
+    $targetPhones = [];
+    if (!$skipAdmin && strlen($cleanAdmin) >= 10) {
+        $targetPhones[] = $cleanAdmin;
+    }
+    if (strlen($cleanStaff) >= 10) {
+        $targetPhones[] = $cleanStaff;
+    }
+    $targetPhones = array_unique($targetPhones);
+
+    // 5. Send to each recipient via Bridge
+    $dispatchResults = [];
+    foreach ($targetPhones as $phone) {
+        try {
+            $res = curlBridgePost('/api/send', [
+                'phone' => $phone,
+                'text' => $waText
+            ], 5);
+            $dispatchResults[$phone] = $res['http_code'] ?? 0;
+        } catch (Exception $e) {
+            $dispatchResults[$phone] = 'error: ' . $e->getMessage();
+        }
+    }
+
+    // 6. Broadcast Realtime Socket.IO event to all active CRM screens
+    try {
+        curlBridgePost('/api/bulk_request/event', [
+            'status' => $decisionUpper,
+            'request' => $req,
+            'reason' => $reason
+        ], 3);
+    } catch (Exception $e) {}
+
+    // 7. Record In-App Notification in DB
+    if ($pdo) {
+        try {
+            $notifTitle = $isApproved 
+                ? "Bulk Price Request {$req['request_code']} Approved" 
+                : "Bulk Price Request {$req['request_code']} Rejected";
+            $notifBody = $isApproved
+                ? "Special price ₹" . number_format((float)($req['requested_price'] ?? 0), 2, '.', '') . "/pc activated for customer {$req['customer_name']}."
+                : "Request {$req['request_code']} was rejected by {$actor}. Reason: " . ($cleanReason ?? 'Price declined');
+            
+            $insNotif = $pdo->prepare("
+                INSERT INTO `app_notifications`
+                (`user_id`, `role`, `title`, `message`, `type`, `reference_id`, `is_read`, `created_at`)
+                VALUES (?, 'STAFF', ?, ?, ?, ?, 0, NOW())
+            ");
+            $insNotif->execute([
+                $req['staff_id'] ?: 'all',
+                $notifTitle,
+                $notifBody,
+                $decisionUpper,
+                $req['request_code']
+            ]);
+        } catch (Exception $e) {}
+    }
+
+    return [
+        'status' => 'success',
+        'decision' => $decisionUpper,
+        'message_text' => $waText,
+        'admin_phone' => $cleanAdmin,
+        'staff_phone' => $cleanStaff,
+        'recipients' => $targetPhones,
+        'dispatches' => $dispatchResults
+    ];
 }
 
 $bridgeUrl = getEffectiveBridgeUrl();
@@ -1642,7 +1788,25 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     $requestedPrice = (float)($data['requested_price'] ?? 0);
     $staffId = trim($data['staff_id'] ?? 'admin');
     $staffName = trim($data['staff_name'] ?? 'Super Admin');
-    $adminPhone = trim($data['admin_phone'] ?? '+919789660115');
+    $staffPhone = trim($data['staff_phone'] ?? '');
+    if (empty($staffPhone) && !empty($staffId)) {
+        try {
+            $uStmt = $pdo->prepare("SELECT phone FROM users WHERE id = ? OR username = ? OR name = ? LIMIT 1");
+            $uStmt->execute([$staffId, $staffId, $staffName]);
+            $staffPhone = (string)$uStmt->fetchColumn();
+        } catch (Exception $e) {}
+    }
+    $adminPhone = trim($data['admin_phone'] ?? '');
+    if (empty($adminPhone)) {
+        $adminPhone = '+91 99435 57998';
+    }
+
+    // Strict RBAC check: Staff in view-only mode cannot create bulk price requests
+    if (isset($data['is_view_only']) && $data['is_view_only']) {
+        http_response_code(403);
+        echo json_encode(["status" => "error", "message" => "Permission Denied: Staff in view-only mode cannot submit bulk price requests."]);
+        exit;
+    }
 
     if (empty($customerName) || empty($productName) || $requestedPrice <= 0 || $quantity <= 0) {
         http_response_code(400);
@@ -1658,11 +1822,11 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         $linkToken = bin2hex(random_bytes(16));
         $stmt = $pdo->prepare("
             INSERT INTO `bulk_price_requests`
-            (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `admin_phone`, `link_token`, `send_count`, `link_click_count`, `max_sends`, `status`, `created_at`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 3, 'PENDING', NOW())
+            (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `staff_phone`, `admin_phone`, `link_token`, `send_count`, `link_click_count`, `max_sends`, `status`, `created_at`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 3, 'PENDING', NOW())
         ");
         $stmt->execute([
-            $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $adminPhone, $linkToken
+            $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $staffPhone, $adminPhone, $linkToken
         ]);
         $newId = (int)$pdo->lastInsertId();
 
@@ -1673,6 +1837,15 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         try {
             $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `details`) VALUES ('BULK_PRICE_REQUEST', 'PRICING', ?, ?)")
                 ->execute([$staffName, "Created bulk price request $requestCode for $customerName ($productName x $quantity at Rs.$requestedPrice)"]);
+        } catch (Exception $e) {}
+
+        try {
+            $pdo->prepare("INSERT INTO `app_notifications` (`user_id`, `role`, `title`, `message`, `type`, `reference_id`, `is_read`, `created_at`) VALUES ('admin', 'ADMIN', ?, ?, 'BULK_PENDING', ?, 0, NOW())")
+                ->execute([
+                    "New Bulk Price Request: $requestCode",
+                    "Staff $staffName requested Rs.$requestedPrice/pc for $productName x $quantity pcs ($customerName).",
+                    $requestCode
+                ]);
         } catch (Exception $e) {}
 
         $waNotifyStatus = 'NOT_SENT';
@@ -1742,14 +1915,19 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             }
         }
 
+        $directAdminWaUrl = '';
+
         echo json_encode([
             "status" => "success",
             "message" => "Bulk price request submitted successfully and sent to Admin for approval",
             "request" => $createdRecord,
             "alert_message" => $alertMsg,
-            "approve_url" => $approveUrl ?? '',
-            "reject_url" => $rejectUrl ?? '',
+            "admin_phone" => $cleanAdminPhone ?? '',
+            "direct_whatsapp_url" => null,
+            "approve_url" => $waApproveUrl ?? '',
+            "reject_url" => $waRejectUrl ?? '',
             "wa_notify" => $waNotifyStatus,
+            "whatsapp_notification" => $waNotifyStatus,
             "bridge_response" => $bridgeResponse
         ]);
         exit;
@@ -1800,11 +1978,13 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         exit;
     }
     if ($currReq['status'] === 'APPROVED') {
-        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} is already approved."]);
-        exit;
-    }
-    if ($currReq['status'] === 'REJECTED') {
-        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} has already been rejected."]);
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'APPROVED', '', $approvedBy, false);
+        echo json_encode([
+            "status" => "success",
+            "message" => "Request {$currReq['request_code']} is already approved.",
+            "request" => $currReq,
+            "wa_dispatch" => $waDispatch
+        ]);
         exit;
     }
     $sendCount = (int)($currReq['send_count'] ?? 1);
@@ -1840,10 +2020,16 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
                 ->execute([$approvedBy, "Approved bulk request {$record['request_code']} for {$record['customer_name']}"]);
         } catch (Exception $e) {}
 
+        // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
+        $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
+        $skipAdmin = false;
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'APPROVED', '', $approvedBy, $skipAdmin);
+
         echo json_encode([
             "status" => "success",
             "message" => "Bulk price request approved successfully! Staff can now take order at the approved price.",
-            "request" => $record
+            "request" => $record,
+            "wa_dispatch" => $waDispatch
         ]);
         exit;
     } catch (Exception $e) {
@@ -1892,12 +2078,14 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
         exit;
     }
-    if ($currReq['status'] === 'APPROVED') {
-        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} is already approved."]);
-        exit;
-    }
     if ($currReq['status'] === 'REJECTED') {
-        echo json_encode(["status" => "error", "message" => "Request {$currReq['request_code']} has already been rejected."]);
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $currReq, 'REJECTED', $rejectionReason, $rejectedBy, false);
+        echo json_encode([
+            "status" => "success",
+            "message" => "Request {$currReq['request_code']} is already rejected.",
+            "request" => $currReq,
+            "wa_dispatch" => $waDispatch
+        ]);
         exit;
     }
     $sendCount = (int)($currReq['send_count'] ?? 1);
@@ -1939,10 +2127,16 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 ->execute([$rejectedBy, "Rejected bulk request {$record['request_code']} with reason: $rejectionReason"]);
         } catch (Exception $e) {}
 
+        // Dispatch WhatsApp notification to Admin & Staff and broadcast to Web UI
+        $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
+        $skipAdmin = false;
+        $waDispatch = dispatchBulkDecisionWhatsAppNotifications($pdo, $record, 'REJECTED', $rejectionReason, $rejectedBy, $skipAdmin);
+
         echo json_encode([
             "status" => "success",
             "message" => "Bulk price request rejected with specified reason.",
-            "request" => $record
+            "request" => $record,
+            "wa_dispatch" => $waDispatch
         ]);
         exit;
     } catch (Exception $e) {
@@ -2065,12 +2259,76 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         } catch (Exception $e) {}
     }
 
+    $directAdminWaUrl = '';
+
     echo json_encode([
         "status" => "success",
         "message" => "Reminder sent to Admin WhatsApp (Message {$newSendCount} of 3)",
         "send_count" => $newSendCount,
-        "alert_message" => $alertMsg
+        "alert_message" => $alertMsg,
+        "admin_phone" => $cleanPhone ?? '',
+        "direct_whatsapp_url" => null,
+        "wa_sent" => $waSent
     ]);
+    exit;
+}
+
+// =========================================================================
+// IN-APP NOTIFICATIONS API (Live notifications for Admin & Staff decisions)
+// =========================================================================
+if ($action === 'get_notifications') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+    $userId = $_GET['user_id'] ?? null;
+    $limit = (int)($_GET['limit'] ?? 50);
+    $unreadOnly = isset($_GET['unread']) && $_GET['unread'] === '1';
+
+    $sql = "SELECT * FROM `app_notifications` WHERE 1=1";
+    $params = [];
+    if (!empty($userId)) {
+        $sql .= " AND (`user_id` = ? OR `user_id` = 'all' OR `user_id` IS NULL)";
+        $params[] = $userId;
+    }
+    if ($unreadOnly) {
+        $sql .= " AND `is_read` = 0";
+    }
+    $sql .= " ORDER BY `id` DESC LIMIT " . $limit;
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $notifs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $unreadCountStmt = $pdo->query("SELECT COUNT(*) FROM `app_notifications` WHERE `is_read` = 0");
+    $unreadCount = $unreadCountStmt ? (int)$unreadCountStmt->fetchColumn() : 0;
+
+    echo json_encode([
+        "status" => "success",
+        "notifications" => $notifs,
+        "unread_count" => $unreadCount
+    ]);
+    exit;
+}
+
+if ($action === 'mark_notification_read' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Database connection unavailable"]);
+        exit;
+    }
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true) ?: $_POST;
+    $id = (int)($data['id'] ?? 0);
+    $markAll = !empty($data['all']);
+
+    if ($markAll) {
+        $pdo->exec("UPDATE `app_notifications` SET `is_read` = 1 WHERE `is_read` = 0");
+    } elseif ($id > 0) {
+        $pdo->prepare("UPDATE `app_notifications` SET `is_read` = 1 WHERE `id` = ?")->execute([$id]);
+    }
+    echo json_encode(["status" => "success"]);
     exit;
 }
 
@@ -2401,29 +2659,13 @@ HTML;
                 ->execute([$approvedBy, "Approved bulk request {$req['request_code']} for {$req['customer_name']} via WhatsApp One-Click Link"]);
         } catch (Exception $e) {}
 
-        // Broadcast to bridge
+        // Broadcast to bridge & dispatch WhatsApp confirmation to Admin AND Staff
         $updatedReq = array_merge($req, [
             'status' => 'APPROVED',
             'approved_by' => $approvedBy,
             'approved_at' => date('Y-m-d H:i:s')
         ]);
-        try {
-            curlBridgePost('/api/bulk_request/event', ['status' => 'APPROVED', 'request' => $updatedReq], 3);
-        } catch (Exception $e) {}
-
-        // Send exact Image 3 format to Admin WhatsApp
-        if (!empty($req['admin_phone'])) {
-            $cleanAdminP = preg_replace('/[^0-9]/', '', $req['admin_phone']);
-            if (strlen($cleanAdminP) === 10) $cleanAdminP = '91' . $cleanAdminP;
-            $confirmText = "✅ *BULK PRICE REQUEST APPROVED!*\n\n" .
-                "Request Code: *{$req['request_code']}*\n" .
-                "Product: *{$req['product_name']}* ({$req['size']}) × *{$req['quantity']} pcs*\n" .
-                "Approved Price: *₹{$req['requested_price']}/pc* (Total: ₹{$req['total_requested_amount']})\n\n" .
-                "Status: Special price activated. Staff can now take the order.";
-            try {
-                curlBridgePost('/api/send', ['phone' => $cleanAdminP, 'text' => $confirmText], 5);
-            } catch (Exception $e) {}
-        }
+        dispatchBulkDecisionWhatsAppNotifications($pdo, $updatedReq, 'APPROVED', '', $approvedBy);
 
         $renderShell("Approved Successfully", "
             <div class='status-icon icon-success'>✓</div>
@@ -2487,28 +2729,13 @@ HTML;
                     ->execute([$rejectedBy, "Rejected bulk request {$req['request_code']} with reason: $reason via WhatsApp Link"]);
             } catch (Exception $e) {}
 
-            // Broadcast to bridge
+            // Broadcast to bridge & dispatch WhatsApp confirmation to Admin AND Staff
             $updatedReq = array_merge($req, [
                 'status' => 'REJECTED',
                 'rejection_reason' => $reason,
                 'approved_by' => $rejectedBy
             ]);
-            try {
-                curlBridgePost('/api/bulk_request/event', ['status' => 'REJECTED', 'request' => $updatedReq, 'reason' => $reason], 3);
-            } catch (Exception $e) {}
-
-            // Send exact Image 4 format to Admin WhatsApp
-            if (!empty($req['admin_phone'])) {
-                $cleanAdminP = preg_replace('/[^0-9]/', '', $req['admin_phone']);
-                if (strlen($cleanAdminP) === 10) $cleanAdminP = '91' . $cleanAdminP;
-                $rejectText = "❌ *BULK PRICE REQUEST REJECTED*\n\n" .
-                    "Request Code: *{$req['request_code']}*\n" .
-                    "Reason: *{$reason}*\n\n" .
-                    "Staff has been informed of rejection.";
-                try {
-                    curlBridgePost('/api/send', ['phone' => $cleanAdminP, 'text' => $rejectText], 5);
-                } catch (Exception $e) {}
-            }
+            dispatchBulkDecisionWhatsAppNotifications($pdo, $updatedReq, 'REJECTED', $reason, $rejectedBy);
 
             $safeSubReason = htmlspecialchars($reason);
             $renderShell("Request Rejected", "
@@ -5174,6 +5401,226 @@ if ($action === 'delete_broadcast_template' && $_SERVER['REQUEST_METHOD'] === 'P
 // 10. DATABASE BACKUP & RESTORE ENGINE (MySQL Zero-Loss Snapshot & Restore)
 // =========================================================================
 
+/**
+ * Pure PHP Direct Socket SMTP Mailer (RFC 2822 / RFC 2045)
+ * Bypasses unauthenticated shared host mail() and delivers directly to Primary Gmail Inbox
+ * Supports SSL on port 465 (Hostinger / Gmail / Brevo / Sendgrid) and TLS on port 587
+ */
+function sendDirectSmtpMail($to, $subject, $htmlBody, $plainBody = '', $smtpConfig = []) {
+    $cfg = [
+        'enabled' => false,
+        'host' => '',
+        'port' => 465,
+        'encryption' => 'ssl',
+        'username' => '',
+        'password' => '',
+        'from_email' => '',
+        'from_name' => 'GRM CRM Security Shield',
+        'timeout' => 8
+    ];
+
+    $cfgFile = __DIR__ . '/config/smtp_config.json';
+    if (file_exists($cfgFile)) {
+        $json = json_decode(file_get_contents($cfgFile), true);
+        if (is_array($json)) {
+            $cfg = array_merge($cfg, $json);
+        }
+    }
+
+    // Direct read from .env file
+    $envFile = __DIR__ . '/.env';
+    if (file_exists($envFile)) {
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line) || str_starts_with($line, '#')) continue;
+            if (strpos($line, '=') !== false) {
+                list($k, $v) = explode('=', $line, 2);
+                $k = trim($k);
+                $v = trim($v, " \t\n\r\0\x0B\"'");
+                if ($k === 'SMTP_HOST') $cfg['host'] = $v;
+                if ($k === 'SMTP_PORT') $cfg['port'] = (int)$v;
+                if ($k === 'SMTP_USER' || $k === 'SMTP_USERNAME') $cfg['username'] = $v;
+                if ($k === 'SMTP_PASS' || $k === 'SMTP_PASSWORD') $cfg['password'] = $v;
+                if ($k === 'SMTP_FROM' || $k === 'SMTP_FROM_EMAIL') $cfg['from_email'] = $v;
+                if ($k === 'SMTP_FROM_NAME') $cfg['from_name'] = $v;
+                if ($k === 'SMTP_ENCRYPTION') $cfg['encryption'] = $v;
+                if ($k === 'SMTP_ENABLED') $cfg['enabled'] = filter_var($v, FILTER_VALIDATE_BOOLEAN);
+            }
+        }
+    }
+
+    // Check environment variables / system $_SERVER
+    $envHost = getenv('SMTP_HOST') ?: ($_SERVER['SMTP_HOST'] ?? ($_ENV['SMTP_HOST'] ?? ''));
+    if (!empty($envHost)) $cfg['host'] = $envHost;
+    $envUser = getenv('SMTP_USER') ?: (getenv('SMTP_USERNAME') ?: ($_SERVER['SMTP_USER'] ?? ($_SERVER['SMTP_USERNAME'] ?? ($_ENV['SMTP_USER'] ?? ''))));
+    if (!empty($envUser)) $cfg['username'] = $envUser;
+    $envPass = getenv('SMTP_PASS') ?: (getenv('SMTP_PASSWORD') ?: ($_SERVER['SMTP_PASS'] ?? ($_SERVER['SMTP_PASSWORD'] ?? ($_ENV['SMTP_PASS'] ?? ''))));
+    if (!empty($envPass)) $cfg['password'] = $envPass;
+    $envPort = getenv('SMTP_PORT') ?: ($_SERVER['SMTP_PORT'] ?? ($_ENV['SMTP_PORT'] ?? ''));
+    if (!empty($envPort)) $cfg['port'] = (int)$envPort;
+    $envFrom = getenv('SMTP_FROM') ?: (getenv('SMTP_FROM_EMAIL') ?: ($_SERVER['SMTP_FROM'] ?? ($_SERVER['SMTP_FROM_EMAIL'] ?? ($_ENV['SMTP_FROM'] ?? ''))));
+    if (!empty($envFrom)) $cfg['from_email'] = $envFrom;
+    $envFromName = getenv('SMTP_FROM_NAME') ?: ($_SERVER['SMTP_FROM_NAME'] ?? ($_ENV['SMTP_FROM_NAME'] ?? ''));
+    if (!empty($envFromName)) $cfg['from_name'] = $envFromName;
+
+    if (!empty($smtpConfig) && is_array($smtpConfig)) {
+        $cfg = array_merge($cfg, $smtpConfig);
+    }
+
+    // If host or username or password is missing or explicitly disabled
+    if ((isset($cfg['enabled']) && $cfg['enabled'] === false) || empty($cfg['host']) || empty($cfg['username']) || empty($cfg['password'])) {
+        return ['success' => false, 'error' => 'SMTP credentials not configured'];
+    }
+
+    $host = trim($cfg['host']);
+    $port = (int)($cfg['port'] ?: 465);
+    $user = trim($cfg['username']);
+    $pass = str_replace(' ', '', trim($cfg['password']));
+    $fromEmail = !empty($cfg['from_email']) ? trim($cfg['from_email']) : $user;
+    $fromName = !empty($cfg['from_name']) ? trim($cfg['from_name']) : 'GRM CRM Security Shield';
+    $timeout = (int)($cfg['timeout'] ?: 10);
+
+    $isSsl = ($port === 465 || strtolower($cfg['encryption'] ?? '') === 'ssl');
+    $isTls = ($port === 587 || strtolower($cfg['encryption'] ?? '') === 'tls');
+
+    $socketPrefix = $isSsl ? 'ssl://' : 'tcp://';
+    $context = stream_context_create([
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true
+        ]
+    ]);
+
+    $socket = @stream_socket_client($socketPrefix . $host . ':' . $port, $errno, $errstr, $timeout, STREAM_CLIENT_CONNECT, $context);
+    if (!$socket) {
+        return ['success' => false, 'error' => "Cannot connect to SMTP server {$host}:{$port} - {$errstr} ({$errno})"];
+    }
+
+    stream_set_timeout($socket, $timeout);
+
+    $readResp = function() use ($socket) {
+        $data = '';
+        while (!feof($socket)) {
+            $line = fgets($socket, 515);
+            if ($line === false) break;
+            $data .= $line;
+            if (preg_match('/^[0-9]{3}[ ]/', $line)) break;
+        }
+        return $data;
+    };
+
+    $sendCmd = function($cmd) use ($socket, $readResp) {
+        fputs($socket, $cmd . "\r\n");
+        return $readResp();
+    };
+
+    $greeting = $readResp();
+    if (substr($greeting, 0, 3) !== '220') {
+        fclose($socket);
+        return ['success' => false, 'error' => "SMTP greeting error: " . trim($greeting)];
+    }
+
+    $ehloName = !empty($_SERVER['HTTP_HOST']) ? preg_replace('/^www\./i', '', $_SERVER['HTTP_HOST']) : 'localhost';
+    $sendCmd("EHLO " . $ehloName);
+
+    if ($isTls && !$isSsl) {
+        $tlsResp = $sendCmd("STARTTLS");
+        if (substr($tlsResp, 0, 3) === '220') {
+            if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                fclose($socket);
+                return ['success' => false, 'error' => 'STARTTLS negotiation failed'];
+            }
+            $sendCmd("EHLO " . $ehloName);
+        }
+    }
+
+    $authResp = $sendCmd("AUTH LOGIN");
+    if (substr($authResp, 0, 3) !== '334') {
+        fclose($socket);
+        return ['success' => false, 'error' => "AUTH LOGIN command failed: " . trim($authResp)];
+    }
+
+    $userResp = $sendCmd(base64_encode($user));
+    if (substr($userResp, 0, 3) !== '334') {
+        fclose($socket);
+        return ['success' => false, 'error' => "SMTP Username rejected: " . trim($userResp)];
+    }
+
+    $passResp = $sendCmd(base64_encode($pass));
+    if (substr($passResp, 0, 3) !== '235') {
+        fclose($socket);
+        return ['success' => false, 'error' => "SMTP Authentication failed: " . trim($passResp)];
+    }
+
+    $fromResp = $sendCmd("MAIL FROM:<" . $fromEmail . ">");
+    if (substr($fromResp, 0, 3) !== '250') {
+        fclose($socket);
+        return ['success' => false, 'error' => "MAIL FROM rejected: " . trim($fromResp)];
+    }
+
+    $toResp = $sendCmd("RCPT TO:<" . $to . ">");
+    if (substr($toResp, 0, 3) !== '250') {
+        fclose($socket);
+        return ['success' => false, 'error' => "RCPT TO rejected: " . trim($toResp)];
+    }
+
+    $dataResp = $sendCmd("DATA");
+    if (substr($dataResp, 0, 3) !== '354') {
+        fclose($socket);
+        return ['success' => false, 'error' => "DATA rejected: " . trim($dataResp)];
+    }
+
+    // Build standard MIME message
+    $boundary = "----=_NextPart_" . md5(uniqid((string)time(), true));
+    $encodedSubject = "=?UTF-8?B?" . base64_encode($subject) . "?=";
+    $encodedFromName = "=?UTF-8?B?" . base64_encode($fromName) . "?=";
+    $fromDomain = (strpos($fromEmail, '@') !== false) ? substr(strrchr($fromEmail, '@'), 1) : 'grmgarments.com';
+    $msgId = "<" . time() . "." . bin2hex(random_bytes(8)) . "@" . $fromDomain . ">";
+
+    $raw = "Date: " . date('r') . "\r\n";
+    $raw .= "From: {$encodedFromName} <{$fromEmail}>\r\n";
+    $raw .= "Reply-To: <{$fromEmail}>\r\n";
+    $raw .= "To: <{$to}>\r\n";
+    $raw .= "Subject: {$encodedSubject}\r\n";
+    $raw .= "Message-ID: {$msgId}\r\n";
+    $raw .= "X-Mailer: GRM-CRM-Mailer/3.0\r\n";
+    $raw .= "MIME-Version: 1.0\r\n";
+    $raw .= "Auto-Submitted: auto-generated\r\n";
+    $raw .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n\r\n";
+
+    if (!empty($plainBody)) {
+        $raw .= "--{$boundary}\r\n";
+        $raw .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $raw .= "Content-Transfer-Encoding: base64\r\n\r\n";
+        $raw .= chunk_split(base64_encode($plainBody)) . "\r\n";
+    }
+
+    $raw .= "--{$boundary}\r\n";
+    $raw .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $raw .= "Content-Transfer-Encoding: base64\r\n\r\n";
+    $raw .= chunk_split(base64_encode($htmlBody)) . "\r\n";
+    $raw .= "--{$boundary}--\r\n";
+
+    $sendResp = $sendCmd($raw . "\r\n.");
+    $sendCmd("QUIT");
+    fclose($socket);
+
+    if (substr($sendResp, 0, 3) === '250') {
+        return ['success' => true, 'message' => 'Delivered via Authenticated SMTP'];
+    }
+    return ['success' => false, 'error' => "SMTP Delivery Failed: " . trim($sendResp)];
+}
+
+if ($action === 'test_smtp') {
+    header('Content-Type: application/json');
+    $to = trim($_GET['to'] ?? 'vanaja15802@gmail.com');
+    $res = sendDirectSmtpMail($to, 'GRM CRM Security - SMTP Test Delivery', '<h2>SMTP Test Successful</h2><p>This email was delivered directly to your inbox via Google Authenticated SMTP.</p>', 'SMTP Test Successful');
+    echo json_encode($res);
+    exit;
+}
+
 // 1. REQUEST BACKUP DOWNLOAD (Triggers Super Admin Email Verification)
 if ($action === 'request_backup_download') {
     header('Content-Type: application/json');
@@ -5236,7 +5683,7 @@ if ($action === 'request_backup_download') {
         $stmt = $pdo->prepare("
             INSERT INTO `backup_download_requests`
             (`request_code`, `requester_id`, `requester_name`, `requester_role`, `requester_ip`, `admin_email`, `token_approve`, `token_reject`, `status`, `expires_at`, `created_at`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', DATE_ADD(NOW(), INTERVAL 15 MINUTE), NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', DATE_ADD(NOW(), INTERVAL 60 MINUTE), NOW())
         ");
         $stmt->execute([
             $requestCode, $requesterId, $requesterName, $requesterRole, $ip, $adminEmail, $tokenApprove, $tokenReject
@@ -5246,7 +5693,7 @@ if ($action === 'request_backup_download') {
         if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') === false && strpos($_SERVER['HTTP_HOST'], '127.0.0.1') === false) {
             $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
             $publicBaseUrl = $proto . '://' . $_SERVER['HTTP_HOST'];
-        } elseif (defined('APP_URL') && strpos(APP_URL, 'localhost') === false) {
+        } elseif (defined('APP_URL') && !empty(APP_URL)) {
             $publicBaseUrl = rtrim(APP_URL, '/');
         }
 
@@ -5255,83 +5702,195 @@ if ($action === 'request_backup_download') {
 
         // Send Email to Super Admin (Support custom subject/notes if provided)
         $customNotes = trim($data['custom_notes'] ?? $data['notes'] ?? '');
-        $subject = !empty($data['custom_subject']) ? trim($data['custom_subject']) : ("🔒 [Action Required] Database Backup Download Request - " . $requestCode);
-        // Resolve host domain for legitimate sender to avoid SPF/DMARC rejection by Gmail
+        // Clean transactional subject without spam/phishing triggers (e.g. no "Security Authorization", no "Action Required")
+        $cleanSubject = !empty($data['custom_subject']) 
+            ? trim($data['custom_subject']) 
+            : ("GRM CRM: Database Backup Verification Code " . $requestCode);
+
         $hostDomain = !empty($_SERVER['HTTP_HOST']) ? preg_replace('/^www\./i', '', $_SERVER['HTTP_HOST']) : 'hostingersite.com';
         $fromEmail = "noreply@" . $hostDomain;
+        $boundary = "----=_NextPart_" . md5(uniqid((string)time(), true));
 
-        $headers = "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $headers .= "From: GRM CRM Security Shield <{$fromEmail}>\r\n";
-        $headers .= "Reply-To: {$fromEmail}\r\n";
-        $headers .= "X-Mailer: PHP/" . phpversion();
+        // Plain Text Fallback Body (Clean transactional format)
+        $plainText = "Hello Administrator,\n\n"
+            . "A request to export a complete database backup has been submitted on GRM Garments CRM.\n\n"
+            . "Verification Code: {$requestCode}\n"
+            . "Requester: {$requesterName} ({$requesterRole})\n"
+            . "Recipient Admin: {$adminEmail}\n"
+            . "IP Address: {$ip}\n"
+            . "Requested At: " . date('Y-m-d H:i:s') . "\n"
+            . "Valid For: 60 Minutes\n\n"
+            . "To approve this export:\n{$approveUrl}\n\n"
+            . "To decline this request:\n{$rejectUrl}\n\n"
+            . "If you did not initiate this request, click Decline to protect your data.\n\n"
+            . "GRM Garments CRM - Tirupur, Tamil Nadu\n";
 
-        $notesHtml = !empty($customNotes) ? "<div class='info-row'><span class='info-label'>Request Note:</span><span class='info-val'>" . htmlspecialchars($customNotes) . "</span></div>" : "";
+        $notesHtml = !empty($customNotes) ? "<tr><td class='lbl'>Request Note:</td><td class='val'>" . htmlspecialchars($customNotes) . "</td></tr>" : "";
 
-        $message = "
+        $htmlMessage = "
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset='UTF-8'>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0f172a; margin: 0; padding: 24px 12px; }
-    .card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-    .header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 24px 20px; text-align: center; }
-    .badge { display: inline-block; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
-    .title { margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; }
-    .body { padding: 24px 20px; color: #334155; font-size: 13px; line-height: 1.6; }
-    .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin: 16px 0; }
-    .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
-    .info-label { color: #64748b; font-weight: 600; }
-    .info-val { color: #0f172a; font-weight: 700; }
-    .btn-table { width: 100%; border-collapse: separate; border-spacing: 10px 0; margin: 24px 0 12px 0; }
-    .btn-approve { display: block; text-align: center; background: #059669; color: #ffffff !important; padding: 14px 18px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 13px; }
-    .btn-reject { display: block; text-align: center; background: #dc2626; color: #ffffff !important; padding: 14px 18px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 13px; }
-    .footer { padding: 16px 20px; background: #f1f5f9; border-top: 1px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 11px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #1e293b; }
+    .email-container { max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .brand-header { padding: 24px 28px 16px; border-bottom: 1px solid #f1f5f9; }
+    .brand-title { font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; }
+    .content-body { padding: 28px; font-size: 14px; line-height: 1.6; color: #334155; }
+    .code-box { background: #f1f5f9; border-radius: 10px; padding: 14px 18px; margin: 20px 0; text-align: center; }
+    .code-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px; }
+    .code-val { font-size: 20px; font-weight: 800; color: #0f172a; font-family: monospace; margin-top: 4px; }
+    .details-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+    .details-table td { padding: 6px 0; }
+    .details-table .lbl { color: #64748b; width: 120px; }
+    .details-table .val { color: #0f172a; font-weight: 600; }
+    .actions-table { width: 100%; border-collapse: separate; border-spacing: 12px 0; margin: 24px 0 16px; }
+    .btn-approve { display: block; text-align: center; background: #059669; color: #ffffff !important; padding: 12px 18px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 13px; }
+    .btn-reject { display: block; text-align: center; background: #f8fafc; color: #64748b !important; border: 1px solid #cbd5e1; padding: 12px 18px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 13px; }
+    .email-footer { padding: 20px 28px; background: #f8fafc; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; text-align: center; }
   </style>
 </head>
 <body>
-  <div class='card'>
-    <div class='header'>
-      <span class='badge'>Security Authorization</span>
-      <h2 class='title'>Database Backup Download Request</h2>
+  <div class='email-container'>
+    <div class='brand-header'>
+      <h2 class='brand-title'>GRM Garments CRM</h2>
     </div>
-    <div class='body'>
-      <p>A user has requested to download the complete CRM database backup file. Your explicit email authorization is required to unlock this file.</p>
+    <div class='content-body'>
+      <p style='margin-top:0;'>Hello,</p>
+      <p>A request to export a database backup snapshot has been submitted. Please review the details below:</p>
       
-      <div class='info-box'>
-        <div class='info-row'><span class='info-label'>Request Code:</span><span class='info-val'>{$requestCode}</span></div>
-        <div class='info-row'><span class='info-label'>Requester:</span><span class='info-val'>{$requesterName} ({$requesterRole})</span></div>
-        <div class='info-row'><span class='info-label'>Target Admin Email:</span><span class='info-val'>{$adminEmail}</span></div>
-        <div class='info-row'><span class='info-label'>IP Address:</span><span class='info-val'>{$ip}</span></div>
-        <div class='info-row'><span class='info-label'>Requested At:</span><span class='info-val'>" . date('Y-m-d H:i:s') . "</span></div>
-        <div class='info-row'><span class='info-label'>Authorization Expires:</span><span class='info-val'>In 15 Minutes</span></div>
-        {$notesHtml}
+      <div class='code-box'>
+        <div class='code-label'>Verification Code</div>
+        <div class='code-val'>{$requestCode}</div>
       </div>
 
-      <p>Please choose an action below:</p>
+      <table class='details-table'>
+        <tr><td class='lbl'>Requested By:</td><td class='val'>{$requesterName} ({$requesterRole})</td></tr>
+        <tr><td class='lbl'>Recipient:</td><td class='val'>{$adminEmail}</td></tr>
+        <tr><td class='lbl'>IP Address:</td><td class='val'>{$ip}</td></tr>
+        <tr><td class='lbl'>Time:</td><td class='val'>" . date('Y-m-d H:i:s') . "</td></tr>
+        <tr><td class='lbl'>Valid For:</td><td class='val'>60 Minutes</td></tr>
+        {$notesHtml}
+      </table>
 
-      <table class='btn-table'>
+      <table class='actions-table'>
         <tr>
-          <td style='width: 50%;'>
-            <a href='{$approveUrl}' class='btn-approve' target='_blank'>✅ APPROVE DOWNLOAD</a>
+          <td style='width:50%;'>
+            <a href='{$approveUrl}' class='btn-approve' target='_blank'>Approve Backup</a>
           </td>
-          <td style='width: 50%;'>
-            <a href='{$rejectUrl}' class='btn-reject' target='_blank'>🚫 REJECT &amp; BLOCK</a>
+          <td style='width:50%;'>
+            <a href='{$rejectUrl}' class='btn-reject' target='_blank'>Decline Request</a>
           </td>
         </tr>
       </table>
 
-      <p style='color: #64748b; font-size: 11px; margin-top: 16px;'>If you did not initiate or approve this backup request, click <strong>REJECT &amp; BLOCK</strong> to prevent data extraction.</p>
+      <p style='font-size: 11px; color: #64748b; margin-top: 20px; line-height: 1.5;'>
+        If you did not initiate this request, click Decline Request to lock export access.
+      </p>
     </div>
-    <div class='footer'>
-      GRM Garments CRM &bull; Automated Data Protection Shield &bull; Hostinger Secure Mailer
+    <div class='email-footer'>
+      GRM Garments CRM &bull; Tirupur, Tamil Nadu &bull; Automated System Notification
     </div>
   </div>
 </body>
 </html>
 ";
-        $mailSent = @mail($adminEmail, $subject, $message, $headers, "-f" . $fromEmail);
+
+        $mailSent = false;
+        $mailMethod = 'NONE';
+        $mailError = null;
+
+        // 1. Try Authenticated Socket SMTP first (Guaranteed direct-to-inbox, SPF & DKIM verified)
+        $smtpRes = sendDirectSmtpMail($adminEmail, $cleanSubject, $htmlMessage, $plainText);
+        if (!empty($smtpRes['success'])) {
+            $mailSent = true;
+            $mailMethod = 'SMTP';
+        } else {
+            $mailError = $smtpRes['error'] ?? null;
+
+            // 2. Fallback to PHP mail() with strict Anti-Spam headers
+            // CRITICAL ANTI-SPAM FIX: REMOVED "Precedence: bulk", REMOVED "X-Priority: 1", REMOVED "Importance: High"
+            $headers = "MIME-Version: 1.0\r\n";
+            $headers .= "From: GRM CRM Security Shield <{$fromEmail}>\r\n";
+            $headers .= "Reply-To: {$fromEmail}\r\n";
+            $headers .= "Return-Path: <{$fromEmail}>\r\n";
+            $headers .= "Date: " . date('r') . "\r\n";
+            $headers .= "Message-ID: <" . time() . "." . bin2hex(random_bytes(8)) . "@" . $hostDomain . ">\r\n";
+            $headers .= "X-Mailer: GRM-CRM-Mailer/3.0\r\n";
+            $headers .= "Auto-Submitted: auto-generated\r\n";
+            $headers .= "X-Auto-Response-Suppress: All\r\n";
+            $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+
+            // RFC 2045 Base64 encoded parts ensure zero line-length violations and zero spam penalties
+            $fullBody = "--{$boundary}\r\n"
+                . "Content-Type: text/plain; charset=UTF-8\r\n"
+                . "Content-Transfer-Encoding: base64\r\n\r\n"
+                . chunk_split(base64_encode($plainText)) . "\r\n"
+                . "--{$boundary}\r\n"
+                . "Content-Type: text/html; charset=UTF-8\r\n"
+                . "Content-Transfer-Encoding: base64\r\n\r\n"
+                . chunk_split(base64_encode($htmlMessage)) . "\r\n"
+                . "--{$boundary}--\r\n";
+
+            $rawMailSuccess = @mail($adminEmail, $cleanSubject, $fullBody, $headers, "-f" . $fromEmail);
+            if ($rawMailSuccess) {
+                $mailSent = true;
+                $mailMethod = 'PHP_MAIL';
+            }
+        }
+
+        // 2. Dispatch Instant WhatsApp Security Authorization Link to Super Admin Phone
+        $waSent = false;
+        $waAdminPhone = null;
+        try {
+            // Find active Super Admin phone number from users table or config
+            $adminUserStmt = $pdo->prepare("SELECT `phone` FROM `users` WHERE `role` IN ('Super Admin', 'admin') AND `status` = 'active' AND `phone` IS NOT NULL AND `phone` != '' ORDER BY id ASC LIMIT 1");
+            $adminUserStmt->execute();
+            $adminRow = $adminUserStmt->fetch(PDO::FETCH_ASSOC);
+            $waAdminPhone = !empty($adminRow['phone']) ? $adminRow['phone'] : '+91 99435 57998';
+
+            $cleanWaPhone = preg_replace('/[^0-9]/', '', $waAdminPhone);
+            if (strlen($cleanWaPhone) === 10) {
+                $cleanWaPhone = '91' . $cleanWaPhone;
+            }
+
+            $waAlertMsg = "🔒 *[GRM CRM SECURITY GATE]*
+*Database Backup Download Authorization Request*
+
+"
+                . "A complete database export has been requested.
+"
+                . "• *Request Code:* `{$requestCode}`
+"
+                . "• *Requested By:* {$requesterName} ({$requesterRole})
+"
+                . "• *Target Admin:* {$adminEmail}
+"
+                . "• *Valid For:* 60 Minutes
+
+"
+                . "✅ *1-CLICK APPROVE:*
+{$approveUrl}
+
+"
+                . "🚫 *REJECT & BLOCK:*
+{$rejectUrl}
+
+"
+                . "_If you did not request this, click REJECT immediately to lock export access._";
+
+            $bRes = curlBridgePost('/api/send', [
+                'phone' => $cleanWaPhone,
+                'text' => $waAlertMsg
+            ], 6);
+
+            if (!empty($bRes['http_code']) && $bRes['http_code'] >= 200 && $bRes['http_code'] < 300) {
+                $waSent = true;
+            }
+        } catch (Exception $waEx) {
+            error_log("WhatsApp backup authorization alert error: " . $waEx->getMessage());
+        }
 
         echo json_encode([
             "success" => true,
@@ -5339,7 +5898,11 @@ if ($action === 'request_backup_download') {
             "request_code" => $requestCode,
             "admin_email" => $adminEmail,
             "mail_sent" => (bool)$mailSent,
-            "expires_in_minutes" => 15,
+            "mail_method" => $mailMethod,
+            "mail_error" => $mailError,
+            "wa_sent" => (bool)$waSent,
+            "wa_admin_phone" => $waAdminPhone,
+            "expires_in_minutes" => 60,
             "approve_url" => $approveUrl,
             "reject_url" => $rejectUrl,
             "approve_url_preview" => $approveUrl,
@@ -5381,11 +5944,16 @@ if ($action === 'check_backup_request_status') {
         echo json_encode([
             "success" => true,
             "status" => "success",
+            "request_code" => $req['request_code'],
             "request_status" => $req['status'],
             "requestStatus" => $req['status'],
             "download_token" => ($req['status'] === 'APPROVED') ? $req['download_token'] : null,
             "action_at" => $req['action_at'],
-            "action_by" => $req['action_by']
+            "action_by" => $req['action_by'],
+            "admin_email" => $req['admin_email'],
+            "requester_name" => $req['requester_name'],
+            "requester_role" => $req['requester_role'],
+            "download_count" => (int)($req['download_count'] ?? 0)
         ]);
     } catch (Exception $e) {
         http_response_code(500);
@@ -5396,20 +5964,78 @@ if ($action === 'check_backup_request_status') {
 
 // 3. VERIFY BACKUP REQUEST (Webhook accessed when Admin clicks email button)
 if ($action === 'verify_backup_request') {
+    // Explicitly set text/html so browser never renders raw source code with Pretty-print
+    header('Content-Type: text/html; charset=UTF-8');
     $token = trim($_GET['token'] ?? '');
+
+    function renderVerifyHtmlPage($title, $icon, $themeColor, $message, $meta = []) {
+        $metaHtml = '';
+        foreach ($meta as $k => $v) {
+            $metaHtml .= '<div class="meta-row"><span class="meta-lbl">' . htmlspecialchars($k) . ':</span><span class="meta-val">' . htmlspecialchars((string)$v) . '</span></div>';
+        }
+        echo <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{$title} — GRM CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f172a; color: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { width: 100%; max-width: 460px; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); overflow: hidden; text-align: center; }
+    .header { background: {$themeColor}; color: #ffffff; padding: 32px 20px; }
+    .icon { font-size: 56px; }
+    .title { font-size: 20px; font-weight: 800; margin-top: 10px; }
+    .body { padding: 28px 24px; font-size: 13px; color: #334155; line-height: 1.6; }
+    .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin: 18px 0; text-align: left; font-size: 12px; }
+    .meta-row { display: flex; justify-content: space-between; margin-bottom: 7px; }
+    .meta-lbl { color: #64748b; font-weight: 600; }
+    .meta-val { color: #0f172a; font-weight: 700; font-family: monospace; }
+    .footer { padding: 16px; background: #f1f5f9; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <span class="material-symbols-outlined icon">{$icon}</span>
+      <h2 class="title">{$title}</h2>
+    </div>
+    <div class="body">
+      <p>{$message}</p>
+      <div class="meta-box">
+        {$metaHtml}
+      </div>
+      <p style="font-size: 11px; color: #64748b;">You can safely close this browser tab.</p>
+    </div>
+    <div class="footer">
+      GRM Garments CRM &bull; Security &amp; Access Control Shield
+    </div>
+  </div>
+</body>
+</html>
+HTML;
+    }
+
     if (empty($token)) {
-        die("Invalid verification link.");
+        renderVerifyHtmlPage("Invalid Request", "error", "#dc2626", "The verification token is missing or malformed.", ["Error" => "Missing Token"]);
+        exit;
     }
 
     try {
-        if (!$pdo) die("Database connection error");
+        if (!$pdo) {
+            renderVerifyHtmlPage("Database Error", "error", "#dc2626", "Database connection is currently unavailable.", ["Error" => "No Database Connection"]);
+            exit;
+        }
 
         $stmt = $pdo->prepare("SELECT * FROM `backup_download_requests` WHERE `token_approve` = ? OR `token_reject` = ? LIMIT 1");
         $stmt->execute([$token, $token]);
         $req = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$req) {
-            die("Verification token not found or already invalidated.");
+            renderVerifyHtmlPage("Token Invalid", "warning", "#64748b", "This verification link is invalid or has already expired / been used.", ["Notice" => "Token Not Found"]);
+            exit;
         }
 
         $isApprove = ($token === $req['token_approve']);
@@ -5426,88 +6052,70 @@ if ($action === 'verify_backup_request') {
                     ->execute([$downloadToken, $req['admin_email'], $req['id']]);
                 $req['status'] = 'APPROVED';
 
+                // Audit log: Admin approval
                 try {
-                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('BACKUP_DOWNLOAD_APPROVED', 'SECURITY', ?, ?, NOW())");
-                    $audit->execute([$req['admin_email'], "Approved database backup download for {$req['requester_name']} (Code: {$req['request_code']})"]);
+                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOAD_APPROVED', 'BACKUP_DOWNLOAD_APPROVED', 'SECURITY', 'SECURITY', ?, ?, ?, ?, NOW())");
+                    $desc = "Approved database backup download for staff: {$req['requester_name']} ({$req['requester_role']}) - Request Code: {$req['request_code']}";
+                    $audit->execute([$req['admin_email'], $req['admin_email'], $desc, $desc, date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
                 } catch (Exception $ae) {}
             } else {
                 $pdo->prepare("UPDATE `backup_download_requests` SET `status` = 'REJECTED', `download_token` = NULL, `action_at` = NOW(), `action_by` = ? WHERE `id` = ?")
                     ->execute([$req['admin_email'], $req['id']]);
                 $req['status'] = 'REJECTED';
 
+                // Audit log: Admin rejection
                 try {
-                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('BACKUP_DOWNLOAD_REJECTED', 'SECURITY', ?, ?, NOW())");
-                    $audit->execute([$req['admin_email'], "REJECTED and BLOCKED database backup download requested by {$req['requester_name']} (Code: {$req['request_code']})"]);
+                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOAD_REJECTED', 'BACKUP_DOWNLOAD_REJECTED', 'SECURITY', 'SECURITY', ?, ?, ?, ?, NOW())");
+                    $desc = "REJECTED and BLOCKED database backup download requested by staff: {$req['requester_name']} ({$req['requester_role']}) - Request Code: {$req['request_code']}";
+                    $audit->execute([$req['admin_email'], $req['admin_email'], $desc, $desc, date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
                 } catch (Exception $ae) {}
             }
         }
 
-        $statusBadge = $req['status'] === 'APPROVED' ? 'bg-emerald-500' : ($req['status'] === 'REJECTED' ? 'bg-rose-500' : 'bg-slate-500');
-        $title = $req['status'] === 'APPROVED' ? 'Backup Download Approved' : ($req['status'] === 'REJECTED' ? 'Backup Download Blocked' : 'Request ' . $req['status']);
-        $icon = $req['status'] === 'APPROVED' ? 'check_circle' : ($req['status'] === 'REJECTED' ? 'block' : 'info');
-        $themeColor = $req['status'] === 'APPROVED' ? '#059669' : ($req['status'] === 'REJECTED' ? '#dc2626' : '#64748b');
-
-        echo <<<HTML
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{$title} — GRM CRM</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f172a; color: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
-    .card { width: 100%; max-width: 440px; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); overflow: hidden; text-align: center; }
-    .header { background: {$themeColor}; color: #ffffff; padding: 32px 20px; }
-    .icon { font-size: 56px; }
-    .title { font-size: 20px; font-weight: 800; margin-top: 10px; }
-    .body { padding: 28px 24px; font-size: 13px; color: #334155; line-height: 1.6; }
-    .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin: 16px 0; text-align: left; font-size: 12px; }
-    .meta-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
-    .meta-lbl { color: #64748b; font-weight: 600; }
-    .meta-val { color: #0f172a; font-weight: 700; font-family: monospace; }
-    .footer { padding: 16px; background: #f1f5f9; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="header">
-      <span class="material-symbols-outlined icon">{$icon}</span>
-      <h2 class="title">{$title}</h2>
-    </div>
-    <div class="body">
-      <p>
-HTML;
         if ($req['status'] === 'APPROVED') {
-            echo "You have successfully <strong>APPROVED</strong> this database backup request. The requester's CRM window has now unlocked the backup file.";
+            renderVerifyHtmlPage(
+                "Backup Download Approved",
+                "check_circle",
+                "#059669",
+                "You have successfully <strong>APPROVED</strong> this database backup request. The requester's CRM window will immediately begin downloading the backup file.",
+                [
+                    "Request Code" => $req['request_code'],
+                    "Staff Requester" => $req['requester_name'] . " (" . $req['requester_role'] . ")",
+                    "Authorized By Admin" => $req['admin_email'],
+                    "Status" => "APPROVED",
+                    "Recorded Time" => $req['created_at']
+                ]
+            );
         } elseif ($req['status'] === 'REJECTED') {
-            echo "You have <strong>REJECTED &amp; BLOCKED</strong> this backup download request. Access to the database backup file has been forbidden.";
+            renderVerifyHtmlPage(
+                "Backup Download Blocked",
+                "block",
+                "#dc2626",
+                "You have <strong>REJECTED &amp; BLOCKED</strong> this backup download request. Access to the database backup file has been forbidden.",
+                [
+                    "Request Code" => $req['request_code'],
+                    "Staff Requester" => $req['requester_name'] . " (" . $req['requester_role'] . ")",
+                    "Blocked By Admin" => $req['admin_email'],
+                    "Status" => "REJECTED",
+                    "Recorded Time" => $req['created_at']
+                ]
+            );
         } else {
-            echo "This authorization request is currently marked as <strong>{$req['status']}</strong>.";
+            renderVerifyHtmlPage(
+                "Request Expired",
+                "history_toggle_off",
+                "#d97706",
+                "This authorization request is currently marked as <strong>EXPIRED</strong>. Please initiate a fresh backup authorization request from the CRM panel.",
+                [
+                    "Request Code" => $req['request_code'],
+                    "Staff Requester" => $req['requester_name'],
+                    "Status" => "EXPIRED",
+                    "Recorded Time" => $req['created_at']
+                ]
+            );
         }
-
-        echo <<<HTML
-      </p>
-
-      <div class="meta-box">
-        <div class="meta-row"><span class="meta-lbl">Request Code:</span><span class="meta-val">{$req['request_code']}</span></div>
-        <div class="meta-row"><span class="meta-lbl">Requester:</span><span class="meta-val">{$req['requester_name']}</span></div>
-        <div class="meta-row"><span class="meta-lbl">Status:</span><span class="meta-val" style="color: {$themeColor};">{$req['status']}</span></div>
-        <div class="meta-row"><span class="meta-lbl">Recorded Time:</span><span class="meta-val">{$req['created_at']}</span></div>
-      </div>
-
-      <p style="font-size: 11px; color: #64748b;">You can safely close this browser window.</p>
-    </div>
-    <div class="footer">
-      GRM Garments CRM &bull; Security &amp; Access Control
-    </div>
-  </div>
-</body>
-</html>
-HTML;
     } catch (Exception $e) {
-        die("Error: " . $e->getMessage());
+        renderVerifyHtmlPage("System Error", "error", "#dc2626", "An unexpected error occurred: " . htmlspecialchars($e->getMessage()), ["Error" => "Exception"]);
     }
     exit;
 }
@@ -5525,7 +6133,15 @@ if ($action === 'backup_db') {
             $authReq = $authStmt->fetch(PDO::FETCH_ASSOC);
             if ($authReq) {
                 $isAuthorized = true;
-                $pdo->prepare("UPDATE `backup_download_requests` SET `download_count` = `download_count` + 1, `downloaded_at` = NOW() WHERE `id` = ?")->execute([$authReq['id']]);
+                $newCount = intval($authReq['download_count'] ?? 0) + 1;
+                $pdo->prepare("UPDATE `backup_download_requests` SET `download_count` = ?, `downloaded_at` = NOW() WHERE `id` = ?")->execute([$newCount, $authReq['id']]);
+
+                // Audit log: Track which admin authorized, which staff downloaded, and total download count
+                try {
+                    $audit = $pdo->prepare("INSERT INTO `audit_logs` (`user`, `actor`, `action`, `action_type`, `module`, `category`, `details`, `description`, `timestamp_str`, `ip_address`, `created_at`) VALUES (?, ?, 'BACKUP_DOWNLOADED', 'DATABASE_BACKUP_EXPORTED', 'BACKUP', 'SECURITY', ?, ?, ?, ?, NOW())");
+                    $desc = "Database backup downloaded by staff: {$authReq['requester_name']} ({$authReq['requester_role']}) - Authorized by Admin: {$authReq['action_by']} (Download #{$newCount}, Request Code: {$authReq['request_code']})";
+                    $audit->execute([$authReq['requester_name'], $authReq['requester_name'], $desc, $desc, date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
+                } catch (Exception $ae) {}
             }
         } catch (Exception $e) {}
     }

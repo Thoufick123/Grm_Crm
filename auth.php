@@ -3,6 +3,7 @@
  * GRM WHATSAPP CRM — AUTHENTICATION BACKEND API
  * Handles Login, Session Validation, Role-Based Access Checks, and Logout with MySQL Integration
  */
+date_default_timezone_set('Asia/Kolkata');
 
 ini_set('session.gc_maxlifetime', 2592000); // 30-day session duration
 session_set_cookie_params([

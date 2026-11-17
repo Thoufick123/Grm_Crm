@@ -1074,9 +1074,9 @@
               class="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">Blast</span>
           </button>
 
-          <!-- Sub-module 4: Setting -->
+          <!-- Sub-module 4: Setting (Mobile Only - Hidden on Desktop) -->
           <button onclick="switchView('inbox', 'settings')" id="nav-inbox-sub-settings"
-            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-xs font-medium transition group cursor-pointer"
+            class="w-full flex md:hidden items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-xs font-medium transition group cursor-pointer"
             title="WhatsApp Inbox Settings">
             <div class="flex items-center gap-2">
               <span
@@ -1384,7 +1384,7 @@
                 id="dropdown-connected-count">5 Active Lines</span>
             </div>
 
-            <div id="phone-dropdown-accounts-list" class="max-h-60 overflow-y-auto divide-y divide-slate-100 p-1">
+            <div id="phone-dropdown-accounts-list" class="max-h-[380px] sm:max-h-[440px] overflow-y-auto divide-y divide-slate-100 p-1 custom-chat-scroll">
               <!-- Rendered dynamically by JS -->
             </div>
 
@@ -2547,7 +2547,7 @@
         <!-- SUB-MODULE 4: SETTING WORKSTATION                        -->
         <!-- ======================================================== -->
         <div id="submodule-inbox-settings"
-          class="flex-1 overflow-y-auto hidden bg-slate-100/70 p-4 pb-28 sm:p-6 sm:pb-8 custom-chat-scroll">
+          class="flex-1 overflow-y-auto hidden md:hidden bg-slate-100/70 p-4 pb-28 sm:p-6 sm:pb-8 custom-chat-scroll">
           <div class="max-w-4xl mx-auto space-y-4">
             <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-soft space-y-4">
               <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
@@ -11528,7 +11528,7 @@
       </div>
 
       <!-- Body Form -->
-      <form id="form-bulk-price-request" onsubmit="submitBulkPriceRequest(event)" class="p-6 space-y-4 text-xs">
+      <form id="form-bulk-price-request" onsubmit="event.preventDefault(); submitBulkPriceRequest(event); return false;" class="p-6 space-y-4 text-xs">
         <!-- Customer Info Strip -->
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
           <div>
@@ -11749,36 +11749,7 @@
           <span>If the Super Admin clicks <b>[Reject]</b> in the email, the backup request will be immediately terminated and download access will be locked.</span>
         </div>
 
-        <!-- Spam folder reminder notice -->
-        <div class="p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-xl text-[11px] text-amber-800 flex items-start gap-2">
-          <span class="material-symbols-outlined text-[16px] text-amber-600 mt-0.5 flex-shrink-0">report_gmailerrorred</span>
-          <div>
-            <span class="font-bold">Not in your Inbox?</span> Check your Gmail <b>Spam or Junk folder</b>. Shared server emails may take 1–2 minutes or land in Spam.
-          </div>
-        </div>
 
-        <!-- Direct Admin One-Click Verification Link / Action Bar -->
-        <div id="backup-approval-direct-actions" class="bg-slate-100/90 rounded-xl p-3 border border-slate-200 space-y-2">
-          <div class="flex items-center justify-between text-[11px]">
-            <span class="font-bold text-slate-700 flex items-center gap-1">
-              <span class="material-symbols-outlined text-[14px] text-brand-wa">key</span>
-              <span>Direct Admin Authorization:</span>
-            </span>
-            <span class="text-[10px] text-slate-500 font-medium">Instant One-Click</span>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <a id="btn-backup-open-approve" href="#" target="_blank"
-              class="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs text-center transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
-              <span class="material-symbols-outlined text-[15px]">check_circle</span>
-              <span>✅ Approve Download</span>
-            </a>
-            <a id="btn-backup-open-reject" href="#" target="_blank"
-              class="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs text-center transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
-              <span class="material-symbols-outlined text-[15px]">block</span>
-              <span>🚫 Reject &amp; Block</span>
-            </a>
-          </div>
-        </div>
       </div>
 
       <!-- Footer Buttons -->
@@ -11799,7 +11770,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261116_v19"></script>
+  <script src="crm_app.js?v=20261117_v26"></script>
 </body>
 
 </html>
