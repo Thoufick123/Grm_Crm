@@ -121,5 +121,4 @@ docker-compose.override.yml
 
 # Binaries
 *.exe
-cloudflared.exe
 bridge/cloudflared.exe
