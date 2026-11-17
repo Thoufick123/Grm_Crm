@@ -3415,6 +3415,39 @@ function initCRMState() {
         }
       }
 
+      // 14. Authoritative WhatsApp Account & Multi-Accounts State Sync from Database
+      // Guarantees that hard-refreshing (Ctrl+F5) NEVER falsely shows Primary WhatsApp as DISCONNECTED!
+      if (data.whatsappAccounts && Array.isArray(data.whatsappAccounts) && data.whatsappAccounts.length > 0) {
+        const liveFromDb = data.whatsappAccounts.map(a => ({
+          id: a.account_slot || a.id,
+          name: a.display_name || a.account_name || a.brand_name || 'WhatsApp Line',
+          phone: a.phone_number || a.phone || '',
+          status: (a.status || 'DISCONNECTED').toUpperCase(),
+          qr_image: a.qr_code || null,
+          connected_number: a.phone_number || a.phone || 'Awaiting Link'
+        }));
+        if (!Array.isArray(MULTI_ACCOUNTS_STATE) || MULTI_ACCOUNTS_STATE.length === 0) {
+          MULTI_ACCOUNTS_STATE = liveFromDb;
+        }
+        if (Array.isArray(CRM_STATE.whatsappLines)) {
+          CRM_STATE.whatsappLines.forEach(line => {
+            const dbAcc = liveFromDb.find(a => a.id === line.id);
+            if (dbAcc && dbAcc.status === 'CONNECTED') {
+              line.status = 'CONNECTED';
+              line.connected_number = dbAcc.phone || line.connected_number;
+              line.qr_image = null;
+            }
+          });
+        }
+      }
+      if (data.whatsappAccount && data.whatsappAccount.status === 'CONNECTED' && data.whatsappAccount.phone_number) {
+        if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
+        CRM_STATE.whatsappAccount.phoneNumber = data.whatsappAccount.phone_number;
+        CRM_STATE.whatsappAccount.status = 'CONNECTED';
+        CRM_STATE.whatsappAccount.businessName = data.whatsappAccount.business_name || CRM_STATE.whatsappAccount.businessName;
+        updateConfiguredPhoneDisplays();
+      }
+
       // Update UI components dynamically to reflect live database state
       if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
       if (typeof populateProductFormCategories === 'function') populateProductFormCategories();
@@ -28720,7 +28753,44 @@ function fetchQRBridgeStatus(btnEl) {
           }
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Direct bridge fetch failed or timed out: Fallback immediately to database state
+        // Ensures hard refresh never leaves Primary WhatsApp in a false DISCONNECTED state!
+        fetch('api.php?action=get_all')
+          .then(r => r.json())
+          .then(res => {
+            const data = res.data || res;
+            if (data && data.whatsappAccounts) {
+              const accounts = data.whatsappAccounts || [];
+              if (Array.isArray(accounts) && accounts.length > 0) {
+                MULTI_ACCOUNTS_STATE = accounts.map(a => ({
+                  id: a.account_slot || a.id,
+                  name: a.account_name || a.name || 'WhatsApp Line',
+                  phone: a.phone_number || a.phone || '',
+                  status: (a.status || 'DISCONNECTED').toUpperCase(),
+                  qr_image: a.qr_code || null
+                }));
+                if (Array.isArray(CRM_STATE.whatsappLines)) {
+                  CRM_STATE.whatsappLines.forEach(line => {
+                    const live = MULTI_ACCOUNTS_STATE.find(a => a.id === line.id);
+                    if (live && live.status === 'CONNECTED') {
+                      line.status = 'CONNECTED';
+                      line.connected_number = live.phone || line.connected_number;
+                      line.qr_image = null;
+                    }
+                  });
+                }
+                const primary = MULTI_ACCOUNTS_STATE.find(a => a.id === 'account_1') || MULTI_ACCOUNTS_STATE[0];
+                if (primary && primary.status === 'CONNECTED' && primary.phone) {
+                  CRM_STATE.whatsappAccount.phoneNumber = primary.phone;
+                  CRM_STATE.whatsappAccount.status = 'CONNECTED';
+                  updateConfiguredPhoneDisplays();
+                }
+                saveCRMState();
+              }
+            }
+          }).catch(() => {});
+      })
       .finally(() => {
         renderMultiAccountsHub();
         renderQuickLineSwitcher();
@@ -28764,7 +28834,44 @@ function fetchQRBridgeStatus(btnEl) {
           updateConfiguredPhoneDisplays();
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Direct bridge fetch failed or timed out: Fallback immediately to database state
+        // Ensures hard refresh never leaves Primary WhatsApp in a false DISCONNECTED state!
+        fetch('api.php?action=get_all')
+          .then(r => r.json())
+          .then(res => {
+            const data = res.data || res;
+            if (data && data.whatsappAccounts) {
+              const accounts = data.whatsappAccounts || [];
+              if (Array.isArray(accounts) && accounts.length > 0) {
+                MULTI_ACCOUNTS_STATE = accounts.map(a => ({
+                  id: a.account_slot || a.id,
+                  name: a.account_name || a.name || 'WhatsApp Line',
+                  phone: a.phone_number || a.phone || '',
+                  status: (a.status || 'DISCONNECTED').toUpperCase(),
+                  qr_image: a.qr_code || null
+                }));
+                if (Array.isArray(CRM_STATE.whatsappLines)) {
+                  CRM_STATE.whatsappLines.forEach(line => {
+                    const live = MULTI_ACCOUNTS_STATE.find(a => a.id === line.id);
+                    if (live && live.status === 'CONNECTED') {
+                      line.status = 'CONNECTED';
+                      line.connected_number = live.phone || line.connected_number;
+                      line.qr_image = null;
+                    }
+                  });
+                }
+                const primary = MULTI_ACCOUNTS_STATE.find(a => a.id === 'account_1') || MULTI_ACCOUNTS_STATE[0];
+                if (primary && primary.status === 'CONNECTED' && primary.phone) {
+                  CRM_STATE.whatsappAccount.phoneNumber = primary.phone;
+                  CRM_STATE.whatsappAccount.status = 'CONNECTED';
+                  updateConfiguredPhoneDisplays();
+                }
+                saveCRMState();
+              }
+            }
+          }).catch(() => {});
+      })
       .finally(() => {
         renderMultiAccountsHub();
         renderQuickLineSwitcher();

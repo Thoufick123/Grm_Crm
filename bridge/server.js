@@ -44,6 +44,7 @@ const { initVoiceSignaling, generateVoiceRoomToken, VOICE_ROOMS } = require('./v
 const {
     default: makeWASocket,
     useMultiFileAuthState,
+    makeCacheableSignalKeyStore,
     DisconnectReason,
     fetchLatestBaileysVersion,
     downloadMediaMessage,
@@ -601,7 +602,7 @@ async function syncAccountStatusToCrm() {
 setTimeout(syncAccountStatusToCrm, 3000);
 setInterval(syncAccountStatusToCrm, 5 * 60 * 1000);
 
-// Active Live Connection Keeper: Continuously ensure Hostinger reflects all active WhatsApp sessions
+// Active Live Connection Keeper: Periodically ensure Hostinger reflects all active WhatsApp sessions (gentle 60s interval to prevent firewall rate-limiting)
 setInterval(async () => {
     for (const [accId, accObj] of accounts.entries()) {
         if (accObj.status === 'CONNECTED' && accObj.connectedNumber) {
@@ -613,12 +614,10 @@ setInterval(async () => {
                 connected_name: accObj.connectedName,
                 label: accObj.label
             }).catch(e => ({ err: e.message }));
-            console.log(`[Status Keeper] ${accId} (${accObj.connectedNumber}) -> synced:`, res?.message || res?.status);
-        } else {
-            console.log(`[Status Keeper] ${accId} not connected: status=${accObj.status}, num=${accObj.connectedNumber}`);
+            if (process.env.DEBUG) console.log(`[Status Keeper] ${accId} (${accObj.connectedNumber}) -> synced:`, res?.message || res?.status);
         }
     }
-}, 5000);
+}, 60 * 1000);
 
 console.log(`🚀 [Hostinger Mode]: WhatsApp Bridge connected to CRM at ${CRM_BASE_URL}`);
 
@@ -733,41 +732,64 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
         fs.mkdirSync(sessionDir, { recursive: true });
     }
 
+    const existingAcc = accounts.get(accountId);
+
     const accountObj = {
         id: accountId,
-        label: label,
-        status: 'CONNECTING',
+        label: existingAcc?.label || label,
+        status: existingAcc?.status === 'CONNECTED' ? 'RECONNECTING' : 'CONNECTING',
         sock: null,
         qrImage: null,
-        connectedNumber: null,
-        connectedName: null,
+        connectedNumber: existingAcc?.connectedNumber || null,
+        connectedName: existingAcc?.connectedName || null,
         isStarting: true,
         lastActive: new Date().toISOString()
     };
 
     accounts.set(accountId, accountObj);
-    broadcastAccountsUpdate();
+    if (!accountObj.connectedNumber) {
+        broadcastAccountsUpdate();
+    }
 
     try {
         const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-        if (state.creds?.me?.id && !state.creds.registered) {
-            state.creds.registered = true;
-            try { await saveCreds(); } catch (e) {}
+        if (state.creds?.me?.id) {
+            if (!state.creds.registered) {
+                state.creds.registered = true;
+                try { await saveCreds(); } catch (e) {}
+            }
+            const rawNum = state.creds.me.id.split(':')[0].split('@')[0];
+            accountObj.connectedNumber = rawNum.startsWith('+') ? rawNum : ('+' + rawNum);
+            accountObj.connectedName = state.creds.me.name || `${label} (${accountObj.connectedNumber})`;
         }
-        const { version } = await fetchLatestBaileysVersion();
+
+        let version = [2, 3000, 1015901307];
+        try {
+            const v = await fetchLatestBaileysVersion();
+            if (v && v.version) version = v.version;
+        } catch (e) {}
+
+        const silentLogger = pino({ level: 'silent' });
 
         const sock = makeWASocket({
             version,
-            logger: pino({ level: 'silent' }),
+            logger: silentLogger,
             printQRInTerminal: false,
-            auth: state,
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, silentLogger)
+            },
             browser: Browsers.windows('Desktop'),
             syncFullHistory: false, // Prevents loading heavy history that crashes or times out after 2 min
             keepAliveIntervalMs: 25000, // Send keep-alive every 25s to keep socket alive stably
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
             generateHighQualityLinkPreview: false,
-            retryRequestDelayMs: 500
+            retryRequestDelayMs: 500,
+            markOnlineOnConnect: true,
+            getMessage: async (key) => {
+                return { conversation: 'keepalive' };
+            }
         });
 
         accountObj.sock = sock;
@@ -2210,7 +2232,7 @@ app.post('/api/autoreply/toggle', (req, res) => {
 
 app.get('/api/qr/status', (req, res) => {
     const summary = getAccountsSummary();
-    const primary = summary[0] || { status: 'DISCONNECTED', connected_number: null, qr_image: null, connected_name: null };
+    const primary = summary.find(a => a.id === 'account_1') || summary[0] || { status: 'DISCONNECTED', connected_number: null, qr_image: null, connected_name: null };
     res.json({
         status: 'success',
         connection: primary.status,
@@ -2233,7 +2255,7 @@ app.get('/api/accounts', (req, res) => {
 
 app.get('/api/status', (req, res) => {
     const summary = getAccountsSummary();
-    const primary = summary[0] || { status: 'DISCONNECTED', connected_number: null, qr_image: null, connected_name: null };
+    const primary = summary.find(a => a.id === 'account_1') || summary[0] || { status: 'DISCONNECTED', connected_number: null, qr_image: null, connected_name: null };
     res.json({
         status: 'success',
         connection: primary.status,

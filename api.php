@@ -1324,17 +1324,32 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $cfg['connected_lines'] = [];
     }
 
-    // Guard: Prevent rogue/unauthenticated SCAN_QR requests from overwriting an already CONNECTED account
+    // Guard: Prevent transient/unauthenticated SCAN_QR or DISCONNECTED requests from overwriting an already CONNECTED account
     $isForce = !empty($data['force']) || !empty($data['force_disconnect']);
     if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isForce) {
+        $alreadyConnected = false;
         foreach ($cfg['connected_lines'] as $existingLine) {
             if (($existingLine['id'] ?? '') === $slotId && ($existingLine['status'] ?? '') === 'CONNECTED') {
-                echo json_encode([
-                    "status" => "success",
-                    "message" => "Account $slotId is already active and CONNECTED. Ignoring unforced $status update."
-                ]);
-                exit;
+                $alreadyConnected = true;
+                break;
             }
+        }
+        if (!$alreadyConnected && $pdo) {
+            try {
+                $chkStmt = $pdo->prepare("SELECT `status` FROM `whatsapp_accounts` WHERE `account_slot` = ? LIMIT 1");
+                $chkStmt->execute([$slotId]);
+                $row = $chkStmt->fetch();
+                if ($row && $row['status'] === 'CONNECTED') {
+                    $alreadyConnected = true;
+                }
+            } catch (Exception $e) {}
+        }
+        if ($alreadyConnected) {
+            echo json_encode([
+                "status" => "success",
+                "message" => "Account $slotId is already active and CONNECTED. Ignoring transient $status update."
+            ]);
+            exit;
         }
     }
     $found = false;

@@ -3645,6 +3645,39 @@ function initCRMState() {
         }
       }
 
+      // 14. Authoritative WhatsApp Account & Multi-Accounts State Sync from Database
+      // Guarantees that hard-refreshing (Ctrl+F5) NEVER falsely shows Primary WhatsApp as DISCONNECTED!
+      if (data.whatsappAccounts && Array.isArray(data.whatsappAccounts) && data.whatsappAccounts.length > 0) {
+        const liveFromDb = data.whatsappAccounts.map(a => ({
+          id: a.account_slot || a.id,
+          name: a.display_name || a.account_name || a.brand_name || 'WhatsApp Line',
+          phone: a.phone_number || a.phone || '',
+          status: (a.status || 'DISCONNECTED').toUpperCase(),
+          qr_image: a.qr_code || null,
+          connected_number: a.phone_number || a.phone || 'Awaiting Link'
+        }));
+        if (!Array.isArray(MULTI_ACCOUNTS_STATE) || MULTI_ACCOUNTS_STATE.length === 0) {
+          MULTI_ACCOUNTS_STATE = liveFromDb;
+        }
+        if (Array.isArray(CRM_STATE.whatsappLines)) {
+          CRM_STATE.whatsappLines.forEach(line => {
+            const dbAcc = liveFromDb.find(a => a.id === line.id);
+            if (dbAcc && dbAcc.status === 'CONNECTED') {
+              line.status = 'CONNECTED';
+              line.connected_number = dbAcc.phone || line.connected_number;
+              line.qr_image = null;
+            }
+          });
+        }
+      }
+      if (data.whatsappAccount && data.whatsappAccount.status === 'CONNECTED' && data.whatsappAccount.phone_number) {
+        if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
+        CRM_STATE.whatsappAccount.phoneNumber = data.whatsappAccount.phone_number;
+        CRM_STATE.whatsappAccount.status = 'CONNECTED';
+        CRM_STATE.whatsappAccount.businessName = data.whatsappAccount.business_name || CRM_STATE.whatsappAccount.businessName;
+        updateConfiguredPhoneDisplays();
+      }
+
       // Update UI components dynamically to reflect live database state
       if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
       if (typeof populateProductFormCategories === 'function') populateProductFormCategories();
@@ -29687,7 +29720,44 @@ function fetchQRBridgeStatus(btnEl) {
           }
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Direct bridge fetch failed or timed out: Fallback immediately to database state
+        // Ensures hard refresh never leaves Primary WhatsApp in a false DISCONNECTED state!
+        fetch('api.php?action=get_all')
+          .then(r => r.json())
+          .then(res => {
+            const data = res.data || res;
+            if (data && data.whatsappAccounts) {
+              const accounts = data.whatsappAccounts || [];
+              if (Array.isArray(accounts) && accounts.length > 0) {
+                MULTI_ACCOUNTS_STATE = accounts.map(a => ({
+                  id: a.account_slot || a.id,
+                  name: a.account_name || a.name || 'WhatsApp Line',
+                  phone: a.phone_number || a.phone || '',
+                  status: (a.status || 'DISCONNECTED').toUpperCase(),
+                  qr_image: a.qr_code || null
+                }));
+                if (Array.isArray(CRM_STATE.whatsappLines)) {
+                  CRM_STATE.whatsappLines.forEach(line => {
+                    const live = MULTI_ACCOUNTS_STATE.find(a => a.id === line.id);
+                    if (live && live.status === 'CONNECTED') {
+                      line.status = 'CONNECTED';
+                      line.connected_number = live.phone || line.connected_number;
+                      line.qr_image = null;
+                    }
+                  });
+                }
+                const primary = MULTI_ACCOUNTS_STATE.find(a => a.id === 'account_1') || MULTI_ACCOUNTS_STATE[0];
+                if (primary && primary.status === 'CONNECTED' && primary.phone) {
+                  CRM_STATE.whatsappAccount.phoneNumber = primary.phone;
+                  CRM_STATE.whatsappAccount.status = 'CONNECTED';
+                  updateConfiguredPhoneDisplays();
+                }
+                saveCRMState();
+              }
+            }
+          }).catch(() => {});
+      })
       .finally(() => {
         renderMultiAccountsHub();
         renderQuickLineSwitcher();
@@ -29754,7 +29824,44 @@ function fetchQRBridgeStatus(btnEl) {
           updateConfiguredPhoneDisplays();
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Direct bridge fetch failed or timed out: Fallback immediately to database state
+        // Ensures hard refresh never leaves Primary WhatsApp in a false DISCONNECTED state!
+        fetch('api.php?action=get_all')
+          .then(r => r.json())
+          .then(res => {
+            const data = res.data || res;
+            if (data && data.whatsappAccounts) {
+              const accounts = data.whatsappAccounts || [];
+              if (Array.isArray(accounts) && accounts.length > 0) {
+                MULTI_ACCOUNTS_STATE = accounts.map(a => ({
+                  id: a.account_slot || a.id,
+                  name: a.account_name || a.name || 'WhatsApp Line',
+                  phone: a.phone_number || a.phone || '',
+                  status: (a.status || 'DISCONNECTED').toUpperCase(),
+                  qr_image: a.qr_code || null
+                }));
+                if (Array.isArray(CRM_STATE.whatsappLines)) {
+                  CRM_STATE.whatsappLines.forEach(line => {
+                    const live = MULTI_ACCOUNTS_STATE.find(a => a.id === line.id);
+                    if (live && live.status === 'CONNECTED') {
+                      line.status = 'CONNECTED';
+                      line.connected_number = live.phone || line.connected_number;
+                      line.qr_image = null;
+                    }
+                  });
+                }
+                const primary = MULTI_ACCOUNTS_STATE.find(a => a.id === 'account_1') || MULTI_ACCOUNTS_STATE[0];
+                if (primary && primary.status === 'CONNECTED' && primary.phone) {
+                  CRM_STATE.whatsappAccount.phoneNumber = primary.phone;
+                  CRM_STATE.whatsappAccount.status = 'CONNECTED';
+                  updateConfiguredPhoneDisplays();
+                }
+                saveCRMState();
+              }
+            }
+          }).catch(() => {});
+      })
       .finally(() => {
         renderMultiAccountsHub();
         renderQuickLineSwitcher();
@@ -39360,54 +39467,60 @@ window.openBulkForwardModal = function () {
   const orderedMsgIds = [];
   document.querySelectorAll('.chat-message-row').forEach(row => {
     const mId = row.getAttribute('data-msg-id');
-    if (mId && window.SELECTED_CHAT_MESSAGES.has(mId)) {
+    if (mId && (window.SELECTED_CHAT_MESSAGES.has(mId) || window.SELECTED_CHAT_MESSAGES.has(String(mId)))) {
       orderedMsgIds.push(mId);
     }
   });
   window.SELECTED_CHAT_MESSAGES.forEach(mId => {
-    if (!orderedMsgIds.includes(mId)) orderedMsgIds.push(mId);
+    const sId = String(mId);
+    if (!orderedMsgIds.includes(sId)) orderedMsgIds.push(sId);
   });
 
   orderedMsgIds.forEach(mId => {
+    const sId = String(mId);
     // 1. Try finding message in active conversation
-    let found = activeConv.find(m => m && String(m.id) === String(mId));
+    let found = activeConv.find(m => m && (String(m.id) === sId || String(m.msg_id) === sId || String(m.message_id) === sId));
     // 2. Try global messages list
     if (!found) {
-      found = allMessages.find(m => m && String(m.id) === String(mId));
+      found = allMessages.find(m => m && (String(m.id) === sId || String(m.msg_id) === sId || String(m.message_id) === sId));
     }
     // 3. Try any conversation in CRM_STATE
     if (!found && CRM_STATE && CRM_STATE.conversations) {
       for (const cid of Object.keys(CRM_STATE.conversations)) {
-        const hit = (CRM_STATE.conversations[cid] || []).find(m => m && String(m.id) === String(mId));
+        const hit = (CRM_STATE.conversations[cid] || []).find(m => m && (String(m.id) === sId || String(m.msg_id) === sId));
         if (hit) { found = hit; break; }
       }
     }
 
-    let t = '';
-    if (found) {
-      t = found.text || found.message_text || '';
-    }
-    if (!t && window.ACTIVE_CHAT_MESSAGES_MAP && window.ACTIVE_CHAT_MESSAGES_MAP[mId]) {
-      t = window.ACTIVE_CHAT_MESSAGES_MAP[mId];
+    let t = found ? (found.text || found.message_text || found.message || found.content || found.body || '') : '';
+    if (!t && window.ACTIVE_CHAT_MESSAGES_MAP && (window.ACTIVE_CHAT_MESSAGES_MAP[sId] || window.ACTIVE_CHAT_MESSAGES_MAP[mId])) {
+      t = window.ACTIVE_CHAT_MESSAGES_MAP[sId] || window.ACTIVE_CHAT_MESSAGES_MAP[mId];
     }
 
     let mediaUrl = found ? (found.media_url || found.mediaUrl || found.audio_url || null) : null;
     let msgType = found ? (found.type || found.media_type || found.mediaType || null) : null;
 
     // DOM fallback for text and media
-    const bubble = document.getElementById('chat-bubble-' + mId) || document.getElementById('msg-bubble-' + mId);
-    if (bubble) {
+    const row = document.querySelector(`.chat-message-row[data-msg-id="${sId}"]`) || document.getElementById('chat-bubble-' + sId) || document.getElementById('msg-bubble-' + sId);
+    if (row) {
       if (!t) {
-        const p = bubble.querySelector('p');
-        if (p) t = p.innerText.trim();
+        const p = row.querySelector('p');
+        if (p && p.innerText.trim()) {
+          t = p.innerText.trim();
+        } else {
+          const bubbleCard = row.querySelector('.chat-bubble-out, .chat-bubble-in') || row;
+          const clone = bubbleCard.cloneNode(true);
+          clone.querySelectorAll('button, .msg-checkbox-container, .msg-forward-btn-wrap, [id^="btn-trans"], script, style').forEach(el => el.remove());
+          t = clone.innerText.trim();
+        }
       }
       if (!mediaUrl) {
-        const img = document.getElementById('chat-img-' + mId) || bubble.querySelector('img');
-        if (img && img.src && !img.src.includes('avatar') && !img.src.includes('icon')) {
+        const img = row.querySelector('img:not([src*="avatar"]):not([src*="icon"])');
+        if (img && img.src) {
           mediaUrl = img.src;
           msgType = 'image';
         }
-        const audio = bubble.querySelector('audio');
+        const audio = row.querySelector('audio');
         if (audio && audio.src) {
           mediaUrl = audio.src;
           msgType = 'audio';
@@ -39415,15 +39528,18 @@ window.openBulkForwardModal = function () {
       }
     }
 
-    if (t || mediaUrl) {
-      items.push({
-        id: mId,
-        text: t,
-        media_url: mediaUrl,
-        type: msgType || (mediaUrl ? 'image' : 'text')
-      });
-      texts.push(t || (mediaUrl ? '[Photo Attachment]' : ''));
+    // Ensure fallback placeholder so selection never drops messages
+    if (!t && !mediaUrl) {
+      t = '[Forwarded Message]';
     }
+
+    items.push({
+      id: sId,
+      text: t,
+      media_url: mediaUrl,
+      type: msgType || (mediaUrl ? 'image' : 'text')
+    });
+    texts.push(t || (mediaUrl ? '[Photo Attachment]' : ''));
   });
 
   if (items.length === 0) {
@@ -39451,9 +39567,12 @@ window.openBulkForwardModal = function () {
   window.renderForwardContactList('');
   if (typeof openModal === 'function') {
     openModal('modal-forward-message');
-  } else {
-    const m = document.getElementById('modal-forward-message');
-    if (m) m.classList.remove('hidden');
+  }
+  const modalEl = document.getElementById('modal-forward-message');
+  if (modalEl) {
+    modalEl.classList.remove('hidden');
+    modalEl.style.display = 'flex';
+    modalEl.style.zIndex = '999999';
   }
 };
 
@@ -39491,41 +39610,47 @@ if (document.readyState === 'loading') {
 
 window.openForwardMessageModal = function (msgId, ev) {
   if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+  if (!msgId) return;
 
+  const sId = String(msgId);
   const allMessages = (CRM_STATE && CRM_STATE.messages) ? CRM_STATE.messages : [];
   const activeConv = (CRM_STATE && CRM_STATE.conversations && typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID && CRM_STATE.conversations[ACTIVE_CUSTOMER_ID]) || [];
 
-  let found = activeConv.find(m => m && String(m.id) === String(msgId));
+  let found = activeConv.find(m => m && (String(m.id) === sId || String(m.msg_id) === sId || String(m.message_id) === sId));
   if (!found) {
-    found = allMessages.find(m => m && String(m.id) === String(msgId));
+    found = allMessages.find(m => m && (String(m.id) === sId || String(m.msg_id) === sId || String(m.message_id) === sId));
   }
   if (!found && CRM_STATE && CRM_STATE.conversations) {
     for (const cid of Object.keys(CRM_STATE.conversations)) {
-      const hit = (CRM_STATE.conversations[cid] || []).find(m => m && String(m.id) === String(msgId));
+      const hit = (CRM_STATE.conversations[cid] || []).find(m => m && (String(m.id) === sId || String(m.msg_id) === sId));
       if (hit) { found = hit; break; }
     }
   }
 
-  let text = '';
-  if (found) {
-    text = found.text || found.message_text || '';
-  }
-  if (!text && window.ACTIVE_CHAT_MESSAGES_MAP && window.ACTIVE_CHAT_MESSAGES_MAP[msgId]) {
-    text = window.ACTIVE_CHAT_MESSAGES_MAP[msgId];
+  let text = found ? (found.text || found.message_text || found.message || found.content || found.body || '') : '';
+  if (!text && window.ACTIVE_CHAT_MESSAGES_MAP && (window.ACTIVE_CHAT_MESSAGES_MAP[sId] || window.ACTIVE_CHAT_MESSAGES_MAP[msgId])) {
+    text = window.ACTIVE_CHAT_MESSAGES_MAP[sId] || window.ACTIVE_CHAT_MESSAGES_MAP[msgId];
   }
 
   let mediaUrl = found ? (found.media_url || found.mediaUrl || found.audio_url || null) : null;
   let msgType = found ? (found.type || found.media_type || found.mediaType || null) : null;
 
-  const bubble = document.getElementById('chat-bubble-' + msgId) || document.getElementById('msg-bubble-' + msgId);
+  const bubble = document.getElementById('chat-bubble-' + sId) || document.getElementById('msg-bubble-' + sId) || document.querySelector(`.chat-message-row[data-msg-id="${sId}"]`);
   if (bubble) {
     if (!text) {
       const p = bubble.querySelector('p');
-      if (p) text = p.innerText.trim();
+      if (p && p.innerText.trim()) {
+        text = p.innerText.trim();
+      } else {
+        const bubbleCard = bubble.querySelector('.chat-bubble-out, .chat-bubble-in') || bubble;
+        const clone = bubbleCard.cloneNode(true);
+        clone.querySelectorAll('button, .msg-checkbox-container, .msg-forward-btn-wrap, [id^="btn-trans"], script, style').forEach(el => el.remove());
+        text = clone.innerText.trim();
+      }
     }
     if (!mediaUrl) {
-      const img = document.getElementById('chat-img-' + msgId) || bubble.querySelector('img');
-      if (img && img.src && !img.src.includes('avatar') && !img.src.includes('icon')) {
+      const img = document.getElementById('chat-img-' + sId) || bubble.querySelector('img:not([src*="avatar"]):not([src*="icon"])');
+      if (img && img.src) {
         mediaUrl = img.src;
         msgType = 'image';
       }
@@ -39538,12 +39663,11 @@ window.openForwardMessageModal = function (msgId, ev) {
   }
 
   if (!text && !mediaUrl) {
-    if (typeof showToast === 'function') showToast('Forward Message', 'No message content or media found to forward.', 'warning', 'amber');
-    return;
+    text = '[Forwarded Message]';
   }
 
   const forwardItem = {
-    id: msgId,
+    id: sId,
     text: text,
     media_url: mediaUrl,
     type: msgType || (mediaUrl ? 'image' : 'text')
@@ -39567,9 +39691,12 @@ window.openForwardMessageModal = function (msgId, ev) {
   window.renderForwardContactList('');
   if (typeof openModal === 'function') {
     openModal('modal-forward-message');
-  } else {
-    const m = document.getElementById('modal-forward-message');
-    if (m) m.classList.remove('hidden');
+  }
+  const modalEl = document.getElementById('modal-forward-message');
+  if (modalEl) {
+    modalEl.classList.remove('hidden');
+    modalEl.style.display = 'flex';
+    modalEl.style.zIndex = '999999';
   }
 };
 
@@ -39583,11 +39710,13 @@ window.closeForwardMessageModal = function () {
     window.cancelBulkMessageSelect();
   }
 
+  const m = document.getElementById('modal-forward-message');
+  if (m) {
+    m.classList.add('hidden');
+    m.style.display = 'none';
+  }
   if (typeof closeModal === 'function') {
     closeModal('modal-forward-message');
-  } else {
-    const m = document.getElementById('modal-forward-message');
-    if (m) m.classList.add('hidden');
   }
 };
 
@@ -39597,10 +39726,11 @@ window.filterForwardContactList = function (val) {
 
 window.toggleForwardContact = function (phone, name) {
   if (!phone) return;
-  if (window.FORWARD_SELECTED_CONTACTS.has(phone)) {
-    window.FORWARD_SELECTED_CONTACTS.delete(phone);
+  const key = String(phone).trim();
+  if (window.FORWARD_SELECTED_CONTACTS.has(key)) {
+    window.FORWARD_SELECTED_CONTACTS.delete(key);
   } else {
-    window.FORWARD_SELECTED_CONTACTS.set(phone, name || phone);
+    window.FORWARD_SELECTED_CONTACTS.set(key, name || key);
   }
   window.updateForwardSelectedUI();
   window.renderForwardContactList(document.getElementById('forward-search-input')?.value || '');
@@ -39628,7 +39758,7 @@ window.updateForwardSelectedUI = function () {
     }
   }
 
-  // Update Status checkbox
+  // Update Status checkbox if present
   const statusBox = document.getElementById('check-box-status');
   if (statusBox) {
     if (window.FORWARD_SELECTED_CONTACTS.has('status')) {
@@ -39658,13 +39788,54 @@ window.renderForwardContactList = function (query) {
   const container = document.getElementById('forward-contacts-container');
   if (!container) return;
 
-  const customers = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers : [];
   const qLower = String(query || '').toLowerCase().trim();
 
-  const filtered = customers.filter(c => {
+  // Aggregate unique contacts from CRM_STATE.customers and CRM_STATE.queries
+  const contactMap = new Map();
+
+  (CRM_STATE && CRM_STATE.customers ? CRM_STATE.customers : []).forEach(c => {
+    if (!c) return;
+    const name = c.name || '';
+    if (name === 'System' || name === 'GRM Linked WhatsApp Device' || name.startsWith('WhatsApp Linked')) return;
+    const phone = String(c.whatsapp || c.phone || '').trim();
+    if (!phone) return;
+    const cleanDigits = phone.replace(/\D/g, '');
+    const key = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : phone;
+    if (!contactMap.has(key)) {
+      contactMap.set(key, {
+        id: c.id,
+        name: name || ('Customer ' + phone),
+        phone: phone,
+        cleanPhone: cleanDigits,
+        jid: c.jid || null,
+        accountId: c.accountId || 'account_1'
+      });
+    }
+  });
+
+  (CRM_STATE && CRM_STATE.queries ? CRM_STATE.queries : []).forEach(q => {
+    if (!q) return;
+    const phone = String(q.customerPhone || q.phone || '').trim();
+    if (!phone) return;
+    const cleanDigits = phone.replace(/\D/g, '');
+    const key = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : phone;
+    if (!contactMap.has(key)) {
+      contactMap.set(key, {
+        id: q.customerId || q.id,
+        name: q.customerName || ('Lead ' + phone),
+        phone: phone,
+        cleanPhone: cleanDigits,
+        jid: null,
+        accountId: q.accountId || 'account_1'
+      });
+    }
+  });
+
+  const contacts = Array.from(contactMap.values());
+  const filtered = contacts.filter(c => {
     if (!qLower) return true;
     const nameMatch = (c.name || '').toLowerCase().includes(qLower);
-    const phoneMatch = String(c.phone || c.whatsapp || '').includes(qLower);
+    const phoneMatch = c.phone.includes(qLower) || c.cleanPhone.includes(qLower);
     return nameMatch || phoneMatch;
   });
 
@@ -39684,28 +39855,32 @@ window.renderForwardContactList = function (query) {
   ];
 
   container.innerHTML = filtered.map((c, idx) => {
-    const phone = c.whatsapp || c.phone || '';
-    const safeName = (c.name || 'Customer').replace(/"/g, '&quot;');
-    const isSelected = window.FORWARD_SELECTED_CONTACTS.has(phone);
+    const phone = c.phone || '';
+    const safeName = c.name || 'Customer';
+    const isSelected = window.FORWARD_SELECTED_CONTACTS.has(phone) || window.FORWARD_SELECTED_CONTACTS.has(c.cleanPhone);
     const colorBg = avatarColors[idx % avatarColors.length];
-    const initial = (c.name || 'C').charAt(0).toUpperCase();
+    const initial = safeName.charAt(0).toUpperCase();
 
-    // Checkbox UI matching Image 3
+    // Checkbox UI matching WhatsApp Forward design
     const checkUi = isSelected
       ? `<div class="w-5 h-5 rounded bg-[#00a884] border-2 border-[#00a884] text-white flex items-center justify-center shrink-0 text-xs font-bold transition">
            <span class="material-symbols-outlined text-[14px]">check</span>
          </div>`
       : `<div class="w-5 h-5 rounded border-2 border-slate-300 bg-white shrink-0 transition"></div>`;
 
+    // Encode name and phone safely into data attributes to prevent JS syntax errors from quotes
+    const encPhone = encodeURIComponent(phone);
+    const encName = encodeURIComponent(safeName);
+
     return `
-      <div onclick="toggleForwardContact('${phone}', '${safeName}')" class="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 transition cursor-pointer select-none ${isSelected ? 'bg-emerald-50/40' : ''}">
+      <div onclick="window.toggleForwardContact(decodeURIComponent('${encPhone}'), decodeURIComponent('${encName}'))" class="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 transition cursor-pointer select-none ${isSelected ? 'bg-emerald-50/50 ring-1 ring-emerald-300' : ''}">
         <div class="flex items-center gap-3 min-w-0">
           ${checkUi}
           <div class="w-11 h-11 rounded-full ${colorBg} text-white font-bold flex items-center justify-center shrink-0 text-sm shadow-2xs">
             ${initial}
           </div>
           <div class="min-w-0">
-            <h4 class="text-sm font-bold text-slate-900 truncate leading-tight">${safeName}</h4>
+            <h4 class="text-sm font-bold text-slate-900 truncate leading-tight">${typeof escapeHtml === 'function' ? escapeHtml(safeName) : safeName}</h4>
             <p class="text-[11px] text-slate-500 truncate mt-0.5">${phone || 'Available'}</p>
           </div>
         </div>
@@ -39715,105 +39890,17 @@ window.renderForwardContactList = function (query) {
 };
 
 window.executeForwardToCustomer = async function (phone, customerName) {
-  const itemsToSend = (Array.isArray(window.CURRENT_FORWARD_ITEMS) && window.CURRENT_FORWARD_ITEMS.length > 0)
-    ? window.CURRENT_FORWARD_ITEMS
-    : (Array.isArray(window.CURRENT_FORWARD_TEXTS) && window.CURRENT_FORWARD_TEXTS.length > 0)
-      ? window.CURRENT_FORWARD_TEXTS.map(t => typeof t === 'object' ? t : { text: t, media_url: null, type: 'text' })
-      : (window.CURRENT_FORWARD_TEXT ? [{ text: window.CURRENT_FORWARD_TEXT, media_url: null, type: 'text' }] : []);
-
-  if (itemsToSend.length === 0) {
-    if (typeof showToast === 'function') showToast('Forward Failed', 'Message content is empty.', 'error', 'rose');
+  if (!phone) {
+    if (typeof showToast === 'function') showToast('Missing Phone', 'Please provide a valid phone number.', 'warning', 'amber');
     return;
   }
-  let cleanPhone = String(phone || '').replace(/[^0-9]/g, '');
-  if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
-  if (!cleanPhone) {
-    if (typeof showToast === 'function') showToast('Missing Phone', 'Please select a customer with a valid phone number.', 'warning', 'amber');
-    return;
-  }
-
-  try {
-    let sentCount = 0;
-    for (let i = 0; i < itemsToSend.length; i++) {
-      const item = itemsToSend[i];
-      const itemText = (typeof item === 'object' ? item.text : item) || '';
-      const itemMedia = (typeof item === 'object' ? (item.media_url || item.mediaUrl) : null) || null;
-      const itemType = (typeof item === 'object' ? item.type : (itemMedia ? 'image' : 'text')) || (itemMedia ? 'image' : 'text');
-
-      if (!itemText && !itemMedia) continue;
-
-      if (i > 0) {
-        await new Promise(r => setTimeout(r, 600));
-      }
-
-      const outboundText = itemText || (itemMedia ? '[Photo Attachment]' : '');
-
-      // Direct REST API send to bridge and save to DB
-      const res = await fetch('api.php?action=send_message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          text: outboundText,
-          message: outboundText,
-          media_url: itemMedia,
-          mediaUrl: itemMedia,
-          type: itemType,
-          sender_name: (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) || 'Super Admin'
-        })
-      });
-      const data = await res.json().catch(() => null);
-      if (data && (data.status === 'success' || data.success)) {
-        sentCount++;
-      } else {
-        if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-          SOCKET_IO.emit('whatsapp:send', {
-            phone: cleanPhone,
-            text: outboundText,
-            media_url: itemMedia,
-            mediaUrl: itemMedia,
-            type: itemType
-          });
-          sentCount++;
-        }
-      }
-    }
-
-    if (typeof showToast === 'function') {
-      const msgLabel = itemsToSend.length > 1 ? `${sentCount} separate messages` : 'Message';
-      showToast('Forwarded Successfully', `${msgLabel} directly sent to ${customerName || cleanPhone}!`, 'check_circle', 'emerald');
-    }
-    window.closeForwardMessageModal();
-  } catch (err) {
-    console.error('Error forwarding message:', err);
-    for (let i = 0; i < itemsToSend.length; i++) {
-      const item = itemsToSend[i];
-      const itemText = (typeof item === 'object' ? item.text : item) || '';
-      const itemMedia = (typeof item === 'object' ? (item.media_url || item.mediaUrl) : null) || null;
-      const itemType = (typeof item === 'object' ? item.type : (itemMedia ? 'image' : 'text')) || (itemMedia ? 'image' : 'text');
-      const outboundText = itemText || (itemMedia ? '[Photo Attachment]' : '');
-
-      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-        if (i > 0) await new Promise(r => setTimeout(r, 400));
-        SOCKET_IO.emit('whatsapp:send', {
-          phone: cleanPhone,
-          text: outboundText,
-          media_url: itemMedia,
-          mediaUrl: itemMedia,
-          type: itemType
-        });
-      }
-    }
-    if (typeof showToast === 'function') {
-      const msgLabel = itemsToSend.length > 1 ? `${itemsToSend.length} messages` : 'Message';
-      showToast('Forwarded', `${msgLabel} dispatched to ${customerName || cleanPhone}`, 'check_circle', 'emerald');
-    }
-    window.closeForwardMessageModal();
-  }
+  window.FORWARD_SELECTED_CONTACTS.clear();
+  window.FORWARD_SELECTED_CONTACTS.set(String(phone).trim(), customerName || phone);
+  await window.executeForwardToSelectedContacts();
 };
 
 window.executeForwardToSelectedContacts = async function () {
-  if (window.FORWARD_SELECTED_CONTACTS.size === 0) {
+  if (!window.FORWARD_SELECTED_CONTACTS || window.FORWARD_SELECTED_CONTACTS.size === 0) {
     if (typeof showToast === 'function') showToast('No Selection', 'Please select at least one contact to forward.', 'warning', 'amber');
     return;
   }
@@ -39831,13 +39918,45 @@ window.executeForwardToSelectedContacts = async function () {
 
   const entries = Array.from(window.FORWARD_SELECTED_CONTACTS.entries());
   let successCount = 0;
+  const currentAccId = (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' && ACTIVE_SEND_ACCOUNT_ID && ACTIVE_SEND_ACCOUNT_ID !== 'all') ? ACTIVE_SEND_ACCOUNT_ID : 'account_1';
+  const senderName = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) || 'Super Admin';
 
   for (const [phone, name] of entries) {
     let cleanPhone = String(phone || '').replace(/[^0-9]/g, '');
     if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
     if (!cleanPhone) continue;
 
+    // Find destination customer in CRM_STATE
+    let destCust = (CRM_STATE && CRM_STATE.customers)
+      ? CRM_STATE.customers.find(c => {
+          if (!c) return false;
+          const cPhone = String(c.whatsapp || c.phone || '').replace(/[^0-9]/g, '');
+          return cPhone.endsWith(cleanPhone.slice(-10));
+        })
+      : null;
+
+    let destCustId = destCust ? destCust.id : null;
+    if (!destCustId) {
+      destCustId = 'cust_' + cleanPhone;
+      if (!destCust && CRM_STATE && CRM_STATE.customers) {
+        destCust = {
+          id: destCustId,
+          name: name || ('Customer ' + cleanPhone),
+          phone: cleanPhone,
+          whatsapp: cleanPhone,
+          accountId: currentAccId,
+          tags: ['Lead'],
+          createdAt: new Date().toISOString()
+        };
+        CRM_STATE.customers.unshift(destCust);
+      }
+    }
+
+    if (CRM_STATE && !CRM_STATE.conversations) CRM_STATE.conversations = {};
+    if (!CRM_STATE.conversations[destCustId]) CRM_STATE.conversations[destCustId] = [];
+
     let contactDelivered = false;
+
     for (let i = 0; i < itemsToSend.length; i++) {
       const item = itemsToSend[i];
       const itemText = (typeof item === 'object' ? item.text : item) || '';
@@ -39851,54 +39970,59 @@ window.executeForwardToSelectedContacts = async function () {
       }
 
       const outboundText = itemText || (itemMedia ? '[Photo Attachment]' : '');
+      const timeStr = typeof getFormattedCurrentTime === 'function' ? getFormattedCurrentTime() : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const newMsg = {
+        id: 'fwd_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        sender: 'agent',
+        sender_name: senderName,
+        text: outboundText,
+        media_url: itemMedia,
+        type: itemType,
+        time: timeStr,
+        timestamp: new Date().toISOString(),
+        status: 'SENDING',
+        isForwarded: true,
+        accountId: destCust ? (destCust.accountId || currentAccId) : currentAccId
+      };
+
+      CRM_STATE.conversations[destCustId].push(newMsg);
 
       try {
-        // Direct send via backend REST API & Baileys Bridge
-        const res = await fetch('api.php?action=send_message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: cleanPhone,
-            text: outboundText,
-            message: outboundText,
-            media_url: itemMedia,
-            mediaUrl: itemMedia,
-            type: itemType,
-            sender_name: (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.name) || 'Super Admin'
-          })
-        });
-        const data = await res.json().catch(() => null);
-        if (data && (data.status === 'success' || data.success)) {
+        const destAccId = (destCust && destCust.accountId) ? destCust.accountId : currentAccId;
+        const destJid = destCust ? destCust.jid : null;
+        const delivered = await dispatchWhatsAppOutbound(
+          cleanPhone,
+          outboundText,
+          newMsg,
+          destJid,
+          destAccId,
+          true,
+          itemMedia,
+          destCustId
+        );
+        if (delivered) {
+          newMsg.status = 'DELIVERED';
           contactDelivered = true;
         } else {
-          if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-            SOCKET_IO.emit('whatsapp:send', {
-              phone: cleanPhone,
-              text: outboundText,
-              media_url: itemMedia,
-              mediaUrl: itemMedia,
-              type: itemType
-            });
-            contactDelivered = true;
-          }
-        }
-      } catch (e) {
-        console.warn('Error forwarding to ' + phone, e);
-        if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-          SOCKET_IO.emit('whatsapp:send', {
-            phone: cleanPhone,
-            text: outboundText,
-            media_url: itemMedia,
-            mediaUrl: itemMedia,
-            type: itemType
-          });
+          newMsg.status = 'SENT';
           contactDelivered = true;
         }
+      } catch (err) {
+        console.warn('[Forward dispatch failed for ' + cleanPhone + ']:', err);
+        newMsg.status = 'FAILED';
       }
     }
 
     if (contactDelivered) successCount++;
   }
+
+  if (typeof saveCRMState === 'function') saveCRMState();
+  if (typeof renderInboxConversationList === 'function') renderInboxConversationList();
+  if (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID) {
+    if (typeof renderChatMessages === 'function') renderChatMessages();
+  }
+  if (typeof playChime === 'function') playChime('order');
 
   if (successCount > 0) {
     if (typeof showToast === 'function') {
@@ -39907,9 +40031,10 @@ window.executeForwardToSelectedContacts = async function () {
     }
   } else {
     if (typeof showToast === 'function') {
-      showToast('Forward Dispatched', `Forward sent to selected recipient(s).`, 'done_all', 'emerald');
+      showToast('Forward Dispatched', `Forward attempted for selected recipient(s).`, 'done_all', 'emerald');
     }
   }
+
   window.closeForwardMessageModal();
 };
 
