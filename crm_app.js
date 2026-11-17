@@ -2175,6 +2175,15 @@ function initSocketIO() {
         const color = (type.includes('APPROV') || type === 'SUCCESS') ? 'emerald' : ((type.includes('REJECT') || type === 'ERROR') ? 'rose' : 'amber');
         const icon = (type.includes('APPROV') || type === 'SUCCESS') ? 'check_circle' : ((type.includes('REJECT') || type === 'ERROR') ? 'cancel' : 'notifications');
         showToast(notif.title, notif.message || '', icon, color);
+        if (typeof addAppNotification === 'function') {
+          addAppNotification({
+            title: notif.title,
+            message: notif.message || '',
+            type: 'alerts',
+            icon: icon,
+            color: color
+          });
+        }
       }
     });
 
@@ -2488,6 +2497,16 @@ function ingestInboundMessage(payload, suppressChime = false) {
       'chat',
       'emerald'
     );
+    if (typeof addAppNotification === 'function') {
+      addAppNotification({
+        title: customer.name || 'WhatsApp Customer',
+        message: `${messageText.length > 80 ? messageText.slice(0, 80) + '...' : messageText}`,
+        type: 'chats',
+        icon: 'chat',
+        color: 'emerald',
+        action: { view: 'inbox', customerId: customer.id }
+      });
+    }
   }
 
   // 9. Automated Stock Category Instant Auto-Responder Engine
@@ -2636,12 +2655,6 @@ function initSSEStream() {
     es.onopen = function () {
       window.IS_SSE_STREAM_ACTIVE = true;
       console.log('⚡ [SSE Stream Active]: Real-time event pipeline connected (0% idle CPU, <50ms push)');
-      const badge = document.getElementById('sse-live-indicator');
-      if (badge) {
-        badge.classList.remove('bg-amber-400');
-        badge.classList.add('bg-emerald-500');
-        badge.title = 'Real-time SSE push stream connected (< 50ms latency)';
-      }
     };
 
     es.onmessage = function (event) {
@@ -2711,12 +2724,6 @@ function initSSEStream() {
 
     es.onerror = function () {
       window.IS_SSE_STREAM_ACTIVE = false;
-      const badge = document.getElementById('sse-live-indicator');
-      if (badge) {
-        badge.classList.remove('bg-emerald-500');
-        badge.classList.add('bg-amber-400');
-        badge.title = 'Real-time stream reconnecting (fallback polling active)...';
-      }
       // Note: native EventSource handles reconnect attempts automatically
     };
 
@@ -3886,11 +3893,315 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
   );
 }
 
-// Global click listener to dismiss phone dropdown when clicking elsewhere
+// =========================================================================
+// REAL-TIME NOTIFICATION HUB & DASHBOARD NOTIFICATION CENTER
+// =========================================================================
+window.ACTIVE_NOTIF_FILTER = 'all';
+
+function getAppNotifications() {
+  if (!CRM_STATE.notifications || !Array.isArray(CRM_STATE.notifications)) {
+    try {
+      const stored = localStorage.getItem('GRM_NOTIFICATIONS');
+      CRM_STATE.notifications = stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      CRM_STATE.notifications = [];
+    }
+  }
+
+  // Seed helpful default notifications if history is empty
+  if (CRM_STATE.notifications.length === 0) {
+    const now = Date.now();
+    CRM_STATE.notifications = [
+      {
+        id: 'notif_welcome',
+        title: 'GRM WhatsApp CRM Ready',
+        message: 'Real-time event push streaming active on official business lines.',
+        type: 'alerts',
+        icon: 'verified',
+        color: 'emerald',
+        timestamp: now - 60000,
+        timeStr: '1m ago',
+        read: false,
+        action: { view: 'dashboard' }
+      },
+      {
+        id: 'notif_autoreply',
+        title: 'Auto-Reply Rules Active',
+        message: 'Automated greeting and catalog bots are online for customer queries.',
+        type: 'alerts',
+        icon: 'smart_toy',
+        color: 'blue',
+        timestamp: now - 180000,
+        timeStr: '3m ago',
+        read: false,
+        action: { view: 'settings' }
+      }
+    ];
+    saveAppNotifications();
+  }
+
+  return CRM_STATE.notifications;
+}
+
+function saveAppNotifications() {
+  try {
+    localStorage.setItem('GRM_NOTIFICATIONS', JSON.stringify((CRM_STATE.notifications || []).slice(0, 60)));
+  } catch (e) { }
+}
+
+function addAppNotification(item) {
+  if (!item || !item.title) return;
+  const list = getAppNotifications();
+  const notifObj = {
+    id: item.id || ('notif_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
+    title: item.title,
+    message: item.message || '',
+    type: item.type || 'chats', // 'chats', 'calls', 'alerts'
+    icon: item.icon || (item.type === 'calls' ? 'call' : (item.type === 'chats' ? 'chat' : 'notifications')),
+    color: item.color || (item.type === 'calls' ? 'blue' : (item.type === 'chats' ? 'emerald' : 'amber')),
+    timestamp: item.timestamp || Date.now(),
+    timeStr: item.timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    read: false,
+    action: item.action || null
+  };
+
+  list.unshift(notifObj);
+  if (list.length > 60) list.length = 60; // Keep latest 60 items
+  saveAppNotifications();
+  updateNotificationBadge();
+
+  // If dropdown flyout is open, re-render in real time
+  const dropdown = document.getElementById('notifications-dropdown');
+  if (dropdown && !dropdown.classList.contains('hidden')) {
+    renderNotificationsList();
+  }
+}
+
+function updateNotificationBadge() {
+  const list = getAppNotifications();
+  const unreadCount = list.filter(n => !n.read).length;
+
+  const pingEl = document.getElementById('header-notif-ping');
+  const countEl = document.getElementById('header-notif-count');
+  const pingMob = document.getElementById('header-notif-ping-mobile');
+  const countMob = document.getElementById('header-notif-count-mobile');
+  const pillEl = document.getElementById('notif-dropdown-unread-pill');
+
+  if (countEl) countEl.innerText = unreadCount > 99 ? '99+' : unreadCount;
+  if (countMob) countMob.innerText = unreadCount > 99 ? '99+' : unreadCount;
+  if (pillEl) pillEl.innerText = `${unreadCount} New`;
+
+  if (unreadCount > 0) {
+    if (pingEl) pingEl.classList.remove('hidden');
+    if (pingMob) pingMob.classList.remove('hidden');
+    if (pillEl) {
+      pillEl.className = 'text-[10px] bg-rose-100 text-rose-700 font-extrabold px-2 py-0.5 rounded-full';
+    }
+  } else {
+    if (pingEl) pingEl.classList.add('hidden');
+    if (pingMob) pingMob.classList.add('hidden');
+    if (pillEl) {
+      pillEl.className = 'text-[10px] bg-slate-100 text-slate-500 font-extrabold px-2 py-0.5 rounded-full';
+    }
+  }
+}
+
+function toggleNotificationsDropdown(event) {
+  if (event) event.stopPropagation();
+  const dropdown = document.getElementById('notifications-dropdown');
+  const btn = document.getElementById('header-notif-btn') || document.getElementById('header-notif-btn-mobile');
+  if (!dropdown) return;
+
+  const isHidden = dropdown.classList.contains('hidden');
+  if (isHidden) {
+    if (typeof closePhoneSwitcherDropdown === 'function') closePhoneSwitcherDropdown();
+    renderNotificationsList();
+    dropdown.classList.remove('hidden');
+
+    // Dynamic viewport positioning
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const dropWidth = Math.min(380, window.innerWidth - 24);
+      dropdown.style.position = 'fixed';
+      dropdown.style.top = (rect.bottom + 8) + 'px';
+      dropdown.style.width = dropWidth + 'px';
+      dropdown.style.maxWidth = 'calc(100vw - 24px)';
+      dropdown.style.zIndex = '99999';
+
+      let leftPos = rect.right - dropWidth;
+      if (leftPos < 12) leftPos = 12;
+      if (leftPos + dropWidth > window.innerWidth - 12) {
+        leftPos = Math.max(12, window.innerWidth - dropWidth - 12);
+      }
+      dropdown.style.left = leftPos + 'px';
+      dropdown.style.right = 'auto';
+    }
+  } else {
+    closeNotificationsDropdown();
+  }
+}
+
+function closeNotificationsDropdown() {
+  const dropdown = document.getElementById('notifications-dropdown');
+  if (dropdown) dropdown.classList.add('hidden');
+}
+
+function setNotifFilter(filter, event) {
+  if (event) event.stopPropagation();
+  window.ACTIVE_NOTIF_FILTER = filter;
+
+  // Update tabs UI
+  ['all', 'chats', 'calls', 'alerts'].forEach(tab => {
+    const el = document.getElementById(`notif-tab-${tab}`);
+    if (el) {
+      if (tab === filter) {
+        el.className = 'px-2.5 py-1 rounded-lg bg-white shadow-xs text-slate-900 font-bold border border-slate-200 cursor-pointer';
+      } else {
+        el.className = 'px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer';
+      }
+    }
+  });
+
+  renderNotificationsList();
+}
+
+function renderNotificationsList() {
+  const container = document.getElementById('notifications-list-container');
+  if (!container) return;
+
+  const list = getAppNotifications();
+  const filter = window.ACTIVE_NOTIF_FILTER || 'all';
+
+  const filtered = list.filter(item => {
+    if (filter === 'all') return true;
+    if (filter === 'chats') return item.type === 'chats';
+    if (filter === 'calls') return item.type === 'calls';
+    if (filter === 'alerts') return item.type === 'alerts' || item.type === 'system';
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="py-10 px-4 text-center">
+        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2.5">
+          <span class="material-symbols-outlined text-[24px]">notifications_off</span>
+        </div>
+        <p class="font-bold text-slate-700 text-xs">No Notifications Found</p>
+        <p class="text-[11px] text-slate-400 mt-0.5">You're all caught up! New chats, calls and alerts will appear here in real time.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const colorClasses = {
+    emerald: { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    blue: { bg: 'bg-blue-50 text-blue-700 border-blue-200' },
+    amber: { bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+    rose: { bg: 'bg-rose-50 text-rose-700 border-rose-200' },
+    indigo: { bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    purple: { bg: 'bg-purple-50 text-purple-700 border-purple-200' },
+    slate: { bg: 'bg-slate-50 text-slate-700 border-slate-200' }
+  };
+
+  container.innerHTML = filtered.map(item => {
+    const theme = colorClasses[item.color] || colorClasses.emerald;
+    const isUnread = !item.read;
+    const view = item.action?.view || '';
+    const custId = item.action?.customerId || '';
+
+    // Relative human time
+    const diffSec = Math.floor((Date.now() - (item.timestamp || Date.now())) / 1000);
+    let timeStr = item.timeStr || 'Just now';
+    if (diffSec < 60) timeStr = 'Just now';
+    else if (diffSec < 3600) timeStr = `${Math.floor(diffSec / 60)}m ago`;
+    else if (diffSec < 86400) timeStr = `${Math.floor(diffSec / 3600)}h ago`;
+
+    const safeTitle = typeof escapeHtml === 'function' ? escapeHtml(item.title) : item.title;
+    const safeMsg = typeof escapeHtml === 'function' ? escapeHtml(item.message) : item.message;
+
+    return `
+      <div onclick="handleNotificationClick('${item.id}', '${view}', '${custId}')"
+        class="p-3 sm:p-3.5 flex items-start gap-3 hover:bg-slate-50 transition cursor-pointer group ${isUnread ? 'bg-emerald-50/25' : ''}">
+        <div class="w-8 h-8 rounded-xl ${theme.bg} border flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+          <span class="material-symbols-outlined text-[17px]">${item.icon || 'notifications'}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-1.5">
+            <h4 class="font-bold text-slate-900 text-xs truncate group-hover:text-emerald-700 transition">${safeTitle}</h4>
+            <span class="text-[10px] text-slate-400 shrink-0 font-medium">${timeStr}</span>
+          </div>
+          <p class="text-[11px] text-slate-600 line-clamp-2 mt-0.5 leading-snug">${safeMsg}</p>
+        </div>
+        ${isUnread ? '<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1.5 ring-2 ring-emerald-100"></span>' : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function handleNotificationClick(notifId, targetView, customerId) {
+  const list = getAppNotifications();
+  const item = list.find(n => n.id === notifId);
+  if (item) {
+    item.read = true;
+    saveAppNotifications();
+    updateNotificationBadge();
+  }
+
+  closeNotificationsDropdown();
+
+  if (customerId) {
+    ACTIVE_CUSTOMER_ID = customerId;
+    switchView('inbox');
+    setInboxFilter('all');
+    renderInbox();
+  } else if (targetView) {
+    switchView(targetView);
+  }
+}
+
+function markAllNotificationsAsRead(event) {
+  if (event) event.stopPropagation();
+  const list = getAppNotifications();
+  list.forEach(n => { n.read = true; });
+  saveAppNotifications();
+  updateNotificationBadge();
+  renderNotificationsList();
+  if (typeof showToast === 'function') {
+    showToast('All Read', 'All notifications marked as read', 'done_all', 'emerald', 1500);
+  }
+}
+
+function clearAllNotifications(event) {
+  if (event) event.stopPropagation();
+  CRM_STATE.notifications = [];
+  saveAppNotifications();
+  updateNotificationBadge();
+  renderNotificationsList();
+  if (typeof showToast === 'function') {
+    showToast('Notifications Cleared', 'Notification history cleared', 'delete_sweep', 'slate', 1500);
+  }
+}
+
+// Ensure notification badge is initialized on boot
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateNotificationBadge);
+  } else {
+    setTimeout(updateNotificationBadge, 300);
+  }
+}
+
+// Global click listener to dismiss phone dropdown & notifications dropdown when clicking elsewhere
 document.addEventListener('click', (e) => {
-  const wrapper = document.getElementById('header-phone-switcher-wrapper');
-  if (wrapper && !wrapper.contains(e.target)) {
+  const phoneWrapper = document.getElementById('header-phone-switcher-wrapper');
+  if (phoneWrapper && !phoneWrapper.contains(e.target)) {
     closePhoneSwitcherDropdown();
+  }
+
+  const notifWrapper = document.getElementById('header-notifications-wrapper');
+  const notifMobileBtn = document.getElementById('header-notif-btn-mobile');
+  if (notifWrapper && !notifWrapper.contains(e.target) && (!notifMobileBtn || !notifMobileBtn.contains(e.target))) {
+    closeNotificationsDropdown();
   }
 });
 
@@ -4184,6 +4495,7 @@ function toggleSidebar(forceState) {
   const backdrop = document.getElementById('sidebar-backdrop');
   const toggleIcon = document.getElementById('sidebar-toggle-icon');
   const toggleBtn = document.getElementById('sidebar-toggle-btn');
+  const mobileBottomBar = document.getElementById('mobile-bottom-app-bar');
   if (!sidebar) return;
 
   const isCurrentlyOpen = sidebar.classList.contains('sidebar-visible');
@@ -4205,6 +4517,11 @@ function toggleSidebar(forceState) {
       toggleBtn.setAttribute('aria-expanded', 'true');
       toggleBtn.title = 'Close Navigation Sidebar';
     }
+    // Hide mobile bottom app bar while sidebar drawer is open to prevent overlapping
+    if (mobileBottomBar && typeof window !== 'undefined' && window.innerWidth < 1024) {
+      mobileBottomBar.classList.add('hidden');
+      mobileBottomBar.classList.remove('flex');
+    }
     try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'true'); } catch (e) { }
   } else {
     sidebar.classList.remove('sidebar-visible');
@@ -4223,6 +4540,14 @@ function toggleSidebar(forceState) {
       toggleBtn.classList.remove('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
       toggleBtn.setAttribute('aria-expanded', 'false');
       toggleBtn.title = 'Open Navigation Sidebar';
+    }
+    // Restore mobile bottom app bar when closing sidebar drawer (unless in active 1:1 chat)
+    if (mobileBottomBar && typeof window !== 'undefined' && window.innerWidth < 1024) {
+      const activeView = (CRM_STATE && CRM_STATE.activeView) || ACTIVE_VIEW || 'dashboard';
+      if (activeView !== 'inbox' || !ACTIVE_CUSTOMER_ID) {
+        mobileBottomBar.classList.remove('hidden');
+        mobileBottomBar.classList.add('flex');
+      }
     }
   }
 }
@@ -4490,8 +4815,10 @@ function switchView(viewName, subName) {
   // Trigger specific view renders
   if (viewName === 'inbox') {
     switchInboxSubmodule(subName || ACTIVE_INBOX_SUBMODULE || 'chats');
-    if (typeof window !== 'undefined' && window.innerWidth < 768 && !ACTIVE_CUSTOMER_ID) {
-      if (typeof mobileBackToConversations === 'function') mobileBackToConversations();
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      if (typeof mobileBackToConversations === 'function') {
+        mobileBackToConversations();
+      }
     }
     renderInbox();
   }
@@ -5275,10 +5602,14 @@ function renderInboxConversationList() {
     return;
   }
 
-  // Ensure ACTIVE_CUSTOMER_ID strictly points to a visible conversation thread
-  if (!ACTIVE_CUSTOMER_ID || !customerCards.some(c => c.customerId === ACTIVE_CUSTOMER_ID || String(c.customerId) === String(ACTIVE_CUSTOMER_ID))) {
-    ACTIVE_CUSTOMER_ID = customerCards[0].customerId;
-    if (CRM_STATE) CRM_STATE.activeCustomerId = ACTIVE_CUSTOMER_ID;
+  // Ensure ACTIVE_CUSTOMER_ID strictly points to a visible conversation thread on desktop.
+  // On mobile (< 768px), keep ACTIVE_CUSTOMER_ID null until user explicitly selects a customer so the list remains visible!
+  const isMobileScreen = (typeof window !== 'undefined' && window.innerWidth < 768);
+  if (!isMobileScreen) {
+    if (!ACTIVE_CUSTOMER_ID || !customerCards.some(c => c.customerId === ACTIVE_CUSTOMER_ID || String(c.customerId) === String(ACTIVE_CUSTOMER_ID))) {
+      ACTIVE_CUSTOMER_ID = customerCards[0].customerId;
+      if (CRM_STATE) CRM_STATE.activeCustomerId = ACTIVE_CUSTOMER_ID;
+    }
   }
 
   container.innerHTML = customerCards.map(item => {
@@ -5418,6 +5749,8 @@ function selectCustomerChat(customerId) {
       centerPanel.classList.remove('hidden');
       centerPanel.classList.add('flex');
       centerPanel.style.width = '100%';
+      centerPanel.style.height = '100%';
+      centerPanel.style.maxHeight = '100%';
     }
     if (mobileBottomBar) {
       mobileBottomBar.classList.add('hidden');
@@ -5426,6 +5759,12 @@ function selectCustomerChat(customerId) {
   }
 
   renderInbox();
+
+  // On mobile, ensure chat messages stream scrolls to bottom so the input bar and latest messages are in full view
+  setTimeout(() => {
+    const stream = document.getElementById('chat-messages-stream');
+    if (stream) stream.scrollTop = stream.scrollHeight;
+  }, 100);
   // Guarantee right Customer 360 panel and header dynamically sync to active profile
   try {
     renderCustomer360Panel();
@@ -7602,6 +7941,9 @@ function renderDndModule() {
 // Update all sidebar & header badge counters dynamically across all modules
 function updateBadgeCounters() {
   if (!CRM_STATE) return;
+  if (typeof updateNotificationBadge === 'function') {
+    updateNotificationBadge();
+  }
 
   // 1. Unread count in inbox
   const unreadEl = document.getElementById('badge-total-unread');
@@ -31973,6 +32315,9 @@ function logAudit(action, module, details) {
 }
 
 function updateBadgeCounters() {
+  if (typeof updateNotificationBadge === 'function') {
+    updateNotificationBadge();
+  }
   const availableAccountIds = getAvailableWhatsAppAccounts().map(a => a.id);
   // Exclude DND queries from active inbox queries count
   const activeQueries = (CRM_STATE.queries || []).filter(q => {
@@ -36424,6 +36769,16 @@ function handleSocketIncomingCall(data) {
       renderInbox();
     }
     if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+    if (typeof addAppNotification === 'function') {
+      addAppNotification({
+        title: `Incoming Call: ${customerDisplayName || data.customer_phone || 'WhatsApp Caller'}`,
+        message: `Voice call ringing on ${data.virtual_number || 'Official Line'}`,
+        type: 'calls',
+        icon: 'call',
+        color: 'blue',
+        action: { view: 'masking' }
+      });
+    }
   }
 
   if (!customerDisplayName) customerDisplayName = 'WhatsApp Caller';
@@ -37971,10 +38326,16 @@ window.exportDashboardSummary = exportDashboardSummary;
  * to a clean executive printable layout and triggers native PDF generation ("Save as PDF").
  */
 function exportDashboardPDF(btnEl) {
+  const origBtnContent = btnEl ? btnEl.innerHTML : '';
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<span class="material-symbols-outlined text-[15px] animate-spin">sync</span><span>Preparing PDF...</span>';
+  }
+
   try {
     const now = new Date();
     const dateFormatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const timeFormatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const timeFormatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const totalEnquiries = (CRM_STATE.queries || []).length;
     const unassignedQueries = (CRM_STATE.queries || []).filter(q => q.assignedTo === 'UNASSIGNED').length;
@@ -37988,198 +38349,201 @@ function exportDashboardPDF(btnEl) {
 
     // 1. Staff Rows
     const staffRows = (CRM_STATE.staffList || []).map(s => `
-      <tr class="border-b border-slate-100 hover:bg-slate-50/50">
-        <td class="py-2.5 px-3 font-semibold text-slate-800">${escapeHtml(s.name || 'Staff')}</td>
-        <td class="py-2.5 px-3 text-slate-600">${escapeHtml(s.role || 'Sales Specialist')}</td>
-        <td class="py-2.5 px-3">
-          <span class="inline-block px-2 py-0.5 text-[11px] font-bold rounded-full ${s.status === 'INACTIVE' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
+      <tr>
+        <td style="font-weight:700; color:#0f172a;">${escapeHtml(s.name || 'Staff')}</td>
+        <td style="color:#475569;">${escapeHtml(s.role || 'Sales Specialist')}</td>
+        <td>
+          <span class="badge ${s.status === 'INACTIVE' ? 'badge-slate' : 'badge-emerald'}">
             ${escapeHtml(s.status || 'ACTIVE')}
           </span>
         </td>
-        <td class="py-2.5 px-3 text-center font-bold text-blue-700">${s.activeQueries || 0}</td>
-        <td class="py-2.5 px-3 text-center font-bold text-emerald-700">${s.converted || 0}</td>
-        <td class="py-2.5 px-3 text-slate-600 text-xs">${escapeHtml(s.phone || '—')}</td>
+        <td style="text-align:center; font-weight:700; color:#1d4ed8;">${s.activeQueries || 0}</td>
+        <td style="text-align:center; font-weight:700; color:#059669;">${s.converted || 0}</td>
+        <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(s.phone || '—')}</td>
       </tr>
-    `).join('') || '<tr><td colspan="6" class="py-4 text-center text-slate-400">No staff members listed.</td></tr>';
+    `).join('') || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">No staff members listed.</td></tr>';
 
     // 2. Orders Rows
     const orderRows = (CRM_STATE.orders || []).slice(0, 50).map(o => `
-      <tr class="border-b border-slate-100 hover:bg-slate-50/50">
-        <td class="py-2.5 px-3 font-mono font-bold text-slate-700 text-xs">${escapeHtml(o.id || '')}</td>
-        <td class="py-2.5 px-3 font-semibold text-slate-800">${escapeHtml(o.customerName || 'Customer')}</td>
-        <td class="py-2.5 px-3 font-mono text-slate-600 text-xs">${escapeHtml(o.customerPhone || '—')}</td>
-        <td class="py-2.5 px-3 text-right font-bold text-slate-900">₹${(parseFloat(o.grandTotal) || 0).toLocaleString('en-IN')}</td>
-        <td class="py-2.5 px-3 text-xs text-slate-600">${escapeHtml(o.paymentMethod || 'COD')}</td>
-        <td class="py-2.5 px-3">
-          <span class="inline-block px-2 py-0.5 text-[11px] font-bold rounded-full ${o.orderStatus === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700' : o.orderStatus === 'CANCELLED' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}">
+      <tr>
+        <td style="font-family:monospace; font-weight:700; color:#334155; font-size:11px;">${escapeHtml(o.id || '')}</td>
+        <td style="font-weight:700; color:#0f172a;">${escapeHtml(o.customerName || 'Customer')}</td>
+        <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(o.customerPhone || '—')}</td>
+        <td style="text-align:right; font-weight:800; color:#0f172a;">₹${(parseFloat(o.grandTotal) || 0).toLocaleString('en-IN')}</td>
+        <td style="color:#475569;">${escapeHtml(o.paymentMethod || 'COD')}</td>
+        <td>
+          <span class="badge ${o.orderStatus === 'DELIVERED' ? 'badge-emerald' : o.orderStatus === 'CANCELLED' ? 'badge-rose' : 'badge-amber'}">
             ${escapeHtml(o.orderStatus || 'PLACED')}
           </span>
         </td>
-        <td class="py-2.5 px-3 text-xs text-slate-500">${escapeHtml(o.createdAt || '—')}</td>
+        <td style="color:#64748b; font-size:11px;">${escapeHtml(o.createdAt || '—')}</td>
       </tr>
-    `).join('') || '<tr><td colspan="7" class="py-4 text-center text-slate-400">No booked sales orders.</td></tr>';
+    `).join('') || '<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:16px;">No booked sales orders.</td></tr>';
 
     // 3. Customer Enquiries Rows
     const queryRows = (CRM_STATE.queries || []).slice(0, 50).map(q => {
       const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
       const cName = cust ? cust.name : 'Customer';
       const cPhone = cust ? (cust.phone || cust.whatsapp || '') : '';
-      const snippet = (q.queryText || q.lastMessage || '').slice(0, 60);
+      const snippet = (q.queryText || q.lastMessage || '').slice(0, 70);
       return `
-        <tr class="border-b border-slate-100 hover:bg-slate-50/50">
-          <td class="py-2 px-3 font-semibold text-slate-800">${escapeHtml(cName)}</td>
-          <td class="py-2 px-3 font-mono text-slate-600 text-xs">${escapeHtml(cPhone)}</td>
-          <td class="py-2 px-3">
-            <span class="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full ${q.assignedTo === 'UNASSIGNED' ? 'bg-amber-100 text-amber-800' : 'bg-blue-50 text-blue-700'}">
+        <tr>
+          <td style="font-weight:700; color:#0f172a;">${escapeHtml(cName)}</td>
+          <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(cPhone)}</td>
+          <td>
+            <span class="badge ${q.assignedTo === 'UNASSIGNED' ? 'badge-amber' : 'badge-blue'}">
               ${escapeHtml(q.assignedTo || 'UNASSIGNED')}
             </span>
           </td>
-          <td class="py-2 px-3">
-            <span class="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full ${q.status === 'NEW' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">
+          <td>
+            <span class="badge ${q.status === 'NEW' ? 'badge-emerald' : 'badge-slate'}">
               ${escapeHtml(q.status || 'NEW')}
             </span>
           </td>
-          <td class="py-2 px-3 text-xs text-slate-600 truncate max-w-[200px]">${escapeHtml(snippet)}</td>
-          <td class="py-2 px-3 text-xs text-slate-400 font-mono">${escapeHtml(q.createdAt || '')}</td>
+          <td style="color:#475569; font-size:11px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(snippet)}</td>
+          <td style="color:#94a3b8; font-family:monospace; font-size:11px;">${escapeHtml(q.createdAt || '')}</td>
         </tr>
       `;
-    }).join('') || '<tr><td colspan="6" class="py-4 text-center text-slate-400">No inquiries recorded.</td></tr>';
+    }).join('') || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">No inquiries recorded.</td></tr>';
 
     // 4. Followups Rows
     const followupRows = (CRM_STATE.followups || []).slice(0, 30).map(f => `
-      <tr class="border-b border-slate-100 hover:bg-slate-50/50">
-        <td class="py-2 px-3 font-semibold text-slate-800">${escapeHtml(f.customerName || 'Customer')}</td>
-        <td class="py-2 px-3 text-xs text-slate-700">${escapeHtml(f.assignedTo || 'Unassigned')}</td>
-        <td class="py-2 px-3 text-xs font-mono text-slate-600">${escapeHtml(f.dateStr || '')} ${escapeHtml(f.timeStr || '')}</td>
-        <td class="py-2 px-3">
-          <span class="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full ${f.priority === 'HIGH' ? 'bg-rose-100 text-rose-800' : 'bg-amber-50 text-amber-700'}">
+      <tr>
+        <td style="font-weight:700; color:#0f172a;">${escapeHtml(f.customerName || 'Customer')}</td>
+        <td style="color:#475569;">${escapeHtml(f.assignedTo || 'Unassigned')}</td>
+        <td style="font-family:monospace; color:#64748b; font-size:11px;">${escapeHtml(f.dateStr || f.date || '')} ${escapeHtml(f.timeStr || f.time || '')}</td>
+        <td>
+          <span class="badge ${f.priority === 'HIGH' ? 'badge-rose' : 'badge-amber'}">
             ${escapeHtml(f.priority || 'NORMAL')}
           </span>
         </td>
-        <td class="py-2 px-3 text-xs text-slate-600">${escapeHtml(f.reason || 'Follow-up reminder')}</td>
+        <td style="color:#475569;">${escapeHtml(f.reason || 'Follow-up reminder')}</td>
       </tr>
-    `).join('') || '<tr><td colspan="5" class="py-4 text-center text-slate-400">No scheduled follow-ups.</td></tr>';
+    `).join('') || '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:16px;">No scheduled follow-ups.</td></tr>';
 
     const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>GRM_Dashboard_Executive_Report_${now.toISOString().slice(0, 10)}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #1e293b; background: #f8fafc; padding: 24px; line-height: 1.4; }
+    .report-container { max-width: 960px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 24px; }
+    .brand-box { display: flex; align-items: center; gap: 14px; }
+    .brand-logo { width: 48px; height: 48px; border-radius: 12px; background: #059669; color: #fff; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(5,150,105,0.3); }
+    .report-meta { text-align: right; font-size: 11px; color: #64748b; line-height: 1.6; }
+    .report-meta strong { color: #1e293b; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+    .kpi-card { padding: 14px 16px; border-radius: 12px; border: 1px solid #e2e8f0; }
+    .kpi-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { font-size: 24px; font-weight: 800; margin-top: 4px; }
+    .kpi-sub { font-size: 10px; font-weight: 600; margin-top: 2px; }
+    .card-blue { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+    .card-amber { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .card-purple { background: #faf5ff; border-color: #e9d5ff; color: #6b21a8; }
+    .card-emerald { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+    .card-indigo { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
+    .card-yellow { background: #fefce8; border-color: #fef08a; color: #854d0e; }
+    .section-title { font-size: 12px; font-weight: 800; text-transform: uppercase; color: #1e293b; margin-bottom: 8px; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+    .section-subtitle { font-size: 11px; color: #64748b; font-weight: 500; text-transform: none; }
+    .table-box { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 26px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+    thead th { background: #f8fafc; color: #475569; font-weight: 700; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+    tbody td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:nth-child(even) { background-color: #fafafa; }
+    .badge { display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 700; border-radius: 9999px; }
+    .badge-emerald { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .badge-amber { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge-blue { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .badge-rose { background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; }
+    .badge-slate { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .report-footer { border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; }
     @media print {
-      @page { size: A4 portrait; margin: 12mm 10mm 12mm 10mm; }
-      body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background: #fff !important; }
-      .no-print { display: none !important; }
+      @page { size: A4 portrait; margin: 10mm; }
+      body { background: #ffffff !important; padding: 0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .report-container { max-width: 100% !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
       .avoid-break { page-break-inside: avoid; break-inside: avoid; }
-      .page-break { page-break-before: always; }
+      .no-print { display: none !important; }
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen py-6 px-4 sm:px-8">
-  <!-- Interactive Action Bar (Visible in browser, hidden when printing/saving to PDF) -->
-  <div class="no-print max-w-5xl mx-auto mb-6 p-4 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
-    <div class="flex items-center gap-2">
-      <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-rose-50 text-rose-600 font-bold">PDF</span>
-      <div>
-        <h3 class="text-sm font-bold text-slate-800">Executive Report Ready for PDF</h3>
-        <p class="text-xs text-slate-500">Click Print below, or select <strong>"Save as PDF"</strong> in your browser print prompt.</p>
-      </div>
-    </div>
-    <div class="flex items-center gap-2">
-      <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5">
-        <span>🖨️ Print / Save as PDF</span>
-      </button>
-      <button onclick="window.close()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer">
-        Close Window
-      </button>
-    </div>
-  </div>
-
-  <!-- Document Sheet -->
-  <div class="max-w-5xl mx-auto bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-slate-200">
+<body>
+  <div class="report-container">
     <!-- Header -->
-    <div class="border-b border-slate-200 pb-6 mb-6 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xl shadow-md shadow-emerald-600/30">
-          GRM
-        </div>
+    <div class="header-bar">
+      <div class="brand-box">
+        <div class="brand-logo">GRM</div>
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Executive Dashboard & Operations Hub</h1>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">Live Status</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <h1 style="font-size:18px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">Executive Dashboard & Operations Hub</h1>
+            <span class="badge badge-emerald">LIVE REPORT</span>
           </div>
-          <p class="text-xs text-slate-500 mt-0.5">Comprehensive Performance, Inquiries, Staff Rosters & Sales Report</p>
+          <p style="font-size:11px; color:#64748b; margin-top:2px;">Performance Metrics, Customer Inquiries, Staff Rosters & Sales Summary</p>
         </div>
       </div>
-      <div class="text-right text-xs text-slate-500 space-y-0.5">
-        <div><strong class="text-slate-800">Generated:</strong> ${dateFormatted} ${timeFormatted}</div>
-        <div><strong class="text-slate-800">Exported By:</strong> ${escapeHtml(exportedBy)}</div>
-        <div><strong class="text-slate-800">WhatsApp Line:</strong> <span class="font-mono">${escapeHtml(activePhone)}</span></div>
+      <div class="report-meta">
+        <div><strong>Generated:</strong> ${dateFormatted} ${timeFormatted}</div>
+        <div><strong>Exported By:</strong> ${escapeHtml(exportedBy)}</div>
+        <div><strong>WhatsApp Line:</strong> <span style="font-family:monospace;">${escapeHtml(activePhone)}</span></div>
       </div>
     </div>
 
-    <!-- 6 KPI Summary Cards Grid (Exact matching Image 3) -->
-    <div class="grid grid-cols-3 gap-3 mb-8">
-      <!-- 1: Total Enquiries -->
-      <div class="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50">
-        <div class="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Total Enquiries</div>
-        <div class="text-2xl font-extrabold text-blue-900 mt-1">${totalEnquiries}</div>
-        <div class="text-[10px] text-blue-600 font-semibold mt-0.5">✓ 100% Inbound Capture</div>
+    <!-- 6 KPI Summary Cards Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card card-blue">
+        <div class="kpi-title">Total Enquiries</div>
+        <div class="kpi-value">${totalEnquiries}</div>
+        <div class="kpi-sub">✓ 100% Inbound Capture</div>
       </div>
-      <!-- 2: Unassigned -->
-      <div class="p-3.5 rounded-xl border border-amber-200 bg-amber-50/50">
-        <div class="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Unassigned Queries</div>
-        <div class="text-2xl font-extrabold text-amber-900 mt-1">${unassignedQueries}</div>
-        <div class="text-[10px] text-amber-700 font-semibold mt-0.5">⚠ Action Required by Admin</div>
+      <div class="kpi-card card-amber">
+        <div class="kpi-title">Unassigned Queries</div>
+        <div class="kpi-value">${unassignedQueries}</div>
+        <div class="kpi-sub">⚠ Action Required by Admin</div>
       </div>
-      <!-- 3: Orders Booked -->
-      <div class="p-3.5 rounded-xl border border-purple-200 bg-purple-50/50">
-        <div class="text-[11px] font-bold text-purple-800 uppercase tracking-wider">Orders Booked</div>
-        <div class="text-2xl font-extrabold text-purple-900 mt-1">${totalOrders}</div>
-        <div class="text-[10px] text-purple-700 font-semibold mt-0.5">🛍 Total Booked Sales</div>
+      <div class="kpi-card card-purple">
+        <div class="kpi-title">Orders Booked</div>
+        <div class="kpi-value">${totalOrders}</div>
+        <div class="kpi-sub">🛍 Total Booked Sales</div>
       </div>
-      <!-- 4: Revenue -->
-      <div class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50">
-        <div class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Verified Revenue</div>
-        <div class="text-2xl font-extrabold text-emerald-900 mt-1">₹${totalRevenue.toLocaleString('en-IN')}</div>
-        <div class="text-[10px] text-emerald-700 font-semibold mt-0.5">✓ Verified Sales Volume</div>
+      <div class="kpi-card card-emerald">
+        <div class="kpi-title">Verified Revenue</div>
+        <div class="kpi-value">₹${totalRevenue.toLocaleString('en-IN')}</div>
+        <div class="kpi-sub">✓ Verified Sales Volume</div>
       </div>
-      <!-- 5: Staff Team -->
-      <div class="p-3.5 rounded-xl border border-indigo-200 bg-indigo-50/50">
-        <div class="text-[11px] font-bold text-indigo-800 uppercase tracking-wider">Staff Team</div>
-        <div class="text-2xl font-extrabold text-indigo-900 mt-1">${totalStaff}</div>
-        <div class="text-[10px] text-indigo-700 font-semibold mt-0.5">👤 ${activeStaff} Active Specialists</div>
+      <div class="kpi-card card-indigo">
+        <div class="kpi-title">Staff Team</div>
+        <div class="kpi-value">${totalStaff}</div>
+        <div class="kpi-sub">👤 ${activeStaff} Active Specialists</div>
       </div>
-      <!-- 6: Follow-ups -->
-      <div class="p-3.5 rounded-xl border border-yellow-200 bg-yellow-50/50">
-        <div class="text-[11px] font-bold text-yellow-800 uppercase tracking-wider">Scheduled Follow-ups</div>
-        <div class="text-2xl font-extrabold text-yellow-900 mt-1">${totalFollowups}</div>
-        <div class="text-[10px] text-yellow-700 font-semibold mt-0.5">⏰ Active Customer Reminders</div>
+      <div class="kpi-card card-yellow">
+        <div class="kpi-title">Scheduled Follow-ups</div>
+        <div class="kpi-value">${totalFollowups}</div>
+        <div class="kpi-sub">⏰ Active Customer Reminders</div>
       </div>
     </div>
 
     <!-- Section 1: Staff Performance Snapshot -->
-    <div class="avoid-break mb-8">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">1. Staff Performance Snapshot</h2>
-        <span class="text-xs text-slate-500 font-medium">${(CRM_STATE.staffList || []).length} registered team members</span>
+    <div class="avoid-break" style="margin-bottom:24px;">
+      <div class="section-title">
+        <span>1. Staff Performance Snapshot</span>
+        <span class="section-subtitle">${(CRM_STATE.staffList || []).length} registered team members</span>
       </div>
-      <div class="border border-slate-200 rounded-xl overflow-hidden">
-        <table class="w-full text-left text-xs border-collapse">
-          <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+      <div class="table-box">
+        <table>
+          <thead>
             <tr>
-              <th class="py-2.5 px-3">Staff Specialist</th>
-              <th class="py-2.5 px-3">Role</th>
-              <th class="py-2.5 px-3">Status</th>
-              <th class="py-2.5 px-3 text-center">Active Leads</th>
-              <th class="py-2.5 px-3 text-center">Orders Converted</th>
-              <th class="py-2.5 px-3">Contact</th>
+              <th>Staff Specialist</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th style="text-align:center;">Active Leads</th>
+              <th style="text-align:center;">Converted</th>
+              <th>Contact</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody>
             ${staffRows}
           </tbody>
         </table>
@@ -38187,25 +38551,25 @@ function exportDashboardPDF(btnEl) {
     </div>
 
     <!-- Section 2: Booked Sales Orders -->
-    <div class="avoid-break mb-8">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">2. Recent Booked Sales Orders</h2>
-        <span class="text-xs text-slate-500 font-medium">${(CRM_STATE.orders || []).length} total orders recorded</span>
+    <div class="avoid-break" style="margin-bottom:24px;">
+      <div class="section-title">
+        <span>2. Recent Booked Sales Orders</span>
+        <span class="section-subtitle">${(CRM_STATE.orders || []).length} total orders recorded</span>
       </div>
-      <div class="border border-slate-200 rounded-xl overflow-hidden">
-        <table class="w-full text-left text-xs border-collapse">
-          <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+      <div class="table-box">
+        <table>
+          <thead>
             <tr>
-              <th class="py-2.5 px-3">Order ID</th>
-              <th class="py-2.5 px-3">Customer</th>
-              <th class="py-2.5 px-3">Phone</th>
-              <th class="py-2.5 px-3 text-right">Grand Total</th>
-              <th class="py-2.5 px-3">Payment</th>
-              <th class="py-2.5 px-3">Order Status</th>
-              <th class="py-2.5 px-3">Date</th>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th style="text-align:right;">Grand Total</th>
+              <th>Payment</th>
+              <th>Order Status</th>
+              <th>Date</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody>
             ${orderRows}
           </tbody>
         </table>
@@ -38213,24 +38577,24 @@ function exportDashboardPDF(btnEl) {
     </div>
 
     <!-- Section 3: Active WhatsApp Customer Inquiries & Queue -->
-    <div class="avoid-break mb-8">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">3. Active Customer Enquiries & Lead Pipeline</h2>
-        <span class="text-xs text-slate-500 font-medium">Top ${(CRM_STATE.queries || []).slice(0, 50).length} of ${totalEnquiries} inquiries</span>
+    <div class="avoid-break" style="margin-bottom:24px;">
+      <div class="section-title">
+        <span>3. Active Customer Enquiries & Lead Pipeline</span>
+        <span class="section-subtitle">Top ${(CRM_STATE.queries || []).slice(0, 50).length} of ${totalEnquiries} inquiries</span>
       </div>
-      <div class="border border-slate-200 rounded-xl overflow-hidden">
-        <table class="w-full text-left text-xs border-collapse">
-          <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+      <div class="table-box">
+        <table>
+          <thead>
             <tr>
-              <th class="py-2 px-3">Customer Name</th>
-              <th class="py-2 px-3">Phone</th>
-              <th class="py-2 px-3">Assigned To</th>
-              <th class="py-2 px-3">Status</th>
-              <th class="py-2 px-3">Last Query Message</th>
-              <th class="py-2 px-3">Received At</th>
+              <th>Customer Name</th>
+              <th>Phone</th>
+              <th>Assigned Staff</th>
+              <th>Status</th>
+              <th>Last Message Snippet</th>
+              <th>Received At</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody>
             ${queryRows}
           </tbody>
         </table>
@@ -38238,60 +38602,91 @@ function exportDashboardPDF(btnEl) {
     </div>
 
     <!-- Section 4: Scheduled Customer Follow-ups -->
-    <div class="avoid-break mb-6">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">4. Scheduled Customer Follow-ups</h2>
-        <span class="text-xs text-slate-500 font-medium">${(CRM_STATE.followups || []).length} follow-ups scheduled</span>
+    <div class="avoid-break" style="margin-bottom:24px;">
+      <div class="section-title">
+        <span>4. Scheduled Customer Follow-ups</span>
+        <span class="section-subtitle">${(CRM_STATE.followups || []).length} follow-ups scheduled</span>
       </div>
-      <div class="border border-slate-200 rounded-xl overflow-hidden">
-        <table class="w-full text-left text-xs border-collapse">
-          <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+      <div class="table-box">
+        <table>
+          <thead>
             <tr>
-              <th class="py-2 px-3">Customer</th>
-              <th class="py-2 px-3">Assigned Staff</th>
-              <th class="py-2 px-3">Due Date & Time</th>
-              <th class="py-2 px-3">Priority</th>
-              <th class="py-2 px-3">Follow-up Reason</th>
+              <th>Customer</th>
+              <th>Assigned Staff</th>
+              <th>Due Date & Time</th>
+              <th>Priority</th>
+              <th>Follow-up Reason</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody>
             ${followupRows}
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Report Footer -->
-    <div class="border-t border-slate-200 pt-4 text-center text-[11px] text-slate-400 flex flex-wrap justify-between items-center gap-2">
+    <!-- Footer -->
+    <div class="report-footer">
       <div>GRM WhatsApp CRM Operations System • Confidential Executive Summary</div>
       <div>Generated on ${dateFormatted} at ${timeFormatted}</div>
     </div>
   </div>
-
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 350);
-    };
-  </script>
 </body>
 </html>`;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Popup blocked! Please allow popups for this site to export the PDF report.');
-      return;
+    // 100% Reliable Print Execution using Hidden Iframe (Never blocked by popup blockers!)
+    let printIframe = document.getElementById('grm-dashboard-pdf-iframe');
+    if (!printIframe) {
+      printIframe = document.createElement('iframe');
+      printIframe.id = 'grm-dashboard-pdf-iframe';
+      printIframe.style.position = 'fixed';
+      printIframe.style.right = '0';
+      printIframe.style.bottom = '0';
+      printIframe.style.width = '0';
+      printIframe.style.height = '0';
+      printIframe.style.border = '0';
+      printIframe.style.visibility = 'hidden';
+      document.body.appendChild(printIframe);
     }
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
 
-    if (typeof showToast === 'function') {
-      showToast('PDF Report Generated', 'Print dialog launched. Choose "Save as PDF" to save file.', 'picture_as_pdf', 'rose');
-    }
+    const iframeDoc = printIframe.contentDocument || printIframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(htmlContent);
+    iframeDoc.close();
+
+    // Trigger Print once written
+    setTimeout(() => {
+      try {
+        printIframe.contentWindow.focus();
+        printIframe.contentWindow.print();
+        if (typeof showToast === 'function') {
+          showToast('PDF Export Ready', 'In the print dialog, choose "Save as PDF" to save the document.', 'picture_as_pdf', 'emerald');
+        }
+      } catch (e) {
+        // Fallback for strict browser sandboxes
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.open();
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+          setTimeout(() => { printWindow.print(); }, 250);
+        } else {
+          alert('Popup blocked! Please allow popups or use browser print.');
+        }
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.innerHTML = origBtnContent;
+        }
+      }
+    }, 200);
+
   } catch (err) {
     console.error('[exportDashboardPDF Error]:', err);
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = origBtnContent;
+    }
     alert('Failed to generate PDF report: ' + err.message);
   }
 }

@@ -876,6 +876,109 @@
       min-height: 100%;
     }
 
+    /* Mobile Viewport & Chat Height Optimization */
+    html, body {
+      height: 100% !important;
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+      overflow: hidden !important;
+    }
+
+    /* Main Flex Container */
+    body > div.flex-1 {
+      height: 100% !important;
+      max-height: 100% !important;
+      min-height: 0 !important;
+    }
+
+    /* Small & Medium / Mobile & Tablet Screens (< 1024px):
+       Ensure ALL CRM modules have generous bottom padding so cards, action buttons,
+       and tables are NEVER hidden or obscured behind #mobile-bottom-app-bar */
+    @media (max-width: 1023px) {
+      #view-dashboard,
+      #view-enquiries,
+      #view-catalog,
+      #view-orders,
+      #view-followups,
+      #view-customers,
+      #view-dnd,
+      #view-audit,
+      #view-analytics,
+      #view-staff,
+      #view-settings,
+      #view-backup,
+      #view-masking,
+      #view-packing-slip-config,
+      #submodule-inbox-autoreply,
+      #submodule-inbox-broadcast,
+      #submodule-inbox-settings,
+      #chat-right-panel {
+        padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 16px)) !important;
+      }
+
+      /* Sidebar navigation drawer bottom user card padding */
+      #app-sidebar > div:last-child {
+        padding-bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+      }
+    }
+
+    @media (max-width: 767px) {
+      /* Mobile Chat Panel Layout: Ensure Chat Stream & Input are 100% visible */
+      #view-inbox,
+      #submodule-inbox-chats {
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+      }
+
+      #chat-center-panel {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        position: relative !important;
+        overflow: hidden !important;
+      }
+
+      #chat-messages-stream {
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      #chat-input-bar-container {
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 35 !important;
+        background-color: #ffffff !important;
+        border-top: 1px solid #e2e8f0 !important;
+        padding-bottom: max(10px, env(safe-area-inset-bottom, 12px)) !important;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05) !important;
+        flex-shrink: 0 !important;
+      }
+
+      #inbox-preset-templates-bar,
+      #reply-lang-bar {
+        padding-top: 3px !important;
+        padding-bottom: 3px !important;
+        min-height: 32px !important;
+        flex-shrink: 0 !important;
+      }
+
+      /* Compact icon buttons in input bar on small mobile screens */
+      #chat-input-bar-container form {
+        gap: 6px !important;
+      }
+
+      #chat-input-text {
+        font-size: 13px !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+      }
+    }
+
     /* Right Panel Layout & Dropdown Safeguards */
     #phone-switcher-dropdown {
       z-index: 100 !important;
@@ -961,7 +1064,7 @@
   </style>
 </head>
 
-<body class="bg-surface-bg font-sans text-slate-800 antialiased overflow-hidden flex h-screen relative">
+<body class="bg-surface-bg font-sans text-slate-800 antialiased overflow-hidden flex h-full min-h-0 relative">
 
   <!-- Sidebar Backdrop Overlay (Mobile & Tablet) -->
   <div id="sidebar-backdrop" onclick="toggleSidebar(false)"
@@ -1339,34 +1442,104 @@
     <header
       class="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 sm:gap-3">
       <!-- Row 1 on Mobile / Left Side on Desktop: Sidebar Toggle Button & Dynamic Header Title -->
-      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 w-full sm:w-auto">
-        <!-- Sidebar Toggle Menu Bar Button -->
-        <button type="button" onclick="toggleSidebar()" id="sidebar-toggle-btn"
-          class="p-1.5 sm:p-2 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-xl transition flex items-center justify-center cursor-pointer shadow-xs border border-slate-200 shrink-0"
-          title="Toggle Navigation Menu">
-          <span class="material-symbols-outlined text-[22px] sm:text-[24px]" id="sidebar-toggle-icon">menu</span>
-        </button>
+      <div class="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 min-w-0 w-full sm:w-auto">
+        <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <!-- Sidebar Toggle Menu Bar Button -->
+          <button type="button" onclick="toggleSidebar()" id="sidebar-toggle-btn"
+            class="p-1.5 sm:p-2 text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-xl transition flex items-center justify-center cursor-pointer shadow-xs border border-slate-200 shrink-0"
+            title="Toggle Navigation Menu">
+            <span class="material-symbols-outlined text-[22px] sm:text-[24px]" id="sidebar-toggle-icon">menu</span>
+          </button>
 
-        <!-- Dynamic Header Title -->
-        <div id="header-title-container" class="flex items-center gap-2 min-w-0">
-          <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight truncate"
-            data-i18n="inbox.title">
-            WhatsApp Dashboard</h2>
-          <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden" data-i18n="inbox.subtitle"></p>
+          <!-- Dynamic Header Title -->
+          <div id="header-title-container" class="flex items-center gap-2 min-w-0">
+            <h2 id="page-title" class="font-bold text-sm sm:text-base lg:text-lg text-slate-900 leading-tight truncate"
+              data-i18n="inbox.title">
+              WhatsApp Dashboard</h2>
+            <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden" data-i18n="inbox.subtitle"></p>
+          </div>
         </div>
+
+        <!-- Mobile-Only Notification Bell Trigger -->
+        <button type="button" onclick="toggleNotificationsDropdown(event)" id="header-notif-btn-mobile"
+          class="sm:hidden relative flex items-center justify-center w-8 h-8 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 transition shadow-xs shrink-0 cursor-pointer"
+          title="Notification Center">
+          <span class="material-symbols-outlined text-[19px] text-slate-600">notifications</span>
+          <span id="header-notif-ping-mobile" class="hidden absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-extrabold text-white border-2 border-white shadow-xs">
+            <span id="header-notif-count-mobile">0</span>
+          </span>
+        </button>
       </div>
 
       <!-- Header actions are available on desktop; mobile navigation remains unchanged. -->
       <div class="hidden sm:flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2.5 w-full sm:w-auto shrink-0">
-        <!-- Real-Time SSE Push Stream Status Indicator -->
-        <div id="sse-stream-badge"
-          class="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200/80 text-emerald-900 rounded-xl text-xs font-semibold shadow-xs"
-          title="Server-Sent Events: Real-time push stream active (<50ms latency)">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span id="sse-live-indicator" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span class="text-[11px] font-bold text-emerald-950">Realtime SSE</span>
+        <!-- Real-Time Notifications Hub Dropdown -->
+        <div class="relative shrink-0" id="header-notifications-wrapper">
+          <button type="button" onclick="toggleNotificationsDropdown(event)" id="header-notif-btn"
+            class="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 hover:text-emerald-700 rounded-xl border border-slate-200 transition shadow-xs cursor-pointer group"
+            title="Notification Center (Live Alerts, Chats & Calls)">
+            <span class="material-symbols-outlined text-[19px] sm:text-[20px] text-slate-600 group-hover:text-emerald-700 transition" id="header-notif-bell-icon">notifications</span>
+            <!-- Live unread counter badge -->
+            <span id="header-notif-ping" class="hidden absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-extrabold text-white border-2 border-white shadow-xs">
+              <span id="header-notif-count">0</span>
+            </span>
+          </button>
+
+          <!-- Notifications Dropdown Flyout -->
+          <div id="notifications-dropdown"
+            class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[110] text-xs">
+            <div class="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-2xl">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[15px]">notifications</span>
+                </div>
+                <p class="font-extrabold text-slate-900 text-xs sm:text-sm">Notifications</p>
+                <span id="notif-dropdown-unread-pill" class="text-[10px] bg-rose-100 text-rose-700 font-extrabold px-2 py-0.5 rounded-full">0 New</span>
+              </div>
+              <div class="flex items-center gap-2 text-[11px]">
+                <button type="button" onclick="markAllNotificationsAsRead(event)"
+                  class="font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer">
+                  Mark all read
+                </button>
+                <span class="text-slate-300">|</span>
+                <button type="button" onclick="clearAllNotifications(event)"
+                  class="font-bold text-slate-400 hover:text-rose-600 hover:underline cursor-pointer">
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <!-- Category Filter Tabs -->
+            <div class="flex items-center gap-1 px-3 py-1.5 bg-slate-50 border-b border-slate-100 text-[11px] font-semibold">
+              <button type="button" onclick="setNotifFilter('all', event)" id="notif-tab-all"
+                class="px-2.5 py-1 rounded-lg bg-white shadow-xs text-slate-900 font-bold border border-slate-200 cursor-pointer">All</button>
+              <button type="button" onclick="setNotifFilter('chats', event)" id="notif-tab-chats"
+                class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Chats</button>
+              <button type="button" onclick="setNotifFilter('calls', event)" id="notif-tab-calls"
+                class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Calls</button>
+              <button type="button" onclick="setNotifFilter('alerts', event)" id="notif-tab-alerts"
+                class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Alerts</button>
+            </div>
+
+            <!-- Dynamic Notification List -->
+            <div id="notifications-list-container" class="max-h-[360px] sm:max-h-[400px] overflow-y-auto divide-y divide-slate-100 custom-chat-scroll">
+              <!-- Rendered dynamically by JS -->
+            </div>
+
+            <!-- Footer: Quick Actions -->
+            <div class="p-2 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between gap-2">
+              <button type="button" onclick="switchView('inbox'); closeNotificationsDropdown();"
+                class="flex-1 py-1.5 px-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer">
+                <span class="material-symbols-outlined text-[15px] text-emerald-600">chat</span>
+                <span>Open Inbox</span>
+              </button>
+              <button type="button" onclick="switchView('enquiries'); closeNotificationsDropdown();"
+                class="flex-1 py-1.5 px-2 bg-white hover:bg-indigo-50 text-indigo-800 border border-slate-200 hover:border-indigo-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer">
+                <span class="material-symbols-outlined text-[15px] text-indigo-600">assignment</span>
+                <span>View Enquiries</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Interactive Multi-WhatsApp Number Switcher Dropdown -->
@@ -1484,18 +1657,18 @@
     <!-- ========================================================================= -->
     <!-- 3. VIEWS CONTAINER -->
     <!-- ========================================================================= -->
-    <main class="flex-1 overflow-hidden relative">
+    <main class="flex-1 min-h-0 overflow-hidden relative">
 
       <!-- ========================================== -->
       <!-- VIEW: WHATSAPP INBOX (SUB-MODULES WORKSTATION) -->
       <!-- ========================================== -->
-      <section id="view-inbox" class="h-full flex flex-col overflow-hidden w-full relative">
+      <section id="view-inbox" class="h-full flex flex-col min-h-0 overflow-hidden w-full relative">
 
 
         <!-- ======================================================== -->
         <!-- SUB-MODULE 1: LIVE CONVERSATIONS WORKSTATION (3-PANEL)  -->
         <!-- ======================================================== -->
-        <div id="submodule-inbox-chats" class="flex-1 flex overflow-hidden w-full relative">
+        <div id="submodule-inbox-chats" class="flex-1 flex min-h-0 overflow-hidden w-full relative">
 
           <!-- Left Panel: Conversation & Enquiry List (Generous Width for Clear Customer Names & Phone Numbers) -->
           <div id="inbox-left-panel"
@@ -1552,7 +1725,7 @@
 
           <!-- Center Panel: Active Chat History & Messaging Stream (Responsive Flex Column) -->
           <div id="chat-center-panel"
-            class="hidden md:flex flex-1 min-w-0 flex-col h-full bg-[#efeae2]/40 relative overflow-hidden transition-all duration-300">
+            class="hidden md:flex flex-1 min-w-0 min-h-0 flex-col h-full max-h-full bg-[#efeae2]/40 relative overflow-hidden transition-all duration-300">
 
             <!-- Floating Slide-Open Tab Button for LEFT PANEL (Visible when left panel is minimized) -->
             <button id="floating-left-panel-toggle-btn" onclick="toggleLeftPanel(true)"
@@ -1595,9 +1768,9 @@
             <div id="chat-bulk-price-request-banner" class="hidden px-3 py-2 border-b text-xs transition-all"></div>
 
             <!-- Message History Stream Container with Floating Top-to-Bottom Bouncing Button -->
-            <div class="relative flex-1 min-w-0 flex flex-col overflow-hidden">
+            <div class="relative flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
               <div id="chat-messages-stream"
-                class="flex-1 min-w-0 overflow-y-auto p-3 sm:p-5 space-y-3 custom-chat-scroll bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]">
+                class="flex-1 min-w-0 min-h-0 overflow-y-auto p-3 sm:p-5 space-y-3 custom-chat-scroll bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]">
                 <!-- Rendered dynamically -->
               </div>
 
@@ -1681,7 +1854,7 @@
             </div>
 
             <!-- Message Input Bar with Photo Upload Support -->
-            <div id="chat-input-bar-container" class="p-2 sm:p-3 bg-white border-t border-slate-200 shrink-0 min-w-0">
+            <div id="chat-input-bar-container" class="p-2 sm:p-3 bg-white border-t border-slate-200 shrink-0 min-w-0 sticky bottom-0 z-30">
               <!-- Attached Image Preview Strip in 1:1 Chat -->
               <div id="chat-attached-image-preview"
                 class="hidden mb-2 p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
