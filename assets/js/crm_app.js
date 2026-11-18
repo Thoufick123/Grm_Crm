@@ -27800,15 +27800,22 @@ function toggleAddCustomCourierInput(forceState) {
   const input = document.getElementById('new-courier-name-input');
   if (!box) return;
 
-  const shouldShow = (typeof forceState === 'boolean') ? forceState : box.classList.contains('hidden');
+  const isHidden = box.classList.contains('hidden') || box.style.display === 'none' || window.getComputedStyle(box).display === 'none';
+  const shouldShow = (typeof forceState === 'boolean') ? forceState : isHidden;
+
   if (shouldShow) {
     box.classList.remove('hidden');
+    box.style.display = 'block';
     if (input) {
       input.value = '';
-      setTimeout(() => input.focus(), 60);
+      setTimeout(() => {
+        input.focus();
+        try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+      }, 50);
     }
   } else {
     box.classList.add('hidden');
+    box.style.display = 'none';
   }
 }
 window.toggleAddCustomCourierInput = toggleAddCustomCourierInput;
