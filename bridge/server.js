@@ -402,14 +402,37 @@ async function getAudioBuffer(url) {
 
 // Detect FFmpeg for WhatsApp PTT voice note audio transcoding
 let ffmpegBinPath = null;
-try {
-    const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-    if (ffmpegInstaller && ffmpegInstaller.path && fs.existsSync(ffmpegInstaller.path)) {
-        ffmpegBinPath = ffmpegInstaller.path;
-        console.log('[FFmpeg Audio Engine] Loaded binary from @ffmpeg-installer/ffmpeg:', ffmpegBinPath);
+const possibleFfmpegPaths = [
+    path.resolve(__dirname, 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(__dirname, '..', 'bridge', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(__dirname, '..', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(process.cwd(), 'bridge', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe')
+];
+for (const p of possibleFfmpegPaths) {
+    if (fs.existsSync(p)) {
+        ffmpegBinPath = p;
+        console.log('[FFmpeg Audio Engine] Loaded binary from direct path:', ffmpegBinPath);
+        break;
     }
-} catch (e) {
-    console.warn('[FFmpeg Audio Engine] Could not load @ffmpeg-installer/ffmpeg:', e.message);
+}
+if (!ffmpegBinPath) {
+    try {
+        const ffmpegInstaller = require(path.resolve(__dirname, 'node_modules', '@ffmpeg-installer', 'ffmpeg'));
+        if (ffmpegInstaller && ffmpegInstaller.path && fs.existsSync(ffmpegInstaller.path)) {
+            ffmpegBinPath = ffmpegInstaller.path;
+            console.log('[FFmpeg Audio Engine] Loaded binary from @ffmpeg-installer/ffmpeg:', ffmpegBinPath);
+        }
+    } catch (e) {
+        try {
+            const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+            if (ffmpegInstaller && ffmpegInstaller.path && fs.existsSync(ffmpegInstaller.path)) {
+                ffmpegBinPath = ffmpegInstaller.path;
+                console.log('[FFmpeg Audio Engine] Loaded binary from global @ffmpeg-installer/ffmpeg:', ffmpegBinPath);
+            }
+        } catch (e2) {
+            console.warn('[FFmpeg Audio Engine] Could not load @ffmpeg-installer/ffmpeg:', e2.message);
+        }
+    }
 }
 
 /**
@@ -1780,12 +1803,22 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
             try {
                 const ext = mediaUrl.includes('.webm') ? 'webm' : (mediaUrl.includes('.ogg') ? 'ogg' : 'mp3');
                 const opusAudioBuf = await convertToWhatsAppOpus(rawAudioBuf, ext);
-                sent = await activeAcc.sock.sendMessage(jid, {
-                    audio: opusAudioBuf || rawAudioBuf,
-                    mimetype: 'audio/ogg; codecs=opus',
-                    ptt: true
-                });
-                console.log(`[Outbound Voice Delivered] Voice note delivered to ${jid} (ID: ${sent?.key?.id})`);
+                try {
+                    sent = await activeAcc.sock.sendMessage(jid, {
+                        audio: opusAudioBuf || rawAudioBuf,
+                        mimetype: 'audio/ogg; codecs=opus',
+                        ptt: true
+                    });
+                    console.log(`[Outbound Voice Delivered] Voice note delivered as PTT to ${jid} (ID: ${sent?.key?.id})`);
+                } catch (pttErr) {
+                    console.warn('[PTT Send Failed, Falling back to standard audio]:', pttErr.message);
+                    sent = await activeAcc.sock.sendMessage(jid, {
+                        audio: rawAudioBuf,
+                        mimetype: ext === 'webm' ? 'audio/webm' : (ext === 'mp3' ? 'audio/mpeg' : 'audio/ogg'),
+                        ptt: false
+                    });
+                    console.log(`[Outbound Voice Fallback Delivered] Standard audio delivered to ${jid} (ID: ${sent?.key?.id})`);
+                }
             } catch (aErr) {
                 console.warn('[Voice Send Failed, Falling back]:', aErr.message);
             }

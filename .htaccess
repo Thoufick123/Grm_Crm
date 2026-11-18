@@ -29,6 +29,20 @@ Options -Indexes -MultiViews
 </IfModule>
 
 # 4. Modern Compression (Brotli & Gzip / Deflate) for Maximum Transfer Speed
+# Audio and Media MIME Types Configuration
+AddType audio/ogg .ogg .opus
+AddType audio/webm .webm
+AddType audio/mpeg .mp3
+AddType audio/mp4 .m4a
+AddType audio/wav .wav
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(ogg|opus|webm|mp3|m4a|wav)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+        Header set Accept-Ranges "bytes"
+    </FilesMatch>
+</IfModule>
 <IfModule mod_brotli.c>
     AddOutputFilterByType BROTLI_COMPRESS text/plain text/html text/xml text/css text/javascript application/xml application/xhtml+xml application/rss+xml application/javascript application/x-javascript application/json application/vnd.ms-fontobject application/x-font-ttf font/opentype font/woff font/woff2 image/svg+xml
 </IfModule>

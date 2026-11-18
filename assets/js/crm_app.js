@@ -3449,21 +3449,29 @@ function applyAuthoritativeDatabaseState(data) {
           CRM_STATE.conversations[cid] = incomingMsgs;
         } else {
           const existingList = CRM_STATE.conversations[cid];
-          const seenIds = new Set();
-          const mergedList = [];
+          const msgMap = new Map();
           existingList.forEach(m => {
             const mid = String(m.message_uid || m.id || '');
-            if (mid) seenIds.add(mid);
-            mergedList.push(m);
+            if (mid) msgMap.set(mid, m);
           });
           incomingMsgs.forEach(im => {
             const mid = String(im.message_uid || im.id || '');
-            if (!mid || !seenIds.has(mid)) {
-              if (mid) seenIds.add(mid);
-              mergedList.push(im);
+            if (mid && msgMap.has(mid)) {
+              const target = msgMap.get(mid);
+              if (im.media_url && (!target.media_url || target.media_url === '' || target.media_url.startsWith('data:'))) {
+                target.media_url = im.media_url;
+              }
+              if (im.mediaUrl && (!target.mediaUrl || target.mediaUrl === '' || target.mediaUrl.startsWith('data:'))) {
+                target.mediaUrl = im.mediaUrl;
+              }
+              if (im.audio_duration) target.audio_duration = im.audio_duration;
+              if (im.duration) target.duration = im.duration;
+              if (im.status) target.status = im.status;
+            } else if (mid) {
+              msgMap.set(mid, im);
             }
           });
-          CRM_STATE.conversations[cid] = mergedList;
+          CRM_STATE.conversations[cid] = Array.from(msgMap.values());
         }
       }
     });
@@ -6590,6 +6598,9 @@ function renderChatMessages() {
         const sibling = (messages || []).find(m => m && (m.media_url || m.mediaUrl) && String(m.media_url || m.mediaUrl).includes('/voice/'));
         if (sibling) audioSrc = sibling.media_url || sibling.mediaUrl;
       }
+      if (audioSrc && !audioSrc.startsWith('http://') && !audioSrc.startsWith('https://') && !audioSrc.startsWith('data:') && !audioSrc.startsWith('blob:')) {
+        audioSrc = window.location.origin + '/' + audioSrc.replace(/^\/+/, '');
+      }
       contentHtml = `
         <div class="space-y-2 py-1">
           <div class="flex items-center gap-3">
@@ -6654,19 +6665,37 @@ function renderChatMessages() {
         </div>
       `;
     } else if (isImage) {
-      contentHtml = `
-        <div class="space-y-2">
-          <div class="group relative rounded-2xl overflow-hidden border border-slate-200/90 bg-slate-900/5 shadow-sm hover:shadow-md transition cursor-pointer" onclick="openImageLightbox('${msgId}')">
-            <img src="${msg.media_url}" id="chat-img-${msgId}" alt="Customer Attachment" onerror="if(!this.dataset.retry){this.dataset.retry=1;if(this.getAttribute('src')&&!this.getAttribute('src').startsWith('http')&&!this.getAttribute('src').startsWith('data:')){this.src=window.location.origin+'/'+this.getAttribute('src').replace(/^\/+/,'');}}" class="w-full max-h-[380px] object-contain rounded-2xl block mx-auto transition duration-200 group-hover:brightness-95">
-            <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
-              <span class="px-3 py-1.5 rounded-full bg-slate-900/90 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg border border-white/20">
-                <span class="material-symbols-outlined text-[16px] text-emerald-400">zoom_in</span> Click to Enlarge / Inspect
-              </span>
+      const hasValidMediaUrl = Boolean(msg.media_url && typeof msg.media_url === 'string' && msg.media_url.trim() !== '');
+      let imgSrc = hasValidMediaUrl ? msg.media_url.trim() : '';
+      if (imgSrc && !imgSrc.startsWith('http://') && !imgSrc.startsWith('https://') && !imgSrc.startsWith('data:') && !imgSrc.startsWith('blob:')) {
+        imgSrc = window.location.origin + '/' + imgSrc.replace(/^\/+/, '');
+      }
+      const isBadTruncatedB64 = imgSrc && imgSrc.startsWith('data:image/') && imgSrc.length < 500;
+      if (isBadTruncatedB64 || !hasValidMediaUrl) {
+        contentHtml = `
+          <div class="space-y-1.5">
+            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 text-xs text-emerald-900">
+              <span class="material-symbols-outlined text-[18px] text-emerald-600">image</span>
+              <span class="font-bold">📷 Photo Attachment (Delivered via WhatsApp)</span>
             </div>
+            ${msg.text && msg.text !== '[Photo Attachment]' ? `<p class="text-xs leading-relaxed font-normal">${(typeof escapeHtml === 'function' ? escapeHtml(msg.text) : msg.text).replace(/\n/g, '<br>')}</p>` : ''}
           </div>
-          ${msg.text && msg.text !== '[Photo Attachment]' ? `<p class="text-xs leading-relaxed font-normal">${(typeof escapeHtml === 'function' ? escapeHtml(msg.text) : msg.text).replace(/\n/g, '<br>')}</p>` : ''}
-        </div>
-      `;
+        `;
+      } else {
+        contentHtml = `
+          <div class="space-y-2">
+            <div class="group relative rounded-2xl overflow-hidden border border-slate-200/90 bg-slate-900/5 shadow-sm hover:shadow-md transition cursor-pointer" onclick="openImageLightbox('${msgId}')">
+              <img src="${imgSrc}" id="chat-img-${msgId}" alt="Customer Attachment" onerror="if(!this.dataset.retry){this.dataset.retry=1;if(this.getAttribute('src')&&!this.getAttribute('src').startsWith('http')&&!this.getAttribute('src').startsWith('data:')){this.src=window.location.origin+'/'+this.getAttribute('src').replace(/^\/+/,'');}}" class="w-full max-h-[380px] object-contain rounded-2xl block mx-auto transition duration-200 group-hover:brightness-95">
+              <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
+                <span class="px-3 py-1.5 rounded-full bg-slate-900/90 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg border border-white/20">
+                  <span class="material-symbols-outlined text-[16px] text-emerald-400">zoom_in</span> Click to Enlarge / Inspect
+                </span>
+              </div>
+            </div>
+            ${msg.text && msg.text !== '[Photo Attachment]' ? `<p class="text-xs leading-relaxed font-normal">${(typeof escapeHtml === 'function' ? escapeHtml(msg.text) : msg.text).replace(/\n/g, '<br>')}</p>` : ''}
+          </div>
+        `;
+      }
     } else {
       let rawSafe = typeof escapeHtml === 'function' ? escapeHtml(msg.text || '') : (msg.text || '');
       let formattedMsg = rawSafe
@@ -7233,17 +7262,27 @@ window.toggleAudioPlay = function (msgId) {
   const icon = document.getElementById(`icon-${msgId}`);
   if (!audio) return;
 
-  // If no source or invalid source, play simulated pleasant voice chime sound
-  if (!audio.src || audio.src === '' || audio.src === window.location.href || audio.src.endsWith('/')) {
+  let src = audio.currentSrc || audio.src || '';
+  if (!src || src === '' || src === window.location.href || src.endsWith('/')) {
+    const rawAttr = audio.getAttribute('src');
+    if (rawAttr && rawAttr.trim()) {
+      src = (rawAttr.startsWith('http://') || rawAttr.startsWith('https://') || rawAttr.startsWith('data:') || rawAttr.startsWith('blob:'))
+        ? rawAttr
+        : (window.location.origin + '/' + rawAttr.replace(/^\/+/, ''));
+      audio.src = src;
+    }
+  }
+
+  if (!src || src === '' || src === window.location.href || src.endsWith('/')) {
     playSimulatedVoice(msgId);
     return;
   }
 
   if (audio.paused) {
-    // Pause all other audios first
+    // Pause all other active audios
     document.querySelectorAll('audio').forEach(a => {
       if (a !== audio) {
-        a.pause();
+        try { a.pause(); } catch (e) {}
         const otherId = a.id.replace('audio-', '');
         const otherIcon = document.getElementById(`icon-${otherId}`);
         if (otherIcon) otherIcon.innerText = 'play_arrow';
@@ -7253,8 +7292,25 @@ window.toggleAudioPlay = function (msgId) {
     audio.play().then(() => {
       if (icon) icon.innerText = 'pause';
     }).catch(err => {
-      console.warn('[Audio Play Fallback]:', err);
-      playSimulatedVoice(msgId);
+      console.warn('[Audio Play Fallback with direct Audio object]:', err);
+      try {
+        const directAudio = new Audio(src);
+        directAudio.play().then(() => {
+          if (icon) icon.innerText = 'pause';
+          directAudio.onended = () => { if (icon) icon.innerText = 'play_arrow'; };
+          directAudio.ontimeupdate = () => {
+            const seek = document.getElementById(`seek-${msgId}`);
+            const timeLbl = document.getElementById(`time-${msgId}`);
+            if (seek && directAudio.duration) { seek.max = directAudio.duration; seek.value = directAudio.currentTime; }
+            if (timeLbl) timeLbl.innerText = formatAudioTime(directAudio.currentTime);
+          };
+        }).catch(err2 => {
+          console.warn('[Direct Audio Play Failed]:', err2);
+          playSimulatedVoice(msgId);
+        });
+      } catch (e3) {
+        playSimulatedVoice(msgId);
+      }
     });
   } else {
     audio.pause();
@@ -8093,9 +8149,9 @@ function updateBadgeCounters() {
       return false;
     };
 
-    if (countAllEl) countAllEl.innerText = activeQ.length;
-    if (countNewLeadsEl) countNewLeadsEl.innerText = activeQ.filter(isNl).length;
-    if (countFollowupEl) countFollowupEl.innerText = activeQ.filter(isFu).length;
+    if (countAllEl && activeQ.length > 0) countAllEl.innerText = activeQ.length;
+    if (countNewLeadsEl && activeQ.length > 0) countNewLeadsEl.innerText = activeQ.filter(isNl).length;
+    if (countFollowupEl && activeQ.length > 0) countFollowupEl.innerText = activeQ.filter(isFu).length;
   }
 }
 
@@ -32730,33 +32786,101 @@ function updateBadgeCounters() {
   const bUnread = document.getElementById('badge-total-unread');
   if (bUnread) bUnread.innerText = unreadCount;
 
-  const countAll = document.getElementById('count-all');
-  if (countAll) countAll.innerText = visibleQueries.length;
+  // High-accuracy calculation of active inbox conversations across customers & queries (excluding DND)
+  const dndSet = new Set();
+  (CRM_STATE.customers || []).forEach(c => {
+    if (c.isDND === true || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'))) {
+      dndSet.add(String(c.id));
+    }
+  });
 
-  // Compute dynamic Follow-up and New Leads counts for Inbox filter pills
+  const convPhoneMap = new Map();
+  for (const [key, msgs] of Object.entries(CRM_STATE.conversations || {})) {
+    const kDigits = String(key).replace(/\D/g, '');
+    if (kDigits.length >= 7) convPhoneMap.set(kDigits.slice(-10), msgs);
+  }
+
+  const queryByCustId = new Map();
+  const queryByPhone10 = new Map();
+  (CRM_STATE.queries || []).forEach(q => {
+    if (!q) return;
+    if (q.customerId) queryByCustId.set(String(q.customerId), q);
+    if (q.customer_id) queryByCustId.set(String(q.customer_id), q);
+    const clean = String(q.customerId || q.customer_id || '').replace(/\D/g, '');
+    if (clean.length >= 7) queryByPhone10.set(clean.slice(-10), q);
+  });
+
   const followupCustIds = new Set((CRM_STATE.followups || [])
     .filter(f => f && (f.status === 'PENDING' || f.status === 'FOLLOW_UP' || !f.status || f.status === 'OPEN'))
     .map(f => String(f.customerId || '')));
 
   const isFollowupQuery = q => {
-    const s = String(q.status || '').toUpperCase();
-    return s === 'FOLLOW_UP' || s === 'PENDING' || followupCustIds.has(String(q.customerId));
+    const s = String(q?.status || '').toUpperCase();
+    return s === 'FOLLOW_UP' || s === 'PENDING' || followupCustIds.has(String(q?.customerId));
   };
 
   const isNewLeadQuery = q => {
-    const s = String(q.status || '').toUpperCase();
+    const s = String(q?.status || '').toUpperCase();
     if (isFollowupQuery(q)) return false;
     if (s === 'NEW' || s === 'OPEN' || s === 'ASSIGNED') return true;
-    const isUnassigned = !q.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
+    const isUnassigned = !q?.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
     if (isUnassigned && s !== 'RESOLVED' && s !== 'CLOSED' && s !== 'CONVERTED') return true;
     return false;
   };
 
+  let totalCardsCount = 0;
+  let newLeadsCount = 0;
+  let followupCount = 0;
+  let unreadTotal = 0;
+
+  (CRM_STATE.customers || []).forEach(cust => {
+    if (!cust || cust.name === 'System' || cust.name === 'GRM Linked WhatsApp Device' || cust.name.startsWith('WhatsApp Linked')) return;
+    if (dndSet.has(String(cust.id))) return;
+
+    const custDigits = (cust.phone || cust.whatsapp || '').replace(/\D/g, '');
+    const phone10 = custDigits.length >= 7 ? custDigits.slice(-10) : '';
+    const query = queryByCustId.get(String(cust.id)) || (phone10 ? queryByPhone10.get(phone10) : null);
+    if (query && query.status === 'DND') return;
+
+    const conv = (CRM_STATE.conversations && CRM_STATE.conversations[cust.id]) || (phone10 ? convPhoneMap.get(phone10) : null) || [];
+    const custLastMsg = cust.lastMessage || cust.last_message || '';
+
+    // If contact has messages, last message, active query, or is currently selected
+    const isActiveCard = (conv.length > 0) || Boolean(custLastMsg) || Boolean(query) || (window.ACTIVE_CUSTOMER_ID && String(cust.id) === String(window.ACTIVE_CUSTOMER_ID));
+    if (!isActiveCard) return;
+
+    totalCardsCount++;
+
+    const isFu = query ? isFollowupQuery(query) : followupCustIds.has(String(cust.id));
+    if (isFu) {
+      followupCount++;
+    } else {
+      const isNl = query ? isNewLeadQuery(query) : (!cust.assignedTo || cust.assignedTo === 'UNASSIGNED');
+      if (isNl) newLeadsCount++;
+    }
+
+    const uCount = (query && query.unreadCount) ? Number(query.unreadCount) : (Number(cust.unreadCount) || (conv.length > 0 && conv[conv.length - 1].direction === 'inbound' ? 1 : 0));
+    unreadTotal += uCount;
+  });
+
+  const finalTotalChats = Math.max(totalCardsCount, visibleQueries.length);
+  const finalNewLeads = Math.max(newLeadsCount, visibleQueries.filter(isNewLeadQuery).length);
+  const finalFollowup = Math.max(followupCount, visibleQueries.filter(isFollowupQuery).length);
+
+  const countAll = document.getElementById('count-all');
+  if (countAll) countAll.innerText = finalTotalChats;
+
   const countNewLeads = document.getElementById('count-new-leads');
-  if (countNewLeads) countNewLeads.innerText = visibleQueries.filter(isNewLeadQuery).length;
+  if (countNewLeads) countNewLeads.innerText = finalNewLeads;
 
   const countFollowup = document.getElementById('count-followup');
-  if (countFollowup) countFollowup.innerText = visibleQueries.filter(isFollowupQuery).length;
+  if (countFollowup) countFollowup.innerText = finalFollowup;
+
+  // Synchronize sidebar WhatsApp Inbox counter with actual unread or total conversation queue
+  if (bUnread) {
+    const finalSidebarCount = unreadTotal > 0 ? unreadTotal : finalTotalChats;
+    bUnread.innerText = finalSidebarCount;
+  }
 
   const countUnassigned = document.getElementById('count-unassigned');
   if (countUnassigned) countUnassigned.innerText = unassignedCount;
