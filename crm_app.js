@@ -5934,8 +5934,13 @@ function initPanelResizers() {
       rightPanel.style.minWidth = rW + 'px';
     }
     const savedSidebarWidth = localStorage.getItem('GRM_APP_SIDEBAR_WIDTH');
-    if (savedSidebarWidth && appSidebar && parseInt(savedSidebarWidth) > 160) {
-      appSidebar.style.width = savedSidebarWidth + 'px';
+    if (savedSidebarWidth && appSidebar && parseInt(savedSidebarWidth) >= 180) {
+      const sWidth = Math.min(500, parseInt(savedSidebarWidth));
+      appSidebar.style.width = sWidth + 'px';
+      appSidebar.style.minWidth = sWidth + 'px';
+      appSidebar.style.maxWidth = sWidth + 'px';
+      appSidebar.style.flexBasis = sWidth + 'px';
+      appSidebar.style.setProperty('--sidebar-width', sWidth + 'px');
     }
     const savedLeftOpen = localStorage.getItem('GRM_INBOX_LEFT_OPEN');
     if (savedLeftOpen === 'false') {
@@ -6065,14 +6070,15 @@ function initPanelResizers() {
     });
   }
 
-  // 3. MAIN APP SIDEBAR RESIZER
+  // 3. MAIN APP SIDEBAR RESIZER (Expand Right & Left Movement)
   if (resizerSidebar && appSidebar && !resizerSidebar._bound) {
     resizerSidebar._bound = true;
     let startXSide = 0;
     let startWidthSide = 0;
 
     const onMouseMoveSide = (e) => {
-      const deltaX = e.clientX - startXSide;
+      const clientX = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+      const deltaX = clientX - startXSide;
       let newWidth = startWidthSide + deltaX;
 
       if (newWidth < 140) {
@@ -6081,31 +6087,60 @@ function initPanelResizers() {
         return;
       }
 
-      newWidth = Math.max(180, Math.min(newWidth, 420));
+      const maxWidth = Math.max(380, Math.min(500, window.innerWidth - 180));
+      newWidth = Math.max(180, Math.min(newWidth, maxWidth));
       appSidebar.style.width = newWidth + 'px';
+      appSidebar.style.minWidth = newWidth + 'px';
+      appSidebar.style.maxWidth = newWidth + 'px';
+      appSidebar.style.flexBasis = newWidth + 'px';
+      appSidebar.style.setProperty('--sidebar-width', newWidth + 'px');
     };
 
     const onMouseUpSide = () => {
+      resizerSidebar.classList.remove('is-resizing');
+      appSidebar.classList.remove('is-resizing');
       document.body.classList.remove('is-resizing-panels');
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      appSidebar.style.transition = '';
       document.removeEventListener('mousemove', onMouseMoveSide);
       document.removeEventListener('mouseup', onMouseUpSide);
-      if (appSidebar.style.width) {
-        try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', parseInt(appSidebar.style.width)); } catch (e) { }
+      document.removeEventListener('touchmove', onMouseMoveSide);
+      document.removeEventListener('touchend', onMouseUpSide);
+      const finalWidth = parseInt(appSidebar.style.width);
+      if (finalWidth && finalWidth >= 180) {
+        try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', finalWidth); } catch (e) { }
       }
     };
 
-    resizerSidebar.addEventListener('mousedown', (e) => {
+    const onMouseDownSide = (e) => {
       e.preventDefault();
-      startXSide = e.clientX;
+      appSidebar.classList.add('is-resizing');
+      appSidebar.style.transition = 'none';
+      startXSide = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
       startWidthSide = appSidebar.getBoundingClientRect().width;
+      resizerSidebar.classList.add('is-resizing');
       document.body.classList.add('is-resizing-panels');
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
 
       document.addEventListener('mousemove', onMouseMoveSide);
       document.addEventListener('mouseup', onMouseUpSide);
+      document.addEventListener('touchmove', onMouseMoveSide, { passive: false });
+      document.addEventListener('touchend', onMouseUpSide);
+    };
+
+    resizerSidebar.addEventListener('mousedown', onMouseDownSide);
+    resizerSidebar.addEventListener('touchstart', onMouseDownSide, { passive: false });
+
+    resizerSidebar.addEventListener('dblclick', () => {
+      const defaultWidth = 260;
+      appSidebar.style.width = defaultWidth + 'px';
+      appSidebar.style.minWidth = defaultWidth + 'px';
+      appSidebar.style.maxWidth = defaultWidth + 'px';
+      appSidebar.style.flexBasis = defaultWidth + 'px';
+      appSidebar.style.setProperty('--sidebar-width', defaultWidth + 'px');
+      try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', defaultWidth); } catch (e) { }
     });
   }
 }

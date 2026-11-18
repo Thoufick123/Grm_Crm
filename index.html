@@ -369,8 +369,13 @@
           rightPanel.style.minWidth = savedRightWidth + 'px';
         }
         var savedSidebarWidth = localStorage.getItem('GRM_APP_SIDEBAR_WIDTH');
-        if (savedSidebarWidth && appSidebar && parseInt(savedSidebarWidth) > 160) {
-          appSidebar.style.width = savedSidebarWidth + 'px';
+        if (savedSidebarWidth && appSidebar && parseInt(savedSidebarWidth) >= 180) {
+          var sWidth = Math.min(500, parseInt(savedSidebarWidth));
+          appSidebar.style.width = sWidth + 'px';
+          appSidebar.style.minWidth = sWidth + 'px';
+          appSidebar.style.maxWidth = sWidth + 'px';
+          appSidebar.style.flexBasis = sWidth + 'px';
+          appSidebar.style.setProperty('--sidebar-width', sWidth + 'px');
         }
         var savedLeftOpen = localStorage.getItem('GRM_INBOX_LEFT_OPEN');
         if (savedLeftOpen === 'false') {
@@ -496,14 +501,15 @@
         });
       }
 
-      // 3. MAIN APP SIDEBAR RESIZER
+      // 3. MAIN APP SIDEBAR RESIZER (Expand Right & Left Movement)
       if (resizerSidebar && appSidebar && !resizerSidebar._bound) {
         resizerSidebar._bound = true;
         var startXSide = 0;
         var startWidthSide = 0;
 
         var onMouseMoveSide = function (e) {
-          var deltaX = e.clientX - startXSide;
+          var clientX = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+          var deltaX = clientX - startXSide;
           var newWidth = startWidthSide + deltaX;
 
           if (newWidth < 140) {
@@ -512,31 +518,60 @@
             return;
           }
 
-          newWidth = Math.max(180, Math.min(newWidth, 420));
+          var maxWidth = Math.max(380, Math.min(500, window.innerWidth - 180));
+          newWidth = Math.max(180, Math.min(newWidth, maxWidth));
           appSidebar.style.width = newWidth + 'px';
+          appSidebar.style.minWidth = newWidth + 'px';
+          appSidebar.style.maxWidth = newWidth + 'px';
+          appSidebar.style.flexBasis = newWidth + 'px';
+          appSidebar.style.setProperty('--sidebar-width', newWidth + 'px');
         };
 
         var onMouseUpSide = function () {
+          resizerSidebar.classList.remove('is-resizing');
+          appSidebar.classList.remove('is-resizing');
           document.body.classList.remove('is-resizing-panels');
           document.body.style.cursor = '';
           document.body.style.userSelect = '';
+          appSidebar.style.transition = '';
           document.removeEventListener('mousemove', onMouseMoveSide);
           document.removeEventListener('mouseup', onMouseUpSide);
-          if (appSidebar.style.width) {
-            try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', parseInt(appSidebar.style.width)); } catch (e) { }
+          document.removeEventListener('touchmove', onMouseMoveSide);
+          document.removeEventListener('touchend', onMouseUpSide);
+          var finalWidth = parseInt(appSidebar.style.width);
+          if (finalWidth && finalWidth >= 180) {
+            try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', finalWidth); } catch (e) { }
           }
         };
 
-        resizerSidebar.addEventListener('mousedown', function (e) {
+        var onMouseDownSide = function (e) {
           e.preventDefault();
-          startXSide = e.clientX;
+          appSidebar.classList.add('is-resizing');
+          appSidebar.style.transition = 'none';
+          startXSide = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
           startWidthSide = appSidebar.getBoundingClientRect().width;
+          resizerSidebar.classList.add('is-resizing');
           document.body.classList.add('is-resizing-panels');
           document.body.style.cursor = 'col-resize';
           document.body.style.userSelect = 'none';
 
           document.addEventListener('mousemove', onMouseMoveSide);
           document.addEventListener('mouseup', onMouseUpSide);
+          document.addEventListener('touchmove', onMouseMoveSide, { passive: false });
+          document.addEventListener('touchend', onMouseUpSide);
+        };
+
+        resizerSidebar.addEventListener('mousedown', onMouseDownSide);
+        resizerSidebar.addEventListener('touchstart', onMouseDownSide, { passive: false });
+
+        resizerSidebar.addEventListener('dblclick', function () {
+          var defaultWidth = 260;
+          appSidebar.style.width = defaultWidth + 'px';
+          appSidebar.style.minWidth = defaultWidth + 'px';
+          appSidebar.style.maxWidth = defaultWidth + 'px';
+          appSidebar.style.flexBasis = defaultWidth + 'px';
+          appSidebar.style.setProperty('--sidebar-width', defaultWidth + 'px');
+          try { localStorage.setItem('GRM_APP_SIDEBAR_WIDTH', defaultWidth); } catch (e) { }
         });
       }
     }
@@ -681,7 +716,7 @@
         left: 0;
         height: 100vh !important;
         height: 100dvh !important;
-        width: 300px !important;
+        width: var(--sidebar-width, 300px) !important;
         max-width: 86vw !important;
         z-index: 75 !important;
         transform: translateX(-100%) !important;
@@ -736,7 +771,7 @@
       }
 
       #app-sidebar.sidebar-hidden {
-        margin-left: -16rem !important;
+        margin-left: calc(-1 * var(--sidebar-width, 16rem)) !important;
         opacity: 0 !important;
         pointer-events: none !important;
         visibility: hidden !important;
@@ -753,6 +788,10 @@
     /* ========================================================================= */
     /* DYNAMIC DRAGGABLE PANEL SPLITTERS & RESIZERS                             */
     /* ========================================================================= */
+    #app-sidebar.is-resizing {
+      transition: none !important;
+    }
+
     .resizer-splitter {
       width: 7px;
       position: relative;
@@ -1086,11 +1125,11 @@
   <!-- ========================================================================= -->
   <aside id="app-sidebar"
     class="sidebar-hidden lg:sidebar-visible w-[290px] sm:w-[320px] lg:w-64 bg-surface-sidebar text-slate-200 flex flex-col h-full shrink-0 shadow-2xl border-r border-brand-900/50 z-[75] select-none transition-all duration-300 ease-in-out relative">
-    <!-- Main Sidebar Right Edge Resizer Handle (Drag with Mouse to Resize) -->
+    <!-- Main Sidebar Right Edge Resizer Handle (Drag with Mouse to Resize Left & Right) -->
     <div id="resizer-app-sidebar"
-      class="absolute top-0 -right-1 w-2.5 h-full hover:bg-emerald-500/50 active:bg-emerald-500 cursor-col-resize z-50 transition-colors select-none group hidden lg:block"
-      title="Drag with mouse to resize navigation sidebar">
-      <div class="h-10 w-1 bg-slate-500/50 group-hover:bg-emerald-300 rounded-full mx-auto my-auto mt-[45vh]"></div>
+      class="absolute top-0 -right-2 w-4 h-full hover:bg-emerald-500/60 active:bg-emerald-500 cursor-col-resize z-[85] transition-colors select-none group flex items-center justify-center touch-none"
+      title="Drag with mouse to resize navigation sidebar • Double-click to reset">
+      <div class="h-12 w-1.5 bg-slate-400/50 group-hover:bg-white group-active:bg-white rounded-full transition-all shadow-xs"></div>
     </div>
 
     <!-- Brand Top -->
@@ -2192,18 +2231,7 @@
               <!-- Populated dynamically -->
             </div>
 
-            <!-- Footer Quick Info Strip -->
-            <div class="p-3.5 sm:p-4 bg-white border border-slate-200 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs">
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span class="material-symbols-outlined text-[18px] text-teal-600 shrink-0">bolt</span>
-                <span>Instant WhatsApp Bot matches customer questions &amp; triggers answers in real-time.</span>
-              </div>
-              <button type="button" onclick="switchInboxSubmodule('chats')"
-                class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shrink-0">
-                <span class="material-symbols-outlined text-[16px]">check</span>
-                <span>Return to Live Chats</span>
-              </button>
-            </div>
+            
 
           </div>
         </div>
@@ -11835,7 +11863,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261118_inbox_sync_v9"></script>
+  <script src="crm_app.js?v=20261118_sidebar_resize_v10"></script>
 </body>
 
 </html>
