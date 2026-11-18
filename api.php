@@ -11,10 +11,17 @@ function saveBase64MediaIfPresent(&$mediaUrl, $type = null) {
     $mime = strtolower(substr($meta, 5));
     
     $isImg = (strpos($mime, 'image') !== false || $type === 'image');
-    $isAudio = (strpos($mime, 'audio') !== false || strpos($mime, 'ogg') !== false || strpos($mime, 'webm') !== false || $type === 'audio');
+    $isAudio = (strpos($mime, 'audio') !== false || strpos($mime, 'ogg') !== false || strpos($mime, 'webm') !== false || strpos($mime, 'opus') !== false || $type === 'audio');
     
     $subDir = $isImg ? 'media' : ($isAudio ? 'voice' : 'media');
-    $ext = $isImg ? 'jpg' : ($isAudio ? 'ogg' : 'bin');
+    
+    // Accurate audio extension detection based on mime type
+    $ext = 'bin';
+    if ($isImg) {
+        $ext = (strpos($mime, 'png') !== false) ? 'png' : ((strpos($mime, 'webp') !== false) ? 'webp' : 'jpg');
+    } elseif ($isAudio) {
+        $ext = (strpos($mime, 'webm') !== false) ? 'webm' : ((strpos($mime, 'mp3') !== false) ? 'mp3' : 'ogg');
+    }
     
     $dir = __DIR__ . '/uploads/' . $subDir;
     if (!file_exists($dir)) @mkdir($dir, 0777, true);
@@ -22,6 +29,16 @@ function saveBase64MediaIfPresent(&$mediaUrl, $type = null) {
     $cleanB64 = str_replace(["\r", "\n", " "], '', $b64data);
     $rawBytes = base64_decode($cleanB64);
     if ($rawBytes !== false && strlen($rawBytes) > 0) {
+        // Inspect raw magic bytes to guarantee valid extension
+        if ($isAudio && strlen($rawBytes) >= 4) {
+            if (substr($rawBytes, 0, 4) === "\x1A\x45\xDF\xA3") {
+                $ext = 'webm';
+            } elseif (substr($rawBytes, 0, 4) === "OggS") {
+                $ext = 'ogg';
+            } elseif (substr($rawBytes, 0, 3) === "ID3" || (ord($rawBytes[0]) === 0xFF && (ord($rawBytes[1]) & 0xE0) === 0xE0)) {
+                $ext = 'mp3';
+            }
+        }
         $fileName = ($isImg ? 'img_' : 'voice_') . time() . '_' . substr(uniqid(), -5) . '.' . $ext;
         file_put_contents($dir . '/' . $fileName, $rawBytes);
         $mediaUrl = 'uploads/' . $subDir . '/' . $fileName;
@@ -87,6 +104,73 @@ if (isset($_GET['action'])) {
     }
     if ($act === 'receive_voice' || $act === 'voice_translate_inbound' || $act === 'translate_inbound_voice') {
         require_once __DIR__ . '/voice_translator/receive_voice.php';
+        exit;
+    }
+    if ($act === 'stream_audio' || $act === 'play_audio') {
+        $reqFile = trim($_GET['file'] ?? $_GET['path'] ?? '');
+        if (empty($reqFile) || strpos($reqFile, '..') !== false) {
+            http_response_code(400);
+            exit('Invalid audio file request');
+        }
+        $cleanPath = ltrim(preg_replace('/^(\/|\\\\)+/', '', $reqFile), '/\\');
+        $fullPath = __DIR__ . '/' . $cleanPath;
+        if (!file_exists($fullPath) || !is_file($fullPath)) {
+            $basename = basename($cleanPath);
+            $candidate = __DIR__ . '/uploads/voice/' . $basename;
+            if (file_exists($candidate) && is_file($candidate)) {
+                $fullPath = $candidate;
+            } else {
+                http_response_code(404);
+                exit('Audio file not found');
+            }
+        }
+
+        $filesize = filesize($fullPath);
+        $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+        $mime = 'audio/ogg; codecs=opus';
+        if ($ext === 'mp3') $mime = 'audio/mpeg';
+        elseif ($ext === 'webm') $mime = 'audio/webm; codecs=opus';
+        elseif ($ext === 'wav') $mime = 'audio/wav';
+        elseif ($ext === 'm4a') $mime = 'audio/mp4';
+
+        header('Content-Type: ' . $mime);
+        header('Accept-Ranges: bytes');
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, HEAD, OPTIONS');
+        header('Cache-Control: public, max-age=604800');
+
+        if (isset($_SERVER['HTTP_RANGE'])) {
+            list($param, $range) = explode('=', $_SERVER['HTTP_RANGE'], 2);
+            if (strtolower(trim($param)) === 'bytes') {
+                $range = explode('-', $range);
+                $start = intval($range[0]);
+                $end = (!empty($range[1])) ? intval($range[1]) : ($filesize - 1);
+                if ($start >= $filesize || $end >= $filesize || $start > $end) {
+                    header('HTTP/1.1 416 Requested Range Not Satisfiable');
+                    header('Content-Range: bytes */' . $filesize);
+                    exit;
+                }
+                header('HTTP/1.1 206 Partial Content');
+                header('Content-Range: bytes ' . $start . '-' . $end . '/' . $filesize);
+                header('Content-Length: ' . ($end - $start + 1));
+                $fp = @fopen($fullPath, 'rb');
+                if ($fp) {
+                    fseek($fp, $start);
+                    $bytesToRead = ($end - $start + 1);
+                    while ($bytesToRead > 0 && !feof($fp)) {
+                        $chunk = fread($fp, min(65536, $bytesToRead));
+                        echo $chunk;
+                        flush();
+                        $bytesToRead -= strlen($chunk);
+                    }
+                    fclose($fp);
+                }
+                exit;
+            }
+        }
+
+        header('Content-Length: ' . $filesize);
+        readfile($fullPath);
         exit;
     }
 }

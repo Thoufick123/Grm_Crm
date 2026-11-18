@@ -6828,13 +6828,18 @@ function renderChatMessages() {
     let contentHtml = '';
 
     if (isAudio) {
-      let audioSrc = rawMedia;
-      if (!audioSrc || audioSrc === 'undefined') {
-        const sibling = (messages || []).find(m => m && (m.media_url || m.mediaUrl) && String(m.media_url || m.mediaUrl).includes('/voice/'));
-        if (sibling) audioSrc = sibling.media_url || sibling.mediaUrl;
-      }
-      if (audioSrc && !audioSrc.startsWith('http://') && !audioSrc.startsWith('https://') && !audioSrc.startsWith('data:') && !audioSrc.startsWith('blob:')) {
-        audioSrc = window.location.origin + '/' + audioSrc.replace(/^\/+/, '');
+      let audioSrc = rawMedia || '';
+      let streamSrc = '';
+      let audioSrcMp3 = '';
+      if (audioSrc && audioSrc !== 'undefined') {
+        if (!audioSrc.startsWith('http://') && !audioSrc.startsWith('https://') && !audioSrc.startsWith('data:') && !audioSrc.startsWith('blob:')) {
+          const cleanRel = audioSrc.replace(/^\/+/, '');
+          streamSrc = window.location.origin + '/api.php?action=stream_audio&file=' + encodeURIComponent(cleanRel);
+          audioSrc = window.location.origin + '/' + cleanRel;
+          audioSrcMp3 = audioSrc.replace(/\.ogg$/i, '.mp3');
+        } else if (audioSrc.startsWith('http://') || audioSrc.startsWith('https://')) {
+          audioSrcMp3 = audioSrc.replace(/\.ogg$/i, '.mp3');
+        }
       }
       contentHtml = `
         <div class="space-y-2 py-1">
@@ -6859,10 +6864,14 @@ function renderChatMessages() {
                 </span>
                 <button onclick="toggleAudioSpeed('${msgId}')" id="speed-${msgId}" class="font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[10px] transition cursor-pointer">1.0x</button>
               </div>
-              <audio id="audio-${msgId}" src="${audioSrc}" preload="metadata" 
+              <audio id="audio-${msgId}" src="${streamSrc || audioSrc}" data-fallback-src="${audioSrc}" data-mp3-src="${audioSrcMp3}" preload="metadata" playsinline 
                 ontimeupdate="updateAudioProgress('${msgId}')" 
                 onended="onAudioEnded('${msgId}')"
-                onerror="handleAudioFallback('${msgId}')"></audio>
+                onerror="handleAudioFallback('${msgId}')">
+                ${streamSrc ? `<source src="${streamSrc}" type="audio/ogg; codecs=opus">` : ''}
+                ${audioSrc ? `<source src="${audioSrc}" type="audio/ogg; codecs=opus">` : ''}
+                ${audioSrcMp3 ? `<source src="${audioSrcMp3}" type="audio/mpeg">` : ''}
+              </audio>
             </div>
           </div>
 
@@ -7490,16 +7499,113 @@ document.addEventListener('keydown', function (e) {
 });
 
 // =========================================================================
-// AUDIO PLAYBACK CONTROLLER
+// AUDIO PLAYBACK CONTROLLER WITH WEB AUDIO API UNIVERSAL DECODER FALLBACK
 // =========================================================================
+let _crmWebAudioCtx = null;
+let _crmActiveWebAudio = null;
+
+async function playWithWebAudioFallback(src, msgId, icon, seek, timeLbl) {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return false;
+    if (!_crmWebAudioCtx) _crmWebAudioCtx = new AudioCtx();
+    if (_crmWebAudioCtx.state === 'suspended') await _crmWebAudioCtx.resume();
+
+    // If currently playing this same voice, toggle pause
+    if (_crmActiveWebAudio && _crmActiveWebAudio.msgId === msgId && _crmActiveWebAudio.isPlaying) {
+      if (_crmActiveWebAudio.source) {
+        try { _crmActiveWebAudio.source.stop(); } catch (e) {}
+      }
+      if (_crmActiveWebAudio.interval) clearInterval(_crmActiveWebAudio.interval);
+      _crmActiveWebAudio.isPlaying = false;
+      if (icon) icon.innerText = 'play_arrow';
+      return true;
+    }
+
+    // Stop any previous Web Audio playback
+    if (_crmActiveWebAudio && _crmActiveWebAudio.source) {
+      try { _crmActiveWebAudio.source.stop(); } catch (e) {}
+      if (_crmActiveWebAudio.interval) clearInterval(_crmActiveWebAudio.interval);
+      const prevIcon = document.getElementById(`icon-${_crmActiveWebAudio.msgId}`);
+      if (prevIcon) prevIcon.innerText = 'play_arrow';
+    }
+
+    let arrayBuf = null;
+    if (src.startsWith('data:audio/')) {
+      const base64Data = src.split(',')[1] || src.replace(/^data:[^;]+;base64,/, '');
+      const binaryStr = atob(base64Data);
+      const len = binaryStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = binaryStr.charCodeAt(i);
+      arrayBuf = bytes.buffer;
+    } else {
+      const resp = await fetch(src);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      arrayBuf = await resp.arrayBuffer();
+    }
+
+    const decodedBuffer = await _crmWebAudioCtx.decodeAudioData(arrayBuf);
+    const sourceNode = _crmWebAudioCtx.createBufferSource();
+    sourceNode.buffer = decodedBuffer;
+    sourceNode.connect(_crmWebAudioCtx.destination);
+
+    const dur = decodedBuffer.duration;
+    if (seek) seek.max = dur;
+    if (icon) icon.innerText = 'pause';
+
+    const startEpoch = _crmWebAudioCtx.currentTime;
+    const interval = setInterval(() => {
+      if (!_crmWebAudioCtx) return;
+      const elapsed = _crmWebAudioCtx.currentTime - startEpoch;
+      if (seek) seek.value = elapsed;
+      if (timeLbl) timeLbl.innerText = formatAudioTime(elapsed);
+      if (elapsed >= dur) {
+        clearInterval(interval);
+        if (icon) icon.innerText = 'play_arrow';
+        if (seek) seek.value = 0;
+        if (timeLbl) timeLbl.innerText = formatAudioTime(dur);
+        if (_crmActiveWebAudio) _crmActiveWebAudio.isPlaying = false;
+      }
+    }, 150);
+
+    sourceNode.onended = () => {
+      clearInterval(interval);
+      if (icon) icon.innerText = 'play_arrow';
+      if (seek) seek.value = 0;
+      if (timeLbl) timeLbl.innerText = formatAudioTime(dur);
+      if (_crmActiveWebAudio) _crmActiveWebAudio.isPlaying = false;
+    };
+
+    sourceNode.start(0);
+    _crmActiveWebAudio = { source: sourceNode, msgId: msgId, isPlaying: true, interval: interval };
+    return true;
+  } catch (err) {
+    console.warn('[Web Audio Playback Fallback Failed]:', err);
+    return false;
+  }
+}
+
 window.toggleAudioPlay = function (msgId) {
   const audio = document.getElementById(`audio-${msgId}`);
   const icon = document.getElementById(`icon-${msgId}`);
+  const seek = document.getElementById(`seek-${msgId}`);
+  const timeLbl = document.getElementById(`time-${msgId}`);
   if (!audio) return;
+
+  // If Web Audio fallback is active for this audio
+  if (_crmActiveWebAudio && _crmActiveWebAudio.msgId === msgId && _crmActiveWebAudio.isPlaying) {
+    if (_crmActiveWebAudio.source) {
+      try { _crmActiveWebAudio.source.stop(); } catch (e) {}
+    }
+    if (_crmActiveWebAudio.interval) clearInterval(_crmActiveWebAudio.interval);
+    _crmActiveWebAudio.isPlaying = false;
+    if (icon) icon.innerText = 'play_arrow';
+    return;
+  }
 
   let src = audio.currentSrc || audio.src || '';
   if (!src || src === '' || src === window.location.href || src.endsWith('/')) {
-    const rawAttr = audio.getAttribute('src');
+    const rawAttr = audio.getAttribute('src') || audio.getAttribute('data-fallback-src') || audio.getAttribute('data-src');
     if (rawAttr && rawAttr.trim()) {
       src = (rawAttr.startsWith('http://') || rawAttr.startsWith('https://') || rawAttr.startsWith('data:') || rawAttr.startsWith('blob:'))
         ? rawAttr
@@ -7514,7 +7620,7 @@ window.toggleAudioPlay = function (msgId) {
   }
 
   if (audio.paused) {
-    // Pause all other active audios
+    // Pause all other active HTML5 audios and Web Audio instances
     document.querySelectorAll('audio').forEach(a => {
       if (a !== audio) {
         try { a.pause(); } catch (e) {}
@@ -7523,6 +7629,11 @@ window.toggleAudioPlay = function (msgId) {
         if (otherIcon) otherIcon.innerText = 'play_arrow';
       }
     });
+    if (_crmActiveWebAudio && _crmActiveWebAudio.source) {
+      try { _crmActiveWebAudio.source.stop(); } catch (e) {}
+      if (_crmActiveWebAudio.interval) clearInterval(_crmActiveWebAudio.interval);
+      _crmActiveWebAudio.isPlaying = false;
+    }
 
     audio.play().then(() => {
       if (icon) icon.innerText = 'pause';
@@ -7534,17 +7645,20 @@ window.toggleAudioPlay = function (msgId) {
           if (icon) icon.innerText = 'pause';
           directAudio.onended = () => { if (icon) icon.innerText = 'play_arrow'; };
           directAudio.ontimeupdate = () => {
-            const seek = document.getElementById(`seek-${msgId}`);
-            const timeLbl = document.getElementById(`time-${msgId}`);
             if (seek && directAudio.duration) { seek.max = directAudio.duration; seek.value = directAudio.currentTime; }
             if (timeLbl) timeLbl.innerText = formatAudioTime(directAudio.currentTime);
           };
-        }).catch(err2 => {
-          console.warn('[Direct Audio Play Failed]:', err2);
-          playSimulatedVoice(msgId);
+        }).catch(async (err2) => {
+          console.warn('[Direct Audio Play Failed, Trying Web Audio API]:', err2);
+          const webAudioSuccess = await playWithWebAudioFallback(src, msgId, icon, seek, timeLbl);
+          if (!webAudioSuccess) {
+            playSimulatedVoice(msgId);
+          }
         });
       } catch (e3) {
-        playSimulatedVoice(msgId);
+        playWithWebAudioFallback(src, msgId, icon, seek, timeLbl).then(ok => {
+          if (!ok) playSimulatedVoice(msgId);
+        });
       }
     });
   } else {
@@ -37219,7 +37333,19 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
 };
 
 window.renderDualVoicePlayerBubble = function (msg, msgId, isOut) {
-  const audioSrc = msg.media_url || '';
+  let audioSrc = msg.media_url || msg.mediaUrl || msg.audio_url || '';
+  let streamSrc = '';
+  let audioSrcMp3 = '';
+  if (audioSrc && audioSrc !== 'undefined') {
+    if (!audioSrc.startsWith('http://') && !audioSrc.startsWith('https://') && !audioSrc.startsWith('data:') && !audioSrc.startsWith('blob:')) {
+      const cleanRel = audioSrc.replace(/^\/+/, '');
+      streamSrc = window.location.origin + '/api.php?action=stream_audio&file=' + encodeURIComponent(cleanRel);
+      audioSrc = window.location.origin + '/' + cleanRel;
+      audioSrcMp3 = audioSrc.replace(/\.ogg$/i, '.mp3');
+    } else if (audioSrc.startsWith('http://') || audioSrc.startsWith('https://')) {
+      audioSrcMp3 = audioSrc.replace(/\.ogg$/i, '.mp3');
+    }
+  }
   const duration = msg.duration || 8;
 
   return `
@@ -37247,10 +37373,14 @@ window.renderDualVoicePlayerBubble = function (msg, msgId, isOut) {
             </span>
             <button onclick="toggleAudioSpeed('${msgId}')" id="speed-${msgId}" class="font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[10px] transition cursor-pointer">1.0x</button>
           </div>
-          <audio id="audio-${msgId}" src="${audioSrc}" preload="metadata" 
+          <audio id="audio-${msgId}" src="${streamSrc || audioSrc}" data-fallback-src="${audioSrc}" data-mp3-src="${audioSrcMp3}" preload="metadata" playsinline 
             ontimeupdate="updateAudioProgress('${msgId}')" 
             onended="onAudioEnded('${msgId}')"
-            onerror="handleAudioFallback('${msgId}')"></audio>
+            onerror="handleAudioFallback('${msgId}')">
+            ${streamSrc ? `<source src="${streamSrc}" type="audio/ogg; codecs=opus">` : ''}
+            ${audioSrc ? `<source src="${audioSrc}" type="audio/ogg; codecs=opus">` : ''}
+            ${audioSrcMp3 ? `<source src="${audioSrcMp3}" type="audio/mpeg">` : ''}
+          </audio>
         </div>
       </div>
       <!-- Inbound 1-Click Translation to Staff Language (Zero Text Display) -->

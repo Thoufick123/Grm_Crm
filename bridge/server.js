@@ -422,9 +422,16 @@ async function getAudioBuffer(url) {
 let ffmpegBinPath = null;
 const possibleFfmpegPaths = [
     path.resolve(__dirname, 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(__dirname, 'node_modules', '@ffmpeg-installer', 'linux-x64', 'ffmpeg'),
+    path.resolve(__dirname, 'node_modules', '@ffmpeg-installer', 'darwin-x64', 'ffmpeg'),
     path.resolve(__dirname, '..', 'bridge', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(__dirname, '..', 'bridge', 'node_modules', '@ffmpeg-installer', 'linux-x64', 'ffmpeg'),
     path.resolve(__dirname, '..', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
-    path.resolve(process.cwd(), 'bridge', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe')
+    path.resolve(__dirname, '..', 'node_modules', '@ffmpeg-installer', 'linux-x64', 'ffmpeg'),
+    path.resolve(process.cwd(), 'bridge', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(process.cwd(), 'bridge', 'node_modules', '@ffmpeg-installer', 'linux-x64', 'ffmpeg'),
+    '/usr/bin/ffmpeg',
+    '/usr/local/bin/ffmpeg'
 ];
 for (const p of possibleFfmpegPaths) {
     if (fs.existsSync(p)) {
@@ -448,7 +455,17 @@ if (!ffmpegBinPath) {
                 console.log('[FFmpeg Audio Engine] Loaded binary from global @ffmpeg-installer/ffmpeg:', ffmpegBinPath);
             }
         } catch (e2) {
-            console.warn('[FFmpeg Audio Engine] Could not load @ffmpeg-installer/ffmpeg:', e2.message);
+            try {
+                const { execSync } = require('child_process');
+                const out = execSync(process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+                const firstPath = out.split(/[\r\n]+/)[0]?.trim();
+                if (firstPath && fs.existsSync(firstPath)) {
+                    ffmpegBinPath = firstPath;
+                    console.log('[FFmpeg Audio Engine] Loaded binary from system PATH:', ffmpegBinPath);
+                }
+            } catch (e3) {
+                console.warn('[FFmpeg Audio Engine] Could not load FFmpeg binary:', e2.message);
+            }
         }
     }
 }
@@ -458,25 +475,53 @@ if (!ffmpegBinPath) {
  * WhatsApp PTT voice notes STRICTLY require libopus inside an OGG container at 48000Hz mono.
  */
 async function convertToWhatsAppOpus(inputBuffer, inputExt = 'mp3') {
-    if (inputExt === 'ogg' || inputExt === 'opus') return inputBuffer;
     if (!inputBuffer || !inputBuffer.length) return null;
-    if (!ffmpegBinPath) return inputBuffer;
+
+    // Detect actual container magic bytes
+    let actualExt = inputExt || 'mp3';
+    if (inputBuffer.length >= 4) {
+        if (inputBuffer[0] === 0x1A && inputBuffer[1] === 0x45 && inputBuffer[2] === 0xDF && inputBuffer[3] === 0xA3) {
+            actualExt = 'webm';
+        } else if (inputBuffer[0] === 0x4F && inputBuffer[1] === 0x67 && inputBuffer[2] === 0x67 && inputBuffer[3] === 0x53) {
+            actualExt = 'ogg';
+        } else if (inputBuffer[0] === 0x52 && inputBuffer[1] === 0x49 && inputBuffer[2] === 0x46 && inputBuffer[3] === 0x46) {
+            actualExt = 'wav';
+        } else if ((inputBuffer[0] === 0x49 && inputBuffer[1] === 0x44 && inputBuffer[2] === 0x33) || (inputBuffer[0] === 0xFF && (inputBuffer[1] & 0xE0) === 0xE0)) {
+            actualExt = 'mp3';
+        }
+    }
+
+    // Check if ALREADY valid WhatsApp-compliant Ogg Opus (starts with OggS and contains OpusHead)
+    const isAlreadyOpusOgg = (actualExt === 'ogg' && inputBuffer.length > 28 &&
+        inputBuffer[0] === 0x4F && inputBuffer[1] === 0x67 && inputBuffer[2] === 0x67 && inputBuffer[3] === 0x53 &&
+        inputBuffer.indexOf(Buffer.from('OpusHead')) !== -1);
+
+    if (isAlreadyOpusOgg) {
+        // Already native Ogg Opus - valid for direct WhatsApp PTT delivery
+        return inputBuffer;
+    }
+
+    if (!ffmpegBinPath) {
+        console.warn('[Audio Transcode] FFmpeg binary not available, falling back to raw buffer');
+        return inputBuffer;
+    }
 
     const tempDir = path.resolve(__dirname, '..', 'uploads', 'voice', 'temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
     const rand = Math.random().toString(36).substring(2, 7);
-    const tempIn = path.join(tempDir, `ptt_in_${Date.now()}_${rand}.${inputExt}`);
+    const tempIn = path.join(tempDir, `ptt_in_${Date.now()}_${rand}.${actualExt}`);
     const tempOut = path.join(tempDir, `ptt_out_${Date.now()}_${rand}.ogg`);
 
     try {
         fs.writeFileSync(tempIn, inputBuffer);
         const { execSync } = require('child_process');
-        const cmd = `"${ffmpegBinPath}" -y -i "${tempIn}" -c:a libopus -b:a 32k -ar 48000 -ac 1 "${tempOut}"`;
-        execSync(cmd, { stdio: 'ignore', timeout: 8000 });
+        // Transcode to strict WhatsApp PTT standard: 48000Hz, mono, libopus in ogg container, voice-optimized voip profile
+        const cmd = `"${ffmpegBinPath}" -y -i "${tempIn}" -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 -application voip -f ogg "${tempOut}"`;
+        execSync(cmd, { stdio: 'ignore', timeout: 10000 });
         if (fs.existsSync(tempOut) && fs.statSync(tempOut).size > 0) {
             const converted = fs.readFileSync(tempOut);
-            console.log(`[Audio Transcode] Successfully transcoded ${inputBuffer.length} bytes (${inputExt}) -> ${converted.length} bytes (Opus OGG)`);
+            console.log(`[Audio Transcode] Successfully transcoded ${inputBuffer.length} bytes (${actualExt}) -> ${converted.length} bytes (WhatsApp Opus OGG)`);
             return converted;
         }
     } catch (err) {
@@ -1288,7 +1333,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 );
                                 if (audioBuffer) {
                                     // Send base64 data URI so remote Hostinger PHP receives actual file bytes and writes to uploads/voice/
-                                    mediaUrl = 'data:audio/ogg;base64,' + audioBuffer.toString('base64');
+                                    mediaUrl = 'data:audio/ogg; codecs=opus;base64,' + audioBuffer.toString('base64');
                                     console.log(`[Audio Downloaded & Base64 Encoded] (${audioBuffer.length} bytes) from ${senderName}`);
 
                                     // Also cache locally on bridge filesystem
@@ -1296,7 +1341,18 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                         const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'voice');
                                         if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
                                         const fileName = `voice_${Date.now()}_${Math.floor(Math.random() * 1000)}.ogg`;
-                                        fs.writeFileSync(path.join(uploadsDir, fileName), audioBuffer);
+                                        const filePath = path.join(uploadsDir, fileName);
+                                        fs.writeFileSync(filePath, audioBuffer);
+
+                                        // Also transcode universal MP3 copy for web browsers lacking Ogg support (Safari/iOS)
+                                        if (ffmpegBinPath) {
+                                            try {
+                                                const mp3FileName = fileName.replace('.ogg', '.mp3');
+                                                const mp3Path = path.join(uploadsDir, mp3FileName);
+                                                const { execSync } = require('child_process');
+                                                execSync(`"${ffmpegBinPath}" -y -i "${filePath}" -c:a libmp3lame -q:a 4 "${mp3Path}"`, { stdio: 'ignore', timeout: 6000 });
+                                            } catch (eMp3) {}
+                                        }
                                     } catch (e) {}
                                 }
                             } catch (err) {
@@ -1730,7 +1786,22 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                         { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
                                     );
                                     if (audioBuffer) {
-                                        outMediaUrl = 'data:audio/ogg;base64,' + audioBuffer.toString('base64');
+                                        outMediaUrl = 'data:audio/ogg; codecs=opus;base64,' + audioBuffer.toString('base64');
+                                        try {
+                                            const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'voice');
+                                            if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                                            const fileName = `voice_out_${Date.now()}_${Math.floor(Math.random() * 1000)}.ogg`;
+                                            const filePath = path.join(uploadsDir, fileName);
+                                            fs.writeFileSync(filePath, audioBuffer);
+                                            if (ffmpegBinPath) {
+                                                try {
+                                                    const mp3FileName = fileName.replace('.ogg', '.mp3');
+                                                    const mp3Path = path.join(uploadsDir, mp3FileName);
+                                                    const { execSync } = require('child_process');
+                                                    execSync(`"${ffmpegBinPath}" -y -i "${filePath}" -c:a libmp3lame -q:a 4 "${mp3Path}"`, { stdio: 'ignore', timeout: 6000 });
+                                                } catch (eMp3) {}
+                                            }
+                                        } catch (e) {}
                                     }
                                 } catch (e) {}
                             } else if (rawMsg.conversation) {
