@@ -13,6 +13,15 @@
 // Universal Timezone Enforcement for India Standard Time (IST, UTC+5:30)
 date_default_timezone_set('Asia/Kolkata');
 
+// GZIP Output Compression for High-Speed API Response Transfer
+if (!ob_get_level() && !headers_sent()) {
+    if (extension_loaded('zlib') && !ini_get('zlib.output_compression')) {
+        ob_start('ob_gzhandler');
+    } else {
+        ob_start();
+    }
+}
+
 if (!headers_sent()) {
     header("Content-Type: application/json");
     header("Access-Control-Allow-Origin: *");
@@ -609,46 +618,48 @@ if ($action === 'get_state' || $action === 'get_all') {
         }
 
         // 6. Conversations map grouped by customer_id (High-Speed Recent Snippets)
-        $mStmt = $pdo->query("SELECT * FROM (SELECT * FROM `messages` ORDER BY `id` DESC LIMIT 300) sub ORDER BY `id` ASC");
-        $allMessages = $mStmt->fetchAll();
         $conversations = [];
-        foreach ($allMessages as $msg) {
-            $cid = $msg['customer_id'];
-            if (!isset($conversations[$cid])) {
-                $conversations[$cid] = [];
+        if (!$isDashboardScope) {
+            $mStmt = $pdo->query("SELECT * FROM (SELECT * FROM `messages` ORDER BY `id` DESC LIMIT 300) sub ORDER BY `id` ASC");
+            $allMessages = $mStmt->fetchAll();
+            foreach ($allMessages as $msg) {
+                $cid = $msg['customer_id'];
+                if (!isset($conversations[$cid])) {
+                    $conversations[$cid] = [];
+                }
+                $conversations[$cid][] = [
+                    'id' => (string)($msg['message_uid'] ?: $msg['id']),
+                    'message_uid' => (string)($msg['message_uid'] ?: $msg['id']),
+                    'db_id' => (int)$msg['id'],
+                    'sender' => $msg['sender'],
+                    'sender_name' => $msg['sender_name'] ?? ($msg['sender'] === 'bot' ? 'Bot (Auto-Reply)' : ($msg['sender'] === 'staff' ? 'Super Admin' : 'Customer')),
+                    'sender_phone' => $msg['sender_phone'] ?? '',
+                    'sender_jid' => $msg['sender_jid'] ?? '',
+                    'direction' => $msg['direction'] ?? ($msg['sender'] === 'customer' ? 'inbound' : 'outbound'),
+                    'isBot' => (bool)($msg['is_bot'] ?? ($msg['sender'] === 'bot')),
+                    'is_bot' => (int)($msg['is_bot'] ?? ($msg['sender'] === 'bot' ? 1 : 0)),
+                    'account_id' => $msg['account_id'] ?? 'account_1',
+                    'accountId' => $msg['account_id'] ?? 'account_1',
+                    'received_on_number' => $msg['received_on_number'] ?? '',
+                    'rule_name' => $msg['rule_name'] ?? null,
+                    'rule_id' => $msg['rule_id'] ?? null,
+                    'source' => $msg['source'] ?? 'REAL_WHATSAPP_LIVE',
+                    'text' => $msg['text'],
+                    'message_text' => $msg['message_text'] ?: $msg['text'],
+                    'type' => $msg['media_type'] ?: 'text',
+                    'media_type' => $msg['media_type'],
+                    'mediaType' => $msg['media_type'],
+                    'media_url' => $msg['media_url'],
+                    'mediaUrl' => $msg['media_url'],
+                    'duration' => (float)($msg['audio_duration'] ?: 8),
+                    'audio_duration' => $msg['audio_duration'],
+                    'audioDuration' => $msg['audio_duration'],
+                    'time' => $msg['time_str'],
+                    'timestamp_epoch' => (int)($msg['timestamp_epoch'] ?? strtotime($msg['created_at'])),
+                    'status' => $msg['status'] ?: 'DELIVERED',
+                    'created_at' => $msg['created_at']
+                ];
             }
-            $conversations[$cid][] = [
-                'id' => (string)($msg['message_uid'] ?: $msg['id']),
-                'message_uid' => (string)($msg['message_uid'] ?: $msg['id']),
-                'db_id' => (int)$msg['id'],
-                'sender' => $msg['sender'],
-                'sender_name' => $msg['sender_name'] ?? ($msg['sender'] === 'bot' ? 'Bot (Auto-Reply)' : ($msg['sender'] === 'staff' ? 'Super Admin' : 'Customer')),
-                'sender_phone' => $msg['sender_phone'] ?? '',
-                'sender_jid' => $msg['sender_jid'] ?? '',
-                'direction' => $msg['direction'] ?? ($msg['sender'] === 'customer' ? 'inbound' : 'outbound'),
-                'isBot' => (bool)($msg['is_bot'] ?? ($msg['sender'] === 'bot')),
-                'is_bot' => (int)($msg['is_bot'] ?? ($msg['sender'] === 'bot' ? 1 : 0)),
-                'account_id' => $msg['account_id'] ?? 'account_1',
-                'accountId' => $msg['account_id'] ?? 'account_1',
-                'received_on_number' => $msg['received_on_number'] ?? '',
-                'rule_name' => $msg['rule_name'] ?? null,
-                'rule_id' => $msg['rule_id'] ?? null,
-                'source' => $msg['source'] ?? 'REAL_WHATSAPP_LIVE',
-                'text' => $msg['text'],
-                'message_text' => $msg['message_text'] ?: $msg['text'],
-                'type' => $msg['media_type'] ?: 'text',
-                'media_type' => $msg['media_type'],
-                'mediaType' => $msg['media_type'],
-                'media_url' => $msg['media_url'],
-                'mediaUrl' => $msg['media_url'],
-                'duration' => (float)($msg['audio_duration'] ?: 8),
-                'audio_duration' => $msg['audio_duration'],
-                'audioDuration' => $msg['audio_duration'],
-                'time' => $msg['time_str'],
-                'timestamp_epoch' => (int)($msg['timestamp_epoch'] ?? strtotime($msg['created_at'])),
-                'status' => $msg['status'] ?: 'DELIVERED',
-                'created_at' => $msg['created_at']
-            ];
         }
 
         // 7. Orders (Lazy loaded on-demand for Orders module / Executive Dashboard)
