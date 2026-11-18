@@ -3455,6 +3455,7 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $httpCode = $bRes['http_code'];
 
     // Also persist message in MySQL (All WhatsApp Fields Recorded)
+    $effectiveCustId = $customerId;
     if ($pdo) {
         try {
             $clean10 = !empty($phone) ? substr(preg_replace('/[^0-9]/', '', $phone), -10) : '';
@@ -3538,6 +3539,7 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     $msgUid = (string)($payload['message_uid'] ?? ($payload['id'] ?? ('msg_out_' . time() . '_' . rand(100, 999))));
     $accSlot = $payload['accountId'] ?? 'account_1';
     $senderName = $payload['sender_name'] ?? 'Super Admin';
+    $recipientName = trim($payload['recipient_name'] ?? ($payload['customer_name'] ?? ''));
 
     // Universal Base64 decoding for outbound images & voice notes
     saveBase64MediaIfPresent($mediaUrl, $mediaType);
@@ -3554,17 +3556,26 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
         try {
             $clean10 = !empty($phone) ? substr(preg_replace('/[^0-9]/', '', $phone), -10) : '';
             if (!empty($clean10)) {
-                $cStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
+                $cStmt = $pdo->prepare("SELECT `id`, `name` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
                 $cStmt->execute([$effectiveCustId ?: '', "%$clean10", "%$clean10"]);
-                $foundId = $cStmt->fetchColumn();
-                if ($foundId) {
-                    $effectiveCustId = $foundId;
+                $foundCust = $cStmt->fetch(PDO::FETCH_ASSOC);
+                if ($foundCust) {
+                    $effectiveCustId = $foundCust['id'];
+                    // Auto-sync real contact name if currently generic or placeholder
+                    if (!empty($recipientName) && (empty($foundCust['name']) || $foundCust['name'] === 'Customer' || strpos($foundCust['name'], 'Customer (') === 0)) {
+                        $pdo->prepare("UPDATE `customers` SET `name` = ? WHERE `id` = ?")->execute([$recipientName, $effectiveCustId]);
+                        $pdo->prepare("UPDATE `queries` SET `customer_name` = ? WHERE `customer_id` = ?")->execute([$recipientName, $effectiveCustId]);
+                    }
                 }
             }
             if (empty($effectiveCustId) && !empty($clean10)) {
                 $effectiveCustId = 'cust_' . $clean10;
-                $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`) VALUES (?, ?, 'Customer', ?, ?, 'Live WhatsApp Lead', 'CU')")
-                    ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $phone, $phone]);
+                $initialName = !empty($recipientName) ? $recipientName : 'Customer';
+                $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`) VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 'CU')")
+                    ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $initialName, $phone, $phone]);
+
+                $pdo->prepare("INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `last_message`, `status`, `account_slot`, `created_at`) VALUES (?, ?, ?, ?, ?, 'OPEN', ?, NOW()) ON DUPLICATE KEY UPDATE `last_message` = VALUES(`last_message`)")
+                    ->execute(['qry_' . $clean10, $effectiveCustId, $initialName, $phone, $text, $accSlot]);
             }
 
             if (!empty($effectiveCustId)) {
@@ -3595,7 +3606,7 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
                         time()
                     ]);
                 } else {
-                    $pdo->prepare("UPDATE `messages` SET `status` = 'DELIVERED' WHERE `id` = ?")->execute([$existingMsgId]);
+                    $pdo->prepare("UPDATE `messages` SET `status` = 'DELIVERED', `media_url` = COALESCE(?, `media_url`), `media_type` = COALESCE(?, `media_type`) WHERE `id` = ?")->execute([$mediaUrl, $mediaType, $existingMsgId]);
                 }
 
                 // Update customer & query last message
@@ -3610,6 +3621,8 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
                         "id" => $msgUid,
                         "message_uid" => $msgUid,
                         "customer_id" => $effectiveCustId,
+                        "customer_name" => $recipientName ?: null,
+                        "recipient_name" => $recipientName ?: null,
                         "sender" => "staff",
                         "sender_name" => $senderName,
                         "sender_phone" => $phone,
