@@ -1696,7 +1696,7 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("
                 UPDATE `customers` 
-                SET `name` = ?, `phone` = ?, `whatsapp` = ?, `alt_phone` = ?, `email` = ?, `gender` = ?, `age` = ?, `address` = ?, `alt_address` = ?, `notes` = COALESCE(?, `notes`)
+                SET `name` = ?, `phone` = ?, `whatsapp` = ?, `alt_phone` = ?, `email` = ?, `gender` = ?, `age` = ?, `address` = ?, `alt_address` = ?, `notes` = COALESCE(?, `notes`), `updated_at` = NOW()
                 WHERE `id` = ?
             ");
             $stmt->execute([
@@ -1714,6 +1714,40 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         } catch (Exception $e) {}
     }
+
+    // Atomic write to customer updates queue for instantaneous multi-user SSE broadcast (<50ms)
+    try {
+        $cUpdatesFile = __DIR__ . '/live_customer_updates.json';
+        $cPayload = [
+            'id' => $data['id'],
+            'name' => $data['name'] ?? '',
+            'phone' => $phoneToSave,
+            'whatsapp' => $phoneToSave,
+            'alt_phone' => $altPhoneToSave,
+            'altPhone' => $altPhoneToSave,
+            'email' => $data['email'] ?? null,
+            'gender' => $data['gender'] ?? null,
+            'age' => $data['age'] ?? null,
+            'address' => $data['address'] ?? '',
+            'alt_address' => $data['alt_address'] ?? ($data['altAddress'] ?? ''),
+            'altAddress' => $data['alt_address'] ?? ($data['altAddress'] ?? ''),
+            'notes' => $data['notes'] ?? null,
+            'updated_at' => date('Y-m-d H:i:s'),
+            'timestamp_epoch' => time()
+        ];
+        $existingQ = [];
+        if (file_exists($cUpdatesFile)) {
+            $raw = @file_get_contents($cUpdatesFile);
+            $existingQ = $raw ? (json_decode($raw, true) ?: []) : [];
+        }
+        $existingQ[] = $cPayload;
+        if (count($existingQ) > 50) $existingQ = array_slice($existingQ, -50);
+        if (function_exists('atomicWriteJson')) {
+            atomicWriteJson($cUpdatesFile, $existingQ);
+        } else {
+            @file_put_contents($cUpdatesFile, json_encode($existingQ, JSON_UNESCAPED_UNICODE));
+        }
+    } catch (Exception $e) {}
 
     echo json_encode(["status" => "success", "message" => "Customer details saved successfully"]);
     exit;
@@ -3192,8 +3226,14 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     $accSlot = $payload['accountId'] ?? 'account_1';
     $senderName = $payload['sender_name'] ?? 'Super Admin';
 
+    // Universal Base64 decoding for outbound images & voice notes
+    saveBase64MediaIfPresent($mediaUrl, $mediaType);
+    if (!empty($mediaUrl) && empty($mediaType)) {
+        $mediaType = (strpos($mediaUrl, 'voice') !== false || strpos($mediaUrl, '.ogg') !== false || strpos($mediaUrl, '.mp3') !== false) ? 'audio' : 'image';
+    }
+
     if (empty($text) && !empty($mediaUrl)) {
-        $text = '[Photo Attachment]';
+        $text = ($mediaType === 'audio') ? '🎙️ Voice Message' : '[Photo Attachment]';
     }
 
     $effectiveCustId = $customerId;
@@ -3733,12 +3773,46 @@ if ($action === 'get_inbound_messages') {
         }
     }
 
+    // Delta query for updated customer profiles
+    $updatedCustomers = [];
+    $cUpdatesFile = __DIR__ . '/live_customer_updates.json';
+    if (file_exists($cUpdatesFile)) {
+        $cRaw = @file_get_contents($cUpdatesFile);
+        $cQueue = $cRaw ? (json_decode($cRaw, true) ?: []) : [];
+        foreach ($cQueue as $cItem) {
+            if ((int)($cItem['timestamp_epoch'] ?? 0) > $since) {
+                $updatedCustomers[] = $cItem;
+            }
+        }
+    }
+    if ($pdo && $since > 0) {
+        try {
+            $custStmt = $pdo->prepare("
+                SELECT id, code, name, phone, whatsapp, alt_phone, email, gender, age, address, alt_address, notes, customer_type, avatar, updated_at
+                FROM `customers`
+                WHERE updated_at IS NOT NULL AND updated_at >= FROM_UNIXTIME(:since)
+                LIMIT 50
+            ");
+            $custStmt->execute([':since' => $since]);
+            $dbCustUpdates = $custStmt->fetchAll(PDO::FETCH_ASSOC);
+            $seenCustIds = array_flip(array_column($updatedCustomers, 'id'));
+            foreach ($dbCustUpdates as $dcu) {
+                if (!isset($seenCustIds[$dcu['id']])) {
+                    $dcu['altPhone'] = $dcu['alt_phone'] ?? '';
+                    $dcu['altAddress'] = $dcu['alt_address'] ?? '';
+                    $updatedCustomers[] = $dcu;
+                }
+            }
+        } catch (Exception $e) {}
+    }
+
     echo json_encode([
         "status" => "success",
         "since" => $since,
         "count" => count($newMessages),
         "messages" => $newMessages,
         "assignments" => $assignments,
+        "updated_customers" => $updatedCustomers,
         "server_time" => time()
     ]);
     exit;
@@ -4505,15 +4579,15 @@ if ($action === 'delete_attribute' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-if (($action === 'upload_product_image' || $action === 'upload_media' || $action === 'upload_broadcast_image') && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $folderName = ($action === 'upload_broadcast_image') ? 'broadcast' : (($action === 'upload_media') ? 'media' : 'products');
+if (($action === 'upload_product_image' || $action === 'upload_media' || $action === 'upload_broadcast_image' || $action === 'upload_chat_attachment') && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $folderName = ($action === 'upload_broadcast_image') ? 'broadcast' : (($action === 'upload_product_image') ? 'products' : 'media');
     $uploadDir = __DIR__ . '/uploads/' . $folderName . '/';
     if (!is_dir($uploadDir)) {
         @mkdir($uploadDir, 0777, true);
     }
 
-    if (!empty($_FILES['image']) && is_uploaded_file($_FILES['image']['tmp_name'])) {
-        $file = $_FILES['image'];
+    $file = $_FILES['image'] ?? ($_FILES['photo'] ?? ($_FILES['file'] ?? ($_FILES['attachment'] ?? null)));
+    if (!empty($file) && is_uploaded_file($file['tmp_name'])) {
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
         if (!in_array($ext, $allowed)) {
@@ -4530,6 +4604,7 @@ if (($action === 'upload_product_image' || $action === 'upload_media' || $action
             echo json_encode([
                 "status" => "success", 
                 "url" => $url, 
+                "media_url" => $url,
                 "absolute_url" => $absoluteUrl,
                 "file_name" => $file['name'],
                 "size" => $file['size'],

@@ -2655,6 +2655,70 @@ function syncIncomingCallsNow() {
 }
 
 // Background & Immediate REST message polling loop
+function applyUpdatedCustomersDelta(updatedCustomers) {
+  if (!Array.isArray(updatedCustomers) || updatedCustomers.length === 0) return false;
+  let hasCustUpdates = false;
+  updatedCustomers.forEach(uc => {
+    if (!uc || !uc.id) return;
+    const existing = (CRM_STATE.customers || []).find(c => c && (c.id === uc.id || String(c.id) === String(uc.id)));
+    if (existing) {
+      if (uc.name !== undefined && uc.name) existing.name = uc.name;
+      if (uc.phone !== undefined && uc.phone) existing.phone = uc.phone;
+      if (uc.whatsapp !== undefined && uc.whatsapp) existing.whatsapp = uc.whatsapp;
+      if (uc.alt_phone !== undefined || uc.altPhone !== undefined) {
+        existing.altPhone = uc.alt_phone || uc.altPhone || '';
+        existing.alt_phone = uc.alt_phone || uc.altPhone || '';
+      }
+      if (uc.address !== undefined) existing.address = uc.address;
+      if (uc.alt_address !== undefined || uc.altAddress !== undefined) {
+        existing.altAddress = uc.alt_address || uc.altAddress || '';
+        existing.alt_address = uc.alt_address || uc.altAddress || '';
+      }
+      if (uc.notes !== undefined && uc.notes !== null) existing.notes = uc.notes;
+      if (uc.gender !== undefined) existing.gender = uc.gender;
+      if (uc.age !== undefined) existing.age = uc.age;
+      if (uc.email !== undefined) existing.email = uc.email;
+      if (uc.tags !== undefined) existing.tags = Array.isArray(uc.tags) ? uc.tags : (typeof uc.tags === 'string' ? (JSON.parse(uc.tags || '[]') || []) : []);
+      if (uc.customer_type || uc.customerType) existing.customerType = uc.customer_type || uc.customerType;
+      if (existing.name) {
+        const nameChars = Array.from(existing.name || 'WA');
+        existing.avatar = (nameChars.slice(0, 2).join('')).toUpperCase();
+      }
+      hasCustUpdates = true;
+
+      // Realtime Customer 360 live update for active chat customer across all browsers
+      if (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && String(ACTIVE_CUSTOMER_ID) === String(existing.id)) {
+        if (!window.CUSTOMER_EDIT_MODES || !window.CUSTOMER_EDIT_MODES.has(existing.id)) {
+          if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+          if (typeof renderChatHeader === 'function') renderChatHeader();
+        }
+      }
+    } else {
+      CRM_STATE.customers.push({
+        id: uc.id,
+        code: uc.code || ('CUST-' + Date.now().toString().slice(-4)),
+        name: uc.name || 'Customer',
+        phone: uc.phone || '',
+        whatsapp: uc.whatsapp || uc.phone || '',
+        altPhone: uc.alt_phone || uc.altPhone || '',
+        alt_phone: uc.alt_phone || uc.altPhone || '',
+        address: uc.address || '',
+        altAddress: uc.alt_address || uc.altAddress || '',
+        alt_address: uc.alt_address || uc.altAddress || '',
+        notes: uc.notes || '',
+        gender: uc.gender || '',
+        age: uc.age || '',
+        email: uc.email || '',
+        customerType: uc.customer_type || uc.customerType || 'Live WhatsApp Lead',
+        avatar: (uc.name ? uc.name.slice(0, 2) : 'CU').toUpperCase()
+      });
+      hasCustUpdates = true;
+    }
+  });
+  return hasCustUpdates;
+}
+window.applyUpdatedCustomersDelta = applyUpdatedCustomersDelta;
+
 function syncInboundMessagesNow(isInitial = false) {
   const since = isInitial ? 0 : LAST_POLL_EPOCH;
   return fetch(`api.php?action=get_inbound_messages&since=${since}`)
@@ -2690,7 +2754,11 @@ function syncInboundMessagesNow(isInitial = false) {
             }
           });
         }
-        if (hasAssignmentUpdates || hasMsgUpdates) {
+        let hasCustUpdates = false;
+        if (Array.isArray(res.updated_customers) && res.updated_customers.length > 0) {
+          hasCustUpdates = applyUpdatedCustomersDelta(res.updated_customers);
+        }
+        if (hasAssignmentUpdates || hasMsgUpdates || hasCustUpdates) {
           saveCRMState();
           if (ACTIVE_VIEW === 'inbox') {
             renderInbox();
@@ -2786,7 +2854,12 @@ function initSSEStream() {
             }
           }
 
-          if (hasAssignmentUpdates || hasMsgUpdates) {
+          let hasCustUpdates = false;
+          if (Array.isArray(res.updated_customers) && res.updated_customers.length > 0) {
+            hasCustUpdates = applyUpdatedCustomersDelta(res.updated_customers);
+          }
+
+          if (hasAssignmentUpdates || hasMsgUpdates || hasCustUpdates) {
             saveCRMState();
             if (ACTIVE_VIEW === 'inbox') {
               renderInbox();
@@ -3211,6 +3284,10 @@ function applyAuthoritativeDatabaseState(data) {
       whatsapp: c.whatsapp || c.phone || '',
       customerType: c.customer_type || c.customerType || 'Live WhatsApp Lead',
       address: c.address || '',
+      altAddress: c.alt_address || c.altAddress || '',
+      alt_address: c.alt_address || c.altAddress || '',
+      altPhone: c.alt_phone || c.altPhone || '',
+      alt_phone: c.alt_phone || c.altPhone || '',
       email: c.email || '',
       gender: c.gender || '',
       age: c.age || '',
@@ -6580,7 +6657,7 @@ function renderChatMessages() {
       contentHtml = `
         <div class="space-y-2">
           <div class="group relative rounded-2xl overflow-hidden border border-slate-200/90 bg-slate-900/5 shadow-sm hover:shadow-md transition cursor-pointer" onclick="openImageLightbox('${msgId}')">
-            <img src="${msg.media_url}" id="chat-img-${msgId}" alt="Customer Attachment" class="w-full max-h-[380px] object-contain rounded-2xl block mx-auto transition duration-200 group-hover:brightness-95">
+            <img src="${msg.media_url}" id="chat-img-${msgId}" alt="Customer Attachment" onerror="if(!this.dataset.retry){this.dataset.retry=1;if(this.getAttribute('src')&&!this.getAttribute('src').startsWith('http')&&!this.getAttribute('src').startsWith('data:')){this.src=window.location.origin+'/'+this.getAttribute('src').replace(/^\/+/,'');}}" class="w-full max-h-[380px] object-contain rounded-2xl block mx-auto transition duration-200 group-hover:brightness-95">
             <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
               <span class="px-3 py-1.5 rounded-full bg-slate-900/90 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg border border-white/20">
                 <span class="material-symbols-outlined text-[16px] text-emerald-400">zoom_in</span> Click to Enlarge / Inspect
@@ -11176,41 +11253,68 @@ function handleChatImageFileSelected(event) {
 
   const reader = new FileReader();
   reader.onload = function (e) {
-    const dataUrl = e.target.result;
-    CHAT_ATTACHED_IMAGE_DATA = {
-      dataUrl: dataUrl,
-      serverUrl: null,
-      name: file.name,
-      file: file
+    const originalDataUrl = e.target.result;
+    const img = new Image();
+    img.onload = function () {
+      const maxDim = 1280;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+      CHAT_ATTACHED_IMAGE_DATA = {
+        dataUrl: compressedDataUrl,
+        serverUrl: null,
+        name: file.name,
+        file: file
+      };
+
+      const strip = document.getElementById('chat-attached-image-preview');
+      const thumb = document.getElementById('chat-attached-thumb');
+      const nameEl = document.getElementById('chat-attached-filename');
+      if (strip && thumb && nameEl) {
+        thumb.src = compressedDataUrl;
+        nameEl.innerText = file.name;
+        strip.classList.remove('hidden');
+      }
+      const input = document.getElementById('chat-input-text');
+      if (input) input.focus();
+
+      // High-speed compressed upload for instant serverUrl resolution
+      try {
+        canvas.toBlob((blob) => {
+          const uploadFile = blob || file;
+          const formData = new FormData();
+          formData.append('image', uploadFile, (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg');
+          fetch('api.php?action=upload_chat_attachment', {
+            method: 'POST',
+            body: formData
+          })
+            .then(res => res.json())
+            .then(json => {
+              const u = json?.url || json?.media_url;
+              if (json && json.status === 'success' && u && CHAT_ATTACHED_IMAGE_DATA) {
+                CHAT_ATTACHED_IMAGE_DATA.serverUrl = u;
+              }
+            })
+            .catch(err => console.warn('[Chat Image Upload Note]:', err));
+        }, 'image/jpeg', 0.85);
+      } catch (e) { }
     };
-
-    const strip = document.getElementById('chat-attached-image-preview');
-    const thumb = document.getElementById('chat-attached-thumb');
-    const nameEl = document.getElementById('chat-attached-filename');
-    if (strip && thumb && nameEl) {
-      thumb.src = dataUrl;
-      nameEl.innerText = file.name;
-      strip.classList.remove('hidden');
-    }
-    const input = document.getElementById('chat-input-text');
-    if (input) input.focus();
-
-    // Upload to server asynchronously for persistent storage & small payload
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-      fetch('api.php?action=upload_media', {
-        method: 'POST',
-        body: formData
-      })
-        .then(res => res.json())
-        .then(json => {
-          if (json && json.status === 'success' && json.url && CHAT_ATTACHED_IMAGE_DATA) {
-            CHAT_ATTACHED_IMAGE_DATA.serverUrl = json.url;
-          }
-        })
-        .catch(err => console.warn('[Chat Image Upload Note]:', err));
-    } catch (e) { }
+    img.src = originalDataUrl;
   };
   reader.readAsDataURL(file);
 }

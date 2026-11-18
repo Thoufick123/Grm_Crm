@@ -67,6 +67,8 @@ require_once __DIR__ . '/config/db.php';
 $pdo = function_exists('getDBConnection') ? getDBConnection() : null;
 $messagesFile = __DIR__ . '/live_messages_queue.json';
 $callsFile = __DIR__ . '/live_incoming_calls.json';
+$cUpdatesFile = __DIR__ . '/live_customer_updates.json';
+$lastCUpdatesMtime = file_exists($cUpdatesFile) ? (int)filemtime($cUpdatesFile) : 0;
 
 // Tell browser's EventSource to reconnect automatically in 1.5s if stream disconnects
 echo "retry: 1500\n\n";
@@ -93,6 +95,7 @@ while (true) {
     $newMessages = [];
     $assignments = [];
     $incomingCalls = [];
+    $updatedCustomers = [];
 
     // --- CHECK 1: New Inbound Messages from live_messages_queue.json ---
     if (file_exists($messagesFile)) {
@@ -228,8 +231,52 @@ while (true) {
         }
     }
 
+    // --- CHECK 4: Updated Customer Profiles (Multi-User Live Sync) ---
+    if (file_exists($cUpdatesFile)) {
+        $curCUpdatesMtime = (int)filemtime($cUpdatesFile);
+        if ($curCUpdatesMtime >= $lastCUpdatesMtime || ($curCUpdatesMtime >= ($since - 2))) {
+            $lastCUpdatesMtime = $curCUpdatesMtime;
+            $rawCUpdates = @file_get_contents($cUpdatesFile);
+            $cQueue = $rawCUpdates ? json_decode($rawCUpdates, true) : null;
+            if (is_array($cQueue)) {
+                foreach ($cQueue as $cItem) {
+                    $itemEpoch = (int)($cItem['timestamp_epoch'] ?? 0);
+                    if ($itemEpoch > $since) {
+                        $updatedCustomers[] = $cItem;
+                        if ($itemEpoch > $since) {
+                            $since = $itemEpoch;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if ($pdo) {
+        try {
+            $custStmt = $pdo->prepare("
+                SELECT id, code, name, phone, whatsapp, alt_phone, email, gender, age, address, alt_address, notes, customer_type, avatar, updated_at
+                FROM `customers`
+                WHERE updated_at IS NOT NULL AND updated_at >= FROM_UNIXTIME(:s_cust)
+                LIMIT 25
+            ");
+            $custStmt->execute([':s_cust' => $since]);
+            $dbCustUpdates = $custStmt->fetchAll(PDO::FETCH_ASSOC);
+            $seenCustIds = array_flip(array_column($updatedCustomers, 'id'));
+            foreach ($dbCustUpdates as $dcu) {
+                if (!isset($seenCustIds[$dcu['id']])) {
+                    $dcu['altPhone'] = $dcu['alt_phone'] ?? '';
+                    $dcu['altAddress'] = $dcu['alt_address'] ?? '';
+                    $updatedCustomers[] = $dcu;
+                    $updEpoch = !empty($dcu['updated_at']) ? strtotime($dcu['updated_at']) : time();
+                    if ($updEpoch > $since) $since = $updEpoch;
+                }
+            }
+        } catch (\Throwable $e) {}
+    }
+
     // --- EMIT REAL-TIME SSE EVENT WHEN NEW DATA ARRIVES ---
-    if (!empty($newMessages) || !empty($assignments) || !empty($incomingCalls)) {
+    if (!empty($newMessages) || !empty($assignments) || !empty($incomingCalls) || !empty($updatedCustomers)) {
         echo "id: {$since}\n";
         echo "event: message\n";
         echo "data: " . json_encode([
@@ -237,6 +284,7 @@ while (true) {
             'messages' => $newMessages,
             'assignments' => $assignments,
             'incoming_calls' => $incomingCalls,
+            'updated_customers' => $updatedCustomers,
             'server_time' => time()
         ], JSON_UNESCAPED_UNICODE) . "\n\n";
         flush();

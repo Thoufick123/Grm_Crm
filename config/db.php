@@ -503,6 +503,15 @@ function initializeDatabaseSchema($pdo) {
         }
     } catch (Exception $e) {}
     try {
+        $hasCustUpdatedCol = $pdo->query("SHOW COLUMNS FROM `customers` LIKE 'updated_at'")->fetch();
+        if (!$hasCustUpdatedCol) {
+            $pdo->exec("ALTER TABLE `customers` ADD COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, ADD INDEX `idx_customers_updated_at` (`updated_at`)");
+        }
+    } catch (Exception $e) {}
+    try {
+        $pdo->exec("ALTER TABLE `messages` MODIFY COLUMN `media_url` MEDIUMTEXT NULL");
+    } catch (Exception $e) {}
+    try {
         $hasMsgUpdatedCol = $pdo->query("SHOW COLUMNS FROM `messages` LIKE 'updated_at'")->fetch();
         if (!$hasMsgUpdatedCol) {
             $pdo->exec("ALTER TABLE `messages` ADD COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, ADD INDEX `idx_messages_updated_at` (`updated_at`)");
