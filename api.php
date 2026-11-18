@@ -525,6 +525,16 @@ if ($action === 'get_state' || $action === 'get_all') {
         $waAccounts = [];
         if ($pdo) {
             try {
+                // Automatically purge legacy hardcoded demo placeholder slots (Lines 2-5) that are disconnected
+                $pdo->exec("
+                    DELETE FROM `whatsapp_accounts` 
+                    WHERE `status` != 'CONNECTED' 
+                      AND `account_slot` IN ('account_2', 'account_3', 'account_4', 'account_5')
+                      AND (`display_name` LIKE 'Line %: Blue Berry%' 
+                        OR `display_name` LIKE 'Line %: Customer Support%' 
+                        OR `display_name` LIKE 'Line %: Wholesale%' 
+                        OR `display_name` LIKE 'Line %: VIP Fast-Track%')
+                ");
                 $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` ORDER BY `id` ASC");
                 $waAccounts = $waStmt->fetchAll();
             } catch (Exception $e) {}
@@ -533,6 +543,20 @@ if ($action === 'get_state' || $action === 'get_all') {
         if (file_exists($configFile)) {
             $cfgData = json_decode(file_get_contents($configFile), true);
             if (!empty($cfgData['connected_lines']) && is_array($cfgData['connected_lines'])) {
+                // Filter out any legacy hardcoded placeholder cards that are disconnected
+                $cfgData['connected_lines'] = array_values(array_filter($cfgData['connected_lines'], function($line) {
+                    $lbl = $line['label'] ?? '';
+                    $st = $line['status'] ?? '';
+                    if ($st !== 'CONNECTED' && in_array($line['id'] ?? '', ['account_2', 'account_3', 'account_4', 'account_5'])) {
+                        if (strpos($lbl, 'Line 2: Blue Berry') !== false ||
+                            strpos($lbl, 'Line 3: Customer Support') !== false ||
+                            strpos($lbl, 'Line 4: Wholesale') !== false ||
+                            strpos($lbl, 'Line 5: VIP Fast-Track') !== false) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }));
                 foreach ($cfgData['connected_lines'] as $line) {
                     $found = false;
                     foreach ($waAccounts as &$wa) {
@@ -1269,16 +1293,46 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    $slotId = $postData['account_id'] ?? $postData['accountId'] ?? $postData['account_slot'] ?? 'account_1';
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
-    $updatedConfig = array_merge($currentConfig, $postData);
+    
+    // Only update root phone/status config if saving Primary account (account_1)
+    if ($slotId === 'account_1') {
+        $updatedConfig = array_merge($currentConfig, $postData);
+        $updatedConfig['status'] = 'CONNECTED';
+    } else {
+        $updatedConfig = $currentConfig;
+    }
     $updatedConfig['last_sync'] = date("Y-m-d H:i:s");
-    $updatedConfig['status'] = 'CONNECTED';
+
+    // Always update connected_lines array with slot isolation
+    if (!isset($updatedConfig['connected_lines']) || !is_array($updatedConfig['connected_lines'])) {
+        $updatedConfig['connected_lines'] = [];
+    }
+    $found = false;
+    foreach ($updatedConfig['connected_lines'] as &$line) {
+        if (($line['id'] ?? '') === $slotId) {
+            $line['status'] = 'CONNECTED';
+            $line['phone_number'] = $postData['phone_number'];
+            if (!empty($postData['display_name'])) $line['label'] = $postData['display_name'];
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
+        $updatedConfig['connected_lines'][] = [
+            'id' => $slotId,
+            'label' => $postData['display_name'] ?? ($slotId === 'account_1' ? 'Primary WhatsApp' : "WhatsApp Line ($slotId)"),
+            'phone_number' => $postData['phone_number'],
+            'status' => 'CONNECTED',
+            'qr_code' => null
+        ];
+    }
 
     atomicWriteJson($configFile, $updatedConfig);
 
-    // Update MySQL
+    // Update MySQL with slot isolation
     if ($pdo) {
-        $slotId = $postData['account_id'] ?? $postData['accountId'] ?? $postData['account_slot'] ?? 'account_1';
         try {
             $stmt = $pdo->prepare("
                 INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`)
@@ -1292,10 +1346,10 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmt->execute([
                 $slotId,
-                $updatedConfig['phone_number'],
-                $updatedConfig['business_name'] ?? 'GRM Garments',
-                $updatedConfig['display_name'] ?? 'GRM Garments Official',
-                $updatedConfig['brand_name'] ?? 'Blue Berry 💙'
+                $postData['phone_number'],
+                $postData['business_name'] ?? 'GRM Garments',
+                $postData['display_name'] ?? ($slotId === 'account_1' ? 'GRM Garments Official' : "WhatsApp Line ($slotId)"),
+                $postData['brand_name'] ?? 'Blue Berry 💙'
             ]);
         } catch (Exception $e) {}
     }

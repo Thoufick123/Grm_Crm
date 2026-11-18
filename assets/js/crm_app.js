@@ -3642,6 +3642,14 @@ function applyAuthoritativeDatabaseState(data) {
         }
       }
     });
+
+    if (typeof sessionStorage !== 'undefined' && Array.isArray(CRM_STATE.whatsappLines)) {
+      try { sessionStorage.setItem('GRM_WHATSAPP_LINES', JSON.stringify(CRM_STATE.whatsappLines)); } catch (e) {}
+    }
+    // Instant zero-lag UI render for multi-account hub and switcher
+    if (typeof renderMultiAccountsHub === 'function') renderMultiAccountsHub();
+    if (typeof renderPhoneSwitcherDropdown === 'function') renderPhoneSwitcherDropdown();
+    if (typeof renderQuickLineSwitcher === 'function') renderQuickLineSwitcher();
   }
 
   if (data.whatsappAccount) {
@@ -3788,6 +3796,14 @@ function initCRMState() {
         const parsed = JSON.parse(cachedConvs);
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           CRM_STATE.conversations = parsed;
+        }
+      }
+      const cachedLines = sessionStorage.getItem('GRM_WHATSAPP_LINES');
+      if (cachedLines) {
+        const parsedLines = JSON.parse(cachedLines);
+        if (Array.isArray(parsedLines) && parsedLines.length > 0) {
+          CRM_STATE.whatsappLines = parsedLines;
+          MULTI_ACCOUNTS_STATE = parsedLines;
         }
       }
     } catch (e) {}
@@ -29979,15 +29995,15 @@ function fetchQRBridgeStatus(btnEl) {
       })
       .catch(() => {
         // Direct bridge fetch failed or timed out: Safely fallback to in-memory CRM_STATE without refetching get_all
-        const accounts = (CRM_STATE && Array.isArray(CRM_STATE.whatsappAccounts)) ? CRM_STATE.whatsappAccounts : [];
+        const accounts = getAvailableWhatsAppAccounts();
         if (accounts.length > 0) {
           applyUpdatedAccountsDelta(accounts.map(a => ({
-            id: a.account_slot || a.id,
-            name: a.account_name || a.name || 'WhatsApp Line',
-            label: a.display_name || a.account_name || a.name || 'WhatsApp Line',
-            phone: a.phone_number || a.phone || '',
+            id: a.id,
+            name: a.label || 'WhatsApp Line',
+            label: a.label || 'WhatsApp Line',
+            phone: a.connected_number || '',
             status: (a.status || 'DISCONNECTED').toUpperCase(),
-            qr_image: a.qr_code || null
+            qr_image: a.qr_image || null
           })), false);
         }
       })
@@ -30275,20 +30291,33 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
     : (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998');
   const cleanPhone = formatPhoneNumberPretty(raw);
 
-  if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
-  CRM_STATE.whatsappAccount.phoneNumber = cleanPhone;
-  CRM_STATE.whatsappAccount.status = 'CONNECTED';
+  if (accountId === 'account_1') {
+    if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
+    CRM_STATE.whatsappAccount.phoneNumber = cleanPhone;
+    CRM_STATE.whatsappAccount.status = 'CONNECTED';
+  }
+
+  // Update specific line in whatsappLines
+  if (Array.isArray(CRM_STATE.whatsappLines)) {
+    const line = CRM_STATE.whatsappLines.find(l => l.id === accountId);
+    if (line) {
+      line.status = 'CONNECTED';
+      line.connected_number = cleanPhone;
+    }
+  }
+
   saveCRMState();
   updateConfiguredPhoneDisplays();
 
-  // Persist to PHP & MySQL database
+  // Persist to PHP & MySQL database with explicit account_id
   fetch('api.php?action=save_config', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      account_id: accountId,
       phone_number: cleanPhone,
       business_name: CRM_STATE?.whatsappAccount?.businessName || 'GRM Garments Business Hub',
-      display_name: label || 'GRM Garments Official'
+      display_name: label || (accountId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Line (${accountId})`)
     })
   }).catch(() => { });
 
@@ -30455,7 +30484,7 @@ function deleteWhatsAppAccountSlot(accountId) {
     }
   }
   if (accountId === 'account_1') {
-    showToast('Core Slot Cannot Be Deleted', 'Default business lines 1 through 5 cannot be removed. You can Disconnect or Refresh QR instead.', 'warning', 'amber');
+    showToast('Core Slot Cannot Be Deleted', 'Primary WhatsApp line cannot be removed. You can Disconnect or Refresh QR instead.', 'warning', 'amber');
     return;
   }
 
@@ -30550,8 +30579,8 @@ function disconnectWhatsAppAccount(accountId) {
     icon: 'phonelink_off',
     color: 'amber',
     onConfirm: () => {
-      // 1. Immediately update CRM_STATE.whatsappAccount
-      if (CRM_STATE.whatsappAccount && (targetId === 'account_1' || ACTIVE_SEND_ACCOUNT_ID === targetId)) {
+      // 1. Immediately update CRM_STATE.whatsappAccount ONLY if targetId is Primary account_1
+      if (CRM_STATE.whatsappAccount && targetId === 'account_1') {
         CRM_STATE.whatsappAccount.status = 'DISCONNECTED';
       }
 

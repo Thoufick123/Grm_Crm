@@ -485,11 +485,7 @@ function loadBrandConfig() {
 loadBrandConfig();
 
 const DEFAULT_ACCOUNT_DEFINITIONS = [
-    { id: 'account_1', label: 'Primary WhatsApp (account_1)' },
-    { id: 'account_2', label: 'Line 2: Blue Berry Kids & Maternity (account_2)' },
-    { id: 'account_3', label: 'Line 3: Customer Support & Enquiries (account_3)' },
-    { id: 'account_4', label: 'Line 4: Wholesale & Bulk Orders (account_4)' },
-    { id: 'account_5', label: 'Line 5: VIP Fast-Track & Dispatch (account_5)' }
+    { id: 'account_1', label: 'Primary WhatsApp' }
 ];
 
 // Helper to get all accounts summary
@@ -508,7 +504,7 @@ function getAccountsSummary() {
             last_active: acc.lastActive
         });
     }
-    // Always include all 5 default accounts if not yet actively started
+    // Only include Primary account (account_1) if not yet actively started
     for (const def of DEFAULT_ACCOUNT_DEFINITIONS) {
         if (!seen.has(def.id)) {
             list.push({
@@ -829,7 +825,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, silentLogger)
             },
-            browser: Browsers.windows('Desktop'),
+            browser: ['GRM WhatsApp CRM', String(accountId), '2.5.0'],
             syncFullHistory: false, // Prevents loading heavy history that crashes or times out after 2 min
             keepAliveIntervalMs: 25000, // Send keep-alive every 25s to keep socket alive stably
             connectTimeoutMs: 60000,
