@@ -15,10 +15,17 @@
     "connected_lines": [
         {
             "id": "account_1",
-            "label": "Line 1: GRM Business Central",
+            "label": "Primary WhatsApp",
             "phone_number": "Awaiting Link",
-            "brand_name": "GRM Garments Central",
+            "brand_name": "Primary Line",
             "status": "DISCONNECTED"
+        },
+        {
+            "id": "account_2",
+            "label": "WhatsApp Business #2",
+            "phone_number": "+91 99435 57998",
+            "brand_name": "WhatsApp Business #2",
+            "status": "CONNECTED"
         }
     ],
     "autoReplyEnabled": false,

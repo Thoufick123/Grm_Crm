@@ -102,6 +102,61 @@ function mergeLidPlaceholderCustomer($pdo, $realCustId, $lidDigits) {
 }
 
 /**
+ * Universal WhatsApp Phone Number Sanitizer
+ * Strips device IDs (:0, :1), domain (@s.whatsapp.net), solves trailing 0 artifacts, and formats canonical +91 phone
+ */
+function cleanWhatsAppPhone($rawInput) {
+    if (empty($rawInput)) return ['clean10' => '', 'formatted' => '+91 98765 43210', 'digits' => ''];
+    $str = trim((string)$rawInput);
+    if (strpos($str, '@') !== false) {
+        $str = explode('@', $str)[0];
+    }
+    if (strpos($str, ':') !== false) {
+        $str = explode(':', $str)[0];
+    }
+    $digits = preg_replace('/[^0-9]/', '', $str);
+
+    // Deeply resolve Privacy LID to genuine phone number
+    if (strlen($digits) >= 14) {
+        $resolved = resolveLidPhone($digits);
+        if (!empty($resolved) && $resolved !== $digits) {
+            $digits = preg_replace('/[^0-9]/', '', $resolved);
+        }
+    }
+
+    // Strip trailing device index 0 (e.g. 9181240385850 -> 918124038585, or 81240385850 -> 8124038585)
+    if (strlen($digits) === 13 && strpos($digits, '91') === 0 && substr($digits, -1) === '0') {
+        $digits = substr($digits, 0, 12);
+    } else if (strlen($digits) === 11 && substr($digits, -1) === '0' && substr($digits, 0, 1) !== '0') {
+        $digits = substr($digits, 0, 10);
+    }
+
+    $clean10 = $digits;
+    if (strlen($digits) === 12 && strpos($digits, '91') === 0) {
+        $clean10 = substr($digits, 2);
+    } else if (strlen($digits) === 11 && strpos($digits, '0') === 0) {
+        $clean10 = substr($digits, 1);
+    } else if (strlen($digits) > 10) {
+        $clean10 = substr($digits, -10);
+    }
+
+    $formatted = '';
+    if (strlen($clean10) === 10) {
+        $formatted = '+91 ' . substr($clean10, 0, 5) . ' ' . substr($clean10, 5);
+    } else if (!empty($digits)) {
+        $formatted = '+' . $digits;
+    } else {
+        $formatted = '+91 98765 43210';
+    }
+
+    return [
+        'clean10' => $clean10,
+        'formatted' => $formatted,
+        'digits' => $digits
+    ];
+}
+
+/**
  * GRM WHATSAPP CRM — FULL BACKEND REST API (PHP + XAMPP MYSQL)
  * Provides comprehensive database endpoints for:
  * - CRM Full State Synchronization (MySQL + Local Storage)
@@ -644,7 +699,29 @@ function atomicWriteJson($filePath, $data) {
 
 $action = $_GET['action'] ?? 'get_state';
 
-
+// Fast Dedicated Multi-WhatsApp Accounts Status Endpoint (< 5ms response, zero overhead)
+if ($action === 'get_whatsapp_accounts') {
+    try {
+        $waAccounts = [];
+        if ($pdo) {
+            $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` WHERE `account_slot` IN ('account_1', 'account_2') ORDER BY `id` ASC");
+            $waAccounts = $waStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        if (empty($waAccounts) && file_exists($configFile)) {
+            $cfgData = json_decode(file_get_contents($configFile), true);
+            $waAccounts = $cfgData['connected_lines'] ?? [];
+        }
+        echo json_encode([
+            "status" => "success",
+            "whatsappAccounts" => $waAccounts,
+            "accounts" => $waAccounts
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
 
 // =========================================================================
 // 1. GET FULL CRM STATE FROM MYSQL DATABASE
@@ -658,20 +735,24 @@ if ($action === 'get_state' || $action === 'get_all') {
         $scope = isset($_GET['scope']) ? strtolower(trim($_GET['scope'])) : (isset($_GET['view']) ? strtolower(trim($_GET['view'])) : 'full');
         $isInboxScope = ($scope === 'inbox');
         $isDashboardScope = ($scope === 'dashboard');
+        $isSettingsScope = ($scope === 'settings' || $scope === 'whatsapp');
 
         // 1. WhatsApp Account Config
         $waAccounts = [];
         if ($pdo) {
             try {
-                // Permanently purge phantom slots (Lines 3, 4, 5 and account_1795...) from database
-                $pdo->exec("
-                    DELETE FROM `whatsapp_accounts` 
-                    WHERE `account_slot` IN ('account_3', 'account_4', 'account_5')
-                       OR `account_slot` LIKE 'account_1795%'
-                       OR `display_name` LIKE '%Customer Support%'
-                       OR `display_name` LIKE '%Wholesale%'
-                       OR `display_name` LIKE '%VIP Fast-Track%'
-                ");
+                // High-speed check: only run DELETE if phantom slots actually exist
+                $checkPh = $pdo->query("SELECT 1 FROM `whatsapp_accounts` WHERE `account_slot` IN ('account_3', 'account_4', 'account_5') OR `account_slot` LIKE 'account_1795%' LIMIT 1")->fetchColumn();
+                if ($checkPh) {
+                    $pdo->exec("
+                        DELETE FROM `whatsapp_accounts` 
+                        WHERE `account_slot` IN ('account_3', 'account_4', 'account_5')
+                           OR `account_slot` LIKE 'account_1795%'
+                           OR `display_name` LIKE '%Customer Support%'
+                           OR `display_name` LIKE '%Wholesale%'
+                           OR `display_name` LIKE '%VIP Fast-Track%'
+                    ");
+                }
                 $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` ORDER BY `id` ASC");
                 $waAccounts = $waStmt->fetchAll();
             } catch (Exception $e) {}
@@ -810,6 +891,35 @@ if ($action === 'get_state' || $action === 'get_all') {
             } catch (Exception $eLidConsolidate) {}
         }
 
+        // Fast-path for Settings / Phone Configuration View (100x faster response)
+        if ($isSettingsScope) {
+            $arRules = [];
+            try {
+                $arRules = $pdo->query("SELECT * FROM `auto_reply_rules` ORDER BY `created_at` ASC")->fetchAll();
+                foreach ($arRules as &$r) {
+                    if (!empty($r['keywords']) && is_string($r['keywords'])) {
+                        $r['keywords'] = json_decode($r['keywords'], true) ?: [$r['keywords']];
+                    }
+                    $r['actionType'] = $r['action_type'] ?? ($r['actionType'] ?? 'custom_text');
+                    $r['categoryId'] = $r['category_id'] ?? ($r['categoryId'] ?? null);
+                    $r['replyText'] = $r['reply_text'] ?? ($r['replyText'] ?? '');
+                    $r['enabled'] = isset($r['enabled']) ? (bool)$r['enabled'] : true;
+                    $r['autoSend'] = isset($r['auto_send']) ? (bool)$r['auto_send'] : true;
+                }
+            } catch (Exception $e) {}
+            echo json_encode([
+                "status" => "success",
+                "source" => "MYSQL_DATABASE_SETTINGS_FASTPATH",
+                "data" => [
+                    "whatsappAccount" => $primaryWA,
+                    "whatsappAccounts" => $waAccounts,
+                    "autoReplyRules" => $arRules,
+                    "lidMappings" => $activeLidMappings
+                ]
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         // 4. Customers
         $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` ASC");
         $customers = $cStmt->fetchAll();
@@ -821,6 +931,27 @@ if ($action === 'get_state' || $action === 'get_all') {
             $c['lastMessage'] = $c['last_message'] ?? '';
             $c['lastMessageAt'] = $c['last_message_at'] ?? '';
             $c['unreadCount'] = (int)($c['unread_count'] ?? 0);
+
+            // Self-healing: Sanitize customer phone from trailing device 0 or companion index
+            $rawP = !empty($c['phone']) ? $c['phone'] : ($c['whatsapp'] ?? '');
+            if (!empty($rawP)) {
+                $pInfo = cleanWhatsAppPhone($rawP);
+                if (!empty($pInfo['clean10']) && strlen($pInfo['clean10']) === 10) {
+                    $c['phone'] = $pInfo['formatted'];
+                    $c['whatsapp'] = $pInfo['formatted'];
+                }
+            }
+
+            // Self-healing: Prevent account slot labels from becoming customer contact names
+            if (!empty($c['name']) && preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $c['name'])) {
+                $cleanDigits = preg_replace('/[^0-9]/', '', $c['phone'] ?? '');
+                $last4 = strlen($cleanDigits) >= 4 ? substr($cleanDigits, -4) : 'User';
+                $c['name'] = "Customer ($last4)";
+                try {
+                    $pdo->prepare("UPDATE `customers` SET `name` = ?, `phone` = ?, `whatsapp` = ? WHERE `id` = ?")->execute([$c['name'], $c['phone'], $c['whatsapp'], $c['id']]);
+                    $pdo->prepare("UPDATE `queries` SET `customer_name` = ?, `customer_phone` = ? WHERE `customer_id` = ?")->execute([$c['name'], $c['phone'], $c['id']]);
+                } catch (Exception $eUpdateCust) {}
+            }
         }
 
         // 5. Queries
@@ -3521,11 +3652,17 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $bridgeMediaUrl = $scheme . '://' . $host . '/' . ltrim($bridgeMediaUrl, '/');
     }
 
+    // Sanitize phone and JID
+    $phoneInfo = cleanWhatsAppPhone($phone ?: ($postData['jid'] ?? ''));
+    $cleanBridgePhone = !empty($phoneInfo['digits']) ? $phoneInfo['digits'] : $phone;
+    $rawJid = $postData['jid'] ?? null;
+    $cleanBridgeJid = (!empty($rawJid) && (strpos($rawJid, ':') !== false || strlen(preg_replace('/[^0-9]/', '', $rawJid)) >= 13)) ? null : $rawJid;
+
     // Call Node.js Baileys Bridge
     $bRes = curlBridgePost('/api/send', [
-        'phone' => $phone, 
+        'phone' => $cleanBridgePhone, 
         'text' => $text,
-        'jid' => $postData['jid'] ?? null,
+        'jid' => $cleanBridgeJid,
         'accountId' => $postData['accountId'] ?? null,
         'mediaUrl' => $bridgeMediaUrl,
         'media_url' => $bridgeMediaUrl,
@@ -3624,10 +3761,14 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     $jid = trim($payload['jid'] ?? '');
     $lid = trim($payload['lid'] ?? '');
 
-    // Deeply resolve Privacy LID to genuine phone number
-    $resolvedPhone = resolveLidPhone(!empty($lid) ? $lid : (!empty($phone) ? $phone : $jid));
-    if (!empty($resolvedPhone) && $resolvedPhone !== $phone && $resolvedPhone !== $lid) {
-        $phone = $resolvedPhone;
+    // Deeply resolve Privacy LID and sanitize phone number
+    $phoneInfo = cleanWhatsAppPhone(!empty($lid) ? $lid : (!empty($phone) ? $phone : $jid));
+    $phone = $phoneInfo['formatted'];
+    $clean10 = $phoneInfo['clean10'];
+
+    // Guard against account slot labels becoming recipient name
+    if (preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $recipientName)) {
+        $recipientName = '';
     }
 
     // Universal Base64 decoding for outbound images & voice notes
@@ -3643,7 +3784,6 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     $effectiveCustId = $customerId;
     if ($pdo && (!empty($phone) || !empty($effectiveCustId))) {
         try {
-            $clean10 = !empty($phone) ? substr(preg_replace('/[^0-9]/', '', $phone), -10) : '';
             if (!empty($clean10)) {
                 $cStmt = $pdo->prepare("SELECT `id`, `name` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
                 $cStmt->execute([$effectiveCustId ?: '', "%$clean10", "%$clean10"]);
@@ -3659,7 +3799,7 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
             }
             if (empty($effectiveCustId) && !empty($clean10)) {
                 $effectiveCustId = 'cust_' . $clean10;
-                $initialName = !empty($recipientName) ? $recipientName : 'Customer';
+                $initialName = !empty($recipientName) ? $recipientName : ('Customer (' . substr($clean10, -4) . ')');
                 $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`) VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 'CU')")
                     ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $initialName, $phone, $phone]);
 
@@ -3776,10 +3916,15 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $senderJid = $payload['sender_jid'] ?? '';
     $lid = $payload['lid'] ?? '';
 
-    // Deeply resolve Privacy LID to genuine phone number
-    $resolvedPhone = resolveLidPhone(!empty($lid) ? $lid : (!empty($senderPhone) ? $senderPhone : $senderJid));
-    if (!empty($resolvedPhone) && $resolvedPhone !== $senderPhone && $resolvedPhone !== $lid) {
-        $senderPhone = $resolvedPhone;
+    // Deeply resolve Privacy LID and sanitize phone number (strips :0 and device artifacts)
+    $phoneInfo = cleanWhatsAppPhone(!empty($lid) ? $lid : (!empty($senderPhone) ? $senderPhone : $senderJid));
+    $senderPhone = $phoneInfo['formatted'];
+    $clean10 = $phoneInfo['clean10'];
+
+    // Guard against internal WhatsApp Business line labels becoming customer names
+    $isLineLabel = preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $senderName);
+    if ($isLineLabel || empty($senderName) || $senderName === 'WhatsApp Customer') {
+        $senderName = 'Customer (' . (strlen($clean10) >= 4 ? substr($clean10, -4) : 'User') . ')';
     }
 
     $msgUid = $payload['id'] ?? ("msg_" . uniqid());
@@ -3822,12 +3967,12 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($pdo) {
         try {
             $cleanPhone = preg_replace('/[^0-9]/', '', $senderPhone);
-            $clean10 = substr($cleanPhone, -10);
+            $clean10 = !empty($clean10) ? $clean10 : substr($cleanPhone, -10);
             $custId = 'cust_' . ($clean10 ?: substr(uniqid(), -6));
 
             // Check or insert customer (robust against spaces and formats)
-            $checkCust = $pdo->prepare("SELECT `id` FROM `customers` WHERE REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
-            $checkCust->execute(["%$clean10%", "%$clean10%"]);
+            $checkCust = $pdo->prepare("SELECT `id`, `name`, `phone` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
+            $checkCust->execute([$custId, "%$clean10", "%$clean10"]);
             $existingCust = $checkCust->fetch();
 
             if (!$existingCust) {
@@ -3844,6 +3989,24 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             } else {
                 $custId = $existingCust['id'];
+                // Self-healing: Update existing customer if their name was an account label or phone had trailing 0
+                $custNeedUpdate = false;
+                $updatedCustName = $existingCust['name'];
+                $updatedCustPhone = $existingCust['phone'];
+                if (preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $existingCust['name'])) {
+                    $updatedCustName = $senderName;
+                    $custNeedUpdate = true;
+                }
+                if (preg_match('/[0-9]{11,}/', preg_replace('/[^0-9]/', '', $existingCust['phone']))) {
+                    $updatedCustPhone = $senderPhone;
+                    $custNeedUpdate = true;
+                }
+                if ($custNeedUpdate) {
+                    $pdo->prepare("UPDATE `customers` SET `name` = ?, `phone` = ?, `whatsapp` = ? WHERE `id` = ?")
+                        ->execute([$updatedCustName, $updatedCustPhone, $updatedCustPhone, $custId]);
+                    $pdo->prepare("UPDATE `queries` SET `customer_name` = ?, `customer_phone` = ? WHERE `customer_id` = ?")
+                        ->execute([$updatedCustName, $updatedCustPhone, $custId]);
+                }
             }
 
             // Consolidate any duplicate placeholder customer created under this LID

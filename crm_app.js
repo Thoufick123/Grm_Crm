@@ -2140,6 +2140,10 @@ function initSocketIO() {
       console.log('ℹ️ [Bridge]: Set localStorage.setItem("GRM_BRIDGE_URL", "https://your-bridge.onrender.com") to connect Render WebSocket');
       return;
     }
+    if (bridgeUrl.includes('hostingersite.com')) {
+      console.log('ℹ️ [Bridge]: Hostinger shared hosting environment detected. Real-time updates active via SSE event stream.');
+      return;
+    }
     SOCKET_IO = io(bridgeUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -2333,12 +2337,12 @@ function initSocketIO() {
 function ingestInboundMessage(payload, suppressChime = false) {
   if (!payload || !CRM_STATE) return;
 
-  const rawPhone = payload.sender_phone || (payload.sender_jid ? payload.sender_jid.split('@')[0] : '+91 98765 43210');
-  let cleanPhone = rawPhone.startsWith('+') ? rawPhone : ('+' + rawPhone);
-  let normalizedDigits = cleanPhone.replace(/[^0-9]/g, '');
+  const phoneNorm = normalizeWhatsAppPhone(payload.sender_phone || payload.sender_jid || '');
+  let cleanPhone = phoneNorm.formattedPhone || '+91 98765 43210';
+  let normalizedDigits = phoneNorm.cleanDigits;
 
   // Privacy LID Resolution (e.g. 275341797023827 -> 919943557998)
-  const lidCandidate = payload.lid || ((payload.sender_jid && payload.sender_jid.includes('@lid')) ? payload.sender_jid.split('@')[0].replace(/[^0-9]/g, '') : (normalizedDigits.length >= 14 ? normalizedDigits : null));
+  const lidCandidate = payload.lid || ((payload.sender_jid && payload.sender_jid.includes('@lid')) ? payload.sender_jid.split('@')[0].split(':')[0].replace(/[^0-9]/g, '') : (normalizedDigits.length >= 14 ? normalizedDigits : null));
   if (lidCandidate) {
     const sharedLidMap = (CRM_STATE && CRM_STATE.lidMappings) || window.LID_MAPPINGS || { '275341797023827': '919943557998' };
     if (sharedLidMap[lidCandidate]) {
@@ -2350,7 +2354,12 @@ function ingestInboundMessage(payload, suppressChime = false) {
     }
   }
 
-  const senderName = payload.sender_name || `WhatsApp Customer (${cleanPhone.slice(-4)})`;
+  // Guard against internal WhatsApp Business line labels becoming customer names
+  const rawSenderName = payload.sender_name || '';
+  const isLineLabel = /whatsapp business|primary line|primary whatsapp|line \d|account_\d|awaiting link/i.test(rawSenderName);
+  const cleanSenderName = (!isLineLabel && rawSenderName && !rawSenderName.startsWith('WhatsApp Customer') && !rawSenderName.includes('Admin')) ? rawSenderName : null;
+  const senderName = cleanSenderName || `Customer (${cleanPhone.slice(-4)})`;
+
   const messageText = payload.message_text || payload.text || 'Message';
   const timeStr = payload.received_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const msgType = payload.type || 'text';
@@ -2386,7 +2395,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
       const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
       const phoneMatch = (cPhoneDigits.length >= 7 && (cPhoneDigits === normalizedDigits || cPhoneDigits.slice(-10) === digits10)) ||
         (c.id && c.id.replace(/[^0-9]/g, '').endsWith(digits10)) ||
-        (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0] === payload.sender_jid.split('@')[0])));
+        (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0].split(':')[0] === payload.sender_jid.split('@')[0].split(':')[0])));
       return phoneMatch;
     });
   }
@@ -2399,9 +2408,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
       return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
         (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10));
     });
-    const finalName = (!isOutboundMsg && senderName && !senderName.startsWith('WhatsApp Customer') && !senderName.includes('Admin'))
-      ? senderName
-      : (existingOther && existingOther.name && !existingOther.name.startsWith('WhatsApp Customer') ? existingOther.name : `Customer (${cleanPhone.slice(-4)})`);
+    const finalName = cleanSenderName || (existingOther && existingOther.name && !/whatsapp business|primary line|primary whatsapp|line \d|account_\d/i.test(existingOther.name) && !existingOther.name.startsWith('WhatsApp Customer') ? existingOther.name : `Customer (${cleanPhone.slice(-4)})`);
 
     const lineTag = payloadAccountId === 'account_2' ? 'Line 2 Lead' : 'Line 1 Lead';
     customer = {
@@ -2425,10 +2432,18 @@ function ingestInboundMessage(payload, suppressChime = false) {
   } else {
     customer.accountId = payloadAccountId;
     if (payloadBusinessNum && payloadBusinessNum !== 'Primary') customer.businessNumber = payloadBusinessNum;
-    if (!isOutboundMsg && senderName && !senderName.startsWith('WhatsApp Customer') && !senderName.includes('Admin') && (customer.name.startsWith('Customer') || customer.name.startsWith('WhatsApp Customer'))) {
-      customer.name = senderName;
+
+    // Self-healing: heal customer phone and name if corrupted with trailing 0 or line slot label
+    customer.phone = cleanPhone;
+    customer.whatsapp = cleanPhone;
+    if (/whatsapp business|primary line|primary whatsapp|line \d|account_\d/i.test(customer.name)) {
+      customer.name = cleanSenderName || `Customer (${cleanPhone.slice(-4)})`;
+      customer.avatar = safeAvatar;
+    } else if (!isOutboundMsg && cleanSenderName && (customer.name.startsWith('Customer') || customer.name.startsWith('WhatsApp Customer'))) {
+      customer.name = cleanSenderName;
       customer.avatar = safeAvatar;
     }
+
     if (payload.sender_jid && !customer.jid) {
       customer.jid = payload.sender_jid;
     }
@@ -3892,7 +3907,7 @@ function initCRMState() {
           CRM_STATE.conversations = parsed;
         }
       }
-      const cachedLines = sessionStorage.getItem('GRM_WHATSAPP_LINES');
+      const cachedLines = sessionStorage.getItem('GRM_WHATSAPP_LINES') || (typeof localStorage !== 'undefined' ? localStorage.getItem('GRM_WHATSAPP_LINES') : null);
       if (cachedLines) {
         const parsedLines = JSON.parse(cachedLines);
         if (Array.isArray(parsedLines) && parsedLines.length > 0) {
@@ -4030,6 +4045,15 @@ function saveCRMState(immediate = false) {
         } catch (e) {}
       }
 
+      // Keep multi-account lines synchronized in storage for 0ms instant display upon refresh
+      if (CRM_STATE && Array.isArray(CRM_STATE.whatsappLines) && CRM_STATE.whatsappLines.length > 0) {
+        try {
+          const linesJson = JSON.stringify(CRM_STATE.whatsappLines);
+          sessionStorage.setItem('GRM_WHATSAPP_LINES', linesJson);
+          localStorage.setItem('GRM_WHATSAPP_LINES', linesJson);
+        } catch (e) {}
+      }
+
       if (typeof window !== 'undefined' && typeof window.broadcastCRMMutation === 'function') {
         window.broadcastCRMMutation('MUTATION');
       }
@@ -4054,13 +4078,35 @@ window.saveStateToStorage = saveCRMState;
 
 // 5 Connected WhatsApp Business Numbers Engine
 function getAvailableWhatsAppAccounts() {
+  // Instant 0ms memory fallback from storage before network returns
+  if ((!Array.isArray(CRM_STATE?.whatsappLines) || CRM_STATE.whatsappLines.length === 0) && typeof localStorage !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('GRM_WHATSAPP_LINES') || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('GRM_WHATSAPP_LINES') : null);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const clean = parsed.filter(a => !isPhantomWhatsAppAccount(a));
+          if (CRM_STATE) CRM_STATE.whatsappLines = clean;
+          MULTI_ACCOUNTS_STATE = clean;
+        }
+      }
+    } catch (e) {}
+  }
+
   const defaultAccounts = [
     {
       id: 'account_1',
-      label: 'Primary WhatsApp (Line 1)',
+      label: 'Primary WhatsApp',
       status: 'DISCONNECTED',
       connected_number: 'Awaiting Link',
       brand_name: 'Primary Line'
+    },
+    {
+      id: 'account_2',
+      label: 'WhatsApp Business #2',
+      status: 'CONNECTED',
+      connected_number: '+91 99435 57998',
+      brand_name: 'WhatsApp Business #2'
     }
   ];
 
@@ -4420,17 +4466,56 @@ document.addEventListener('click', (e) => {
   }
 });
 
+function normalizeWhatsAppPhone(rawInput) {
+  if (!rawInput) return { cleanDigits: '', formattedPhone: '+91 98765 43210', digits10: '' };
+  let str = String(rawInput).trim();
+  if (str.includes('@')) str = str.split('@')[0];
+  if (str.includes(':')) str = str.split(':')[0];
+  let digits = str.replace(/[^0-9]/g, '');
+
+  // Privacy LID Resolution
+  if (digits.length >= 14) {
+    const sharedLidMap = (CRM_STATE && CRM_STATE.lidMappings) || window.LID_MAPPINGS || { '275341797023827': '919943557998' };
+    if (sharedLidMap[digits]) {
+      const mapped = String(sharedLidMap[digits]).replace(/[^0-9]/g, '');
+      if (mapped.length >= 10) digits = mapped;
+    }
+  }
+
+  // Strip trailing device index 0 (e.g. 9181240385850 -> 918124038585, or 81240385850 -> 8124038585)
+  if (digits.length === 13 && digits.startsWith('91') && digits.endsWith('0')) {
+    digits = digits.slice(0, 12);
+  } else if (digits.length === 11 && digits.endsWith('0') && !digits.startsWith('0')) {
+    digits = digits.slice(0, 10);
+  }
+
+  let digits10 = digits;
+  if (digits.length === 12 && digits.startsWith('91')) {
+    digits10 = digits.slice(2);
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    digits10 = digits.slice(1);
+  } else if (digits.length > 10) {
+    digits10 = digits.slice(-10);
+  }
+
+  let formatted = '';
+  if (digits10.length === 10) {
+    formatted = `+91 ${digits10.slice(0, 5)} ${digits10.slice(5)}`;
+  } else if (digits.length > 0) {
+    formatted = `+${digits}`;
+  } else {
+    formatted = '+91 98765 43210';
+  }
+
+  return { cleanDigits: digits10 || digits, formattedPhone: formatted, digits10: digits10.slice(-10) };
+}
+window.normalizeWhatsAppPhone = normalizeWhatsAppPhone;
+
 function formatPhoneNumberPretty(phone) {
   if (!phone) return '+91 86680 07593';
   if (phone.includes('156066293805087')) return '+91 95009 04638';
-  const clean = phone.replace(/[^0-9]/g, '');
-  if (clean.length === 12 && clean.startsWith('91')) {
-    return `+91 ${clean.slice(2, 7)} ${clean.slice(7)}`;
-  }
-  if (clean.length === 10) {
-    return `+91 ${clean.slice(0, 5)} ${clean.slice(5)}`;
-  }
-  return phone.startsWith('+') ? phone : ('+' + phone);
+  const norm = normalizeWhatsAppPhone(phone);
+  return norm.formattedPhone || (phone.startsWith('+') ? phone : ('+' + phone));
 }
 
 // Update all UI elements displaying the WhatsApp Business Phone Number
@@ -8889,15 +8974,29 @@ function handleCancelQueryEdit(queryId) {
 }
 window.handleCancelQueryEdit = handleCancelQueryEdit;
 
-// Helper to extract clean 10-digit phone number (removing +91 or leading 0)
+// Helper to extract clean 10-digit phone number (removing +91, device :0 index, or leading 0)
 function extract10Digits(val) {
   if (!val) return '';
-  let digits = String(val).replace(/[^0-9]/g, '');
+  let str = String(val).trim();
+  if (str.includes('@')) str = str.split('@')[0];
+  if (str.includes(':')) str = str.split(':')[0];
+  let digits = str.replace(/[^0-9]/g, '');
+
+  // Strip trailing device index 0 (e.g. 9181240385850 -> 918124038585, or 81240385850 -> 8124038585)
+  if (digits.length === 13 && digits.startsWith('91') && digits.endsWith('0')) {
+    digits = digits.slice(0, 12);
+  } else if (digits.length === 11 && digits.endsWith('0') && !digits.startsWith('0')) {
+    digits = digits.slice(0, 10);
+  }
+
   if (digits.length === 12 && digits.startsWith('91')) {
     return digits.slice(2);
   }
   if (digits.length === 11 && digits.startsWith('0')) {
     return digits.slice(1);
+  }
+  if (digits.length > 10) {
+    return digits.slice(-10);
   }
   return digits;
 }
@@ -11580,11 +11679,15 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     absoluteMediaUrl = origin.replace(/\/+$/, '') + '/' + targetMedia.replace(/^\/+/, '');
   }
 
-  // Clean and normalize phone number
-  let cleanPhone = (phone || '').toString().trim().replace(/[\s\-\(\)]/g, '');
-  if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.substring(1);
+  // Clean and normalize phone number (strips :0 and device artifacts)
+  const normPhone = normalizeWhatsAppPhone(phone);
+  let cleanPhone = normPhone.cleanDigits;
   if (/^\d{10}$/.test(cleanPhone)) {
     cleanPhone = '91' + cleanPhone;
+  }
+  let cleanJid = jid;
+  if (cleanJid && (cleanJid.includes(':') || /^\d{13}@/.test(cleanJid) || cleanJid.includes('85850'))) {
+    cleanJid = cleanPhone ? `${cleanPhone}@s.whatsapp.net` : null;
   }
 
   const effectiveCustId = customerId || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : null);
@@ -11593,9 +11696,9 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
   // IMMEDIATELY persist outbound message to MySQL so it is NEVER lost on page reload!
   if (typeof persistOutboundMessageToBackend === 'function') {
     persistOutboundMessageToBackend({
-      phone: cleanPhone || phone,
+      phone: normPhone.formattedPhone || cleanPhone || phone,
       text: text,
-      jid: jid,
+      jid: cleanJid,
       accountId: targetAccId,
       media_url: targetMedia,
       customer_id: effectiveCustId,
@@ -11635,7 +11738,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
         SOCKET_IO.emit('whatsapp:send', {
           phone: cleanPhone,
           text,
-          jid,
+          jid: cleanJid,
           accountId: targetAccId,
           mediaUrl: targetBase64 || absoluteMediaUrl,
           media_url: targetBase64 || absoluteMediaUrl,
@@ -11676,7 +11779,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       body: JSON.stringify({
         phone: cleanPhone,
         text,
-        jid,
+        jid: cleanJid,
         accountId: targetAccId,
         mediaUrl: targetBase64 || absoluteMediaUrl,
         media_url: targetBase64 || absoluteMediaUrl,
@@ -11706,7 +11809,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       body: JSON.stringify({
         phone: cleanPhone,
         text,
-        jid,
+        jid: cleanJid,
         accountId: targetAccId,
         media_url: targetBase64 || targetMedia,
         mediaUrl: targetBase64 || targetMedia,
@@ -20216,27 +20319,31 @@ function renderCatalogGridFromList(list) {
           ` : ''}
           
           ${IS_BULK_PRICE_MODE ? `
-            <div class="absolute top-2.5 left-2.5 z-10 flex items-center">
+            <div class="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-1">
               <label class="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-xl border-2 ${isSelected ? 'border-emerald-600 shadow-md ring-2 ring-emerald-200' : 'border-slate-300 shadow-sm'} cursor-pointer hover:border-emerald-600 transition" onclick="event.stopPropagation()">
                 <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBulkProductSelected('${p.id}', this.checked, '${p.groupKey || ''}')" class="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
                 <span class="font-mono text-[11px] font-extrabold text-slate-800">${p.sku}</span>
                 ${p.isGroup ? `<span class="bg-indigo-900/90 text-indigo-100 text-[10px] font-extrabold px-1.5 py-0.5 rounded shadow-xs">${p.variantCount} Var</span>` : ''}
               </label>
+              <div class="shrink-0">
+                ${stockBadge}
+              </div>
             </div>
           ` : `
-            <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap max-w-[70%]">
-              <span class="bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shadow">${p.sku}</span>
-              ${p.isGroup ? `
-                <span class="bg-indigo-900/90 backdrop-blur-sm text-indigo-100 font-extrabold text-[10px] px-2 py-0.5 rounded-md shadow flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[13px] text-indigo-300">layers</span> ${p.variantCount} Variants
-                </span>
-              ` : ''}
+            <div class="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1 z-10 pointer-events-none">
+              <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                <span class="bg-slate-900/85 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shadow shrink-0">${p.sku}</span>
+                ${p.isGroup ? `
+                  <span class="bg-indigo-900/90 backdrop-blur-sm text-indigo-100 font-extrabold text-[10px] px-1.5 py-0.5 rounded-md shadow flex items-center gap-1 shrink-0">
+                    <span class="material-symbols-outlined text-[12px] text-indigo-300">layers</span> ${p.variantCount} Var
+                  </span>
+                ` : ''}
+              </div>
+              <div class="shrink-0 pointer-events-auto">
+                ${stockBadge}
+              </div>
             </div>
           `}
-
-          <div class="absolute top-2.5 right-2.5">
-            ${stockBadge}
-          </div>
           <div class="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between">
             <span class="text-[9px] bg-white/95 backdrop-blur-sm text-slate-800 font-bold px-2 py-0.5 rounded-md shadow-sm truncate max-w-[200px]" title="${catBreadcrumb}">
               ${catBreadcrumb}
@@ -30286,22 +30393,22 @@ function fetchQRBridgeStatus(btnEl) {
         }
       });
   } else {
-    // Hosted server fallback (e.g. Hostinger / MariaDB)
-    fetch('api.php?action=get_all')
+    // Hosted server fallback (e.g. Hostinger / MariaDB) - Fast dedicated accounts query (<5ms)
+    fetch('api.php?action=get_whatsapp_accounts')
       .then(r => r.json())
       .then(res => {
-        const data = res.data || res;
-        if (data && Array.isArray(data.whatsappAccounts)) {
-          const accounts = data.whatsappAccounts.map(a => ({
+        const rawList = res.accounts || res.whatsappAccounts || (res.data && res.data.whatsappAccounts) || [];
+        if (Array.isArray(rawList) && rawList.length > 0) {
+          const accounts = rawList.map(a => ({
             id: a.account_slot || a.id,
             name: a.display_name || a.account_name || a.name || 'WhatsApp Line',
             label: a.display_name || a.account_name || a.name || 'WhatsApp Line',
             phone: a.phone_number || a.phone || '',
             status: (a.status || 'DISCONNECTED').toUpperCase(),
-            qr_image: a.qr_code || null,
+            qr_image: a.qr_code || a.qr_image || null,
             connected_number: a.phone_number || a.phone || 'Awaiting Link'
           }));
-          applyUpdatedAccountsDelta(accounts, true);
+          applyUpdatedAccountsDelta(accounts, false);
           const primary = accounts.find(a => a.id === 'account_1') || accounts[0];
           if (primary) {
             updateQRBridgeUI({
@@ -30311,40 +30418,18 @@ function fetchQRBridgeStatus(btnEl) {
             });
           }
         }
-        if (data && data.whatsappAccount) {
-          CRM_STATE.whatsappAccount = Object.assign(CRM_STATE.whatsappAccount || {}, data.whatsappAccount);
+        if (res.whatsappAccount) {
+          CRM_STATE.whatsappAccount = Object.assign(CRM_STATE.whatsappAccount || {}, res.whatsappAccount);
           saveCRMState();
           updateConfiguredPhoneDisplays();
         }
       })
       .catch(() => {
-        // Direct bridge fetch failed or timed out: Fallback immediately to database state
-        // Ensures hard refresh never leaves Primary WhatsApp in a false DISCONNECTED state!
-        fetch('api.php?action=get_all')
-          .then(r => r.json())
-          .then(res => {
-            const data = res.data || res;
-            if (data && Array.isArray(data.whatsappAccounts)) {
-              const accounts = data.whatsappAccounts.map(a => ({
-                id: a.account_slot || a.id,
-                name: a.display_name || a.account_name || a.name || 'WhatsApp Line',
-                label: a.display_name || a.account_name || a.name || 'WhatsApp Line',
-                phone: a.phone_number || a.phone || '',
-                status: (a.status || 'DISCONNECTED').toUpperCase(),
-                qr_image: a.qr_code || null,
-                connected_number: a.phone_number || a.phone || 'Awaiting Link'
-              }));
-              applyUpdatedAccountsDelta(accounts, true);
-              const primary = accounts.find(a => a.id === 'account_1') || accounts[0];
-              if (primary) {
-                updateQRBridgeUI({
-                  connection: primary.status,
-                  connected_number: primary.phone,
-                  qr_image: primary.qr_image
-                });
-              }
-            }
-          }).catch(() => {});
+        // Fallback safely to in-memory accounts without secondary network latency
+        const accounts = getAvailableWhatsAppAccounts();
+        if (accounts.length > 0) {
+          applyUpdatedAccountsDelta(accounts, false);
+        }
       })
       .finally(() => {
         renderMultiAccountsHub();

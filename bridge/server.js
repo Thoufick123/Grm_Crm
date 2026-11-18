@@ -900,10 +900,29 @@ function resolveDestinationJid(phoneOrJid) {
     if (!phoneOrJid) return null;
     let target = phoneOrJid.toString().trim();
 
+    // Remove multi-device index if present (e.g. :0, :1, :2)
+    if (target.includes(':')) {
+        const parts = target.split(':');
+        const afterColon = parts[1] || '';
+        if (afterColon.includes('@')) {
+            target = parts[0] + '@' + afterColon.split('@')[1];
+        } else {
+            target = parts[0];
+        }
+    }
+
     // 1. Check if target has @lid or is a 14+ digit privacy LID
-    const cleanDigits = target.replace(/[^0-9]/g, '');
+    let cleanDigits = target.replace(/[^0-9]/g, '');
+
+    // Strip trailing device index 0 artifact (e.g. 9181240385850 -> 918124038585 or 81240385850 -> 8124038585)
+    if (cleanDigits.length === 13 && cleanDigits.startsWith('91') && cleanDigits.endsWith('0')) {
+        cleanDigits = cleanDigits.slice(0, 12);
+    } else if (cleanDigits.length === 11 && cleanDigits.endsWith('0') && !cleanDigits.startsWith('0')) {
+        cleanDigits = cleanDigits.slice(0, 10);
+    }
+
     if (target.includes('@lid') || cleanDigits.length >= 14) {
-        const lidDigits = target.split('@')[0].replace(/[^0-9]/g, '');
+        const lidDigits = target.split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
         if (LID_TO_PHONE_MAP.has(lidDigits)) {
             const mappedPhone = LID_TO_PHONE_MAP.get(lidDigits);
             console.log(`[JID Resolver] Resolved LID ${lidDigits} -> Standard Phone JID: ${mappedPhone}@s.whatsapp.net`);
@@ -935,7 +954,14 @@ function resolveDestinationJid(phoneOrJid) {
 
     // 2. Standard WhatsApp format
     if (target.includes('@s.whatsapp.net')) {
-        return target;
+        let userPart = target.split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
+        if (userPart.length === 13 && userPart.startsWith('91') && userPart.endsWith('0')) {
+            userPart = userPart.slice(0, 12);
+        } else if (userPart.length === 11 && userPart.endsWith('0') && !userPart.startsWith('0')) {
+            userPart = userPart.slice(0, 10);
+        }
+        if (userPart.length === 10) userPart = '91' + userPart;
+        return `${userPart}@s.whatsapp.net`;
     }
 
     // 3. Check memory cache
@@ -951,11 +977,6 @@ function resolveDestinationJid(phoneOrJid) {
     }
 
     let clean = cleanDigits;
-    if (jidMap.has(clean)) {
-        return jidMap.get(clean);
-    }
-
-    // 4. Standard 10-digit Indian numbers
     if (clean.length === 10) {
         clean = '91' + clean;
     }
@@ -1406,7 +1427,14 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             }
                         }
 
-                        const digitsOnly = cleanNumber.replace(/[^0-9]/g, '');
+                        let digitsOnly = cleanNumber.replace(/[^0-9]/g, '');
+                        // Strip trailing device index if 13 digits starting with 91 (e.g. 9181240385850 -> 918124038585)
+                        if (digitsOnly.length === 13 && digitsOnly.startsWith('91') && digitsOnly.endsWith('0')) {
+                            digitsOnly = digitsOnly.slice(0, 12);
+                        } else if (digitsOnly.length === 11 && digitsOnly.endsWith('0') && !digitsOnly.startsWith('0')) {
+                            digitsOnly = digitsOnly.slice(0, 10);
+                        }
+
                         if (digitsOnly.length === 10) {
                             realPhone = '+91 ' + digitsOnly.slice(0, 5) + ' ' + digitsOnly.slice(5);
                         } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
@@ -1418,10 +1446,16 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         const senderNumber = realPhone || ('+' + cleanNumber);
 
                         let resolvedSenderName = msg.pushName;
+                        if (resolvedSenderName && /whatsapp business|primary line|primary whatsapp|line \d|account_\d/i.test(resolvedSenderName)) {
+                            resolvedSenderName = null;
+                        }
                         if (!resolvedSenderName) {
                             const cachedC = CONTACTS_CACHE.get(senderJid) || CONTACTS_CACHE.get(cleanNumber) || (LID_TO_PHONE_MAP.has(cleanNumber) ? CONTACTS_CACHE.get(LID_TO_PHONE_MAP.get(cleanNumber)) : null);
                             if (cachedC) {
-                                resolvedSenderName = cachedC.name || cachedC.notify || cachedC.verifiedName;
+                                const candName = cachedC.name || cachedC.notify || cachedC.verifiedName;
+                                if (candName && !/whatsapp business|primary line|primary whatsapp|line \d|account_\d/i.test(candName)) {
+                                    resolvedSenderName = candName;
+                                }
                             }
                         }
                         const senderName = resolvedSenderName || ('Customer ' + senderNumber.slice(-4));
@@ -1819,7 +1853,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             if (replyObj) {
                                 setTimeout(async () => {
                                     try {
-                                        const targetJid = resolveDestinationJid(senderNumber || senderJid);
+                                        const cleanRemote = (msg.key?.remoteJid || '').split('@')[0].split(':')[0] + '@' + ((msg.key?.remoteJid || '').split('@')[1] || 's.whatsapp.net');
+                                        const targetJid = resolveDestinationJid(senderNumber || cleanRemote || senderJid);
                                         let sentRes = null;
                                         let botText = '';
                                         let botType = 'text';
@@ -1837,7 +1872,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                                     sentRes = await sock.sendMessage(targetJid, {
                                                         image: imgBuf,
                                                         caption: replyObj.caption
-                                                    });
+                                                    }, { quoted: msg });
                                                 } catch (imgErr) {
                                                     console.warn('[Image Send Failed, Falling back to Text]:', imgErr.message);
                                                 }
@@ -1846,12 +1881,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             if (!sentRes) {
                                                 sentRes = await sock.sendMessage(targetJid, {
                                                     text: `${replyObj.caption}\n\n🖼️ *Product Image:* ${replyObj.image}`
-                                                });
+                                                }, { quoted: msg });
                                             }
                                         } else {
                                             botText = replyObj.text || replyObj;
                                             console.log(`[Auto-Reply Engine] 🤖 Dispatching response to ${senderName} (${targetJid}): "${cleanMsg}"`);
-                                            sentRes = await sock.sendMessage(targetJid, { text: botText });
+                                            sentRes = await sock.sendMessage(targetJid, { text: botText }, { quoted: msg });
                                         }
 
                                         console.log(`[Auto-Reply Engine] ✅ Delivered to ${targetJid} (ID: ${sentRes?.key?.id})`);
@@ -1940,7 +1975,9 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     if (cData.lid === recipientJid || (cData.lid && cData.lid.includes(digitsOnly))) {
                                         recipientContactName = cData.name || cData.notify || cData.verifiedName;
                                         if (cId.includes('@s.whatsapp.net') && digitsOnly.length >= 14) {
-                                            const ph = cId.split('@')[0].replace(/[^0-9]/g, '');
+                                            let ph = cId.split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
+                                            if (ph.length === 13 && ph.startsWith('91') && ph.endsWith('0')) ph = ph.slice(0, 12);
+                                            else if (ph.length === 11 && ph.endsWith('0') && !ph.startsWith('0')) ph = ph.slice(0, 10);
                                             if (ph) {
                                                 LID_TO_PHONE_MAP.set(digitsOnly, ph);
                                                 PHONE_TO_LID_MAP.set(ph, digitsOnly);
