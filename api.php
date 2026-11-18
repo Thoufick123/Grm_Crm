@@ -537,10 +537,10 @@ if ($action === 'get_state' || $action === 'get_all') {
                     $found = false;
                     foreach ($waAccounts as &$wa) {
                         if (($wa['account_slot'] ?? '') === ($line['id'] ?? '')) {
-                            if (!empty($line['qr_code']) && empty($wa['qr_code'])) {
+                            if (!empty($line['qr_code'])) {
                                 $wa['qr_code'] = $line['qr_code'];
                             }
-                            if (!empty($line['status']) && ($line['status'] === 'SCAN_QR' || $line['status'] === 'CONNECTED')) {
+                            if (!empty($line['status'])) {
                                 $wa['status'] = $line['status'];
                             }
                             if (($line['status'] ?? '') === 'CONNECTED') {
@@ -549,6 +549,15 @@ if ($action === 'get_state' || $action === 'get_all') {
                                 if (!empty($line['phone_number'])) {
                                     $wa['phone_number'] = $line['phone_number'];
                                 }
+                            } elseif (($line['status'] ?? '') === 'DISCONNECTED') {
+                                $wa['status'] = 'DISCONNECTED';
+                                $wa['phone_number'] = 'Awaiting Link';
+                                if (empty($line['qr_code'])) {
+                                    $wa['qr_code'] = null;
+                                }
+                            }
+                            if (!empty($line['label'])) {
+                                $wa['display_name'] = $line['label'];
                             }
                             $found = true;
                             break;
@@ -1331,9 +1340,11 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $cfg['connected_lines'] = [];
     }
 
-    // Guard: Prevent transient/unauthenticated SCAN_QR or DISCONNECTED requests from overwriting an already CONNECTED account
+    // Guard: Prevent empty transient status updates from overwriting an already CONNECTED account
+    // But ALWAYS allow if forced, if a real QR code is provided, or if disconnection is reported
     $isForce = !empty($data['force']) || !empty($data['force_disconnect']);
-    if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isForce) {
+    $hasRealQr = !empty($qrCode) && strlen($qrCode) > 20;
+    if ($status === 'SCAN_QR' && !$hasRealQr && !$isForce) {
         $alreadyConnected = false;
         foreach ($cfg['connected_lines'] as $existingLine) {
             if (($existingLine['id'] ?? '') === $slotId && ($existingLine['status'] ?? '') === 'CONNECTED') {
@@ -1341,20 +1352,10 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                 break;
             }
         }
-        if (!$alreadyConnected && $pdo) {
-            try {
-                $chkStmt = $pdo->prepare("SELECT `status` FROM `whatsapp_accounts` WHERE `account_slot` = ? LIMIT 1");
-                $chkStmt->execute([$slotId]);
-                $row = $chkStmt->fetch();
-                if ($row && $row['status'] === 'CONNECTED') {
-                    $alreadyConnected = true;
-                }
-            } catch (Exception $e) {}
-        }
         if ($alreadyConnected) {
             echo json_encode([
                 "status" => "success",
-                "message" => "Account $slotId is already active and CONNECTED. Ignoring transient $status update."
+                "message" => "Account $slotId is already active and CONNECTED. Ignoring empty QR update."
             ]);
             exit;
         }
@@ -1364,8 +1365,14 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         if (($line['id'] ?? '') === $slotId) {
             $line['status'] = $status;
             if ($phoneNumber) $line['phone_number'] = $phoneNumber;
-            if ($qrCode) $line['qr_code'] = $qrCode;
-            if ($status === 'CONNECTED') unset($line['qr_code']);
+            if ($status === 'DISCONNECTED') {
+                $line['phone_number'] = 'Awaiting Link';
+                unset($line['qr_code']);
+            } else if ($status === 'CONNECTED') {
+                unset($line['qr_code']);
+            } else if ($qrCode) {
+                $line['qr_code'] = $qrCode;
+            }
             $line['label'] = $label;
             $found = true;
             break;
@@ -1375,14 +1382,15 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $cfg['connected_lines'][] = [
             'id' => $slotId,
             'label' => $label,
-            'phone_number' => $phoneNumber ?: 'Awaiting Link',
+            'phone_number' => ($status === 'CONNECTED' && $phoneNumber) ? $phoneNumber : 'Awaiting Link',
             'status' => $status,
-            'qr_code' => $qrCode
+            'qr_code' => ($status === 'CONNECTED' || $status === 'DISCONNECTED') ? null : $qrCode
         ];
     }
     if ($slotId === 'account_1') {
         $cfg['status'] = $status;
-        if ($phoneNumber) $cfg['phone_number'] = $phoneNumber;
+        if ($phoneNumber && $status === 'CONNECTED') $cfg['phone_number'] = $phoneNumber;
+        if ($status === 'DISCONNECTED') $cfg['phone_number'] = 'Awaiting Link';
     }
     $cfg['last_sync'] = date("Y-m-d H:i:s");
     atomicWriteJson($configFile, $cfg);
@@ -1390,6 +1398,8 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     // 2. Update MySQL database
     if ($pdo) {
         try {
+            $dbPhone = ($status === 'CONNECTED' && $phoneNumber) ? $phoneNumber : (($status === 'DISCONNECTED') ? 'Awaiting Link' : null);
+            $dbQr = ($status === 'CONNECTED' || $status === 'DISCONNECTED') ? null : $qrCode;
             $stmt = $pdo->prepare("
                 UPDATE `whatsapp_accounts` 
                 SET `status` = ?, 
@@ -1400,8 +1410,8 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             ");
             $stmt->execute([
                 $status,
-                $phoneNumber ?: null,
-                $status === 'CONNECTED' ? null : $qrCode,
+                $dbPhone,
+                $dbQr,
                 $label,
                 $slotId
             ]);
@@ -1415,17 +1425,28 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                     ");
                     $ins->execute([
                         $slotId,
-                        $phoneNumber ?: '+91 99435 57998',
+                        $dbPhone ?: '+91 99435 57998',
                         'GRM Garments Business Hub',
                         $label,
                         $label,
                         $status,
-                        $status === 'CONNECTED' ? null : $qrCode
+                        $dbQr
                     ]);
                 }
             }
         } catch (Exception $e) {}
     }
+
+    // 3. Touch live_account_updates.json to notify SSE across multiple tabs & browsers instantly
+    $updatesFile = __DIR__ . '/live_account_updates.json';
+    @file_put_contents($updatesFile, json_encode([
+        'action' => 'status_sync',
+        'account_slot' => $slotId,
+        'status' => $status,
+        'phone_number' => $phoneNumber,
+        'has_qr' => !empty($qrCode),
+        'timestamp' => time()
+    ]));
 
     echo json_encode(["status" => "success", "message" => "Account $slotId status synced: $status"]);
     exit;
@@ -1608,18 +1629,122 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $accountId = $postData['accountId'] ?? 'account_1';
 
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
-    $currentConfig['status'] = 'DISCONNECTED';
+    if ($accountId === 'account_1') {
+        $currentConfig['status'] = 'DISCONNECTED';
+        $currentConfig['phone_number'] = 'Awaiting Link';
+    }
+    if (isset($currentConfig['connected_lines']) && is_array($currentConfig['connected_lines'])) {
+        foreach ($currentConfig['connected_lines'] as &$line) {
+            if (($line['id'] ?? '') === $accountId) {
+                $line['status'] = 'DISCONNECTED';
+                $line['phone_number'] = 'Awaiting Link';
+                unset($line['qr_code']);
+            }
+        }
+    }
     $currentConfig['last_sync'] = date("Y-m-d H:i:s");
     atomicWriteJson($configFile, $currentConfig);
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("UPDATE `whatsapp_accounts` SET `status` = 'DISCONNECTED' WHERE `account_slot` = ?");
+            $stmt = $pdo->prepare("UPDATE `whatsapp_accounts` SET `status` = 'DISCONNECTED', `phone_number` = 'Awaiting Link', `qr_code` = NULL WHERE `account_slot` = ?");
             $stmt->execute([$accountId]);
         } catch (Exception $e) {}
     }
 
-    echo json_encode(["status" => "success", "message" => "Account disconnected in backend"]);
+    // Touch live_account_updates.json to notify SSE stream across all open tabs & browsers
+    $updatesFile = __DIR__ . '/live_account_updates.json';
+    @file_put_contents($updatesFile, json_encode([
+        'action' => 'disconnect',
+        'account_slot' => $accountId,
+        'status' => 'DISCONNECTED',
+        'timestamp' => time()
+    ]));
+
+    echo json_encode(["status" => "success", "message" => "Account $accountId disconnected in backend. Customer records safely preserved."]);
+    exit;
+}
+
+if ($action === 'add_account_slot' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $postData = json_decode($input, true);
+    $accountId = $postData['accountId'] ?? '';
+    $label = trim($postData['label'] ?? '');
+
+    if (empty($accountId)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "accountId is required"]);
+        exit;
+    }
+    if (empty($label)) {
+        $label = "WhatsApp Line ($accountId)";
+    }
+
+    $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    if (!isset($currentConfig['connected_lines']) || !is_array($currentConfig['connected_lines'])) {
+        $currentConfig['connected_lines'] = [];
+    }
+
+    $found = false;
+    foreach ($currentConfig['connected_lines'] as &$line) {
+        if (($line['id'] ?? '') === $accountId) {
+            $line['label'] = $label;
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
+        $currentConfig['connected_lines'][] = [
+            'id' => $accountId,
+            'label' => $label,
+            'phone_number' => 'Awaiting Link',
+            'status' => 'DISCONNECTED',
+            'qr_code' => null
+        ];
+    }
+    $currentConfig['last_sync'] = date("Y-m-d H:i:s");
+    atomicWriteJson($configFile, $currentConfig);
+
+    if ($pdo) {
+        try {
+            $check = $pdo->prepare("SELECT `id` FROM `whatsapp_accounts` WHERE `account_slot` = ? LIMIT 1");
+            $check->execute([$accountId]);
+            if (!$check->fetch()) {
+                $ins = $pdo->prepare("
+                    INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`, `qr_code`)
+                    VALUES (?, ?, ?, ?, ?, 'DISCONNECTED', NULL)
+                ");
+                $ins->execute([
+                    $accountId,
+                    'Awaiting Link',
+                    'GRM Garments Business Hub',
+                    $label,
+                    $label
+                ]);
+            }
+        } catch (Exception $e) {}
+    }
+
+    // Touch live_account_updates.json
+    $updatesFile = __DIR__ . '/live_account_updates.json';
+    @file_put_contents($updatesFile, json_encode([
+        'action' => 'add_slot',
+        'account_slot' => $accountId,
+        'label' => $label,
+        'status' => 'DISCONNECTED',
+        'timestamp' => time()
+    ]));
+
+    echo json_encode([
+        "status" => "success",
+        "message" => "Account slot $accountId created successfully",
+        "account" => [
+            "id" => $accountId,
+            "label" => $label,
+            "status" => "DISCONNECTED",
+            "phone_number" => "Awaiting Link"
+        ]
+    ]);
     exit;
 }
 
@@ -1643,6 +1768,14 @@ if ($action === 'delete_account_slot' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                 $stmt->execute([$accountId]);
             } catch (Exception $e) {}
         }
+
+        // Touch live_account_updates.json
+        $updatesFile = __DIR__ . '/live_account_updates.json';
+        @file_put_contents($updatesFile, json_encode([
+            'action' => 'delete_slot',
+            'account_slot' => $accountId,
+            'timestamp' => time()
+        ]));
 
         echo json_encode(["status" => "success", "message" => "Account slot $accountId deleted successfully"]);
         exit;

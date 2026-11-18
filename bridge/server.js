@@ -865,6 +865,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         account_slot: accountId,
                         status: 'SCAN_QR',
                         qr_code: accountObj.qrImage,
+                        force: true,
                         label: label
                     }).catch(() => {});
                 } catch (err) {
@@ -893,16 +894,30 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         account_slot: accountId,
                         status: 'DISCONNECTED',
                         phone_number: null,
+                        force: true,
                         label: label
                     }).catch(() => {});
                 }
 
                 if (isLoggedOut) {
-                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Marking disconnected...`);
-                    // Preserve session directory unless user explicitly disconnects via API to prevent accidental wipe
+                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Cleaning session dir and re-initializing fresh QR...`);
+                    // Clean invalidated session directory so fresh QR code can be generated smoothly
+                    try {
+                        if (fs.existsSync(sessionDir)) {
+                            fs.rmSync(sessionDir, { recursive: true, force: true });
+                        }
+                        if (accountId === 'account_1') {
+                            const legacyDir = path.join(__dirname, 'auth_session');
+                            if (fs.existsSync(legacyDir)) {
+                                fs.rmSync(legacyDir, { recursive: true, force: true });
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`[Session Clean Error for ${accountId}]:`, e.message);
+                    }
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-                    }, 3000);
+                    }, 1200);
                 } else if (isReplaced) {
                     console.warn(`[QR Bridge - ${accountId}] Session replaced by another active connection (status: 440). Pausing auto-reconnect to prevent rapid loop...`);
                     setTimeout(() => {
@@ -935,6 +950,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     phone_number: accountObj.connectedNumber,
                     qr_code: null,
                     connected_name: accountObj.connectedName,
+                    force: true,
                     label: label
                 }).catch(() => {});
             }
@@ -2229,7 +2245,7 @@ app.get('/api/accounts', (req, res) => {
 
 app.post('/api/accounts/add', (req, res) => {
     const nextIdx = accounts.size + 1;
-    const nextId = 'account_' + nextIdx;
+    const nextId = req.body.accountId || ('account_' + nextIdx);
     const label = req.body.label || `WhatsApp Account #${nextIdx}`;
     initAccountSession(nextId, label);
     res.json({ status: 'success', message: 'Account initialization started', account_id: nextId });
@@ -2345,6 +2361,15 @@ app.post('/api/accounts/disconnect', async (req, res) => {
         }
 
         broadcastAccountsUpdate();
+
+        // Also sync directly to Hostinger CRM API with force: true
+        callCrmApi('sync_account_status', {
+            account_slot: targetId,
+            status: 'DISCONNECTED',
+            phone_number: null,
+            force: true,
+            label: acc.label
+        }).catch(() => {});
 
         // Re-initialize a fresh QR session for this slot after a short delay
         setTimeout(() => {
