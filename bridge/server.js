@@ -331,6 +331,20 @@ async function getImageBuffer(url) {
                 return Buffer.from(arrayBuf);
             }
         }
+
+        // 5. Remote Hostinger Fallback for relative paths like uploads/media/...
+        if (typeof url === 'string' && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
+            const remoteUrl = `${CRM_BASE_URL}/${url.replace(/^[/\\]+/, '')}`;
+            if (typeof fetch === 'function') {
+                try {
+                    const res = await fetch(remoteUrl);
+                    if (res.ok) {
+                        const arrayBuf = await res.arrayBuffer();
+                        return Buffer.from(arrayBuf);
+                    }
+                } catch (e) {}
+            }
+        }
     } catch (e) {
         console.warn(`[Image Buffer Fetch Failed for ${url?.slice?.(0, 80)}]:`, e.message);
     }
@@ -365,6 +379,19 @@ async function getAudioBuffer(url) {
                     const arrayBuf = await res.arrayBuffer();
                     return Buffer.from(arrayBuf);
                 }
+            }
+        }
+        // Remote Hostinger Fallback for relative paths like uploads/voice/...
+        if (typeof url === 'string' && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
+            const remoteUrl = `${CRM_BASE_URL}/${url.replace(/^[/\\]+/, '')}`;
+            if (typeof fetch === 'function') {
+                try {
+                    const res = await fetch(remoteUrl);
+                    if (res.ok) {
+                        const arrayBuf = await res.arrayBuffer();
+                        return Buffer.from(arrayBuf);
+                    }
+                } catch (e) {}
             }
         }
     } catch (e) {
@@ -1184,7 +1211,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         let mediaUrl = null;
                         let duration = 0;
 
-                        // 1. Check for Voice Message / Audio
+                        // 1. Check for Voice Message / Audio (Wrapped Resilient Download + Remote Hostinger Base64 Sync)
                         if (rawMsg.audioMessage) {
                             msgType = 'audio';
                             const isPtt = rawMsg.audioMessage.ptt;
@@ -1193,18 +1220,23 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                             try {
                                 const audioBuffer = await downloadMediaMessage(
-                                    msg,
+                                    { key: msg.key, message: rawMsg },
                                     'buffer',
                                     {},
-                                    { logger: pino({ level: 'silent' }) }
+                                    { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
                                 );
                                 if (audioBuffer) {
-                                    const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'voice');
-                                    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-                                    const fileName = `voice_${Date.now()}_${Math.floor(Math.random() * 1000)}.ogg`;
-                                    fs.writeFileSync(path.join(uploadsDir, fileName), audioBuffer);
-                                    mediaUrl = `uploads/voice/${fileName}`;
-                                    console.log(`[Audio Message Saved] ${mediaUrl} (${audioBuffer.length} bytes) from ${senderName}`);
+                                    // Send base64 data URI so remote Hostinger PHP receives actual file bytes and writes to uploads/voice/
+                                    mediaUrl = 'data:audio/ogg;base64,' + audioBuffer.toString('base64');
+                                    console.log(`[Audio Downloaded & Base64 Encoded] (${audioBuffer.length} bytes) from ${senderName}`);
+
+                                    // Also cache locally on bridge filesystem
+                                    try {
+                                        const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'voice');
+                                        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                                        const fileName = `voice_${Date.now()}_${Math.floor(Math.random() * 1000)}.ogg`;
+                                        fs.writeFileSync(path.join(uploadsDir, fileName), audioBuffer);
+                                    } catch (e) {}
                                 }
                             } catch (err) {
                                 console.error('[Audio Download Error]:', err.message);
@@ -1624,6 +1656,20 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     );
                                     if (imgBuffer) {
                                         outMediaUrl = 'data:image/jpeg;base64,' + imgBuffer.toString('base64');
+                                    }
+                                } catch (e) {}
+                            } else if (rawMsg.audioMessage) {
+                                outType = 'audio';
+                                outText = rawMsg.audioMessage.ptt ? '🎙️ Voice Message' : '🎵 Audio Message';
+                                try {
+                                    const audioBuffer = await downloadMediaMessage(
+                                        { key: msg.key, message: rawMsg },
+                                        'buffer',
+                                        {},
+                                        { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+                                    );
+                                    if (audioBuffer) {
+                                        outMediaUrl = 'data:audio/ogg;base64,' + audioBuffer.toString('base64');
                                     }
                                 } catch (e) {}
                             } else if (rawMsg.conversation) {

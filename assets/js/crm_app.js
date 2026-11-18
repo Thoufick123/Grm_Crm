@@ -36629,6 +36629,23 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
       // Immediately reset voice recorder and close panel so user cannot re-click
       window.resetVoiceRecorder();
 
+      // Direct instant dispatch to WhatsApp phone via connected Bridge
+      const targetAudio = (sendMode === 'translated' ? _voiceCurrentTransAudioUrl : _voiceUploadedAudioUrl) || data.audio_url;
+      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+        SOCKET_IO.emit('whatsapp:send', {
+          phone: phone,
+          text: '🎤 WhatsApp Voice Note',
+          jid: customer?.jid || null,
+          accountId: (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' ? ACTIVE_SEND_ACCOUNT_ID : null) || 'account_1',
+          mediaUrl: targetAudio,
+          media_type: 'audio',
+          isVoiceNote: true,
+          customerId: custId
+        }, (res) => {
+          console.log('[Socket Voice Dispatch Result]:', res);
+        });
+      }
+
       if (CRM_STATE && CRM_STATE.conversations) {
         if (!CRM_STATE.conversations[custId]) {
           CRM_STATE.conversations[custId] = [];

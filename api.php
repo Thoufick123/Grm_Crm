@@ -1,5 +1,36 @@
 <?php
 /**
+ * Universal Base64 Media Decoder & File Persister
+ * Safely decodes data:image/... and data:audio/... to Hostinger uploads/ storage.
+ */
+function saveBase64MediaIfPresent(&$mediaUrl, $type = null) {
+    if (empty($mediaUrl) || !is_string($mediaUrl)) return null;
+    if (strpos($mediaUrl, 'data:') !== 0 || strpos($mediaUrl, ';base64,') === false) return $mediaUrl;
+
+    list($meta, $b64data) = explode(';base64,', $mediaUrl, 2);
+    $mime = strtolower(substr($meta, 5));
+    
+    $isImg = (strpos($mime, 'image') !== false || $type === 'image');
+    $isAudio = (strpos($mime, 'audio') !== false || strpos($mime, 'ogg') !== false || strpos($mime, 'webm') !== false || $type === 'audio');
+    
+    $subDir = $isImg ? 'media' : ($isAudio ? 'voice' : 'media');
+    $ext = $isImg ? 'jpg' : ($isAudio ? 'ogg' : 'bin');
+    
+    $dir = __DIR__ . '/uploads/' . $subDir;
+    if (!file_exists($dir)) @mkdir($dir, 0777, true);
+    
+    $cleanB64 = str_replace(["\r", "\n", " "], '', $b64data);
+    $rawBytes = base64_decode($cleanB64);
+    if ($rawBytes !== false && strlen($rawBytes) > 0) {
+        $fileName = ($isImg ? 'img_' : 'voice_') . time() . '_' . substr(uniqid(), -5) . '.' . $ext;
+        file_put_contents($dir . '/' . $fileName, $rawBytes);
+        $mediaUrl = 'uploads/' . $subDir . '/' . $fileName;
+        return $mediaUrl;
+    }
+    return $mediaUrl;
+}
+
+/**
  * GRM WHATSAPP CRM — FULL BACKEND REST API (PHP + XAMPP MYSQL)
  * Provides comprehensive database endpoints for:
  * - CRM Full State Synchronization (MySQL + Local Storage)
@@ -3061,8 +3092,9 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     if (empty($text) && !empty($mediaUrl)) {
-        $text = '[Photo Attachment]';
+        $text = ($mediaType === 'audio' || strpos((string)$mediaUrl, 'voice') !== false) ? '🎤 Voice Note' : '[Photo Attachment]';
     }
+    saveBase64MediaIfPresent($mediaUrl, $mediaType);
 
     // Call Node.js Baileys Bridge
     $bRes = curlBridgePost('/api/send', [
@@ -3299,19 +3331,9 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         "received_at" => $receivedAt
     ];
 
-    // Clean media_url if base64 before putting into queue
-    if (!empty($msgEntry['media_url']) && str_starts_with($msgEntry['media_url'], 'data:')) {
-        $mMatch = [];
-        if (preg_match('/^data:([a-zA-Z0-9\/\+;=-]+);base64,(.+)$/', $msgEntry['media_url'], $mMatch)) {
-            $isImg = strpos($mMatch[1], 'image') !== false;
-            $ext = $isImg ? 'jpg' : (strpos($mMatch[1], 'audio') !== false ? 'ogg' : 'bin');
-            $dir = $isImg ? (__DIR__ . '/uploads/media') : (__DIR__ . '/uploads/voice');
-            if (!file_exists($dir)) @mkdir($dir, 0777, true);
-            $fileName = 'media_' . time() . '_' . substr(uniqid(), -5) . '.' . $ext;
-            file_put_contents($dir . '/' . $fileName, base64_decode($mMatch[2]));
-            $msgEntry['media_url'] = ($isImg ? 'uploads/media/' : 'uploads/voice/') . $fileName;
-        }
-    }
+    // Universal resilient media decoding (Images & Audio Voice Notes)
+    saveBase64MediaIfPresent($mediaUrl, $type);
+    $msgEntry['media_url'] = $mediaUrl;
 
     // Append to live queue file (capped to last 50 items for ultra-fast polling)
     $queue = [];
