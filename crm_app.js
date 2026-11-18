@@ -1,30 +1,4 @@
 // =========================================================================
-// UNIVERSAL TOAST SUPPRESSION SHIELD
-// Guaranteed zero on-screen floating toast banners: all alerts route strictly to Notification Center
-// =========================================================================
-(function suppressToastContainerGlobally() {
-  try {
-    const styleId = 'grm-suppress-toasts-css';
-    if (typeof document !== 'undefined' && !document.getElementById(styleId)) {
-      const styleEl = document.createElement('style');
-      styleEl.id = styleId;
-      styleEl.textContent = '#toast-container, .crm-toast-item { display: none !important; visibility: hidden !important; pointer-events: none !important; height: 0 !important; width: 0 !important; opacity: 0 !important; }';
-      (document.head || document.documentElement).appendChild(styleEl);
-    }
-    if (typeof document !== 'undefined') {
-      const container = document.getElementById('toast-container');
-      if (container) {
-        container.style.setProperty('display', 'none', 'important');
-        container.style.setProperty('visibility', 'hidden', 'important');
-        container.innerHTML = '';
-      }
-      const stale = document.querySelectorAll('.crm-toast-item');
-      stale.forEach(el => el.remove());
-    }
-  } catch (e) { }
-})();
-
-// =========================================================================
 // LIGHTWEIGHT UI STRING HELPER (Native English Default)
 // =========================================================================
 if (typeof window.t !== 'function') {
@@ -2281,15 +2255,7 @@ function initSocketIO() {
         const color = (type.includes('APPROV') || type === 'SUCCESS') ? 'emerald' : ((type.includes('REJECT') || type === 'ERROR') ? 'rose' : 'amber');
         const icon = (type.includes('APPROV') || type === 'SUCCESS') ? 'check_circle' : ((type.includes('REJECT') || type === 'ERROR') ? 'cancel' : 'notifications');
         showToast(notif.title, notif.message || '', icon, color);
-        if (typeof addAppNotification === 'function') {
-          addAppNotification({
-            title: notif.title,
-            message: notif.message || '',
-            type: 'alerts',
-            icon: icon,
-            color: color
-          });
-        }
+        
       }
     });
 
@@ -2603,16 +2569,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
       'chat',
       'emerald'
     );
-    if (typeof addAppNotification === 'function') {
-      addAppNotification({
-        title: customer.name || 'WhatsApp Customer',
-        message: `${messageText.length > 80 ? messageText.slice(0, 80) + '...' : messageText}`,
-        type: 'chats',
-        icon: 'chat',
-        color: 'emerald',
-        action: { view: 'inbox', customerId: customer.id }
-      });
-    }
+    
   }
 
   // 9. Automated Stock Category Instant Auto-Responder Engine
@@ -4071,400 +4028,91 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
 }
 
 // =========================================================================
-// REAL-TIME NOTIFICATION HUB & DASHBOARD NOTIFICATION CENTER
+// FLOATING TOAST DISPATCHER (NOTIFICATION CENTER PERMANENTLY REMOVED)
 // =========================================================================
-window.ACTIVE_NOTIF_FILTER = 'all';
+try {
+  localStorage.removeItem('GRM_NOTIFICATIONS');
+} catch (e) { }
 
-function getAppNotifications() {
-  if (!CRM_STATE.notifications || !Array.isArray(CRM_STATE.notifications)) {
-    try {
-      const stored = localStorage.getItem('GRM_NOTIFICATIONS');
-      CRM_STATE.notifications = stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      CRM_STATE.notifications = [];
-    }
-  }
-
-  // Seed helpful default notifications if history is empty
-  if (CRM_STATE.notifications.length === 0) {
-    const now = Date.now();
-    CRM_STATE.notifications = [
-      {
-        id: 'notif_welcome',
-        title: 'GRM WhatsApp CRM Ready',
-        message: 'Real-time event push streaming active on official business lines.',
-        type: 'alerts',
-        icon: 'verified',
-        color: 'emerald',
-        timestamp: now - 60000,
-        timeStr: '1m ago',
-        read: false,
-        action: { view: 'dashboard' }
-      },
-      {
-        id: 'notif_autoreply',
-        title: 'Auto-Reply Rules Active',
-        message: 'Automated greeting and catalog bots are online for customer queries.',
-        type: 'alerts',
-        icon: 'smart_toy',
-        color: 'blue',
-        timestamp: now - 180000,
-        timeStr: '3m ago',
-        read: false,
-        action: { view: 'settings' }
-      }
-    ];
-    saveAppNotifications();
-  }
-
-  return CRM_STATE.notifications;
-}
-
-function saveAppNotifications() {
-  try {
-    localStorage.setItem('GRM_NOTIFICATIONS', JSON.stringify((CRM_STATE.notifications || []).slice(0, 60)));
-  } catch (e) { }
-}
-
-function triggerBellPingAnimation() {
-  try {
-    const bells = [
-      document.getElementById('header-notif-bell-icon'),
-      document.getElementById('header-notif-bell-icon-mobile')
-    ].filter(Boolean);
-
-    bells.forEach(bell => {
-      bell.classList.remove('bell-ring-anim');
-      void bell.offsetWidth; // force DOM reflow to re-trigger CSS keyframe
-      bell.classList.add('bell-ring-anim');
-    });
-
-    const pings = [
-      document.getElementById('header-notif-ping'),
-      document.getElementById('header-notif-ping-mobile')
-    ].filter(Boolean);
-
-    pings.forEach(ping => {
-      ping.classList.add('animate-bounce');
-      setTimeout(() => {
-        try { ping.classList.remove('animate-bounce'); } catch (e) { }
-      }, 1200);
-    });
-  } catch (e) { }
-}
-window.triggerBellPingAnimation = triggerBellPingAnimation;
-
-function addAppNotification(item) {
-  if (!item || !item.title) return;
-  const list = getAppNotifications();
-  const notifObj = {
-    id: item.id || ('notif_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
-    title: item.title,
-    message: item.message || '',
-    type: item.type || 'alerts', // 'chats', 'calls', 'alerts'
-    icon: item.icon || (item.type === 'calls' ? 'call' : (item.type === 'chats' ? 'chat' : 'notifications')),
-    color: item.color || (item.type === 'calls' ? 'blue' : (item.type === 'chats' ? 'emerald' : 'amber')),
-    timestamp: item.timestamp || Date.now(),
-    timeStr: item.timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    read: false,
-    action: item.action || null
-  };
-
-  list.unshift(notifObj);
-  if (list.length > 60) list.length = 60; // Keep latest 60 items
-  saveAppNotifications();
-  updateNotificationBadge();
-  triggerBellPingAnimation();
-
-  // If dropdown flyout is open, re-render in real time
-  const dropdown = document.getElementById('notifications-dropdown');
-  if (dropdown && !dropdown.classList.contains('hidden')) {
-    renderNotificationsList();
-  }
-}
-window.addAppNotification = addAppNotification;
-
-// Drain any notifications pushed before crm_app.js initialization
-if (Array.isArray(window.PENDING_APP_NOTIFICATIONS) && window.PENDING_APP_NOTIFICATIONS.length > 0) {
-  const pending = window.PENDING_APP_NOTIFICATIONS.splice(0, window.PENDING_APP_NOTIFICATIONS.length);
-  pending.forEach(item => addAppNotification(item));
-}
-
-// Universal Notification Dispatcher: Strictly suppresses any on-screen floating toast boxes
-// and routes every alert, status update, and message directly to the Notifications Center (Bell Icon)
 window.showToast = function (title, message, icon = 'info', color = 'emerald', duration = 2800) {
   if (!title && !message) return;
-
-  // 1. Immediately wipe and suppress any toast containers from DOM
   try {
     const container = document.getElementById('toast-container');
-    if (container) {
-      container.style.setProperty('display', 'none', 'important');
-      container.style.setProperty('visibility', 'hidden', 'important');
-      container.style.setProperty('pointer-events', 'none', 'important');
-      container.innerHTML = '';
-    }
-    const staleToasts = document.querySelectorAll('.crm-toast-item');
-    staleToasts.forEach(t => t.remove());
-  } catch (e) { }
+    if (!container) return;
+    const toast = document.createElement('div');
+    const colorClasses = {
+      emerald: 'border-emerald-200 text-emerald-800',
+      blue: 'border-blue-200 text-blue-800',
+      amber: 'border-amber-200 text-amber-800',
+      rose: 'border-rose-200 text-rose-800',
+      slate: 'border-slate-200 text-slate-800'
+    };
+    const colorClass = colorClasses[color] || colorClasses.emerald;
+    const iconColors = {
+      emerald: 'text-emerald-600',
+      blue: 'text-blue-600',
+      amber: 'text-amber-600',
+      rose: 'text-rose-600',
+      slate: 'text-slate-600'
+    };
+    const iconColor = iconColors[color] || iconColors.emerald;
 
-  // 2. Route message directly into Header Notification Center
-  addAppNotification({
-    title: title || 'System Notification',
-    message: message || '',
-    type: 'alerts',
-    icon: icon || 'notifications',
-    color: color || 'emerald'
-  });
+    toast.className = 'pointer-events-auto flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl shadow-lg border text-xs font-medium bg-white transition-all duration-300 transform translate-y-2 opacity-0 ' + colorClass;
+
+    const iconEl = document.createElement('span');
+    iconEl.className = 'material-symbols-outlined text-[18px] shrink-0 mt-0.5 ' + iconColor;
+    iconEl.textContent = icon || 'info';
+
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'flex flex-col min-w-0';
+    if (title) {
+      const t = document.createElement('span');
+      t.className = 'font-bold text-slate-900 leading-snug';
+      t.textContent = title;
+      bodyEl.appendChild(t);
+    }
+    if (message) {
+      const m = document.createElement('span');
+      m.className = 'text-slate-600 text-[11px] leading-snug break-words';
+      m.textContent = message;
+      bodyEl.appendChild(m);
+    }
+
+    toast.appendChild(iconEl);
+    toast.appendChild(bodyEl);
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.classList.remove('translate-y-2', 'opacity-0');
+    });
+
+    setTimeout(() => {
+      toast.classList.add('opacity-0', 'translate-y-2');
+      setTimeout(() => {
+        if (toast.parentNode) toast.remove();
+      }, 300);
+    }, duration);
+  } catch (e) {
+    console.log('[Toast]', title, message);
+  }
 };
 
-function updateNotificationBadge() {
-  const list = getAppNotifications();
-  const unreadCount = list.filter(n => !n.read).length;
+// Compatibility stubs for obsolete notification center
+window.addAppNotification = function () { };
+window.updateNotificationBadge = function () { };
+window.toggleNotificationsDropdown = function () { };
+window.closeNotificationsDropdown = function () { };
+window.markAllNotificationsAsRead = function () { };
+window.clearAllNotifications = function () { };
+window.setNotifFilter = function () { };
+window.renderNotificationsList = function () { };
+window.triggerBellPingAnimation = function () { };
 
-  const pingEl = document.getElementById('header-notif-ping');
-  const countEl = document.getElementById('header-notif-count');
-  const pingMob = document.getElementById('header-notif-ping-mobile');
-  const countMob = document.getElementById('header-notif-count-mobile');
-  const pillEl = document.getElementById('notif-dropdown-unread-pill');
-
-  if (countEl) countEl.innerText = unreadCount > 99 ? '99+' : unreadCount;
-  if (countMob) countMob.innerText = unreadCount > 99 ? '99+' : unreadCount;
-  if (pillEl) pillEl.innerText = `${unreadCount} New`;
-
-  if (unreadCount > 0) {
-    if (pingEl) pingEl.classList.remove('hidden');
-    if (pingMob) pingMob.classList.remove('hidden');
-    if (pillEl) {
-      pillEl.className = 'text-[10px] bg-rose-100 text-rose-700 font-extrabold px-2 py-0.5 rounded-full';
-    }
-  } else {
-    if (pingEl) pingEl.classList.add('hidden');
-    if (pingMob) pingMob.classList.add('hidden');
-    if (pillEl) {
-      pillEl.className = 'text-[10px] bg-slate-100 text-slate-500 font-extrabold px-2 py-0.5 rounded-full';
-    }
-  }
-}
-
-function toggleNotificationsDropdown(event) {
-  if (event) event.stopPropagation();
-  const dropdown = document.getElementById('notifications-dropdown');
-  if (!dropdown) return;
-
-  const isMobile = (typeof window !== 'undefined') && window.innerWidth < 640;
-  const btn = (event && event.currentTarget)
-    ? event.currentTarget
-    : (isMobile
-        ? (document.getElementById('header-notif-btn-mobile') || document.getElementById('header-notif-btn'))
-        : (document.getElementById('header-notif-btn') || document.getElementById('header-notif-btn-mobile')));
-
-  const isHidden = dropdown.classList.contains('hidden');
-  if (isHidden) {
-    if (typeof closePhoneSwitcherDropdown === 'function') closePhoneSwitcherDropdown();
-    renderNotificationsList();
-    dropdown.classList.remove('hidden');
-
-    if (isMobile) {
-      const rect = btn ? btn.getBoundingClientRect() : { bottom: 48 };
-      const topPos = Math.max(52, (rect && rect.bottom ? rect.bottom + 6 : 52));
-      dropdown.style.position = 'fixed';
-      dropdown.style.top = topPos + 'px';
-      dropdown.style.right = '10px';
-      dropdown.style.left = 'auto';
-      dropdown.style.width = 'calc(100vw - 20px)';
-      dropdown.style.maxWidth = '380px';
-      dropdown.style.maxHeight = '78vh';
-      dropdown.style.zIndex = '999999';
-    } else if (btn) {
-      const rect = btn.getBoundingClientRect();
-      const dropWidth = Math.min(380, window.innerWidth - 24);
-      dropdown.style.position = 'fixed';
-      dropdown.style.top = (rect.bottom + 8) + 'px';
-      dropdown.style.width = dropWidth + 'px';
-      dropdown.style.maxWidth = 'calc(100vw - 24px)';
-      dropdown.style.maxHeight = '80vh';
-      dropdown.style.zIndex = '999999';
-
-      let leftPos = rect.right - dropWidth;
-      if (leftPos < 12) leftPos = 12;
-      if (leftPos + dropWidth > window.innerWidth - 12) {
-        leftPos = Math.max(12, window.innerWidth - dropWidth - 12);
-      }
-      dropdown.style.left = leftPos + 'px';
-      dropdown.style.right = 'auto';
-    }
-  } else {
-    closeNotificationsDropdown();
-  }
-}
-window.toggleNotificationsDropdown = toggleNotificationsDropdown;
-
-function closeNotificationsDropdown() {
-  const dropdown = document.getElementById('notifications-dropdown');
-  if (dropdown) dropdown.classList.add('hidden');
-}
-window.closeNotificationsDropdown = closeNotificationsDropdown;
-
-function setNotifFilter(filter, event) {
-  if (event) event.stopPropagation();
-  window.ACTIVE_NOTIF_FILTER = filter;
-
-  // Update tabs UI
-  ['all', 'chats', 'calls', 'alerts'].forEach(tab => {
-    const el = document.getElementById(`notif-tab-${tab}`);
-    if (el) {
-      if (tab === filter) {
-        el.className = 'px-2.5 py-1 rounded-lg bg-white shadow-xs text-slate-900 font-bold border border-slate-200 cursor-pointer';
-      } else {
-        el.className = 'px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer';
-      }
-    }
-  });
-
-  renderNotificationsList();
-}
-
-function renderNotificationsList() {
-  const container = document.getElementById('notifications-list-container');
-  if (!container) return;
-
-  const list = getAppNotifications();
-  const filter = window.ACTIVE_NOTIF_FILTER || 'all';
-
-  const filtered = list.filter(item => {
-    if (filter === 'all') return true;
-    if (filter === 'chats') return item.type === 'chats';
-    if (filter === 'calls') return item.type === 'calls';
-    if (filter === 'alerts') return item.type === 'alerts' || item.type === 'system';
-    return true;
-  });
-
-  if (filtered.length === 0) {
-    container.innerHTML = `
-      <div class="py-10 px-4 text-center">
-        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2.5">
-          <span class="material-symbols-outlined text-[24px]">notifications_off</span>
-        </div>
-        <p class="font-bold text-slate-700 text-xs">No Notifications Found</p>
-        <p class="text-[11px] text-slate-400 mt-0.5">You're all caught up! New chats, calls and alerts will appear here in real time.</p>
-      </div>
-    `;
-    return;
-  }
-
-  const colorClasses = {
-    emerald: { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    blue: { bg: 'bg-blue-50 text-blue-700 border-blue-200' },
-    amber: { bg: 'bg-amber-50 text-amber-700 border-amber-200' },
-    rose: { bg: 'bg-rose-50 text-rose-700 border-rose-200' },
-    indigo: { bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    purple: { bg: 'bg-purple-50 text-purple-700 border-purple-200' },
-    slate: { bg: 'bg-slate-50 text-slate-700 border-slate-200' }
-  };
-
-  container.innerHTML = filtered.map(item => {
-    const theme = colorClasses[item.color] || colorClasses.emerald;
-    const isUnread = !item.read;
-    const view = item.action?.view || '';
-    const custId = item.action?.customerId || '';
-
-    // Relative human time
-    const diffSec = Math.floor((Date.now() - (item.timestamp || Date.now())) / 1000);
-    let timeStr = item.timeStr || 'Just now';
-    if (diffSec < 60) timeStr = 'Just now';
-    else if (diffSec < 3600) timeStr = `${Math.floor(diffSec / 60)}m ago`;
-    else if (diffSec < 86400) timeStr = `${Math.floor(diffSec / 3600)}h ago`;
-
-    const safeTitle = typeof escapeHtml === 'function' ? escapeHtml(item.title) : item.title;
-    const safeMsg = typeof escapeHtml === 'function' ? escapeHtml(item.message) : item.message;
-
-    return `
-      <div onclick="handleNotificationClick('${item.id}', '${view}', '${custId}')"
-        class="p-3 sm:p-3.5 flex items-start gap-3 hover:bg-slate-50 transition cursor-pointer group ${isUnread ? 'bg-emerald-50/25' : ''}">
-        <div class="w-8 h-8 rounded-xl ${theme.bg} border flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-          <span class="material-symbols-outlined text-[17px]">${item.icon || 'notifications'}</span>
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between gap-1.5">
-            <h4 class="font-bold text-slate-900 text-xs truncate group-hover:text-emerald-700 transition">${safeTitle}</h4>
-            <span class="text-[10px] text-slate-400 shrink-0 font-medium">${timeStr}</span>
-          </div>
-          <p class="text-[11px] text-slate-600 line-clamp-2 mt-0.5 leading-snug">${safeMsg}</p>
-        </div>
-        ${isUnread ? '<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1.5 ring-2 ring-emerald-100"></span>' : ''}
-      </div>
-    `;
-  }).join('');
-}
-
-function handleNotificationClick(notifId, targetView, customerId) {
-  const list = getAppNotifications();
-  const item = list.find(n => n.id === notifId);
-  if (item) {
-    item.read = true;
-    saveAppNotifications();
-    updateNotificationBadge();
-  }
-
-  closeNotificationsDropdown();
-
-  if (customerId) {
-    ACTIVE_CUSTOMER_ID = customerId;
-    switchView('inbox');
-    setInboxFilter('all');
-    renderInbox();
-  } else if (targetView) {
-    switchView(targetView);
-  }
-}
-
-function markAllNotificationsAsRead(event) {
-  if (event) event.stopPropagation();
-  const list = getAppNotifications();
-  list.forEach(n => { n.read = true; });
-  saveAppNotifications();
-  updateNotificationBadge();
-  renderNotificationsList();
-  if (typeof showToast === 'function') {
-    showToast('All Read', 'All notifications marked as read', 'done_all', 'emerald', 1500);
-  }
-}
-
-function clearAllNotifications(event) {
-  if (event) event.stopPropagation();
-  CRM_STATE.notifications = [];
-  saveAppNotifications();
-  updateNotificationBadge();
-  renderNotificationsList();
-  if (typeof showToast === 'function') {
-    showToast('Notifications Cleared', 'Notification history cleared', 'delete_sweep', 'slate', 1500);
-  }
-}
-
-// Ensure notification badge is initialized on boot
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateNotificationBadge);
-  } else {
-    setTimeout(updateNotificationBadge, 300);
-  }
-}
-
-// Global click listener to dismiss phone dropdown & notifications dropdown when clicking elsewhere
+// Global click listener to dismiss phone dropdown when clicking elsewhere
 document.addEventListener('click', (e) => {
   const phoneWrapper = document.getElementById('header-phone-switcher-wrapper');
   if (phoneWrapper && !phoneWrapper.contains(e.target)) {
     closePhoneSwitcherDropdown();
-  }
-
-  const notifDropdown = document.getElementById('notifications-dropdown');
-  const notifBtn = document.getElementById('header-notif-btn');
-  const notifMobileBtn = document.getElementById('header-notif-btn-mobile');
-  if (notifDropdown && !notifDropdown.classList.contains('hidden')) {
-    if (!notifDropdown.contains(e.target) && (!notifBtn || !notifBtn.contains(e.target)) && (!notifMobileBtn || !notifMobileBtn.contains(e.target))) {
-      closeNotificationsDropdown();
-    }
   }
 });
 
@@ -8274,9 +7922,7 @@ function renderDndModule() {
 // Update all sidebar & header badge counters dynamically across all modules
 function updateBadgeCounters() {
   if (!CRM_STATE) return;
-  if (typeof updateNotificationBadge === 'function') {
-    updateNotificationBadge();
-  }
+  
 
   // 1. Unread count in inbox
   const unreadEl = document.getElementById('badge-total-unread');
@@ -32988,9 +32634,7 @@ function logAudit(action, module, details) {
 }
 
 function updateBadgeCounters() {
-  if (typeof updateNotificationBadge === 'function') {
-    updateNotificationBadge();
-  }
+  
   const availableAccountIds = getAvailableWhatsAppAccounts().map(a => a.id);
   // Exclude DND queries from active inbox queries count
   const activeQueries = (CRM_STATE.queries || []).filter(q => {
@@ -37504,16 +37148,7 @@ function handleSocketIncomingCall(data) {
       renderInbox();
     }
     if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
-    if (typeof addAppNotification === 'function') {
-      addAppNotification({
-        title: `Incoming Call: ${customerDisplayName || data.customer_phone || 'WhatsApp Caller'}`,
-        message: `Voice call ringing on ${data.virtual_number || 'Official Line'}`,
-        type: 'calls',
-        icon: 'call',
-        color: 'blue',
-        action: { view: 'masking' }
-      });
-    }
+    
   }
 
   if (!customerDisplayName) customerDisplayName = 'WhatsApp Caller';

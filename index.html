@@ -633,28 +633,7 @@
       animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
-    @keyframes bellRing {
-      0% { transform: rotate(0); }
-      15% { transform: rotate(14deg); }
-      30% { transform: rotate(-14deg); }
-      45% { transform: rotate(10deg); }
-      60% { transform: rotate(-10deg); }
-      75% { transform: rotate(6deg); }
-      85% { transform: rotate(-4deg); }
-      100% { transform: rotate(0); }
-    }
-
-    .bell-ring-anim {
-      animation: bellRing 0.8s ease-in-out !important;
-      display: inline-block !important;
-      transform-origin: top center !important;
-      color: #059669 !important;
-    }
-
-    #toast-container,
-    .crm-toast-item {
-      display: none !important;
-      visibility: hidden !important;
+    #toast-container {
       pointer-events: none !important;
     }
 
@@ -1510,33 +1489,10 @@
             <p id="page-subtitle" class="text-xs text-slate-500 truncate hidden" data-i18n="inbox.subtitle"></p>
           </div>
         </div>
-
-        <!-- Mobile-Only Notification Bell Trigger -->
-        <button type="button" onclick="toggleNotificationsDropdown(event)" id="header-notif-btn-mobile"
-          class="sm:hidden relative flex items-center justify-center w-8 h-8 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 transition shadow-xs shrink-0 cursor-pointer"
-          title="Notification Center">
-          <span class="material-symbols-outlined text-[19px] text-slate-600" id="header-notif-bell-icon-mobile">notifications</span>
-          <span id="header-notif-ping-mobile" class="hidden absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-extrabold text-white border-2 border-white shadow-xs">
-            <span id="header-notif-count-mobile">0</span>
-          </span>
-        </button>
       </div>
 
       <!-- Header actions are available on desktop; mobile navigation remains unchanged. -->
       <div class="hidden sm:flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2.5 w-full sm:w-auto shrink-0">
-        <!-- Real-Time Notifications Hub Dropdown -->
-        <div class="relative shrink-0" id="header-notifications-wrapper">
-          <button type="button" onclick="toggleNotificationsDropdown(event)" id="header-notif-btn"
-            class="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 hover:text-emerald-700 rounded-xl border border-slate-200 transition shadow-xs cursor-pointer group"
-            title="Notification Center (Live Alerts, Chats & Calls)">
-            <span class="material-symbols-outlined text-[19px] sm:text-[20px] text-slate-600 group-hover:text-emerald-700 transition" id="header-notif-bell-icon">notifications</span>
-            <!-- Live unread counter badge -->
-            <span id="header-notif-ping" class="hidden absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-extrabold text-white border-2 border-white shadow-xs">
-              <span id="header-notif-count">0</span>
-            </span>
-          </button>
-        </div>
-
         <!-- Interactive Multi-WhatsApp Number Switcher Dropdown -->
         <div class="relative shrink-0" id="header-phone-switcher-wrapper">
           <button type="button" onclick="togglePhoneSwitcherDropdown(event)" id="header-phone-badge"
@@ -1606,62 +1562,6 @@
           <span class="material-symbols-outlined text-[15px] sm:text-[16px]">logout</span>
           <span data-i18n="header.logout">Logout</span>
         </button>
-      </div>
-
-      <!-- Notifications Dropdown Flyout (Shared for Both Mobile & Desktop) -->
-      <div id="notifications-dropdown"
-        class="hidden fixed right-2.5 sm:right-6 top-14 w-[calc(100vw-20px)] sm:w-96 max-w-[calc(100vw-20px)] sm:max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[999999] text-xs">
-        <div class="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-2xl">
-          <div class="flex items-center gap-2">
-            <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-              <span class="material-symbols-outlined text-[15px]">notifications</span>
-            </div>
-            <p class="font-extrabold text-slate-900 text-xs sm:text-sm">Notifications</p>
-            <span id="notif-dropdown-unread-pill" class="text-[10px] bg-rose-100 text-rose-700 font-extrabold px-2 py-0.5 rounded-full">0 New</span>
-          </div>
-          <div class="flex items-center gap-2 text-[11px]">
-            <button type="button" onclick="markAllNotificationsAsRead(event)"
-              class="font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer">
-              Mark all read
-            </button>
-            <span class="text-slate-300">|</span>
-            <button type="button" onclick="clearAllNotifications(event)"
-              class="font-bold text-slate-400 hover:text-rose-600 hover:underline cursor-pointer">
-              Clear
-            </button>
-          </div>
-        </div>
-
-        <!-- Category Filter Tabs -->
-        <div class="flex items-center gap-1 px-3 py-1.5 bg-slate-50 border-b border-slate-100 text-[11px] font-semibold">
-          <button type="button" onclick="setNotifFilter('all', event)" id="notif-tab-all"
-            class="px-2.5 py-1 rounded-lg bg-white shadow-xs text-slate-900 font-bold border border-slate-200 cursor-pointer">All</button>
-          <button type="button" onclick="setNotifFilter('chats', event)" id="notif-tab-chats"
-            class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Chats</button>
-          <button type="button" onclick="setNotifFilter('calls', event)" id="notif-tab-calls"
-            class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Calls</button>
-          <button type="button" onclick="setNotifFilter('alerts', event)" id="notif-tab-alerts"
-            class="px-2.5 py-1 rounded-lg hover:bg-white text-slate-600 transition cursor-pointer">Alerts</button>
-        </div>
-
-        <!-- Dynamic Notification List -->
-        <div id="notifications-list-container" class="max-h-[360px] sm:max-h-[400px] overflow-y-auto divide-y divide-slate-100 custom-chat-scroll">
-          <!-- Rendered dynamically by JS -->
-        </div>
-
-        <!-- Footer: Quick Actions -->
-        <div class="p-2 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between gap-2">
-          <button type="button" onclick="switchView('inbox'); closeNotificationsDropdown();"
-            class="flex-1 py-1.5 px-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer">
-            <span class="material-symbols-outlined text-[15px] text-emerald-600">chat</span>
-            <span>Open Inbox</span>
-          </button>
-          <button type="button" onclick="switchView('enquiries'); closeNotificationsDropdown();"
-            class="flex-1 py-1.5 px-2 bg-white hover:bg-indigo-50 text-indigo-800 border border-slate-200 hover:border-indigo-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer">
-            <span class="material-symbols-outlined text-[15px] text-indigo-600">assignment</span>
-            <span>View Enquiries</span>
-          </button>
-        </div>
       </div>
     </header>
 
@@ -11552,7 +11452,7 @@
   </div>
 
   <!-- NOTIFICATION CONTAINER (Suppressed: All messages/alerts route exclusively into the Notifications Center) -->
-  <div id="toast-container" class="hidden pointer-events-none" style="display: none !important;"></div>
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[999999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-3 sm:px-0"></div>
 
   <!-- AUDIO SOUND ALERT (Web Audio API synthetic notification chime) -->
   <script>
@@ -11587,24 +11487,67 @@
       }
     }
 
-    // Queue for notifications arriving before CRM scripts finish initialization
-    window.PENDING_APP_NOTIFICATIONS = window.PENDING_APP_NOTIFICATIONS || [];
-
-    // All messages/alerts route exclusively to the Header Notifications Center (Bell icon flyout)
+    // Clean, lightweight floating toast notification handler
     function showToast(title, message, icon = 'info', color = 'emerald', duration = 2800) {
       if (!title && !message) return;
-      const notifItem = {
-        title: title || 'System Notification',
-        message: message || '',
-        type: 'alerts',
-        icon: icon || 'notifications',
-        color: color || 'emerald'
-      };
+      try {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        const colorClasses = {
+          emerald: 'border-emerald-200 text-emerald-800',
+          blue: 'border-blue-200 text-blue-800',
+          amber: 'border-amber-200 text-amber-800',
+          rose: 'border-rose-200 text-rose-800',
+          slate: 'border-slate-200 text-slate-800'
+        };
+        const colorClass = colorClasses[color] || colorClasses.emerald;
+        const iconColors = {
+          emerald: 'text-emerald-600',
+          blue: 'text-blue-600',
+          amber: 'text-amber-600',
+          rose: 'text-rose-600',
+          slate: 'text-slate-600'
+        };
+        const iconColor = iconColors[color] || iconColors.emerald;
 
-      if (typeof addAppNotification === 'function') {
-        addAppNotification(notifItem);
-      } else {
-        window.PENDING_APP_NOTIFICATIONS.push(notifItem);
+        toast.className = 'pointer-events-auto flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl shadow-lg border text-xs font-medium bg-white transition-all duration-300 transform translate-y-2 opacity-0 ' + colorClass;
+
+        const iconEl = document.createElement('span');
+        iconEl.className = 'material-symbols-outlined text-[18px] shrink-0 mt-0.5 ' + iconColor;
+        iconEl.textContent = icon || 'info';
+
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'flex flex-col min-w-0';
+        if (title) {
+          const t = document.createElement('span');
+          t.className = 'font-bold text-slate-900 leading-snug';
+          t.textContent = title;
+          bodyEl.appendChild(t);
+        }
+        if (message) {
+          const m = document.createElement('span');
+          m.className = 'text-slate-600 text-[11px] leading-snug break-words';
+          m.textContent = message;
+          bodyEl.appendChild(m);
+        }
+
+        toast.appendChild(iconEl);
+        toast.appendChild(bodyEl);
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+          toast.classList.remove('translate-y-2', 'opacity-0');
+        });
+
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+          setTimeout(() => {
+            if (toast.parentNode) toast.remove();
+          }, 300);
+        }, duration);
+      } catch (e) {
+        console.log('[Toast]', title, message);
       }
     }
     window.showToast = showToast;
@@ -11952,7 +11895,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261118_perf_v1"></script>
+  <script src="crm_app.js?v=20261118_nonotif_v2"></script>
 </body>
 
 </html>
