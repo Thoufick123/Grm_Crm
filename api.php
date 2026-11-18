@@ -3234,7 +3234,9 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
                         "type" => $mediaType ?: "text",
                         "media_url" => $mediaUrl,
                         "account_id" => $accSlot,
-                        "source" => "CRM_OUTBOUND",
+                        "direction" => "outbound",
+                        "is_outbound" => true,
+                        "source" => $payload['source'] ?? "CRM_OUTBOUND",
                         "timestamp_epoch" => time(),
                         "received_at" => date("h:i A"),
                         "time" => date("h:i A"),
@@ -3551,15 +3553,60 @@ if ($action === 'get_inbound_messages') {
     $since = isset($_GET['since']) ? (int)$_GET['since'] : 0;
     $newMessages = [];
 
-    // 1. Inbound messages from live queue JSON file
+    // 1. Inbound and outbound messages from live queue JSON file
+    $seenQueueIds = [];
     if (file_exists($messagesFile)) {
         $rawQueue = file_get_contents($messagesFile);
         $queue = json_decode($rawQueue, true) ?: [];
         foreach ($queue as $item) {
             if ((int)($item['timestamp_epoch'] ?? 0) > $since) {
                 $newMessages[] = $item;
+                $uid = (string)($item['message_uid'] ?? ($item['id'] ?? ''));
+                if ($uid) $seenQueueIds[$uid] = true;
             }
         }
+    }
+
+    // 1.1 Authoritative MySQL Delta sync for any outbound/inbound messages across browsers
+    if ($pdo && $since > 0) {
+        try {
+            $mStmt = $pdo->prepare("
+                SELECT * FROM `messages` 
+                WHERE (timestamp_epoch > :s1 OR (created_at IS NOT NULL AND created_at >= FROM_UNIXTIME(:s2)))
+                ORDER BY id ASC LIMIT 50
+            ");
+            $mStmt->execute([':s1' => $since, ':s2' => $since]);
+            $dbRows = $mStmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($dbRows as $r) {
+                $uid = (string)($r['message_uid'] ?: $r['id']);
+                if (!isset($seenQueueIds[$uid])) {
+                    $seenQueueIds[$uid] = true;
+                    $epoch = !empty($r['timestamp_epoch']) ? (int)$r['timestamp_epoch'] : (!empty($r['created_at']) ? strtotime($r['created_at']) : time());
+                    $newMessages[] = [
+                        'id' => $uid,
+                        'message_uid' => $uid,
+                        'customer_id' => $r['customer_id'],
+                        'sender' => $r['sender'],
+                        'sender_name' => $r['sender_name'] ?: 'Staff',
+                        'sender_phone' => $r['sender_phone'] ?: '',
+                        'sender_jid' => $r['sender_jid'] ?? null,
+                        'message_text' => $r['message_text'] ?: ($r['text'] ?: ''),
+                        'text' => $r['message_text'] ?: ($r['text'] ?: ''),
+                        'type' => $r['media_type'] ?: 'text',
+                        'media_url' => $r['media_url'] ?? null,
+                        'duration' => $r['audio_duration'] ?? null,
+                        'account_id' => $r['account_id'] ?: 'account_1',
+                        'direction' => $r['direction'] ?: ($r['sender'] === 'staff' ? 'outbound' : 'inbound'),
+                        'is_outbound' => ($r['direction'] === 'outbound' || $r['sender'] === 'staff'),
+                        'is_bot' => (bool)$r['is_bot'],
+                        'source' => $r['source'] ?: 'CRM_OUTBOUND',
+                        'timestamp_epoch' => $epoch,
+                        'received_at' => $r['time_str'] ?: date("h:i A", $epoch),
+                        'status' => $r['status'] ?: 'DELIVERED'
+                    ];
+                }
+            }
+        } catch (Exception $e) {}
     }
 
     // 2. High-speed delta query for newly updated / assigned leads

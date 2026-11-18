@@ -1210,24 +1210,29 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 console.error('[Audio Download Error]:', err.message);
                             }
                         }
-                        // 2. Check for Photo / Image Attachment
+                        // 2. Check for Photo / Image Attachment (Resilient Wrapped Download + Remote Hostinger Base64 Sync)
                         else if (rawMsg.imageMessage) {
                             msgType = 'image';
                             messageText = rawMsg.imageMessage.caption ? ('[Photo] ' + rawMsg.imageMessage.caption) : '[Photo Attachment]';
                             try {
                                 const imgBuffer = await downloadMediaMessage(
-                                    msg,
+                                    { key: msg.key, message: rawMsg },
                                     'buffer',
                                     {},
-                                    { logger: pino({ level: 'silent' }) }
+                                    { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
                                 );
                                 if (imgBuffer) {
-                                    const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'media');
-                                    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-                                    const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
-                                    fs.writeFileSync(path.join(uploadsDir, fileName), imgBuffer);
-                                    mediaUrl = `uploads/media/${fileName}`;
-                                    console.log(`[Image Saved] ${mediaUrl} (${imgBuffer.length} bytes) from ${senderName}`);
+                                    // Send base64 data URI so remote Hostinger PHP receives actual file bytes and writes to uploads/media/
+                                    mediaUrl = 'data:image/jpeg;base64,' + imgBuffer.toString('base64');
+                                    console.log(`[Image Downloaded & Base64 Encoded] (${imgBuffer.length} bytes) from ${senderName}`);
+                                    
+                                    // Also cache locally on bridge filesystem
+                                    try {
+                                        const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'media');
+                                        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                                        const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+                                        fs.writeFileSync(path.join(uploadsDir, fileName), imgBuffer);
+                                    } catch (e) {}
                                 }
                             } catch (err) {
                                 console.error('[Image Download Error]:', err.message);
@@ -1547,6 +1552,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             source: 'AUTOREPLY_BOT',
                                             rule_name: replyObj.ruleName || 'Auto-Reply',
                                             rule_id: replyObj.ruleId || null,
+                                            direction: 'outbound',
                                             is_outbound: true,
                                             timestamp_epoch: Math.floor(Date.now() / 1000),
                                             received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -1558,6 +1564,123 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     }
                                 }, 500);
                             }
+                        }
+                    } else {
+                        // =========================================================================
+                        // TASK 2: ADMIN DIRECT REPLY ON WHATSAPP MOBILE PHONE APP
+                        // Captures outbound messages sent directly from the linked phone!
+                        // =========================================================================
+                        try {
+                            const msgId = msg.key?.id;
+                            if (msgId) {
+                                if (PROCESSED_MESSAGE_IDS.has(msgId)) continue;
+                                PROCESSED_MESSAGE_IDS.add(msgId);
+                                if (PROCESSED_MESSAGE_IDS.size > 5000) {
+                                    const firstVal = PROCESSED_MESSAGE_IDS.values().next().value;
+                                    PROCESSED_MESSAGE_IDS.delete(firstVal);
+                                }
+                            }
+
+                            const recipientJid = msg.key?.remoteJid;
+                            if (!recipientJid || recipientJid.includes('@g.us') || recipientJid === 'status@broadcast') continue;
+
+                            let cleanRecipient = recipientJid.split('@')[0].split(':')[0];
+                            let realRecipientPhone = null;
+                            const digitsOnly = cleanRecipient.replace(/[^0-9]/g, '');
+                            if (digitsOnly.length === 10) {
+                                realRecipientPhone = '+91 ' + digitsOnly.slice(0, 5) + ' ' + digitsOnly.slice(5);
+                            } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+                                realRecipientPhone = '+91 ' + digitsOnly.slice(2, 7) + ' ' + digitsOnly.slice(7);
+                            } else {
+                                realRecipientPhone = '+' + digitsOnly;
+                            }
+
+                            // Unwrap message content
+                            let rawMsg = msg.message || {};
+                            let unwrapCycles = 10;
+                            while (unwrapCycles-- > 0) {
+                                if (rawMsg.ephemeralMessage?.message) rawMsg = rawMsg.ephemeralMessage.message;
+                                else if (rawMsg.viewOnceMessage?.message) rawMsg = rawMsg.viewOnceMessage.message;
+                                else if (rawMsg.viewOnceMessageV2?.message) rawMsg = rawMsg.viewOnceMessageV2.message;
+                                else if (rawMsg.documentWithCaptionMessage?.message) rawMsg = rawMsg.documentWithCaptionMessage.message;
+                                else if (rawMsg.deviceSentMessage?.message) rawMsg = rawMsg.deviceSentMessage.message;
+                                else if (rawMsg.editedMessage?.message?.protocolMessage?.editedMessage) rawMsg = rawMsg.editedMessage.message.protocolMessage.editedMessage;
+                                else break;
+                            }
+
+                            let outText = '';
+                            let outType = 'text';
+                            let outMediaUrl = null;
+
+                            if (rawMsg.imageMessage) {
+                                outType = 'image';
+                                outText = rawMsg.imageMessage.caption ? ('[Photo] ' + rawMsg.imageMessage.caption) : '[Photo Attachment]';
+                                try {
+                                    const imgBuffer = await downloadMediaMessage(
+                                        { key: msg.key, message: rawMsg },
+                                        'buffer',
+                                        {},
+                                        { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+                                    );
+                                    if (imgBuffer) {
+                                        outMediaUrl = 'data:image/jpeg;base64,' + imgBuffer.toString('base64');
+                                    }
+                                } catch (e) {}
+                            } else if (rawMsg.conversation) {
+                                outText = rawMsg.conversation;
+                            } else if (rawMsg.extendedTextMessage?.text) {
+                                outText = rawMsg.extendedTextMessage.text;
+                            }
+
+                            if (!outText && !outMediaUrl) continue;
+
+                            console.log(`[Admin Mobile Direct Reply on ${accountId}] To ${realRecipientPhone}: "${outText}" [${outType}]`);
+
+                            const outboundPayload = {
+                                id: msgId || ('msg_out_' + Date.now()),
+                                message_uid: msgId || ('msg_out_' + Date.now()),
+                                sender: 'staff',
+                                sender_name: 'Super Admin (WhatsApp Mobile)',
+                                sender_phone: realRecipientPhone,
+                                sender_jid: recipientJid,
+                                message_text: outText,
+                                text: outText,
+                                type: outType,
+                                media_url: outMediaUrl,
+                                account_id: accountId,
+                                received_on_number: accountObj.connectedNumber || 'Primary',
+                                direction: 'outbound',
+                                is_outbound: true,
+                                is_bot: false,
+                                source: 'WHATSAPP_PHONE_DIRECT',
+                                status: 'DELIVERED',
+                                timestamp_epoch: Math.floor(Date.now() / 1000),
+                                received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            };
+
+                            // Emit live to CRM UI over WebSocket (Instant!)
+                            io.emit('whatsapp:inbound', outboundPayload);
+
+                            // Forward to CRM PHP API for database & queue persistence
+                            if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
+                                fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        phone: realRecipientPhone,
+                                        text: outText,
+                                        jid: recipientJid,
+                                        accountId: accountId,
+                                        media_url: outMediaUrl,
+                                        type: outType,
+                                        message_uid: msgId,
+                                        sender_name: 'Super Admin (WhatsApp Mobile)',
+                                        source: 'WHATSAPP_PHONE_DIRECT'
+                                    })
+                                }).catch(() => {});
+                            }
+                        } catch (errFromMe) {
+                            console.warn('[Admin Phone Reply Capture Notice]:', errFromMe.message);
                         }
                     }
                 }

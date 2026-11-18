@@ -2379,17 +2379,23 @@ function ingestInboundMessage(payload, suppressChime = false) {
   const nameChars = Array.from(senderName || 'WA');
   const safeAvatar = (nameChars.slice(0, 2).join('')).toUpperCase() || 'WA';
 
-  // 2. Match or Create Customer in CRM_STATE
+  // 2. Match or Create Customer in CRM_STATE (ID match first, then phone match)
   const payloadAccountId = payload.account_id || 'account_1';
   const payloadBusinessNum = payload.received_on_number || CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
 
-  let customer = CRM_STATE.customers.find(c => {
-    const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
-    const phoneMatch = (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
-      (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10)) ||
-      (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0] === payload.sender_jid.split('@')[0])));
-    return phoneMatch;
-  });
+  let customer = null;
+  if (payload.customer_id) {
+    customer = (CRM_STATE.customers || []).find(c => c && String(c.id) === String(payload.customer_id));
+  }
+  if (!customer) {
+    customer = (CRM_STATE.customers || []).find(c => {
+      const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+      const phoneMatch = (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
+        (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10)) ||
+        (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0] === payload.sender_jid.split('@')[0])));
+      return phoneMatch;
+    });
+  }
 
   if (!customer) {
     const newCustId = 'cust_' + (normalizedDigits.slice(-10) || Date.now().toString().slice(-6));
@@ -2446,9 +2452,17 @@ function ingestInboundMessage(payload, suppressChime = false) {
     CRM_STATE.conversations[customer.id] = [];
   }
 
-  const isOutboundMsg = Boolean(payload.is_outbound || payload.source === 'AUTOREPLY_BOT' || payload.source === 'STAFF_OUTBOUND');
-  const isBotMsg = payload.source === 'AUTOREPLY_BOT';
-  const msgSender = isOutboundMsg ? 'staff' : 'customer';
+  const isOutboundMsg = Boolean(
+    payload.is_outbound || 
+    payload.direction === 'outbound' || 
+    payload.sender === 'staff' || 
+    payload.source === 'CRM_OUTBOUND' || 
+    payload.source === 'WHATSAPP_PHONE_DIRECT' ||
+    payload.source === 'AUTOREPLY_BOT' || 
+    payload.source === 'STAFF_OUTBOUND'
+  );
+  const isBotMsg = Boolean(payload.source === 'AUTOREPLY_BOT' || payload.is_bot || payload.sender === 'bot');
+  const msgSender = isBotMsg ? 'bot' : (isOutboundMsg ? 'staff' : (payload.sender || 'customer'));
 
   // Deduplicate against existing messages
   const existingMsgs = CRM_STATE.conversations[customer.id];
@@ -3122,14 +3136,39 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
     const crmSyncChannel = new BroadcastChannel('grm_crm_live_channel');
     crmSyncChannel.onmessage = (event) => {
       if (event && event.data && event.data.type === 'DATA_MUTATED') {
+        if (event.data.mutation === 'NEW_OUTBOUND_MESSAGE' && event.data.payload) {
+          try {
+            const d = event.data.payload;
+            const msgObj = d.message || {};
+            const cId = d.customer_id;
+            const targetCust = (window.CRM_STATE && Array.isArray(window.CRM_STATE.customers))
+              ? window.CRM_STATE.customers.find(c => c && (String(c.id) === String(cId) || (d.phone && c.phone && c.phone.replace(/\D/g, '').slice(-10) === d.phone.replace(/\D/g, '').slice(-10))))
+              : null;
+            if (targetCust && window.CRM_STATE) {
+              if (!window.CRM_STATE.conversations) window.CRM_STATE.conversations = {};
+              if (!window.CRM_STATE.conversations[targetCust.id]) window.CRM_STATE.conversations[targetCust.id] = [];
+              const exists = window.CRM_STATE.conversations[targetCust.id].some(m => (msgObj.id && String(m.id) === String(msgObj.id)) || (m.sender === 'staff' && m.text === msgObj.text && m.time === msgObj.time));
+              if (!exists) {
+                window.CRM_STATE.conversations[targetCust.id].push(msgObj);
+                targetCust.last_message = msgObj.text || 'Message';
+                targetCust.last_message_time = msgObj.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                if (typeof renderChatConversation === 'function') renderChatConversation();
+                if (typeof renderCustomerList === 'function') renderCustomerList();
+                if (typeof updateStats === 'function') updateStats();
+              }
+            }
+          } catch (e) {
+            console.warn('[BroadcastChannel NEW_OUTBOUND_MESSAGE error]', e);
+          }
+        }
         if (typeof syncLiveCRMData === 'function') {
           syncLiveCRMData(true);
         }
       }
     };
-    window.broadcastCRMMutation = function (mutationType = 'UPDATE') {
+    window.broadcastCRMMutation = function (mutationType = 'UPDATE', extraPayload = null) {
       try {
-        crmSyncChannel.postMessage({ type: 'DATA_MUTATED', mutation: mutationType, time: Date.now() });
+        crmSyncChannel.postMessage({ type: 'DATA_MUTATED', mutation: mutationType, payload: extraPayload, time: Date.now() });
       } catch (e) {}
     };
   } catch (e) {}
@@ -10945,6 +10984,22 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       media_url: targetMedia,
       customer_id: effectiveCustId,
       message_uid: msgUid
+    });
+  }
+
+  // Realtime BroadcastChannel sync across all open tabs in same browser
+  if (typeof window !== 'undefined' && typeof window.broadcastCRMMutation === 'function') {
+    window.broadcastCRMMutation('NEW_OUTBOUND_MESSAGE', {
+      customer_id: effectiveCustId,
+      message: msgRef || {
+        id: msgUid,
+        sender: 'staff',
+        direction: 'outbound',
+        text: text,
+        media_url: targetMedia,
+        status: 'DELIVERED',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
     });
   }
 

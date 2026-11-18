@@ -139,10 +139,13 @@ while (true) {
                     $newMessages[] = [
                         'id' => $uid,
                         'message_uid' => $uid,
+                        'customer_id' => $dm['customer_id'] ?? null,
+                        'sender' => $dm['sender'] ?? ($dm['direction'] === 'outbound' ? 'staff' : 'customer'),
                         'sender_name' => $dm['sender_name'] ?: ($dm['customer_name'] ?: 'Customer'),
                         'sender_phone' => $dm['sender_phone'] ?: ($dm['customer_phone'] ?: ''),
                         'sender_jid' => $dm['sender_jid'] ?? null,
                         'message_text' => $dm['message_text'] ?: ($dm['text'] ?: ''),
+                        'text' => $dm['message_text'] ?: ($dm['text'] ?: ''),
                         'type' => $dm['media_type'] ?: 'text',
                         'media_url' => $dm['media_url'] ?? null,
                         'duration' => $dm['audio_duration'] ?? null,
@@ -153,8 +156,10 @@ while (true) {
                         'source' => $dm['source'] ?: 'REAL_WHATSAPP_LIVE',
                         'timestamp_epoch' => $epoch,
                         'received_at' => $dm['time_str'] ?: (!empty($dm['created_at']) ? date("h:i A", strtotime($dm['created_at'])) : date("h:i A")),
-                        'direction' => $dm['direction'] ?? 'inbound',
-                        'is_bot' => (bool)$dm['is_bot']
+                        'direction' => $dm['direction'] ?? ($dm['sender'] === 'staff' ? 'outbound' : 'inbound'),
+                        'is_outbound' => ($dm['direction'] === 'outbound' || $dm['sender'] === 'staff'),
+                        'is_bot' => (bool)$dm['is_bot'],
+                        'status' => $dm['status'] ?: 'DELIVERED'
                     ];
                     if ($epoch > $since) {
                         $since = $epoch;
