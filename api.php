@@ -859,23 +859,6 @@ if ($action === 'get_state' || $action === 'get_all') {
         echo json_encode([
             "status" => "success",
             "source" => "MYSQL_DATABASE",
-            "products" => $products,
-            "customers" => $customers,
-            "queries" => $queries,
-            "orders" => $orders,
-            "followups" => $followups,
-            "staff" => $staffList,
-            "staffList" => $staffList,
-            "categories" => $categories,
-            "subcategories" => $subcategories,
-            "attributes" => $attributes,
-            "rolePermissions" => $rolePermissions,
-            "dnd_records" => $dndRecords,
-            "dndRecords" => $dndRecords,
-            "auto_reply_rules" => $arRules,
-            "autoReplyRules" => $arRules,
-            "broadcast_templates" => $bcTemplates,
-            "broadcastTemplates" => $bcTemplates,
             "data" => [
                 "whatsappAccount" => $primaryWA,
                 "whatsappAccounts" => $waAccounts,
@@ -896,7 +879,7 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "autoReplyRules" => $arRules,
                 "broadcastTemplates" => $bcTemplates
             ]
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Exception $e) {
         // Return fallback from config file if MySQL is offline

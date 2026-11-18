@@ -592,6 +592,8 @@ window.canUserPerformAction = canUserPerformAction;
 function enforceGranularActionPermissions() {
   const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
   const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
+  // Performance optimization: Super Admin has full unrestricted access — skip expensive 40+ querySelector scans
+  if (isSuperAdmin) return;
 
   // 1. Staff Module Actions
   const canStaffView = isSuperAdmin || canUserPerformAction('staff', 'view');
@@ -3295,19 +3297,7 @@ function initCRMState() {
     saveCRMState();
   }
 
-  // Sync auto-reply rules from backend API
-  fetch('api.php?action=get_autoreply_rules')
-    .then(r => r.json())
-    .then(res => {
-      if (res && res.status === 'success' && Array.isArray(res.rules)) {
-        CRM_STATE.autoReplyRules = res.rules;
-        saveCRMState();
-        if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
-        if (typeof renderInboxPresetTemplatesBar === 'function') renderInboxPresetTemplatesBar();
-        if (typeof updateRulesCountBadge === 'function') updateRulesCountBadge();
-      }
-    })
-    .catch(() => { });
+  // Auto-reply rules are synchronized directly via get_all / CRM_STATE
 
   // Set active customer ID to first existing customer who actually has messages/conversations
   const activeChatCusts = (CRM_STATE.customers || []).filter(c => {
@@ -3678,40 +3668,48 @@ function initCRMState() {
         updateConfiguredPhoneDisplays();
       }
 
-      // Update UI components dynamically to reflect live database state
-      if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
-      if (typeof populateProductFormCategories === 'function') populateProductFormCategories();
-      if (ACTIVE_VIEW === 'catalog' && typeof filterCatalogGrid === 'function') filterCatalogGrid();
-      if (typeof updateOrderProductDropdown === 'function') updateOrderProductDropdown();
-      if (ACTIVE_VIEW === 'orders') {
-        if (typeof renderOrdersModule === 'function') renderOrdersModule();
-      } else {
-        const badgeOrders = document.getElementById('badge-orders-count');
-        const badgeTotalHeader = document.getElementById('badge-orders-total-count');
-        const badgeHistoryTab = document.getElementById('orders-tab-history-badge');
-        const badgeSidebarHistory = document.getElementById('nav-sub-orders-history-badge');
-        const totalCount = (CRM_STATE?.orders || []).length;
-        if (badgeOrders) badgeOrders.innerText = totalCount;
-        if (badgeTotalHeader) badgeTotalHeader.innerText = `${totalCount} Order${totalCount === 1 ? '' : 's'}`;
-        if (badgeHistoryTab) badgeHistoryTab.innerText = totalCount;
-        if (badgeSidebarHistory) badgeSidebarHistory.innerText = totalCount;
-      }
-      if (typeof renderCustomersGrid === 'function') renderCustomersGrid();
-      if (typeof renderCustomersTable === 'function') renderCustomersTable();
-      if (typeof renderInbox === 'function') renderInbox();
-      if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
-      if (typeof renderStaffCards === 'function') renderStaffCards();
-      if (typeof renderStaffKPIOverview === 'function') renderStaffKPIOverview();
-      if (typeof renderStaffTable === 'function') renderStaffTable();
-      if (typeof renderDashboard === 'function') renderDashboard(); // auto-sync staff count
+      // Update UI components dynamically (Modular View-Based Rendering: ONLY render current active view)
       if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
-      if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
-      if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
-      if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
-      if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
-      if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
-      if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
-      if (typeof renderBroadcastTemplateDropdown === 'function') renderBroadcastTemplateDropdown();
+      if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
+
+      if (ACTIVE_VIEW === 'inbox') {
+        if (typeof renderInbox === 'function') renderInbox();
+        if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+      } else if (ACTIVE_VIEW === 'dashboard') {
+        if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+        if (typeof renderDashboard === 'function') renderDashboard();
+      } else if (ACTIVE_VIEW === 'catalog') {
+        if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
+        if (typeof populateProductFormCategories === 'function') populateProductFormCategories();
+        if (typeof filterCatalogGrid === 'function') filterCatalogGrid();
+      } else if (ACTIVE_VIEW === 'orders') {
+        if (typeof renderOrdersModule === 'function') renderOrdersModule();
+      } else if (ACTIVE_VIEW === 'followups') {
+        if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+        if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+        if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+        if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+      } else if (ACTIVE_VIEW === 'customers') {
+        if (typeof renderCustomersGrid === 'function') renderCustomersGrid();
+        if (typeof renderCustomersTable === 'function') renderCustomersTable();
+      } else if (ACTIVE_VIEW === 'enquiries') {
+        if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
+      } else if (ACTIVE_VIEW === 'staff') {
+        if (typeof renderStaffCards === 'function') renderStaffCards();
+        if (typeof renderStaffKPIOverview === 'function') renderStaffKPIOverview();
+        if (typeof renderStaffTable === 'function') renderStaffTable();
+      }
+
+      // Sync order badges in header without full module rebuild
+      const badgeOrders = document.getElementById('badge-orders-count');
+      const badgeTotalHeader = document.getElementById('badge-orders-total-count');
+      const badgeHistoryTab = document.getElementById('orders-tab-history-badge');
+      const badgeSidebarHistory = document.getElementById('nav-sub-orders-history-badge');
+      const totalCount = (CRM_STATE?.orders || []).length;
+      if (badgeOrders) badgeOrders.innerText = totalCount;
+      if (badgeTotalHeader) badgeTotalHeader.innerText = `${totalCount} Order${totalCount === 1 ? '' : 's'}`;
+      if (badgeHistoryTab) badgeHistoryTab.innerText = totalCount;
+      if (badgeSidebarHistory) badgeSidebarHistory.innerText = totalCount;
 
       saveCRMState();
     })
@@ -6153,17 +6151,7 @@ function selectCustomerChat(customerId) {
     const stream = document.getElementById('chat-messages-stream');
     if (stream) stream.scrollTop = stream.scrollHeight;
   }, 100);
-  // Guarantee right Customer 360 panel and header dynamically sync to active profile
-  try {
-    renderCustomer360Panel();
-  } catch (e) {
-    console.error('Error rendering Customer 360 panel on selectCustomerChat:', e);
-  }
-  try {
-    renderChatHeader();
-  } catch (e) {
-    console.error('Error rendering Chat Header on selectCustomerChat:', e);
-  }
+  // renderInbox() above already renders Chat Header, Messages & Customer 360
   // Enforce RBAC permissions on chat controls after rendering
   try {
     if (typeof enforceGranularActionPermissions === 'function') {
@@ -30008,8 +29996,13 @@ function fetchQRBridgeStatus(btnEl) {
   const canDirectFetchBridge = Boolean(bUrl && (isLocalHost || bUrl.startsWith('https://')));
 
   if (canDirectFetchBridge) {
-    fetch(`${bUrl}/api/qr/status`)
-      .then(r => r.json())
+    const qrAbort = (typeof AbortController !== "undefined") ? new AbortController() : null;
+    const qrTimer = qrAbort ? setTimeout(() => qrAbort.abort(), 800) : null;
+    fetch(`${bUrl}/api/qr/status`, qrAbort ? { signal: qrAbort.signal } : {})
+      .then(r => {
+        if (qrTimer) clearTimeout(qrTimer);
+        return r.json();
+      })
       .then(res => {
         if (res.status === 'success' && Array.isArray(res.accounts)) {
           MULTI_ACCOUNTS_STATE = res.accounts;
@@ -30046,42 +30039,17 @@ function fetchQRBridgeStatus(btnEl) {
         }
       })
       .catch(() => {
-        // Direct bridge fetch failed or timed out: Fallback immediately to database state
-        // Ensures hard refresh never leaves Primary WhatsApp in a false DISCONNECTED state!
-        fetch('api.php?action=get_all')
-          .then(r => r.json())
-          .then(res => {
-            const data = res.data || res;
-            if (data && data.whatsappAccounts) {
-              const accounts = data.whatsappAccounts || [];
-              if (Array.isArray(accounts) && accounts.length > 0) {
-                MULTI_ACCOUNTS_STATE = accounts.map(a => ({
-                  id: a.account_slot || a.id,
-                  name: a.account_name || a.name || 'WhatsApp Line',
-                  phone: a.phone_number || a.phone || '',
-                  status: (a.status || 'DISCONNECTED').toUpperCase(),
-                  qr_image: a.qr_code || null
-                }));
-                if (Array.isArray(CRM_STATE.whatsappLines)) {
-                  CRM_STATE.whatsappLines.forEach(line => {
-                    const live = MULTI_ACCOUNTS_STATE.find(a => a.id === line.id);
-                    if (live && live.status === 'CONNECTED') {
-                      line.status = 'CONNECTED';
-                      line.connected_number = live.phone || line.connected_number;
-                      line.qr_image = null;
-                    }
-                  });
-                }
-                const primary = MULTI_ACCOUNTS_STATE.find(a => a.id === 'account_1') || MULTI_ACCOUNTS_STATE[0];
-                if (primary && primary.status === 'CONNECTED' && primary.phone) {
-                  CRM_STATE.whatsappAccount.phoneNumber = primary.phone;
-                  CRM_STATE.whatsappAccount.status = 'CONNECTED';
-                  updateConfiguredPhoneDisplays();
-                }
-                saveCRMState();
-              }
-            }
-          }).catch(() => {});
+        // Direct bridge fetch failed or timed out: Safely fallback to in-memory CRM_STATE without refetching get_all
+        const accounts = (CRM_STATE && Array.isArray(CRM_STATE.whatsappAccounts)) ? CRM_STATE.whatsappAccounts : [];
+        if (accounts.length > 0) {
+          MULTI_ACCOUNTS_STATE = accounts.map(a => ({
+            id: a.account_slot || a.id,
+            name: a.account_name || a.name || 'WhatsApp Line',
+            phone: a.phone_number || a.phone || '',
+            status: (a.status || 'DISCONNECTED').toUpperCase(),
+            qr_image: a.qr_code || null
+          }));
+        }
       })
       .finally(() => {
         renderMultiAccountsHub();
@@ -37392,7 +37360,7 @@ function renderMaskingView() {
       clearInterval(MASKING_VIEW_POLL_INTERVAL);
       MASKING_VIEW_POLL_INTERVAL = null;
     }
-  }, 3000);
+  }, 8000);
 }
 window.renderMaskingView = renderMaskingView;
 

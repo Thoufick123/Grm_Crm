@@ -17,10 +17,10 @@
     rel="stylesheet" media="print" onload="this.media='all'" />
   <!-- Precompiled Production Stylesheet (Instant Zero-Lag First Paint, Zero CDN Latency) -->
   <link rel="stylesheet" href="css/style.min.css">
-  <!-- Local Tailwind Engine (Cached Locally for Dynamic Classes) -->
-  <script src="js/tailwindcss.min.js"></script>
+  <!-- Local Tailwind Engine (Deferred to eliminate render-blocking CPU freeze) -->
   <script>
-    tailwind.config = {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
@@ -62,6 +62,7 @@
       }
     };
   </script>
+  <script defer src="js/tailwindcss.min.js"></script>
   <script>
       // Prevent VS Code Live Server (Port 5500) from reloading on WhatsApp background file writes
       (function () {
@@ -11951,7 +11952,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261118_fix_header"></script>
+  <script src="crm_app.js?v=20261118_perf_v1"></script>
 </body>
 
 </html>

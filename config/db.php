@@ -165,11 +165,14 @@ function getDBConnection() {
             } catch (Exception $tzEx) {}
 
             // 3. Ensure tables and default seeds exist ONLY IF NOT ALREADY INITIALIZED
-            // Running 47 DDL CREATE TABLE queries on every HTTP request creates massive table lock contention and socket exhaustion.
+            // Persistent file flag prevents running 8-47 DDL queries on every stateless PHP HTTP request
+            $migratedFlagFile = __DIR__ . '/.db_migrated';
+            $forceMigration = isset($_GET['init_schema']) || isset($_GET['migrate']);
             static $schemaChecked = false;
-            if (!$schemaChecked) {
+
+            if (!$schemaChecked && ($forceMigration || !file_exists($migratedFlagFile))) {
                 $needSchemaInit = false;
-                if (isset($_GET['init_schema']) || isset($_GET['migrate'])) {
+                if ($forceMigration) {
                     $needSchemaInit = true;
                 } else {
                     try {
@@ -364,6 +367,7 @@ function getDBConnection() {
                     initializeDatabaseSchema($pdo);
                 }
                 $schemaChecked = true;
+                @touch($migratedFlagFile);
             }
 
             return $pdo;

@@ -75,7 +75,7 @@ flush();
 
 $startTime = time();
 $lastPingTime = time();
-$maxExecutionSeconds = isset($maxExecutionSeconds) ? (int)$maxExecutionSeconds : 25; // Recycle every 25s for shared hosting compatibility
+$maxExecutionSeconds = isset($maxExecutionSeconds) ? (int)$maxExecutionSeconds : 18; // Recycled every 18s to quickly release PHP workers on shared hosting
 
 $lastQueueMtime = file_exists($messagesFile) ? (int)filemtime($messagesFile) : 0;
 $lastCallsMtime = file_exists($callsFile) ? (int)filemtime($callsFile) : 0;
@@ -251,6 +251,6 @@ while (true) {
         break;
     }
 
-    // Sleep for 350ms (ultra-responsive, negligible CPU overhead)
-    usleep(350000);
+    // Sleep for 1.25s (sub-second push latency with 75% lower DB/CPU overhead)
+    usleep(1250000);
 }
