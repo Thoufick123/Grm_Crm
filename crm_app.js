@@ -2334,8 +2334,22 @@ function ingestInboundMessage(payload, suppressChime = false) {
   if (!payload || !CRM_STATE) return;
 
   const rawPhone = payload.sender_phone || (payload.sender_jid ? payload.sender_jid.split('@')[0] : '+91 98765 43210');
-  const cleanPhone = rawPhone.startsWith('+') ? rawPhone : ('+' + rawPhone);
-  const normalizedDigits = cleanPhone.replace(/[^0-9]/g, '');
+  let cleanPhone = rawPhone.startsWith('+') ? rawPhone : ('+' + rawPhone);
+  let normalizedDigits = cleanPhone.replace(/[^0-9]/g, '');
+
+  // Privacy LID Resolution (e.g. 275341797023827 -> 919943557998)
+  const lidCandidate = payload.lid || ((payload.sender_jid && payload.sender_jid.includes('@lid')) ? payload.sender_jid.split('@')[0].replace(/[^0-9]/g, '') : (normalizedDigits.length >= 14 ? normalizedDigits : null));
+  if (lidCandidate) {
+    const sharedLidMap = (CRM_STATE && CRM_STATE.lidMappings) || window.LID_MAPPINGS || { '275341797023827': '919943557998' };
+    if (sharedLidMap[lidCandidate]) {
+      const mapped = String(sharedLidMap[lidCandidate]).replace(/[^0-9]/g, '');
+      if (mapped.length >= 10) {
+        normalizedDigits = mapped;
+        cleanPhone = mapped.length === 10 ? ('+91 ' + mapped.slice(0, 5) + ' ' + mapped.slice(5)) : (mapped.length === 12 && mapped.startsWith('91') ? ('+91 ' + mapped.slice(2, 7) + ' ' + mapped.slice(7)) : ('+' + mapped));
+      }
+    }
+  }
+
   const senderName = payload.sender_name || `WhatsApp Customer (${cleanPhone.slice(-4)})`;
   const messageText = payload.message_text || payload.text || 'Message';
   const timeStr = payload.received_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -3561,6 +3575,83 @@ function applyAuthoritativeDatabaseState(data) {
         }
       }
     });
+  }
+
+  // 8.1 Consolidate Privacy LID conversations, queries & customer profiles
+  const activeLidMap = (data.lidMappings && typeof data.lidMappings === 'object') ? data.lidMappings : (CRM_STATE.lidMappings || window.LID_MAPPINGS || { '275341797023827': '919943557998' });
+  if (data.lidMappings && typeof data.lidMappings === 'object') {
+    CRM_STATE.lidMappings = data.lidMappings;
+    window.LID_MAPPINGS = Object.assign(window.LID_MAPPINGS || {}, data.lidMappings);
+  }
+
+  for (const [lidDig, phoneDig] of Object.entries(activeLidMap)) {
+    const cleanLid = String(lidDig).replace(/[^0-9]/g, '');
+    const cleanPn = String(phoneDig).replace(/[^0-9]/g, '');
+    if (cleanLid.length >= 14 && cleanPn.length >= 10) {
+      const pn10 = cleanPn.slice(-10);
+      const realCust = (CRM_STATE.customers || []).find(c => {
+        const cp = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+        return cp.endsWith(pn10) || (c.id && c.id.endsWith(pn10));
+      });
+      if (realCust) {
+        const realCustId = realCust.id;
+        const lid10 = cleanLid.slice(-10);
+
+        // Find and remove placeholder customer
+        const phIdx = (CRM_STATE.customers || []).findIndex(c => {
+          if (c.id === realCustId) return false;
+          const cp = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+          return c.id === ('cust_' + cleanLid) || c.id === ('cust_' + lid10) || cp.includes(cleanLid) || (c.name && c.name.includes(cleanLid.slice(-4)));
+        });
+
+        if (phIdx !== -1) {
+          const phCust = CRM_STATE.customers[phIdx];
+          const phId = phCust.id;
+
+          // Merge conversations
+          if (CRM_STATE.conversations) {
+            const phMsgs = Array.isArray(CRM_STATE.conversations[phId]) ? CRM_STATE.conversations[phId] : [];
+            if (phMsgs.length > 0) {
+              if (!Array.isArray(CRM_STATE.conversations[realCustId])) CRM_STATE.conversations[realCustId] = [];
+              const existingUids = new Set(CRM_STATE.conversations[realCustId].map(m => m.id || m.message_uid));
+              phMsgs.forEach(m => {
+                const uid = m.id || m.message_uid;
+                if (!existingUids.has(uid)) {
+                  m.customer_id = realCustId;
+                  CRM_STATE.conversations[realCustId].push(m);
+                  existingUids.add(uid);
+                }
+              });
+              CRM_STATE.conversations[realCustId].sort((a, b) => (a.timestamp_epoch || 0) - (b.timestamp_epoch || 0));
+            }
+            delete CRM_STATE.conversations[phId];
+          }
+
+          // Remove placeholder query
+          if (Array.isArray(CRM_STATE.queries)) {
+            CRM_STATE.queries = CRM_STATE.queries.filter(q => q.customerId !== phId && q.customer_id !== phId);
+          }
+
+          // Remove placeholder customer
+          CRM_STATE.customers.splice(phIdx, 1);
+
+          // If user currently had placeholder selected, point to real customer
+          if (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID === phId) {
+            ACTIVE_CUSTOMER_ID = realCustId;
+            if (typeof selectCustomerForChat === 'function') {
+              selectCustomerForChat(realCustId);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Persist cleaned conversations to sessionStorage
+  if (typeof sessionStorage !== 'undefined' && CRM_STATE.conversations) {
+    try {
+      sessionStorage.setItem('GRM_INBOX_CONVERSATIONS', JSON.stringify(CRM_STATE.conversations));
+    } catch (e) {}
   }
 
   // 9. DND Records

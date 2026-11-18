@@ -48,6 +48,60 @@ function saveBase64MediaIfPresent(&$mediaUrl, $type = null) {
 }
 
 /**
+ * WhatsApp Privacy LID (15-digit linked identifier) to Genuine Phone Resolver
+ */
+function resolveLidPhone($phoneOrJid) {
+    if (empty($phoneOrJid)) return $phoneOrJid;
+    $target = trim((string)$phoneOrJid);
+    $clean = preg_replace('/[^0-9]/', '', $target);
+    if (empty($clean)) return $target;
+
+    $sharedLidFile = __DIR__ . '/lid_mappings.json';
+    if (file_exists($sharedLidFile)) {
+        try {
+            $map = json_decode(file_get_contents($sharedLidFile), true) ?: [];
+            if (isset($map[$clean])) {
+                $mapped = preg_replace('/[^0-9]/', '', (string)$map[$clean]);
+                if (strlen($mapped) >= 10) {
+                    if (strlen($mapped) === 10) return '+91 ' . substr($mapped, 0, 5) . ' ' . substr($mapped, 5);
+                    if (strlen($mapped) === 12 && str_starts_with($mapped, '91')) return '+91 ' . substr($mapped, 2, 5) . ' ' . substr($mapped, 7);
+                    return '+' . $mapped;
+                }
+            }
+        } catch (Exception $e) {}
+    }
+    return $target;
+}
+
+/**
+ * Merge temporary Privacy LID placeholder customer into authoritative Customer Profile
+ */
+function mergeLidPlaceholderCustomer($pdo, $realCustId, $lidDigits) {
+    if (!$pdo || empty($realCustId) || empty($lidDigits)) return;
+    try {
+        $cleanLid = preg_replace('/[^0-9]/', '', (string)$lidDigits);
+        if (strlen($cleanLid) < 10) return;
+        $lid10 = substr($cleanLid, -10);
+
+        // Find placeholder customers created under the LID digits or cust_{lid10}
+        $stmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `id` != ? AND (`id` = ? OR `id` = ? OR `phone` LIKE ? OR `whatsapp` LIKE ?)");
+        $stmt->execute([$realCustId, 'cust_' . $cleanLid, 'cust_' . $lid10, "%$cleanLid%", "%$cleanLid%"]);
+        $placeholders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($placeholders as $ph) {
+            $phId = $ph['id'];
+            if ($phId === $realCustId) continue;
+            // Move all messages from placeholder to real customer
+            $pdo->prepare("UPDATE `messages` SET `customer_id` = ? WHERE `customer_id` = ?")->execute([$realCustId, $phId]);
+            // Delete placeholder query
+            $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` = ?")->execute([$phId]);
+            // Delete placeholder customer
+            $pdo->prepare("DELETE FROM `customers` WHERE `id` = ?")->execute([$phId]);
+        }
+    } catch (Exception $e) {}
+}
+
+/**
  * GRM WHATSAPP CRM — FULL BACKEND REST API (PHP + XAMPP MYSQL)
  * Provides comprehensive database endpoints for:
  * - CRM Full State Synchronization (MySQL + Local Storage)
@@ -730,6 +784,32 @@ if ($action === 'get_state' || $action === 'get_all') {
             $products = $pStmt->fetchAll();
         }
 
+        // Self-Healing Privacy LID Consolidation: Merge temporary LID placeholder customers into authoritative profiles
+        $sharedLidFile = __DIR__ . '/lid_mappings.json';
+        $activeLidMappings = [];
+        if (file_exists($sharedLidFile)) {
+            try {
+                $activeLidMappings = json_decode(file_get_contents($sharedLidFile), true) ?: [];
+                foreach ($activeLidMappings as $lidKey => $pnVal) {
+                    $cleanLid = preg_replace('/[^0-9]/', '', (string)$lidKey);
+                    $cleanPn = preg_replace('/[^0-9]/', '', (string)$pnVal);
+                    if (strlen($cleanLid) >= 14 && strlen($cleanPn) >= 10 && strlen($cleanPn) <= 13) {
+                        $pn10 = substr($cleanPn, -10);
+                        // Locate genuine customer profile
+                        $realCustStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
+                        $realCustStmt->execute(['cust_' . $pn10, "%$pn10", "%$pn10"]);
+                        $realCustId = $realCustStmt->fetchColumn();
+                        if ($realCustId) {
+                            mergeLidPlaceholderCustomer($pdo, $realCustId, $cleanLid);
+                            // Update last message of real customer
+                            $pdo->prepare("UPDATE `queries` SET `last_message` = COALESCE((SELECT COALESCE(`text`, `message_text`) FROM `messages` WHERE `customer_id` = ? ORDER BY `timestamp_epoch` DESC, `id` DESC LIMIT 1), `last_message`) WHERE `customer_id` = ?")->execute([$realCustId, $realCustId]);
+                            $pdo->prepare("UPDATE `customers` SET `last_message` = COALESCE((SELECT COALESCE(`text`, `message_text`) FROM `messages` WHERE `customer_id` = ? ORDER BY `timestamp_epoch` DESC, `id` DESC LIMIT 1), `last_message`), `last_message_at` = NOW() WHERE `id` = ?")->execute([$realCustId, $realCustId]);
+                        }
+                    }
+                }
+            } catch (Exception $eLidConsolidate) {}
+        }
+
         // 4. Customers
         $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` ASC");
         $customers = $cStmt->fetchAll();
@@ -1031,7 +1111,8 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "dndRecords" => $dndRecords,
                 "dnd_records" => $dndRecords,
                 "autoReplyRules" => $arRules,
-                "broadcastTemplates" => $bcTemplates
+                "broadcastTemplates" => $bcTemplates,
+                "lidMappings" => $activeLidMappings
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -3540,6 +3621,14 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     $accSlot = $payload['accountId'] ?? 'account_1';
     $senderName = $payload['sender_name'] ?? 'Super Admin';
     $recipientName = trim($payload['recipient_name'] ?? ($payload['customer_name'] ?? ''));
+    $jid = trim($payload['jid'] ?? '');
+    $lid = trim($payload['lid'] ?? '');
+
+    // Deeply resolve Privacy LID to genuine phone number
+    $resolvedPhone = resolveLidPhone(!empty($lid) ? $lid : (!empty($phone) ? $phone : $jid));
+    if (!empty($resolvedPhone) && $resolvedPhone !== $phone && $resolvedPhone !== $lid) {
+        $phone = $resolvedPhone;
+    }
 
     // Universal Base64 decoding for outbound images & voice notes
     saveBase64MediaIfPresent($mediaUrl, $mediaType);
@@ -3576,6 +3665,14 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
 
                 $pdo->prepare("INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `last_message`, `status`, `account_slot`, `created_at`) VALUES (?, ?, ?, ?, ?, 'OPEN', ?, NOW()) ON DUPLICATE KEY UPDATE `last_message` = VALUES(`last_message`)")
                     ->execute(['qry_' . $clean10, $effectiveCustId, $initialName, $phone, $text, $accSlot]);
+            }
+
+            // Consolidate any duplicate placeholder customer created under this LID
+            if (!empty($lid)) {
+                mergeLidPlaceholderCustomer($pdo, $effectiveCustId, $lid);
+            }
+            if (!empty($jid) && (strpos($jid, '@lid') !== false || strlen(preg_replace('/[^0-9]/', '', $jid)) >= 14)) {
+                mergeLidPlaceholderCustomer($pdo, $effectiveCustId, $jid);
             }
 
             if (!empty($effectiveCustId)) {
@@ -3676,6 +3773,14 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $duration = $payload['duration'] ?? null;
     $timestampEpoch = $payload['timestamp_epoch'] ?? time();
     $receivedAt = $payload['received_at'] ?? date("h:i A");
+    $senderJid = $payload['sender_jid'] ?? '';
+    $lid = $payload['lid'] ?? '';
+
+    // Deeply resolve Privacy LID to genuine phone number
+    $resolvedPhone = resolveLidPhone(!empty($lid) ? $lid : (!empty($senderPhone) ? $senderPhone : $senderJid));
+    if (!empty($resolvedPhone) && $resolvedPhone !== $senderPhone && $resolvedPhone !== $lid) {
+        $senderPhone = $resolvedPhone;
+    }
 
     $msgUid = $payload['id'] ?? ("msg_" . uniqid());
     $msgEntry = [
@@ -3739,6 +3844,14 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             } else {
                 $custId = $existingCust['id'];
+            }
+
+            // Consolidate any duplicate placeholder customer created under this LID
+            if (!empty($lid)) {
+                mergeLidPlaceholderCustomer($pdo, $custId, $lid);
+            }
+            if (!empty($senderJid) && (strpos($senderJid, '@lid') !== false || strlen(preg_replace('/[^0-9]/', '', $senderJid)) >= 14)) {
+                mergeLidPlaceholderCustomer($pdo, $custId, $senderJid);
             }
 
             $isBot = (!empty($payload['is_outbound']) || ($payload['sender_name'] ?? '') === 'Bot (Auto-Reply)' || ($payload['source'] ?? '') === 'AUTOREPLY_BOT') ? 1 : 0;
@@ -3827,6 +3940,28 @@ if ($action === 'get_customer_messages') {
             if (strlen($rawP) >= 7) {
                 $phone10 = substr($rawP, -10);
             }
+        }
+
+        // Auto-consolidate any Privacy LID placeholder messages into this customer
+        $mappedLid = null;
+        $sharedLidFile = __DIR__ . '/lid_mappings.json';
+        if (file_exists($sharedLidFile)) {
+            try {
+                $lidMap = json_decode(file_get_contents($sharedLidFile), true) ?: [];
+                if (!empty($phone10)) {
+                    foreach ($lidMap as $lk => $lv) {
+                        $c1 = preg_replace('/[^0-9]/', '', (string)$lk);
+                        $c2 = preg_replace('/[^0-9]/', '', (string)$lv);
+                        if (strlen($c1) >= 14 && (substr($c2, -10) === $phone10)) {
+                            $mappedLid = $c1;
+                            break;
+                        }
+                    }
+                }
+            } catch (Exception $e) {}
+        }
+        if (!empty($mappedLid)) {
+            mergeLidPlaceholderCustomer($pdo, $cid, $mappedLid);
         }
 
         if (!empty($phone10)) {

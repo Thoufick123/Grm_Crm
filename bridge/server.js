@@ -215,12 +215,122 @@ function indexAllLidMappings() {
                 }
             }
         }
+        // Load shared root json mapping if present
+        const sharedLidPath = path.resolve(__dirname, '..', 'lid_mappings.json');
+        if (fs.existsSync(sharedLidPath)) {
+            try {
+                const shared = JSON.parse(fs.readFileSync(sharedLidPath, 'utf8'));
+                for (const [k, v] of Object.entries(shared)) {
+                    const kd = String(k).replace(/\D/g, '');
+                    const vd = String(v).replace(/\D/g, '');
+                    if (kd && vd) {
+                        LID_TO_PHONE_MAP.set(kd, vd);
+                        PHONE_TO_LID_MAP.set(vd, kd);
+                    }
+                }
+            } catch (eShared) {}
+        }
         console.log(`[LID Indexer] Loaded ${LID_TO_PHONE_MAP.size} bidirectional LID-to-Phone mappings into memory.`);
     } catch (e) {
         console.warn('[LID Indexer Warning]:', e.message);
     }
 }
 indexAllLidMappings();
+
+const SHARED_LID_MAPPINGS_FILE = path.resolve(__dirname, '..', 'lid_mappings.json');
+
+function saveLidMappingToDisk(lidDigits, pnDigits, accountId = null) {
+    if (!lidDigits || !pnDigits) return;
+    try {
+        if (accountId) {
+            const sDir = path.join(SESSIONS_BASE_DIR, accountId);
+            if (fs.existsSync(sDir)) {
+                fs.writeFileSync(path.join(sDir, `lid-mapping-${pnDigits}.json`), JSON.stringify(lidDigits));
+                fs.writeFileSync(path.join(sDir, `lid-mapping-${lidDigits}_reverse.json`), JSON.stringify(pnDigits));
+            }
+        }
+        let sharedMap = {};
+        if (fs.existsSync(SHARED_LID_MAPPINGS_FILE)) {
+            try { sharedMap = JSON.parse(fs.readFileSync(SHARED_LID_MAPPINGS_FILE, 'utf8')) || {}; } catch (e) {}
+        }
+        sharedMap[lidDigits] = pnDigits;
+        sharedMap[pnDigits] = lidDigits;
+        fs.writeFileSync(SHARED_LID_MAPPINGS_FILE, JSON.stringify(sharedMap, null, 2));
+    } catch (e) {}
+}
+
+async function resolveLidToPhoneNumber(jidOrLid, currentSock = null, accountId = null) {
+    if (!jidOrLid) return null;
+    const target = jidOrLid.toString().trim();
+    const cleanDigits = target.split('@')[0].replace(/\D/g, '');
+    if (!cleanDigits) return null;
+
+    // 1. Check in-memory map
+    if (LID_TO_PHONE_MAP.has(cleanDigits)) {
+        return LID_TO_PHONE_MAP.get(cleanDigits);
+    }
+
+    // 2. Check contacts cache
+    const cachedContact = CONTACTS_CACHE.get(target) || CONTACTS_CACHE.get(cleanDigits);
+    if (cachedContact?.phoneNumber) {
+        const ph = cachedContact.phoneNumber.replace(/\D/g, '');
+        if (ph && ph.length >= 10) {
+            LID_TO_PHONE_MAP.set(cleanDigits, ph);
+            PHONE_TO_LID_MAP.set(ph, cleanDigits);
+            saveLidMappingToDisk(cleanDigits, ph, accountId);
+            return ph;
+        }
+    }
+    for (const [cId, cData] of CONTACTS_CACHE.entries()) {
+        if (cData.lid === target || (cData.lid && cData.lid.includes(cleanDigits))) {
+            if (cId.includes('@s.whatsapp.net')) {
+                const ph = cId.split('@')[0].replace(/\D/g, '');
+                if (ph && ph.length >= 10) {
+                    LID_TO_PHONE_MAP.set(cleanDigits, ph);
+                    PHONE_TO_LID_MAP.set(ph, cleanDigits);
+                    saveLidMappingToDisk(cleanDigits, ph, accountId);
+                    return ph;
+                }
+            }
+        }
+    }
+
+    // 3. Query Baileys Signal Repository (Async USync)
+    const activeSock = currentSock || (accountId && accounts.has(accountId) ? accounts.get(accountId)?.sock : null) || accounts.values().next().value?.sock;
+    if (activeSock?.signalRepository?.lidMapping?.getPNForLID) {
+        try {
+            const formattedLid = target.includes('@lid') ? target : `${cleanDigits}@lid`;
+            const resolvedPn = await activeSock.signalRepository.lidMapping.getPNForLID(formattedLid);
+            if (resolvedPn) {
+                const ph = resolvedPn.split('@')[0].replace(/\D/g, '');
+                if (ph && ph.length >= 10) {
+                    LID_TO_PHONE_MAP.set(cleanDigits, ph);
+                    PHONE_TO_LID_MAP.set(ph, cleanDigits);
+                    saveLidMappingToDisk(cleanDigits, ph, accountId);
+                    console.log(`[Baileys Signal USync Hit] Resolved LID ${cleanDigits} -> PN ${ph}`);
+                    return ph;
+                }
+            }
+        } catch (eSignal) {}
+    }
+
+    // 4. Check shared JSON file on disk
+    if (fs.existsSync(SHARED_LID_MAPPINGS_FILE)) {
+        try {
+            const sharedMap = JSON.parse(fs.readFileSync(SHARED_LID_MAPPINGS_FILE, 'utf8'));
+            if (sharedMap && sharedMap[cleanDigits]) {
+                const ph = String(sharedMap[cleanDigits]).replace(/\D/g, '');
+                if (ph && ph.length >= 10) {
+                    LID_TO_PHONE_MAP.set(cleanDigits, ph);
+                    PHONE_TO_LID_MAP.set(ph, cleanDigits);
+                    return ph;
+                }
+            }
+        } catch (eDisk) {}
+    }
+
+    return null;
+}
 
 // Brand Configuration
 let BRAND_NAME = 'GRM Garments'; // Overridden by whatsapp_account_config.json on load
@@ -1247,6 +1357,23 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             }
         });
 
+        // Capture Baileys real-time LID-to-PN updates
+        sock.ev.on('lid-mapping.update', (mapping) => {
+            if (!mapping) return;
+            const mappings = Array.isArray(mapping) ? mapping : [mapping];
+            for (const m of mappings) {
+                if (!m.lid || !m.pn) continue;
+                const cleanLid = m.lid.split('@')[0].replace(/[^0-9]/g, '');
+                const cleanPn = m.pn.split('@')[0].replace(/[^0-9]/g, '');
+                if (cleanLid && cleanPn) {
+                    LID_TO_PHONE_MAP.set(cleanLid, cleanPn);
+                    PHONE_TO_LID_MAP.set(cleanPn, cleanLid);
+                    saveLidMappingToDisk(cleanLid, cleanPn, accountId);
+                    console.log(`[LID Sync Event] Mapped LID ${cleanLid} <-> PN ${cleanPn}`);
+                }
+            }
+        });
+
         // Listen for Real Inbound Customer Messages on this Account
         sock.ev.on('messages.upsert', async (m) => {
             if (m.type === 'notify') {
@@ -1267,68 +1394,28 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         if (senderJid.includes('@g.us') || senderJid === 'status@broadcast') continue;
 
                         let cleanNumber = senderJid.split('@')[0].split(':')[0];
+                        let originalLid = (senderJid.includes('@lid') || cleanNumber.length >= 14) ? cleanNumber : null;
                         let realPhone = null;
 
-                        // Check Baileys LID reverse mapping file if LID format
-                        if (senderJid.includes('@lid') || (cleanNumber.length >= 14 && (cleanNumber.startsWith('156') || cleanNumber.startsWith('235') || cleanNumber.startsWith('253') || cleanNumber.startsWith('275') || cleanNumber.startsWith('967')))) {
-                            // 1. Check in-memory index
-                            if (LID_TO_PHONE_MAP.has(cleanNumber)) {
-                                const digits = LID_TO_PHONE_MAP.get(cleanNumber);
-                                if (digits.length === 10) {
-                                    realPhone = '+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5);
-                                } else if (digits.length === 12 && digits.startsWith('91')) {
-                                    realPhone = '+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7);
-                                } else {
-                                    realPhone = '+' + digits;
-                                }
-                            }
-
-                            // 2. Check disk reverse file if not found
-                            if (!realPhone) {
-                                const reverseFile = path.join(sessionDir, `lid-mapping-${cleanNumber}_reverse.json`);
-                                if (fs.existsSync(reverseFile)) {
-                                    try {
-                                        const rawMapped = JSON.parse(fs.readFileSync(reverseFile, 'utf8'));
-                                        if (rawMapped && typeof rawMapped === 'string') {
-                                            const digits = rawMapped.replace(/[^0-9]/g, '');
-                                            if (digits.length >= 10) {
-                                                realPhone = digits.length === 10 ? ('+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5)) : (digits.length === 12 && digits.startsWith('91') ? ('+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7)) : ('+' + digits));
-                                            }
-                                        }
-                                    } catch (e) { }
-                                }
-                            }
-
-                            // 3. Check direct phone mapping files on disk
-                            if (!realPhone) {
-                                try {
-                                    const directFiles = fs.readdirSync(sessionDir).filter(f => f.startsWith('lid-mapping-') && !f.endsWith('_reverse.json'));
-                                    for (const pf of directFiles) {
-                                        try {
-                                            const c = JSON.parse(fs.readFileSync(path.join(sessionDir, pf), 'utf8'));
-                                            if (c && c.toString().replace(/[^0-9]/g, '') === cleanNumber) {
-                                                const digits = pf.replace('lid-mapping-', '').replace('.json', '');
-                                                LID_TO_PHONE_MAP.set(cleanNumber, digits);
-                                                PHONE_TO_LID_MAP.set(digits, cleanNumber);
-                                                realPhone = digits.length === 10 ? ('+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5)) : (digits.length === 12 && digits.startsWith('91') ? ('+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7)) : ('+' + digits));
-                                                break;
-                                            }
-                                        } catch (e) { }
-                                    }
-                                } catch (e) { }
+                        // Deeply resolve WhatsApp Privacy LID to genuine phone number
+                        if (originalLid) {
+                            const resolvedPn = await resolveLidToPhoneNumber(senderJid, sock, accountId);
+                            if (resolvedPn) {
+                                cleanNumber = resolvedPn;
+                                console.log(`[Inbound LID Resolved] Mapped ${originalLid} -> ${cleanNumber}`);
                             }
                         }
 
-                        if (!realPhone) {
-                            const digitsOnly = cleanNumber.replace(/[^0-9]/g, '');
-                            if (digitsOnly.length === 10) {
-                                realPhone = '+91 ' + digitsOnly.slice(0, 5) + ' ' + digitsOnly.slice(5);
-                            } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
-                                realPhone = '+91 ' + digitsOnly.slice(2, 7) + ' ' + digitsOnly.slice(7);
-                            } else {
-                                realPhone = '+' + cleanNumber;
-                            }
+                        const digitsOnly = cleanNumber.replace(/[^0-9]/g, '');
+                        if (digitsOnly.length === 10) {
+                            realPhone = '+91 ' + digitsOnly.slice(0, 5) + ' ' + digitsOnly.slice(5);
+                        } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+                            realPhone = '+91 ' + digitsOnly.slice(2, 7) + ' ' + digitsOnly.slice(7);
+                        } else {
+                            realPhone = '+' + cleanNumber;
                         }
+
+                        const senderNumber = realPhone || ('+' + cleanNumber);
 
                         let resolvedSenderName = msg.pushName;
                         if (!resolvedSenderName) {
@@ -1701,7 +1788,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             assigned_to: 'UNASSIGNED',
                             source: 'REAL_WHATSAPP_LIVE',
                             timestamp_epoch: Math.floor(Date.now() / 1000),
-                            received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            lid: originalLid
                         };
 
                         // 1. Emit live to CRM UI over WebSocket (Instant!)
@@ -1817,9 +1905,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                             // Resolve Privacy LID to actual telephone number
                             let mappedDigits = digitsOnly;
-                            if (recipientJid.includes('@lid') || digitsOnly.length >= 14) {
-                                if (LID_TO_PHONE_MAP.has(digitsOnly)) {
-                                    mappedDigits = LID_TO_PHONE_MAP.get(digitsOnly);
+                            const isLid = recipientJid.includes('@lid') || digitsOnly.length >= 14;
+                            if (isLid) {
+                                const resolvedPn = await resolveLidToPhoneNumber(recipientJid, sock, accountId);
+                                if (resolvedPn) {
+                                    mappedDigits = resolvedPn;
+                                    console.log(`[Admin Phone Reply LID Resolved] Mapped ${recipientJid} -> ${mappedDigits}`);
                                 }
                             }
 
@@ -1994,7 +2085,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 source: 'WHATSAPP_PHONE_DIRECT',
                                 status: 'DELIVERED',
                                 timestamp_epoch: Math.floor(Date.now() / 1000),
-                                received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                lid: isLid ? digitsOnly : null
                             };
 
                             // Emit live to CRM UI over WebSocket (Instant!)
@@ -2009,6 +2101,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                         phone: realRecipientPhone,
                                         text: outText,
                                         jid: recipientJid,
+                                        lid: isLid ? digitsOnly : null,
                                         accountId: accountId,
                                         media_url: outMediaUrl,
                                         mediaUrl: outMediaUrl,
