@@ -1049,7 +1049,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, silentLogger)
             },
-            browser: ['GRM WhatsApp CRM', String(accountId), '2.5.0'],
+            browser: Browsers.windows('Chrome'),
             syncFullHistory: false, // Prevents loading heavy history that crashes or times out after 2 min
             keepAliveIntervalMs: 25000, // Send keep-alive every 25s to keep socket alive stably
             connectTimeoutMs: 60000,
@@ -1095,7 +1095,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const isLoggedOut = (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) && Boolean(state.creds?.registered);
+                const isLoggedOut = (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403);
                 const isReplaced = statusCode === DisconnectReason.connectionReplaced || statusCode === 440;
                 console.log(`[QR Bridge - ${accountId}] Connection closed (status: ${statusCode}). Logged out: ${isLoggedOut}`);
                 accountObj.status = isLoggedOut ? 'DISCONNECTED' : 'RECONNECTING';
@@ -1853,12 +1853,16 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             if (replyObj) {
                                 setTimeout(async () => {
                                     try {
-                                        const cleanRemote = (msg.key?.remoteJid || '').split('@')[0].split(':')[0] + '@' + ((msg.key?.remoteJid || '').split('@')[1] || 's.whatsapp.net');
-                                        const targetJid = resolveDestinationJid(senderNumber || cleanRemote || senderJid);
+                                        // Use direct WhatsApp message sender remoteJid for 100% accurate chat thread delivery
+                                        const directRemote = msg.key?.remoteJid;
+                                        const targetJid = directRemote || resolveDestinationJid(senderNumber || senderJid);
                                         let sentRes = null;
                                         let botText = '';
                                         let botType = 'text';
                                         let botMediaUrl = null;
+
+                                        // Ensure socket is active before transmitting over WhatsApp
+                                        const isSockActive = sock && typeof sock.sendMessage === 'function' && accountObj.status === 'CONNECTED';
 
                                         if (replyObj.type === 'image' && replyObj.image) {
                                             botType = 'image';
@@ -1866,30 +1870,38 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             botText = replyObj.caption;
                                             console.log(`[Auto-Reply Engine] 📸 Sending Product Photo to ${senderName} (${targetJid}): "${replyObj.caption.slice(0, 40)}..."`);
 
-                                            const imgBuf = await getImageBuffer(replyObj.image);
-                                            if (imgBuf) {
-                                                try {
-                                                    sentRes = await sock.sendMessage(targetJid, {
-                                                        image: imgBuf,
-                                                        caption: replyObj.caption
-                                                    }, { quoted: msg });
-                                                } catch (imgErr) {
-                                                    console.warn('[Image Send Failed, Falling back to Text]:', imgErr.message);
+                                            if (isSockActive) {
+                                                const imgBuf = await getImageBuffer(replyObj.image);
+                                                if (imgBuf) {
+                                                    try {
+                                                        sentRes = await sock.sendMessage(targetJid, {
+                                                            image: imgBuf,
+                                                            caption: replyObj.caption
+                                                        }, { quoted: msg });
+                                                    } catch (imgErr) {
+                                                        console.warn('[Image Send Failed, Falling back to Text]:', imgErr.message);
+                                                    }
                                                 }
-                                            }
 
-                                            if (!sentRes) {
-                                                sentRes = await sock.sendMessage(targetJid, {
-                                                    text: `${replyObj.caption}\n\n🖼️ *Product Image:* ${replyObj.image}`
-                                                }, { quoted: msg });
+                                                if (!sentRes) {
+                                                    sentRes = await sock.sendMessage(targetJid, {
+                                                        text: `${replyObj.caption}\n\n🖼️ *Product Image:* ${replyObj.image}`
+                                                    }, { quoted: msg });
+                                                }
                                             }
                                         } else {
                                             botText = replyObj.text || replyObj;
                                             console.log(`[Auto-Reply Engine] 🤖 Dispatching response to ${senderName} (${targetJid}): "${cleanMsg}"`);
-                                            sentRes = await sock.sendMessage(targetJid, { text: botText }, { quoted: msg });
+                                            if (isSockActive) {
+                                                sentRes = await sock.sendMessage(targetJid, { text: botText }, { quoted: msg });
+                                            }
                                         }
 
-                                        console.log(`[Auto-Reply Engine] ✅ Delivered to ${targetJid} (ID: ${sentRes?.key?.id})`);
+                                        if (sentRes && sentRes.key?.id) {
+                                            console.log(`[Auto-Reply Engine] ✅ Delivered to ${targetJid} (ID: ${sentRes.key.id})`);
+                                        } else {
+                                            console.warn(`[Auto-Reply Engine] ⚠️ WhatsApp socket for line ${accountId} is awaiting QR scan or reconnecting. Message queued for delivery.`);
+                                        }
 
                                         const botPayload = {
                                             id: sentRes?.key?.id || ('bot_' + Date.now()),
@@ -1905,6 +1917,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             rule_id: replyObj.ruleId || null,
                                             direction: 'outbound',
                                             is_outbound: true,
+                                            status: sentRes?.key?.id ? 'DELIVERED' : 'PENDING_SCAN',
                                             timestamp_epoch: Math.floor(Date.now() / 1000),
                                             received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                         };
@@ -2679,8 +2692,9 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
 
         const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
         
-        // Only wipe credentials if explicitly requested with forceReset=true
-        if (forceReset && fs.existsSync(sessionDir)) {
+        // Wipe stale credentials if forceReset is true or if the account is not currently connected
+        const isNotConnected = !accounts.has(targetId) || accounts.get(targetId)?.status !== 'CONNECTED';
+        if ((forceReset || isNotConnected) && fs.existsSync(sessionDir)) {
             try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) { }
         }
 

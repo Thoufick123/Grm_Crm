@@ -2140,10 +2140,6 @@ function initSocketIO() {
       console.log('ℹ️ [Bridge]: Set localStorage.setItem("GRM_BRIDGE_URL", "https://your-bridge.onrender.com") to connect Render WebSocket');
       return;
     }
-    if (bridgeUrl.includes('hostingersite.com')) {
-      console.log('ℹ️ [Bridge]: Hostinger shared hosting environment detected. Real-time updates active via SSE event stream.');
-      return;
-    }
     SOCKET_IO = io(bridgeUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -2770,8 +2766,8 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
   accounts.forEach(acc => {
     let existing = CRM_STATE.whatsappLines.find(l => l.id === acc.id);
     if (existing) {
-      // Guard: Never demote an already CONNECTED account in CRM_STATE to DISCONNECTED
-      // if the incoming update has no real authenticated phone number!
+      // Guard: Never demote an already authenticated CONNECTED account to DISCONNECTED on transient network drops
+      // unless a live QR code is emitted (which means device was unlinked and needs scanning)
       const isExistingLive = existing.status === 'CONNECTED' && 
                              existing.connected_number && 
                              existing.connected_number !== 'Awaiting Link' && 
@@ -2782,11 +2778,11 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
                                    incomingRawPhone !== 'Scan QR Code' &&
                                    !incomingRawPhone.includes('Awaiting');
 
-      if (isExistingLive && !hasIncomingRealPhone && (acc.status === 'DISCONNECTED' || acc.status === 'SCAN_QR' || acc.status === 'CONNECTING' || acc.status === 'RECONNECTING')) {
+      if (isExistingLive && !hasIncomingRealPhone && !acc.qr_image && (acc.status === 'DISCONNECTED' || acc.status === 'CONNECTING' || acc.status === 'RECONNECTING')) {
         return;
       }
       existing.status = (acc.status || 'DISCONNECTED').toUpperCase();
-      existing.connected_number = (hasIncomingRealPhone ? incomingRawPhone : existing.connected_number) || 'Awaiting Link';
+      existing.connected_number = hasIncomingRealPhone ? incomingRawPhone : (existing.status === 'CONNECTED' ? existing.connected_number : 'Awaiting Link');
       existing.qr_image = acc.qr_image || null;
       existing.label = acc.label || acc.name || existing.label;
     } else {
@@ -30632,6 +30628,22 @@ function renderMultiAccountsHub() {
       </div>
     `;
   }).join('');
+
+  // Auto-poll QR status every 3.5s while viewing settings if any account is scanning or connecting
+  if (typeof window !== 'undefined') {
+    if (window._qrHubPollTimer) {
+      clearTimeout(window._qrHubPollTimer);
+      window._qrHubPollTimer = null;
+    }
+    const hasPendingScan = accounts.some(a => a.status === 'SCAN_QR' || a.status === 'CONNECTING');
+    if (hasPendingScan && ACTIVE_VIEW === 'settings') {
+      window._qrHubPollTimer = setTimeout(() => {
+        if (ACTIVE_VIEW === 'settings') {
+          fetchQRBridgeStatus();
+        }
+      }, 3500);
+    }
+  }
 }
 
 // Connect selected WhatsApp number and open live conversations in inbox
@@ -30731,13 +30743,14 @@ function generateFreshAccountQR(accountId) {
   fetch(`${getBridgeBaseUrl()}/api/accounts/refresh_qr`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ accountId: targetId })
+    body: JSON.stringify({ accountId: targetId, forceReset: true })
   })
     .then(r => r.json())
     .then(res => {
       setTimeout(fetchQRBridgeStatus, 1000);
       setTimeout(fetchQRBridgeStatus, 2500);
       setTimeout(fetchQRBridgeStatus, 4500);
+      setTimeout(fetchQRBridgeStatus, 7000);
     })
     .catch(() => {
       showToast('Bridge Offline', 'Please make sure Node.js bridge server is running on port 3000', 'warning', 'rose');

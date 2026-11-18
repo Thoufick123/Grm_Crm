@@ -208,9 +208,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <span class="material-symbols-outlined text-[32px] text-emerald-300">lock_person</span>
           </div>
           <h2 class="text-xl font-extrabold tracking-tight text-white flex items-center justify-center gap-2">
-            GRM WhatsApp CRM <span class="text-xs bg-brand-wa/30 text-emerald-300 font-mono px-2 py-0.5 rounded-full border border-emerald-400/30">Secure Login</span>
+            GRM WhatsApp CRM
           </h2>
-          <p class="text-xs text-emerald-200/80 mt-1">Role-Based Authentication & Workstation Access</p>
         </div>
       </div>
 
@@ -234,9 +233,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST" action="login.php" id="login-form" class="space-y-4">
           <!-- Username / Staff ID -->
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+            <label class="block text-xs font-bold text-slate-700 mb-1">
               <span>Username or Staff ID</span>
-              <span class="text-[10px] text-slate-400">e.g. admin or staff ID</span>
             </label>
             <div class="relative">
               <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">account_circle</span>
@@ -246,9 +244,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <!-- Password -->
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+            <label class="block text-xs font-bold text-slate-700 mb-1">
               <span>Password</span>
-              <span class="text-[10px] text-slate-400">admin123 / staff123</span>
             </label>
             <div class="relative">
               <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">key</span>
@@ -260,12 +257,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
 
           <!-- Remember Me Checkbox -->
-          <div class="flex items-center justify-between text-xs pt-1">
+          <div class="flex items-center text-xs pt-1">
             <label class="flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" name="remember" id="remember" checked class="rounded border-slate-300 text-brand-wa focus:ring-brand-wa w-4 h-4">
               <span class="text-slate-600 font-medium">Keep me signed in</span>
             </label>
-            <span class="text-[11px] text-emerald-600 font-bold">100% Cost-Free Local Auth</span>
           </div>
 
           <!-- Submit Button -->
@@ -273,47 +269,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <span class="material-symbols-outlined text-[18px]">login</span> Sign In to Panel
           </button>
         </form>
-
-        <!-- Quick 1-Click Fast Demo Logins -->
-        <div class="pt-3 border-t border-slate-100">
-          <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center mb-2.5">
-            ⚡ Quick 1-Click Fast Login
-          </p>
-          <div class="grid grid-cols-2 gap-2">
-            <!-- Super Admin -->
-            <button type="button" onclick="quickFillAndSubmit('admin', 'admin123')" class="p-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-left transition flex items-center gap-2 group <?php echo empty($dbStaffList) ? 'col-span-2' : ''; ?>">
-              <span class="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0">👑</span>
-              <div class="overflow-hidden">
-                <div class="text-[11px] font-bold text-purple-900 leading-tight">Super Admin</div>
-                <div class="text-[9px] text-purple-600 truncate">Full System Access</div>
-              </div>
-            </button>
-
-            <?php if (!empty($dbStaffList)): ?>
-              <?php foreach ($dbStaffList as $st): ?>
-                <button type="button" onclick="quickFillAndSubmit('<?php echo htmlspecialchars($st['username'] ?? $st['id']); ?>', '')" class="p-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-left transition flex items-center gap-2 group cursor-pointer shadow-2xs">
-                  <span class="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0"><?php echo htmlspecialchars($st['avatar'] ?? strtoupper(substr($st['name'], 0, 2))); ?></span>
-                  <div class="overflow-hidden">
-                    <div class="text-[11px] font-bold text-blue-900 leading-tight truncate"><?php echo htmlspecialchars($st['name'] . ' (' . $st['id'] . ')'); ?></div>
-                    <div class="text-[9px] text-blue-600 truncate"><?php echo htmlspecialchars($st['role'] ?? 'Staff Member'); ?></div>
-                  </div>
-                </button>
-              <?php endforeach; ?>
-            <?php endif; ?>
-          </div>
-        </div>
-
-        <!-- Role Separation Details -->
-        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
-          <div class="flex items-center gap-1.5 font-bold text-slate-800">
-            <span class="material-symbols-outlined text-[14px] text-brand-wa">verified_user</span>
-            <span>Strict Role Access Control:</span>
-          </div>
-          <p class="text-[10px] text-slate-500 leading-relaxed">
-            &bull; <strong>Admin:</strong> Complete system control, WhatsApp QR management, backup, and staff creation.<br>
-            &bull; <strong>Staff:</strong> Restricted workstation for assigned customer chats, stock check & order creation.
-          </p>
-        </div>
 
       </div>
     </div>

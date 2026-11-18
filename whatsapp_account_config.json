@@ -11,7 +11,7 @@
     "webhook_verify_token": "GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026",
     "provider": "META_CLOUD_API",
     "status": "DISCONNECTED",
-    "last_sync": "2026-11-18 11:02:02",
+    "last_sync": "2026-11-19 02:14:59",
     "connected_lines": [
         {
             "id": "account_1",
@@ -23,9 +23,9 @@
         {
             "id": "account_2",
             "label": "WhatsApp Business #2",
-            "phone_number": "+91 99435 57998",
+            "phone_number": "Awaiting Link",
             "brand_name": "WhatsApp Business #2",
-            "status": "CONNECTED"
+            "status": "DISCONNECTED"
         }
     ],
     "autoReplyEnabled": false,

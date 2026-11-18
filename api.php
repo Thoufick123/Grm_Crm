@@ -921,9 +921,53 @@ if ($action === 'get_state' || $action === 'get_all') {
         }
 
         // 4. Customers
+        // Self-heal legacy 11-digit customer IDs and companion device artifacts
+        try {
+            $pdo->exec("UPDATE `messages` SET `customer_id` = 'cust_8124038585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_id` LIKE '%85850'");
+            $pdo->exec("UPDATE `queries` SET `customer_id` = 'cust_8124038585', `customer_phone` = '+91 81240 38585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_phone` LIKE '%85850%'");
+            $pdo->exec("UPDATE `customers` SET `id` = 'cust_8124038585', `phone` = '+91 81240 38585', `whatsapp` = '+91 81240 38585' WHERE `id` IN ('cust_1240385850', 'cust_81240385850') OR `id` LIKE '%85850'");
+        } catch (Exception $eSelfHeal) {}
+
+        // Identify company business line phone numbers so they NEVER appear as customers
+        $businessPhones10 = ['9943557998', '8668007593', '9789660115'];
+        foreach ($waAccounts as $wa) {
+            if (!empty($wa['phone_number'])) {
+                $wp = preg_replace('/[^0-9]/', '', $wa['phone_number']);
+                if (strlen($wp) >= 10) {
+                    $businessPhones10[] = substr($wp, -10);
+                }
+            }
+        }
+        $businessPhones10 = array_values(array_unique($businessPhones10));
+
         $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` ASC");
-        $customers = $cStmt->fetchAll();
-        foreach ($customers as &$c) {
+        $rawCustomers = $cStmt->fetchAll();
+        $customers = [];
+        foreach ($rawCustomers as $c) {
+            $rawP = !empty($c['phone']) ? $c['phone'] : ($c['whatsapp'] ?? '');
+            $cleanDigits = preg_replace('/[^0-9]/', '', $rawP);
+            $cName = trim($c['name'] ?? '');
+
+            // STRICT FILTER: The business itself (GRM Garments, Business Hub, admin numbers) is NOT a customer!
+            $isBusiness = false;
+            foreach ($businessPhones10 as $bp) {
+                if (!empty($bp) && str_ends_with($cleanDigits, $bp)) {
+                    $isBusiness = true;
+                    break;
+                }
+            }
+            if ($cName === 'GRM Garments' || $cName === 'GRM Garments Business Hub' || $cName === 'GRM Garments Official' || $c['id'] === 'cust_9943557998') {
+                $isBusiness = true;
+            }
+
+            if ($isBusiness) {
+                try {
+                    $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` = ?")->execute([$c['id']]);
+                    $pdo->prepare("DELETE FROM `customers` WHERE `id` = ?")->execute([$c['id']]);
+                } catch (Exception $eDelPh) {}
+                continue;
+            }
+
             if (!empty($c['tags']) && is_string($c['tags'])) {
                 $c['tags'] = json_decode($c['tags'], true) ?: [];
             }
@@ -933,7 +977,6 @@ if ($action === 'get_state' || $action === 'get_all') {
             $c['unreadCount'] = (int)($c['unread_count'] ?? 0);
 
             // Self-healing: Sanitize customer phone from trailing device 0 or companion index
-            $rawP = !empty($c['phone']) ? $c['phone'] : ($c['whatsapp'] ?? '');
             if (!empty($rawP)) {
                 $pInfo = cleanWhatsAppPhone($rawP);
                 if (!empty($pInfo['clean10']) && strlen($pInfo['clean10']) === 10) {
@@ -944,7 +987,6 @@ if ($action === 'get_state' || $action === 'get_all') {
 
             // Self-healing: Prevent account slot labels from becoming customer contact names
             if (!empty($c['name']) && preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $c['name'])) {
-                $cleanDigits = preg_replace('/[^0-9]/', '', $c['phone'] ?? '');
                 $last4 = strlen($cleanDigits) >= 4 ? substr($cleanDigits, -4) : 'User';
                 $c['name'] = "Customer ($last4)";
                 try {
@@ -952,12 +994,30 @@ if ($action === 'get_state' || $action === 'get_all') {
                     $pdo->prepare("UPDATE `queries` SET `customer_name` = ?, `customer_phone` = ? WHERE `customer_id` = ?")->execute([$c['name'], $c['phone'], $c['id']]);
                 } catch (Exception $eUpdateCust) {}
             }
+            $customers[] = $c;
         }
 
         // 5. Queries
         $qStmt = $pdo->query("SELECT * FROM `queries` ORDER BY `created_at` DESC");
-        $queries = $qStmt->fetchAll();
-        foreach ($queries as &$q) {
+        $rawQueries = $qStmt->fetchAll();
+        $queries = [];
+        foreach ($rawQueries as $q) {
+            $qPhoneDigits = preg_replace('/[^0-9]/', '', $q['customer_phone'] ?? '');
+            $qCidDigits = preg_replace('/[^0-9]/', '', $q['customer_id'] ?? '');
+            $isBusinessQuery = false;
+            foreach ($businessPhones10 as $bp) {
+                if (!empty($bp) && (str_ends_with($qPhoneDigits, $bp) || str_ends_with($qCidDigits, $bp))) {
+                    $isBusinessQuery = true;
+                    break;
+                }
+            }
+            if ($isBusinessQuery || ($q['customer_name'] ?? '') === 'GRM Garments') {
+                try {
+                    $pdo->prepare("DELETE FROM `queries` WHERE `id` = ?")->execute([$q['id']]);
+                } catch (Exception $eDelQ) {}
+                continue;
+            }
+
             if (!empty($q['status_history']) && is_string($q['status_history'])) {
                 $q['statusHistory'] = json_decode($q['status_history'], true) ?: [];
             } else {
@@ -974,6 +1034,7 @@ if ($action === 'get_state' || $action === 'get_all') {
             $q['callbackDate'] = $q['callback_date'] ?? '';
             $q['callbackTime'] = $q['callback_time'] ?? '11:00 AM';
             $q['statusNotes'] = $q['status_notes'] ?? '';
+            $queries[] = $q;
         }
 
         // 6. Conversations map grouped by customer_id (High-Speed Recent Snippets)
@@ -983,7 +1044,10 @@ if ($action === 'get_state' || $action === 'get_all') {
             foreach ($customers as $c) {
                 $cp = preg_replace('/[^0-9]/', '', ($c['phone'] ?? ($c['whatsapp'] ?? '')));
                 if (strlen($cp) >= 7) {
-                    $phoneToCid[substr($cp, -10)] = $c['id'];
+                    $pInfo = cleanWhatsAppPhone($cp);
+                    if (!empty($pInfo['clean10'])) {
+                        $phoneToCid[$pInfo['clean10']] = $c['id'];
+                    }
                 }
             }
 
@@ -991,17 +1055,36 @@ if ($action === 'get_state' || $action === 'get_all') {
             $allMessages = $mStmt->fetchAll();
             foreach ($allMessages as $msg) {
                 $cid = $msg['customer_id'];
-                if (!empty($msg['sender_phone'])) {
-                    $cleanP = substr(preg_replace('/[^0-9]/', '', $msg['sender_phone']), -10);
-                    if (!empty($cleanP) && isset($phoneToCid[$cleanP])) {
-                        $cid = $phoneToCid[$cleanP];
+                $dir = $msg['direction'] ?? ($msg['sender'] === 'customer' ? 'inbound' : 'outbound');
+
+                // Canonicalize customer ID if 11 digits ending in 0 (e.g. cust_81240385850 -> cust_8124038585)
+                if (!empty($cid) && preg_match('/cust_(\d{10,12})/', $cid, $mCid)) {
+                    $pInfo = cleanWhatsAppPhone($mCid[1]);
+                    if (!empty($pInfo['clean10'])) {
+                        $cid = 'cust_' . $pInfo['clean10'];
                     }
                 }
-                if (empty($cid) && !empty($msg['sender_phone'])) {
-                    $cleanP = preg_replace('/[^0-9]/', '', $msg['sender_phone']);
-                    $cid = 'cust_' . substr($cleanP, -10);
+
+                // ONLY match sender_phone for inbound customer messages, NEVER for outbound staff/bot messages!
+                if (($dir === 'inbound' || $msg['sender'] === 'customer') && !empty($msg['sender_phone'])) {
+                    $pInfo = cleanWhatsAppPhone($msg['sender_phone']);
+                    $clean10 = $pInfo['clean10'];
+                    if (!empty($clean10)) {
+                        if (isset($phoneToCid[$clean10])) {
+                            $cid = $phoneToCid[$clean10];
+                        } elseif (empty($cid)) {
+                            $cid = 'cust_' . $clean10;
+                        }
+                    }
                 }
+
+                // Skip messages if $cid points to the business itself
                 if (!empty($cid)) {
+                    $cleanCidDigits = preg_replace('/[^0-9]/', '', $cid);
+                    if (in_array(substr($cleanCidDigits, -10), $businessPhones10)) {
+                        continue;
+                    }
+
                     if (!isset($conversations[$cid])) {
                         $conversations[$cid] = [];
                     }
@@ -1761,7 +1844,7 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     // 2. Update MySQL database
     if ($pdo) {
         try {
-            $dbPhone = ($status === 'CONNECTED' && $phoneNumber) ? $phoneNumber : (($status === 'DISCONNECTED') ? 'Awaiting Link' : null);
+            $dbPhone = ($status === 'CONNECTED' && $phoneNumber) ? $phoneNumber : (($status === 'DISCONNECTED' || $status === 'SCAN_QR') ? 'Awaiting Link' : null);
             $dbQr = ($status === 'CONNECTED' || $status === 'DISCONNECTED') ? null : $qrCode;
             $stmt = $pdo->prepare("
                 UPDATE `whatsapp_accounts` 
@@ -4133,7 +4216,7 @@ if ($action === 'get_customer_messages') {
                     SELECT * FROM `messages` 
                     WHERE `customer_id` = :cid 
                        OR `customer_id` LIKE :cidLike
-                       OR REPLACE(REPLACE(REPLACE(REPLACE(`sender_phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE :phoneLike
+                       OR (`direction` = 'inbound' AND REPLACE(REPLACE(REPLACE(REPLACE(`sender_phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE :phoneLike)
                     ORDER BY `id` DESC LIMIT 300
                 ) sub ORDER BY `id` ASC
             ");
