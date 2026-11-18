@@ -4152,23 +4152,27 @@ function switchInboxSubmodule(submodule) {
   if (tabAuto) tabAuto.className = inactiveTabClass;
   if (tabBcast) tabBcast.className = inactiveTabClass;
 
-  // Reset sidebar subnav classes
-  const inactiveNavClass = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-xs font-medium transition cursor-pointer group";
-  if (navSubChat) navSubChat.className = inactiveNavClass;
-  if (navSubAuto) navSubAuto.className = inactiveNavClass;
-  if (navSubBcast) navSubBcast.className = inactiveNavClass;
-  if (navSubSettings) navSubSettings.className = inactiveNavClass + " md:hidden";
+  // Update sidebar flat nav classes
+  const navInboxBtn = document.getElementById('nav-inbox');
+  const navAutoBtn = document.getElementById('nav-inbox-sub-autoreply');
+  const navBcastBtn = document.getElementById('nav-inbox-sub-broadcast');
+  const unreadBadge = document.getElementById('badge-total-unread');
+
+  const mainActiveNav = "w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer";
+  const mainInactiveNav = "w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group cursor-pointer";
+
+  if (navInboxBtn) navInboxBtn.className = (submodule === 'chats' ? mainActiveNav : mainInactiveNav);
+  if (navAutoBtn) navAutoBtn.className = (submodule === 'autoreply' ? mainActiveNav : mainInactiveNav);
+  if (navBcastBtn) navBcastBtn.className = (submodule === 'broadcast' ? mainActiveNav : mainInactiveNav);
+  if (unreadBadge) unreadBadge.className = (submodule === 'chats' ? "bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full" : "bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-2 py-0.5 rounded-full");
 
   const pTitle = document.getElementById('page-title');
   const pSub = document.getElementById('page-subtitle');
   const t = window.t || ((k, f) => f || k);
 
-  const activeSubNavClass = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-300 bg-emerald-950/40 border border-emerald-500/25 font-bold text-xs hover:text-white transition cursor-pointer group";
-
   if (submodule === 'chats') {
     if (chatSub) chatSub.classList.remove('hidden');
     if (tabChat) tabChat.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-brand-wa text-white cursor-pointer";
-    if (navSubChat) navSubChat.className = activeSubNavClass;
     if (pTitle) pTitle.innerText = t('header.title.inbox_chats', 'WhatsApp Inbox & Customer Queue');
     if (pSub) {
       pSub.innerText = '';
@@ -4177,7 +4181,6 @@ function switchInboxSubmodule(submodule) {
   } else if (submodule === 'autoreply') {
     if (autoSub) autoSub.classList.remove('hidden');
     if (tabAuto) tabAuto.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-teal-600 to-emerald-600 text-white cursor-pointer";
-    if (navSubAuto) navSubAuto.className = activeSubNavClass;
     if (pTitle) pTitle.innerText = t('header.title.inbox_autoreply', 'Pre-Set Templates & Auto-Reply Hub');
     if (pSub) {
       pSub.innerText = '';
@@ -4191,7 +4194,6 @@ function switchInboxSubmodule(submodule) {
   } else if (submodule === 'broadcast') {
     if (bcastSub) bcastSub.classList.remove('hidden');
     if (tabBcast) tabBcast.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white cursor-pointer";
-    if (navSubBcast) navSubBcast.className = activeSubNavClass;
     if (pTitle) pTitle.innerText = t('header.title.inbox_broadcast', 'Automated Template Broadcast');
     if (pSub) {
       pSub.innerText = '';
@@ -4283,38 +4285,11 @@ function renderInboxSettingsView() {
 }
 window.renderInboxSettingsView = renderInboxSettingsView;
 
-// Interactive WhatsApp Inbox Dropdown Sidebar Toggle Handler
-function toggleWhatsAppDropdown(event, targetSubmodule, arrowOnly) {
-  if (event) {
-    if (typeof event.stopPropagation === 'function') event.stopPropagation();
-    if (typeof event.preventDefault === 'function' && arrowOnly) event.preventDefault();
-  }
-  const subMenu = document.getElementById('inbox-submodules-menu');
-  const subnavArrow = document.getElementById('inbox-subnav-arrow');
-
+// Direct WhatsApp Inbox Navigation Handler (No Expand Dropdown)
+function toggleWhatsAppDropdown(event, targetSubmodule) {
+  if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
   const shield = document.getElementById('instant-view-shield');
   if (shield) shield.remove();
-
-  if (!subMenu) return;
-
-  const isCurrentlyOpen = !subMenu.classList.contains('hidden');
-
-  // If arrow was clicked, or already active in inbox and parent button clicked without specific submodule:
-  // Toggle accordion open/closed smoothly without closing sidebar drawer on mobile
-  if (arrowOnly || (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'inbox' && !targetSubmodule)) {
-    if (isCurrentlyOpen) {
-      subMenu.classList.add('hidden');
-      if (subnavArrow) subnavArrow.style.transform = 'rotate(0deg)';
-    } else {
-      subMenu.classList.remove('hidden');
-      if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
-    }
-    return;
-  }
-
-  // If navigating from another module: expand submenu and switch view
-  subMenu.classList.remove('hidden');
-  if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
   if (typeof switchView === 'function') {
     switchView('inbox', targetSubmodule || 'chats');
   }
@@ -4659,25 +4634,39 @@ function switchView(viewName, subName, isFromHistory = false) {
     if (navOrdersStand) navOrdersStand.className = "w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group" + (canViewOrders ? '' : ' hidden');
   }
 
-  // Handle WhatsApp Inbox dropdown menu active / inactive state
-  const inboxSubMenu = document.getElementById('inbox-submodules-menu');
-  const subnavArrow = document.getElementById('inbox-subnav-arrow');
+  // Handle WhatsApp Inbox, Auto-Reply, and Broadcast flat sidebar nav active states
+  const navInboxBtn = document.getElementById('nav-inbox');
+  const navAutoBtn = document.getElementById('nav-inbox-sub-autoreply');
+  const navBcastBtn = document.getElementById('nav-inbox-sub-broadcast');
   const unreadBadge = document.getElementById('badge-total-unread');
 
+  const mainActiveNav = "w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer";
+  const mainInactiveNav = "w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group cursor-pointer";
+
+  const effectiveSub = subName || (typeof ACTIVE_INBOX_SUBMODULE !== 'undefined' ? ACTIVE_INBOX_SUBMODULE : 'chats');
+
   if (viewName === 'inbox') {
-    // ACTIVE: Expand submenu, rotate arrow up, active badge styling
-    if (inboxSubMenu) inboxSubMenu.classList.remove('hidden');
-    if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
-    if (unreadBadge) {
-      unreadBadge.className = "bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full";
+    if (effectiveSub === 'autoreply') {
+      if (navAutoBtn) navAutoBtn.className = mainActiveNav;
+      if (navInboxBtn) navInboxBtn.className = mainInactiveNav;
+      if (navBcastBtn) navBcastBtn.className = mainInactiveNav;
+      if (unreadBadge) unreadBadge.className = "bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-2 py-0.5 rounded-full";
+    } else if (effectiveSub === 'broadcast') {
+      if (navBcastBtn) navBcastBtn.className = mainActiveNav;
+      if (navInboxBtn) navInboxBtn.className = mainInactiveNav;
+      if (navAutoBtn) navAutoBtn.className = mainInactiveNav;
+      if (unreadBadge) unreadBadge.className = "bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-2 py-0.5 rounded-full";
+    } else {
+      if (navInboxBtn) navInboxBtn.className = mainActiveNav;
+      if (navAutoBtn) navAutoBtn.className = mainInactiveNav;
+      if (navBcastBtn) navBcastBtn.className = mainInactiveNav;
+      if (unreadBadge) unreadBadge.className = "bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full";
     }
   } else {
-    // INACTIVE: Collapse submenu, rotate arrow down, inactive badge styling
-    if (inboxSubMenu) inboxSubMenu.classList.add('hidden');
-    if (subnavArrow) subnavArrow.style.transform = 'rotate(0deg)';
-    if (unreadBadge) {
-      unreadBadge.className = "bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-2 py-0.5 rounded-full";
-    }
+    if (navInboxBtn) navInboxBtn.className = mainInactiveNav;
+    if (navAutoBtn) navAutoBtn.className = mainInactiveNav;
+    if (navBcastBtn) navBcastBtn.className = mainInactiveNav;
+    if (unreadBadge) unreadBadge.className = "bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-2 py-0.5 rounded-full";
   }
 
   updatePageHeaderTitle();

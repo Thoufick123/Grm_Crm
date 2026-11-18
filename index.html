@@ -266,31 +266,11 @@
     }
     window.toggleSidebar = toggleSidebar;
 
-    // Interactive WhatsApp Inbox Dropdown Sidebar Toggle Handler (Early inline handler)
-    function toggleWhatsAppDropdown(event, targetSubmodule, arrowOnly) {
-      if (event) {
-        if (typeof event.stopPropagation === 'function') event.stopPropagation();
-        if (typeof event.preventDefault === 'function' && arrowOnly) event.preventDefault();
-      }
-      var subMenu = document.getElementById('inbox-submodules-menu');
-      var subnavArrow = document.getElementById('inbox-subnav-arrow');
+    // Direct WhatsApp Inbox Navigation Handler (No Expand Dropdown)
+    function toggleWhatsAppDropdown(event, targetSubmodule) {
+      if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
       var shield = document.getElementById('instant-view-shield');
       if (shield) shield.remove();
-      if (!subMenu) return;
-
-      var isCurrentlyOpen = !subMenu.classList.contains('hidden');
-      if (arrowOnly || (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'inbox' && !targetSubmodule)) {
-        if (isCurrentlyOpen) {
-          subMenu.classList.add('hidden');
-          if (subnavArrow) subnavArrow.style.transform = 'rotate(0deg)';
-        } else {
-          subMenu.classList.remove('hidden');
-          if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
-        }
-        return;
-      }
-      subMenu.classList.remove('hidden');
-      if (subnavArrow) subnavArrow.style.transform = 'rotate(180deg)';
       if (typeof switchView === 'function') {
         switchView('inbox', targetSubmodule || 'chats');
       }
@@ -1152,76 +1132,44 @@
         </div>
       </button>
 
-      <!-- WhatsApp Inbox Module with Sub-Modules -->
-      <div class="space-y-1">
-        <button type="button" onclick="toggleWhatsAppDropdown(event)" id="nav-inbox"
-          class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer"
-          title="Toggle WhatsApp Inbox and submodules">
-          <div class="flex items-center gap-3">
-            <span
-              class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">inbox</span>
-            <span data-i18n="nav.inbox">WhatsApp Inbox</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span id="badge-total-unread"
-              class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">0</span>
-            <span type="button" onclick="toggleWhatsAppDropdown(event, null, true)" class="material-symbols-outlined text-[16px] text-white/70 transition-transform duration-200 hover:text-white hover:bg-white/10 rounded p-0.5 cursor-pointer"
-              id="inbox-subnav-arrow" title="Toggle WhatsApp Sub-Modules">expand_more</span>
-          </div>
-        </button>
-
-        <!-- WhatsApp Inbox Sub-Modules -->
-        <div id="inbox-submodules-menu" class="pl-3 pr-1 py-1 space-y-1 ml-3 border-l-2 border-emerald-600/40">
-          <!-- Sub-module 1: All Chats & Queue -->
-          <button onclick="switchView('inbox', 'chats')" id="nav-inbox-sub-chats"
-            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-emerald-300 bg-emerald-950/40 border border-emerald-500/25 font-bold text-xs hover:text-white transition group cursor-pointer"
-            title="Active WhatsApp Chats & Customer Queue">
-            <div class="flex items-center gap-2">
-              <span
-                class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">forum</span>
-              <span data-i18n="nav.inbox">All Chats &amp; Queue</span>
-            </div>
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-xs shadow-emerald-400/50"></span>
-          </button>
-
-          <!-- Sub-module 2: Auto-Reply Hub -->
-          <button onclick="switchView('inbox', 'autoreply')" id="nav-inbox-sub-autoreply"
-            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-xs font-medium transition group cursor-pointer"
-            title="Auto-Reply Bot Rules & Q&A Templates">
-            <div class="flex items-center gap-2">
-              <span
-                class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">smart_toy</span>
-              <span data-i18n="nav.autoreply">Auto-Reply Hub</span>
-            </div>
-            <span id="nav-autoreply-pill"
-              class="text-[9px] font-extrabold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">ON</span>
-          </button>
-
-          <!-- Sub-module 3: Broadcast Templates -->
-          <button onclick="switchView('inbox', 'broadcast')" id="nav-inbox-sub-broadcast"
-            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-xs font-medium transition group cursor-pointer"
-            title="Custom Broadcast Templates & Blast Engine">
-            <div class="flex items-center gap-2">
-              <span
-                class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">campaign</span>
-              <span data-i18n="nav.broadcast">Broadcast Hub</span>
-            </div>
-            <span
-              class="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">Blast</span>
-          </button>
-
-          <!-- Sub-module 4: Setting (Mobile Only - Hidden on Desktop) -->
-          <button onclick="switchView('inbox', 'settings')" id="nav-inbox-sub-settings"
-            class="w-full flex md:hidden items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-sidebarActive text-xs font-medium transition group cursor-pointer"
-            title="WhatsApp Inbox Settings">
-            <div class="flex items-center gap-2">
-              <span
-                class="material-symbols-outlined text-[15px] text-emerald-400 group-hover:scale-110 transition">settings</span>
-              <span>Setting</span>
-            </div>
-          </button>
+      <!-- WhatsApp Inbox (Direct 1-Click Navigation - No Expand Dropdown) -->
+      <button onclick="switchView('inbox', 'chats')" id="nav-inbox"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm cursor-pointer"
+        title="WhatsApp Inbox & Customer Queue">
+        <div class="flex items-center gap-3">
+          <span
+            class="material-symbols-outlined text-[20px] text-emerald-400 group-hover:scale-110 transition">inbox</span>
+          <span data-i18n="nav.inbox">WhatsApp Inbox</span>
         </div>
-      </div>
+        <span id="badge-total-unread"
+          class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">0</span>
+      </button>
+
+      <!-- Auto-Reply Hub (Direct 1-Click Navigation) -->
+      <button onclick="switchView('inbox', 'autoreply')" id="nav-inbox-sub-autoreply"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group cursor-pointer"
+        title="Auto-Reply Bot Rules & Q&A Templates">
+        <div class="flex items-center gap-3">
+          <span
+            class="material-symbols-outlined text-[20px] text-teal-400 group-hover:scale-110 transition">smart_toy</span>
+          <span data-i18n="nav.autoreply">Auto-Reply Hub</span>
+        </div>
+        <span id="nav-autoreply-pill"
+          class="text-[9px] font-extrabold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">ON</span>
+      </button>
+
+      <!-- Broadcast Hub (Direct 1-Click Navigation) -->
+      <button onclick="switchView('inbox', 'broadcast')" id="nav-inbox-sub-broadcast"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group cursor-pointer"
+        title="Custom Broadcast Templates & Blast Engine">
+        <div class="flex items-center gap-3">
+          <span
+            class="material-symbols-outlined text-[20px] text-purple-400 group-hover:scale-110 transition">campaign</span>
+          <span data-i18n="nav.broadcast">Broadcast Hub</span>
+        </div>
+        <span
+          class="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">Blast</span>
+      </button>
 
       <div id="nav-section-sales-operations"
         class="pt-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Sales & Operations
@@ -11887,7 +11835,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261118_inbox_persist_v7"></script>
+  <script src="crm_app.js?v=20261118_sidenav_flat_v8"></script>
 </body>
 
 </html>
