@@ -3320,6 +3320,10 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $text = $postData['text'] ?? ($postData['message'] ?? '');
     $customerId = $postData['customer_id'] ?? null;
     $mediaUrl = $postData['media_url'] ?? ($postData['mediaUrl'] ?? null);
+    $mediaData = $postData['media_data'] ?? ($postData['mediaData'] ?? null);
+    if (!empty($mediaData) && empty($mediaUrl)) {
+        $mediaUrl = $mediaData;
+    }
     $mediaType = $postData['type'] ?? ($mediaUrl ? 'image' : null);
 
     if (empty($phone) && empty($postData['jid'])) {
@@ -3327,15 +3331,25 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(["status" => "error", "message" => "Phone or JID is required"]);
         exit;
     }
-    if (empty($text) && empty($mediaUrl)) {
+    if (empty($text) && empty($mediaUrl) && empty($mediaData)) {
         http_response_code(400);
         echo json_encode(["status" => "error", "message" => "Text or media is required"]);
         exit;
     }
-    if (empty($text) && !empty($mediaUrl)) {
+    if (empty($text) && (!empty($mediaUrl) || !empty($mediaData))) {
         $text = ($mediaType === 'audio' || strpos((string)$mediaUrl, 'voice') !== false) ? '🎤 Voice Note' : '[Photo Attachment]';
     }
+
+    $rawBase64Media = (!empty($mediaUrl) && is_string($mediaUrl) && strpos($mediaUrl, 'data:') === 0) ? $mediaUrl : (!empty($mediaData) ? $mediaData : null);
     saveBase64MediaIfPresent($mediaUrl, $mediaType);
+
+    // Build absolute URL for the bridge if relative
+    $bridgeMediaUrl = $rawBase64Media ?: $mediaUrl;
+    if (!empty($bridgeMediaUrl) && strpos($bridgeMediaUrl, 'http') !== 0 && strpos($bridgeMediaUrl, 'data:') !== 0) {
+        $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'maroon-partridge-532881.hostingersite.com';
+        $bridgeMediaUrl = $scheme . '://' . $host . '/' . ltrim($bridgeMediaUrl, '/');
+    }
 
     // Call Node.js Baileys Bridge
     $bRes = curlBridgePost('/api/send', [
@@ -3343,8 +3357,10 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'text' => $text,
         'jid' => $postData['jid'] ?? null,
         'accountId' => $postData['accountId'] ?? null,
-        'mediaUrl' => $mediaUrl,
-        'media_url' => $mediaUrl
+        'mediaUrl' => $bridgeMediaUrl,
+        'media_url' => $bridgeMediaUrl,
+        'mediaData' => $rawBase64Media,
+        'media_data' => $rawBase64Media
     ], 10);
     $response = $bRes['response'];
     $httpCode = $bRes['http_code'];

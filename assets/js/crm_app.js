@@ -11387,9 +11387,17 @@ function persistOutboundMessageToBackend(params) {
 window.persistOutboundMessageToBackend = persistOutboundMessageToBackend;
 
 // Dispatches live message to customer's WhatsApp via Node Baileys QR Bridge (Method 3)
-async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false, mediaUrl = null, customerId = null) {
+async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false, mediaUrl = null, customerId = null, mediaData = null) {
   const targetAccId = accountId || ACTIVE_SEND_ACCOUNT_ID || 'account_1';
   const targetMedia = mediaUrl || (msgRef && msgRef.media_url ? msgRef.media_url : null);
+  const targetBase64 = mediaData || (targetMedia && typeof targetMedia === 'string' && targetMedia.startsWith('data:') ? targetMedia : null);
+
+  // Convert relative mediaUrl to absolute URL for external bridge compatibility
+  let absoluteMediaUrl = targetMedia;
+  if (targetMedia && typeof targetMedia === 'string' && !targetMedia.startsWith('http://') && !targetMedia.startsWith('https://') && !targetMedia.startsWith('data:')) {
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'https://maroon-partridge-532881.hostingersite.com';
+    absoluteMediaUrl = origin.replace(/\/+$/, '') + '/' + targetMedia.replace(/^\/+/, '');
+  }
 
   // Clean and normalize phone number
   let cleanPhone = (phone || '').toString().trim().replace(/[\s\-\(\)]/g, '');
@@ -11448,7 +11456,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
           text,
           jid,
           accountId: targetAccId,
-          mediaUrl: targetMedia,
+          mediaUrl: targetBase64 || absoluteMediaUrl,
+          media_url: targetBase64 || absoluteMediaUrl,
+          mediaData: targetBase64,
+          media_data: targetBase64,
           customerId: effectiveCustId
         }, (res) => {
           if (resolved) return;
@@ -11486,7 +11497,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
         text,
         jid,
         accountId: targetAccId,
-        mediaUrl: targetMedia,
+        mediaUrl: targetBase64 || absoluteMediaUrl,
+        media_url: targetBase64 || absoluteMediaUrl,
+        mediaData: targetBase64,
+        media_data: targetBase64,
         customerId: effectiveCustId
       })
     });
@@ -11513,7 +11527,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
         text,
         jid,
         accountId: targetAccId,
-        media_url: targetMedia,
+        media_url: targetBase64 || targetMedia,
+        mediaUrl: targetBase64 || targetMedia,
+        media_data: targetBase64,
+        mediaData: targetBase64,
         customer_id: effectiveCustId
       })
     });
@@ -11763,6 +11780,7 @@ async function handleSendMessage(event) {
   }
 
   const attachedMedia = CHAT_ATTACHED_IMAGE_DATA ? (CHAT_ATTACHED_IMAGE_DATA.serverUrl || CHAT_ATTACHED_IMAGE_DATA.dataUrl) : null;
+  const attachedBase64 = CHAT_ATTACHED_IMAGE_DATA ? CHAT_ATTACHED_IMAGE_DATA.dataUrl : null;
 
   // Translate text if outbound Send As language is selected
   let textToSend = rawText;
@@ -11816,7 +11834,17 @@ async function handleSendMessage(event) {
   playChime('order');
 
   // Transmit live WhatsApp message across WebSocket bridge to customer's WhatsApp!
-  dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, formattedText, newMsg, customer.jid, customer.accountId || ACTIVE_SEND_ACCOUNT_ID, false, attachedMedia, customer.id);
+  dispatchWhatsAppOutbound(
+    customer.whatsapp || customer.phone,
+    formattedText,
+    newMsg,
+    customer.jid,
+    customer.accountId || ACTIVE_SEND_ACCOUNT_ID,
+    false,
+    attachedMedia,
+    customer.id,
+    attachedBase64
+  );
 }
 
 function insertQuickReply(type) {

@@ -272,10 +272,15 @@ function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, sen
 async function getImageBuffer(url) {
     if (!url) return null;
     try {
-        // 1. Data URL (Base64)
-        if (typeof url === 'string' && url.startsWith('data:image/')) {
-            const base64Data = url.split(',')[1] || url.replace(/^data:image\/\w+;base64,/, '');
-            return Buffer.from(base64Data, 'base64');
+        // 1. Data URL (Base64) - direct memory buffer decode (0 network latency)
+        if (typeof url === 'string' && (url.startsWith('data:') || url.startsWith('/9j/') || url.startsWith('iVBORw0KGgo'))) {
+            let base64Data = url;
+            if (url.includes('base64,')) {
+                base64Data = url.split('base64,')[1];
+            } else if (url.startsWith('data:')) {
+                base64Data = url.split(',')[1] || url;
+            }
+            return Buffer.from(base64Data.trim().replace(/\s+/g, ''), 'base64');
         }
 
         // 2. Direct local file resolution for any URL or path containing uploads/
@@ -334,15 +339,28 @@ async function getImageBuffer(url) {
 
         // 5. Remote Hostinger Fallback for relative paths like uploads/media/...
         if (typeof url === 'string' && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
-            const remoteUrl = `${CRM_BASE_URL}/${url.replace(/^[/\\]+/, '')}`;
-            if (typeof fetch === 'function') {
-                try {
-                    const res = await fetch(remoteUrl);
-                    if (res.ok) {
-                        const arrayBuf = await res.arrayBuffer();
-                        return Buffer.from(arrayBuf);
-                    }
-                } catch (e) {}
+            const cleanRel = url.replace(/^[/\\]+/, '');
+            const candidateUrls = [
+                `${CRM_BASE_URL}/${cleanRel}`,
+                `https://maroon-partridge-532881.hostingersite.com/${cleanRel}`,
+                `http://localhost:8000/${cleanRel}`,
+                `http://localhost/${cleanRel}`
+            ];
+            for (const remoteUrl of candidateUrls) {
+                if (typeof fetch === 'function') {
+                    try {
+                        const res = await fetch(remoteUrl, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                            }
+                        });
+                        if (res.ok) {
+                            const arrayBuf = await res.arrayBuffer();
+                            return Buffer.from(arrayBuf);
+                        }
+                    } catch (e) {}
+                }
             }
         }
     } catch (e) {
@@ -1840,11 +1858,25 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
         const imgBuf = await getImageBuffer(mediaUrl);
         if (imgBuf) {
             try {
-                const sendOptions = { image: imgBuf };
+                let mime = 'image/jpeg';
+                if (imgBuf.length >= 4) {
+                    if (imgBuf[0] === 0x89 && imgBuf[1] === 0x50 && imgBuf[2] === 0x4E && imgBuf[3] === 0x47) {
+                        mime = 'image/png';
+                    } else if (imgBuf[0] === 0x52 && imgBuf[1] === 0x49 && imgBuf[2] === 0x46 && imgBuf[3] === 0x46) {
+                        mime = 'image/webp';
+                    } else if (imgBuf[0] === 0x47 && imgBuf[1] === 0x49 && imgBuf[2] === 0x46) {
+                        mime = 'image/gif';
+                    }
+                }
+                const sendOptions = { 
+                    image: imgBuf,
+                    mimetype: mime
+                };
                 if (finalText && finalText.trim() && finalText !== '[Photo Attachment]') {
                     sendOptions.caption = finalText.trim();
                 }
                 sent = await activeAcc.sock.sendMessage(jid, sendOptions);
+                console.log(`[Outbound Media Delivered] Image delivered to ${jid} (ID: ${sent?.key?.id})`);
             } catch (err) {
                 console.warn('[Image Send Failed, Falling back to Text]:', err.message);
             }
@@ -1959,9 +1991,9 @@ io.on('connection', (socket) => {
     // Handle outbound message sending from CRM client over WebSocket
     socket.on('whatsapp:send', async (data, callback) => {
         try {
-            const { phone, text, jid, accountId, mediaUrl, media_url } = data;
+            const { phone, text, jid, accountId, mediaUrl, media_url, mediaData, media_data, image, imageUrl } = data;
             const target = jid || phone;
-            const imageTarget = mediaUrl || media_url || null;
+            const imageTarget = mediaData || media_data || mediaUrl || media_url || image || imageUrl || null;
             const result = await sendWhatsAppMessage(target, text, accountId, imageTarget);
 
             if (typeof callback === 'function') {
@@ -2659,11 +2691,11 @@ app.post('/api/bulk_request/event', (req, res) => {
 
 app.post('/api/send', async (req, res) => {
     try {
-        const { phone, text, jid, accountId, mediaUrl, media_url } = req.body;
+        const { phone, text, jid, accountId, mediaUrl, media_url, mediaData, media_data, image, imageUrl } = req.body;
         if (!phone && !jid) {
             return res.status(400).json({ status: 'error', message: 'Phone or JID is required' });
         }
-        if (!text && !mediaUrl && !media_url) {
+        if (!text && !mediaUrl && !media_url && !mediaData && !media_data && !image && !imageUrl) {
             return res.status(400).json({ status: 'error', message: 'Text or media is required' });
         }
 
@@ -2683,7 +2715,7 @@ app.post('/api/send', async (req, res) => {
                 finalTextToSend = finalTextToSend.replace(/https:\/\/wa\.me\/[0-9]+/g, `https://wa.me/${cleanCrmNum}`);
             }
         }
-        const imageTarget = mediaUrl || media_url || null;
+        const imageTarget = mediaData || media_data || mediaUrl || media_url || image || imageUrl || null;
         const result = await sendWhatsAppMessage(jid || phone, finalTextToSend, accountId, imageTarget);
         if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
             fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {
