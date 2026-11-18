@@ -2298,45 +2298,8 @@ function initSocketIO() {
 
     // Real-time Bridge Status Changes
     SOCKET_IO.on('bridge:accounts', (data) => {
-      if (data && data.accounts) {
-        MULTI_ACCOUNTS_STATE = data.accounts;
-        if (Array.isArray(CRM_STATE.whatsappLines)) {
-          CRM_STATE.whatsappLines.forEach(line => {
-            const live = data.accounts.find(a => a.id === line.id);
-            if (live) {
-              line.status = live.status;
-              if (live.status === 'CONNECTED') {
-                line.connected_number = live.connected_number || line.connected_number;
-                line.qr_image = null;
-              } else if (live.status === 'SCAN_QR') {
-                line.qr_image = live.qr_image;
-                if (!line.connected_number || line.connected_number === 'Awaiting Link') {
-                  line.connected_number = 'Scan QR Code';
-                }
-              } else if (live.status === 'DISCONNECTED') {
-                line.qr_image = null;
-                if (!line.connected_number || line.connected_number === 'Scan QR Code') {
-                  line.connected_number = 'Awaiting Link';
-                }
-              }
-            }
-          });
-        }
-        renderMultiAccountsHub();
-        renderQuickLineSwitcher();
-        renderPhoneSwitcherDropdown();
-
-        const primary = data.accounts.find(a => a.id === 'account_1') || data.accounts[0];
-        if (primary) {
-          if (primary.status === 'CONNECTED' && primary.connected_number) {
-            CRM_STATE.whatsappAccount.phoneNumber = primary.connected_number;
-            CRM_STATE.whatsappAccount.status = 'CONNECTED';
-          } else if (primary.status === 'SCAN_QR' || primary.status === 'DISCONNECTED') {
-            CRM_STATE.whatsappAccount.status = primary.status;
-          }
-          saveCRMState();
-          updateConfiguredPhoneDisplays();
-        }
+      if (data && Array.isArray(data.accounts)) {
+        applyUpdatedAccountsDelta(data.accounts, false);
       }
     });
 
@@ -2779,14 +2742,22 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
     let existing = CRM_STATE.whatsappLines.find(l => l.id === acc.id);
     if (existing) {
       // Guard: Never demote an already CONNECTED account in CRM_STATE to DISCONNECTED
-      // if the incoming update has no phone number and is just a default unstarted slot from bridge!
-      if (existing.status === 'CONNECTED' && existing.connected_number && existing.connected_number !== 'Awaiting Link') {
-        if ((acc.status === 'DISCONNECTED' || acc.status === 'SCAN_QR') && !acc.phone && !acc.connected_number) {
-          return;
-        }
+      // if the incoming update has no real authenticated phone number!
+      const isExistingLive = existing.status === 'CONNECTED' && 
+                             existing.connected_number && 
+                             existing.connected_number !== 'Awaiting Link' && 
+                             existing.connected_number !== 'Scan QR Code';
+      const incomingRawPhone = acc.phone || acc.connected_number || '';
+      const hasIncomingRealPhone = incomingRawPhone && 
+                                   incomingRawPhone !== 'Awaiting Link' && 
+                                   incomingRawPhone !== 'Scan QR Code' &&
+                                   !incomingRawPhone.includes('Awaiting');
+
+      if (isExistingLive && !hasIncomingRealPhone && (acc.status === 'DISCONNECTED' || acc.status === 'SCAN_QR' || acc.status === 'CONNECTING' || acc.status === 'RECONNECTING')) {
+        return;
       }
       existing.status = (acc.status || 'DISCONNECTED').toUpperCase();
-      existing.connected_number = acc.phone || acc.connected_number || existing.connected_number;
+      existing.connected_number = (hasIncomingRealPhone ? incomingRawPhone : existing.connected_number) || 'Awaiting Link';
       existing.qr_image = acc.qr_image || null;
       existing.label = acc.label || acc.name || existing.label;
     } else {
@@ -2804,12 +2775,17 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
   });
 
   const primary = accounts.find(a => a.id === 'account_1') || accounts[0];
-  if (primary && CRM_STATE.whatsappAccount) {
-    if (primary.status === 'CONNECTED' && (primary.phone || primary.connected_number)) {
+  const anyConnected = CRM_STATE.whatsappLines.find(l => l.status === 'CONNECTED' && l.connected_number && l.connected_number !== 'Awaiting Link');
+  if (CRM_STATE.whatsappAccount) {
+    if (primary && primary.status === 'CONNECTED' && (primary.phone || primary.connected_number)) {
       CRM_STATE.whatsappAccount.phoneNumber = primary.phone || primary.connected_number;
       CRM_STATE.whatsappAccount.status = 'CONNECTED';
+    } else if (anyConnected) {
+      // If secondary line (e.g. account_2) is live and connected, preserve CONNECTED status on CRM_STATE.whatsappAccount
+      CRM_STATE.whatsappAccount.phoneNumber = anyConnected.connected_number;
+      CRM_STATE.whatsappAccount.status = 'CONNECTED';
     } else {
-      CRM_STATE.whatsappAccount.status = (primary.status || 'DISCONNECTED').toUpperCase();
+      CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
     }
   }
 
@@ -30049,7 +30025,7 @@ function fetchQRBridgeStatus(btnEl) {
 
   if (canDirectFetchBridge) {
     const qrAbort = (typeof AbortController !== "undefined") ? new AbortController() : null;
-    const qrTimer = qrAbort ? setTimeout(() => qrAbort.abort(), 800) : null;
+    const qrTimer = qrAbort ? setTimeout(() => qrAbort.abort(), 4000) : null;
     fetch(`${bUrl}/api/qr/status`, qrAbort ? { signal: qrAbort.signal } : {})
       .then(r => {
         if (qrTimer) clearTimeout(qrTimer);

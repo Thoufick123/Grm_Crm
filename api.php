@@ -563,9 +563,6 @@ if ($action === 'get_state' || $action === 'get_all') {
                             if (!empty($line['qr_code'])) {
                                 $wa['qr_code'] = $line['qr_code'];
                             }
-                            if (!empty($line['status'])) {
-                                $wa['status'] = $line['status'];
-                            }
                             if (($line['status'] ?? '') === 'CONNECTED') {
                                 $wa['status'] = 'CONNECTED';
                                 $wa['qr_code'] = null;
@@ -573,10 +570,18 @@ if ($action === 'get_state' || $action === 'get_all') {
                                     $wa['phone_number'] = $line['phone_number'];
                                 }
                             } elseif (($line['status'] ?? '') === 'DISCONNECTED') {
-                                $wa['status'] = 'DISCONNECTED';
-                                $wa['phone_number'] = 'Awaiting Link';
-                                if (empty($line['qr_code'])) {
-                                    $wa['qr_code'] = null;
+                                // Guard: If MySQL database already has this line recorded as CONNECTED with a real phone number,
+                                // never let a stale config file demote it to DISCONNECTED!
+                                if (($wa['status'] ?? '') !== 'CONNECTED' || empty($wa['phone_number']) || $wa['phone_number'] === 'Awaiting Link') {
+                                    $wa['status'] = 'DISCONNECTED';
+                                    $wa['phone_number'] = 'Awaiting Link';
+                                    if (empty($line['qr_code'])) {
+                                        $wa['qr_code'] = null;
+                                    }
+                                }
+                            } else if (!empty($line['status'])) {
+                                if (($wa['status'] ?? '') !== 'CONNECTED') {
+                                    $wa['status'] = $line['status'];
                                 }
                             }
                             if (!empty($line['label'])) {

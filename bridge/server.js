@@ -797,6 +797,13 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
     }
 
     const existingAcc = accounts.get(accountId);
+    if (existingAcc && existingAcc.sock) {
+        try {
+            existingAcc.sock.ev.removeAllListeners();
+            existingAcc.sock.end();
+        } catch (e) {}
+        existingAcc.sock = null;
+    }
 
     const accountObj = {
         id: accountId,
@@ -889,7 +896,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+                const isLoggedOut = (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) && Boolean(state.creds?.registered);
                 const isReplaced = statusCode === DisconnectReason.connectionReplaced || statusCode === 440;
                 console.log(`[QR Bridge - ${accountId}] Connection closed (status: ${statusCode}). Logged out: ${isLoggedOut}`);
                 accountObj.status = isLoggedOut ? 'DISCONNECTED' : 'RECONNECTING';
@@ -902,7 +909,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 broadcastAccountsUpdate();
 
                 // ONLY notify Hostinger CRM of disconnection if the session was truly logged out on phone!
-                // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) to prevent accidental unlinking.
+                // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) or unauthenticated QR expirations.
                 if (isLoggedOut) {
                     callCrmApi('sync_account_status', {
                         account_slot: accountId,
@@ -938,10 +945,11 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         initAccountSession(accountId, label);
                     }, 15000);
                 } else {
-                    // Reconnect on network drops / keep-alive hiccups without clearing session
+                    // Reconnect on network drops / keep-alive hiccups / 515 restart required without clearing session
+                    const reconnectDelay = (statusCode === 515) ? 1000 : 3500;
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-                    }, 4000);
+                    }, reconnectDelay);
                 }
             } else if (connection === 'open') {
                 accountObj.status = 'CONNECTED';
