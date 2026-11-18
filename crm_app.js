@@ -3263,6 +3263,16 @@ function initCRMState() {
         CRM_STATE.autoReplyRules = [];
       }
 
+      // ZERO-LATENCY INSTANT PRE-RENDER: Paint real cached numbers immediately before network request
+      if (typeof window !== "undefined" && window.location) {
+        const curHash = (window.location.hash || "").replace("#", "").split("/")[0] || "dashboard";
+        if (curHash === "dashboard" && typeof renderDashboard === "function") {
+          try { renderDashboard(); if (typeof updateDashboardKPIs === "function") updateDashboardKPIs(); } catch (e) {}
+        } else if (curHash === "inbox" && typeof renderInbox === "function") {
+          try { renderInbox(); } catch (e) {}
+        }
+      }
+
       if (Array.isArray(CRM_STATE.staffList)) {
         // Filter out legacy mock staff members
         CRM_STATE.staffList = CRM_STATE.staffList.filter(s =>
@@ -3366,7 +3376,7 @@ function initCRMState() {
 
 
   // Asynchronously synchronize CRM database state dynamically (Fast View-Based Scope)
-  const initialScope = (typeof window !== 'undefined' && window.location && (window.location.hash.includes('orders') || window.location.hash.includes('catalog') || window.location.hash.includes('dashboard'))) ? 'full' : 'inbox';
+  const initialScope = (typeof window !== 'undefined' && window.location && window.location.hash.includes('catalog')) ? 'catalog' : ((typeof window !== 'undefined' && window.location && window.location.hash.includes('orders')) ? 'orders' : ((typeof window !== 'undefined' && window.location && window.location.hash.includes('dashboard')) ? 'dashboard' : 'inbox'));
   fetch(`api.php?action=get_all&scope=${initialScope}`)
     .then(r => r.json())
     .then(res => {
@@ -4933,7 +4943,7 @@ let _ORDERS_LOADED = false;
 let _ORDERS_LOADING = false;
 function loadOrdersOnDemand(force = false) {
   if (_ORDERS_LOADING) return Promise.resolve();
-  if (_ORDERS_LOADED && !force && (CRM_STATE.orders || []).length > 0) return Promise.resolve();
+  if (_ORDERS_LOADED && !force) return Promise.resolve();
   _ORDERS_LOADING = true;
   return fetch('api.php?action=get_orders')
     .then(r => r.json())
@@ -4954,7 +4964,7 @@ let _CATALOG_LOADED = false;
 let _CATALOG_LOADING = false;
 function loadCatalogOnDemand(force = false) {
   if (_CATALOG_LOADING) return Promise.resolve();
-  if (_CATALOG_LOADED && !force && (CRM_STATE.products || []).length > 0) return Promise.resolve();
+  if (_CATALOG_LOADED && !force) return Promise.resolve();
   _CATALOG_LOADING = true;
   return Promise.all([
     fetch('api.php?action=get_products').then(r => r.json()).catch(() => null),

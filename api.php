@@ -476,6 +476,7 @@ if ($action === 'get_state' || $action === 'get_all') {
 
         $scope = isset($_GET['scope']) ? strtolower(trim($_GET['scope'])) : (isset($_GET['view']) ? strtolower(trim($_GET['view'])) : 'full');
         $isInboxScope = ($scope === 'inbox');
+        $isDashboardScope = ($scope === 'dashboard');
 
         // 1. WhatsApp Account Config
         $waAccounts = [];
@@ -567,7 +568,7 @@ if ($action === 'get_state' || $action === 'get_all') {
 
         // 3. Products (Lazy loaded on-demand for catalog/inventory)
         $products = [];
-        if (!$isInboxScope) {
+        if (!$isInboxScope && !$isDashboardScope) {
             $pStmt = $pdo->query("SELECT * FROM `products` ORDER BY `id` ASC");
             $products = $pStmt->fetchAll();
         }
@@ -723,7 +724,7 @@ if ($action === 'get_state' || $action === 'get_all') {
 
         // 9. Audit Logs (Loaded for full scope or audit tab)
         $auditLogs = [];
-        if (!$isInboxScope) {
+        if (!$isInboxScope && !$isDashboardScope) {
             try {
                 $aStmt = $pdo->query("SELECT * FROM `audit_logs` ORDER BY `id` DESC LIMIT 100");
                 $auditLogs = $aStmt->fetchAll();
@@ -732,7 +733,7 @@ if ($action === 'get_state' || $action === 'get_all') {
 
         // 9.1 Dedicated DND Records Table
         $dndRecords = [];
-        if (!$isInboxScope) {
+        if (!$isInboxScope && !$isDashboardScope) {
             try {
                 $dndStmt = $pdo->query("SELECT * FROM `dnd_records` ORDER BY `created_at` DESC");
                 $dndRecords = $dndStmt->fetchAll();
@@ -747,7 +748,7 @@ if ($action === 'get_state' || $action === 'get_all') {
         $arRules = [];
         $bcTemplates = [];
 
-        if (!$isInboxScope) {
+        if (!$isInboxScope && !$isDashboardScope) {
             $cachedConfig = getCachedConfigItem('catalog_and_rules_cache', function() use ($pdo) {
                 $cRolePermissions = [];
                 $cCategories = [];
