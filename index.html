@@ -201,21 +201,35 @@
       var toggleBtn = document.getElementById('sidebar-toggle-btn');
       if (!sidebar) return;
 
-      var isCurrentlyOpen = sidebar.classList.contains('sidebar-visible');
+      var isMobile = (window.innerWidth < 1024);
+      var isCurrentlyOpen = isMobile
+        ? sidebar.classList.contains('sidebar-visible')
+        : !sidebar.classList.contains('sidebar-hidden');
+
       var shouldOpen = (forceState !== undefined && forceState !== null) ? Boolean(forceState) : !isCurrentlyOpen;
 
       if (shouldOpen) {
         sidebar.classList.remove('sidebar-hidden');
         sidebar.classList.add('sidebar-visible');
         var nav = sidebar.querySelector('nav');
-        if (nav && window.innerWidth < 1024) nav.scrollTop = 0;
+        if (nav && isMobile) nav.scrollTop = 0;
+
+        // Backdrop ONLY exists on mobile/tablet screens (< 1024px)
         if (backdrop) {
-          backdrop.classList.remove('hidden');
-          backdrop.style.display = 'block';
-          requestAnimationFrame(function () {
-            backdrop.classList.remove('opacity-0');
-            backdrop.classList.add('opacity-100');
-          });
+          if (isMobile) {
+            backdrop.classList.remove('hidden');
+            backdrop.style.display = 'block';
+            backdrop.style.pointerEvents = 'auto';
+            requestAnimationFrame(function () {
+              backdrop.classList.remove('opacity-0');
+              backdrop.classList.add('opacity-100');
+            });
+          } else {
+            backdrop.classList.add('hidden', 'opacity-0');
+            backdrop.classList.remove('opacity-100');
+            backdrop.style.display = 'none';
+            backdrop.style.pointerEvents = 'none';
+          }
         }
         if (toggleIcon) toggleIcon.innerText = 'menu_open';
         if (toggleBtn) {
@@ -227,12 +241,16 @@
       } else {
         sidebar.classList.remove('sidebar-visible');
         sidebar.classList.add('sidebar-hidden');
+
+        // IMMEDIATELY disable pointer events and hide backdrop
         if (backdrop) {
+          backdrop.style.pointerEvents = 'none';
           backdrop.classList.remove('opacity-100');
           backdrop.classList.add('opacity-0');
           setTimeout(function () {
-            if (!sidebar.classList.contains('sidebar-visible')) {
+            if (!sidebar.classList.contains('sidebar-visible') || window.innerWidth >= 1024) {
               backdrop.classList.add('hidden');
+              backdrop.style.display = 'none';
             }
           }, 300);
         }
@@ -729,11 +747,29 @@
 
       #sidebar-backdrop {
         z-index: 70 !important;
+        pointer-events: none !important;
+      }
+
+      #sidebar-backdrop.opacity-100:not(.hidden):not(.opacity-0) {
+        pointer-events: auto !important;
+      }
+
+      #sidebar-backdrop.hidden,
+      #sidebar-backdrop.opacity-0 {
+        display: none !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
       }
     }
 
-    /* Large / Desktop Screens (>= 1024px): Smooth Collapsible Flex Panel */
+    /* Large / Desktop Screens (>= 1024px): Smooth Collapsible Flex Panel (NEVER SHOW BACKDROP) */
     @media (min-width: 1024px) {
+      #sidebar-backdrop {
+        display: none !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+      }
+
       #app-sidebar {
         position: relative !important;
         height: 100% !important;
@@ -1081,8 +1117,8 @@
 
   <!-- Sidebar Backdrop Overlay (Mobile & Tablet) -->
   <div id="sidebar-backdrop" onclick="toggleSidebar(false)"
-    class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden transition-opacity duration-300 opacity-0 cursor-pointer lg:hidden"
-    style="background-color: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);">
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden transition-opacity duration-300 opacity-0 cursor-pointer pointer-events-none lg:hidden"
+    style="background-color: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: none; pointer-events: none;">
   </div>
 
   <!-- ========================================================================= -->
@@ -11915,7 +11951,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261117_v34"></script>
+  <script src="crm_app.js?v=20261118_fix_header"></script>
 </body>
 
 </html>

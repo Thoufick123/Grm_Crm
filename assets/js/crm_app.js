@@ -4105,55 +4105,90 @@ window.toggleWhatsAppDropdown = toggleWhatsAppDropdown;
 // SIDEBAR COLLAPSE & MOBILE DRAWER TOGGLE ENGINE
 // =========================================================================
 function toggleSidebar(forceState) {
-  const sidebar = document.getElementById('app-sidebar');
-  const backdrop = document.getElementById('sidebar-backdrop');
-  const toggleIcon = document.getElementById('sidebar-toggle-icon');
-  const toggleBtn = document.getElementById('sidebar-toggle-btn');
+  const sidebar = document.getElementById("app-sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  const toggleIcon = document.getElementById("sidebar-toggle-icon");
+  const toggleBtn = document.getElementById("sidebar-toggle-btn");
+  const mobileBottomBar = document.getElementById("mobile-bottom-app-bar");
   if (!sidebar) return;
 
-  const isCurrentlyOpen = sidebar.classList.contains('sidebar-visible');
+  const isMobile = (typeof window !== "undefined") && window.innerWidth < 1024;
+  const isCurrentlyOpen = isMobile
+    ? sidebar.classList.contains("sidebar-visible")
+    : !sidebar.classList.contains("sidebar-hidden");
+
   const shouldOpen = (forceState !== undefined && forceState !== null) ? Boolean(forceState) : !isCurrentlyOpen;
 
   if (shouldOpen) {
-    sidebar.classList.remove('sidebar-hidden');
-    sidebar.classList.add('sidebar-visible');
-    const nav = sidebar.querySelector('nav');
-    if (nav && typeof window !== 'undefined' && window.innerWidth < 1024) {
+    sidebar.classList.remove("sidebar-hidden");
+    sidebar.classList.add("sidebar-visible");
+    const nav = sidebar.querySelector("nav");
+    if (nav && isMobile) {
       nav.scrollTop = 0;
     }
+
+    // Backdrop ONLY exists on mobile/tablet screens (< 1024px)
     if (backdrop) {
-      backdrop.classList.remove('hidden');
-      backdrop.style.display = 'block';
-      requestAnimationFrame(() => {
-        backdrop.classList.remove('opacity-0');
-        backdrop.classList.add('opacity-100');
-      });
+      if (isMobile) {
+        backdrop.classList.remove("hidden");
+        backdrop.style.display = "block";
+        backdrop.style.pointerEvents = "auto";
+        requestAnimationFrame(() => {
+          backdrop.classList.remove("opacity-0");
+          backdrop.classList.add("opacity-100");
+        });
+      } else {
+        backdrop.classList.add("hidden", "opacity-0");
+        backdrop.classList.remove("opacity-100");
+        backdrop.style.display = "none";
+        backdrop.style.pointerEvents = "none";
+      }
     }
-    if (toggleIcon) toggleIcon.innerText = 'menu_open';
+
+    if (toggleIcon) toggleIcon.innerText = "menu_open";
     if (toggleBtn) {
-      toggleBtn.classList.add('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
-      toggleBtn.setAttribute('aria-expanded', 'true');
-      toggleBtn.title = 'Close Navigation Sidebar';
+      toggleBtn.classList.add("bg-emerald-100", "text-emerald-900", "border-emerald-300");
+      toggleBtn.setAttribute("aria-expanded", "true");
+      toggleBtn.title = "Close Navigation Sidebar";
     }
-    try { localStorage.setItem('GRM_SIDEBAR_OPEN', 'true'); } catch (e) { }
+    // Hide mobile bottom app bar while sidebar drawer is open to prevent overlapping
+    if (mobileBottomBar && isMobile) {
+      mobileBottomBar.classList.add("hidden");
+      mobileBottomBar.classList.remove("flex");
+    }
+    try { localStorage.setItem("GRM_SIDEBAR_OPEN", "true"); } catch (e) { }
   } else {
-    sidebar.classList.remove('sidebar-visible');
-    sidebar.classList.add('sidebar-hidden');
+    sidebar.classList.remove("sidebar-visible");
+    sidebar.classList.add("sidebar-hidden");
+
+    // IMMEDIATELY disable pointer events and hide backdrop
     if (backdrop) {
-      backdrop.classList.remove('opacity-100');
-      backdrop.classList.add('opacity-0');
+      backdrop.style.pointerEvents = "none";
+      backdrop.classList.remove("opacity-100");
+      backdrop.classList.add("opacity-0");
       setTimeout(() => {
-        if (!sidebar.classList.contains('sidebar-visible')) {
-          backdrop.classList.add('hidden');
+        if (!sidebar.classList.contains("sidebar-visible") || window.innerWidth >= 1024) {
+          backdrop.classList.add("hidden");
+          backdrop.style.display = "none";
         }
       }, 300);
     }
-    if (toggleIcon) toggleIcon.innerText = 'menu';
+
+    if (toggleIcon) toggleIcon.innerText = "menu";
     if (toggleBtn) {
-      toggleBtn.classList.remove('bg-emerald-100', 'text-emerald-900', 'border-emerald-300');
-      toggleBtn.setAttribute('aria-expanded', 'false');
-      toggleBtn.title = 'Open Navigation Sidebar';
+      toggleBtn.classList.remove("bg-emerald-100", "text-emerald-900", "border-emerald-300");
+      toggleBtn.setAttribute("aria-expanded", "false");
+      toggleBtn.title = "Open Navigation Sidebar";
     }
+    // Restore mobile bottom app bar when closing sidebar drawer (unless in active 1:1 chat)
+    if (mobileBottomBar && isMobile) {
+      const activeView = (CRM_STATE && CRM_STATE.activeView) || ACTIVE_VIEW || "dashboard";
+      if (activeView !== "inbox" || !ACTIVE_CUSTOMER_ID) {
+        mobileBottomBar.classList.remove("hidden");
+        mobileBottomBar.classList.add("flex");
+      }
+    }
+    try { localStorage.setItem("GRM_SIDEBAR_OPEN", "false"); } catch (e) { }
   }
 }
 window.toggleSidebar = toggleSidebar;
