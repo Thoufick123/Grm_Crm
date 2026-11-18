@@ -3162,9 +3162,9 @@ function applyAuthoritativeDatabaseState(data) {
     CRM_STATE.attributes = data.attributes;
   }
 
-  // 3. Customers (Direct authoritative MySQL sync - strictly replaces stale lists)
+  // 3. Customers (Direct authoritative MySQL sync - strictly replaces stale lists while preserving live chat customers)
   if (Array.isArray(data.customers)) {
-    CRM_STATE.customers = data.customers.map(c => ({
+    const dbCusts = data.customers.map(c => ({
       id: c.id,
       code: c.code || '',
       name: c.name || 'Customer',
@@ -3187,8 +3187,24 @@ function applyAuthoritativeDatabaseState(data) {
       createdAt: c.created_at || '',
       avatar: (c.name ? c.name.slice(0, 2) : 'CU').toUpperCase(),
       automationHistory: Array.isArray(c.automationHistory) ? c.automationHistory : [],
-      adminNotes: Array.isArray(c.adminNotes) ? c.adminNotes : []
+      adminNotes: Array.isArray(c.adminNotes) ? c.adminNotes : [],
+      lastMessage: c.lastMessage || c.last_message || '',
+      lastMessageAt: c.lastMessageAt || c.last_message_at || '',
+      unreadCount: parseInt(c.unreadCount || c.unread_count || 0)
     }));
+
+    const custMap = new Map();
+    dbCusts.forEach(dc => custMap.set(String(dc.id), dc));
+    (CRM_STATE.customers || []).forEach(ec => {
+      if (ec && ec.id && !custMap.has(String(ec.id))) {
+        // Keep active customer if they have messages or recent activity
+        const hasConv = CRM_STATE.conversations && Array.isArray(CRM_STATE.conversations[ec.id]) && CRM_STATE.conversations[ec.id].length > 0;
+        if (hasConv || ec.lastMessage || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && String(ACTIVE_CUSTOMER_ID) === String(ec.id))) {
+          custMap.set(String(ec.id), ec);
+        }
+      }
+    });
+    CRM_STATE.customers = Array.from(custMap.values());
   }
 
   // 4. Orders (Authoritative MySQL sync)
@@ -3305,9 +3321,36 @@ function applyAuthoritativeDatabaseState(data) {
     }));
   }
 
-  // 8. Conversations
-  if (data.conversations && typeof data.conversations === 'object') {
-    CRM_STATE.conversations = data.conversations;
+  // 8. Conversations & Message History (Safe merge - NEVER overwrite with array or wipe in-memory threads!)
+  if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object' || Array.isArray(CRM_STATE.conversations)) {
+    CRM_STATE.conversations = {};
+  }
+  if (data.conversations && typeof data.conversations === 'object' && !Array.isArray(data.conversations)) {
+    Object.keys(data.conversations).forEach(cid => {
+      const incomingMsgs = data.conversations[cid];
+      if (Array.isArray(incomingMsgs) && incomingMsgs.length > 0) {
+        if (!Array.isArray(CRM_STATE.conversations[cid])) {
+          CRM_STATE.conversations[cid] = incomingMsgs;
+        } else {
+          const existingList = CRM_STATE.conversations[cid];
+          const seenIds = new Set();
+          const mergedList = [];
+          existingList.forEach(m => {
+            const mid = String(m.message_uid || m.id || '');
+            if (mid) seenIds.add(mid);
+            mergedList.push(m);
+          });
+          incomingMsgs.forEach(im => {
+            const mid = String(im.message_uid || im.id || '');
+            if (!mid || !seenIds.has(mid)) {
+              if (mid) seenIds.add(mid);
+              mergedList.push(im);
+            }
+          });
+          CRM_STATE.conversations[cid] = mergedList;
+        }
+      }
+    });
   }
 
   // 9. DND Records
@@ -3388,6 +3431,17 @@ function applyAuthoritativeDatabaseState(data) {
     if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
   }
 
+  // Auto-select first active customer if none selected
+  if (!ACTIVE_CUSTOMER_ID && Array.isArray(CRM_STATE.customers) && CRM_STATE.customers.length > 0) {
+    const activeOne = CRM_STATE.customers.find(c => {
+      const conv = (CRM_STATE.conversations && typeof CRM_STATE.conversations === 'object') ? CRM_STATE.conversations[c.id] : null;
+      return (conv && conv.length > 0) || c.lastMessage || c.last_message;
+    });
+    if (activeOne) {
+      ACTIVE_CUSTOMER_ID = activeOne.id;
+    }
+  }
+
   // Update badges & UI for the active view
   if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
   if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
@@ -3463,17 +3517,32 @@ function syncLiveCRMData(force = false) {
 }
 window.syncLiveCRMData = syncLiveCRMData;
 
-// Universal Visibility & Focus Sync: All browsers update automatically when focused
+// Universal Visibility & Focus Sync: Alt+Tab safe, delta-only in inbox view
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      syncLiveCRMData(true);
+      if (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'inbox') {
+        // In inbox: quietly poll new messages without re-rendering or wiping chat
+        if (typeof syncInboundMessagesNow === 'function') syncInboundMessagesNow(false);
+        if (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID && typeof syncCustomerMessagesFromDB === 'function') {
+          syncCustomerMessagesFromDB(ACTIVE_CUSTOMER_ID);
+        }
+      } else {
+        syncLiveCRMData(false);
+      }
     }
   });
 }
 if (typeof window !== 'undefined') {
   window.addEventListener('focus', () => {
-    syncLiveCRMData(true);
+    if (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'inbox') {
+      if (typeof syncInboundMessagesNow === 'function') syncInboundMessagesNow(false);
+      if (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID && typeof syncCustomerMessagesFromDB === 'function') {
+        syncCustomerMessagesFromDB(ACTIVE_CUSTOMER_ID);
+      }
+    } else {
+      syncLiveCRMData(false);
+    }
   });
 }
 
@@ -3491,6 +3560,17 @@ function initCRMState() {
   if (!Array.isArray(CRM_STATE.autoReplyRules)) CRM_STATE.autoReplyRules = [];
   if (!Array.isArray(CRM_STATE.broadcastTemplates)) CRM_STATE.broadcastTemplates = [];
   if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object') CRM_STATE.conversations = {};
+  if (typeof sessionStorage !== 'undefined') {
+    try {
+      const cachedConvs = sessionStorage.getItem('GRM_INBOX_CONVERSATIONS');
+      if (cachedConvs) {
+        const parsed = JSON.parse(cachedConvs);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          CRM_STATE.conversations = parsed;
+        }
+      }
+    } catch (e) {}
+  }
 
   if (!CRM_STATE.whatsappAccount) {
     CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
@@ -3582,6 +3662,25 @@ function saveCRMState(immediate = false) {
       localStorage.removeItem('GRM_CRM_STATE_V2_5');
       localStorage.removeItem('GRM_CRM_STATE_V2');
       localStorage.removeItem('GRM_CRM_STATE');
+
+      // Keep recent in-memory conversation threads in sessionStorage for zero-latency instant chat rendering
+      if (typeof sessionStorage !== 'undefined' && CRM_STATE && CRM_STATE.conversations && typeof CRM_STATE.conversations === 'object') {
+        try {
+          const trimmedConvs = {};
+          for (const [cid, msgs] of Object.entries(CRM_STATE.conversations)) {
+            if (Array.isArray(msgs)) {
+              trimmedConvs[cid] = msgs.slice(-50).map(m => {
+                if (m && m.media_url && typeof m.media_url === 'string' && m.media_url.startsWith('data:')) {
+                  return { ...m, media_url: '' };
+                }
+                return m;
+              });
+            }
+          }
+          sessionStorage.setItem('GRM_INBOX_CONVERSATIONS', JSON.stringify(trimmedConvs));
+        } catch (e) {}
+      }
+
       if (typeof window !== 'undefined' && typeof window.broadcastCRMMutation === 'function') {
         window.broadcastCRMMutation('MUTATION');
       }
@@ -5301,7 +5400,9 @@ function renderInboxConversationList() {
     const lastMsgObj = conv.length > 0 ? conv[conv.length - 1] : null;
 
     // Filter out contacts with no messages and no active query from the inbox list
-    if (conv.length === 0 && !query) {
+    const custLastMsg = cust.lastMessage || cust.last_message || '';
+    // Do NOT discard contacts if they have messages, active query, recorded last message, or is active customer
+    if (conv.length === 0 && !query && !custLastMsg && (!ACTIVE_CUSTOMER_ID || String(cust.id) !== String(ACTIVE_CUSTOMER_ID))) {
       return;
     }
 
@@ -5325,6 +5426,9 @@ function renderInboxConversationList() {
       const safeText = String(lastMsgObj.text || lastMsgObj.message_text || (lastMsgObj.type === 'audio' ? '🎤 WhatsApp Voice Note' : (lastMsgObj.type === 'image' ? '📷 Photo Attachment' : 'Message')));
       lastText = (lastMsgObj.sender === 'staff' ? t('chat.staff_prefix', 'Staff: ') : t('chat.customer_prefix', 'Customer: ')) + `"${safeText.substring(0, 38)}..."`;
       timeDisplay = lastMsgObj.time || timeDisplay;
+    } else if (custLastMsg) {
+      lastText = `"${String(custLastMsg).substring(0, 38)}..."`;
+      timeDisplay = cust.lastMessageAt || cust.last_message_at || timeDisplay;
     } else if (query) {
       const qText = String(query.lastMessage || query.queryText || 'Enquiry');
       lastText = t('chat.customer_prefix', 'Customer: ') + `"${qText.substring(0, 38)}..."`;
@@ -6142,7 +6246,23 @@ function renderChatMessages() {
 
   if (!CRM_STATE || !CRM_STATE.conversations) return;
 
-  const rawMessages = CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] || [];
+  let rawMessages = CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] || [];
+  if ((!rawMessages || rawMessages.length === 0) && ACTIVE_CUSTOMER_ID) {
+    const cust = (CRM_STATE.customers || []).find(c => c && String(c.id) === String(ACTIVE_CUSTOMER_ID));
+    if (cust) {
+      const custDigits = (cust.phone || cust.whatsapp || '').replace(/\D/g, '');
+      const phone10 = custDigits.length >= 7 ? custDigits.slice(-10) : '';
+      if (phone10) {
+        for (const [k, msgs] of Object.entries(CRM_STATE.conversations)) {
+          if (k.replace(/\D/g, '').endsWith(phone10) && Array.isArray(msgs) && msgs.length > 0) {
+            rawMessages = msgs;
+            CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] = msgs;
+            break;
+          }
+        }
+      }
+    }
+  }
   const seenIds = new Set();
   const seenFp = new Set();
   const messages = [];
@@ -10799,6 +10919,18 @@ window.insertAdminNoteTag = function (tagText) {
 // 4. SEND MESSAGE & REAL-TIME OUTBOUND DISPATCH
 // =========================================================================
 
+function persistOutboundMessageToBackend(params) {
+  if (!params || (!params.phone && !params.customer_id)) return;
+  try {
+    fetch('api.php?action=record_outbound_message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    }).catch(err => console.warn('[persistOutboundMessageToBackend notice]:', err));
+  } catch (e) {}
+}
+window.persistOutboundMessageToBackend = persistOutboundMessageToBackend;
+
 // Dispatches live message to customer's WhatsApp via Node Baileys QR Bridge (Method 3)
 async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false, mediaUrl = null, customerId = null) {
   const targetAccId = accountId || ACTIVE_SEND_ACCOUNT_ID || 'account_1';
@@ -10809,6 +10941,22 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
   if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.substring(1);
   if (/^\d{10}$/.test(cleanPhone)) {
     cleanPhone = '91' + cleanPhone;
+  }
+
+  const effectiveCustId = customerId || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : null);
+  const msgUid = (msgRef && msgRef.id) ? String(msgRef.id) : ('msg_out_' + Date.now());
+
+  // IMMEDIATELY persist outbound message to MySQL so it is NEVER lost on page reload!
+  if (typeof persistOutboundMessageToBackend === 'function') {
+    persistOutboundMessageToBackend({
+      phone: cleanPhone || phone,
+      text: text,
+      jid: jid,
+      accountId: targetAccId,
+      media_url: targetMedia,
+      customer_id: effectiveCustId,
+      message_uid: msgUid
+    });
   }
 
   // 1. Try Instant WebSocket (Socket.IO) Dispatch

@@ -607,14 +607,33 @@ if ($action === 'get_state' || $action === 'get_all') {
         // 6. Conversations map grouped by customer_id (High-Speed Recent Snippets)
         $conversations = [];
         if (!$isDashboardScope) {
-            $mStmt = $pdo->query("SELECT * FROM (SELECT * FROM `messages` ORDER BY `id` DESC LIMIT 300) sub ORDER BY `id` ASC");
+            $phoneToCid = [];
+            foreach ($customers as $c) {
+                $cp = preg_replace('/[^0-9]/', '', ($c['phone'] ?? ($c['whatsapp'] ?? '')));
+                if (strlen($cp) >= 7) {
+                    $phoneToCid[substr($cp, -10)] = $c['id'];
+                }
+            }
+
+            $mStmt = $pdo->query("SELECT * FROM (SELECT * FROM `messages` ORDER BY `id` DESC LIMIT 500) sub ORDER BY `id` ASC");
             $allMessages = $mStmt->fetchAll();
             foreach ($allMessages as $msg) {
                 $cid = $msg['customer_id'];
-                if (!isset($conversations[$cid])) {
-                    $conversations[$cid] = [];
+                if (!empty($msg['sender_phone'])) {
+                    $cleanP = substr(preg_replace('/[^0-9]/', '', $msg['sender_phone']), -10);
+                    if (!empty($cleanP) && isset($phoneToCid[$cleanP])) {
+                        $cid = $phoneToCid[$cleanP];
+                    }
                 }
-                $conversations[$cid][] = [
+                if (empty($cid) && !empty($msg['sender_phone'])) {
+                    $cleanP = preg_replace('/[^0-9]/', '', $msg['sender_phone']);
+                    $cid = 'cust_' . substr($cleanP, -10);
+                }
+                if (!empty($cid)) {
+                    if (!isset($conversations[$cid])) {
+                        $conversations[$cid] = [];
+                    }
+                    $conversations[$cid][] = [
                     'id' => (string)($msg['message_uid'] ?: $msg['id']),
                     'message_uid' => (string)($msg['message_uid'] ?: $msg['id']),
                     'db_id' => (int)$msg['id'],
@@ -646,6 +665,7 @@ if ($action === 'get_state' || $action === 'get_all') {
                     'status' => $msg['status'] ?: 'DELIVERED',
                     'created_at' => $msg['created_at']
                 ];
+                }
             }
         }
 
@@ -839,7 +859,7 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "products" => $products,
                 "customers" => $customers,
                 "queries" => $queries,
-                "conversations" => $conversations,
+                "conversations" => (object)$conversations,
                 "orders" => $orders,
                 "followups" => $followups,
                 "auditLogs" => $auditLogs,
@@ -3125,6 +3145,117 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // =========================================================================
+// 4.1 RECORD OUTBOUND MESSAGE (Ensures sent messages are 100% persistent in MySQL)
+// =========================================================================
+if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $payload = json_decode($input, true) ?: [];
+
+    $phone = trim($payload['phone'] ?? '');
+    $text = trim($payload['text'] ?? ($payload['message'] ?? ''));
+    $customerId = $payload['customer_id'] ?? null;
+    $mediaUrl = $payload['media_url'] ?? ($payload['mediaUrl'] ?? null);
+    $mediaType = $payload['type'] ?? ($mediaUrl ? 'image' : null);
+    $msgUid = (string)($payload['message_uid'] ?? ($payload['id'] ?? ('msg_out_' . time() . '_' . rand(100, 999))));
+    $accSlot = $payload['accountId'] ?? 'account_1';
+    $senderName = $payload['sender_name'] ?? 'Super Admin';
+
+    if (empty($text) && !empty($mediaUrl)) {
+        $text = '[Photo Attachment]';
+    }
+
+    $effectiveCustId = $customerId;
+    if ($pdo && (!empty($phone) || !empty($effectiveCustId))) {
+        try {
+            if (empty($effectiveCustId) && !empty($phone)) {
+                $cleanP = preg_replace('/[^0-9]/', '', $phone);
+                $clean10 = substr($cleanP, -10);
+                $cStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `phone` LIKE ? OR `whatsapp` LIKE ? LIMIT 1");
+                $cStmt->execute(["%$clean10%", "%$clean10%"]);
+                $effectiveCustId = $cStmt->fetchColumn() ?: null;
+            }
+            if (empty($effectiveCustId) && !empty($phone)) {
+                $cleanP = preg_replace('/[^0-9]/', '', $phone);
+                $clean10 = substr($cleanP, -10);
+                $effectiveCustId = 'cust_' . ($clean10 ?: substr(uniqid(), -6));
+                $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`) VALUES (?, ?, 'Customer', ?, ?, 'Live WhatsApp Lead', 'CU')")
+                    ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $phone, $phone]);
+            }
+
+            if (!empty($effectiveCustId)) {
+                $checkStmt = $pdo->prepare("SELECT `id` FROM `messages` WHERE `message_uid` = ? LIMIT 1");
+                $checkStmt->execute([$msgUid]);
+                $existingMsgId = $checkStmt->fetchColumn();
+
+                if (!$existingMsgId) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO `messages` (
+                            `message_uid`, `customer_id`, `sender`, `sender_name`, `sender_phone`, `sender_jid`,
+                            `direction`, `text`, `message_text`, `media_type`, `media_url`,
+                            `account_id`, `is_bot`, `source`, `time_str`, `timestamp_epoch`, `status`
+                        ) VALUES (?, ?, 'staff', ?, ?, ?, 'outbound', ?, ?, ?, ?, ?, 0, 'CRM_OUTBOUND', ?, ?, 'DELIVERED')
+                    ");
+                    $stmt->execute([
+                        $msgUid,
+                        $effectiveCustId,
+                        $senderName,
+                        $phone,
+                        $payload['jid'] ?? null,
+                        $text,
+                        $text,
+                        $mediaType,
+                        $mediaUrl,
+                        $accSlot,
+                        date("h:i A"),
+                        time()
+                    ]);
+                } else {
+                    $pdo->prepare("UPDATE `messages` SET `status` = 'DELIVERED' WHERE `id` = ?")->execute([$existingMsgId]);
+                }
+
+                // Update customer & query last message
+                $pdo->prepare("UPDATE `customers` SET `last_message` = ?, `last_message_at` = NOW() WHERE `id` = ?")->execute([$text, $effectiveCustId]);
+                $pdo->prepare("UPDATE `queries` SET `last_message` = ? WHERE `customer_id` = ?")->execute([$text, $effectiveCustId]);
+
+                // Also append to live queue file for real-time SSE & polling catch-up
+                if (file_exists($messagesFile)) {
+                    $rawQueue = file_get_contents($messagesFile);
+                    $queue = json_decode($rawQueue, true) ?: [];
+                    $queue[] = [
+                        "id" => $msgUid,
+                        "message_uid" => $msgUid,
+                        "customer_id" => $effectiveCustId,
+                        "sender" => "staff",
+                        "sender_name" => $senderName,
+                        "sender_phone" => $phone,
+                        "sender_jid" => $payload['jid'] ?? null,
+                        "message_text" => $text,
+                        "text" => $text,
+                        "type" => $mediaType ?: "text",
+                        "media_url" => $mediaUrl,
+                        "account_id" => $accSlot,
+                        "source" => "CRM_OUTBOUND",
+                        "timestamp_epoch" => time(),
+                        "received_at" => date("h:i A"),
+                        "time" => date("h:i A"),
+                        "status" => "DELIVERED"
+                    ];
+                    if (count($queue) > 50) {
+                        $queue = array_slice($queue, -50);
+                    }
+                    atomicWriteJson($messagesFile, $queue);
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error in record_outbound_message: " . $e->getMessage());
+        }
+    }
+
+    echo json_encode(["status" => "success", "message_uid" => $msgUid, "customer_id" => $effectiveCustId ?? null]);
+    exit;
+}
+
+// =========================================================================
 // 5. INBOUND WHATSAPP MESSAGE INGESTION & REALTIME SYNC QUEUE
 // =========================================================================
 if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -3291,8 +3422,42 @@ if ($action === 'get_customer_messages') {
     }
     $msgs = [];
     if ($pdo && !empty($cid)) {
-        $stmt = $pdo->prepare("SELECT * FROM (SELECT * FROM `messages` WHERE `customer_id` = ? ORDER BY `id` DESC LIMIT 200) sub ORDER BY `id` ASC");
-        $stmt->execute([$cid]);
+        $phone10 = '';
+        $cStmt = $pdo->prepare("SELECT `phone`, `whatsapp` FROM `customers` WHERE `id` = ? LIMIT 1");
+        $cStmt->execute([$cid]);
+        $cRow = $cStmt->fetch(PDO::FETCH_ASSOC);
+        if ($cRow) {
+            $rawP = preg_replace('/[^0-9]/', '', ($cRow['phone'] ?: $cRow['whatsapp']));
+            if (strlen($rawP) >= 7) {
+                $phone10 = substr($rawP, -10);
+            }
+        }
+        if (empty($phone10)) {
+            $rawP = preg_replace('/[^0-9]/', '', $cid);
+            if (strlen($rawP) >= 7) {
+                $phone10 = substr($rawP, -10);
+            }
+        }
+
+        if (!empty($phone10)) {
+            $stmt = $pdo->prepare("
+                SELECT * FROM (
+                    SELECT * FROM `messages` 
+                    WHERE `customer_id` = :cid 
+                       OR `customer_id` LIKE :cidLike
+                       OR REPLACE(REPLACE(REPLACE(`sender_phone`, ' ', ''), '+', ''), '-', '') LIKE :phoneLike
+                    ORDER BY `id` DESC LIMIT 300
+                ) sub ORDER BY `id` ASC
+            ");
+            $stmt->execute([
+                'cid' => $cid,
+                'cidLike' => "%$phone10%",
+                'phoneLike' => "%$phone10%"
+            ]);
+        } else {
+            $stmt = $pdo->prepare("SELECT * FROM (SELECT * FROM `messages` WHERE `customer_id` = ? ORDER BY `id` DESC LIMIT 200) sub ORDER BY `id` ASC");
+            $stmt->execute([$cid]);
+        }
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $r) {
             $msgs[] = [

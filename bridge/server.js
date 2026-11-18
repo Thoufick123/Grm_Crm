@@ -1754,6 +1754,23 @@ io.on('connection', (socket) => {
                 callback({ status: 'success', result });
             }
 
+            // Record outbound message in CRM PHP backend so it persists in MySQL across refreshes
+            if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
+                fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: phone || '',
+                        text: text || '',
+                        jid: result?.jid || jid || null,
+                        accountId: accountId || 'account_1',
+                        media_url: imageTarget,
+                        customer_id: data.customerId || null,
+                        message_uid: result?.id || ('msg_out_' + Date.now())
+                    })
+                }).catch(() => {});
+            }
+
             io.emit('whatsapp:sent_ack', {
                 recipient: phone,
                 jid: result.jid,
@@ -2388,6 +2405,21 @@ app.post('/api/send', async (req, res) => {
         }
         const imageTarget = mediaUrl || media_url || null;
         const result = await sendWhatsAppMessage(jid || phone, finalTextToSend, accountId, imageTarget);
+        if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
+            fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: phone || '',
+                    text: finalTextToSend || '',
+                    jid: result?.jid || jid || null,
+                    accountId: accountId || 'account_1',
+                    media_url: imageTarget,
+                    customer_id: req.body?.customerId || null,
+                    message_uid: result?.id || ('msg_out_' + Date.now())
+                })
+            }).catch(() => {});
+        }
         res.json(result);
     } catch (err) {
         console.error('[REST Send Error]:', err.message);
