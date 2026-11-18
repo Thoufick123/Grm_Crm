@@ -1956,6 +1956,8 @@ io.on('connection', (socket) => {
                 callback({ status: 'success', result });
             }
 
+            const outboundMsgUid = result?.id || ('msg_out_' + Date.now());
+
             // Record outbound message in CRM PHP backend so it persists in MySQL across refreshes
             if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
                 fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {
@@ -1968,15 +1970,41 @@ io.on('connection', (socket) => {
                         accountId: accountId || 'account_1',
                         media_url: imageTarget,
                         customer_id: data.customerId || null,
-                        message_uid: result?.id || ('msg_out_' + Date.now())
+                        message_uid: outboundMsgUid
                     })
                 }).catch(() => {});
             }
 
+            const outboundPayload = {
+                id: outboundMsgUid,
+                message_uid: outboundMsgUid,
+                customer_id: data.customerId || null,
+                sender: 'staff',
+                sender_name: 'Super Admin',
+                sender_phone: phone,
+                sender_jid: result?.jid || jid || null,
+                message_text: text || (imageTarget ? '[Photo Attachment]' : ''),
+                text: text || (imageTarget ? '[Photo Attachment]' : ''),
+                type: imageTarget ? 'image' : 'text',
+                media_url: imageTarget,
+                account_id: accountId || 'account_1',
+                direction: 'outbound',
+                is_outbound: true,
+                source: 'CRM_OUTBOUND',
+                timestamp_epoch: Math.floor(Date.now() / 1000),
+                received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: 'DELIVERED'
+            };
+
+            // Real-time broadcast to all connected staff tabs & browsers
+            io.emit('whatsapp:outbound', outboundPayload);
+            io.emit('whatsapp:inbound', outboundPayload);
+
             io.emit('whatsapp:sent_ack', {
                 recipient: phone,
-                jid: result.jid,
-                account_id: result.account_id,
+                jid: result?.jid || jid,
+                account_id: result?.account_id || accountId,
                 text: text,
                 media_url: imageTarget,
                 status: 'DELIVERED',

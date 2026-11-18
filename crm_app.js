@@ -2344,9 +2344,15 @@ function initSocketIO() {
       updateQRBridgeUI(statusData);
     });
 
-    // Real-time Outbound Delivery Ack
+    // Real-time Outbound Delivery Ack & Instant Broadcast Ingestion
     SOCKET_IO.on('whatsapp:sent_ack', (ack) => {
       console.log('⚡ [Socket.IO Outbound Ack]:', ack);
+    });
+
+    SOCKET_IO.on('whatsapp:outbound', (outboundPayload) => {
+      if (outboundPayload) {
+        ingestInboundMessage(outboundPayload, true);
+      }
     });
 
     SOCKET_IO.on('disconnect', () => {
@@ -2375,6 +2381,16 @@ function ingestInboundMessage(payload, suppressChime = false) {
   const duration = payload.duration || null;
   const msgTimestamp = payload.timestamp_epoch ? (payload.timestamp_epoch * 1000) : Date.now();
 
+  const isOutboundMsg = Boolean(
+    payload.is_outbound || 
+    payload.direction === 'outbound' || 
+    payload.sender === 'staff' || 
+    payload.source === 'CRM_OUTBOUND' || 
+    payload.source === 'WHATSAPP_PHONE_DIRECT' ||
+    payload.source === 'AUTOREPLY_BOT' || 
+    payload.source === 'STAFF_OUTBOUND'
+  );
+
   // 1. Safe Unicode Avatar Extraction (Supports emojis & math bold script characters)
   const nameChars = Array.from(senderName || 'WA');
   const safeAvatar = (nameChars.slice(0, 2).join('')).toUpperCase() || 'WA';
@@ -2387,11 +2403,12 @@ function ingestInboundMessage(payload, suppressChime = false) {
   if (payload.customer_id) {
     customer = (CRM_STATE.customers || []).find(c => c && String(c.id) === String(payload.customer_id));
   }
-  if (!customer) {
+  if (!customer && normalizedDigits) {
+    const digits10 = normalizedDigits.slice(-10);
     customer = (CRM_STATE.customers || []).find(c => {
       const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
-      const phoneMatch = (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
-        (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10)) ||
+      const phoneMatch = (cPhoneDigits.length >= 7 && (cPhoneDigits === normalizedDigits || cPhoneDigits.slice(-10) === digits10)) ||
+        (c.id && c.id.replace(/[^0-9]/g, '').endsWith(digits10)) ||
         (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0] === payload.sender_jid.split('@')[0])));
       return phoneMatch;
     });
@@ -2405,9 +2422,9 @@ function ingestInboundMessage(payload, suppressChime = false) {
       return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
         (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10));
     });
-    const finalName = (senderName && !senderName.startsWith('WhatsApp Customer'))
+    const finalName = (!isOutboundMsg && senderName && !senderName.startsWith('WhatsApp Customer') && !senderName.includes('Admin'))
       ? senderName
-      : (existingOther && existingOther.name && !existingOther.name.startsWith('WhatsApp Customer') ? existingOther.name : senderName);
+      : (existingOther && existingOther.name && !existingOther.name.startsWith('WhatsApp Customer') ? existingOther.name : `Customer (${cleanPhone.slice(-4)})`);
 
     const lineTag = payloadAccountId === 'account_2' ? 'Line 2 Lead' : 'Line 1 Lead';
     customer = {
@@ -2431,7 +2448,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
   } else {
     customer.accountId = payloadAccountId;
     if (payloadBusinessNum && payloadBusinessNum !== 'Primary') customer.businessNumber = payloadBusinessNum;
-    if (senderName && !senderName.startsWith('WhatsApp Customer') && (customer.name.startsWith('Customer') || customer.name.startsWith('WhatsApp Customer'))) {
+    if (!isOutboundMsg && senderName && !senderName.startsWith('WhatsApp Customer') && !senderName.includes('Admin') && (customer.name.startsWith('Customer') || customer.name.startsWith('WhatsApp Customer'))) {
       customer.name = senderName;
       customer.avatar = safeAvatar;
     }
@@ -2451,16 +2468,10 @@ function ingestInboundMessage(payload, suppressChime = false) {
   if (!CRM_STATE.conversations[customer.id]) {
     CRM_STATE.conversations[customer.id] = [];
   }
+  if (payload.customer_id && payload.customer_id !== customer.id && !CRM_STATE.conversations[payload.customer_id]) {
+    CRM_STATE.conversations[payload.customer_id] = CRM_STATE.conversations[customer.id];
+  }
 
-  const isOutboundMsg = Boolean(
-    payload.is_outbound || 
-    payload.direction === 'outbound' || 
-    payload.sender === 'staff' || 
-    payload.source === 'CRM_OUTBOUND' || 
-    payload.source === 'WHATSAPP_PHONE_DIRECT' ||
-    payload.source === 'AUTOREPLY_BOT' || 
-    payload.source === 'STAFF_OUTBOUND'
-  );
   const isBotMsg = Boolean(payload.source === 'AUTOREPLY_BOT' || payload.is_bot || payload.sender === 'bot');
   const msgSender = isBotMsg ? 'bot' : (isOutboundMsg ? 'staff' : (payload.sender || 'customer'));
 
@@ -6394,36 +6405,63 @@ function renderChatMessages() {
 
   if (!CRM_STATE || !CRM_STATE.conversations) return;
 
-  let rawMessages = CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] || [];
-  if ((!rawMessages || rawMessages.length === 0) && ACTIVE_CUSTOMER_ID) {
+  let rawMessages = [];
+  if (ACTIVE_CUSTOMER_ID) {
     const cust = (CRM_STATE.customers || []).find(c => c && String(c.id) === String(ACTIVE_CUSTOMER_ID));
-    if (cust) {
-      const custDigits = (cust.phone || cust.whatsapp || '').replace(/\D/g, '');
-      const phone10 = custDigits.length >= 7 ? custDigits.slice(-10) : '';
-      if (phone10) {
-        for (const [k, msgs] of Object.entries(CRM_STATE.conversations)) {
-          if (k.replace(/\D/g, '').endsWith(phone10) && Array.isArray(msgs) && msgs.length > 0) {
-            rawMessages = msgs;
-            CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] = msgs;
-            break;
-          }
-        }
+    const custDigits = cust ? (cust.phone || cust.whatsapp || '').replace(/\D/g, '') : '';
+    const phone10 = custDigits.length >= 7 ? custDigits.slice(-10) : (String(ACTIVE_CUSTOMER_ID).replace(/\D/g, '').slice(-10) || '');
+
+    const candidateKeys = new Set([String(ACTIVE_CUSTOMER_ID)]);
+    if (cust && cust.id) candidateKeys.add(String(cust.id));
+    if (phone10) {
+      candidateKeys.add(phone10);
+      candidateKeys.add('cust_' + phone10);
+    }
+
+    const mergedList = [];
+    const mergedIds = new Set();
+    const mergedFingerprints = new Set();
+
+    const addMessagesFrom = (bucket) => {
+      if (!Array.isArray(bucket)) return;
+      for (const m of bucket) {
+        if (!m) continue;
+        const mId = m.id ? String(m.id) : null;
+        const fp = `${m.sender}_${m.time || ''}_${(m.text || '').slice(0, 30)}_${(m.media_url || '').slice(-30)}`;
+        if (mId && mergedIds.has(mId)) continue;
+        if (mergedFingerprints.has(fp)) continue;
+        if (mId) mergedIds.add(mId);
+        mergedFingerprints.add(fp);
+        mergedList.push(m);
+      }
+    };
+
+    // 1. Direct active customer key
+    addMessagesFrom(CRM_STATE.conversations[ACTIVE_CUSTOMER_ID]);
+
+    // 2. Scan all other conversation buckets matching phone or ID
+    for (const [k, msgs] of Object.entries(CRM_STATE.conversations)) {
+      if (k === ACTIVE_CUSTOMER_ID) continue;
+      const kDigits = k.replace(/\D/g, '');
+      const isMatch = candidateKeys.has(k) || (phone10 && kDigits.length >= 7 && kDigits.endsWith(phone10));
+      if (isMatch && Array.isArray(msgs) && msgs.length > 0) {
+        addMessagesFrom(msgs);
       }
     }
+
+    // Sort chronologically by timestamp or ID
+    mergedList.sort((a, b) => {
+      const tA = a.timestamp || (a.timestamp_epoch ? a.timestamp_epoch * 1000 : 0);
+      const tB = b.timestamp || (b.timestamp_epoch ? b.timestamp_epoch * 1000 : 0);
+      if (tA && tB && tA !== tB) return tA - tB;
+      return (a.id || 0) > (b.id || 0) ? 1 : -1;
+    });
+
+    CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] = mergedList;
+    rawMessages = mergedList;
   }
-  const seenIds = new Set();
-  const seenFp = new Set();
-  const messages = [];
-  rawMessages.forEach(m => {
-    if (!m) return;
-    const mId = m.id ? String(m.id) : null;
-    const fp = `${m.sender}_${m.time}_${(m.text || '').slice(0, 25)}_${(m.media_url || '').slice(-25)}`;
-    if (mId && seenIds.has(mId)) return;
-    if (seenFp.has(fp)) return;
-    if (mId) seenIds.add(mId);
-    seenFp.add(fp);
-    messages.push(m);
-  });
+
+  const messages = rawMessages;
 
   const t = window.t || ((k, f) => f || k);
 
@@ -11190,7 +11228,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
           jid,
           accountId: targetAccId,
           mediaUrl: targetMedia,
-          customerId
+          customerId: effectiveCustId
         }, (res) => {
           if (resolved) return;
           resolved = true;
@@ -11228,7 +11266,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
         jid,
         accountId: targetAccId,
         mediaUrl: targetMedia,
-        customerId
+        customerId: effectiveCustId
       })
     });
     let result = await resp.json();
@@ -11255,7 +11293,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
         jid,
         accountId: targetAccId,
         media_url: targetMedia,
-        customer_id: customerId
+        customer_id: effectiveCustId
       })
     });
     let fResult = await fResp.json();
