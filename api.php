@@ -23,7 +23,10 @@ if (!ob_get_level() && !headers_sent()) {
 }
 
 if (!headers_sent()) {
-    header("Content-Type: application/json");
+    header("Content-Type: application/json; charset=utf-8");
+    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0");
+    header("Pragma: no-cache");
+    header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
     header("Access-Control-Allow-Origin: *");
     header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type");
@@ -735,7 +738,8 @@ if ($action === 'get_state' || $action === 'get_all') {
             } catch (Exception $e) {}
         }
 
-        // 10. Categories, Subcategories & Attributes (60-Second Query Cache)
+        // 10. Categories, Subcategories, Attributes, Auto-Reply Rules & Role Permissions
+        // Direct zero-lag MySQL queries ensures all browsers always show 100% synchronized live data
         $rolePermissions = [];
         $categories = [];
         $subcategories = [];
@@ -743,114 +747,87 @@ if ($action === 'get_state' || $action === 'get_all') {
         $arRules = [];
         $bcTemplates = [];
 
-        if (!$isInboxScope && !$isDashboardScope) {
-            $cachedConfig = getCachedConfigItem('catalog_and_rules_cache', function() use ($pdo) {
-                $cRolePermissions = [];
-                $cCategories = [];
-                $cSubcategories = [];
-                $cAttributes = ['sizes' => [], 'colors' => [], 'fabrics' => [], 'specifications' => [], 'custom' => []];
+        try {
+            $catStmt = $pdo->query("SELECT * FROM `categories` ORDER BY `display_order` ASC, `name` ASC");
+            $categories = $catStmt->fetchAll();
 
-                try {
-                    $catStmt = $pdo->query("SELECT * FROM `categories` ORDER BY `display_order` ASC, `name` ASC");
-                    $cCategories = $catStmt->fetchAll();
+            $subStmt = $pdo->query("SELECT * FROM `subcategories` ORDER BY `name` ASC");
+            $subcategories = $subStmt->fetchAll();
 
-                    $subStmt = $pdo->query("SELECT * FROM `subcategories` ORDER BY `name` ASC");
-                    $cSubcategories = $subStmt->fetchAll();
-
-                    $attrStmt = $pdo->query("SELECT * FROM `attributes` ORDER BY `id` ASC");
-                    $rawAttrs = $attrStmt->fetchAll();
-                    foreach ($rawAttrs as $ra) {
-                        $type = $ra['type'] ?? '';
-                        if ($type === 'size') $cAttributes['sizes'][] = $ra['value'];
-                        else if ($type === 'color') $cAttributes['colors'][] = $ra['value'];
-                        else if ($type === 'fabric') $cAttributes['fabrics'][] = $ra['value'];
-                        else if ($type === 'role_permissions') {
-                            $decoded = json_decode($ra['extra'] ?? '', true);
-                            if ($decoded) {
-                                $cRolePermissions[$ra['value']] = $decoded;
-                            }
-                        } else if ($type === 'specification') {
-                            $extraStr = $ra['extra'] ?? '';
-                            if (strpos($extraStr, ',') !== false) {
-                                $parts = array_filter(array_map('trim', explode(',', $extraStr)));
-                                foreach ($parts as $pIdx => $part) {
-                                    $cAttributes['specifications'][] = [
-                                        'id' => (int)$ra['id'] * 1000 + $pIdx,
-                                        'label' => $ra['value'],
-                                        'content' => $part
-                                    ];
-                                }
-                            } else {
-                                $cAttributes['specifications'][] = [
-                                    'id' => (int)$ra['id'],
-                                    'label' => $ra['value'],
-                                    'content' => $extraStr
-                                ];
-                            }
-                        } else if ($type === 'attribute_type') {
-                            $attrName = trim($ra['value']);
-                            if (!empty($attrName) && !isset($cAttributes['custom'][$attrName])) {
-                                $cAttributes['custom'][$attrName] = [];
-                            }
-                        } else if ($type === 'attribute_value' || $type === 'custom') {
-                            $attrName = trim($ra['extra'] ?: 'Custom');
-                            if (!isset($cAttributes['custom'][$attrName])) {
-                                $cAttributes['custom'][$attrName] = [];
-                            }
-                            if (!empty($ra['value']) && !in_array($ra['value'], $cAttributes['custom'][$attrName])) {
-                                $cAttributes['custom'][$attrName][] = $ra['value'];
-                            }
-                        } else {
-                            $attrName = trim($ra['extra'] ?: ucfirst($ra['type']));
-                            if (!empty($attrName)) {
-                                if (!isset($cAttributes['custom'][$attrName])) {
-                                    $cAttributes['custom'][$attrName] = [];
-                                }
-                                if (!empty($ra['value']) && !in_array($ra['value'], $cAttributes['custom'][$attrName])) {
-                                    $cAttributes['custom'][$attrName][] = $ra['value'];
-                                }
-                            }
+            $attrStmt = $pdo->query("SELECT * FROM `attributes` ORDER BY `id` ASC");
+            $rawAttrs = $attrStmt->fetchAll();
+            foreach ($rawAttrs as $ra) {
+                $type = $ra['type'] ?? '';
+                if ($type === 'size') $attributes['sizes'][] = $ra['value'];
+                else if ($type === 'color') $attributes['colors'][] = $ra['value'];
+                else if ($type === 'fabric') $attributes['fabrics'][] = $ra['value'];
+                else if ($type === 'role_permissions') {
+                    $decoded = json_decode($ra['extra'] ?? '', true);
+                    if ($decoded) {
+                        $rolePermissions[$ra['value']] = $decoded;
+                    }
+                } else if ($type === 'specification') {
+                    $extraStr = $ra['extra'] ?? '';
+                    if (strpos($extraStr, ',') !== false) {
+                        $parts = array_filter(array_map('trim', explode(',', $extraStr)));
+                        foreach ($parts as $pIdx => $part) {
+                            $attributes['specifications'][] = [
+                                'id' => (int)$ra['id'] * 1000 + $pIdx,
+                                'label' => $ra['value'],
+                                'content' => $part
+                            ];
+                        }
+                    } else {
+                        $attributes['specifications'][] = [
+                            'id' => (int)$ra['id'],
+                            'label' => $ra['value'],
+                            'content' => $extraStr
+                        ];
+                    }
+                } else if ($type === 'attribute_type') {
+                    $attrName = trim($ra['value']);
+                    if (!empty($attrName) && !isset($attributes['custom'][$attrName])) {
+                        $attributes['custom'][$attrName] = [];
+                    }
+                } else if ($type === 'attribute_value' || $type === 'custom') {
+                    $attrName = trim($ra['extra'] ?: 'Custom');
+                    if (!isset($attributes['custom'][$attrName])) {
+                        $attributes['custom'][$attrName] = [];
+                    }
+                    if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
+                        $attributes['custom'][$attrName][] = $ra['value'];
+                    }
+                } else {
+                    $attrName = trim($ra['extra'] ?: ucfirst($ra['type']));
+                    if (!empty($attrName)) {
+                        if (!isset($attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName] = [];
+                        }
+                        if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName][] = $ra['value'];
                         }
                     }
-                } catch (Exception $e) {}
+                }
+            }
+        } catch (Exception $e) {}
 
-                $cArRules = [];
-                try {
-                    $cArRules = $pdo->query("SELECT * FROM `auto_reply_rules` ORDER BY `created_at` ASC")->fetchAll();
-                    foreach ($cArRules as &$r) {
-                        if (!empty($r['keywords']) && is_string($r['keywords'])) {
-                            $r['keywords'] = json_decode($r['keywords'], true) ?: [$r['keywords']];
-                        }
-                        $r['actionType'] = $r['action_type'] ?? ($r['actionType'] ?? 'custom_text');
-                        $r['categoryId'] = $r['category_id'] ?? ($r['categoryId'] ?? null);
-                        $r['replyText'] = $r['reply_text'] ?? ($r['replyText'] ?? '');
-                        $r['enabled'] = isset($r['enabled']) ? (bool)$r['enabled'] : true;
-                        $r['autoSend'] = isset($r['auto_send']) ? (bool)$r['auto_send'] : true;
-                    }
-                } catch (Exception $e) {}
+        try {
+            $arRules = $pdo->query("SELECT * FROM `auto_reply_rules` ORDER BY `created_at` ASC")->fetchAll();
+            foreach ($arRules as &$r) {
+                if (!empty($r['keywords']) && is_string($r['keywords'])) {
+                    $r['keywords'] = json_decode($r['keywords'], true) ?: [$r['keywords']];
+                }
+                $r['actionType'] = $r['action_type'] ?? ($r['actionType'] ?? 'custom_text');
+                $r['categoryId'] = $r['category_id'] ?? ($r['categoryId'] ?? null);
+                $r['replyText'] = $r['reply_text'] ?? ($r['replyText'] ?? '');
+                $r['enabled'] = isset($r['enabled']) ? (bool)$r['enabled'] : true;
+                $r['autoSend'] = isset($r['auto_send']) ? (bool)$r['auto_send'] : true;
+            }
+        } catch (Exception $e) {}
 
-                $cBcTemplates = [];
-                try {
-                    $cBcTemplates = $pdo->query("SELECT * FROM `broadcast_templates` ORDER BY `created_at` ASC")->fetchAll();
-                } catch (Exception $e) {}
-
-                return [
-                    'rolePermissions' => $cRolePermissions,
-                    'categories' => $cCategories,
-                    'subcategories' => $cSubcategories,
-                    'attributes' => $cAttributes,
-                    'arRules' => $cArRules,
-                    'bcTemplates' => $cBcTemplates
-                ];
-            }, 60);
-
-            $rolePermissions = $cachedConfig['rolePermissions'] ?? [];
-            $categories = $cachedConfig['categories'] ?? [];
-            $subcategories = $cachedConfig['subcategories'] ?? [];
-            $attributes = $cachedConfig['attributes'] ?? $attributes;
-            $arRules = $cachedConfig['arRules'] ?? [];
-            $bcTemplates = $cachedConfig['bcTemplates'] ?? [];
-        }
+        try {
+            $bcTemplates = $pdo->query("SELECT * FROM `broadcast_templates` ORDER BY `created_at` ASC")->fetchAll();
+        } catch (Exception $e) {}
 
         echo json_encode([
             "status" => "success",

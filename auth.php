@@ -15,7 +15,10 @@ session_set_cookie_params([
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=utf-8");
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0");
+header("Pragma: no-cache");
+header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");

@@ -3091,208 +3091,424 @@ function mergeCatalogProductsWithDB(dbRawProducts) {
   saveCRMState();
 }
 
-// Load State from LocalStorage or Initialise (100% Persistent across page reloads)
-function initCRMState() {
-  const saved = localStorage.getItem('GRM_CRM_STATE_V2_5');
-  if (saved) {
-    try {
-      CRM_STATE = JSON.parse(saved);
-      if (!CRM_STATE.whatsappAccount) {
-        CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
-      } else if (!CRM_STATE.whatsappAccount.phoneNumber || CRM_STATE.whatsappAccount.phoneNumber.includes('98765 43210') || CRM_STATE.whatsappAccount.phoneNumber.includes('97896 60115')) {
-        CRM_STATE.whatsappAccount.phoneNumber = '+91 86680 07593';
-      }
-      if (!CRM_STATE.dailyMessageTarget) {
-        CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
-      }
-      if (!Array.isArray(CRM_STATE.customers)) CRM_STATE.customers = [];
-      // Always clear cached categories/subcategories — DB is the single source of truth
-      CRM_STATE.categories = [];
-      CRM_STATE.subcategories = [];
-      // Clean up any stale dummy mock customers from state
-      CRM_STATE.customers = CRM_STATE.customers.filter(c =>
-        c && c.id !== 'cust_89660115_account_1' && c.id !== 'cust_101' && c.id !== 'cust_102' && c.id !== 'cust_103' && c.name !== 'Pooja Venkatesh'
-      );
-      cleanupAndDeduplicateCRMState();
-      // Clean up legacy mock accounts (account_2 to account_5) if unlinked
-      if (Array.isArray(CRM_STATE.whatsappLines)) {
-        CRM_STATE.whatsappLines = CRM_STATE.whatsappLines.filter(a =>
-          a && a.id && (a.id === 'account_1' || (a.status === 'CONNECTED' && a.connected_number && a.connected_number !== 'Awaiting Link'))
-        );
-      }
-      // Clean up legacy mock auto-reply rules
-      if (Array.isArray(CRM_STATE.autoReplyRules)) {
-        const mockRuleIds = ['rule_feeding_kurti', 'rule_baby_frocks', 'rule_newborn_sets', 'rule_kids_daily', 'rule_wholesale', 'rule_festive_silk', 'rule_payment_upi', 'rule_shipping_delivery', 'rule_store_location'];
-        CRM_STATE.autoReplyRules = CRM_STATE.autoReplyRules.filter(r => r && r.id && !mockRuleIds.includes(r.id));
-      }
-      const mekhaStaff = (CRM_STATE.staffList || []).find(s => s && s.name && s.name.toLowerCase() === 'mekha');
-      const mekhaId = mekhaStaff ? mekhaStaff.id : 'staff_05';
-
-      if (Array.isArray(CRM_STATE.followups) && Array.isArray(CRM_STATE.queries)) {
-        CRM_STATE.followups.forEach(f => {
-          if (!f) return;
-          if (f.assignedTo === 'staff_04' || f.assignedTo === 'staff_01' || f.assignedTo === 'mekha') {
-            f.assignedTo = mekhaId;
-          }
-          const q = CRM_STATE.queries.find(qry => qry && (
-            (qry.customerId && (qry.customerId === f.customerId || String(qry.customerId) === String(f.customerId))) ||
-            (qry.customer_id && (qry.customer_id === f.customerId || String(qry.customer_id) === String(f.customerId))) ||
-            (qry.id === f.queryId || qry.id === f.query_id)
-          ));
-          if (q && q.assignedTo && q.assignedTo !== 'UNASSIGNED') {
-            f.assignedTo = q.assignedTo;
-          }
-        });
-      }
-      if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
-      CRM_STATE.queries = CRM_STATE.queries.filter(q =>
-        q && q.customerId !== 'cust_89660115_account_1' && q.customerId !== 'cust_101' && q.customerId !== 'cust_102' && q.customerId !== 'cust_103' && !(q.queryText && q.queryText.includes('ytfdw'))
-      );
-      if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object') CRM_STATE.conversations = {};
-      // Repair any voice notes sitting in localStorage that lost type or duration
-      Object.keys(CRM_STATE.conversations).forEach(cid => {
-        const msgs = CRM_STATE.conversations[cid];
-        if (Array.isArray(msgs)) {
-          msgs.forEach(m => {
-            if (m && (m.text && (m.text.includes('Voice Note') || m.text.includes('Voice Message') || m.text.includes('🎤')) || (m.media_url && m.media_url.includes('/voice/')))) {
-              m.type = 'audio';
-              m.media_type = 'audio';
-              if (!m.media_url && m.mediaUrl) m.media_url = m.mediaUrl;
-              if (!m.mediaUrl && m.media_url) m.mediaUrl = m.media_url;
-              if (!m.duration) m.duration = m.audioDuration || 8;
-            }
-          });
-        }
-      });
-      // Clean up any non-products (voice notes, generic attachments) from customer automation history
-      if (Array.isArray(CRM_STATE.customers)) {
-        CRM_STATE.customers.forEach(c => {
-          if (!Array.isArray(c.automationHistory) || c.automationHistory.length === 0) {
-            try {
-              const saved = localStorage.getItem('GRM_TRACKED_PRODUCTS_' + c.id);
-              if (saved) {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length > 0) c.automationHistory = parsed;
-              }
-            } catch (e) { }
-          }
-          if (Array.isArray(c.automationHistory)) {
-            c.automationHistory = c.automationHistory.filter(a => {
-              if (!a) return false;
-              const t = (a.title || a.name || '').toLowerCase();
-              return !t.includes('voice note') && !t.includes('audio message') && !t.includes('voice message') && t !== '[photo attachment]' && !t.includes('🎤');
-            });
-          }
-        });
-      }
-      if (!Array.isArray(CRM_STATE.orders)) CRM_STATE.orders = [];
-      if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = [];
-      if (!Array.isArray(CRM_STATE.followups)) {
-        CRM_STATE.followups = [];
-      } else {
-        const seenKeys = new Set();
-        CRM_STATE.followups = CRM_STATE.followups.filter(f => {
-          if (!f || !f.id) return false;
-          if (f.id.startsWith('FU-2026-000') || f.id === 'FU-2026-00107' || f.id === 'FU-2026-00108' || f.id === 'FU-2026-00109' || f.id === 'FU-2026-00110') return false;
-          if (f.customerId && (f.customerId === 'cust_101' || f.customerId === 'cust_102' || f.customerId === 'cust_103')) return false;
-          if (f.reason && f.reason.includes('ytfdw')) return false;
-          const k = f.id;
-          const custK = (f.customerId || '') + '_' + (f.isPaymentPending ? 'PAY' : 'FU') + '_' + (f.status || '');
-          if (seenKeys.has(k) || (f.customerId && seenKeys.has(custK))) return false;
-          seenKeys.add(k);
-          if (f.customerId) seenKeys.add(custK);
-          return true;
-        });
-      }
-      // Keep existing products intact without destructive mock filtering
-      if (!Array.isArray(CRM_STATE.categories)) CRM_STATE.categories = [];
-      if (!Array.isArray(CRM_STATE.subcategories)) CRM_STATE.subcategories = [];
-      if (!CRM_STATE.attributes || typeof CRM_STATE.attributes !== 'object' || !Array.isArray(CRM_STATE.attributes.sizes)) {
-        CRM_STATE.attributes = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.attributes || { sizes: [], colors: [], fabrics: [], specifications: [], custom: {} }));
-      }
-      if (!CRM_STATE.attributes.custom || typeof CRM_STATE.attributes.custom !== 'object' || Array.isArray(CRM_STATE.attributes.custom)) {
-        CRM_STATE.attributes.custom = {};
-      }
-      // Clean up previous test mock Memory if present
-      if (CRM_STATE.attributes.custom['Memory']) {
-        delete CRM_STATE.attributes.custom['Memory'];
-      }
-
-      if (!CRM_STATE.autoReplySettings || typeof CRM_STATE.autoReplySettings !== 'object' || !CRM_STATE.autoReplySettings.messageTemplate || CRM_STATE.autoReplySettings.messageTemplate.includes('wa.me')) {
-        CRM_STATE.autoReplySettings = {
-          enabled: true,
-          cooldownMinutes: 0,
-          keywordMatching: true,
-          messageTemplate: getDefaultStockAutoReplyTemplate()
-        };
-      }
-
-      if (!Array.isArray(CRM_STATE.autoReplyRules)) {
-        CRM_STATE.autoReplyRules = [];
-      }
-
-      // ZERO-LATENCY INSTANT PRE-RENDER: Paint real cached numbers immediately before network request
-      if (typeof window !== "undefined" && window.location) {
-        const curHash = (window.location.hash || "").replace("#", "").split("/")[0] || "dashboard";
-        if (curHash === "dashboard" && typeof renderDashboard === "function") {
-          try { renderDashboard(); if (typeof updateDashboardKPIs === "function") updateDashboardKPIs(); } catch (e) {}
-        } else if (curHash === "inbox" && typeof renderInbox === "function") {
-          try { renderInbox(); } catch (e) {}
+// =========================================================================
+// UNIVERSAL STALE CACHE PURGER: Guarantees 100% data consistency across all browsers
+// =========================================================================
+(function purgeLegacyStaleCaches() {
+  const CURRENT_SYNC_VERSION = 'GRM_CRM_V3_LIVE_SYNC';
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('GRM_SYNC_VERSION') !== CURRENT_SYNC_VERSION) {
+      localStorage.removeItem('GRM_CRM_STATE_V2_5');
+      localStorage.removeItem('GRM_CRM_STATE_V2');
+      localStorage.removeItem('GRM_CRM_STATE');
+      localStorage.removeItem('CRM_ROLE_PERMISSIONS');
+      localStorage.removeItem('GRM_NOTIFICATIONS');
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('GRM_TRACKED_PRODUCTS_') || k.startsWith('GRM_CRM_MOCK_') || k.startsWith('GRM_CACHE_'))) {
+          keysToRemove.push(k);
         }
       }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('GRM_SYNC_VERSION', CURRENT_SYNC_VERSION);
+    }
+  } catch (e) {}
+})();
 
-      if (Array.isArray(CRM_STATE.staffList)) {
-        // Filter out legacy mock staff members
-        CRM_STATE.staffList = CRM_STATE.staffList.filter(s =>
-          s && s.id !== 'staff_01' && s.id !== 'staff_02' && s.id !== 'staff_03' &&
-          s.name !== 'Priya Sharma' && s.name !== 'Rahul Verma' && s.name !== 'Sneha Patel'
-        );
-        CRM_STATE.staffList.forEach((s, idx) => {
-          if (typeof s.dailyQuota === 'undefined') s.dailyQuota = idx === 2 ? 60 : 70;
-          if (typeof s.todayHandled === 'undefined' || s.todayHandled === 18 || s.todayHandled === 14 || s.todayHandled === 8) s.todayHandled = 0;
-          if (!s.email) s.email = `${(s.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@grmgarments.com`;
-          if (!s.phone) s.phone = `+91 98450 1122${idx + 1}`;
-          if (!s.status) s.status = 'ACTIVE';
-        });
+// Cross-tab live broadcast channel for instant multi-tab sync
+if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+  try {
+    const crmSyncChannel = new BroadcastChannel('grm_crm_live_channel');
+    crmSyncChannel.onmessage = (event) => {
+      if (event && event.data && event.data.type === 'DATA_MUTATED') {
+        if (typeof syncLiveCRMData === 'function') {
+          syncLiveCRMData(true);
+        }
       }
-    } catch (e) {
-      console.warn('Recovering CRM state from initial schema:', e);
-      CRM_STATE = JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
+    };
+    window.broadcastCRMMutation = function (mutationType = 'UPDATE') {
+      try {
+        crmSyncChannel.postMessage({ type: 'DATA_MUTATED', mutation: mutationType, time: Date.now() });
+      } catch (e) {}
+    };
+  } catch (e) {}
+}
+
+/**
+ * Applies authoritative database state from MySQL directly into CRM_STATE.
+ * Eliminates phantom records, zombie queries, and cross-browser desynchronization.
+ */
+function applyAuthoritativeDatabaseState(data) {
+  if (!data || typeof data !== 'object') return;
+
+  // 1. Products & Inventory
+  if (data.products && Array.isArray(data.products)) {
+    if (typeof mergeCatalogProductsWithDB === 'function') {
+      mergeCatalogProductsWithDB(data.products);
+    } else {
+      CRM_STATE.products = data.products;
     }
-  } else {
-    CRM_STATE = JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
-    if (!CRM_STATE.autoReplySettings) {
-      CRM_STATE.autoReplySettings = {
-        enabled: true,
-        cooldownMinutes: 0,
-        keywordMatching: true,
-        messageTemplate: getDefaultStockAutoReplyTemplate()
-      };
-    }
-    if (!Array.isArray(CRM_STATE.autoReplyRules)) {
-      CRM_STATE.autoReplyRules = [];
-    }
-    saveCRMState();
   }
 
-  // Auto-reply rules are synchronized directly via get_all / CRM_STATE
+  // 2. Taxonomy & Catalog Attributes (MySQL is the single source of truth)
+  if (Array.isArray(data.categories)) {
+    CRM_STATE.categories = data.categories;
+  }
+  if (Array.isArray(data.subcategories)) {
+    CRM_STATE.subcategories = data.subcategories;
+  }
+  if (data.attributes && typeof data.attributes === 'object') {
+    CRM_STATE.attributes = data.attributes;
+  }
 
-  // Set active customer ID to first existing customer who actually has messages/conversations
-  const activeChatCusts = (CRM_STATE.customers || []).filter(c => {
-    if (!c || c.name === 'System' || c.name === 'GRM Linked WhatsApp Device' || (c.name && c.name.startsWith('WhatsApp Linked'))) return false;
-    const conv = CRM_STATE.conversations?.[c.id] || [];
-    const q = CRM_STATE.queries?.find(qry => qry.customerId === c.id);
-    return conv.length > 0 || q;
+  // 3. Customers (Direct authoritative MySQL sync - strictly replaces stale lists)
+  if (Array.isArray(data.customers)) {
+    CRM_STATE.customers = data.customers.map(c => ({
+      id: c.id,
+      code: c.code || '',
+      name: c.name || 'Customer',
+      phone: c.phone || '',
+      whatsapp: c.whatsapp || c.phone || '',
+      customerType: c.customer_type || c.customerType || 'Live WhatsApp Lead',
+      address: c.address || '',
+      email: c.email || '',
+      gender: c.gender || '',
+      age: c.age || '',
+      notes: c.notes || '',
+      tags: Array.isArray(c.tags) ? c.tags : (typeof c.tags === 'string' ? (JSON.parse(c.tags || '[]') || []) : []),
+      totalOrders: parseInt(c.total_orders || c.totalOrders || 0),
+      totalSpend: parseFloat(c.total_spend || c.totalSpend || 0),
+      isDND: Boolean(c.is_dnd || c.isDND),
+      dndReason: c.dnd_reason || '',
+      dndNotes: c.dnd_notes || '',
+      dndMarkedBy: c.dnd_marked_by || '',
+      dndTimestamp: c.dnd_timestamp || '',
+      createdAt: c.created_at || '',
+      avatar: (c.name ? c.name.slice(0, 2) : 'CU').toUpperCase(),
+      automationHistory: Array.isArray(c.automationHistory) ? c.automationHistory : [],
+      adminNotes: Array.isArray(c.adminNotes) ? c.adminNotes : []
+    }));
+  }
+
+  // 4. Orders (Authoritative MySQL sync)
+  if (Array.isArray(data.orders)) {
+    CRM_STATE.orders = data.orders.map(o => ({
+      id: o.id,
+      queryId: o.queryId || o.query_id || '',
+      customerId: o.customerId || o.customer_id || '',
+      customerName: o.customerName || o.customer_name || 'Customer',
+      customerPhone: o.customerPhone || o.customer_phone || '',
+      shippingAddress: o.shippingAddress || o.shipping_address || '',
+      items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
+      grandTotal: parseFloat(o.grandTotal || o.grand_total || 0),
+      shippingAmount: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
+      shippingCharge: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
+      codAdvance: parseFloat(o.codAdvance || o.cod_advance || o.advancePayment || o.advance_payment || 0),
+      advancePayment: parseFloat(o.codAdvance || o.cod_advance || o.advancePayment || o.advance_payment || 0),
+      codBalanceDue: parseFloat(o.codBalanceDue || o.cod_balance_due || o.balanceAmount || o.balance_amount || 0),
+      balanceAmount: parseFloat(o.codBalanceDue || o.cod_balance_due || o.balanceAmount || o.balance_amount || 0),
+      paymentMethod: o.paymentMethod || o.payment_method || 'COD',
+      paymentStatus: o.paymentStatus || o.payment_status || 'PENDING',
+      upiTransactionId: o.upiTransactionId || o.upi_transaction_id || '',
+      paymentScreenshot: o.paymentScreenshot || o.payment_screenshot || '',
+      orderStatus: o.orderStatus || o.order_status || 'PLACED',
+      staffId: o.staffId || o.staff_id || 'staff_01',
+      staffName: o.staffName || o.staff_name || 'Staff',
+      createdBy: o.createdBy || o.created_by || 'Staff',
+      trackingNumber: o.trackingNumber || o.tracking_number || '',
+      courierName: o.courierName || o.courier_name || '',
+      createdAt: o.createdAt || o.created_at || ''
+    }));
+  }
+
+  // 5. Customer Enquiries & Leads (Authoritative MySQL sync - strictly replaces stale lists)
+  if (Array.isArray(data.queries)) {
+    CRM_STATE.queries = data.queries.map(q => ({
+      id: q.id,
+      customerId: q.customerId || q.customer_id || '',
+      assignedTo: q.assignedTo || q.assigned_to || 'UNASSIGNED',
+      status: q.status || 'NEW',
+      priority: q.priority || 'NORMAL',
+      queryText: q.queryText || q.query_text || '',
+      statusNotes: q.statusNotes !== undefined ? q.statusNotes : (q.status_notes || ''),
+      isPaymentPending: Boolean(q.isPaymentPending || q.is_payment_pending),
+      paymentAmount: parseFloat(q.paymentAmount || q.payment_amount || 0),
+      shippingAmount: parseFloat(q.shippingAmount || q.shipping_amount || 0),
+      paymentMode: q.paymentMode || q.payment_mode || 'UPI',
+      advancePayment: parseFloat(q.advancePayment || q.advance_payment || 0),
+      paymentDueDate: q.paymentDueDate || q.payment_due_date || '',
+      paymentNotes: q.paymentNotes || q.payment_notes || '',
+      quotedItems: q.quotedItems || q.quoted_items || '',
+      callbackDate: q.callbackDate || q.callback_date || '',
+      callbackTime: q.callbackTime || q.callback_time || '11:00 AM',
+      statusHistory: Array.isArray(q.statusHistory) ? q.statusHistory : (typeof q.status_history === 'string' ? (JSON.parse(q.status_history || '[]') || []) : []),
+      createdAt: q.createdAt || q.created_at || ''
+    }));
+  }
+
+  // 6. Follow-ups (Authoritative MySQL sync)
+  if (Array.isArray(data.followups)) {
+    const seenKeys = new Set();
+    const cleanList = [];
+    data.followups.forEach(fu => {
+      if (!fu || !fu.id) return;
+      const key = fu.id;
+      const custKey = (fu.customerId || '') + '_' + ((fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1) ? 'PAY' : 'FU') + '_' + (fu.status || '');
+      if (!seenKeys.has(key) && (!fu.customerId || !seenKeys.has(custKey))) {
+        seenKeys.add(key);
+        if (fu.customerId) seenKeys.add(custKey);
+        cleanList.push({
+          id: fu.id,
+          queryId: fu.queryId || fu.query_id || '',
+          customerId: fu.customerId || fu.customer_id || '',
+          customerName: fu.customerName || fu.customer_name || 'Customer',
+          assignedTo: fu.assignedTo || fu.assigned_to || 'staff_01',
+          date: fu.date || fu.date_str || '',
+          time: fu.time || fu.time_str || '11:00 AM',
+          reason: fu.reason || '',
+          status: fu.status || 'PENDING',
+          outcome: fu.outcome || 'PENDING',
+          priority: fu.priority || 'NORMAL',
+          channel: fu.channel || fu.contact_channel || 'WHATSAPP',
+          outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
+          completedAt: fu.completedAt || fu.completed_at || null,
+          rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
+          createdAt: fu.createdAt || fu.created_at || '',
+          isPaymentPending: (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1),
+          paymentAmount: parseFloat(fu.paymentAmount || fu.payment_amount || 0),
+          paymentMode: fu.paymentMode || fu.payment_mode || 'UPI',
+          paymentDueDate: fu.paymentDueDate || fu.payment_due_date || '',
+          paymentNotes: fu.paymentNotes || fu.payment_notes || '',
+          quotedItems: fu.quotedItems || fu.quoted_items || ''
+        });
+      }
+    });
+    CRM_STATE.followups = cleanList;
+  }
+
+  // 7. Staff
+  if (Array.isArray(data.staffList)) {
+    CRM_STATE.staffList = data.staffList.map(s => ({
+      id: s.id,
+      name: s.name,
+      role: s.role,
+      avatar: s.avatar || (s.name ? s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'ST'),
+      activeQueries: parseInt(s.active_queries || s.activeQueries || 0),
+      converted: parseInt(s.converted || 0),
+      dailyQuota: parseInt(s.daily_quota || s.dailyQuota || 70),
+      todayHandled: parseInt(s.today_handled || s.todayHandled || 0),
+      email: s.email || '',
+      phone: s.phone || '',
+      specialization: s.specialization || s.role || 'Sales Specialist',
+      status: s.status || 'ACTIVE'
+    }));
+  }
+
+  // 8. Conversations
+  if (data.conversations && typeof data.conversations === 'object') {
+    CRM_STATE.conversations = data.conversations;
+  }
+
+  // 9. DND Records
+  if (Array.isArray(data.dndRecords)) {
+    CRM_STATE.dndRecords = data.dndRecords;
+  }
+
+  // 10. Auto-reply Rules (Direct authoritative assignment)
+  if (Array.isArray(data.autoReplyRules)) {
+    CRM_STATE.autoReplyRules = data.autoReplyRules;
+  }
+
+  // 11. Broadcast Templates
+  if (Array.isArray(data.broadcastTemplates)) {
+    CRM_STATE.broadcastTemplates = data.broadcastTemplates;
+    data.broadcastTemplates.forEach(bt => {
+      let varObj = {};
+      if (bt.variables_json) {
+        try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) { }
+      }
+      if (typeof BROADCAST_PRESETS_DATA !== 'undefined') {
+        BROADCAST_PRESETS_DATA[bt.id] = {
+          label: bt.name,
+          text: bt.body_text,
+          category: bt.category,
+          image_url: bt.image_url || null,
+          variables: varObj
+        };
+      }
+    });
+  }
+
+  // 12. Audit Logs
+  if (Array.isArray(data.auditLogs)) {
+    CRM_STATE.auditLogs = data.auditLogs;
+  }
+
+  // 13. Role Permissions
+  if (data.rolePermissions && typeof data.rolePermissions === 'object') {
+    if (typeof initRolePermissionsState === 'function') initRolePermissionsState();
+    Object.keys(data.rolePermissions).forEach(r => {
+      if (r && r.trim()) {
+        CRM_STATE.rolePermissions[r] = data.rolePermissions[r];
+      }
+    });
+    if (typeof updateStaffRoleSelectDropdowns === 'function') updateStaffRoleSelectDropdowns();
+    if (typeof enforceGranularActionPermissions === 'function') enforceGranularActionPermissions();
+  }
+
+  // 14. Authoritative WhatsApp Account & Multi-Accounts State Sync from Database
+  if (Array.isArray(data.whatsappAccounts) && data.whatsappAccounts.length > 0) {
+    const liveFromDb = data.whatsappAccounts.map(a => ({
+      id: a.account_slot || a.id,
+      name: a.display_name || a.account_name || a.brand_name || 'WhatsApp Line',
+      phone: a.phone_number || a.phone || '',
+      status: (a.status || 'DISCONNECTED').toUpperCase(),
+      qr_image: a.qr_code || null,
+      connected_number: a.phone_number || a.phone || 'Awaiting Link'
+    }));
+    MULTI_ACCOUNTS_STATE = liveFromDb;
+    if (Array.isArray(CRM_STATE.whatsappLines)) {
+      CRM_STATE.whatsappLines.forEach(line => {
+        const dbAcc = liveFromDb.find(a => a.id === line.id);
+        if (dbAcc && dbAcc.status === 'CONNECTED') {
+          line.status = 'CONNECTED';
+          line.connected_number = dbAcc.phone || line.connected_number;
+          line.qr_image = null;
+        }
+      });
+    }
+  }
+
+  if (data.whatsappAccount && data.whatsappAccount.status === 'CONNECTED' && data.whatsappAccount.phone_number) {
+    if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
+    CRM_STATE.whatsappAccount.phoneNumber = data.whatsappAccount.phone_number;
+    CRM_STATE.whatsappAccount.status = 'CONNECTED';
+    CRM_STATE.whatsappAccount.businessName = data.whatsappAccount.business_name || CRM_STATE.whatsappAccount.businessName;
+    if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
+  }
+
+  // Update badges & UI for the active view
+  if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+  if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
+
+  if (ACTIVE_VIEW === 'inbox') {
+    if (typeof renderInbox === 'function') renderInbox();
+    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+  } else if (ACTIVE_VIEW === 'dashboard') {
+    if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
+    if (typeof renderDashboard === 'function') renderDashboard();
+  } else if (ACTIVE_VIEW === 'catalog') {
+    if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
+    if (typeof populateProductFormCategories === 'function') populateProductFormCategories();
+    if (typeof filterCatalogGrid === 'function') filterCatalogGrid();
+  } else if (ACTIVE_VIEW === 'orders') {
+    if (typeof renderOrdersModule === 'function') renderOrdersModule();
+  } else if (ACTIVE_VIEW === 'followups') {
+    if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
+    if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
+    if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
+    if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
+  } else if (ACTIVE_VIEW === 'customers') {
+    if (typeof renderCustomersGrid === 'function') renderCustomersGrid();
+    if (typeof renderCustomersTable === 'function') renderCustomersTable();
+  } else if (ACTIVE_VIEW === 'enquiries') {
+    if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
+  } else if (ACTIVE_VIEW === 'staff') {
+    if (typeof renderStaffCards === 'function') renderStaffCards();
+    if (typeof renderStaffKPIOverview === 'function') renderStaffKPIOverview();
+    if (typeof renderStaffTable === 'function') renderStaffTable();
+  }
+
+  // Sync order badges in header without full module rebuild
+  const badgeOrders = document.getElementById('badge-orders-count');
+  const badgeTotalHeader = document.getElementById('badge-orders-total-count');
+  const badgeHistoryTab = document.getElementById('orders-tab-history-badge');
+  const badgeSidebarHistory = document.getElementById('nav-sub-orders-history-badge');
+  const totalCount = (CRM_STATE?.orders || []).length;
+  if (badgeOrders) badgeOrders.innerText = totalCount;
+  if (badgeTotalHeader) badgeTotalHeader.innerText = `${totalCount} Order${totalCount === 1 ? '' : 's'}`;
+  if (badgeHistoryTab) badgeHistoryTab.innerText = totalCount;
+  if (badgeSidebarHistory) badgeSidebarHistory.innerText = totalCount;
+}
+window.applyAuthoritativeDatabaseState = applyAuthoritativeDatabaseState;
+
+let _lastSyncTimestamp = 0;
+let _isSyncing = false;
+function syncLiveCRMData(force = false) {
+  const now = Date.now();
+  if (!force && (now - _lastSyncTimestamp < 2500)) return; // Throttle to max once per 2.5s
+  if (_isSyncing) return;
+  _isSyncing = true;
+  _lastSyncTimestamp = now;
+
+  const activeScope = (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW) ? ACTIVE_VIEW : 'dashboard';
+  fetch(`api.php?action=get_all&scope=${activeScope}&_t=${now}`, {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+  })
+    .then(r => r.json())
+    .then(res => {
+      const data = res.data || res;
+      if (data) {
+        applyAuthoritativeDatabaseState(data);
+      }
+    })
+    .catch(err => {
+      console.warn('[syncLiveCRMData] Network check:', err);
+    })
+    .finally(() => {
+      _isSyncing = false;
+    });
+}
+window.syncLiveCRMData = syncLiveCRMData;
+
+// Universal Visibility & Focus Sync: All browsers update automatically when focused
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      syncLiveCRMData(true);
+    }
   });
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', () => {
+    syncLiveCRMData(true);
+  });
+}
 
-  if (activeChatCusts.length > 0) {
-    ACTIVE_CUSTOMER_ID = activeChatCusts[0].id;
-  } else {
-    ACTIVE_CUSTOMER_ID = null;
+// Initialise CRM State from clean schema and sync from MySQL
+function initCRMState() {
+  CRM_STATE = JSON.parse(JSON.stringify(INITIAL_CRM_DATA));
+  if (!Array.isArray(CRM_STATE.customers)) CRM_STATE.customers = [];
+  if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+  if (!Array.isArray(CRM_STATE.orders)) CRM_STATE.orders = [];
+  if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
+  if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = [];
+  if (!Array.isArray(CRM_STATE.staffList)) CRM_STATE.staffList = [];
+  if (!Array.isArray(CRM_STATE.categories)) CRM_STATE.categories = [];
+  if (!Array.isArray(CRM_STATE.subcategories)) CRM_STATE.subcategories = [];
+  if (!Array.isArray(CRM_STATE.autoReplyRules)) CRM_STATE.autoReplyRules = [];
+  if (!Array.isArray(CRM_STATE.broadcastTemplates)) CRM_STATE.broadcastTemplates = [];
+  if (!CRM_STATE.conversations || typeof CRM_STATE.conversations !== 'object') CRM_STATE.conversations = {};
+
+  if (!CRM_STATE.whatsappAccount) {
+    CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
+  }
+  if (!CRM_STATE.dailyMessageTarget) {
+    CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
+  }
+  if (!CRM_STATE.autoReplySettings) {
+    CRM_STATE.autoReplySettings = {
+      enabled: true,
+      cooldownMinutes: 0,
+      keywordMatching: true,
+      messageTemplate: getDefaultStockAutoReplyTemplate()
+    };
   }
 
   // Load from backend config if available
-  fetch('api.php?action=get_config')
+  fetch('api.php?action=get_config&_t=' + Date.now(), { cache: 'no-store' })
     .then(r => r.json())
     .then(res => {
       if (res.status === 'success' && res.data) {
@@ -3301,7 +3517,6 @@ function initCRMState() {
           CRM_STATE.whatsappAccount.businessName = res.data.business_name || CRM_STATE.whatsappAccount.businessName;
           CRM_STATE.whatsappAccount.displayName = res.data.display_name || CRM_STATE.whatsappAccount.displayName;
           updateConfiguredPhoneDisplays();
-          saveCRMState();
         }
         if (res.data.bridge_url && !res.data.bridge_url.includes('trycloudflare.com')) {
           window.BRIDGE_URL = res.data.bridge_url;
@@ -3317,7 +3532,7 @@ function initCRMState() {
         }
       }
     })
-    .catch(() => { });
+    .catch(() => {});
 
   // Load brand name & tagline from bridge config file with fast 1200ms timeout
   const brandAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -3330,7 +3545,6 @@ function initCRMState() {
         if (!CRM_STATE.brandSettings) CRM_STATE.brandSettings = {};
         if (res.brand_name) CRM_STATE.brandSettings.brandName = res.brand_name;
         if (res.brand_tagline) CRM_STATE.brandSettings.brandTagline = res.brand_tagline;
-        // Refresh brand settings UI fields if Settings panel is open
         const brandInput = document.getElementById('cfg-brand-name');
         const taglineInput = document.getElementById('cfg-brand-tagline');
         if (brandInput) brandInput.value = res.brand_name || '';
@@ -3340,358 +3554,10 @@ function initCRMState() {
     })
     .catch(() => {
       if (brandTimer) clearTimeout(brandTimer);
-    }); // Bridge may not be running — fail silently without hanging
+    });
 
-
-  // Asynchronously synchronize CRM database state dynamically (Fast View-Based Scope)
-  const initialScope = (typeof window !== 'undefined' && window.location && window.location.hash.includes('catalog')) ? 'catalog' : ((typeof window !== 'undefined' && window.location && window.location.hash.includes('orders')) ? 'orders' : ((typeof window !== 'undefined' && window.location && window.location.hash.includes('dashboard')) ? 'dashboard' : 'inbox'));
-  fetch(`api.php?action=get_all&scope=${initialScope}`)
-    .then(r => r.json())
-    .then(res => {
-      const data = res.data || res;
-      if (!data) return;
-
-      // 1. Products & Inventory
-      if (data.products && Array.isArray(data.products)) {
-        mergeCatalogProductsWithDB(data.products);
-      }
-
-      // 2. Taxonomy & Catalog Attributes (always sync from DB — empty array clears UI)
-      if (data.categories && Array.isArray(data.categories)) {
-        CRM_STATE.categories = data.categories;
-      }
-      if (data.subcategories && Array.isArray(data.subcategories)) {
-        CRM_STATE.subcategories = data.subcategories;
-      }
-      if (data.attributes) {
-        CRM_STATE.attributes = data.attributes;
-      }
-
-      // 3. Customers (Dynamic database sync - Merge without wiping local live leads)
-      if (data.customers && Array.isArray(data.customers)) {
-        const dbCusts = data.customers.map(c => {
-          const cleanPhone = (c.phone || c.whatsapp || '').replace(/\D/g, '');
-          const existingCust = (CRM_STATE.customers || []).find(ec => ec && (ec.id === c.id || (cleanPhone.length >= 10 && (ec.phone || ec.whatsapp || '').replace(/\D/g, '').endsWith(cleanPhone.slice(-10)))));
-
-          let existingHistory = (existingCust && Array.isArray(existingCust.automationHistory) && existingCust.automationHistory.length > 0)
-            ? existingCust.automationHistory
-            : (Array.isArray(c.automationHistory) ? c.automationHistory : []);
-          if (existingHistory.length === 0) {
-            try {
-              const saved = localStorage.getItem('GRM_TRACKED_PRODUCTS_' + c.id);
-              if (saved) {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length > 0) existingHistory = parsed;
-              }
-            } catch (e) { }
-          }
-          let existingNotes = (existingCust && Array.isArray(existingCust.adminNotes)) ? existingCust.adminNotes : [];
-
-          return {
-            id: c.id,
-            code: c.code || '',
-            name: c.name || 'Customer',
-            phone: c.phone || '',
-            whatsapp: c.whatsapp || c.phone || '',
-            customerType: c.customer_type || c.customerType || 'Live WhatsApp Lead',
-            address: c.address || '',
-            email: c.email || '',
-            gender: c.gender || '',
-            age: c.age || '',
-            notes: c.notes || '',
-            tags: Array.isArray(c.tags) ? c.tags : (typeof c.tags === 'string' ? (JSON.parse(c.tags || '[]') || []) : []),
-            totalOrders: parseInt(c.total_orders || c.totalOrders || 0),
-            totalSpend: parseFloat(c.total_spend || c.totalSpend || 0),
-            isDND: Boolean(c.is_dnd || c.isDND),
-            dndReason: c.dnd_reason || '',
-            dndNotes: c.dnd_notes || '',
-            dndMarkedBy: c.dnd_marked_by || '',
-            dndTimestamp: c.dnd_timestamp || '',
-            createdAt: c.created_at || '',
-            avatar: (c.name ? c.name.slice(0, 2) : 'CU').toUpperCase(),
-            automationHistory: existingHistory,
-            adminNotes: existingNotes
-          };
-        });
-        const existingCustMap = new Map();
-        (CRM_STATE.customers || []).forEach(ec => {
-          if (ec && ec.id) existingCustMap.set(String(ec.id), ec);
-        });
-        dbCusts.forEach(dc => {
-          existingCustMap.set(String(dc.id), Object.assign({}, existingCustMap.get(String(dc.id)) || {}, dc));
-        });
-        CRM_STATE.customers = Array.from(existingCustMap.values());
-      }
-
-      // 4. Orders (Dynamic database sync)
-      if (data.orders && Array.isArray(data.orders)) {
-        CRM_STATE.orders = data.orders.map(o => ({
-          id: o.id,
-          queryId: o.queryId || o.query_id || '',
-          customerId: o.customerId || o.customer_id || '',
-          customerName: o.customerName || o.customer_name || 'Customer',
-          customerPhone: o.customerPhone || o.customer_phone || '',
-          shippingAddress: o.shippingAddress || o.shipping_address || '',
-          items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
-          grandTotal: parseFloat(o.grandTotal || o.grand_total || 0),
-          shippingAmount: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
-          shippingCharge: parseFloat(o.shippingAmount || o.shipping_amount || o.shippingCharge || o.shipping_charge || 0),
-          codAdvance: parseFloat(o.codAdvance || o.cod_advance || o.advancePayment || o.advance_payment || 0),
-          advancePayment: parseFloat(o.codAdvance || o.cod_advance || o.advancePayment || o.advance_payment || 0),
-          codBalanceDue: parseFloat(o.codBalanceDue || o.cod_balance_due || o.balanceAmount || o.balance_amount || 0),
-          balanceAmount: parseFloat(o.codBalanceDue || o.cod_balance_due || o.balanceAmount || o.balance_amount || 0),
-          paymentMethod: o.paymentMethod || o.payment_method || 'COD',
-          paymentStatus: o.paymentStatus || o.payment_status || 'PENDING',
-          upiTransactionId: o.upiTransactionId || o.upi_transaction_id || '',
-          paymentScreenshot: o.paymentScreenshot || o.payment_screenshot || '',
-          orderStatus: o.orderStatus || o.order_status || 'PLACED',
-          staffId: o.staffId || o.staff_id || 'staff_01',
-          staffName: o.staffName || o.staff_name || 'Staff',
-          createdBy: o.createdBy || o.created_by || 'Staff',
-          trackingNumber: o.trackingNumber || o.tracking_number || '',
-          courierName: o.courierName || o.courier_name || '',
-          createdAt: o.createdAt || o.created_at || ''
-        }));
-      }
-
-      // 5. Customer Enquiries & Leads (Dynamic database sync - Merge without wiping local in-memory/localStorage leads)
-      if (data.queries && Array.isArray(data.queries)) {
-        const dbQueries = data.queries.map(q => ({
-          id: q.id,
-          customerId: q.customerId || q.customer_id || '',
-          assignedTo: q.assignedTo || q.assigned_to || 'UNASSIGNED',
-          status: q.status || 'NEW',
-          priority: q.priority || 'NORMAL',
-          queryText: q.queryText || q.query_text || '',
-          statusNotes: q.statusNotes !== undefined ? q.statusNotes : (q.status_notes || ''),
-          isPaymentPending: Boolean(q.isPaymentPending || q.is_payment_pending),
-          paymentAmount: parseFloat(q.paymentAmount || q.payment_amount || 0),
-          shippingAmount: parseFloat(q.shippingAmount || q.shipping_amount || 0),
-          paymentMode: q.paymentMode || q.payment_mode || 'UPI',
-          advancePayment: parseFloat(q.advancePayment || q.advance_payment || 0),
-          paymentDueDate: q.paymentDueDate || q.payment_due_date || '',
-          paymentNotes: q.paymentNotes || q.payment_notes || '',
-          quotedItems: q.quotedItems || q.quoted_items || '',
-          callbackDate: q.callbackDate || q.callback_date || '',
-          callbackTime: q.callbackTime || q.callback_time || '11:00 AM',
-          statusHistory: Array.isArray(q.statusHistory) ? q.statusHistory : (typeof q.status_history === 'string' ? (JSON.parse(q.status_history || '[]') || []) : []),
-          createdAt: q.createdAt || q.created_at || ''
-        }));
-        const existingQMap = new Map();
-        (CRM_STATE.queries || []).forEach(eq => {
-          if (eq && (eq.id || eq.customerId)) {
-            existingQMap.set(String(eq.id || eq.customerId), eq);
-          }
-        });
-        dbQueries.forEach(dq => {
-          const key = String(dq.id || dq.customerId);
-          existingQMap.set(key, Object.assign({}, existingQMap.get(key) || {}, dq));
-        });
-        CRM_STATE.queries = Array.from(existingQMap.values());
-      }
-
-      // 6. Follow-ups (Dynamic database sync - strictly deduplicated & non-mock)
-      if (data.followups && Array.isArray(data.followups)) {
-        const seenKeys = new Set();
-        const cleanList = [];
-        data.followups.forEach(fu => {
-          if (!fu || !fu.id) return;
-          if (fu.id.startsWith('FU-2026-000') || fu.id === 'FU-2026-00107' || fu.id === 'FU-2026-00108' || fu.id === 'FU-2026-00109' || fu.id === 'FU-2026-00110') return;
-          if (fu.customerId && (fu.customerId === 'cust_101' || fu.customerId === 'cust_102' || fu.customerId === 'cust_103')) return;
-          if (fu.reason && fu.reason.includes('ytfdw')) return;
-
-          const key = fu.id;
-          const custKey = (fu.customerId || '') + '_' + ((fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1) ? 'PAY' : 'FU') + '_' + (fu.status || '');
-          if (!seenKeys.has(key) && (!fu.customerId || !seenKeys.has(custKey))) {
-            seenKeys.add(key);
-            if (fu.customerId) seenKeys.add(custKey);
-            cleanList.push({
-              id: fu.id,
-              queryId: fu.queryId || fu.query_id || '',
-              customerId: fu.customerId || fu.customer_id || '',
-              customerName: fu.customerName || fu.customer_name || 'Customer',
-              assignedTo: fu.assignedTo || fu.assigned_to || 'staff_01',
-              date: fu.date || fu.date_str || '',
-              time: fu.time || fu.time_str || '11:00 AM',
-              reason: fu.reason || '',
-              status: fu.status || 'PENDING',
-              outcome: fu.outcome || 'PENDING',
-              priority: fu.priority || 'NORMAL',
-              channel: fu.channel || fu.contact_channel || 'WHATSAPP',
-              outcomeNotes: fu.outcomeNotes || fu.outcome_notes || '',
-              completedAt: fu.completedAt || fu.completed_at || null,
-              rescheduledFromId: fu.rescheduledFromId || fu.rescheduled_from_id || null,
-              createdAt: fu.createdAt || fu.created_at || '',
-              isPaymentPending: (fu.isPaymentPending === true || fu.isPaymentPending === 1 || fu.isPaymentPending === '1' || fu.is_payment_pending == 1),
-              paymentAmount: parseFloat(fu.paymentAmount || fu.payment_amount || 0),
-              paymentMode: fu.paymentMode || fu.payment_mode || 'UPI',
-              paymentDueDate: fu.paymentDueDate || fu.payment_due_date || '',
-              paymentNotes: fu.paymentNotes || fu.payment_notes || '',
-              quotedItems: fu.quotedItems || fu.quoted_items || ''
-            });
-          }
-        });
-        CRM_STATE.followups = cleanList;
-      }
-
-      // 7. Staff Management (Dynamic database sync)
-      if (data.staffList && Array.isArray(data.staffList)) {
-        CRM_STATE.staffList = data.staffList.map(s => ({
-          id: s.id,
-          name: s.name,
-          role: s.role,
-          avatar: s.avatar || (s.name ? s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'ST'),
-          activeQueries: parseInt(s.active_queries || s.activeQueries || 0),
-          converted: parseInt(s.converted || 0),
-          dailyQuota: parseInt(s.daily_quota || s.dailyQuota || 70),
-          todayHandled: parseInt(s.today_handled || s.todayHandled || 0),
-          email: s.email || '',
-          phone: s.phone || '',
-          specialization: s.specialization || s.role || 'Sales Specialist',
-          status: s.status || 'ACTIVE'
-        }));
-      }
-
-      // 8. Conversations & Message History
-      if (data.conversations && typeof data.conversations === 'object') {
-        CRM_STATE.conversations = data.conversations;
-      }
-
-      // 9. DND Suppression Records
-      if (data.dndRecords && Array.isArray(data.dndRecords)) {
-        CRM_STATE.dndRecords = data.dndRecords;
-      }
-
-      // 10. Auto-reply Rules
-      if (data.autoReplyRules && Array.isArray(data.autoReplyRules) && data.autoReplyRules.length > 0) {
-        CRM_STATE.autoReplyRules = data.autoReplyRules;
-      }
-
-      // 11. Broadcast Templates
-      if (data.broadcastTemplates && Array.isArray(data.broadcastTemplates) && data.broadcastTemplates.length > 0) {
-        CRM_STATE.broadcastTemplates = data.broadcastTemplates;
-        data.broadcastTemplates.forEach(bt => {
-          let varObj = {};
-          if (bt.variables_json) {
-            try { varObj = typeof bt.variables_json === 'string' ? JSON.parse(bt.variables_json) : bt.variables_json; } catch (e) { }
-          }
-          if (typeof BROADCAST_PRESETS_DATA !== 'undefined') {
-            BROADCAST_PRESETS_DATA[bt.id] = {
-              label: bt.name,
-              text: bt.body_text,
-              category: bt.category,
-              image_url: bt.image_url || null,
-              variables: varObj
-            };
-          }
-        });
-      }
-
-      // 12. Audit Logs
-      CRM_STATE.auditLogs = (data.auditLogs && Array.isArray(data.auditLogs)) ? data.auditLogs : (CRM_STATE.auditLogs || []);
-
-      // 13. Role Permissions (Dynamic database sync)
-      if (data.rolePermissions && typeof data.rolePermissions === 'object') {
-        initRolePermissionsState();
-        Object.keys(data.rolePermissions).forEach(r => {
-          if (r && r.trim()) {
-            CRM_STATE.rolePermissions[r] = data.rolePermissions[r];
-          }
-        });
-        try {
-          localStorage.setItem('CRM_ROLE_PERMISSIONS', JSON.stringify(CRM_STATE.rolePermissions));
-        } catch (e) { }
-        if (typeof updateStaffRoleSelectDropdowns === 'function') {
-          updateStaffRoleSelectDropdowns();
-        }
-        if (typeof enforceGranularActionPermissions === 'function') {
-          enforceGranularActionPermissions();
-        }
-        if (ACTIVE_VIEW === 'inbox' && (typeof ACTIVE_INBOX_SUBMODULE === 'undefined' || ACTIVE_INBOX_SUBMODULE === 'autoreply')) {
-          if (typeof renderAutoReplyRulesList === 'function') renderAutoReplyRulesList();
-          if (typeof updateAutoReplyUI === 'function') updateAutoReplyUI();
-        }
-      }
-
-      // 14. Authoritative WhatsApp Account & Multi-Accounts State Sync from Database
-      // Guarantees that hard-refreshing (Ctrl+F5) NEVER falsely shows Primary WhatsApp as DISCONNECTED!
-      if (data.whatsappAccounts && Array.isArray(data.whatsappAccounts) && data.whatsappAccounts.length > 0) {
-        const liveFromDb = data.whatsappAccounts.map(a => ({
-          id: a.account_slot || a.id,
-          name: a.display_name || a.account_name || a.brand_name || 'WhatsApp Line',
-          phone: a.phone_number || a.phone || '',
-          status: (a.status || 'DISCONNECTED').toUpperCase(),
-          qr_image: a.qr_code || null,
-          connected_number: a.phone_number || a.phone || 'Awaiting Link'
-        }));
-        if (!Array.isArray(MULTI_ACCOUNTS_STATE) || MULTI_ACCOUNTS_STATE.length === 0) {
-          MULTI_ACCOUNTS_STATE = liveFromDb;
-        }
-        if (Array.isArray(CRM_STATE.whatsappLines)) {
-          CRM_STATE.whatsappLines.forEach(line => {
-            const dbAcc = liveFromDb.find(a => a.id === line.id);
-            if (dbAcc && dbAcc.status === 'CONNECTED') {
-              line.status = 'CONNECTED';
-              line.connected_number = dbAcc.phone || line.connected_number;
-              line.qr_image = null;
-            }
-          });
-        }
-      }
-      if (data.whatsappAccount && data.whatsappAccount.status === 'CONNECTED' && data.whatsappAccount.phone_number) {
-        if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
-        CRM_STATE.whatsappAccount.phoneNumber = data.whatsappAccount.phone_number;
-        CRM_STATE.whatsappAccount.status = 'CONNECTED';
-        CRM_STATE.whatsappAccount.businessName = data.whatsappAccount.business_name || CRM_STATE.whatsappAccount.businessName;
-        updateConfiguredPhoneDisplays();
-      }
-
-      // Update UI components dynamically (Modular View-Based Rendering: ONLY render current active view)
-      if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
-      if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
-
-      if (ACTIVE_VIEW === 'inbox') {
-        if (typeof renderInbox === 'function') renderInbox();
-        if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
-      } else if (ACTIVE_VIEW === 'dashboard') {
-        if (typeof updateDashboardKPIs === 'function') updateDashboardKPIs();
-        if (typeof renderDashboard === 'function') renderDashboard();
-      } else if (ACTIVE_VIEW === 'catalog') {
-        if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
-        if (typeof populateProductFormCategories === 'function') populateProductFormCategories();
-        if (typeof filterCatalogGrid === 'function') filterCatalogGrid();
-      } else if (ACTIVE_VIEW === 'orders') {
-        if (typeof renderOrdersModule === 'function') renderOrdersModule();
-      } else if (ACTIVE_VIEW === 'followups') {
-        if (typeof updateFollowupsKPICounters === 'function') updateFollowupsKPICounters();
-        if (typeof filterFollowupsCards === 'function') filterFollowupsCards();
-        if (typeof updatePaymentPendingKPICounters === 'function') updatePaymentPendingKPICounters();
-        if (typeof filterPaymentPendingCards === 'function') filterPaymentPendingCards();
-      } else if (ACTIVE_VIEW === 'customers') {
-        if (typeof renderCustomersGrid === 'function') renderCustomersGrid();
-        if (typeof renderCustomersTable === 'function') renderCustomersTable();
-      } else if (ACTIVE_VIEW === 'enquiries') {
-        if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
-      } else if (ACTIVE_VIEW === 'staff') {
-        if (typeof renderStaffCards === 'function') renderStaffCards();
-        if (typeof renderStaffKPIOverview === 'function') renderStaffKPIOverview();
-        if (typeof renderStaffTable === 'function') renderStaffTable();
-      }
-
-      // Sync order badges in header without full module rebuild
-      const badgeOrders = document.getElementById('badge-orders-count');
-      const badgeTotalHeader = document.getElementById('badge-orders-total-count');
-      const badgeHistoryTab = document.getElementById('orders-tab-history-badge');
-      const badgeSidebarHistory = document.getElementById('nav-sub-orders-history-badge');
-      const totalCount = (CRM_STATE?.orders || []).length;
-      if (badgeOrders) badgeOrders.innerText = totalCount;
-      if (badgeTotalHeader) badgeTotalHeader.innerText = `${totalCount} Order${totalCount === 1 ? '' : 's'}`;
-      if (badgeHistoryTab) badgeHistoryTab.innerText = totalCount;
-      if (badgeSidebarHistory) badgeSidebarHistory.innerText = totalCount;
-
-      saveCRMState();
-    })
-    .catch(() => { });
+  // Pull authoritative database state immediately
+  syncLiveCRMData(true);
 
   cleanupAndDeduplicateCRMState();
   if (typeof populateCatalogCategoryFilters === 'function') {
@@ -3706,8 +3572,6 @@ function initCRMState() {
 }
 
 function purgeStaticMockData() {
-  // Deprecated: Never auto-purge customer conversations on page load/refresh
-  // Preserves 100% of incoming live chats, customer histories and enquiries
   return;
 }
 
@@ -3715,31 +3579,12 @@ let _saveCRMStateTimer = null;
 function saveCRMState(immediate = false) {
   const doSave = () => {
     try {
-      const safeState = { ...CRM_STATE };
-      // Prune heavy conversation buffers from LocalStorage (MySQL is the persistent authority)
-      if (safeState.conversations && typeof safeState.conversations === 'object') {
-        const trimmedConvs = {};
-        for (const [cid, msgs] of Object.entries(safeState.conversations)) {
-          if (Array.isArray(msgs)) {
-            trimmedConvs[cid] = msgs.slice(-25).map(m => {
-              if (m && m.media_url && typeof m.media_url === 'string' && m.media_url.startsWith('data:')) {
-                return { ...m, media_url: '' };
-              }
-              return m;
-            });
-          }
-        }
-        safeState.conversations = trimmedConvs;
+      localStorage.removeItem('GRM_CRM_STATE_V2_5');
+      localStorage.removeItem('GRM_CRM_STATE_V2');
+      localStorage.removeItem('GRM_CRM_STATE');
+      if (typeof window !== 'undefined' && typeof window.broadcastCRMMutation === 'function') {
+        window.broadcastCRMMutation('MUTATION');
       }
-      if (Array.isArray(safeState.products)) {
-        safeState.products = safeState.products.map(p => {
-          if (p.image && p.image.startsWith('data:image')) {
-            return { ...p, image: (typeof getSmartProductImage === 'function' ? getSmartProductImage(p) : '') };
-          }
-          return p;
-        });
-      }
-      localStorage.setItem('GRM_CRM_STATE_V2_5', JSON.stringify(safeState));
     } catch (err) {
       console.warn('LocalStorage save notice:', err);
     }
