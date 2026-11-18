@@ -1519,7 +1519,7 @@
                 <p class="text-[10px] text-slate-500">Select active number to view &amp; send chats</p>
               </div>
               <span class="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full"
-                id="dropdown-connected-count">5 Active Lines</span>
+                id="dropdown-connected-count">1 Active Line</span>
             </div>
 
             <div id="phone-dropdown-accounts-list" class="max-h-[380px] sm:max-h-[440px] overflow-y-auto divide-y divide-slate-100 p-1 custom-chat-scroll">
@@ -2520,12 +2520,8 @@
                           <option value="ALL_INCLUDING_DND">👥 All Customers (Incl. DND)</option>
                           <option value="DND_ONLY">🚫 DND Customers Only</option>
                         </optgroup>
-                        <optgroup label="── Filter by WhatsApp Line ──">
-                          <option value="account_1">📞 Line 1: Main Business</option>
-                          <option value="account_2">📞 Line 2: Kids &amp; Maternity</option>
-                          <option value="account_3">📞 Line 3: Customer Support</option>
-                          <option value="account_4">📞 Line 4: Wholesale &amp; Bulk</option>
-                          <option value="account_5">📞 Line 5: VIP Orders</option>
+                        <optgroup label="── Filter by WhatsApp Line ──" id="bcast-line-optgroup">
+                          <option value="account_1">📞 Line 1: Primary WhatsApp</option>
                         </optgroup>
                         <optgroup label="── Customer Segments ──">
                           <option value="TAG_VIP">⭐ VIP Customers Only</option>
@@ -2634,7 +2630,7 @@
                     <!-- Preview Bottom Indicator -->
                     <div class="bg-white/95 px-3 py-1.5 border-t border-slate-200 text-center shrink-0">
                       <p class="text-[10px] text-slate-500 font-medium">📱 Dynamic Preview for: <strong
-                          class="text-emerald-800" id="bcast-preview-customer-name">Priya Sharma</strong></p>
+                          class="text-emerald-800" id="bcast-preview-customer-name">Customer Name</strong></p>
                     </div>
 
                   </div>
@@ -9229,14 +9225,10 @@
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Select Incoming Line (5 Connected Numbers):</label>
+          <label class="block font-bold text-slate-700 mb-1">Select Incoming Line:</label>
           <select id="sim-account-slot"
             class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold">
-            <option value="account_1">Line 1: GRM Business Central (+91 86680 07593)</option>
-            <option value="account_2">Line 2: Blue Berry Kids &amp; Maternity (+91 97896 60115)</option>
-            <option value="account_3">Line 3: Customer Support &amp; Enquiries (+91 98765 43210)</option>
-            <option value="account_4">Line 4: Wholesale &amp; Bulk Orders (+91 98450 99887)</option>
-            <option value="account_5">Line 5: VIP Fast-Track &amp; Dispatch (+91 95009 04638)</option>
+            <option value="account_1">Line 1: Primary WhatsApp</option>
           </select>
         </div>
 
@@ -10938,7 +10930,7 @@
           <div class="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-semibold">
             <span class="material-symbols-outlined text-[15px] text-emerald-600">sim_card</span>
             <span>Called Brand DID: </span>
-            <strong id="incoming-call-did">+91 97896 60115</strong>
+            <strong id="incoming-call-did">Official Line</strong>
           </div>
         </div>
 
@@ -11895,7 +11887,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261118_nonotif_v2"></script>
+  <script src="crm_app.js?v=20261118_clean_v3"></script>
 </body>
 
 </html>

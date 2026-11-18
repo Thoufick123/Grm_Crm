@@ -3114,6 +3114,17 @@ function initCRMState() {
         c && c.id !== 'cust_89660115_account_1' && c.id !== 'cust_101' && c.id !== 'cust_102' && c.id !== 'cust_103' && c.name !== 'Pooja Venkatesh'
       );
       cleanupAndDeduplicateCRMState();
+      // Clean up legacy mock accounts (account_2 to account_5) if unlinked
+      if (Array.isArray(CRM_STATE.whatsappLines)) {
+        CRM_STATE.whatsappLines = CRM_STATE.whatsappLines.filter(a =>
+          a && a.id && (a.id === 'account_1' || (a.status === 'CONNECTED' && a.connected_number && a.connected_number !== 'Awaiting Link'))
+        );
+      }
+      // Clean up legacy mock auto-reply rules
+      if (Array.isArray(CRM_STATE.autoReplyRules)) {
+        const mockRuleIds = ['rule_feeding_kurti', 'rule_baby_frocks', 'rule_newborn_sets', 'rule_kids_daily', 'rule_wholesale', 'rule_festive_silk', 'rule_payment_upi', 'rule_shipping_delivery', 'rule_store_location'];
+        CRM_STATE.autoReplyRules = CRM_STATE.autoReplyRules.filter(r => r && r.id && !mockRuleIds.includes(r.id));
+      }
       const mekhaStaff = (CRM_STATE.staffList || []).find(s => s && s.name && s.name.toLowerCase() === 'mekha');
       const mekhaId = mekhaStaff ? mekhaStaff.id : 'staff_05';
 
@@ -3753,42 +3764,13 @@ function getAvailableWhatsAppAccounts() {
   const defaultAccounts = [
     {
       id: 'account_1',
-      label: 'Line 1: GRM Business Central',
+      label: 'Primary WhatsApp (Line 1)',
       status: 'DISCONNECTED',
       connected_number: 'Awaiting Link',
-      brand_name: 'GRM Garments Central'
-    },
-    {
-      id: 'account_2',
-      label: 'Line 2: Blue Berry Kids & Maternity',
-      status: 'DISCONNECTED',
-      connected_number: 'Awaiting Link',
-      brand_name: 'Blue Berry 💙'
-    },
-    {
-      id: 'account_3',
-      label: 'Line 3: Customer Support & Enquiries',
-      status: 'DISCONNECTED',
-      connected_number: 'Awaiting Link',
-      brand_name: 'GRM Support Desk'
-    },
-    {
-      id: 'account_4',
-      label: 'Line 4: Wholesale & Bulk Orders',
-      status: 'DISCONNECTED',
-      connected_number: 'Awaiting Link',
-      brand_name: 'GRM Wholesale Desk'
-    },
-    {
-      id: 'account_5',
-      label: 'Line 5: VIP Fast-Track & Dispatch',
-      status: 'DISCONNECTED',
-      connected_number: 'Awaiting Link',
-      brand_name: 'GRM VIP Desk'
+      brand_name: 'Primary Line'
     }
   ];
 
-  // Map any existing slots saved in CRM_STATE
   const existingMap = new Map();
   if (Array.isArray(CRM_STATE?.whatsappLines)) {
     CRM_STATE.whatsappLines.forEach(acc => {
@@ -3796,7 +3778,6 @@ function getAvailableWhatsAppAccounts() {
     });
   }
 
-  // Always ensure all 5 default accounts exist with their saved or default data
   let accountsList = defaultAccounts.map(def => {
     const existing = existingMap.get(def.id);
     if (!existing) return JSON.parse(JSON.stringify(def));
@@ -3812,18 +3793,20 @@ function getAvailableWhatsAppAccounts() {
     };
   });
 
-  // Append any additional custom account slots (e.g. account_6, etc.)
+  // Append any additional custom account slots (added manually by user)
   if (Array.isArray(CRM_STATE?.whatsappLines)) {
     CRM_STATE.whatsappLines.forEach(acc => {
-      if (acc && acc.id && !defaultAccounts.some(d => d.id === acc.id)) {
-        accountsList.push(JSON.parse(JSON.stringify(acc)));
+      if (acc && acc.id && acc.id !== 'account_1') {
+        if (!accountsList.some(d => d.id === acc.id)) {
+          accountsList.push(JSON.parse(JSON.stringify(acc)));
+        }
       }
     });
   }
 
-  // Clear any default slots (account_1 to account_5) from deletedSlots so all 5 are always guaranteed to be visible
+  // Filter out deleted slots
   if (Array.isArray(CRM_STATE?.deletedSlots)) {
-    CRM_STATE.deletedSlots = CRM_STATE.deletedSlots.filter(id => !defaultAccounts.some(d => d.id === id));
+    CRM_STATE.deletedSlots = CRM_STATE.deletedSlots.filter(id => id !== 'account_1');
     if (CRM_STATE.deletedSlots.length > 0) {
       accountsList = accountsList.filter(acc => !CRM_STATE.deletedSlots.includes(acc.id));
     }
@@ -3844,10 +3827,6 @@ function getAvailableWhatsAppAccounts() {
         qr: liveAcc.qr_image || liveAcc.qr || acc.qr
       };
     });
-  }
-
-  if (CRM_STATE) {
-    CRM_STATE.whatsappLines = accountsList;
   }
 
   return accountsList;
@@ -5292,7 +5271,6 @@ function renderQuickLineSwitcher() {
   // Filter to display: connected lines, plus account_1 and account_2, or lines with chats
   const displayAccounts = accounts.filter(acc =>
     acc.id === 'account_1' ||
-    acc.id === 'account_2' ||
     acc.status === 'CONNECTED' ||
     (CRM_STATE?.customers || []).some(c => (c.accountId || 'account_1') === acc.id)
   );
@@ -11566,108 +11544,7 @@ function shareStockCategoryMenu() {
 // =========================================================================
 
 function getDefaultAutoReplyRules() {
-  return [
-    {
-      id: "rule_testing_the_crm",
-      name: "testing the crm",
-      keywords: ["feeding gown", "testing the crm", "testing", "crm"],
-      actionType: "custom_text",
-      categoryId: null,
-      replyText: "welcome",
-      enabled: true,
-      autoSend: true
-    },
-    {
-      id: "rule_feeding_kurti",
-      name: "Feeding Kurti & Maternity Wear",
-      keywords: ["feeding kurti", "feeding", "kurti", "maternity", "feeding dress", "feeding gown"],
-      actionType: "category_and_text",
-      categoryId: "2",
-      replyText: "🤰 *Maternity & Feeding Collection*\nHello *{customer_name}*! 👋 Yes, we have ready stock of Pure Cotton Feeding Kurtis & Maternity Gowns with concealed invisible feeding zips!\n\n✨ Pure mulmul breathable cotton • Sizes L to XXL • Ready to dispatch.",
-      enabled: true,
-      autoSend: true
-    },
-    {
-      id: "rule_baby_frocks",
-      name: "Baby Frocks & Frocks (0-3Y)",
-      keywords: ["baby frock", "frock", "baby dress", "baby collection", "cotton frock", "baby cloth"],
-      actionType: "category_and_text",
-      categoryId: "1",
-      replyText: "👗 *Baby Collection (0–3 Years)*\nHello *{customer_name}*! 👋 Here are our 100% combed cotton embroidered baby frocks:",
-      enabled: true,
-      autoSend: true
-    },
-    {
-      id: "rule_newborn_sets",
-      name: "Newborn Gift Sets (0-6M)",
-      keywords: ["newborn", "gift set", "baby born", "romper", "swaddle", "born baby"],
-      actionType: "category_and_text",
-      categoryId: "3",
-      replyText: "🎁 *Newborn Gift Sets (0–6 Months)*\nHello *{customer_name}*! 👋 Here are our organic cotton romper & swaddle luxury gift boxes:",
-      enabled: true,
-      autoSend: true
-    },
-    {
-      id: "rule_kids_daily",
-      name: "Kids Everyday T-Shirts (4-5Y)",
-      keywords: ["kids tshirt", "tshirt", "t-shirt", "boys tshirt", "daily wear", "shorts combo"],
-      actionType: "category_and_text",
-      categoryId: "4",
-      replyText: "👕 *Kids Everyday Wear (4–5 Years)*\nHello *{customer_name}*! 👋 Check out our bio-washed organic cotton t-shirt and denim combos:",
-      enabled: true,
-      autoSend: true
-    },
-    {
-      id: "rule_wholesale",
-      name: "Wholesale & Bulk Orders",
-      keywords: ["wholesale", "bulk", "bundle", "resale", "dealer", "margin", "bulk price"],
-      actionType: "category_and_text",
-      categoryId: "5",
-      replyText: "📦 *Wholesale & Bulk Bundles*\nHello *{customer_name}*! 👋 We offer bulk retailer carton boxes (25–50 pcs) with maximum resale profit margins:",
-      enabled: true,
-      autoSend: true
-    },
-    {
-      id: "rule_festive_silk",
-      name: "Festive & Silk Pattu Pavadai",
-      keywords: ["pattu", "silk", "lehenga", "festive", "pavadai", "diwali", "kanjivaram"],
-      actionType: "category_and_text",
-      categoryId: "6",
-      replyText: "🥻 *Festive & Silk Collection*\nHello *{customer_name}*! 👋 Here are our pure zari Kanjivaram silk pattu pavadais & designer lehengas:",
-      enabled: true,
-      autoSend: true
-    },
-    {
-      id: "rule_store_location",
-      name: "Store Address & Timings",
-      keywords: ["address", "location", "shop address", "where is your shop", "store", "visit", "timings", "map"],
-      actionType: "custom_text",
-      categoryId: null,
-      replyText: "📍 *{brand_name} Store Location*\n\n🏢 GRM Garments Hub, 42 Cotton Market Road, Tirupur, Tamil Nadu - 641604.\n🕒 Working Hours: Monday – Saturday (9:30 AM to 8:30 PM)\n📞 Direct Desk: {business_phone}\n\n🗺️ You are welcome to visit our retail counter & wholesale warehouse!",
-      enabled: true,
-      autoSend: true
-    },
-    {
-      id: "rule_payment_upi",
-      name: "Payment & UPI QR",
-      keywords: ["payment", "gpay", "phonepe", "paytm", "upi", "bank details", "account", "how to pay", "scanner"],
-      actionType: "custom_text",
-      categoryId: null,
-      replyText: "💳 *Payment Details — {brand_name}*\n\n📱 UPI ID: `grmgarments@upi`\n📲 GPay / PhonePe: {business_phone}\n\n🏦 *Bank Transfer:*\nBank: HDFC Bank\nA/C Name: GRM Garments Hub\nA/C No: 50200088991122\nIFSC: HDFC0001234\n\n📸 *Please reply with your payment screenshot once paid for immediate dispatch!*",
-      enabled: true,
-      autoSend: true
-    },
-    {
-      id: "rule_shipping_delivery",
-      name: "Shipping & Delivery Time",
-      keywords: ["delivery", "shipping", "courier", "how many days", "tracking", "dispatch", "charge"],
-      actionType: "custom_text",
-      categoryId: null,
-      replyText: "🚚 *Shipping & Delivery Information*\n\n⚡ Dispatch: Same day / within 24 hours of confirmation\n📦 Courier Partners: ST Courier, Professional Couriers & DTDC\n⏱️ Delivery Time: 2–3 days within South India, 4–5 days Rest of India\n\nLive tracking link will be sent to your WhatsApp upon courier pickup! 📦",
-      enabled: true,
-      autoSend: true
-    }
-  ];
+  return [];
 }
 
 // Modal Controllers
@@ -11677,8 +11554,8 @@ function openAutoReplyModal(activeTab = 'rules') {
       enabled: true
     };
   }
-  if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
-    CRM_STATE.autoReplyRules = getDefaultAutoReplyRules();
+  if (!Array.isArray(CRM_STATE.autoReplyRules)) {
+    CRM_STATE.autoReplyRules = [];
   }
 
   const settings = CRM_STATE.autoReplySettings;
@@ -11713,8 +11590,8 @@ function renderAutoReplyRulesList() {
   const container = document.getElementById('ar-rules-list-container');
   if (!container) return;
 
-  if (!Array.isArray(CRM_STATE.autoReplyRules) || CRM_STATE.autoReplyRules.length === 0) {
-    CRM_STATE.autoReplyRules = getDefaultAutoReplyRules();
+  if (!Array.isArray(CRM_STATE.autoReplyRules)) {
+    CRM_STATE.autoReplyRules = [];
   }
 
   const searchQ = (document.getElementById('ar-rules-search-input')?.value || '').trim().toLowerCase();
@@ -29991,7 +29868,7 @@ function renderMultiAccountsHub() {
               ` : ''
       )}
 
-            ${(!['account_1', 'account_2', 'account_3', 'account_4', 'account_5'].includes(acc.id) && canSettingsDelete) ? `
+            ${(acc.id !== 'account_1' && canSettingsDelete) ? `
               <button type="button" onclick="deleteWhatsAppAccountSlot('${acc.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Delete account slot">
                 <span class="material-symbols-outlined text-[14px]">delete</span> Delete Slot
               </button>
@@ -30166,7 +30043,7 @@ function deleteWhatsAppAccountSlot(accountId) {
       return;
     }
   }
-  if (['account_1', 'account_2', 'account_3', 'account_4', 'account_5'].includes(accountId)) {
+  if (accountId === 'account_1') {
     showToast('Core Slot Cannot Be Deleted', 'Default business lines 1 through 5 cannot be removed. You can Disconnect or Refresh QR instead.', 'warning', 'amber');
     return;
   }
