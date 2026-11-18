@@ -7785,8 +7785,8 @@
             <label class="block font-bold text-slate-800 text-xs">
               Courier Partner / Name <span class="text-rose-600">*</span>
             </label>
-            <button type="button" onclick="toggleAddCustomCourierInput()"
-              class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-extrabold flex items-center gap-1 transition cursor-pointer shadow-2xs">
+            <button type="button" id="btn-add-courier-partner" onclick="toggleAddCustomCourierInput()"
+              class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-extrabold flex items-center gap-1 transition cursor-pointer shadow-2xs select-none">
               <span class="material-symbols-outlined text-[14px]">add_circle</span>
               <span>+ Add Courier</span>
             </button>
@@ -7805,13 +7805,14 @@
               <option value="Delhivery">Delhivery</option>
               <option value="Blue Dart">Blue Dart</option>
               <option value="India Post (Speed Post)">India Post (Speed Post)</option>
+              <option value="__ADD_NEW__" class="font-black text-indigo-700 bg-indigo-50">➕ + Add Custom Courier Partner...</option>
             </select>
             <span
               class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 text-[18px] pointer-events-none">expand_more</span>
           </div>
 
           <!-- Dynamic Add Courier Partner Input Box (Inline) -->
-          <div id="add-custom-courier-box"
+          <div id="add-custom-courier-box" style="display: none;"
             class="hidden p-2.5 bg-indigo-50/70 border border-dashed border-indigo-300 rounded-xl space-y-2 mt-1.5 transition-all">
             <div class="flex items-center justify-between">
               <span class="text-[11px] font-extrabold text-indigo-900 flex items-center gap-1">
@@ -7905,6 +7906,111 @@
       </div>
     </div>
   </div>
+
+  <script>
+    // Standalone Courier Management Engine (Guaranteed Cache-Immune)
+    function toggleAddCustomCourierInput(forceState) {
+      var box = document.getElementById('add-custom-courier-box');
+      var input = document.getElementById('new-courier-name-input');
+      if (!box) return;
+
+      var isCurrentlyHidden = box.classList.contains('hidden') || box.style.display === 'none' || !box.style.display;
+      var shouldShow = (typeof forceState === 'boolean') ? forceState : isCurrentlyHidden;
+
+      if (shouldShow) {
+        box.classList.remove('hidden');
+        box.style.display = 'block';
+        if (input) {
+          input.value = '';
+          setTimeout(function() { input.focus(); }, 50);
+        }
+      } else {
+        box.classList.add('hidden');
+        box.style.display = 'none';
+      }
+    }
+    window.toggleAddCustomCourierInput = toggleAddCustomCourierInput;
+
+    function addNewCourierPartnerOption() {
+      var input = document.getElementById('new-courier-name-input');
+      var select = document.getElementById('ship-courier-name');
+      if (!input || !select) return;
+
+      var name = (input.value || '').trim();
+      if (!name) {
+        if (typeof showToast === 'function') {
+          showToast('Courier Name Required', 'Please enter a courier partner name.', 'warning', 'amber');
+        } else {
+          alert('Please enter a courier partner name.');
+        }
+        input.focus();
+        return;
+      }
+
+      var exists = false;
+      for (var i = 0; i < select.options.length; i++) {
+        if (select.options[i].value.toLowerCase() === name.toLowerCase()) {
+          select.selectedIndex = i;
+          exists = true;
+          break;
+        }
+      }
+
+      if (!exists) {
+        var opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        var addOpt = select.querySelector('option[value="__ADD_NEW__"]');
+        if (addOpt) {
+          select.insertBefore(opt, addOpt);
+        } else {
+          select.appendChild(opt);
+        }
+        select.value = name;
+
+        try {
+          var saved = JSON.parse(localStorage.getItem('GRM_CUSTOM_COURIERS') || '[]');
+          if (!saved.some(function(s) { return s.toLowerCase() === name.toLowerCase(); })) {
+            saved.push(name);
+            localStorage.setItem('GRM_CUSTOM_COURIERS', JSON.stringify(saved));
+          }
+        } catch (e) {}
+      }
+
+      if (typeof onShippingCourierChange === 'function') {
+        onShippingCourierChange(name);
+      } else if (typeof updateShippingWhatsAppPreview === 'function') {
+        updateShippingWhatsAppPreview();
+      }
+
+      toggleAddCustomCourierInput(false);
+
+      if (typeof showToast === 'function') {
+        showToast('Courier Added', '"' + name + '" added and selected.', 'success', 'emerald');
+      }
+    }
+    window.addNewCourierPartnerOption = addNewCourierPartnerOption;
+
+    function onShippingCourierChange(courierName) {
+      if (courierName === '__ADD_NEW__') {
+        toggleAddCustomCourierInput(true);
+        var sel = document.getElementById('ship-courier-name');
+        if (sel) sel.value = '';
+        return;
+      }
+      var trackingInput = document.getElementById('ship-tracking-id');
+      var urlInput = document.getElementById('ship-tracking-url');
+      var trkVal = (trackingInput && trackingInput.value ? trackingInput.value : '').trim();
+
+      if (urlInput && typeof generateCourierTrackingURL === 'function') {
+        urlInput.value = trkVal ? generateCourierTrackingURL(courierName, trkVal) : '';
+      }
+      if (typeof updateShippingWhatsAppPreview === 'function') {
+        updateShippingWhatsAppPreview();
+      }
+    }
+    window.onShippingCourierChange = onShippingCourierChange;
+  </script>
 
   <!-- MODAL: EDIT WHATSAPP ORDER (NEW) -->
   <div id="modal-edit-order"
@@ -11871,7 +11977,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261118_voice_and_counters_v13"></script>
+  <script src="crm_app.js?v=20261119_courier_fixed_v15"></script>
 </body>
 
 </html>
