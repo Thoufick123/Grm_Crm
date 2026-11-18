@@ -3658,6 +3658,46 @@ function applyAuthoritativeDatabaseState(data) {
     }
   }
 
+  // 8.2 Purge internal company business lines from CRM_STATE.customers and CRM_STATE.queries
+  const internalBusinessPhones = ['9943557998', '8124038585', '8668007593', '9789660115'];
+  if (Array.isArray(CRM_STATE.customers)) {
+    CRM_STATE.customers = CRM_STATE.customers.filter(c => {
+      if (!c) return false;
+      const cp = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+      const isBiz = internalBusinessPhones.some(bp => cp.endsWith(bp)) ||
+                    c.name === 'GRM Garments' ||
+                    c.name === 'WhatsApp Business #2' ||
+                    c.name === 'Bot (Auto-Reply)' ||
+                    (c.id && internalBusinessPhones.some(bp => c.id.includes(bp)));
+      return !isBiz;
+    });
+  }
+  if (Array.isArray(CRM_STATE.queries)) {
+    CRM_STATE.queries = CRM_STATE.queries.filter(q => {
+      if (!q) return false;
+      const qp = (q.customerPhone || q.customer_phone || '').replace(/[^0-9]/g, '');
+      const qcid = String(q.customerId || q.customer_id || '');
+      const isBiz = internalBusinessPhones.some(bp => qp.endsWith(bp) || qcid.includes(bp)) ||
+                    (q.customerName || q.customer_name) === 'WhatsApp Business #2' ||
+                    (q.customerName || q.customer_name) === 'GRM Garments' ||
+                    (q.customerName || q.customer_name) === 'Bot (Auto-Reply)';
+      return !isBiz;
+    });
+  }
+
+  // Ensure active customer is valid and not pointing to internal business line
+  if (typeof ACTIVE_CUSTOMER_ID !== 'undefined') {
+    const isCurrentActiveBiz = internalBusinessPhones.some(bp => String(ACTIVE_CUSTOMER_ID).includes(bp));
+    if (isCurrentActiveBiz || (CRM_STATE.customers && !CRM_STATE.customers.some(c => c && c.id === ACTIVE_CUSTOMER_ID))) {
+      if (CRM_STATE.customers && CRM_STATE.customers.length > 0) {
+        ACTIVE_CUSTOMER_ID = CRM_STATE.customers[0].id;
+        if (typeof selectCustomerForChat === 'function') {
+          setTimeout(() => selectCustomerForChat(ACTIVE_CUSTOMER_ID), 50);
+        }
+      }
+    }
+  }
+
   // Persist cleaned conversations to sessionStorage
   if (typeof sessionStorage !== 'undefined' && CRM_STATE.conversations) {
     try {
@@ -3730,6 +3770,12 @@ function applyAuthoritativeDatabaseState(data) {
     liveFromDb.forEach(dbAcc => {
       let line = CRM_STATE.whatsappLines.find(l => l.id === dbAcc.id);
       if (line) {
+        // Guard: If the line is already CONNECTED with an active phone, never demote it to SCAN_QR or DISCONNECTED
+        const isCurrentlyLive = line.status === 'CONNECTED' && line.connected_number && line.connected_number !== 'Awaiting Link';
+        const isIncomingDemotion = dbAcc.status === 'SCAN_QR' || dbAcc.status === 'DISCONNECTED' || dbAcc.status === 'CONNECTING';
+        if (isCurrentlyLive && isIncomingDemotion) {
+          return;
+        }
         line.status = dbAcc.status;
         line.connected_number = dbAcc.phone || line.connected_number;
         line.qr_image = dbAcc.qr_image;
@@ -6796,11 +6842,17 @@ function renderChatMessages() {
       for (const m of bucket) {
         if (!m) continue;
         const mId = m.id ? String(m.id) : null;
+        const isVoice = m.media_type === 'audio' || m.type === 'audio' || (m.text && m.text.includes('Voice Note'));
+        const voiceTimeKey = isVoice && m.sender === 'staff' ? `${m.sender}_voice_${m.time || ''}` : null;
+
         const fp = `${m.sender}_${m.time || ''}_${(m.text || '').slice(0, 30)}_${(m.media_url || '').slice(-30)}`;
         if (mId && mergedIds.has(mId)) continue;
         if (mergedFingerprints.has(fp)) continue;
+        if (voiceTimeKey && mergedFingerprints.has(voiceTimeKey)) continue;
+
         if (mId) mergedIds.add(mId);
         mergedFingerprints.add(fp);
+        if (voiceTimeKey) mergedFingerprints.add(voiceTimeKey);
         mergedList.push(m);
       }
     };
@@ -12057,6 +12109,7 @@ async function handleSendMessage(event) {
   if (!rawText && !CHAT_ATTACHED_IMAGE_DATA && !hasVoiceRecording) return;
 
   if (!rawText && !CHAT_ATTACHED_IMAGE_DATA && hasVoiceRecording) {
+    if (typeof _isVoiceSending !== 'undefined' && _isVoiceSending) return;
     if (typeof window.dispatchTranslatedVoice === 'function') {
       window.dispatchTranslatedVoice('original');
     }
@@ -13631,83 +13684,59 @@ function handleConfirmAssignment(event) {
 window.handleConfirmAssignment = handleConfirmAssignment;
 
 // =========================================================================
-// 6. INBOUND WHATSAPP SIMULATOR & DEV TESTING ACTIONS
+// 6. INBOX FILTERS & VIEW RESET ENGINE (Safe across all tabs and browsers)
 // =========================================================================
-function confirmResetInboxMessages() {
-  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
-  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('inbox', 'delete')) {
-    if (typeof showToast === 'function') {
-      showToast('Access Restricted', 'Your assigned role does not have permission to delete or reset WhatsApp Inbox messages.', 'lock', 'rose');
+function resetInboxViewFilters() {
+  try {
+    // 1. Clear search input field
+    const searchInput = document.getElementById('inbox-search-input') || 
+                        document.querySelector('input[placeholder*="Search customer"]') ||
+                        document.querySelector('input[placeholder*="Search SKU"]');
+    if (searchInput) {
+      searchInput.value = '';
     }
-    return;
+
+    // 2. Reset category, subcategory, and status dropdowns if present
+    const catSel = document.getElementById('inbox-cat-select');
+    if (catSel) catSel.value = 'all';
+
+    // 3. Reset queue filter tab back to default 'all'
+    if (typeof setInboxFilter === 'function') {
+      setInboxFilter('all');
+    }
+
+    // 4. Reset internal search memory
+    window.INBOX_SEARCH_QUERY = '';
+    window.ACTIVE_INBOX_FILTER = 'all';
+
+    // 5. Safely refresh live data from server without wiping any records
+    if (typeof syncLiveCRMData === 'function') {
+      syncLiveCRMData(true);
+    }
+    if (typeof syncInboundMessagesNow === 'function') {
+      syncInboundMessagesNow(true);
+    }
+
+    // 6. Re-render customer queue and chats cleanly
+    if (typeof renderInbox === 'function') renderInbox();
+    if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+
+    if (typeof showToast === 'function') {
+      showToast('Inbox Filters Reset', 'Search and filter criteria reset. Active conversation queue refreshed.', 'refresh', 'emerald');
+    }
+  } catch (err) {
+    console.error('Error resetting inbox view filters:', err);
   }
-  const modal = document.getElementById('modal-reset-inbox-confirm');
-  if (modal && typeof openModal === 'function') {
-    openModal('modal-reset-inbox-confirm');
-  } else {
-    resetInboxMessages();
-  }
+}
+window.resetInboxViewFilters = resetInboxViewFilters;
+
+function confirmResetInboxMessages() {
+  resetInboxViewFilters();
 }
 window.confirmResetInboxMessages = confirmResetInboxMessages;
 
 function resetInboxMessages(skipAlert) {
-  try {
-    // 1. Completely clear all inbox conversations, active inquiries, customers, and temporary chat data
-    CRM_STATE.conversations = {};
-    CRM_STATE.queries = [];
-    CRM_STATE.customers = [];
-    CRM_STATE.orders = [];
-    CRM_STATE.deletedSlots = [];
-    CRM_STATE.whatsappLines = null;
-    ACTIVE_CUSTOMER_ID = null;
-    ACTIVE_SEND_ACCOUNT_ID = 'all';
-
-    if (INITIAL_CRM_DATA && INITIAL_CRM_DATA.whatsappAccount) {
-      CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
-    }
-    if (INITIAL_CRM_DATA && INITIAL_CRM_DATA.dailyMessageTarget) {
-      CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
-    }
-
-    // 2. Call backend API to clear messages and live message queue
-    fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => { });
-
-    // 3. Persist clean state to local storage
-    saveCRMState();
-
-    // 4. Re-render UI components cleanly
-    renderInbox();
-    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
-    if (typeof renderChatHeader === 'function') renderChatHeader();
-    if (typeof renderChatMessages === 'function') renderChatMessages();
-    if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
-    if (typeof renderPhoneSwitcherDropdown === 'function') renderPhoneSwitcherDropdown();
-    if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
-    if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
-    if (typeof renderOrdersTable === 'function') renderOrdersTable();
-    if (typeof renderMultiAccountsHub === 'function') renderMultiAccountsHub();
-
-    if (typeof closeModal === 'function') {
-      closeModal('modal-reset-inbox-confirm');
-      closeModal('modal-inbound-simulator');
-      closeModal('modal-inbound-sim');
-    }
-
-    if (!skipAlert && typeof showToast === 'function') {
-      showToast(
-        'Inbox Cleared',
-        'All chat conversations and messages have been cleared.',
-        'delete_sweep',
-        'emerald'
-      );
-      if (typeof playChime === 'function') playChime('inbound');
-    }
-  } catch (err) {
-    console.error('Error resetting inbox messages:', err);
-    if (typeof showToast === 'function') {
-      showToast('Reset Error', err.message, 'error', 'rose');
-    }
-  }
+  resetInboxViewFilters();
 }
 window.resetInboxMessages = resetInboxMessages;
 
@@ -27668,13 +27697,43 @@ function openShippingDispatchModal(orderId) {
   if (totalEl) totalEl.innerText = `₹${(parseFloat(ord.grandTotal) || 0).toLocaleString('en-IN')} (${(ord.items || []).length} items)`;
   if (addrEl) addrEl.innerText = ord.shippingAddress || 'Store Pickup / Direct WhatsApp';
 
+  // Reset and hide custom courier input box
+  toggleAddCustomCourierInput(false);
+
   // Populate inputs with existing or default values
   const courierInput = document.getElementById('ship-courier-name');
   const trackingInput = document.getElementById('ship-tracking-id');
   const urlInput = document.getElementById('ship-tracking-url');
   const waCheck = document.getElementById('ship-send-whatsapp');
 
+  // Load custom couriers from localStorage into dropdown
+  try {
+    const savedCouriers = JSON.parse(localStorage.getItem('GRM_CUSTOM_COURIERS') || '[]');
+    if (Array.isArray(savedCouriers) && courierInput) {
+      const existingVals = new Set(Array.from(courierInput.options).map(o => o.value.toLowerCase()));
+      savedCouriers.forEach(cName => {
+        if (cName && !existingVals.has(cName.toLowerCase())) {
+          const opt = document.createElement('option');
+          opt.value = cName;
+          opt.textContent = cName;
+          courierInput.appendChild(opt);
+          existingVals.add(cName.toLowerCase());
+        }
+      });
+    }
+  } catch (e) {}
+
   const defaultCourier = ord.courierName || ord.courier_name || 'ST Courier';
+  // If order courier is custom and not yet in select, add it dynamically
+  if (defaultCourier && courierInput) {
+    const exists = Array.from(courierInput.options).some(o => o.value.toLowerCase() === defaultCourier.toLowerCase());
+    if (!exists) {
+      const opt = document.createElement('option');
+      opt.value = defaultCourier;
+      opt.textContent = defaultCourier;
+      courierInput.appendChild(opt);
+    }
+  }
   // Tracking number must be empty by default because courier partner provides it
   const defaultTracking = ord.trackingNumber || ord.tracking_number || '';
 
@@ -27723,6 +27782,91 @@ function onShippingIdChange() {
   updateShippingWhatsAppPreview();
 }
 window.onShippingIdChange = onShippingIdChange;
+
+function onShippingCourierChange(courierName) {
+  const trackingInput = document.getElementById('ship-tracking-id');
+  const urlInput = document.getElementById('ship-tracking-url');
+  const trkVal = (trackingInput?.value || '').trim();
+
+  if (urlInput) {
+    urlInput.value = trkVal ? generateCourierTrackingURL(courierName, trkVal) : '';
+  }
+  updateShippingWhatsAppPreview();
+}
+window.onShippingCourierChange = onShippingCourierChange;
+
+function toggleAddCustomCourierInput(forceState) {
+  const box = document.getElementById('add-custom-courier-box');
+  const input = document.getElementById('new-courier-name-input');
+  if (!box) return;
+
+  const shouldShow = (typeof forceState === 'boolean') ? forceState : box.classList.contains('hidden');
+  if (shouldShow) {
+    box.classList.remove('hidden');
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 60);
+    }
+  } else {
+    box.classList.add('hidden');
+  }
+}
+window.toggleAddCustomCourierInput = toggleAddCustomCourierInput;
+
+function addNewCourierPartnerOption() {
+  const input = document.getElementById('new-courier-name-input');
+  const select = document.getElementById('ship-courier-name');
+  if (!input || !select) return;
+
+  const name = input.value.trim();
+  if (!name) {
+    if (typeof showToast === 'function') {
+      showToast('Courier Name Required', 'Please enter a courier partner name.', 'warning', 'amber');
+    } else {
+      alert('Please enter a courier partner name.');
+    }
+    input.focus();
+    return;
+  }
+
+  // Check if already in options
+  let exists = false;
+  for (let i = 0; i < select.options.length; i++) {
+    if (select.options[i].value.toLowerCase() === name.toLowerCase()) {
+      select.selectedIndex = i;
+      exists = true;
+      break;
+    }
+  }
+
+  if (!exists) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+    select.value = name;
+
+    // Save custom courier in localStorage
+    try {
+      const saved = JSON.parse(localStorage.getItem('GRM_CUSTOM_COURIERS') || '[]');
+      if (!saved.some(s => s.toLowerCase() === name.toLowerCase())) {
+        saved.push(name);
+        localStorage.setItem('GRM_CUSTOM_COURIERS', JSON.stringify(saved));
+      }
+    } catch (e) {}
+  }
+
+  // Recalculate tracking URL & preview
+  onShippingCourierChange(name);
+
+  // Close input box
+  toggleAddCustomCourierInput(false);
+
+  if (typeof showToast === 'function') {
+    showToast('Courier Added', `"${name}" added and selected.`, 'success', 'emerald');
+  }
+}
+window.addNewCourierPartnerOption = addNewCourierPartnerOption;
 
 function generateSampleAWB(courier) {
   const cleanCourier = (courier || 'ST').toUpperCase();
@@ -37491,75 +37635,84 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
       // Immediately reset voice recorder and close panel so user cannot re-click
       window.resetVoiceRecorder();
 
-      // Direct instant dispatch to WhatsApp phone via connected Bridge
-      const targetAudio = (sendMode === 'translated' ? _voiceCurrentTransAudioUrl : _voiceUploadedAudioUrl) || base64Audio || data.audio_url;
-      let bridgeDispatched = false;
+      // Selected audio URL to dispatch
+      const targetAudio = (sendMode === 'translated' ? _voiceCurrentTransAudioUrl : (_voiceUploadedAudioUrl || data.audio_url || base64Audio));
 
-      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-        SOCKET_IO.emit('whatsapp:send', {
-          phone: cleanPhone,
-          text: '🎤 WhatsApp Voice Note',
-          jid: customer?.jid || null,
-          accountId: targetAccId,
-          mediaUrl: base64Audio || targetAudio,
-          media_url: base64Audio || targetAudio,
-          mediaData: base64Audio,
-          media_data: base64Audio,
-          media_type: 'audio',
-          type: 'audio',
-          isVoiceNote: true,
-          customerId: custId
-        }, (res) => {
-          console.log('[Socket Voice Dispatch Result]:', res);
-        });
-        bridgeDispatched = true;
-      }
+      // ONLY dispatch via client Bridge if backend did not already dispatch directly
+      if (data.bridge_dispatched !== true && targetAudio) {
+        let bridgeDispatched = false;
+        if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+          SOCKET_IO.emit('whatsapp:send', {
+            phone: cleanPhone,
+            text: '🎤 WhatsApp Voice Note',
+            jid: customer?.jid || null,
+            accountId: targetAccId,
+            mediaUrl: targetAudio,
+            media_url: targetAudio,
+            mediaData: targetAudio.startsWith('data:') ? targetAudio : null,
+            media_data: targetAudio.startsWith('data:') ? targetAudio : null,
+            media_type: 'audio',
+            type: 'audio',
+            isVoiceNote: true,
+            customerId: custId
+          }, (res) => {
+            console.log('[Socket Voice Dispatch Result]:', res);
+          });
+          bridgeDispatched = true;
+        }
 
-      // Resilient HTTP fallback to Bridge
-      const bridgeBaseUrl = typeof getBridgeBaseUrl === 'function' ? getBridgeBaseUrl() : 'http://localhost:3000';
-      if (bridgeBaseUrl) {
-        try {
-          fetch(`${bridgeBaseUrl}/api/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              phone: cleanPhone,
-              text: '🎤 WhatsApp Voice Note',
-              jid: customer?.jid || null,
-              accountId: targetAccId,
-              mediaUrl: base64Audio || targetAudio,
-              media_url: base64Audio || targetAudio,
-              mediaData: base64Audio,
-              media_data: base64Audio,
-              media_type: 'audio',
-              type: 'audio',
-              isVoiceNote: true,
-              customerId: custId
-            })
-          }).catch(() => {});
-        } catch (eBridge) {}
+        if (!bridgeDispatched) {
+          // Fallback to HTTP Bridge only if Socket.IO was not available
+          const bridgeBaseUrl = typeof getBridgeBaseUrl === 'function' ? getBridgeBaseUrl() : 'http://localhost:3000';
+          if (bridgeBaseUrl) {
+            try {
+              fetch(`${bridgeBaseUrl}/api/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  phone: cleanPhone,
+                  text: '🎤 WhatsApp Voice Note',
+                  jid: customer?.jid || null,
+                  accountId: targetAccId,
+                  mediaUrl: targetAudio,
+                  media_url: targetAudio,
+                  mediaData: targetAudio.startsWith('data:') ? targetAudio : null,
+                  media_data: targetAudio.startsWith('data:') ? targetAudio : null,
+                  media_type: 'audio',
+                  type: 'audio',
+                  isVoiceNote: true,
+                  customerId: custId
+                })
+              }).catch(() => {});
+            } catch (eBridge) {}
+          }
+        }
       }
 
       if (CRM_STATE && CRM_STATE.conversations) {
         if (!CRM_STATE.conversations[custId]) {
           CRM_STATE.conversations[custId] = [];
         }
-        CRM_STATE.conversations[custId].push({
-          id: data.message_id || ('msg_voice_' + Date.now()),
-          sender: 'staff',
-          text: '🎤 WhatsApp Voice Note',
-          type: 'audio',
-          media_type: 'audio',
-          mediaType: 'audio',
-          media_url: data.audio_url,
-          mediaUrl: data.audio_url,
-          audioDuration: data.duration,
-          duration: data.duration,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'DELIVERED'
-        });
-        if (typeof saveCRMState === 'function') {
-          saveCRMState();
+        const effectiveMsgId = data.message_id || ('msg_voice_' + Date.now());
+        const alreadyExists = CRM_STATE.conversations[custId].some(m => m && (m.id === effectiveMsgId || m.message_uid === effectiveMsgId));
+        if (!alreadyExists) {
+          CRM_STATE.conversations[custId].push({
+            id: effectiveMsgId,
+            sender: 'staff',
+            text: '🎤 WhatsApp Voice Note',
+            type: 'audio',
+            media_type: 'audio',
+            mediaType: 'audio',
+            media_url: data.audio_url || targetAudio,
+            mediaUrl: data.audio_url || targetAudio,
+            audioDuration: data.duration,
+            duration: data.duration,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'DELIVERED'
+          });
+          if (typeof saveCRMState === 'function') {
+            saveCRMState();
+          }
         }
       }
 

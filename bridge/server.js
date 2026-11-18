@@ -650,12 +650,18 @@ async function convertToWhatsAppOpus(inputBuffer, inputExt = 'mp3') {
         fs.writeFileSync(tempIn, inputBuffer);
         const { execSync } = require('child_process');
         // Transcode to strict WhatsApp PTT standard: 48000Hz, mono, libopus in ogg container, voice-optimized voip profile
-        const cmd = `"${ffmpegBinPath}" -y -i "${tempIn}" -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 -application voip -f ogg "${tempOut}"`;
+        // Include -fflags +genpts+igndts -avoid_negative_ts make_zero to handle browser MediaRecorder WebM fragmented chunks
+        const cmd = `"${ffmpegBinPath}" -y -fflags +genpts+igndts -avoid_negative_ts make_zero -i "${tempIn}" -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 -application voip -f ogg "${tempOut}"`;
         execSync(cmd, { stdio: 'ignore', timeout: 10000 });
         if (fs.existsSync(tempOut) && fs.statSync(tempOut).size > 0) {
             const converted = fs.readFileSync(tempOut);
-            console.log(`[Audio Transcode] Successfully transcoded ${inputBuffer.length} bytes (${actualExt}) -> ${converted.length} bytes (WhatsApp Opus OGG)`);
-            return converted;
+            const isValidOggOpus = (converted.length > 28 &&
+                converted[0] === 0x4F && converted[1] === 0x67 && converted[2] === 0x67 && converted[3] === 0x53 &&
+                converted.indexOf(Buffer.from('OpusHead')) !== -1);
+            if (isValidOggOpus) {
+                console.log(`[Audio Transcode] Successfully transcoded ${inputBuffer.length} bytes (${actualExt}) -> ${converted.length} bytes (WhatsApp Opus OGG)`);
+                return converted;
+            }
         }
     } catch (err) {
         console.warn('[Audio Transcode Warning]:', err.message);
@@ -663,7 +669,7 @@ async function convertToWhatsAppOpus(inputBuffer, inputExt = 'mp3') {
         try { if (fs.existsSync(tempIn)) fs.unlinkSync(tempIn); } catch (e) {}
         try { if (fs.existsSync(tempOut)) fs.unlinkSync(tempOut); } catch (e) {}
     }
-    return inputBuffer;
+    return null;
 }
 
 const configFilePath = path.join(__dirname, '..', 'whatsapp_account_config.json');
@@ -763,10 +769,11 @@ function getPublicBaseUrl() {
 
 // Fast CRM API Dispatcher with instant CRM_BASE_URL priority
 async function callCrmApi(action, postData) {
+    const isRemoteEnv = Boolean(process.env.REMOTE_BRIDGE || process.env.RENDER || process.env.HOSTINGER || __dirname.includes('hostingersite'));
     const candidateUrls = [
         process.env.CRM_URL,
         process.env.APP_URL,
-        'https://maroon-partridge-532881.hostingersite.com',
+        isRemoteEnv ? 'https://maroon-partridge-532881.hostingersite.com' : null,
         CRM_BASE_URL,
         'http://localhost:8000',
         'http://127.0.0.1:8000',
@@ -2211,32 +2218,52 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
     let finalText = typeof text === 'string' ? text.trim() : String(text || '');
 
     let sent = null;
-    const isAudioMsg = (typeof mediaUrl === 'string' && (mediaUrl.includes('.mp3') || mediaUrl.includes('.ogg') || mediaUrl.includes('.webm') || mediaUrl.includes('/voice/') || mediaUrl.startsWith('data:audio')));
+    const isAudioMsg = (typeof mediaUrl === 'string' && (mediaUrl.includes('audio') || mediaUrl.includes('.mp3') || mediaUrl.includes('.ogg') || mediaUrl.includes('.webm') || mediaUrl.includes('.wav') || mediaUrl.includes('/voice/') || mediaUrl.startsWith('data:audio')));
     if (mediaUrl && isAudioMsg) {
         console.log(`[Outbound Voice Send via ${activeAcc.connectedNumber || activeAcc.id}] Dispatching voice note PTT to ${jid}`);
         const rawAudioBuf = await getAudioBuffer(mediaUrl);
         if (rawAudioBuf) {
             try {
-                const ext = mediaUrl.includes('.webm') ? 'webm' : (mediaUrl.includes('.ogg') ? 'ogg' : 'mp3');
-                const opusAudioBuf = await convertToWhatsAppOpus(rawAudioBuf, ext);
-                try {
+                let actualExt = 'webm';
+                if (rawAudioBuf.length >= 4) {
+                    if (rawAudioBuf[0] === 0x1A && rawAudioBuf[1] === 0x45 && rawAudioBuf[2] === 0xDF && rawAudioBuf[3] === 0xA3) {
+                        actualExt = 'webm';
+                    } else if (rawAudioBuf[0] === 0x4F && rawAudioBuf[1] === 0x67 && rawAudioBuf[2] === 0x67 && rawAudioBuf[3] === 0x53) {
+                        actualExt = 'ogg';
+                    } else if (rawAudioBuf[0] === 0x52 && rawAudioBuf[1] === 0x49 && rawAudioBuf[2] === 0x46 && rawAudioBuf[3] === 0x46) {
+                        actualExt = 'wav';
+                    } else if ((rawAudioBuf[0] === 0x49 && rawAudioBuf[1] === 0x44 && rawAudioBuf[2] === 0x33) || (rawAudioBuf[0] === 0xFF && (rawAudioBuf[1] & 0xE0) === 0xE0)) {
+                        actualExt = 'mp3';
+                    }
+                }
+                const opusAudioBuf = await convertToWhatsAppOpus(rawAudioBuf, actualExt);
+                const isOpusOgg = (opusAudioBuf && opusAudioBuf.length > 28 &&
+                    opusAudioBuf[0] === 0x4F && opusAudioBuf[1] === 0x67 && opusAudioBuf[2] === 0x67 && opusAudioBuf[3] === 0x53 &&
+                    opusAudioBuf.indexOf(Buffer.from('OpusHead')) !== -1);
+
+                if (isOpusOgg) {
                     sent = await activeAcc.sock.sendMessage(jid, {
-                        audio: opusAudioBuf || rawAudioBuf,
+                        audio: opusAudioBuf,
                         mimetype: 'audio/ogg; codecs=opus',
                         ptt: true
                     });
-                    console.log(`[Outbound Voice Delivered] Voice note delivered as PTT to ${jid} (ID: ${sent?.key?.id})`);
-                } catch (pttErr) {
-                    console.warn('[PTT Send Failed, Falling back to standard audio]:', pttErr.message);
+                    console.log(`[Outbound Voice Delivered] Voice note delivered as WhatsApp PTT to ${jid} (ID: ${sent?.key?.id})`);
+                } else {
+                    console.warn('[PTT Not Viable, Sending Playable Standard Audio]: Format is', actualExt);
+                    let safeMime = 'audio/mpeg';
+                    if (actualExt === 'ogg') safeMime = 'audio/ogg';
+                    else if (actualExt === 'wav') safeMime = 'audio/wav';
+                    else if (actualExt === 'mp4' || actualExt === 'm4a') safeMime = 'audio/mp4';
+
                     sent = await activeAcc.sock.sendMessage(jid, {
                         audio: rawAudioBuf,
-                        mimetype: ext === 'webm' ? 'audio/webm' : (ext === 'mp3' ? 'audio/mpeg' : 'audio/ogg'),
+                        mimetype: safeMime,
                         ptt: false
                     });
-                    console.log(`[Outbound Voice Fallback Delivered] Standard audio delivered to ${jid} (ID: ${sent?.key?.id})`);
+                    console.log(`[Outbound Audio Delivered] Audio delivered to ${jid} (ID: ${sent?.key?.id})`);
                 }
             } catch (aErr) {
-                console.warn('[Voice Send Failed, Falling back]:', aErr.message);
+                console.warn('[Voice Send Failed]:', aErr.message);
             }
         }
     } else if (mediaUrl) {

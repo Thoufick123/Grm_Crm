@@ -147,6 +147,7 @@ try {
     // Call WhatsApp Bridge
     $waMsgId = 'wamid_' . uniqid();
     $deliveryStatus = 'DELIVERED';
+    $bridgeDispatched = false;
     try {
         $waService = new WhatsAppMediaService();
         $sendResult = $waService->sendVoiceMessage($phone, $audioUrl, $customerId);
@@ -156,8 +157,12 @@ try {
         if (!empty($sendResult['status'])) {
             $deliveryStatus = $sendResult['status'];
         }
+        if (!empty($sendResult['success'])) {
+            $bridgeDispatched = true;
+        }
     } catch (Exception $eWa) {
         // Fallback to client browser bridge dispatch
+        $bridgeDispatched = false;
     }
 
     // 1. Persist into messages table
@@ -218,7 +223,8 @@ try {
         'audio_url' => $audioUrl,
         'duration' => $duration,
         'status' => $deliveryStatus,
-        'target_lang' => $targetLang
+        'target_lang' => $targetLang,
+        'bridge_dispatched' => $bridgeDispatched
     ]);
 } catch (Exception $e) {
     // If failure occurred, rollback sending state

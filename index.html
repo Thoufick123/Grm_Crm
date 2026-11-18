@@ -1532,11 +1532,11 @@
           <span class="font-extrabold text-amber-950 text-xs" id="mask-status-label">OFF</span>
         </button>
 
-        <!-- Reset Test Inbox Messages Button (Dev / Test Helper) -->
-        <button onclick="confirmResetInboxMessages()" id="header-reset-inbox-btn"
-          class="flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
-          title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
-          <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-rose-600">restart_alt</span>
+        <!-- Reset Inbox Filters & Refresh Queue -->
+        <button onclick="resetInboxViewFilters()" id="header-reset-inbox-btn"
+          class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 hover:border-slate-300 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
+          title="Reset inbox search, active filters, and refresh conversation queue">
+          <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-slate-600">refresh</span>
           <span data-i18n="header.reset_inbox">Reset</span>
         </button>
 

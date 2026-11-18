@@ -929,7 +929,7 @@ if ($action === 'get_state' || $action === 'get_all') {
         } catch (Exception $eSelfHeal) {}
 
         // Identify company business line phone numbers so they NEVER appear as customers
-        $businessPhones10 = ['9943557998', '8668007593', '9789660115'];
+        $businessPhones10 = ['9943557998', '8124038585', '8668007593', '9789660115'];
         foreach ($waAccounts as $wa) {
             if (!empty($wa['phone_number'])) {
                 $wp = preg_replace('/[^0-9]/', '', $wa['phone_number']);
@@ -939,6 +939,14 @@ if ($action === 'get_state' || $action === 'get_all') {
             }
         }
         $businessPhones10 = array_values(array_unique($businessPhones10));
+
+        // Purge any accidental business records from customers and queries tables
+        try {
+            $delBizStmt = $pdo->prepare("DELETE FROM `customers` WHERE `id` LIKE '%8124038585%' OR `phone` LIKE '%8124038585%' OR `whatsapp` LIKE '%8124038585%' OR `name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
+            $delBizStmt->execute();
+            $delBizQStmt = $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` LIKE '%8124038585%' OR `customer_phone` LIKE '%8124038585%' OR `customer_name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
+            $delBizQStmt->execute();
+        } catch (Exception $ePurgeBiz) {}
 
         $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` ASC");
         $rawCustomers = $cStmt->fetchAll();
@@ -956,7 +964,7 @@ if ($action === 'get_state' || $action === 'get_all') {
                     break;
                 }
             }
-            if ($cName === 'GRM Garments' || $cName === 'GRM Garments Business Hub' || $cName === 'GRM Garments Official' || $c['id'] === 'cust_9943557998') {
+            if ($cName === 'GRM Garments' || $cName === 'GRM Garments Business Hub' || $cName === 'GRM Garments Official' || $cName === 'WhatsApp Business #2' || $cName === 'Bot (Auto-Reply)' || strpos($c['id'], '8124038585') !== false || $c['id'] === 'cust_9943557998') {
                 $isBusiness = true;
             }
 
@@ -1593,6 +1601,19 @@ if ($action === 'delete_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($action === 'clear_inbox' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $rawInput = file_get_contents('php://input');
+    $postData = json_decode($rawInput, true) ?: $_POST;
+    $maintenanceToken = $postData['maintenance_token'] ?? '';
+
+    // Security Gate: Protect database messages from multi-tab / multi-browser wipeouts
+    if ($maintenanceToken !== 'GRM_SECURITY_HARD_RESET_CONFIRMED_2026') {
+        echo json_encode([
+            "status" => "ignored",
+            "message" => "Database clear ignored to preserve data across multiple tabs and browsers. Use view filter reset instead."
+        ]);
+        exit;
+    }
+
     try {
         if ($pdo) {
             $pdo->exec("DELETE FROM `messages`");
@@ -1786,22 +1807,41 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $cfg['connected_lines'] = [];
     }
 
-    // Guard: Prevent empty transient status updates from overwriting an already CONNECTED account
-    // But ALWAYS allow if forced, if a real QR code is provided, or if disconnection is reported
-    $isForce = !empty($data['force']) || !empty($data['force_disconnect']);
-    $hasRealQr = !empty($qrCode) && strlen($qrCode) > 20;
-    if ($status === 'SCAN_QR' && !$hasRealQr && !$isForce) {
+    // Robust Guard: Never allow spurious SCAN_QR or DISCONNECTED pings to demote an already CONNECTED account
+    // unless an explicit user-initiated disconnection was requested (force_disconnect=true)!
+    $isExplicitDisconnect = !empty($data['force_disconnect']);
+    if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isExplicitDisconnect) {
         $alreadyConnected = false;
-        foreach ($cfg['connected_lines'] as $existingLine) {
-            if (($existingLine['id'] ?? '') === $slotId && ($existingLine['status'] ?? '') === 'CONNECTED') {
-                $alreadyConnected = true;
-                break;
+        $connectedPhone = null;
+
+        // Check MySQL database first (authoritative single source of truth)
+        if ($pdo) {
+            try {
+                $chkStmt = $pdo->prepare("SELECT `status`, `phone_number` FROM `whatsapp_accounts` WHERE `account_slot` = ? LIMIT 1");
+                $chkStmt->execute([$slotId]);
+                $currAcc = $chkStmt->fetch(PDO::FETCH_ASSOC);
+                if ($currAcc && ($currAcc['status'] ?? '') === 'CONNECTED' && !empty($currAcc['phone_number']) && $currAcc['phone_number'] !== 'Awaiting Link') {
+                    $alreadyConnected = true;
+                    $connectedPhone = $currAcc['phone_number'];
+                }
+            } catch (Exception $eDbChk) {}
+        }
+
+        // Check config file cache
+        if (!$alreadyConnected && isset($cfg['connected_lines']) && is_array($cfg['connected_lines'])) {
+            foreach ($cfg['connected_lines'] as $existingLine) {
+                if (($existingLine['id'] ?? '') === $slotId && ($existingLine['status'] ?? '') === 'CONNECTED' && !empty($existingLine['phone_number']) && $existingLine['phone_number'] !== 'Awaiting Link') {
+                    $alreadyConnected = true;
+                    $connectedPhone = $existingLine['phone_number'];
+                    break;
+                }
             }
         }
+
         if ($alreadyConnected) {
             echo json_encode([
                 "status" => "success",
-                "message" => "Account $slotId is already active and CONNECTED. Ignoring empty QR update."
+                "message" => "Account $slotId is already authenticated & LIVE ($connectedPhone). Spurious $status demotion blocked."
             ]);
             exit;
         }
@@ -3880,7 +3920,16 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
                     }
                 }
             }
-            if (empty($effectiveCustId) && !empty($clean10)) {
+            // CRITICAL: Internal company business numbers MUST NEVER be created as customers or queries!
+            $isCompanyLine = false;
+            foreach (['9943557998', '8124038585', '8668007593', '9789660115'] as $bp) {
+                if (!empty($bp) && !empty($clean10) && str_ends_with($clean10, $bp)) {
+                    $isCompanyLine = true;
+                    break;
+                }
+            }
+
+            if (!$isCompanyLine && empty($effectiveCustId) && !empty($clean10)) {
                 $effectiveCustId = 'cust_' . $clean10;
                 $initialName = !empty($recipientName) ? $recipientName : ('Customer (' . substr($clean10, -4) . ')');
                 $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`) VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 'CU')")
@@ -4058,7 +4107,15 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $checkCust->execute([$custId, "%$clean10", "%$clean10"]);
             $existingCust = $checkCust->fetch();
 
-            if (!$existingCust) {
+            $isCompanySender = false;
+            foreach (['9943557998', '8124038585', '8668007593', '9789660115'] as $bp) {
+                if (!empty($bp) && !empty($clean10) && str_ends_with($clean10, $bp)) {
+                    $isCompanySender = true;
+                    break;
+                }
+            }
+
+            if (!$isCompanySender && !$existingCust) {
                 $pdo->prepare("
                     INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `address`, `city`, `customer_type`, `tags`, `avatar`)
                     VALUES (?, ?, ?, ?, ?, 'WhatsApp Customer', 'Online', 'New WhatsApp Customer', '[\"Live Inbound\"]', ?)
@@ -4070,7 +4127,7 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $senderPhone,
                     strtoupper(substr($senderName, 0, 2))
                 ]);
-            } else {
+            } else if ($existingCust && !$isCompanySender) {
                 $custId = $existingCust['id'];
                 // Self-healing: Update existing customer if their name was an account label or phone had trailing 0
                 $custNeedUpdate = false;
