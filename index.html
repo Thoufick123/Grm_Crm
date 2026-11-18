@@ -1921,11 +1921,20 @@
                       </select>
                     </div>
 
-                    <button type="button" id="btn-voice-translate" onclick="executeVoiceTranslation()"
-                      class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
-                      <span class="material-symbols-outlined text-[15px]">auto_awesome</span>
-                      <span id="btn-voice-translate-text">Translate Voice</span>
-                    </button>
+                    <div class="flex items-center gap-2">
+                      <button type="button" id="btn-voice-send-direct" onclick="dispatchTranslatedVoice('original')"
+                        class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
+                        title="Send recorded voice directly to customer WhatsApp">
+                        <span class="material-symbols-outlined text-[16px]">send</span>
+                        <span id="btn-voice-send-direct-text">Send Voice Note</span>
+                      </button>
+
+                      <button type="button" id="btn-voice-translate" onclick="executeVoiceTranslation()"
+                        class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
+                        <span class="material-symbols-outlined text-[15px]">auto_awesome</span>
+                        <span id="btn-voice-translate-text">Translate Voice</span>
+                      </button>
+                    </div>
                   </div>
 
                   <!-- Translated Audio Player & Text (Visible after translation) -->

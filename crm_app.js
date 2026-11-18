@@ -11859,8 +11859,19 @@ async function handleSendMessage(event) {
   const input = document.getElementById('chat-input-text');
   const rawText = input.value.trim();
 
-  // Allow sending if there is text OR an attached image
-  if (!rawText && !CHAT_ATTACHED_IMAGE_DATA) return;
+  // Allow sending if there is text OR an attached image OR an active voice recording
+  const hasVoiceRecording = Boolean(typeof _voiceCurrentBlob !== 'undefined' && _voiceCurrentBlob) ||
+    Boolean(typeof _voiceUploadedAudioUrl !== 'undefined' && _voiceUploadedAudioUrl) ||
+    Boolean(document.getElementById('voice-recording-preview') && !document.getElementById('voice-recording-preview').classList.contains('hidden'));
+
+  if (!rawText && !CHAT_ATTACHED_IMAGE_DATA && !hasVoiceRecording) return;
+
+  if (!rawText && !CHAT_ATTACHED_IMAGE_DATA && hasVoiceRecording) {
+    if (typeof window.dispatchTranslatedVoice === 'function') {
+      window.dispatchTranslatedVoice('original');
+    }
+    return;
+  }
 
   const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
   if (!customer) return;
@@ -37216,6 +37227,8 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
     return;
   }
 
+  const directBtn = document.getElementById('btn-voice-send-direct');
+  const directText = document.getElementById('btn-voice-send-direct-text');
   const approveBtn = document.getElementById('btn-voice-approve-send');
   const origBtn = document.getElementById('btn-voice-send-orig');
   const approveText = document.getElementById('btn-voice-approve-text');
@@ -37224,6 +37237,11 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
   _isVoiceSending = true;
 
   // Immediate frontend single-click lockout & visual loading indicator
+  if (directBtn) {
+    directBtn.disabled = true;
+    directBtn.classList.add('opacity-60', 'pointer-events-none');
+    if (directText) directText.textContent = 'Sending...';
+  }
   if (approveBtn) {
     approveBtn.disabled = true;
     approveBtn.classList.add('opacity-60', 'pointer-events-none');
@@ -37238,10 +37256,30 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
     origBtn.classList.add('opacity-60', 'pointer-events-none');
   }
 
+  // Ensure original audio finished uploading first if upload is in flight
+  if (_voiceUploadPromise && !_voiceUploadedMsgId) {
+    try { await _voiceUploadPromise; } catch (e) { }
+  }
+
+  // Convert client recorded audio blob directly to Base64 data URL for instant zero-loss bridge transmission
+  let base64Audio = null;
+  if (_voiceCurrentBlob && typeof FileReader !== 'undefined') {
+    try {
+      base64Audio = await new Promise((resolve) => {
+        const r = new FileReader();
+        r.onloadend = () => resolve(r.result);
+        r.onerror = () => resolve(null);
+        r.readAsDataURL(_voiceCurrentBlob);
+      });
+    } catch (eB64) { }
+  }
+
   const targetLang = document.getElementById('voice-target-lang')?.value || 'en';
   const custId = (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '') || '';
   const customer = (CRM_STATE?.customers || []).find(c => c && (c.id === custId || String(c.id) === String(custId)));
   const phone = customer ? (customer.whatsapp || customer.phone) : '';
+  const targetAccId = (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' ? ACTIVE_SEND_ACCOUNT_ID : null) || 'account_1';
+  const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
 
   try {
     const res = await fetch('api.php?action=send_translated_voice', {
@@ -37252,7 +37290,9 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
         phone: phone,
         voice_message_id: _voiceUploadedMsgId,
         translation_id: _voiceCurrentTranslationId,
-        audio_url: sendMode === 'translated' ? _voiceCurrentTransAudioUrl : _voiceUploadedAudioUrl,
+        audio_url: sendMode === 'translated' ? _voiceCurrentTransAudioUrl : (_voiceUploadedAudioUrl || base64Audio),
+        media_data: base64Audio,
+        mediaData: base64Audio,
         send_mode: sendMode,
         target_lang: targetLang
       })
@@ -37263,20 +37303,52 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
       window.resetVoiceRecorder();
 
       // Direct instant dispatch to WhatsApp phone via connected Bridge
-      const targetAudio = (sendMode === 'translated' ? _voiceCurrentTransAudioUrl : _voiceUploadedAudioUrl) || data.audio_url;
+      const targetAudio = (sendMode === 'translated' ? _voiceCurrentTransAudioUrl : _voiceUploadedAudioUrl) || base64Audio || data.audio_url;
+      let bridgeDispatched = false;
+
       if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
         SOCKET_IO.emit('whatsapp:send', {
-          phone: phone,
+          phone: cleanPhone,
           text: '🎤 WhatsApp Voice Note',
           jid: customer?.jid || null,
-          accountId: (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' ? ACTIVE_SEND_ACCOUNT_ID : null) || 'account_1',
-          mediaUrl: targetAudio,
+          accountId: targetAccId,
+          mediaUrl: base64Audio || targetAudio,
+          media_url: base64Audio || targetAudio,
+          mediaData: base64Audio,
+          media_data: base64Audio,
           media_type: 'audio',
+          type: 'audio',
           isVoiceNote: true,
           customerId: custId
         }, (res) => {
           console.log('[Socket Voice Dispatch Result]:', res);
         });
+        bridgeDispatched = true;
+      }
+
+      // Resilient HTTP fallback to Bridge
+      const bridgeBaseUrl = typeof getBridgeBaseUrl === 'function' ? getBridgeBaseUrl() : 'http://localhost:3000';
+      if (bridgeBaseUrl) {
+        try {
+          fetch(`${bridgeBaseUrl}/api/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: cleanPhone,
+              text: '🎤 WhatsApp Voice Note',
+              jid: customer?.jid || null,
+              accountId: targetAccId,
+              mediaUrl: base64Audio || targetAudio,
+              media_url: base64Audio || targetAudio,
+              mediaData: base64Audio,
+              media_data: base64Audio,
+              media_type: 'audio',
+              type: 'audio',
+              isVoiceNote: true,
+              customerId: custId
+            })
+          }).catch(() => {});
+        } catch (eBridge) {}
       }
 
       if (CRM_STATE && CRM_STATE.conversations) {
@@ -37316,6 +37388,11 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
     alert('Failed to send voice note: ' + err.message);
   } finally {
     _isVoiceSending = false;
+    if (directBtn) {
+      directBtn.disabled = false;
+      directBtn.classList.remove('opacity-60', 'pointer-events-none');
+      if (directText) directText.textContent = 'Send Voice Note';
+    }
     if (approveBtn) {
       approveBtn.disabled = false;
       approveBtn.classList.remove('opacity-60', 'pointer-events-none');
