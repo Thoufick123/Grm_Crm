@@ -5525,8 +5525,10 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $courierName = $order['courierName'] ?? ($order['courier_name'] ?? '');
         $shippingUrl = $order['shippingUrl'] ?? ($order['shipping_url'] ?? ($order['tracking_url'] ?? ''));
 
-        // Check and reserve stock atomically
-        if (!empty($items) && is_array($items)) {
+        $isEditUpdate = !empty($order['isEditUpdate']);
+
+        // Check and reserve stock atomically (skip re-reserving full stock when editing an existing order)
+        if (!$isEditUpdate && !empty($items) && is_array($items)) {
             foreach ($items as $item) {
                 $sku = $item['sku'] ?? null;
                 $qty = (int)($item['qty'] ?? ($item['quantity'] ?? 1));
@@ -5592,13 +5594,15 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $orderStatus, $trackingNumber, $courierName, $shippingUrl, $createdBy, $staffId, $staffName
         ]);
 
-        // Update Customer metrics
+        // Update Customer metrics (only increment total_orders for brand new orders)
         if ($customerId) {
-            $pdo->prepare("
-                UPDATE `customers` 
-                SET `total_orders` = `total_orders` + 1, `total_spend` = `total_spend` + ? 
-                WHERE `id` = ?
-            ")->execute([$grandTotal, $customerId]);
+            if (!$isEditUpdate) {
+                $pdo->prepare("
+                    UPDATE `customers` 
+                    SET `total_orders` = `total_orders` + 1, `total_spend` = `total_spend` + ? 
+                    WHERE `id` = ?
+                ")->execute([$grandTotal, $customerId]);
+            }
         }
 
         // Update Query Status
@@ -5607,13 +5611,17 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Audit Log
+        $auditAction = $isEditUpdate ? 'ORDER_EDITED' : 'ORDER_CREATED';
+        $auditDetails = $isEditUpdate 
+            ? "Order {$orderId} details updated for {$customerName}. Amount: ₹{$grandTotal}" 
+            : "Order {$orderId} booked for {$customerName}. Amount: ₹{$grandTotal}";
         $pdo->prepare("
             INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
-            VALUES (?, 'ORDER_CREATED', 'ORDERS', ?, ?)
-        ")->execute([$createdBy, "Order {$orderId} booked for {$customerName}. Amount: ₹{$grandTotal}", date("h:i A")]);
+            VALUES (?, ?, 'ORDERS', ?, ?)
+        ")->execute([$createdBy, $auditAction, $auditDetails, date("h:i A")]);
 
         $pdo->commit();
-        echo json_encode(["status" => "success", "message" => "Order booked and stock reserved in MySQL", "order_id" => $orderId]);
+        echo json_encode(["status" => "success", "message" => $isEditUpdate ? "Order updated in MySQL" : "Order booked and stock reserved in MySQL", "order_id" => $orderId]);
         exit;
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {

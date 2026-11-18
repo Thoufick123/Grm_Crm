@@ -36622,6 +36622,49 @@ window.selectOrderModalAddress = selectOrderModalAddress;
 let CURRENT_EDIT_ORDER = null;
 let EDIT_ORDER_ITEMS = [];
 
+function switchEditOrderTab(tab) {
+  const tabs = ['items', 'payment', 'shipping', 'customer'];
+  const btns = {
+    items: document.getElementById('tab-btn-edit-items'),
+    payment: document.getElementById('tab-btn-edit-payment'),
+    shipping: document.getElementById('tab-btn-edit-shipping'),
+    customer: document.getElementById('tab-btn-edit-customer'),
+    all: document.getElementById('tab-btn-edit-all')
+  };
+  const panels = {
+    items: document.getElementById('edit-order-panel-items'),
+    payment: document.getElementById('edit-order-panel-payment'),
+    shipping: document.getElementById('edit-order-panel-shipping'),
+    customer: document.getElementById('edit-order-panel-customer')
+  };
+
+  // Reset all button styles
+  Object.keys(btns).forEach(key => {
+    if (btns[key]) {
+      btns[key].className = 'px-3 py-1.5 rounded-xl bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 flex items-center gap-1.5 transition cursor-pointer shrink-0';
+    }
+  });
+
+  if (tab === 'all') {
+    if (btns.all) btns.all.className = 'px-3 py-1.5 rounded-xl bg-slate-800 text-white font-extrabold shadow-xs flex items-center gap-1.5 transition cursor-pointer shrink-0';
+    tabs.forEach(t => {
+      if (panels[t]) panels[t].classList.remove('hidden');
+    });
+  } else {
+    if (btns[tab]) btns[tab].className = 'px-3 py-1.5 rounded-xl bg-blue-600 text-white font-extrabold shadow-xs flex items-center gap-1.5 transition cursor-pointer shrink-0';
+    tabs.forEach(t => {
+      if (panels[t]) {
+        if (t === tab) {
+          panels[t].classList.remove('hidden');
+        } else {
+          panels[t].classList.add('hidden');
+        }
+      }
+    });
+  }
+}
+window.switchEditOrderTab = switchEditOrderTab;
+
 function openEditOrderModal(orderId) {
   const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
   if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
@@ -36636,6 +36679,9 @@ function openEditOrderModal(orderId) {
 
   CURRENT_EDIT_ORDER = ord;
   EDIT_ORDER_ITEMS = JSON.parse(JSON.stringify(ord.items || []));
+
+  // Reset tab to products view
+  switchEditOrderTab('items');
 
   // Set header details
   const titleId = document.getElementById('edit-order-modal-id-title');
@@ -36668,21 +36714,56 @@ function openEditOrderModal(orderId) {
     `).join('');
   }
 
-  // Populate Payment Fields
+  // Calculate order total
+  let initialTotal = 0;
+  EDIT_ORDER_ITEMS.forEach(it => {
+    initialTotal += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+  });
+  if (initialTotal === 0) {
+    initialTotal = parseFloat(ord.grandTotal || ord.grand_total || 0);
+  }
+
+  // Populate Payment Fields accurately
   const methodSelect = document.getElementById('edit-order-payment-method');
   const pStatusSelect = document.getElementById('edit-order-payment-status');
   const upiInput = document.getElementById('edit-order-upi-id');
+  const noteInput = document.getElementById('edit-order-payment-note');
   const codAdvInput = document.getElementById('edit-order-cod-advance');
   const codBalInput = document.getElementById('edit-order-cod-balance');
 
-  const pMethod = ord.paymentMethod || ord.payment_method || 'ONLINE_UPI';
-  if (methodSelect) methodSelect.value = pMethod.includes('COD') ? 'COD' : 'ONLINE_UPI';
-  if (pStatusSelect) pStatusSelect.value = ord.paymentStatus || ord.payment_status || 'PAID';
-  if (upiInput) upiInput.value = ord.upiTransactionId || ord.upi_transaction_id || '';
-  if (codAdvInput) codAdvInput.value = ord.codAdvance || ord.cod_advance || 0;
-  if (codBalInput) codBalInput.value = ord.codBalanceDue || ord.cod_balance_due || 0;
+  const pMethod = (ord.paymentMethod || ord.payment_method || 'ONLINE_UPI').toUpperCase();
+  if (methodSelect) {
+    if (pMethod.includes('COD')) methodSelect.value = 'COD';
+    else if (pMethod.includes('CASH')) methodSelect.value = 'CASH';
+    else if (pMethod.includes('BANK')) methodSelect.value = 'BANK_TRANSFER';
+    else methodSelect.value = 'ONLINE_UPI';
+  }
 
-  onEditOrderPaymentMethodChange();
+  if (pStatusSelect) {
+    const rawStatus = (ord.paymentStatus || ord.payment_status || 'PAID').toUpperCase();
+    if (rawStatus.includes('PARTIAL')) pStatusSelect.value = 'PARTIAL_PAID';
+    else if (rawStatus.includes('PENDING')) pStatusSelect.value = 'PENDING';
+    else if (rawStatus.includes('REFUND')) pStatusSelect.value = 'REFUNDED';
+    else pStatusSelect.value = 'PAID';
+  }
+
+  if (upiInput) upiInput.value = ord.upiTransactionId || ord.upi_transaction_id || '';
+  if (noteInput) noteInput.value = ord.paymentNote || ord.payment_note || '';
+
+  let adv = parseFloat(ord.codAdvance ?? ord.cod_advance ?? ord.advancePayment ?? ord.advance_payment);
+  let bal = parseFloat(ord.codBalanceDue ?? ord.cod_balance_due ?? ord.balanceAmount ?? ord.balance_amount);
+
+  if (isNaN(adv)) {
+    adv = pMethod.includes('COD') ? Math.min(200, initialTotal) : initialTotal;
+  }
+  if (isNaN(bal)) {
+    bal = Math.max(0, initialTotal - adv);
+  }
+
+  if (codAdvInput) codAdvInput.value = adv;
+  if (codBalInput) codBalInput.value = bal;
+
+  onEditOrderPaymentMethodChange(false);
 
   // Populate Fulfillment & Tracking with strict sequential stage rules
   const statusSelect = document.getElementById('edit-order-status');
@@ -36742,9 +36823,10 @@ function renderEditOrderItemsList() {
   if (!container) return;
 
   if (EDIT_ORDER_ITEMS.length === 0) {
-    container.innerHTML = `<div class="p-4 text-center text-slate-400">No items in order. Click "Add Product" above to add items.</div>`;
+    container.innerHTML = `<div class="p-4 text-center text-slate-400">No items in order. Click "+ Add Product" above to add items.</div>`;
     if (grandTotalEl) grandTotalEl.innerText = '₹0';
     if (countEl) countEl.innerText = '0 items';
+    updateEditOrderPaymentQuickSummary();
     return;
   }
 
@@ -36752,30 +36834,41 @@ function renderEditOrderItemsList() {
   let count = 0;
 
   container.innerHTML = EDIT_ORDER_ITEMS.map((item, idx) => {
-    const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.qty) || 1);
+    const qty = parseInt(item.qty) || 1;
+    const price = parseFloat(item.price) || 0;
+    const itemTotal = price * qty;
     total += itemTotal;
-    count += (parseInt(item.qty) || 1);
+    count += qty;
 
     return `
-      <div class="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
+      <div class="p-2.5 bg-white rounded-2xl border border-slate-200 flex items-center justify-between gap-3 shadow-2xs hover:border-blue-200 transition">
         <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
-            ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-[18px] text-slate-400">apparel</span>`}
+          <div class="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
+            ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-[20px] text-slate-400">apparel</span>`}
           </div>
           <div class="min-w-0">
             <h5 class="font-bold text-slate-900 text-xs truncate">${item.name || item.sku}</h5>
-            <p class="text-[10px] text-slate-500 font-mono">${item.sku} • ₹${(parseFloat(item.price) || 0).toLocaleString('en-IN')} / pc • <span class="font-semibold text-indigo-700">${item.size || 'Free Size'}</span></p>
+            <p class="text-[10px] text-slate-500 font-mono">${item.sku} • ₹${price.toLocaleString('en-IN')} / pc • <span class="font-semibold text-indigo-700">${item.size || 'Free Size'}</span></p>
           </div>
         </div>
         <div class="flex items-center gap-3 shrink-0">
-          <div class="flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden">
-            <button type="button" onclick="changeEditOrderItemQty(${idx}, -1)" class="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 font-bold cursor-pointer">-</button>
-            <span class="w-8 text-center text-xs font-bold text-slate-800 font-mono">${item.qty}</span>
-            <button type="button" onclick="changeEditOrderItemQty(${idx}, 1)" class="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 font-bold cursor-pointer">+</button>
+          <div class="flex items-center border border-slate-300 rounded-xl bg-white overflow-hidden shadow-2xs">
+            <button type="button" onclick="changeEditOrderItemQty(${idx}, -1)"
+              class="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 active:bg-slate-200 font-black text-sm cursor-pointer transition select-none"
+              title="Decrease Quantity">-</button>
+            <input type="number" min="1" max="999" value="${qty}"
+              id="edit-order-item-qty-${idx}"
+              oninput="updateEditOrderItemQtyDirect(${idx}, this.value)"
+              onchange="updateEditOrderItemQtyDirect(${idx}, this.value)"
+              class="w-12 text-center text-xs font-black text-slate-900 font-mono py-1 focus:ring-2 focus:ring-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none border-x border-slate-200"
+              title="Type quantity directly">
+            <button type="button" onclick="changeEditOrderItemQty(${idx}, 1)"
+              class="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 active:bg-slate-200 font-black text-sm cursor-pointer transition select-none"
+              title="Increase Quantity">+</button>
           </div>
-          <span class="font-mono font-bold text-xs text-slate-900 w-16 text-right">₹${itemTotal.toLocaleString('en-IN')}</span>
-          <button type="button" onclick="deleteEditOrderItem(${idx})" class="text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 cursor-pointer" title="Remove item">
-            <span class="material-symbols-outlined text-[16px]">delete</span>
+          <span class="font-mono font-black text-xs text-slate-900 w-16 text-right" id="edit-order-item-total-${idx}">₹${itemTotal.toLocaleString('en-IN')}</span>
+          <button type="button" onclick="deleteEditOrderItem(${idx})" class="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 cursor-pointer transition" title="Remove item from order">
+            <span class="material-symbols-outlined text-[17px]">delete</span>
           </button>
         </div>
       </div>
@@ -36785,28 +36878,167 @@ function renderEditOrderItemsList() {
   if (grandTotalEl) grandTotalEl.innerText = `₹${total.toLocaleString('en-IN')}`;
   if (countEl) countEl.innerText = `${count} items`;
 
-  // Auto-update COD balance if in COD mode
-  const methodSelect = document.getElementById('edit-order-payment-method');
-  if (methodSelect && methodSelect.value === 'COD') {
-    const advInput = document.getElementById('edit-order-cod-advance');
-    const balInput = document.getElementById('edit-order-cod-balance');
-    const adv = parseFloat(advInput?.value || 200) || 200;
-    if (balInput) balInput.value = Math.max(0, total - adv);
-  }
+  updateEditOrderTotals();
 }
 window.renderEditOrderItemsList = renderEditOrderItemsList;
 
 function changeEditOrderItemQty(idx, delta) {
   if (!EDIT_ORDER_ITEMS[idx]) return;
-  const newQty = (parseInt(EDIT_ORDER_ITEMS[idx].qty) || 1) + delta;
-  if (newQty <= 0) {
-    deleteEditOrderItem(idx);
-    return;
-  }
+  const cur = parseInt(EDIT_ORDER_ITEMS[idx].qty) || 1;
+  const newQty = Math.max(1, cur + delta);
   EDIT_ORDER_ITEMS[idx].qty = newQty;
-  renderEditOrderItemsList();
+  const input = document.getElementById(`edit-order-item-qty-${idx}`);
+  if (input) input.value = newQty;
+  updateEditOrderItemLine(idx);
+  updateEditOrderTotals();
 }
 window.changeEditOrderItemQty = changeEditOrderItemQty;
+
+function updateEditOrderItemQtyDirect(idx, val) {
+  if (!EDIT_ORDER_ITEMS[idx]) return;
+  let qty = parseInt(val, 10);
+  if (isNaN(qty) || qty < 1) qty = 1;
+  EDIT_ORDER_ITEMS[idx].qty = qty;
+  updateEditOrderItemLine(idx);
+  updateEditOrderTotals();
+}
+window.updateEditOrderItemQtyDirect = updateEditOrderItemQtyDirect;
+
+function updateEditOrderItemLine(idx) {
+  const item = EDIT_ORDER_ITEMS[idx];
+  if (!item) return;
+  const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.qty) || 1);
+  const totalEl = document.getElementById(`edit-order-item-total-${idx}`);
+  if (totalEl) totalEl.innerText = `₹${itemTotal.toLocaleString('en-IN')}`;
+}
+window.updateEditOrderItemLine = updateEditOrderItemLine;
+
+function updateEditOrderTotals() {
+  let total = 0;
+  let count = 0;
+  EDIT_ORDER_ITEMS.forEach(it => {
+    const q = parseInt(it.qty) || 1;
+    total += (parseFloat(it.price) || 0) * q;
+    count += q;
+  });
+
+  const grandTotalEl = document.getElementById('edit-order-grand-total');
+  const countEl = document.getElementById('edit-order-items-count');
+  if (grandTotalEl) grandTotalEl.innerText = `₹${total.toLocaleString('en-IN')}`;
+  if (countEl) countEl.innerText = `${count} items`;
+
+  // Auto-update Payment Due
+  const advInput = document.getElementById('edit-order-cod-advance');
+  const balInput = document.getElementById('edit-order-cod-balance');
+  const methodSelect = document.getElementById('edit-order-payment-method');
+
+  if (advInput && balInput) {
+    const isOnline = methodSelect && (methodSelect.value === 'ONLINE_UPI' || methodSelect.value === 'BANK_TRANSFER');
+    let adv = parseFloat(advInput.value);
+    if (isNaN(adv)) adv = isOnline ? total : Math.min(200, total);
+    const bal = Math.max(0, total - adv);
+    balInput.value = bal;
+  }
+
+  updateEditOrderPaymentQuickSummary();
+}
+window.updateEditOrderTotals = updateEditOrderTotals;
+
+function updateEditOrderPaymentQuickSummary() {
+  const summaryEl = document.getElementById('edit-order-payment-quick-summary');
+  if (!summaryEl) return;
+  const method = document.getElementById('edit-order-payment-method')?.value || 'ONLINE_UPI';
+  const status = document.getElementById('edit-order-payment-status')?.value || 'PAID';
+  const adv = parseFloat(document.getElementById('edit-order-cod-advance')?.value || 0) || 0;
+  const bal = parseFloat(document.getElementById('edit-order-cod-balance')?.value || 0) || 0;
+
+  summaryEl.innerText = `${method} • ${status} (Paid: ₹${adv.toLocaleString('en-IN')} | Due: ₹${bal.toLocaleString('en-IN')})`;
+}
+window.updateEditOrderPaymentQuickSummary = updateEditOrderPaymentQuickSummary;
+
+function setEditOrderPaymentQuick(type) {
+  let total = 0;
+  EDIT_ORDER_ITEMS.forEach(it => {
+    total += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+  });
+  const advInput = document.getElementById('edit-order-cod-advance');
+  const balInput = document.getElementById('edit-order-cod-balance');
+  const methodSelect = document.getElementById('edit-order-payment-method');
+  const pStatusSelect = document.getElementById('edit-order-payment-status');
+
+  if (type === 'FULL') {
+    if (advInput) advInput.value = total;
+    if (balInput) balInput.value = 0;
+    if (pStatusSelect) pStatusSelect.value = 'PAID';
+    if (methodSelect && methodSelect.value === 'COD') methodSelect.value = 'ONLINE_UPI';
+  } else if (type === 'ADVANCE_200') {
+    const adv = Math.min(200, total);
+    if (advInput) advInput.value = adv;
+    if (balInput) balInput.value = Math.max(0, total - adv);
+    if (pStatusSelect) pStatusSelect.value = 'PARTIAL_PAID';
+    if (methodSelect) methodSelect.value = 'COD';
+  } else if (type === 'ZERO') {
+    if (advInput) advInput.value = 0;
+    if (balInput) balInput.value = total;
+    if (pStatusSelect) pStatusSelect.value = 'PENDING';
+    if (methodSelect) methodSelect.value = 'COD';
+  }
+  updateEditOrderPaymentQuickSummary();
+}
+window.setEditOrderPaymentQuick = setEditOrderPaymentQuick;
+
+function onEditOrderAdvanceChange(val) {
+  let total = 0;
+  EDIT_ORDER_ITEMS.forEach(it => {
+    total += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+  });
+  const adv = parseFloat(val) || 0;
+  const bal = Math.max(0, total - adv);
+  const balInput = document.getElementById('edit-order-cod-balance');
+  if (balInput) balInput.value = bal;
+
+  const pStatusSelect = document.getElementById('edit-order-payment-status');
+  if (pStatusSelect) {
+    if (adv >= total && total > 0) {
+      pStatusSelect.value = 'PAID';
+    } else if (adv > 0) {
+      pStatusSelect.value = 'PARTIAL_PAID';
+    } else {
+      pStatusSelect.value = 'PENDING';
+    }
+  }
+  updateEditOrderPaymentQuickSummary();
+}
+window.onEditOrderAdvanceChange = onEditOrderAdvanceChange;
+
+function onEditOrderPaymentMethodChange(userInitiated = false) {
+  const methodSelect = document.getElementById('edit-order-payment-method');
+  const pStatusSelect = document.getElementById('edit-order-payment-status');
+  const advInput = document.getElementById('edit-order-cod-advance');
+  const balInput = document.getElementById('edit-order-cod-balance');
+  if (!methodSelect) return;
+
+  if (userInitiated) {
+    let total = 0;
+    EDIT_ORDER_ITEMS.forEach(it => {
+      total += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+    });
+
+    if (methodSelect.value === 'COD') {
+      const adv = Math.min(200, total);
+      if (advInput) advInput.value = adv;
+      if (balInput) balInput.value = Math.max(0, total - adv);
+      if (pStatusSelect) pStatusSelect.value = 'PARTIAL_PAID';
+    } else if (methodSelect.value === 'ONLINE_UPI' || methodSelect.value === 'BANK_TRANSFER') {
+      if (advInput) advInput.value = total;
+      if (balInput) balInput.value = 0;
+      if (pStatusSelect) pStatusSelect.value = 'PAID';
+    }
+  }
+
+  updateEditOrderPaymentQuickSummary();
+}
+window.onEditOrderPaymentMethodChange = onEditOrderPaymentMethodChange;
 
 function deleteEditOrderItem(idx) {
   if (EDIT_ORDER_ITEMS.length <= 1) {
@@ -36849,28 +37081,6 @@ function addSelectedProductToEditOrder() {
   showToast('Item Added', `${product.name} added to order!`, 'check_circle', 'blue');
 }
 window.addSelectedProductToEditOrder = addSelectedProductToEditOrder;
-
-function onEditOrderPaymentMethodChange() {
-  const methodSelect = document.getElementById('edit-order-payment-method');
-  const codFields = document.getElementById('edit-order-cod-fields');
-  const pStatusSelect = document.getElementById('edit-order-payment-status');
-  if (!methodSelect) return;
-
-  const isCOD = methodSelect.value === 'COD';
-  if (codFields) {
-    if (isCOD) {
-      codFields.classList.remove('hidden');
-    } else {
-      codFields.classList.add('hidden');
-    }
-  }
-
-  if (pStatusSelect) {
-    pStatusSelect.value = isCOD ? 'PARTIAL_PAID (₹200 ADVANCE)' : 'PAID';
-  }
-}
-window.onEditOrderPaymentMethodChange = onEditOrderPaymentMethodChange;
-
 
 function confirmDeleteOrder(orderId) {
   const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
@@ -37044,17 +37254,20 @@ function saveEditedOrder() {
   CURRENT_EDIT_ORDER.shippingUrl = (urlInput?.value || '').trim();
   CURRENT_EDIT_ORDER.shipping_url = CURRENT_EDIT_ORDER.shippingUrl;
 
-  if (CURRENT_EDIT_ORDER.paymentMethod === 'COD') {
-    CURRENT_EDIT_ORDER.codAdvance = parseFloat(codAdvInput?.value || 200) || 200;
-    CURRENT_EDIT_ORDER.cod_advance = CURRENT_EDIT_ORDER.codAdvance;
-    CURRENT_EDIT_ORDER.codBalanceDue = parseFloat(codBalInput?.value || Math.max(0, grandTotal - CURRENT_EDIT_ORDER.codAdvance)) || 0;
-    CURRENT_EDIT_ORDER.cod_balance_due = CURRENT_EDIT_ORDER.codBalanceDue;
-  } else {
-    CURRENT_EDIT_ORDER.codAdvance = 0;
-    CURRENT_EDIT_ORDER.cod_advance = 0;
-    CURRENT_EDIT_ORDER.codBalanceDue = 0;
-    CURRENT_EDIT_ORDER.cod_balance_due = 0;
-  }
+  const advVal = parseFloat(codAdvInput?.value ?? 0) || 0;
+  const balVal = parseFloat(codBalInput?.value ?? 0) || 0;
+  const noteVal = (document.getElementById('edit-order-payment-note')?.value || '').trim();
+
+  CURRENT_EDIT_ORDER.paymentNote = noteVal;
+  CURRENT_EDIT_ORDER.payment_note = noteVal;
+  CURRENT_EDIT_ORDER.codAdvance = advVal;
+  CURRENT_EDIT_ORDER.cod_advance = advVal;
+  CURRENT_EDIT_ORDER.advancePayment = advVal;
+  CURRENT_EDIT_ORDER.advance_payment = advVal;
+  CURRENT_EDIT_ORDER.codBalanceDue = balVal;
+  CURRENT_EDIT_ORDER.cod_balance_due = balVal;
+  CURRENT_EDIT_ORDER.balanceAmount = balVal;
+  CURRENT_EDIT_ORDER.balance_amount = balVal;
 
   // Persist to MySQL
   fetch('api.php?action=save_order', {
@@ -37080,7 +37293,10 @@ function saveEditedOrder() {
       staffId: CURRENT_EDIT_ORDER.staffId,
       staffName: CURRENT_EDIT_ORDER.staffName,
       codAdvance: CURRENT_EDIT_ORDER.codAdvance,
+      advancePayment: CURRENT_EDIT_ORDER.advancePayment,
       codBalanceDue: CURRENT_EDIT_ORDER.codBalanceDue,
+      balanceAmount: CURRENT_EDIT_ORDER.balanceAmount,
+      paymentNote: CURRENT_EDIT_ORDER.paymentNote,
       isEditUpdate: true
     })
   }).catch(() => { });
