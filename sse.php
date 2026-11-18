@@ -298,6 +298,13 @@ while (true) {
                 }
             }
             if (!empty($waList)) {
+                $waList = array_values(array_filter($waList, function($a) {
+                    $slot = $a['account_slot'] ?? $a['id'] ?? '';
+                    $name = $a['display_name'] ?? ($a['label'] ?? '');
+                    if (in_array($slot, ['account_3', 'account_4', 'account_5']) || strpos($slot, 'account_1795') === 0) return false;
+                    if (strpos($name, 'Customer Support') !== false || strpos($name, 'Wholesale') !== false || strpos($name, 'VIP Fast-Track') !== false) return false;
+                    return true;
+                }));
                 $updatedAccounts = array_map(function($a) {
                     return [
                         'id' => $a['account_slot'] ?? $a['id'],

@@ -525,15 +525,14 @@ if ($action === 'get_state' || $action === 'get_all') {
         $waAccounts = [];
         if ($pdo) {
             try {
-                // Automatically purge legacy hardcoded demo placeholder slots (Lines 2-5) that are disconnected
+                // Permanently purge phantom slots (Lines 3, 4, 5 and account_1795...) from database
                 $pdo->exec("
                     DELETE FROM `whatsapp_accounts` 
-                    WHERE `status` != 'CONNECTED' 
-                      AND `account_slot` IN ('account_2', 'account_3', 'account_4', 'account_5')
-                      AND (`display_name` LIKE 'Line %: Blue Berry%' 
-                        OR `display_name` LIKE 'Line %: Customer Support%' 
-                        OR `display_name` LIKE 'Line %: Wholesale%' 
-                        OR `display_name` LIKE 'Line %: VIP Fast-Track%')
+                    WHERE `account_slot` IN ('account_3', 'account_4', 'account_5')
+                       OR `account_slot` LIKE 'account_1795%'
+                       OR `display_name` LIKE '%Customer Support%'
+                       OR `display_name` LIKE '%Wholesale%'
+                       OR `display_name` LIKE '%VIP Fast-Track%'
                 ");
                 $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` ORDER BY `id` ASC");
                 $waAccounts = $waStmt->fetchAll();
@@ -543,17 +542,17 @@ if ($action === 'get_state' || $action === 'get_all') {
         if (file_exists($configFile)) {
             $cfgData = json_decode(file_get_contents($configFile), true);
             if (!empty($cfgData['connected_lines']) && is_array($cfgData['connected_lines'])) {
-                // Filter out any legacy hardcoded placeholder cards that are disconnected
+                // Permanently purge phantom slots from json config
                 $cfgData['connected_lines'] = array_values(array_filter($cfgData['connected_lines'], function($line) {
+                    $id = $line['id'] ?? '';
                     $lbl = $line['label'] ?? '';
-                    $st = $line['status'] ?? '';
-                    if ($st !== 'CONNECTED' && in_array($line['id'] ?? '', ['account_2', 'account_3', 'account_4', 'account_5'])) {
-                        if (strpos($lbl, 'Line 2: Blue Berry') !== false ||
-                            strpos($lbl, 'Line 3: Customer Support') !== false ||
-                            strpos($lbl, 'Line 4: Wholesale') !== false ||
-                            strpos($lbl, 'Line 5: VIP Fast-Track') !== false) {
-                            return false;
-                        }
+                    if (in_array($id, ['account_3', 'account_4', 'account_5']) || strpos($id, 'account_1795') === 0) {
+                        return false;
+                    }
+                    if (strpos($lbl, 'Customer Support') !== false ||
+                        strpos($lbl, 'Wholesale') !== false ||
+                        strpos($lbl, 'VIP Fast-Track') !== false) {
+                        return false;
                     }
                     return true;
                 }));
@@ -599,6 +598,15 @@ if ($action === 'get_state' || $action === 'get_all') {
                 }
             }
         }
+
+        // Filter out any lingering phantom slots from output
+        $waAccounts = array_values(array_filter($waAccounts, function($wa) {
+            $slot = $wa['account_slot'] ?? $wa['id'] ?? '';
+            $name = $wa['display_name'] ?? ($wa['business_name'] ?? '');
+            if (in_array($slot, ['account_3', 'account_4', 'account_5']) || strpos($slot, 'account_1795') === 0) return false;
+            if (strpos($name, 'Customer Support') !== false || strpos($name, 'Wholesale') !== false || strpos($name, 'VIP Fast-Track') !== false) return false;
+            return true;
+        }));
 
         // Only ensure primary account slot is initialized if no accounts exist
         if (empty($waAccounts)) {
@@ -1714,6 +1722,18 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'status' => 'DISCONNECTED',
         'timestamp' => time()
     ]));
+
+    // Forward disconnect request directly to Baileys bridge to unlink session on mobile phone
+    try {
+        $ch = curl_init($bridgeUrl . '/api/accounts/disconnect');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['accountId' => $accountId]));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+        curl_exec($ch);
+        curl_close($ch);
+    } catch (Exception $e) {}
 
     echo json_encode(["status" => "success", "message" => "Account $accountId disconnected in backend. Customer records safely preserved."]);
     exit;

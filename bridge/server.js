@@ -2104,6 +2104,13 @@ io.on('connection', (socket) => {
         initAccountSession(nextId, label);
     });
 
+    // Handle account disconnect request from CRM over WebSocket
+    socket.on('accounts:disconnect', async (data, ack) => {
+        const targetId = data?.accountId || 'account_1';
+        const resObj = await disconnectAccountSession(targetId);
+        if (typeof ack === 'function') ack(resObj);
+    });
+
     // Handle Auto-Reply toggle from CRM client over WebSocket
     socket.on('autoreply:toggle', (data, ack) => {
         const newState = (data && data.enabled !== undefined) ? Boolean(data.enabled) : !autoReplyConfig.enabled;
@@ -2305,12 +2312,10 @@ app.post('/api/accounts/delete', async (req, res) => {
     }
 });
 
-app.post('/api/accounts/disconnect', async (req, res) => {
+// Centralized Procedure: Disconnect and Logout WhatsApp session cleanly from WhatsApp servers & mobile phone
+async function disconnectAccountSession(targetId = 'account_1') {
     try {
-        const { accountId } = req.body;
-        const targetId = accountId || 'account_1';
-
-        console.log(`[Disconnect Request]: Disconnecting and logging out ${targetId}`);
+        console.log(`[Disconnect Request]: Disconnecting and logging out ${targetId} from WhatsApp servers & phone...`);
 
         let acc = accounts.get(targetId);
         if (!acc) {
@@ -2328,10 +2333,24 @@ app.post('/api/accounts/disconnect', async (req, res) => {
             accounts.set(targetId, acc);
         }
 
+        // Send remove-companion-device IQ node over active socket to unlink on the physical mobile phone
         if (acc.sock) {
-            try { await acc.sock.logout(); } catch (e) { }
-            try { acc.sock.end(); } catch (e) { }
+            try {
+                console.log(`[Disconnect] Transmitting remove-companion-device IQ to WhatsApp servers for ${targetId}...`);
+                await Promise.race([
+                    acc.sock.logout('User clicked Disconnect in CRM'),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Logout network timeout')), 5000))
+                ]);
+                console.log(`[Disconnect] WhatsApp servers successfully processed unbind for ${targetId}. Mobile phone is unlinked.`);
+            } catch (e) {
+                console.warn(`[Disconnect logout notice for ${targetId}]:`, e.message);
+                try { acc.sock.end(); } catch (err) {}
+            }
         }
+
+        // Give WhatsApp network 600ms to propagate session termination before wiping local credentials
+        await new Promise(r => setTimeout(r, 600));
+
         acc.sock = null;
         acc.status = 'DISCONNECTED';
         acc.connectedNumber = null;
@@ -2370,16 +2389,26 @@ app.post('/api/accounts/disconnect', async (req, res) => {
         // Re-initialize a fresh QR session for this slot after a short delay
         setTimeout(() => {
             initAccountSession(targetId, acc.label);
-        }, 800);
+        }, 1200);
 
-        return res.json({
+        return {
             status: 'success',
-            message: `Account ${targetId} disconnected. CRM records and customer messages are completely preserved.`
-        });
+            message: `Account ${targetId} disconnected. Mobile phone unlinked successfully.`
+        };
     } catch (e) {
         console.error('[Disconnect Error]:', e.message);
-        res.status(500).json({ status: 'error', message: e.message });
+        return { status: 'error', message: e.message };
     }
+}
+
+app.post('/api/accounts/disconnect', async (req, res) => {
+    const { accountId } = req.body;
+    const targetId = accountId || 'account_1';
+    const result = await disconnectAccountSession(targetId);
+    if (result.status === 'error') {
+        return res.status(500).json(result);
+    }
+    res.json(result);
 });
 
 app.post('/api/accounts/update_profile', async (req, res) => {

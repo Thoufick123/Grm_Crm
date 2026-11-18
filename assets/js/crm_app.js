@@ -2749,15 +2749,42 @@ function broadcastWhatsAppSyncEvent(data) {
 }
 window.broadcastWhatsAppSyncEvent = broadcastWhatsAppSyncEvent;
 
+function isPhantomWhatsAppAccount(acc) {
+  if (!acc) return true;
+  const id = String(acc.id || acc.account_slot || '');
+  const label = String(acc.label || acc.name || acc.display_name || '');
+  if (id === 'account_3' || id === 'account_4' || id === 'account_5' || id.startsWith('account_1795')) {
+    return true;
+  }
+  if (label.includes('Customer Support') || label.includes('Wholesale & Bulk') || label.includes('VIP Fast-Track')) {
+    return true;
+  }
+  return false;
+}
+window.isPhantomWhatsAppAccount = isPhantomWhatsAppAccount;
+
 function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
   if (!Array.isArray(accounts) || accounts.length === 0) return;
+  // Strictly filter out phantom accounts (Lines 3, 4, 5 and account_1795...)
+  accounts = accounts.filter(a => !isPhantomWhatsAppAccount(a));
+
   MULTI_ACCOUNTS_STATE = accounts;
   if (!Array.isArray(CRM_STATE.whatsappLines)) {
     CRM_STATE.whatsappLines = [];
   }
+  // Purge any previously stored phantom lines
+  CRM_STATE.whatsappLines = CRM_STATE.whatsappLines.filter(a => !isPhantomWhatsAppAccount(a));
+
   accounts.forEach(acc => {
     let existing = CRM_STATE.whatsappLines.find(l => l.id === acc.id);
     if (existing) {
+      // Guard: Never demote an already CONNECTED account in CRM_STATE to DISCONNECTED
+      // if the incoming update has no phone number and is just a default unstarted slot from bridge!
+      if (existing.status === 'CONNECTED' && existing.connected_number && existing.connected_number !== 'Awaiting Link') {
+        if ((acc.status === 'DISCONNECTED' || acc.status === 'SCAN_QR') && !acc.phone && !acc.connected_number) {
+          return;
+        }
+      }
       existing.status = (acc.status || 'DISCONNECTED').toUpperCase();
       existing.connected_number = acc.phone || acc.connected_number || existing.connected_number;
       existing.qr_image = acc.qr_image || null;
@@ -3802,11 +3829,29 @@ function initCRMState() {
       if (cachedLines) {
         const parsedLines = JSON.parse(cachedLines);
         if (Array.isArray(parsedLines) && parsedLines.length > 0) {
-          CRM_STATE.whatsappLines = parsedLines;
-          MULTI_ACCOUNTS_STATE = parsedLines;
+          const cleanLines = parsedLines.filter(a => !isPhantomWhatsAppAccount(a));
+          CRM_STATE.whatsappLines = cleanLines;
+          MULTI_ACCOUNTS_STATE = cleanLines;
         }
       }
     } catch (e) {}
+  }
+
+  // Restore permanently deleted slots from localStorage
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const storedDeleted = localStorage.getItem('GRM_DELETED_SLOTS');
+      if (storedDeleted) {
+        CRM_STATE.deletedSlots = JSON.parse(storedDeleted);
+      }
+    } catch (e) {}
+  }
+  if (!Array.isArray(CRM_STATE.deletedSlots)) {
+    CRM_STATE.deletedSlots = [];
+  }
+
+  if (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' && isPhantomWhatsAppAccount({ id: ACTIVE_SEND_ACCOUNT_ID })) {
+    ACTIVE_SEND_ACCOUNT_ID = 'account_1';
   }
 
   if (!CRM_STATE.whatsappAccount) {
@@ -4020,6 +4065,9 @@ function getAvailableWhatsAppAccounts() {
       }
     });
   }
+
+  // Filter out any phantom accounts (Lines 3, 4, 5 and account_1795...)
+  accountsList = accountsList.filter(acc => !isPhantomWhatsAppAccount(acc));
 
   return accountsList;
 }
@@ -30523,8 +30571,18 @@ function deleteWhatsAppAccountSlot(accountId) {
         ACTIVE_SEND_ACCOUNT_ID = 'all';
       }
 
-      // 4. Save state
+      // 4. Save state & persist deleted slots to localStorage
       saveCRMState();
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('GRM_DELETED_SLOTS', JSON.stringify(CRM_STATE.deletedSlots));
+        } catch (e) {}
+      }
+      if (typeof sessionStorage !== 'undefined') {
+        try {
+          sessionStorage.setItem('GRM_WHATSAPP_LINES', JSON.stringify(CRM_STATE.whatsappLines));
+        } catch (e) {}
+      }
 
       // Broadcast to other tabs
       broadcastWhatsAppSyncEvent({
@@ -30620,7 +30678,7 @@ function disconnectWhatsAppAccount(accountId) {
         accounts: getAvailableWhatsAppAccounts()
       });
 
-      // 5. Send disconnect request to Baileys bridge
+      // 5. Send disconnect request to Baileys bridge via HTTP
       fetch(`${getBridgeBaseUrl()}/api/accounts/disconnect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -30628,16 +30686,23 @@ function disconnectWhatsAppAccount(accountId) {
       })
         .then(r => r.json())
         .then(res => {
-          showToast('WhatsApp Disconnected', `Session logged out. Fresh QR code is ready to scan.`, 'link_off', 'blue');
-          setTimeout(fetchQRBridgeStatus, 1000);
+          showToast('WhatsApp Disconnected', `Session logged out from phone. Fresh QR code is ready to scan.`, 'link_off', 'blue');
+          setTimeout(fetchQRBridgeStatus, 1200);
           setTimeout(fetchQRBridgeStatus, 2500);
         })
         .catch(() => {
-          showToast('Disconnected', 'Session reset and unlinked locally.', 'info', 'blue');
+          showToast('Disconnected', 'Session reset and unlinked.', 'info', 'blue');
           setTimeout(fetchQRBridgeStatus, 1500);
         });
 
-      // 6. Notify PHP backend API
+      // 6. Also emit over Socket.IO for immediate unbind on WhatsApp servers
+      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+        try {
+          SOCKET_IO.emit('accounts:disconnect', { accountId: targetId });
+        } catch (e) {}
+      }
+
+      // 7. Notify PHP backend API (which also server-side proxies the unbind command to bridge via cURL)
       fetch('api.php?action=disconnect_account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
