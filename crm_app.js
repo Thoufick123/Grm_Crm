@@ -6241,106 +6241,101 @@ function isAssignedToCurrentStaff(card, user) {
 window.isAssignedToCurrentStaff = isAssignedToCurrentStaff;
 
 /**
- * High-Precision Conversation Epoch Extractor
- * Accurately converts all message timestamps, customer last_message_at, query times,
- * and time strings (e.g. "02:36 PM", "12:31 PM") into comparable millisecond epochs.
- * Ensures the newest messages appear at the top and older ("first come") messages stay below.
+ * Accurate Conversation Sort Key Generator
+ * Bulletproof time-based sorting: parses the exact time displayed on each card
+ * (e.g. "03:43 PM", "02:46 PM") and date references into a comparable numeric sort key:
+ * YYYYMMDDHHMMSS (e.g. 20261119154300 for 03:43 PM, 20261119144600 for 02:46 PM).
+ * Strictly guarantees:
+ * - RECENT message comes FIRST (top of list)
+ * - PREVIOUS message goes to the BOTTOM
  */
 function extractConversationEpoch(lastMsgObj, cust, query, timeDisplay) {
-  let epoch = 0;
+  const rawStr = String(timeDisplay || lastMsgObj?.time || cust?.lastMessageAt || cust?.last_message_at || query?.createdAt || '').trim();
 
-  // 1. High-precision numeric timestamps from message object
-  if (lastMsgObj) {
-    if (typeof lastMsgObj.timestamp === 'number' && lastMsgObj.timestamp > 1e11) {
-      epoch = Math.max(epoch, lastMsgObj.timestamp);
-    } else if (typeof lastMsgObj.timestamp_epoch === 'number' && lastMsgObj.timestamp_epoch > 0) {
-      epoch = Math.max(epoch, lastMsgObj.timestamp_epoch > 1e11 ? lastMsgObj.timestamp_epoch : lastMsgObj.timestamp_epoch * 1000);
-    } else if (typeof lastMsgObj.timestamp === 'number' && lastMsgObj.timestamp > 0) {
-      epoch = Math.max(epoch, lastMsgObj.timestamp * 1000);
-    }
-    if (lastMsgObj.created_at) {
-      const p = Date.parse(String(lastMsgObj.created_at).replace(' ', 'T'));
-      if (!isNaN(p) && p > 1e11) epoch = Math.max(epoch, p);
-    }
-    if (typeof lastMsgObj.id === 'number' && lastMsgObj.id > 1e11) {
-      epoch = Math.max(epoch, lastMsgObj.id);
-    }
+  // 1. Extract hours, minutes, seconds from the visible time string (12-hour or 24-hour)
+  let hrs = 0;
+  let mins = 0;
+  let secs = 0;
+  let hasTime = false;
+
+  const timeMatch = rawStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?/i);
+  if (timeMatch) {
+    hasTime = true;
+    hrs = parseInt(timeMatch[1], 10);
+    mins = parseInt(timeMatch[2], 10);
+    secs = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
+    const ampm = timeMatch[4] ? timeMatch[4].toUpperCase() : null;
+    if (ampm === 'PM' && hrs < 12) hrs += 12;
+    if (ampm === 'AM' && hrs === 12) hrs = 0;
   }
 
-  // 2. High-precision timestamps from customer record
-  if (cust) {
-    const lastMsgAt = cust.lastMessageAt || cust.last_message_at;
-    if (lastMsgAt) {
-      if (typeof lastMsgAt === 'number' && lastMsgAt > 0) {
-        epoch = Math.max(epoch, lastMsgAt > 1e11 ? lastMsgAt : lastMsgAt * 1000);
-      } else if (typeof lastMsgAt === 'string') {
-        const p = Date.parse(lastMsgAt.replace(' ', 'T'));
-        if (!isNaN(p) && p > 1e11) epoch = Math.max(epoch, p);
+  // 2. Extract Year, Month, Day
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth() + 1;
+  let day = now.getDate();
+
+  // Check if rawStr contains date e.g. "2026-11-19" or "19/11/2026"
+  const dateMatchYMD = rawStr.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  const dateMatchDMY = rawStr.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+  if (dateMatchYMD) {
+    year = parseInt(dateMatchYMD[1], 10);
+    month = parseInt(dateMatchYMD[2], 10);
+    day = parseInt(dateMatchYMD[3], 10);
+  } else if (dateMatchDMY) {
+    day = parseInt(dateMatchDMY[1], 10);
+    month = parseInt(dateMatchDMY[2], 10);
+    year = parseInt(dateMatchDMY[3], 10);
+  } else if (/yesterday/i.test(rawStr)) {
+    const yest = new Date();
+    yest.setDate(yest.getDate() - 1);
+    year = yest.getFullYear();
+    month = yest.getMonth() + 1;
+    day = yest.getDate();
+  } else if (!hasTime) {
+    // Only check date references if no direct time string (like "03:43 PM") was present
+    const refDate = lastMsgObj?.created_at || cust?.last_message_at || cust?.lastMessageAt || query?.createdAt;
+    if (refDate && typeof refDate === 'string') {
+      const ym = refDate.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+      if (ym) {
+        year = parseInt(ym[1], 10);
+        month = parseInt(ym[2], 10);
+        day = parseInt(ym[3], 10);
       }
     }
-    if (typeof cust.lastTimeEpoch === 'number' && cust.lastTimeEpoch > 0) {
-      epoch = Math.max(epoch, cust.lastTimeEpoch > 1e11 ? cust.lastTimeEpoch : cust.lastTimeEpoch * 1000);
-    }
   }
 
-  // 3. Query record timestamps
-  if (query) {
-    if (typeof query.lastTimeEpoch === 'number' && query.lastTimeEpoch > 0) {
-      epoch = Math.max(epoch, query.lastTimeEpoch > 1e11 ? query.lastTimeEpoch : query.lastTimeEpoch * 1000);
+  // 3. Fallback: if no time was found in timeDisplay, try numeric timestamp from lastMsgObj, cust, or query
+  if (!hasTime) {
+    let fallbackMs = 0;
+    if (lastMsgObj) {
+      if (typeof lastMsgObj.timestamp === 'number' && lastMsgObj.timestamp > 1e11) fallbackMs = lastMsgObj.timestamp;
+      else if (typeof lastMsgObj.timestamp_epoch === 'number' && lastMsgObj.timestamp_epoch > 0) fallbackMs = lastMsgObj.timestamp_epoch * 1000;
     }
-    if (query.createdAt) {
-      const p = Date.parse(String(query.createdAt).replace(' ', 'T'));
-      if (!isNaN(p) && p > 1e11) epoch = Math.max(epoch, p);
+    if (!fallbackMs && cust) {
+      if (typeof cust.lastTimeEpoch === 'number' && cust.lastTimeEpoch > 0) fallbackMs = cust.lastTimeEpoch;
+      else if (cust.last_message_at) fallbackMs = Date.parse(String(cust.last_message_at).replace(' ', 'T'));
     }
-  }
+    if (!fallbackMs && query && typeof query.lastTimeEpoch === 'number') fallbackMs = query.lastTimeEpoch;
 
-  // 4. Time display string parsing (e.g. "02:36 PM", "12:31 PM", "Yesterday 04:15 PM")
-  const rawTimeStr = (timeDisplay || lastMsgObj?.time || cust?.lastMessageAt || cust?.last_message_at || query?.createdAt || '').trim();
-  if (rawTimeStr) {
-    const directDate = Date.parse(rawTimeStr.replace(' ', 'T'));
-    if (!isNaN(directDate) && directDate > 1e11) {
-      epoch = Math.max(epoch, directDate);
+    if (fallbackMs && Number.isFinite(fallbackMs) && fallbackMs > 0) {
+      const d = new Date(fallbackMs);
+      year = d.getFullYear();
+      month = d.getMonth() + 1;
+      day = d.getDate();
+      hrs = d.getHours();
+      mins = d.getMinutes();
+      secs = d.getSeconds();
     } else {
-      const timeMatch = rawTimeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?/i);
-      if (timeMatch) {
-        let hrs = parseInt(timeMatch[1], 10);
-        const mins = parseInt(timeMatch[2], 10);
-        const secs = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
-        const ampm = timeMatch[4] ? timeMatch[4].toUpperCase() : null;
-        if (ampm === 'PM' && hrs < 12) hrs += 12;
-        if (ampm === 'AM' && hrs === 12) hrs = 0;
-
-        const baseDate = new Date();
-        const refDateStr = cust?.last_message_at || cust?.created_at || lastMsgObj?.created_at || query?.createdAt;
-        if (refDateStr) {
-          const refParsed = Date.parse(String(refDateStr).replace(' ', 'T'));
-          if (!isNaN(refParsed) && refParsed > 0) {
-            const rObj = new Date(refParsed);
-            baseDate.setFullYear(rObj.getFullYear(), rObj.getMonth(), rObj.getDate());
-          }
-        }
-        if (/yesterday/i.test(rawTimeStr)) baseDate.setDate(baseDate.getDate() - 1);
-        baseDate.setHours(hrs, mins, secs, 0);
-        const parsedTimeEpoch = baseDate.getTime();
-        if (parsedTimeEpoch > 0) {
-          if (epoch === 0 || Math.abs(epoch - parsedTimeEpoch) > 3600000) {
-            epoch = Math.max(epoch, parsedTimeEpoch);
-          }
-        }
-      }
+      // No time and no fallback timestamp: Return 0 so contact is at the bottom
+      return 0;
     }
   }
 
-  // 5. Ultimate fallback to customer created_at so no card evaluates to NaN or 0
-  if (epoch === 0 && cust) {
-    const cCreated = cust.created_at || cust.createdAt;
-    if (cCreated) {
-      const p = Date.parse(String(cCreated).replace(' ', 'T'));
-      if (!isNaN(p) && p > 0) epoch = p;
-    }
-  }
-
-  return Number.isFinite(epoch) ? epoch : 0;
+  // Generate numeric sort key: YYYYMMDDHHMMSS (e.g. 20261119154300 for 03:43 PM, 20261119144600 for 02:46 PM)
+  const pad = (n, len = 2) => String(n).padStart(len, '0');
+  const sortKeyStr = `${pad(year, 4)}${pad(month)}${pad(day)}${pad(hrs)}${pad(mins)}${pad(secs)}`;
+  return Number(sortKeyStr) || 0;
 }
 window.extractConversationEpoch = extractConversationEpoch;
 
@@ -6570,6 +6565,13 @@ function renderInboxConversationList() {
     `;
     return;
   }
+
+  // Final Strict Time-based Alignment: RECENT MSG COME FIRST (top), PREVIOUS MSG AT BOTTOM
+  customerCards.sort((a, b) => {
+    const diff = (b.lastTimeEpoch || 0) - (a.lastTimeEpoch || 0);
+    if (diff !== 0) return diff;
+    return String(b.customerId || '').localeCompare(String(a.customerId || ''));
+  });
 
   // Ensure ACTIVE_CUSTOMER_ID strictly points to a visible conversation thread on desktop.
   // On mobile (< 768px), keep ACTIVE_CUSTOMER_ID null until user explicitly selects a customer so the list remains visible!
