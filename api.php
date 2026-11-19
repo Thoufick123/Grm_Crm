@@ -737,21 +737,31 @@ if ($action === 'get_state' || $action === 'get_all') {
         $isDashboardScope = ($scope === 'dashboard');
         $isSettingsScope = ($scope === 'settings' || $scope === 'whatsapp');
 
+        // DB Maintenance Rate-Limiting: Gate heavy schema and cleanup writes during GET read requests
+        $maintLockFile = sys_get_temp_dir() . '/.grm_crm_maint_lock';
+        $shouldRunDbMaintenance = (isset($_GET['heal']) && $_GET['heal'] === '1') ||
+            (!file_exists($maintLockFile) || (time() - @filemtime($maintLockFile) > 600));
+        if ($shouldRunDbMaintenance) {
+            @touch($maintLockFile);
+        }
+
         // 1. WhatsApp Account Config
         $waAccounts = [];
         if ($pdo) {
             try {
-                // High-speed check: only run DELETE if phantom slots actually exist
-                $checkPh = $pdo->query("SELECT 1 FROM `whatsapp_accounts` WHERE `account_slot` IN ('account_3', 'account_4', 'account_5') OR `account_slot` LIKE 'account_1795%' LIMIT 1")->fetchColumn();
-                if ($checkPh) {
-                    $pdo->exec("
-                        DELETE FROM `whatsapp_accounts` 
-                        WHERE `account_slot` IN ('account_3', 'account_4', 'account_5')
-                           OR `account_slot` LIKE 'account_1795%'
-                           OR `display_name` LIKE '%Customer Support%'
-                           OR `display_name` LIKE '%Wholesale%'
-                           OR `display_name` LIKE '%VIP Fast-Track%'
-                    ");
+                if ($shouldRunDbMaintenance) {
+                    // High-speed check: only run DELETE if phantom slots actually exist
+                    $checkPh = $pdo->query("SELECT 1 FROM `whatsapp_accounts` WHERE `account_slot` IN ('account_3', 'account_4', 'account_5') OR `account_slot` LIKE 'account_1795%' LIMIT 1")->fetchColumn();
+                    if ($checkPh) {
+                        $pdo->exec("
+                            DELETE FROM `whatsapp_accounts` 
+                            WHERE `account_slot` IN ('account_3', 'account_4', 'account_5')
+                               OR `account_slot` LIKE 'account_1795%'
+                               OR `display_name` LIKE '%Customer Support%'
+                               OR `display_name` LIKE '%Wholesale%'
+                               OR `display_name` LIKE '%VIP Fast-Track%'
+                        ");
+                    }
                 }
                 $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` ORDER BY `id` ASC");
                 $waAccounts = $waStmt->fetchAll();
@@ -871,20 +881,22 @@ if ($action === 'get_state' || $action === 'get_all') {
         if (file_exists($sharedLidFile)) {
             try {
                 $activeLidMappings = json_decode(file_get_contents($sharedLidFile), true) ?: [];
-                foreach ($activeLidMappings as $lidKey => $pnVal) {
-                    $cleanLid = preg_replace('/[^0-9]/', '', (string)$lidKey);
-                    $cleanPn = preg_replace('/[^0-9]/', '', (string)$pnVal);
-                    if (strlen($cleanLid) >= 14 && strlen($cleanPn) >= 10 && strlen($cleanPn) <= 13) {
-                        $pn10 = substr($cleanPn, -10);
-                        // Locate genuine customer profile
-                        $realCustStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
-                        $realCustStmt->execute(['cust_' . $pn10, "%$pn10", "%$pn10"]);
-                        $realCustId = $realCustStmt->fetchColumn();
-                        if ($realCustId) {
-                            mergeLidPlaceholderCustomer($pdo, $realCustId, $cleanLid);
-                            // Update last message of real customer
-                            $pdo->prepare("UPDATE `queries` SET `last_message` = COALESCE((SELECT COALESCE(`text`, `message_text`) FROM `messages` WHERE `customer_id` = ? ORDER BY `timestamp_epoch` DESC, `id` DESC LIMIT 1), `last_message`) WHERE `customer_id` = ?")->execute([$realCustId, $realCustId]);
-                            $pdo->prepare("UPDATE `customers` SET `last_message` = COALESCE((SELECT COALESCE(`text`, `message_text`) FROM `messages` WHERE `customer_id` = ? ORDER BY `timestamp_epoch` DESC, `id` DESC LIMIT 1), `last_message`), `last_message_at` = NOW() WHERE `id` = ?")->execute([$realCustId, $realCustId]);
+                if ($shouldRunDbMaintenance) {
+                    foreach ($activeLidMappings as $lidKey => $pnVal) {
+                        $cleanLid = preg_replace('/[^0-9]/', '', (string)$lidKey);
+                        $cleanPn = preg_replace('/[^0-9]/', '', (string)$pnVal);
+                        if (strlen($cleanLid) >= 14 && strlen($cleanPn) >= 10 && strlen($cleanPn) <= 13) {
+                            $pn10 = substr($cleanPn, -10);
+                            // Locate genuine customer profile
+                            $realCustStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
+                            $realCustStmt->execute(['cust_' . $pn10, "%$pn10", "%$pn10"]);
+                            $realCustId = $realCustStmt->fetchColumn();
+                            if ($realCustId) {
+                                mergeLidPlaceholderCustomer($pdo, $realCustId, $cleanLid);
+                                // Update last message of real customer
+                                $pdo->prepare("UPDATE `queries` SET `last_message` = COALESCE((SELECT COALESCE(`text`, `message_text`) FROM `messages` WHERE `customer_id` = ? ORDER BY `timestamp_epoch` DESC, `id` DESC LIMIT 1), `last_message`) WHERE `customer_id` = ?")->execute([$realCustId, $realCustId]);
+                                $pdo->prepare("UPDATE `customers` SET `last_message` = COALESCE((SELECT COALESCE(`text`, `message_text`) FROM `messages` WHERE `customer_id` = ? ORDER BY `timestamp_epoch` DESC, `id` DESC LIMIT 1), `last_message`), `last_message_at` = NOW() WHERE `id` = ?")->execute([$realCustId, $realCustId]);
+                            }
                         }
                     }
                 }
@@ -922,11 +934,13 @@ if ($action === 'get_state' || $action === 'get_all') {
 
         // 4. Customers
         // Self-heal legacy 11-digit customer IDs and companion device artifacts
-        try {
-            $pdo->exec("UPDATE `messages` SET `customer_id` = 'cust_8124038585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_id` LIKE '%85850'");
-            $pdo->exec("UPDATE `queries` SET `customer_id` = 'cust_8124038585', `customer_phone` = '+91 81240 38585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_phone` LIKE '%85850%'");
-            $pdo->exec("UPDATE `customers` SET `id` = 'cust_8124038585', `phone` = '+91 81240 38585', `whatsapp` = '+91 81240 38585' WHERE `id` IN ('cust_1240385850', 'cust_81240385850') OR `id` LIKE '%85850'");
-        } catch (Exception $eSelfHeal) {}
+        if ($shouldRunDbMaintenance) {
+            try {
+                $pdo->exec("UPDATE `messages` SET `customer_id` = 'cust_8124038585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_id` LIKE '%85850'");
+                $pdo->exec("UPDATE `queries` SET `customer_id` = 'cust_8124038585', `customer_phone` = '+91 81240 38585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_phone` LIKE '%85850%'");
+                $pdo->exec("UPDATE `customers` SET `id` = 'cust_8124038585', `phone` = '+91 81240 38585', `whatsapp` = '+91 81240 38585' WHERE `id` IN ('cust_1240385850', 'cust_81240385850') OR `id` LIKE '%85850'");
+            } catch (Exception $eSelfHeal) {}
+        }
 
         // Identify company business line phone numbers so they NEVER appear as customers
         $businessPhones10 = ['9943557998', '8124038585', '8668007593', '9789660115'];
@@ -941,12 +955,14 @@ if ($action === 'get_state' || $action === 'get_all') {
         $businessPhones10 = array_values(array_unique($businessPhones10));
 
         // Purge any accidental business records from customers and queries tables
-        try {
-            $delBizStmt = $pdo->prepare("DELETE FROM `customers` WHERE `id` LIKE '%8124038585%' OR `phone` LIKE '%8124038585%' OR `whatsapp` LIKE '%8124038585%' OR `name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
-            $delBizStmt->execute();
-            $delBizQStmt = $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` LIKE '%8124038585%' OR `customer_phone` LIKE '%8124038585%' OR `customer_name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
-            $delBizQStmt->execute();
-        } catch (Exception $ePurgeBiz) {}
+        if ($shouldRunDbMaintenance) {
+            try {
+                $delBizStmt = $pdo->prepare("DELETE FROM `customers` WHERE `id` LIKE '%8124038585%' OR `phone` LIKE '%8124038585%' OR `whatsapp` LIKE '%8124038585%' OR `name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
+                $delBizStmt->execute();
+                $delBizQStmt = $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` LIKE '%8124038585%' OR `customer_phone` LIKE '%8124038585%' OR `customer_name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
+                $delBizQStmt->execute();
+            } catch (Exception $ePurgeBiz) {}
+        }
 
         $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` ASC");
         $rawCustomers = $cStmt->fetchAll();
@@ -969,10 +985,12 @@ if ($action === 'get_state' || $action === 'get_all') {
             }
 
             if ($isBusiness) {
-                try {
-                    $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` = ?")->execute([$c['id']]);
-                    $pdo->prepare("DELETE FROM `customers` WHERE `id` = ?")->execute([$c['id']]);
-                } catch (Exception $eDelPh) {}
+                if ($shouldRunDbMaintenance) {
+                    try {
+                        $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` = ?")->execute([$c['id']]);
+                        $pdo->prepare("DELETE FROM `customers` WHERE `id` = ?")->execute([$c['id']]);
+                    } catch (Exception $eDelPh) {}
+                }
                 continue;
             }
 
@@ -997,10 +1015,12 @@ if ($action === 'get_state' || $action === 'get_all') {
             if (!empty($c['name']) && preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $c['name'])) {
                 $last4 = strlen($cleanDigits) >= 4 ? substr($cleanDigits, -4) : 'User';
                 $c['name'] = "Customer ($last4)";
-                try {
-                    $pdo->prepare("UPDATE `customers` SET `name` = ?, `phone` = ?, `whatsapp` = ? WHERE `id` = ?")->execute([$c['name'], $c['phone'], $c['whatsapp'], $c['id']]);
-                    $pdo->prepare("UPDATE `queries` SET `customer_name` = ?, `customer_phone` = ? WHERE `customer_id` = ?")->execute([$c['name'], $c['phone'], $c['id']]);
-                } catch (Exception $eUpdateCust) {}
+                if ($shouldRunDbMaintenance) {
+                    try {
+                        $pdo->prepare("UPDATE `customers` SET `name` = ?, `phone` = ?, `whatsapp` = ? WHERE `id` = ?")->execute([$c['name'], $c['phone'], $c['whatsapp'], $c['id']]);
+                        $pdo->prepare("UPDATE `queries` SET `customer_name` = ?, `customer_phone` = ? WHERE `customer_id` = ?")->execute([$c['name'], $c['phone'], $c['id']]);
+                    } catch (Exception $eUpdateCust) {}
+                }
             }
             $customers[] = $c;
         }
@@ -1020,9 +1040,11 @@ if ($action === 'get_state' || $action === 'get_all') {
                 }
             }
             if ($isBusinessQuery || ($q['customer_name'] ?? '') === 'GRM Garments') {
-                try {
-                    $pdo->prepare("DELETE FROM `queries` WHERE `id` = ?")->execute([$q['id']]);
-                } catch (Exception $eDelQ) {}
+                if ($shouldRunDbMaintenance) {
+                    try {
+                        $pdo->prepare("DELETE FROM `queries` WHERE `id` = ?")->execute([$q['id']]);
+                    } catch (Exception $eDelQ) {}
+                }
                 continue;
             }
 

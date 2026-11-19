@@ -6248,6 +6248,16 @@ function renderInboxConversationList() {
     }
   }
 
+  // Performance Guard: Skip full DOM regeneration if conversation list items haven't changed
+  const convListFp = `${INBOX_FILTER}#${searchQuery}#${ACTIVE_CUSTOMER_ID}#` +
+    customerCards.map(c => `${c.customerId}:${c.unreadCount}:${c.lastTime}:${c.status}:${c.assignedTo}`).join(';');
+
+  if (container._lastConvListFp === convListFp && !window._FORCE_CONV_LIST_RENDER) {
+    return;
+  }
+  container._lastConvListFp = convListFp;
+  window._FORCE_CONV_LIST_RENDER = false;
+
   container.innerHTML = customerCards.map(item => {
     const isSelected = item.customerId === ACTIVE_CUSTOMER_ID || String(item.customerId) === String(ACTIVE_CUSTOMER_ID);
     const isUnassigned = item.assignedTo === 'UNASSIGNED';
@@ -7016,6 +7026,11 @@ function renderChatMessages() {
   const t = window.t || ((k, f) => f || k);
 
   if (messages.length === 0) {
+    const emptyFp = `empty_${ACTIVE_CUSTOMER_ID}`;
+    if (stream._lastRenderedFingerprint === emptyFp && !window._FORCE_CHAT_RE_RENDER) {
+      return;
+    }
+    stream._lastRenderedFingerprint = emptyFp;
     stream.innerHTML = `
       <div class="h-full flex items-center justify-center text-center text-slate-400">
         <div>
@@ -7036,6 +7051,17 @@ function renderChatMessages() {
   const selSearch = (filter.search || '').trim().toLowerCase();
 
   const hasActiveFilter = (selCat !== 'ALL' || selSub !== 'ALL' || selSubsub !== 'ALL' || selSearch.length > 0);
+
+  // Performance Guard: Skip rebuilding chat stream DOM if active customer, message count, latest message and filter haven't changed
+  const lastMsg = messages[messages.length - 1];
+  const lastMsgKey = lastMsg ? `${lastMsg.id || lastMsg.message_uid}_${lastMsg.status}_${lastMsg.translated_audio_url ? 1 : 0}` : 'none';
+  const streamFingerprint = `${ACTIVE_CUSTOMER_ID}#${messages.length}#${lastMsgKey}#${selCat}#${selSub}#${selSubsub}#${selSearch}`;
+
+  if (stream._lastRenderedFingerprint === streamFingerprint && !window._FORCE_CHAT_RE_RENDER) {
+    return;
+  }
+  stream._lastRenderedFingerprint = streamFingerprint;
+  window._FORCE_CHAT_RE_RENDER = false;
 
   const matchingMsgIds = new Set();
   const matchingSkus = new Set();
