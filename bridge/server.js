@@ -1464,10 +1464,30 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                         // Deeply resolve WhatsApp Privacy LID to genuine phone number
                         if (originalLid) {
-                            const resolvedPn = await resolveLidToPhoneNumber(senderJid, sock, accountId);
-                            if (resolvedPn) {
-                                cleanNumber = resolvedPn;
-                                console.log(`[Inbound LID Resolved] Mapped ${originalLid} -> ${cleanNumber}`);
+                            // Check Baileys participantPn or direct participant fields
+                            let directPn = null;
+                            if (msg.key?.participantPn) directPn = msg.key.participantPn;
+                            else if (msg.participantPn) directPn = msg.participantPn;
+                            else if (msg.key?.participant && !msg.key.participant.includes('@lid')) directPn = msg.key.participant;
+                            else if (msg.participant && !msg.participant.includes('@lid')) directPn = msg.participant;
+
+                            if (directPn) {
+                                const pnDigits = directPn.split('@')[0].replace(/\D/g, '');
+                                if (pnDigits && pnDigits.length >= 10) {
+                                    cleanNumber = pnDigits;
+                                    LID_TO_PHONE_MAP.set(originalLid, pnDigits);
+                                    PHONE_TO_LID_MAP.set(pnDigits, originalLid);
+                                    saveLidMappingToDisk(originalLid, pnDigits, accountId);
+                                    console.log(`[Inbound Direct Participant PN Hit] Mapped ${originalLid} -> ${cleanNumber}`);
+                                }
+                            }
+
+                            if (cleanNumber === originalLid) {
+                                const resolvedPn = await resolveLidToPhoneNumber(senderJid, sock, accountId);
+                                if (resolvedPn) {
+                                    cleanNumber = resolvedPn;
+                                    console.log(`[Inbound LID Resolved] Mapped ${originalLid} -> ${cleanNumber}`);
+                                }
                             }
                         }
 
@@ -1479,15 +1499,19 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             digitsOnly = digitsOnly.slice(0, 10);
                         }
 
-                        if (digitsOnly.length === 10) {
+                        // Strict validation: Indian mobile numbers strictly start with [6-9]
+                        if (digitsOnly.length === 10 && /^[6-9]/.test(digitsOnly)) {
                             realPhone = '+91 ' + digitsOnly.slice(0, 5) + ' ' + digitsOnly.slice(5);
-                        } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+                        } else if (digitsOnly.length === 12 && /^91[6-9]/.test(digitsOnly)) {
                             realPhone = '+91 ' + digitsOnly.slice(2, 7) + ' ' + digitsOnly.slice(7);
+                        } else if (originalLid && cleanNumber === originalLid) {
+                            // Unresolved Privacy LID: Never format as an Indian mobile number!
+                            realPhone = null;
                         } else {
                             realPhone = '+' + cleanNumber;
                         }
 
-                        const senderNumber = realPhone || ('+' + cleanNumber);
+                        const senderNumber = realPhone || (originalLid ? null : ('+' + cleanNumber));
 
                         let resolvedSenderName = msg.pushName;
                         if (resolvedSenderName && /whatsapp business|primary line|primary whatsapp|line \d|account_\d/i.test(resolvedSenderName)) {
@@ -1502,7 +1526,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 }
                             }
                         }
-                        const senderName = resolvedSenderName || ('Customer ' + senderNumber.slice(-4));
+                        const senderName = resolvedSenderName || (senderNumber ? ('Customer ' + senderNumber.slice(-4)) : 'WhatsApp Customer');
 
                         // Store in JID Cache (Always map to standard @s.whatsapp.net for guaranteed outbound delivery)
                         if (LID_TO_PHONE_MAP.has(cleanNumber)) {
@@ -1688,8 +1712,41 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                         // WhatsApp Direct Bulk Price Request Approval / Rejection Interceptor
                         const cleanUpperMsg = (messageText || '').trim().toUpperCase();
-                        const isApproveCmd = cleanUpperMsg === '1' || cleanUpperMsg === 'APPROVE' || cleanUpperMsg.startsWith('APPROVE ') || cleanUpperMsg.startsWith('APPROVE:');
-                        const isRejectCmd = cleanUpperMsg.startsWith('2') || cleanUpperMsg === 'REJECT' || cleanUpperMsg.startsWith('REJECT ') || cleanUpperMsg.startsWith('REJECT:');
+
+                        // 1. Guard against garment sizes, measurements, product quantities (e.g. "2xl", "2XL", "2 pieces", "1 pc", "20", "2 meters")
+                        const isGarmentSpecOrQty = /^\d+\s*(?:XL|XXL|XXXL|XS|S|M|L|PCS?|PIECES?|METERS?|MTRS?|M|KG|COMBO|SET|DRESS|SAREE|COLOR|COLOUR|INCH)\b/i.test(cleanUpperMsg) ||
+                                                   /^\d+[A-Z]/i.test(cleanUpperMsg);
+
+                        // 2. Resolve sender identity: strictly ensure sender is an authorized Admin!
+                        const senderDigits10 = String(cleanNumber || senderNumber || senderJid || '').replace(/\D/g, '').slice(-10);
+                        const connectedDigits10 = String(accountObj.connectedNumber || '').replace(/\D/g, '').slice(-10);
+                        const authorizedAdminSet = new Set(['9943557998', '8124038585', '9789660115', '8668007593']);
+                        if (connectedDigits10 && connectedDigits10.length === 10) authorizedAdminSet.add(connectedDigits10);
+                        if (typeof configFilePath !== 'undefined' && fs.existsSync(configFilePath)) {
+                            try {
+                                const rawCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+                                const p = (rawCfg.phone_number || '').replace(/\D/g, '').slice(-10);
+                                if (p.length === 10) authorizedAdminSet.add(p);
+                            } catch (eCfg) {}
+                        }
+                        const isSenderAdmin = authorizedAdminSet.has(senderDigits10) || msg.key?.fromMe === true;
+
+                        // 3. Strict Command Matching (Never loosely check startsWith('2')!)
+                        const isApproveCmd = !isGarmentSpecOrQty && isSenderAdmin && (
+                            cleanUpperMsg === '1' ||
+                            cleanUpperMsg === 'APPROVE' ||
+                            /^APPROVE(?:\s+BPR-\d+|\s+\d+)?$/i.test(cleanUpperMsg) ||
+                            /^APPROVE:\s*(?:BPR-\d+|\d+)?$/i.test(cleanUpperMsg) ||
+                            /^ACCEPT(?:\s+BPR-\d+|\s+\d+)?$/i.test(cleanUpperMsg)
+                        );
+                        const isRejectCmd = !isGarmentSpecOrQty && isSenderAdmin && (
+                            cleanUpperMsg === '2' ||
+                            /^2\s+[A-Za-z0-9]/.test(cleanUpperMsg) ||
+                            cleanUpperMsg === 'REJECT' ||
+                            /^REJECT(?:\s+BPR-\d+)?(?:\s+.*)?$/i.test(cleanUpperMsg) ||
+                            /^REJECT:\s*(?:BPR-\d+)?(?:\s+.*)?$/i.test(cleanUpperMsg) ||
+                            /^DECLINE(?:\s+BPR-\d+)?(?:\s+.*)?$/i.test(cleanUpperMsg)
+                        );
 
                         if (isApproveCmd || isRejectCmd) {
                             const codeMatch = messageText.match(/BPR-\d+/i);
@@ -1736,9 +1793,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     // Send to WhatsApp chat only if not already dispatched by API (prevents duplicate messages)
                                     const alreadyDispatched = d && d.wa_dispatch && d.wa_dispatch.dispatched_by_api === true;
                                     if (!alreadyDispatched) {
-                                        // Send to Admin in same chat
-                                        await sock.sendMessage(replyTargetJid, { text: confirmText });
-                                        console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to ${replyTargetJid}`);
+                                        // Send to Admin in same chat ONLY if reply target belongs to an authorized admin
+                                        const replyTarget10 = String(replyTargetJid || '').replace(/\D/g, '').slice(-10);
+                                        if (authorizedAdminSet.has(replyTarget10)) {
+                                            await sock.sendMessage(replyTargetJid, { text: confirmText });
+                                            console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to Admin ${replyTargetJid}`);
+                                        }
 
                                         // Send to Staff WhatsApp inbox only if staff is a different person from sender (prevents duplicate messages)
                                         const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);
@@ -1815,9 +1875,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     // Send to WhatsApp chat only if not already dispatched by API (prevents duplicate messages)
                                     const alreadyDispatched = d && d.wa_dispatch && d.wa_dispatch.dispatched_by_api === true;
                                     if (!alreadyDispatched) {
-                                        // Send to Admin in same chat
-                                        await sock.sendMessage(replyTargetJid, { text: rejectText });
-                                        console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to ${replyTargetJid}`);
+                                        // Send to Admin in same chat ONLY if reply target belongs to an authorized admin
+                                        const replyTarget10 = String(replyTargetJid || '').replace(/\D/g, '').slice(-10);
+                                        if (authorizedAdminSet.has(replyTarget10)) {
+                                            await sock.sendMessage(replyTargetJid, { text: rejectText });
+                                            console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to Admin ${replyTargetJid}`);
+                                        }
 
                                         // Send to Staff's WhatsApp inbox only if staff is a different person from sender (prevents duplicate messages)
                                         const staffPhone = r.staff_phone || (d && d.wa_dispatch && d.wa_dispatch.staff_phone);

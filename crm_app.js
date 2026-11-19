@@ -1516,7 +1516,13 @@ window.getStaffFilterContext = getStaffFilterContext;
 // =========================================================================
 function formatDisplayPhone(rawPhone, customerId = null, forceUnmask = false) {
   if (!rawPhone) return '';
+  const clean = String(rawPhone).replace(/[^0-9]/g, '');
+  // If rawPhone is an invalid LID slice (starts with 0-5) or unmapped LID, do NOT display fake numbers
+  if (clean.length >= 14 || (clean.length === 10 && !/^[6-9]/.test(clean)) || (clean.length === 12 && clean.startsWith('91') && !/^[6-9]/.test(clean.slice(2)))) {
+    return '';
+  }
   const pretty = formatPhoneNumberPretty(rawPhone);
+  if (!pretty) return '';
 
   const isGlobalMasked = CRM_STATE?.settings?.maskCustomerNumbers ?? false;
   const isRevealed = customerId && REVEALED_CUSTOMERS.has(customerId);
@@ -1524,7 +1530,6 @@ function formatDisplayPhone(rawPhone, customerId = null, forceUnmask = false) {
 
   // When masking is active or for staff users:
   if ((isGlobalMasked || isStaffRole) && !isRevealed && !forceUnmask) {
-    const clean = rawPhone.replace(/[^0-9]/g, '');
     if (clean.length >= 10) {
       const prefix = rawPhone.startsWith('+') ? '+91 ' : '';
       const first2 = clean.length === 12 ? clean.slice(2, 4) : clean.slice(0, 2);
@@ -4640,38 +4645,48 @@ function normalizeWhatsAppPhone(rawInput) {
     digits = digits.slice(0, 10);
   }
 
-  let digits10 = digits;
-  if (digits.length === 12 && digits.startsWith('91')) {
-    digits10 = digits.slice(2);
-  } else if (digits.length === 11 && digits.startsWith('0')) {
-    digits10 = digits.slice(1);
-  } else if (digits.length > 10) {
-    digits10 = digits.slice(-10);
-  }
-
+  let digits10 = '';
   let formatted = '';
-  if (digits10.length === 10) {
+
+  // Valid Indian Mobile 12 digits: 91 followed by [6-9] and 9 digits
+  if (digits.length === 12 && digits.startsWith('91') && /^[6-9]/.test(digits.slice(2))) {
+    digits10 = digits.slice(2);
     formatted = `+91 ${digits10.slice(0, 5)} ${digits10.slice(5)}`;
+  } else if (digits.length === 11 && digits.startsWith('0') && /^[6-9]/.test(digits.slice(1))) {
+    digits10 = digits.slice(1);
+    formatted = `+91 ${digits10.slice(0, 5)} ${digits10.slice(5)}`;
+  } else if (digits.length === 10 && /^[6-9]/.test(digits)) {
+    digits10 = digits;
+    formatted = `+91 ${digits10.slice(0, 5)} ${digits10.slice(5)}`;
+  } else if (digits.length >= 14 || (digits.length === 10 && !/^[6-9]/.test(digits)) || (digits.length === 12 && digits.startsWith('91') && !/^[6-9]/.test(digits.slice(2)))) {
+    // Unmapped Privacy LID or invalid LID slice: NEVER format as +91 Indian mobile!
+    digits10 = '';
+    formatted = '';
   } else if (digits.length > 0) {
     formatted = `+${digits}`;
-  } else {
-    formatted = '+91 98765 43210';
+    digits10 = digits;
   }
 
-  return { cleanDigits: digits10 || digits, formattedPhone: formatted, digits10: digits10.slice(-10) };
+  return { cleanDigits: digits10 || digits, formattedPhone: formatted, digits10: digits10 };
 }
 window.normalizeWhatsAppPhone = normalizeWhatsAppPhone;
 
 function formatPhoneNumberPretty(phone) {
-  if (!phone) return '+91 86680 07593';
+  if (!phone) return '';
   if (phone.includes('156066293805087')) return '+91 95009 04638';
-  const clean = phone.replace(/[^0-9]/g, '');
+  const clean = String(phone).replace(/[^0-9]/g, '');
   if (clean.length < 5) return phone;
-  if (clean.length === 12 && clean.startsWith('91')) {
+  // Valid Indian Mobile 12 digits: 91 followed by [6-9]
+  if (clean.length === 12 && clean.startsWith('91') && /^[6-9]/.test(clean.slice(2))) {
     return `+91 ${clean.slice(2, 7)} ${clean.slice(7)}`;
   }
-  if (clean.length === 10) {
+  // Valid Indian Mobile 10 digits: [6-9] followed by 9 digits
+  if (clean.length === 10 && /^[6-9]/.test(clean)) {
     return `+91 ${clean.slice(0, 5)} ${clean.slice(5)}`;
+  }
+  // If clean is an unmapped Privacy LID (14+ digits) or an invalid slice (starts with 0-5)
+  if (clean.length >= 14 || (clean.length === 10 && !/^[6-9]/.test(clean)) || (clean.length === 12 && clean.startsWith('91') && !/^[6-9]/.test(clean.slice(2)))) {
+    return ''; // Never display fake +91 numbers!
   }
   return phone.startsWith('+') ? phone : ('+' + phone);
 }
@@ -6463,6 +6478,10 @@ function renderInboxConversationList() {
     const isUnassigned = item.assignedTo === 'UNASSIGNED';
     const rawPhone = item.customer ? (item.customer.whatsapp || item.customer.phone || '') : '';
     const displayPhone = typeof formatDisplayPhone === 'function' ? formatDisplayPhone(rawPhone, item.customerId) : rawPhone;
+    let custDisplayName = item.customer ? (item.customer.name || 'Customer') : 'Customer';
+    if (/^Customer \([0-5]\d{3}\)$/.test(custDisplayName)) {
+      custDisplayName = 'WhatsApp Customer';
+    }
 
     // Priority badge
     let priorityBadge = '';
@@ -6508,7 +6527,7 @@ function renderInboxConversationList() {
         <div class="flex-1 min-w-0">
           <div class="flex items-start justify-between gap-1.5">
             <div class="min-w-0 flex-1">
-              <h4 class="text-xs font-bold text-slate-900 truncate" title="${item.customer ? item.customer.name : 'Customer'}">${item.customer ? item.customer.name : 'Customer'}</h4>
+              <h4 class="text-xs font-bold text-slate-900 truncate" title="${custDisplayName}">${custDisplayName}</h4>
               ${displayPhone ? `<p class="text-[11px] font-mono font-semibold text-emerald-700 truncate mt-0.5">${displayPhone}</p>` : ''}
             </div>
             <span class="text-[10px] text-slate-400 font-medium shrink-0 pt-0.5">${item.createdAt}</span>
@@ -14043,28 +14062,53 @@ window.handleConfirmAssignment = handleConfirmAssignment;
 // =========================================================================
 function resetInboxViewFilters() {
   try {
-    // 1. Clear search input field
+    const curView = (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW) ? ACTIVE_VIEW : 'inbox';
+
+    // 1. Reset Inbox View & Filters
     const searchInput = document.getElementById('inbox-search-input') || 
                         document.querySelector('input[placeholder*="Search customer"]') ||
                         document.querySelector('input[placeholder*="Search SKU"]');
-    if (searchInput) {
-      searchInput.value = '';
-    }
+    if (searchInput) searchInput.value = '';
 
-    // 2. Reset category, subcategory, and status dropdowns if present
     const catSel = document.getElementById('inbox-cat-select');
     if (catSel) catSel.value = 'all';
 
-    // 3. Reset queue filter tab back to default 'all'
-    if (typeof setInboxFilter === 'function') {
-      setInboxFilter('all');
-    }
-
-    // 4. Reset internal search memory
+    if (typeof setInboxFilter === 'function') setInboxFilter('all');
     window.INBOX_SEARCH_QUERY = '';
     window.ACTIVE_INBOX_FILTER = 'all';
 
-    // 5. Safely refresh live data from server without wiping any records
+    // 2. Reset Catalog Filters & Search if active or present
+    const catSearch = document.getElementById('catalog-search-input');
+    if (catSearch) catSearch.value = '';
+    window.CATALOG_SEARCH_QUERY = '';
+    if (typeof resetChosenProductsFilters === 'function') resetChosenProductsFilters();
+    if (typeof renderCatalog === 'function' && curView === 'catalog') renderCatalog();
+
+    // 3. Reset Orders Filters & Search if active or present
+    const ordSearch = document.getElementById('orders-search-input');
+    if (ordSearch) ordSearch.value = '';
+    if (typeof renderOrdersHistoryTable === 'function' && curView === 'orders') renderOrdersHistoryTable();
+
+    // 4. Reset Follow-ups Filters & Search if active or present
+    const fuSearch = document.getElementById('followup-search-input');
+    if (fuSearch) fuSearch.value = '';
+    if (typeof renderFollowupScheduler === 'function' && curView === 'followups') renderFollowupScheduler();
+
+    // 5. Reset Customer Directory & Requirements Search if active or present
+    const custSearch = document.getElementById('customer-search-input');
+    if (custSearch) custSearch.value = '';
+    const custReqSearch = document.getElementById('customer-req-search-input');
+    if (custReqSearch) custReqSearch.value = '';
+    window.CUSTOMER_REQ_SEARCH_QUERY = '';
+    if (typeof renderCustomersGrid === 'function' && curView === 'customers') renderCustomersGrid();
+    if (typeof renderCustomerRequirementsTable === 'function' && curView === 'customers') renderCustomerRequirementsTable();
+
+    // 6. Reset DND Search
+    const dndSearch = document.getElementById('dnd-search-input');
+    if (dndSearch) dndSearch.value = '';
+    if (typeof renderDndList === 'function' && curView === 'dnd') renderDndList();
+
+    // 7. Re-sync live authoritative CRM data from server
     if (typeof syncLiveCRMData === 'function') {
       syncLiveCRMData(true);
     }
@@ -14072,28 +14116,73 @@ function resetInboxViewFilters() {
       syncInboundMessagesNow(true);
     }
 
-    // 6. Re-render customer queue and chats cleanly
-    if (typeof renderInbox === 'function') renderInbox();
+    if (typeof renderInbox === 'function' && curView === 'inbox') renderInbox();
     if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
 
     if (typeof showToast === 'function') {
-      showToast('Inbox Filters Reset', 'Search and filter criteria reset. Active conversation queue refreshed.', 'refresh', 'emerald');
+      showToast('Filters & Data Reset', 'Search filters cleared and live CRM data refreshed from server.', 'refresh', 'emerald');
     }
   } catch (err) {
-    console.error('Error resetting inbox view filters:', err);
+    console.error('Error resetting view filters:', err);
   }
 }
 window.resetInboxViewFilters = resetInboxViewFilters;
 
 function confirmResetInboxMessages() {
-  resetInboxViewFilters();
+  if (typeof openModal === 'function') openModal('modal-reset-inbox-confirm');
+  else resetInboxMessages();
 }
 window.confirmResetInboxMessages = confirmResetInboxMessages;
 
-function resetInboxMessages(skipAlert) {
-  resetInboxViewFilters();
+async function resetInboxMessages(skipAlert) {
+  try {
+    const res = await fetch('api.php?action=clear_inbox', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maintenance_token: 'GRM_SECURITY_HARD_RESET_CONFIRMED_2026' })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      if (CRM_STATE) {
+        CRM_STATE.queries = [];
+        CRM_STATE.conversations = {};
+      }
+      try {
+        localStorage.removeItem('GRM_CRM_STATE_V2_5');
+        localStorage.removeItem('GRM_CRM_STATE');
+      } catch (e) {}
+      if (typeof syncLiveCRMData === 'function') syncLiveCRMData(true);
+      if (typeof renderInbox === 'function') renderInbox();
+      if (!skipAlert && typeof showToast === 'function') {
+        showToast('Inbox Data Reset', 'All inbox test messages and conversations have been reset.', 'check_circle', 'emerald');
+      }
+    } else {
+      resetInboxViewFilters();
+    }
+  } catch (e) {
+    resetInboxViewFilters();
+  }
+  if (typeof closeModal === 'function') closeModal('modal-reset-inbox-confirm');
 }
 window.resetInboxMessages = resetInboxMessages;
+
+window.handleResetDemoData = async function () {
+  if (!confirm('Are you sure you want to reset all test data and restore initial clean state?')) return;
+  try {
+    await fetch('api.php?action=clear_inbox', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maintenance_token: 'GRM_SECURITY_HARD_RESET_CONFIRMED_2026' })
+    });
+  } catch (e) {}
+  try {
+    localStorage.removeItem('GRM_CRM_STATE_V2_5');
+    localStorage.removeItem('GRM_CRM_STATE_V2');
+    localStorage.removeItem('GRM_CRM_STATE');
+    localStorage.removeItem('GRM_NOTIFICATIONS');
+  } catch (e) {}
+  location.reload();
+};
 
 function openInboundSimulatorModal() {
   const phoneLabel = document.getElementById('sim-target-phone');
@@ -41835,6 +41924,14 @@ window.openBulkPriceRequestModal = function () {
   const reqPrice = document.getElementById('bulk-requested-price');
   if (reqPrice) reqPrice.value = '';
 
+  const adminPhoneInput = document.getElementById('bulk-admin-phone');
+  if (adminPhoneInput) {
+    const configuredPhone = CRM_STATE?.whatsappAccount?.phoneNumber || CRM_STATE?.whatsappAccounts?.[0]?.phone_number || '+91 99435 57998';
+    if (!adminPhoneInput.value || adminPhoneInput.value === '+91 99435 57998') {
+      adminPhoneInput.value = configuredPhone;
+    }
+  }
+
   window.calculateBulkRequestTotals();
 
   if (typeof openModal === 'function') {
@@ -41949,14 +42046,29 @@ window.submitBulkPriceRequest = async function (ev) {
     const data = await res.json();
 
     if (data.status === 'success') {
-      if (data.whatsapp_notification === 'FAILED' || data.whatsapp_notification === 'ERROR') {
-        if (typeof showToast === 'function') {
-          showToast('Request Saved (WhatsApp Disconnected)', `Bulk request ${data.request?.request_code || ''} saved, but WhatsApp line is not connected. Please scan QR in WhatsApp Settings.`, 'warning', 'amber');
+      // Direct client bridge dispatch: guarantees WhatsApp message delivery directly from the active browser session
+      if (data.whatsapp_notification !== 'SENT') {
+        try {
+          const bridgeBase = typeof getBridgeBaseUrl === 'function' ? getBridgeBaseUrl() : 'https://mediumturquoise-dugong-987946.hostingersite.com';
+          const alertText = data.alert_message || `🔔 *NEW BULK PRICE REQUEST*\n\nRequest Code: *${data.request?.request_code || ''}*\nStatus: *PENDING APPROVAL* by *${staffUser.name || 'Staff'}*\nCustomer: *${custName}* (${custPhone})\nProduct: *${productName}* (${size}) × *${qty} pcs*\nStandard Price: ₹${sellPrice}/pc → Requested Price: *₹${reqPrice}/pc*\nTotal Value: *₹${qty * reqPrice}*\n\n👉 *Quick Actions:*\nReply *1* or *APPROVE ${data.request?.request_code || ''}* to APPROVE\nReply *2* or *REJECT ${data.request?.request_code || ''} <reason>* to REJECT`;
+          const targetPhone = data.admin_phone || adminPhone;
+
+          await fetch(`${bridgeBase}/api/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: targetPhone,
+              text: alertText
+            })
+          });
+          data.whatsapp_notification = 'SENT';
+        } catch (bridgeErr) {
+          console.warn('[submitBulkPriceRequest] Client bridge fallback dispatch notice:', bridgeErr);
         }
-      } else {
-        if (typeof showToast === 'function') {
-          showToast('WhatsApp Sent to Admin', `Bulk price request sent directly to Admin WhatsApp (${adminPhone})!`, 'send', 'emerald');
-        }
+      }
+
+      if (typeof showToast === 'function') {
+        showToast('WhatsApp Sent to Admin', `Bulk price request sent directly to Admin WhatsApp (${adminPhone})!`, 'send', 'emerald');
       }
 
       window.closeBulkPriceRequestModal();

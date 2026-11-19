@@ -106,7 +106,7 @@ function mergeLidPlaceholderCustomer($pdo, $realCustId, $lidDigits) {
  * Strips device IDs (:0, :1), domain (@s.whatsapp.net), solves trailing 0 artifacts, and formats canonical +91 phone
  */
 function cleanWhatsAppPhone($rawInput) {
-    if (empty($rawInput)) return ['clean10' => '', 'formatted' => '+91 98765 43210', 'digits' => ''];
+    if (empty($rawInput)) return ['clean10' => '', 'formatted' => '', 'digits' => ''];
     $str = trim((string)$rawInput);
     if (strpos($str, '@') !== false) {
         $str = explode('@', $str)[0];
@@ -131,22 +131,33 @@ function cleanWhatsAppPhone($rawInput) {
         $digits = substr($digits, 0, 10);
     }
 
-    $clean10 = $digits;
-    if (strlen($digits) === 12 && strpos($digits, '91') === 0) {
-        $clean10 = substr($digits, 2);
-    } else if (strlen($digits) === 11 && strpos($digits, '0') === 0) {
-        $clean10 = substr($digits, 1);
-    } else if (strlen($digits) > 10) {
-        $clean10 = substr($digits, -10);
-    }
-
+    $clean10 = '';
     $formatted = '';
-    if (strlen($clean10) === 10) {
+
+    // Valid Indian Mobile 12-digit format: 91 followed by [6-9] and 9 digits
+    if (strlen($digits) === 12 && strpos($digits, '91') === 0 && preg_match('/^[6-9]/', substr($digits, 2))) {
+        $clean10 = substr($digits, 2);
         $formatted = '+91 ' . substr($clean10, 0, 5) . ' ' . substr($clean10, 5);
-    } else if (!empty($digits)) {
+    }
+    // Valid Indian Mobile 11-digit format: 0 followed by [6-9] and 9 digits
+    else if (strlen($digits) === 11 && strpos($digits, '0') === 0 && preg_match('/^[6-9]/', substr($digits, 1))) {
+        $clean10 = substr($digits, 1);
+        $formatted = '+91 ' . substr($clean10, 0, 5) . ' ' . substr($clean10, 5);
+    }
+    // Valid Indian Mobile 10-digit format: strictly [6-9] followed by 9 digits
+    else if (strlen($digits) === 10 && preg_match('/^[6-9]/', $digits)) {
+        $clean10 = $digits;
+        $formatted = '+91 ' . substr($clean10, 0, 5) . ' ' . substr($clean10, 5);
+    }
+    // If it is 14+ digits (an unmapped Privacy LID) or 10 digits starting with [0-5] (an LID slice)
+    else if (strlen($digits) >= 14 || (strlen($digits) === 10 && !preg_match('/^[6-9]/', $digits))) {
+        // Unmapped LID or invalid LID slice: NEVER format as +91 Indian mobile!
+        $clean10 = '';
+        $formatted = '';
+    }
+    else if (!empty($digits)) {
         $formatted = '+' . $digits;
-    } else {
-        $formatted = '+91 98765 43210';
+        $clean10 = $digits;
     }
 
     return [
@@ -514,7 +525,16 @@ function getEffectiveBridgeUrl() {
         $resolved = 'http://127.0.0.1:3000';
         return $resolved;
     }
-    $resolved = defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000';
+    // Read bridge_url from whatsapp_account_config.json if configured
+    $cfgPath = __DIR__ . '/whatsapp_account_config.json';
+    if (file_exists($cfgPath)) {
+        $cfgJson = @json_decode(file_get_contents($cfgPath), true);
+        if (!empty($cfgJson['bridge_url']) && strpos($cfgJson['bridge_url'], 'http') === 0) {
+            $resolved = rtrim($cfgJson['bridge_url'], '/');
+            return $resolved;
+        }
+    }
+    $resolved = (defined('BRIDGE_URL') && BRIDGE_URL !== 'http://localhost:3000') ? BRIDGE_URL : 'https://mediumturquoise-dugong-987946.hostingersite.com';
     return $resolved;
 }
 
@@ -964,6 +984,39 @@ if ($action === 'get_state' || $action === 'get_all') {
                 $pdo->exec("UPDATE `messages` SET `customer_id` = 'cust_8124038585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_id` LIKE '%85850'");
                 $pdo->exec("UPDATE `queries` SET `customer_id` = 'cust_8124038585', `customer_phone` = '+91 81240 38585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_phone` LIKE '%85850%'");
                 $pdo->exec("UPDATE `customers` SET `id` = 'cust_8124038585', `phone` = '+91 81240 38585', `whatsapp` = '+91 81240 38585' WHERE `id` IN ('cust_1240385850', 'cust_81240385850') OR `id` LIKE '%85850'");
+
+                // Self-heal fake +91 [0-5] numbers caused by legacy Privacy LID 10-digit slicing bug
+                $fakeCustStmt = $pdo->query("SELECT `id`, `name`, `phone`, `whatsapp` FROM `customers` WHERE `phone` REGEXP '^\\\\+?91[[:space:]]?[0-5]' OR `whatsapp` REGEXP '^\\\\+?91[[:space:]]?[0-5]'");
+                $fakeCusts = $fakeCustStmt ? $fakeCustStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+                foreach ($fakeCusts as $fc) {
+                    $realPhone = null;
+                    // Attempt recovery from genuine sender_phone or sender_jid in messages table
+                    $mStmt = $pdo->prepare("SELECT `sender_phone`, `sender_jid` FROM `messages` WHERE `customer_id` = ? AND `sender_phone` IS NOT NULL AND `sender_phone` != '' ORDER BY `id` DESC LIMIT 10");
+                    $mStmt->execute([$fc['id']]);
+                    foreach ($mStmt->fetchAll(PDO::FETCH_ASSOC) as $mRow) {
+                        $pClean = preg_replace('/[^0-9]/', '', $mRow['sender_phone'] ?? '');
+                        if (preg_match('/^(?:91)?[6-9]\d{9}$/', $pClean)) {
+                            $realPhone = cleanWhatsAppPhone($pClean)['formatted'];
+                            break;
+                        }
+                    }
+                    if (!empty($realPhone)) {
+                        $pdo->prepare("UPDATE `customers` SET `phone` = ?, `whatsapp` = ? WHERE `id` = ?")->execute([$realPhone, $realPhone, $fc['id']]);
+                        $pdo->prepare("UPDATE `queries` SET `customer_phone` = ? WHERE `customer_id` = ?")->execute([$realPhone, $fc['id']]);
+                    } else {
+                        // Clear the fake number so users don't see an impossible Indian mobile number (+91 1..5)
+                        $pdo->prepare("UPDATE `customers` SET `phone` = '', `whatsapp` = '' WHERE `id` = ?")->execute([$fc['id']]);
+                        $pdo->prepare("UPDATE `queries` SET `customer_phone` = '' WHERE `customer_id` = ?")->execute([$fc['id']]);
+                    }
+                    if (preg_match('/^Customer \([0-5]\d{3}\)$/', $fc['name'])) {
+                        $pnStmt = $pdo->prepare("SELECT `sender_name` FROM `messages` WHERE `customer_id` = ? AND `sender_name` NOT LIKE 'Customer%' AND `sender_name` != '' LIMIT 1");
+                        $pnStmt->execute([$fc['id']]);
+                        $realName = $pnStmt->fetchColumn();
+                        $finalName = !empty($realName) ? $realName : 'WhatsApp Customer';
+                        $pdo->prepare("UPDATE `customers` SET `name` = ? WHERE `id` = ?")->execute([$finalName, $fc['id']]);
+                        $pdo->prepare("UPDATE `queries` SET `customer_name` = ? WHERE `customer_id` = ?")->execute([$finalName, $fc['id']]);
+                    }
+                }
             } catch (Exception $eSelfHeal) {}
         }
 
@@ -1033,13 +1086,20 @@ if ($action === 'get_state' || $action === 'get_all') {
                 if (!empty($pInfo['clean10']) && strlen($pInfo['clean10']) === 10) {
                     $c['phone'] = $pInfo['formatted'];
                     $c['whatsapp'] = $pInfo['formatted'];
+                } else if (preg_match('/^\+?91[[:space:]]?[0-5]/', $rawP)) {
+                    // Invalid LID slice formatted as +91: Clear fake phone!
+                    $c['phone'] = '';
+                    $c['whatsapp'] = '';
                 }
             }
 
             // Self-healing: Prevent account slot labels from becoming customer contact names
-            if (!empty($c['name']) && preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $c['name'])) {
-                $last4 = strlen($cleanDigits) >= 4 ? substr($cleanDigits, -4) : 'User';
-                $c['name'] = "Customer ($last4)";
+            if (!empty($c['name']) && (preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $c['name']) || preg_match('/^Customer \([0-5]\d{3}\)$/', $c['name']))) {
+                if (!empty($pInfo['clean10']) && preg_match('/^[6-9]\d{9}$/', $pInfo['clean10'])) {
+                    $c['name'] = "Customer (" . substr($pInfo['clean10'], -4) . ")";
+                } else {
+                    $c['name'] = "WhatsApp Customer";
+                }
                 if ($shouldRunDbMaintenance) {
                     try {
                         $pdo->prepare("UPDATE `customers` SET `name` = ?, `phone` = ?, `whatsapp` = ? WHERE `id` = ?")->execute([$c['name'], $c['phone'], $c['whatsapp'], $c['id']]);
@@ -1071,6 +1131,16 @@ if ($action === 'get_state' || $action === 'get_all') {
                     } catch (Exception $eDelQ) {}
                 }
                 continue;
+            }
+
+            // Sanitize query customer phone from fake LID slice
+            if (!empty($q['customer_phone'])) {
+                $qPInfo = cleanWhatsAppPhone($q['customer_phone']);
+                if (!empty($qPInfo['clean10']) && strlen($qPInfo['clean10']) === 10) {
+                    $q['customer_phone'] = $qPInfo['formatted'];
+                } else if (preg_match('/^\+?91[[:space:]]?[0-5]/', $q['customer_phone'])) {
+                    $q['customer_phone'] = '';
+                }
             }
 
             if (!empty($q['status_history']) && is_string($q['status_history'])) {
@@ -2760,6 +2830,16 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     }
     $adminPhone = trim($data['admin_phone'] ?? '');
     if (empty($adminPhone)) {
+        try {
+            $adminUserStmt = $pdo->prepare("SELECT `phone` FROM `users` WHERE `role` IN ('Super Admin', 'admin') AND `phone` IS NOT NULL AND `phone` != '' ORDER BY id ASC LIMIT 1");
+            $adminUserStmt->execute();
+            $adminRow = $adminUserStmt->fetch(PDO::FETCH_ASSOC);
+            if (!empty($adminRow['phone'])) {
+                $adminPhone = $adminRow['phone'];
+            }
+        } catch (Exception $e) {}
+    }
+    if (empty($adminPhone)) {
         $adminPhone = '+91 99435 57998';
     }
 
@@ -4091,7 +4171,7 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $senderPhone = $payload['sender_phone'] ?? '+91 98765 00000';
+    $senderPhone = $payload['sender_phone'] ?? '';
     $senderName = $payload['sender_name'] ?? 'WhatsApp Customer';
     $messageText = $payload['message_text'] ?? ($payload['text'] ?? '');
     $type = $payload['type'] ?? 'text';
@@ -4102,15 +4182,45 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $senderJid = $payload['sender_jid'] ?? '';
     $lid = $payload['lid'] ?? '';
 
+    // Priority Resolution: Prioritize genuine phone numbers; never let an unmapped Privacy LID override a real phone number
+    $rawSenderDigits = preg_replace('/[^0-9]/', '', $senderPhone);
+    $hasRealSenderPhone = (!empty($senderPhone) && 
+                           !str_contains($senderPhone, '@lid') && 
+                           strlen($rawSenderDigits) >= 10 && 
+                           strlen($rawSenderDigits) <= 13 &&
+                           preg_match('/^(?:91)?[6-9]\d{9}$/', $rawSenderDigits));
+
+    $rawJidDigits = preg_replace('/[^0-9]/', '', $senderJid);
+    $hasRealSenderJid = (!empty($senderJid) && 
+                         !str_contains($senderJid, '@lid') && 
+                         strlen($rawJidDigits) >= 10 && 
+                         strlen($rawJidDigits) <= 13 &&
+                         preg_match('/^(?:91)?[6-9]\d{9}$/', $rawJidDigits));
+
+    if ($hasRealSenderPhone) {
+        $targetPhone = $senderPhone;
+    } elseif ($hasRealSenderJid) {
+        $targetPhone = $senderJid;
+    } elseif (!empty($lid)) {
+        $resolved = resolveLidPhone($lid);
+        $targetPhone = (!empty($resolved) && $resolved !== $lid) ? $resolved : '';
+    } else {
+        $targetPhone = $senderPhone ?: $senderJid;
+    }
+
     // Deeply resolve Privacy LID and sanitize phone number (strips :0 and device artifacts)
-    $phoneInfo = cleanWhatsAppPhone(!empty($lid) ? $lid : (!empty($senderPhone) ? $senderPhone : $senderJid));
+    $phoneInfo = cleanWhatsAppPhone($targetPhone);
     $senderPhone = $phoneInfo['formatted'];
     $clean10 = $phoneInfo['clean10'];
 
     // Guard against internal WhatsApp Business line labels becoming customer names
     $isLineLabel = preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $senderName);
     if ($isLineLabel || empty($senderName) || $senderName === 'WhatsApp Customer') {
-        $senderName = 'Customer (' . (strlen($clean10) >= 4 ? substr($clean10, -4) : 'User') . ')';
+        if (!empty($clean10) && preg_match('/^[6-9]\d{9}$/', $clean10)) {
+            $senderName = 'Customer (' . substr($clean10, -4) . ')';
+        } else {
+            $senderName = 'WhatsApp Customer';
+        }
     }
 
     $msgUid = $payload['id'] ?? ("msg_" . uniqid());
