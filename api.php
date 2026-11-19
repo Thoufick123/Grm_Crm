@@ -1042,7 +1042,11 @@ if ($action === 'get_state' || $action === 'get_all') {
             } catch (Exception $ePurgeBiz) {}
         }
 
-        $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` ASC");
+        try {
+            $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY COALESCE(`last_message_at`, `created_at`) DESC, `id` DESC");
+        } catch (Exception $eOrder) {
+            $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` DESC");
+        }
         $rawCustomers = $cStmt->fetchAll();
         $customers = [];
         foreach ($rawCustomers as $c) {

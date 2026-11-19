@@ -2572,6 +2572,13 @@ function ingestInboundMessage(payload, suppressChime = false) {
     CRM_STATE.queries.unshift(query);
   }
 
+  // Update customer latest activity timestamp for instant queue time alignment
+  customer.lastMessage = messageText;
+  customer.last_message = messageText;
+  customer.lastMessageAt = timeStr;
+  customer.last_message_at = new Date(msgTimestamp).toISOString().slice(0, 19).replace('T', ' ');
+  customer.lastTimeEpoch = msgTimestamp;
+
   // 5. Update last poll epoch
   if (payload.timestamp_epoch) {
     LAST_POLL_EPOCH = Math.max(LAST_POLL_EPOCH, payload.timestamp_epoch);
@@ -6233,6 +6240,110 @@ function isAssignedToCurrentStaff(card, user) {
 }
 window.isAssignedToCurrentStaff = isAssignedToCurrentStaff;
 
+/**
+ * High-Precision Conversation Epoch Extractor
+ * Accurately converts all message timestamps, customer last_message_at, query times,
+ * and time strings (e.g. "02:36 PM", "12:31 PM") into comparable millisecond epochs.
+ * Ensures the newest messages appear at the top and older ("first come") messages stay below.
+ */
+function extractConversationEpoch(lastMsgObj, cust, query, timeDisplay) {
+  let epoch = 0;
+
+  // 1. High-precision numeric timestamps from message object
+  if (lastMsgObj) {
+    if (typeof lastMsgObj.timestamp === 'number' && lastMsgObj.timestamp > 1e11) {
+      epoch = Math.max(epoch, lastMsgObj.timestamp);
+    } else if (typeof lastMsgObj.timestamp_epoch === 'number' && lastMsgObj.timestamp_epoch > 0) {
+      epoch = Math.max(epoch, lastMsgObj.timestamp_epoch > 1e11 ? lastMsgObj.timestamp_epoch : lastMsgObj.timestamp_epoch * 1000);
+    } else if (typeof lastMsgObj.timestamp === 'number' && lastMsgObj.timestamp > 0) {
+      epoch = Math.max(epoch, lastMsgObj.timestamp * 1000);
+    }
+    if (lastMsgObj.created_at) {
+      const p = Date.parse(String(lastMsgObj.created_at).replace(' ', 'T'));
+      if (!isNaN(p) && p > 1e11) epoch = Math.max(epoch, p);
+    }
+    if (typeof lastMsgObj.id === 'number' && lastMsgObj.id > 1e11) {
+      epoch = Math.max(epoch, lastMsgObj.id);
+    }
+  }
+
+  // 2. High-precision timestamps from customer record
+  if (cust) {
+    const lastMsgAt = cust.lastMessageAt || cust.last_message_at;
+    if (lastMsgAt) {
+      if (typeof lastMsgAt === 'number' && lastMsgAt > 0) {
+        epoch = Math.max(epoch, lastMsgAt > 1e11 ? lastMsgAt : lastMsgAt * 1000);
+      } else if (typeof lastMsgAt === 'string') {
+        const p = Date.parse(lastMsgAt.replace(' ', 'T'));
+        if (!isNaN(p) && p > 1e11) epoch = Math.max(epoch, p);
+      }
+    }
+    if (typeof cust.lastTimeEpoch === 'number' && cust.lastTimeEpoch > 0) {
+      epoch = Math.max(epoch, cust.lastTimeEpoch > 1e11 ? cust.lastTimeEpoch : cust.lastTimeEpoch * 1000);
+    }
+  }
+
+  // 3. Query record timestamps
+  if (query) {
+    if (typeof query.lastTimeEpoch === 'number' && query.lastTimeEpoch > 0) {
+      epoch = Math.max(epoch, query.lastTimeEpoch > 1e11 ? query.lastTimeEpoch : query.lastTimeEpoch * 1000);
+    }
+    if (query.createdAt) {
+      const p = Date.parse(String(query.createdAt).replace(' ', 'T'));
+      if (!isNaN(p) && p > 1e11) epoch = Math.max(epoch, p);
+    }
+  }
+
+  // 4. Time display string parsing (e.g. "02:36 PM", "12:31 PM", "Yesterday 04:15 PM")
+  const rawTimeStr = (timeDisplay || lastMsgObj?.time || cust?.lastMessageAt || cust?.last_message_at || query?.createdAt || '').trim();
+  if (rawTimeStr) {
+    const directDate = Date.parse(rawTimeStr.replace(' ', 'T'));
+    if (!isNaN(directDate) && directDate > 1e11) {
+      epoch = Math.max(epoch, directDate);
+    } else {
+      const timeMatch = rawTimeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?/i);
+      if (timeMatch) {
+        let hrs = parseInt(timeMatch[1], 10);
+        const mins = parseInt(timeMatch[2], 10);
+        const secs = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
+        const ampm = timeMatch[4] ? timeMatch[4].toUpperCase() : null;
+        if (ampm === 'PM' && hrs < 12) hrs += 12;
+        if (ampm === 'AM' && hrs === 12) hrs = 0;
+
+        const baseDate = new Date();
+        const refDateStr = cust?.last_message_at || cust?.created_at || lastMsgObj?.created_at || query?.createdAt;
+        if (refDateStr) {
+          const refParsed = Date.parse(String(refDateStr).replace(' ', 'T'));
+          if (!isNaN(refParsed) && refParsed > 0) {
+            const rObj = new Date(refParsed);
+            baseDate.setFullYear(rObj.getFullYear(), rObj.getMonth(), rObj.getDate());
+          }
+        }
+        if (/yesterday/i.test(rawTimeStr)) baseDate.setDate(baseDate.getDate() - 1);
+        baseDate.setHours(hrs, mins, secs, 0);
+        const parsedTimeEpoch = baseDate.getTime();
+        if (parsedTimeEpoch > 0) {
+          if (epoch === 0 || Math.abs(epoch - parsedTimeEpoch) > 3600000) {
+            epoch = Math.max(epoch, parsedTimeEpoch);
+          }
+        }
+      }
+    }
+  }
+
+  // 5. Ultimate fallback to customer created_at so no card evaluates to NaN or 0
+  if (epoch === 0 && cust) {
+    const cCreated = cust.created_at || cust.createdAt;
+    if (cCreated) {
+      const p = Date.parse(String(cCreated).replace(' ', 'T'));
+      if (!isNaN(p) && p > 0) epoch = p;
+    }
+  }
+
+  return Number.isFinite(epoch) ? epoch : 0;
+}
+window.extractConversationEpoch = extractConversationEpoch;
+
 function renderInboxConversationList() {
   renderQuickLineSwitcher();
   const container = document.getElementById('conversation-list-container');
@@ -6303,7 +6414,6 @@ function renderInboxConversationList() {
     const t = window.t || ((k, f) => f || k);
     let lastText = t('chat.no_messages', 'No messages yet');
     let timeDisplay = query ? query.createdAt : t('chat.recent', 'Recent');
-    let lastTimeEpoch = lastMsgObj ? (lastMsgObj.id || 0) : 0;
 
     if (lastMsgObj) {
       const safeText = String(lastMsgObj.text || lastMsgObj.message_text || (lastMsgObj.type === 'audio' ? '🎤 WhatsApp Voice Note' : (lastMsgObj.type === 'image' ? '📷 Photo Attachment' : 'Message')));
@@ -6316,6 +6426,9 @@ function renderInboxConversationList() {
       const qText = String(query.lastMessage || query.queryText || 'Enquiry');
       lastText = t('chat.customer_prefix', 'Customer: ') + `"${qText.substring(0, 38)}..."`;
     }
+
+    // Resolve true Epoch timestamp for accurate chronological sorting (Newest message at top, older below)
+    const lastTimeEpoch = extractConversationEpoch(lastMsgObj, cust, query, timeDisplay);
 
     const custAccountId = cust.accountId || (query ? query.accountId : null) || 'account_1';
     const custBusinessNumber = cust.businessNumber || (query ? query.businessNumber : null) || '+91 86680 07593';
@@ -6331,6 +6444,7 @@ function renderInboxConversationList() {
       priority: query ? query.priority : 'NORMAL',
       lastMessage: lastText,
       createdAt: timeDisplay,
+      lastTime: timeDisplay,
       unreadCount: query ? (query.unreadCount || 0) : 0,
       lastTimeEpoch: lastTimeEpoch,
       accountId: custAccountId,
@@ -6338,8 +6452,12 @@ function renderInboxConversationList() {
     });
   });
 
-  // Sort by latest message/activity timestamp (most recent at top)
-  customerCards.sort((a, b) => b.lastTimeEpoch - a.lastTimeEpoch);
+  // Time-based Alignment: Most recent/newest message at TOP, first come / older messages BELOW
+  customerCards.sort((a, b) => {
+    const diff = (b.lastTimeEpoch || 0) - (a.lastTimeEpoch || 0);
+    if (diff !== 0) return diff;
+    return String(b.customerId || '').localeCompare(String(a.customerId || ''));
+  });
 
   // Dynamic Multi-Line Filtering: Filter by active chosen WhatsApp number
   const availableAccounts = getAvailableWhatsAppAccounts();
@@ -6465,7 +6583,7 @@ function renderInboxConversationList() {
 
   // Performance Guard: Skip full DOM regeneration if conversation list items haven't changed
   const convListFp = `${INBOX_FILTER}#${searchQuery}#${ACTIVE_CUSTOMER_ID}#` +
-    customerCards.map(c => `${c.customerId}:${c.unreadCount}:${c.lastTime}:${c.status}:${c.assignedTo}`).join(';');
+    customerCards.map(c => `${c.customerId}:${c.unreadCount}:${c.lastTimeEpoch}:${c.lastTime || c.createdAt}:${c.status}:${c.assignedTo}`).join(';');
 
   if (container._lastConvListFp === convListFp && !window._FORCE_CONV_LIST_RENDER) {
     return;
@@ -12518,11 +12636,15 @@ async function handleSendMessage(event) {
   // Format outbound text with company Brand Name header
   const formattedText = textToSend ? formatOutboundBrandMessage(textToSend) : `[Photo from ${getBrandName()}]`;
 
+  const nowMs = Date.now();
+  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const newMsg = {
-    id: Date.now(),
+    id: nowMs,
     sender: 'staff',
     text: formattedText,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: timeStr,
+    timestamp: nowMs,
+    timestamp_epoch: Math.floor(nowMs / 1000),
     status: 'SENDING',
     media_type: attachedMedia ? 'image' : null,
     media_url: attachedMedia
@@ -12530,10 +12652,19 @@ async function handleSendMessage(event) {
 
   CRM_STATE.conversations[ACTIVE_CUSTOMER_ID].push(newMsg);
 
+  // Update customer latest activity timestamp for instant queue time alignment (Newest at top)
+  customer.lastMessage = formattedText;
+  customer.last_message = formattedText;
+  customer.lastMessageAt = timeStr;
+  customer.last_message_at = new Date(nowMs).toISOString().slice(0, 19).replace('T', ' ');
+  customer.lastTimeEpoch = nowMs;
+
   // Update query last message & status to REPLIED (skip status mutation if sharing payment request so status remains still same)
   const query = CRM_STATE.queries.find(q => q.customerId === ACTIVE_CUSTOMER_ID);
   if (query) {
     query.lastMessage = attachedMedia ? `Staff: [Photo] "${rawText.substring(0, 30)}"` : `Staff: "${rawText.substring(0, 40)}..."`;
+    query.lastTimeEpoch = nowMs;
+    query.createdAt = timeStr;
     if (!window.__IS_SHARING_PAYMENT) {
       if (query.status === 'NEW' || query.status === 'ASSIGNED') {
         query.status = 'REPLIED';
