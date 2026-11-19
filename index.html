@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GRM WhatsApp CRM — Modern Customer Communication & Assignment Hub</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -3091,6 +3092,9 @@
             </div>
           </div>
 
+          <!-- Bottom Clearance Spacer for Mobile App Bar -->
+          <div class="h-24 sm:hidden w-full shrink-0" aria-hidden="true"></div>
+
         </div>
       </section>
 
@@ -3895,6 +3899,9 @@
             </div>
           </div>
 
+          <!-- Bottom Clearance Spacer for Mobile App Bar -->
+          <div class="h-24 sm:hidden w-full shrink-0" aria-hidden="true"></div>
+
         </div>
       </section>
 
@@ -4555,6 +4562,9 @@
             </div>
           </div>
 
+          <!-- Bottom Clearance Spacer for Mobile App Bar -->
+          <div class="h-24 sm:hidden w-full shrink-0" aria-hidden="true"></div>
+
         </div>
       </section>
 
@@ -4935,7 +4945,7 @@
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Primary Role <span
                         class="text-rose-500">*</span>:</label>
-                    <select id="staff-new-role" required
+                    <select id="staff-new-role" required onchange="syncStaffFormPermissionsWithRole(this.value, 'staff-perm-')"
                       class="w-full p-2 sm:p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
                       <!-- Dynamically populated from created roles -->
                     </select>
@@ -4965,6 +4975,36 @@
                       <option value="ON_LEAVE">⚪ On Leave (Temporary Pause)</option>
                     </select>
                   </div>
+                </div>
+
+                <!-- Operational Action Permissions Card -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-purple-600 text-[18px]">security</span>
+                      <label class="font-bold text-slate-800 text-xs">Action Permissions (Operational Privileges):</label>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-semibold">Granular access rights</span>
+                  </div>
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                    <label class="flex items-center gap-2 p-2.5 bg-white rounded-lg border border-slate-200 hover:border-sky-400 cursor-pointer transition select-none">
+                      <input type="checkbox" id="staff-perm-view" checked class="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer">
+                      <span class="font-bold text-xs text-slate-800">View</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2.5 bg-white rounded-lg border border-slate-200 hover:border-emerald-400 cursor-pointer transition select-none">
+                      <input type="checkbox" id="staff-perm-create" checked class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+                      <span class="font-bold text-xs text-slate-800">Create</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2.5 bg-white rounded-lg border border-slate-200 hover:border-amber-400 cursor-pointer transition select-none">
+                      <input type="checkbox" id="staff-perm-edit" checked class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer">
+                      <span class="font-bold text-xs text-slate-800">Edit</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2.5 bg-white rounded-lg border border-slate-200 hover:border-rose-400 cursor-pointer transition select-none">
+                      <input type="checkbox" id="staff-perm-delete" class="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer">
+                      <span class="font-bold text-xs text-slate-800">Delete</span>
+                    </label>
+                  </div>
+                  <p class="text-[10px] text-slate-400">Controls whether this staff member can perform View, Create, Edit, or Delete actions across modules.</p>
                 </div>
 
                 <!-- Password Row -->
@@ -5212,7 +5252,7 @@
           </div>
         </div>
       </section>
-      <section id="view-settings" class="h-full overflow-y-auto p-3.5 sm:p-6 hidden">
+      <section id="view-settings" class="h-full overflow-y-auto p-3.5 sm:p-6 pb-44 sm:pb-8 hidden custom-scrollbar overscroll-contain touch-pan-y">
         <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
 
           <!-- Header Banner -->
@@ -5494,13 +5534,16 @@
             </div>
           </div>
 
+          <!-- Bottom Clearance Spacer for Mobile App Bar -->
+          <div class="h-24 sm:hidden w-full shrink-0" aria-hidden="true"></div>
+
         </div>
       </section>
 
       <!-- ========================================== -->
       <!-- VIEW: DATA BACKUP & RECOVERY MODULE -->
       <!-- ========================================== -->
-      <section id="view-backup" class="h-full overflow-y-auto p-3.5 sm:p-6 hidden">
+      <section id="view-backup" class="h-full overflow-y-auto p-3.5 sm:p-6 pb-44 sm:pb-8 hidden custom-scrollbar overscroll-contain touch-pan-y">
         <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
 
           <!-- Header Banner -->
@@ -5614,6 +5657,9 @@
               Reset Demo Data
             </button>
           </div>
+
+          <!-- Bottom Clearance Spacer for Mobile App Bar -->
+          <div class="h-24 sm:hidden w-full shrink-0" aria-hidden="true"></div>
 
         </div>
       </section>
@@ -6948,7 +6994,7 @@
 
           <div>
             <label class="block font-bold text-slate-800 mb-1">Primary Role <span class="text-rose-500">*</span>:</label>
-            <select id="edit-staff-role" required
+            <select id="edit-staff-role" required onchange="syncStaffFormPermissionsWithRole(this.value, 'edit-staff-perm-')"
               class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
               <!-- Dynamically populated from created roles -->
             </select>
@@ -6971,6 +7017,36 @@
               <option value="ON_LEAVE">⚪ On Leave (Temporary Pause)</option>
             </select>
           </div>
+        </div>
+
+        <!-- Operational Action Permissions Assignment -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-3.5 space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-purple-600 text-[17px]">security</span>
+              <label class="font-bold text-slate-800 text-xs">Action Permissions (Operational Privileges):</label>
+            </div>
+            <span class="text-[10px] text-slate-400 font-semibold">Granular access rights</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+            <label class="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 hover:border-sky-400 cursor-pointer transition select-none">
+              <input type="checkbox" id="edit-staff-perm-view" class="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer">
+              <span class="font-bold text-xs text-slate-800">View</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 hover:border-emerald-400 cursor-pointer transition select-none">
+              <input type="checkbox" id="edit-staff-perm-create" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+              <span class="font-bold text-xs text-slate-800">Create</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 hover:border-amber-400 cursor-pointer transition select-none">
+              <input type="checkbox" id="edit-staff-perm-edit" class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer">
+              <span class="font-bold text-xs text-slate-800">Edit</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 hover:border-rose-400 cursor-pointer transition select-none">
+              <input type="checkbox" id="edit-staff-perm-delete" class="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer">
+              <span class="font-bold text-xs text-slate-800">Delete</span>
+            </label>
+          </div>
+          <p class="text-[10px] text-slate-400">Restricts or permits View, Create, Edit, or Delete actions for this staff member.</p>
         </div>
 
         <div>
@@ -12323,7 +12399,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261119_perf_optimized_v18"></script>
+  <script src="crm_app.js?v=20261119_perf_optimized_v20"></script>
 </body>
 
 </html>

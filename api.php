@@ -423,6 +423,11 @@ if (!headers_sent() && session_status() === PHP_SESSION_NONE) {
 }
 
 $pdo = getDBConnection();
+if ($pdo) {
+    try {
+        $pdo->exec("ALTER TABLE `users` ADD COLUMN `permissions` TEXT NULL DEFAULT NULL");
+    } catch (Exception $pe) {}
+}
 if (isset($_GET['action']) && $_GET['action'] === 'reset_customer_payment') {
     $raw = file_get_contents('php://input');
     $d = json_decode($raw, true) ?: $_POST;
@@ -881,6 +886,12 @@ if ($action === 'get_state' || $action === 'get_all') {
         // 2. Staff List
         $staffStmt = $pdo->query("SELECT * FROM `users` WHERE `id` != 'admin' ORDER BY `created_at` ASC");
         $staffList = $staffStmt->fetchAll();
+        foreach ($staffList as &$st) {
+            if (!empty($st['permissions'])) {
+                $st['permissions'] = is_string($st['permissions']) ? json_decode($st['permissions'], true) : $st['permissions'];
+            }
+        }
+        unset($st);
 
         // 3. Products (Lazy loaded on-demand for catalog/inventory)
         $products = [];
@@ -1410,11 +1421,12 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $staff['password'] ?? 'staff123';
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $avatar = $staff['avatar'] ?? strtoupper(substr($staff['name'], 0, 2));
+        $permsJson = !empty($staff['permissions']) ? (is_string($staff['permissions']) ? $staff['permissions'] : json_encode($staff['permissions'])) : null;
 
         $stmt = $pdo->prepare("
-            INSERT INTO `users` (`id`, `username`, `password`, `name`, `role`, `email`, `phone`, `specialization`, `avatar`, `status`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password`=VALUES(`password`), `role`=VALUES(`role`), `phone`=VALUES(`phone`), `status`=VALUES(`status`), `email`=VALUES(`email`), `specialization`=VALUES(`specialization`), `avatar`=VALUES(`avatar`)
+            INSERT INTO `users` (`id`, `username`, `password`, `name`, `role`, `email`, `phone`, `specialization`, `avatar`, `status`, `permissions`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password`=VALUES(`password`), `role`=VALUES(`role`), `phone`=VALUES(`phone`), `status`=VALUES(`status`), `email`=VALUES(`email`), `specialization`=VALUES(`specialization`), `avatar`=VALUES(`avatar`), `permissions`=VALUES(`permissions`)
         ");
 
         $stmt->execute([
@@ -1427,7 +1439,8 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $staff['phone'],
             $staff['specialization'] ?? 'General',
             $avatar,
-            $staff['status'] ?? 'ACTIVE'
+            $staff['status'] ?? 'ACTIVE',
+            $permsJson
         ]);
 
         echo json_encode(["status" => "success", "message" => "Staff member created in MySQL", "staff_id" => $staffId]);
@@ -1565,6 +1578,11 @@ if ($action === 'update_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($staff['password'])) {
             $fields[] = "`password` = ?";
             $params[] = password_hash($staff['password'], PASSWORD_BCRYPT);
+        }
+
+        if (isset($staff['permissions'])) {
+            $fields[] = "`permissions` = ?";
+            $params[] = is_string($staff['permissions']) ? $staff['permissions'] : json_encode($staff['permissions']);
         }
 
         $params[] = $staffId;

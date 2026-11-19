@@ -335,7 +335,7 @@ window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
 // ROLE-BASED ACCESS CONTROL (RBAC) & PERMISSION DEFINITIONS
 // =========================================================================
 const CRM_MODULE_DEFINITIONS = [
-  { key: 'dashboard', name: 'Operations Dashboard', desc: 'Real-time overview of inquiries and sales health', icon: 'dashboard' },
+  { key: 'dashboard', name: 'WhatsApp Sales Dashboard', desc: 'Real-time sales KPI, pipeline metrics, and conversion tracking', icon: 'analytics' },
   { key: 'enquiries', name: 'Customer Enquiries Hub', desc: 'Admin lead assignment control room', icon: 'assignment' },
   { key: 'inbox', name: 'WhatsApp Inbox & Live Chat', desc: 'Realtime chats, inbound stream, templates & photo sending', icon: 'chat' },
   { key: 'followups', name: 'Customer Follow-up Scheduler', desc: 'Callback calendar, payment promises & reminders', icon: 'schedule' },
@@ -347,7 +347,7 @@ const CRM_MODULE_DEFINITIONS = [
   { key: 'analytics', name: 'Staff Performance Analytics & KPIs', desc: 'Team conversions, response latency & volume reports', icon: 'monitoring' },
   { key: 'audit', name: 'System Audit Trail & Security Logs', desc: 'Tamper-proof event logs, security & staff actions', icon: 'history', viewOnly: true },
   { key: 'settings', name: 'WhatsApp Business Settings', desc: 'Business phone slots, Webhook routing & Softphone config', icon: 'settings' },
-  { key: 'backup', name: 'Data Backup & Recovery Hub', desc: 'Full MySQL database snapshot export and zero-loss restore', icon: 'backup' },
+  { key: 'backup', name: 'Data Backup & Recovery Hub', desc: 'Full MySQL database snapshot export and zero-loss restore', icon: 'cloud_sync' },
   { key: 'masking', name: 'Call & Number Masking', desc: 'In-CRM softphone dialer, lead privacy protection & virtual DID caller ID', icon: 'phone_locked' },
   { key: 'packing-slip-config', name: 'Packing Slip & Label Settings', desc: 'Customizable packing slip template, logo uploader & position layout', icon: 'local_shipping' }
 ];
@@ -504,30 +504,20 @@ function canUserPerformAction(moduleName, action) {
     return true;
   }
 
-  // Non-admin staff can NEVER touch or perform actions on sensitive admin modules
-  const sensitiveAdminModules = ['settings', 'backup', 'masking'];
-  if (sensitiveAdminModules.includes(moduleName)) {
-    return false;
-  }
-
-  // 1. Check individual staff permissions configured by Admin during staff onboarding / editing
+  // 1. Check individual staff action permissions configured by Admin during staff onboarding / editing
   const staffId = user.staff_id || user.staffId || user.id || user.username;
   const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === staffId || s.username === user.username || s.name === user.name);
   const staffPerms = (staffObj && staffObj.permissions) ? staffObj.permissions : (user.permissions ? user.permissions : null);
 
+  // If Admin explicitly set this action permission to false for this staff member, strictly DENY!
+  // E.g. If staff was assigned View only, then create/edit/delete are false across all modules!
   if (staffPerms && typeof staffPerms === 'object' && typeof staffPerms[action] === 'boolean') {
-    // If Admin explicitly set this action permission to false, strictly DENY!
     if (!staffPerms[action]) {
       return false;
     }
-    // If the Admin enabled this action, allow it for operational modules
-    if (moduleName === 'staff' && action !== 'view') {
-      return false; // Staff cannot create/edit/delete other staff members
-    }
-    return true;
   }
 
-  // 2. Fallback to Role Permissions Matrix
+  // 2. Resolve Role Permissions Matrix for this module and action
   initRolePermissionsState();
   const roleName = getUserAssignedRoleName(user);
 
@@ -541,47 +531,46 @@ function canUserPerformAction(moduleName, action) {
 
   const rolePerms = (CRM_STATE?.rolePermissions && CRM_STATE.rolePermissions[roleName]) || DEFAULT_ROLE_PERMISSIONS[roleName];
 
-  // For enquiries, autoreply & broadcast: WhatsApp Inbox sub-modules — strictly inherit from inbox permissions
+  // For enquiries, autoreply & broadcast: WhatsApp Inbox sub-modules — inherit from inbox permissions
   if (moduleName === 'autoreply' || moduleName === 'broadcast' || moduleName === 'enquiries') {
+    if (rolePerms && rolePerms[moduleName] && rolePerms[moduleName][action] !== undefined) {
+      return Boolean(rolePerms[moduleName][action]);
+    }
     const inboxPerm = (rolePerms && rolePerms.inbox) ? rolePerms.inbox[action] : undefined;
     if (inboxPerm !== undefined) {
       return Boolean(inboxPerm);
     }
-    if (rolePerms && rolePerms[moduleName] && rolePerms[moduleName][action] !== undefined) {
-      return Boolean(rolePerms[moduleName][action]);
-    }
     return canUserPerformAction('inbox', action);
   }
 
-  if (moduleName === 'masking') {
-    return false; // Masking master config is strictly admin only
-  }
-
-  if (!rolePerms || !rolePerms[moduleName]) {
-    const sensitive = ['settings', 'backup', 'staff', 'audit', 'analytics', 'masking'];
-    if (action === 'view') {
-      return !sensitive.includes(moduleName);
-    }
-    return false;
+  // Check specific module in role permissions matrix
+  if (rolePerms && rolePerms[moduleName] && rolePerms[moduleName][action] !== undefined) {
+    return Boolean(rolePerms[moduleName][action]);
   }
 
   // For customers (Customer 360): strictly view-only directory & profile hub
   if (moduleName === 'customers') {
     if (action === 'view') {
-      return Boolean(rolePerms.customers ? rolePerms.customers.view : true);
+      return Boolean(rolePerms?.customers ? rolePerms.customers.view : true);
     }
-    return false; // Customer 360 has no create, edit, or delete actions
+    return false;
   }
 
   // For audit (System Audit Trail & Security Logs): strictly view-only tamper-proof log
   if (moduleName === 'audit') {
     if (action === 'view') {
-      return Boolean(rolePerms.audit ? rolePerms.audit.view : false);
+      return Boolean(rolePerms?.audit ? rolePerms.audit.view : false);
     }
-    return false; // Audit logs have no manual create, edit, or delete actions
+    return false;
   }
 
-  return Boolean(rolePerms[moduleName][action]);
+  // Fallback for modules:
+  if (staffPerms && typeof staffPerms === 'object' && staffPerms[action] === true) {
+    if (moduleName === 'settings' && action !== 'view') return false;
+    return true;
+  }
+
+  return false;
 }
 window.canUserPerformAction = canUserPerformAction;
 
@@ -591,17 +580,33 @@ function enforceGranularActionPermissions() {
   // Performance optimization: Super Admin has full unrestricted access — skip expensive scans
   if (isSuperAdmin) return;
 
+  // 0. Operations Dashboard & WhatsApp Sales Dashboard Actions
+  const canDashView = isSuperAdmin || canUserPerformAction('dashboard', 'view');
+  const navDash = document.getElementById('nav-dashboard');
+  if (navDash) navDash.style.display = canDashView ? '' : 'none';
+  const navOrdersDash = document.getElementById('nav-orders-dashboard');
+  if (navOrdersDash) navOrdersDash.style.display = canDashView ? '' : 'none';
+  if (!canDashView && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'dashboard') {
+    if (typeof switchView === 'function') switchView('inbox');
+  }
+
   // 1. Staff Module Actions
   const canStaffView = isSuperAdmin || canUserPerformAction('staff', 'view');
   const canStaffCreate = isSuperAdmin || canUserPerformAction('staff', 'create');
   const canStaffEdit = isSuperAdmin || canUserPerformAction('staff', 'edit');
   const canStaffDelete = isSuperAdmin || canUserPerformAction('staff', 'delete');
 
+  const navStaffGroup = document.getElementById('nav-staff-group');
+  if (navStaffGroup) navStaffGroup.style.display = canStaffView ? '' : 'none';
+  const navSubStaffList = document.getElementById('nav-sub-staff-list');
+  if (navSubStaffList) navSubStaffList.style.display = canStaffView ? '' : 'none';
   const navSubStaffCreate = document.getElementById('nav-sub-staff-create');
   if (navSubStaffCreate) navSubStaffCreate.style.display = canStaffCreate ? '' : 'none';
   const navSubStaffRoles = document.getElementById('nav-sub-staff-roles');
   if (navSubStaffRoles) navSubStaffRoles.style.display = canStaffEdit ? '' : 'none';
 
+  const tabBtnStaffList = document.getElementById('tab-btn-staff-list');
+  if (tabBtnStaffList) tabBtnStaffList.style.display = canStaffView ? '' : 'none';
   const tabBtnStaffCreate = document.getElementById('tab-btn-staff-create');
   if (tabBtnStaffCreate) tabBtnStaffCreate.style.display = canStaffCreate ? '' : 'none';
   const tabBtnStaffRoles = document.getElementById('tab-btn-staff-roles');
@@ -617,6 +622,26 @@ function enforceGranularActionPermissions() {
   if (currentStaffTab === 'roles' && !canStaffEdit) {
     if (typeof switchStaffTab === 'function') switchStaffTab('list');
   }
+  if (!canStaffView && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'staff') {
+    if (typeof switchView === 'function') switchView('dashboard');
+  }
+
+  // 1b. Packing Slip & Label Settings Actions
+  const canSlipView = isSuperAdmin || canUserPerformAction('packing-slip-config', 'view');
+  const canSlipEdit = isSuperAdmin || canUserPerformAction('packing-slip-config', 'edit');
+  const navSlip = document.getElementById('nav-packing-slip-config');
+  if (navSlip) navSlip.style.display = canSlipView ? '' : 'none';
+  if (!canSlipView && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'packing-slip-config') {
+    if (typeof switchView === 'function') switchView('dashboard');
+  }
+  if (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'packing-slip-config') {
+    document.querySelectorAll('#view-packing-slip-config button[type="submit"], #view-packing-slip-config [onclick*="save"], #btn-save-packing-slip, #btn-reset-packing-slip').forEach(btn => {
+      btn.style.display = canSlipEdit ? '' : 'none';
+    });
+    document.querySelectorAll('#view-packing-slip-config input, #view-packing-slip-config select').forEach(inp => {
+      inp.disabled = !canSlipEdit;
+    });
+  }
 
   // 2. Orders Module Actions
   const canOrderView = isSuperAdmin || canUserPerformAction('orders', 'view');
@@ -625,11 +650,9 @@ function enforceGranularActionPermissions() {
   const canOrderDelete = isSuperAdmin || canUserPerformAction('orders', 'delete');
 
   const navOrdersGroup = document.getElementById('nav-orders-group');
-  if (navOrdersGroup) navOrdersGroup.style.display = canOrderView ? '' : 'none';
+  if (navOrdersGroup) navOrdersGroup.style.display = (canOrderView || canDashView) ? '' : 'none';
   const navOrders = document.getElementById('nav-orders');
   if (navOrders) navOrders.style.display = canOrderView ? '' : 'none';
-  const navOrdersDash = document.getElementById('nav-orders-dashboard');
-  if (navOrdersDash) navOrdersDash.style.display = canOrderView ? '' : 'none';
   const navOrdersSub = document.getElementById('nav-orders-submodules');
   if (navOrdersSub && !canOrderView) navOrdersSub.style.display = 'none';
 
@@ -677,14 +700,6 @@ function enforceGranularActionPermissions() {
 
   const staffAssignSelect = document.getElementById('chat-staff-assign-select');
   if (staffAssignSelect) staffAssignSelect.disabled = !canInboxEdit;
-
-  // 4. Backup Hub Actions (Admin Only)
-  const cardExport = document.getElementById('card-backup-export');
-  if (cardExport) cardExport.style.display = isSuperAdmin ? '' : 'none';
-  const cardRestore = document.getElementById('card-backup-restore');
-  if (cardRestore) cardRestore.style.display = isSuperAdmin ? '' : 'none';
-  const cardReset = document.getElementById('card-backup-reset');
-  if (cardReset) cardReset.style.display = isSuperAdmin ? '' : 'none';
 
   // 5. Hide Add Line Footer from Phone Dropdown for Staff
   const addLineFooter = document.getElementById('phone-dropdown-add-line-footer');
@@ -32585,6 +32600,33 @@ window.populateStaffAssignedLineDropdowns = function () {
   });
 };
 
+// Auto-sync staff onboarding / edit action checkboxes with selected role
+function syncStaffFormPermissionsWithRole(roleName, prefix = 'staff-perm-') {
+  if (!roleName || !CRM_STATE?.rolePermissions) return;
+  const rolePerm = CRM_STATE.rolePermissions[roleName];
+  if (!rolePerm) return;
+
+  let hasView = false, hasCreate = false, hasEdit = false, hasDelete = false;
+  Object.keys(rolePerm).forEach(mod => {
+    if (mod === 'audit' || mod === 'customers') return;
+    if (rolePerm[mod]?.view) hasView = true;
+    if (rolePerm[mod]?.create) hasCreate = true;
+    if (rolePerm[mod]?.edit) hasEdit = true;
+    if (rolePerm[mod]?.delete) hasDelete = true;
+  });
+
+  const vEl = document.getElementById(`${prefix}view`);
+  const cEl = document.getElementById(`${prefix}create`);
+  const eEl = document.getElementById(`${prefix}edit`);
+  const dEl = document.getElementById(`${prefix}delete`);
+
+  if (vEl) vEl.checked = hasView;
+  if (cEl) cEl.checked = hasCreate;
+  if (eEl) eEl.checked = hasEdit;
+  if (dEl) dEl.checked = hasDelete;
+}
+window.syncStaffFormPermissionsWithRole = syncStaffFormPermissionsWithRole;
+
 // 6. Handle Staff Onboarding (Sub-item 2: Add Staff)
 window.handleCreateNewStaff = handleCreateNewStaff;
 function handleCreateNewStaff(event) {
@@ -33591,21 +33633,19 @@ window.openEditStaffModal = function (staffId) {
   if (assignedLineSelect) assignedLineSelect.value = staff.assignedLine || 'ALL';
 
   // Populate Permissions Checkboxes
-  const perms = staff.permissions || {
-    view: true,
-    create: true,
-    edit: true,
-    delete: false
-  };
   const permViewEl = document.getElementById('edit-staff-perm-view');
   const permCreateEl = document.getElementById('edit-staff-perm-create');
   const permEditEl = document.getElementById('edit-staff-perm-edit');
   const permDeleteEl = document.getElementById('edit-staff-perm-delete');
 
-  if (permViewEl) permViewEl.checked = Boolean(perms.view);
-  if (permCreateEl) permCreateEl.checked = Boolean(perms.create);
-  if (permEditEl) permEditEl.checked = Boolean(perms.edit);
-  if (permDeleteEl) permDeleteEl.checked = Boolean(perms.delete);
+  if (staff.permissions && typeof staff.permissions === 'object') {
+    if (permViewEl) permViewEl.checked = Boolean(staff.permissions.view);
+    if (permCreateEl) permCreateEl.checked = Boolean(staff.permissions.create);
+    if (permEditEl) permEditEl.checked = Boolean(staff.permissions.edit);
+    if (permDeleteEl) permDeleteEl.checked = Boolean(staff.permissions.delete);
+  } else {
+    syncStaffFormPermissionsWithRole(staff.role, 'edit-staff-perm-');
+  }
 
   if (roleSelect) {
     if (staff.role && !Array.from(roleSelect.options).some(o => o.value === staff.role)) {
