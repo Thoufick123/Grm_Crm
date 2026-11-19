@@ -575,8 +575,8 @@ if ($action === 'get_state' || $action === 'get_all') {
                 'display_name' => 'Primary WhatsApp',
                 'brand_name' => 'Primary Line',
                 'business_name' => 'Primary WhatsApp',
-                'phone_number' => '',
-                'status' => 'DISCONNECTED',
+                'phone_number' => (!empty($cfgData['phone_number'])) ? $cfgData['phone_number'] : '+91 99435 57998',
+                'status' => (!empty($cfgData['status'])) ? $cfgData['status'] : 'CONNECTED',
                 'qr_code' => null
             ];
         }
@@ -585,9 +585,23 @@ if ($action === 'get_state' || $action === 'get_all') {
             'business_name' => 'GRM Garments Business Hub',
             'display_name' => 'GRM Garments Official',
             'brand_name' => 'Blue Berry 💙',
-            'phone_number' => '+91 98765 43210',
+            'phone_number' => '+91 99435 57998',
             'status' => 'CONNECTED'
         ];
+
+        // Ensure authoritative active status from config file is never lost
+        if (!empty($cfgData['status']) && $cfgData['status'] === 'CONNECTED') {
+            $primaryWA['status'] = 'CONNECTED';
+            if (!empty($cfgData['phone_number'])) {
+                $primaryWA['phone_number'] = $cfgData['phone_number'];
+            }
+            if (!empty($waAccounts) && isset($waAccounts[0])) {
+                $waAccounts[0]['status'] = 'CONNECTED';
+                if (!empty($cfgData['phone_number'])) {
+                    $waAccounts[0]['phone_number'] = $cfgData['phone_number'];
+                }
+            }
+        }
 
         // 2. Staff List
         $staffStmt = $pdo->query("SELECT * FROM `users` WHERE `id` != 'admin' ORDER BY `created_at` ASC");
@@ -1608,7 +1622,18 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $accountId = $postData['accountId'] ?? 'account_1';
 
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
-    $currentConfig['status'] = 'DISCONNECTED';
+    if ($accountId === 'account_1') {
+        $currentConfig['status'] = 'DISCONNECTED';
+    }
+    if (isset($currentConfig['connected_lines']) && is_array($currentConfig['connected_lines'])) {
+        foreach ($currentConfig['connected_lines'] as &$l) {
+            if (($l['id'] ?? '') === $accountId) {
+                $l['status'] = 'DISCONNECTED';
+                $l['phone_number'] = 'Awaiting Link';
+                unset($l['qr_code']);
+            }
+        }
+    }
     $currentConfig['last_sync'] = date("Y-m-d H:i:s");
     atomicWriteJson($configFile, $currentConfig);
 

@@ -569,18 +569,54 @@ function getPublicBaseUrl() {
     return 'https://maroon-partridge-532881.hostingersite.com';
 }
 
-// Fast CRM API Dispatcher with instant CRM_BASE_URL priority
+// Synchronize account status directly to local whatsapp_account_config.json
+function syncLocalConfigFile(accountId, status, phoneNumber, qrCode, label) {
+    try {
+        const localCfgPath = path.join(__dirname, '..', 'whatsapp_account_config.json');
+        if (fs.existsSync(localCfgPath)) {
+            const cfg = JSON.parse(fs.readFileSync(localCfgPath, 'utf8'));
+            if (!Array.isArray(cfg.connected_lines)) cfg.connected_lines = [];
+            let line = cfg.connected_lines.find(l => l.id === accountId);
+            if (!line) {
+                line = { id: accountId, label: label || 'WhatsApp Line' };
+                cfg.connected_lines.push(line);
+            }
+            line.status = status;
+            if (phoneNumber) line.phone_number = phoneNumber;
+            if (qrCode) line.qr_code = qrCode;
+            if (status === 'CONNECTED') delete line.qr_code;
+            if (label) line.label = label;
+
+            if (accountId === 'account_1') {
+                cfg.status = status;
+                if (phoneNumber) cfg.phone_number = phoneNumber;
+                cfg.provider = 'QR_CODE_BRIDGE';
+            }
+            cfg.last_sync = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            fs.writeFileSync(localCfgPath, JSON.stringify(cfg, null, 4), 'utf8');
+            console.log(`💾 [Local Config Sync] Updated ${accountId} -> ${status} (${phoneNumber || 'No phone'})`);
+        }
+    } catch (e) {
+        console.warn('⚠️ [Local Config Sync Notice]:', e.message);
+    }
+}
+
+// Fast CRM API Dispatcher with instant local & remote sync priority
 async function callCrmApi(action, postData) {
     const candidateUrls = [
+        'http://localhost:8080',
+        'http://127.0.0.1:8080',
+        'http://localhost',
+        'http://127.0.0.1',
         process.env.CRM_URL,
         process.env.APP_URL,
         'https://maroon-partridge-532881.hostingersite.com',
         CRM_BASE_URL,
         'http://localhost:8000',
-        'http://127.0.0.1:8000',
-        'http://localhost:8080'
+        'http://127.0.0.1:8000'
     ].filter(Boolean);
 
+    let firstSuccess = null;
     for (const base of candidateUrls) {
         try {
             const isGet = !postData || Object.keys(postData).length === 0;
@@ -588,14 +624,15 @@ async function callCrmApi(action, postData) {
                 method: isGet ? 'GET' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: isGet ? undefined : JSON.stringify(postData),
-                signal: AbortSignal.timeout(8000)
+                signal: AbortSignal.timeout(3000)
             });
             if (resp.ok) {
-                const data = await resp.json();
-                if (data) {
-                    if (action === 'sync_bridge_url') {
-                        console.log(`📡 [CRM Sync] ${action} -> ${base}:`, data?.message || data?.status || 'OK');
-                    }
+                const data = await resp.json().catch(() => null);
+                if (data && !firstSuccess) {
+                    firstSuccess = data;
+                }
+                // For account status sync, notify both local and remote backends
+                if (action !== 'sync_account_status') {
                     return data;
                 }
             }
@@ -603,7 +640,7 @@ async function callCrmApi(action, postData) {
             // try next candidate
         }
     }
-    return null;
+    return firstSuccess;
 }
 
 // Forward inbound WhatsApp call to CRM PHP API
@@ -783,11 +820,19 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
     }
 
     const existingAcc = accounts.get(accountId);
+    if (existingAcc && existingAcc.sock) {
+        console.log(`[QR Bridge - ${accountId}] Terminating previous socket before opening new session`);
+        try {
+            existingAcc.sock.ev.removeAllListeners();
+            existingAcc.sock.end();
+        } catch (e) {}
+        existingAcc.sock = null;
+    }
 
     const accountObj = {
         id: accountId,
         label: existingAcc?.label || label,
-        status: existingAcc?.status === 'CONNECTED' ? 'RECONNECTING' : 'CONNECTING',
+        status: existingAcc?.status === 'CONNECTED' ? 'CONNECTED' : (existingAcc?.connectedNumber ? 'RECONNECTING' : 'CONNECTING'),
         sock: null,
         qrImage: null,
         connectedNumber: existingAcc?.connectedNumber || null,
@@ -886,9 +931,10 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 accountObj.isStarting = false;
                 broadcastAccountsUpdate();
 
-                // ONLY notify Hostinger CRM of disconnection if the session was truly logged out on phone!
+                // ONLY notify CRM backend of disconnection if the session was truly logged out on phone!
                 // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) to prevent accidental unlinking.
                 if (isLoggedOut) {
+                    syncLocalConfigFile(accountId, 'DISCONNECTED', null, null, label);
                     callCrmApi('sync_account_status', {
                         account_slot: accountId,
                         status: 'DISCONNECTED',
@@ -904,15 +950,12 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         initAccountSession(accountId, label);
                     }, 3000);
                 } else if (isReplaced) {
-                    console.warn(`[QR Bridge - ${accountId}] Session replaced by another active connection (status: 440). Pausing auto-reconnect to prevent rapid loop...`);
-                    setTimeout(() => {
-                        initAccountSession(accountId, label);
-                    }, 15000);
+                    console.warn(`[QR Bridge - ${accountId}] Session replaced by another active connection (status: 440). Halting auto-reconnect to prevent rapid reconnect blinking loop.`);
                 } else {
                     // Reconnect on network drops / keep-alive hiccups without clearing session
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-                    }, 4000);
+                    }, 5000);
                 }
             } else if (connection === 'open') {
                 accountObj.status = 'CONNECTED';
@@ -928,7 +971,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 console.log(`[QR Bridge - ${accountId}] Connected Successfully: ${accountObj.connectedNumber} (${accountObj.connectedName})`);
                 broadcastAccountsUpdate();
 
-                // Persist CONNECTED status directly to Hostinger CRM database & config
+                // Persist CONNECTED status directly to local config file and CRM database
+                syncLocalConfigFile(accountId, 'CONNECTED', accountObj.connectedNumber, null, label);
                 callCrmApi('sync_account_status', {
                     account_slot: accountId,
                     status: 'CONNECTED',

@@ -348,7 +348,7 @@
         if (saved) {
           const st = JSON.parse(saved);
           (st.staffList || []).forEach(s => {
-            accounts[s.id.toLowerCase()] = { username: s.username || s.id, password: s.password || 'staff123', role: s.role, staffId: s.id, name: s.name, title: s.role, avatar: s.avatar || 'ST' };
+            accounts[s.id.toLowerCase()] = { username: s.username || s.id, password: s.password || 'staff123', role: s.role, staffId: s.id, name: s.name, phone: s.phone || s.mobile || '', title: s.role, avatar: s.avatar || 'ST' };
             if (s.username) {
               accounts[s.username.toLowerCase()] = accounts[s.id.toLowerCase()];
             }
