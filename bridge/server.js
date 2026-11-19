@@ -1041,10 +1041,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
     const existingAcc = accounts.get(accountId);
     if (existingAcc && existingAcc.sock) {
-<<<<<<< HEAD
         console.log(`[QR Bridge - ${accountId}] Terminating previous socket before opening new session`);
-=======
->>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
         try {
             existingAcc.sock.ev.removeAllListeners();
             existingAcc.sock.end();
@@ -1155,13 +1152,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 accountObj.isStarting = false;
                 broadcastAccountsUpdate();
 
-<<<<<<< HEAD
-                // ONLY notify CRM backend of disconnection if the session was truly logged out on phone!
+                // ONLY notify CRM / Hostinger backend of disconnection if the session was truly logged out on phone!
                 // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) to prevent accidental unlinking.
-=======
-                // ONLY notify Hostinger CRM of disconnection if the session was truly logged out on phone!
-                // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) or unauthenticated QR expirations.
->>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
                 if (isLoggedOut) {
                     syncLocalConfigFile(accountId, 'DISCONNECTED', null, null, label);
                     callCrmApi('sync_account_status', {
@@ -1199,11 +1191,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     const reconnectDelay = (statusCode === 515) ? 1000 : 3500;
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-<<<<<<< HEAD
-                    }, 5000);
-=======
                     }, reconnectDelay);
->>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
                 }
             } else if (connection === 'open') {
                 accountObj.status = 'CONNECTED';

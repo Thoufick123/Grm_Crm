@@ -631,31 +631,58 @@
     }
 
     .custom-scrollbar::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
+      width: 6px;
+      height: 6px;
+      display: block !important;
     }
 
     .custom-scrollbar::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.03);
+      background: rgba(0, 0, 0, 0.04);
       border-radius: 999px;
     }
 
     .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: rgba(16, 185, 129, 0.35);
+      background: rgba(16, 185, 129, 0.6);
       border-radius: 999px;
     }
 
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: rgba(16, 185, 129, 0.65);
+      background: rgba(16, 185, 129, 0.85);
     }
 
     .custom-scrollbar {
       scrollbar-width: thin;
-      scrollbar-color: rgba(16, 185, 129, 0.35) rgba(0, 0, 0, 0.03);
+      scrollbar-color: rgba(16, 185, 129, 0.6) rgba(0, 0, 0, 0.04);
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+    }
+
+    .custom-chat-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+      display: block !important;
+    }
+
+    .custom-chat-scroll::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.04);
+      border-radius: 999px;
+    }
+
+    .custom-chat-scroll::-webkit-scrollbar-thumb {
+      background: rgba(16, 185, 129, 0.6);
+      border-radius: 999px;
+    }
+
+    .custom-chat-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(16, 185, 129, 0.85);
     }
 
     .custom-chat-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(16, 185, 129, 0.6) rgba(0, 0, 0, 0.04);
       scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
     }
 
     .badge-pulse {
@@ -3070,7 +3097,7 @@
       <!-- ========================================== -->
       <!-- VIEW: LIVE STOCK CATALOG & SHARING -->
       <!-- ========================================== -->
-      <section id="view-catalog" class="h-full overflow-y-auto p-6 hidden">
+      <section id="view-catalog" class="h-full overflow-y-auto p-3.5 sm:p-6 pb-32 sm:pb-8 hidden custom-scrollbar overscroll-contain touch-pan-y">
         <div class="max-w-7xl mx-auto space-y-6">
 
           <!-- Header & Actions -->
@@ -3874,7 +3901,7 @@
       <!-- ========================================== -->
       <!-- VIEW: FOLLOW-UPS (UNIFIED ADMIN & STAFF WORKSTATION) -->
       <!-- ========================================== -->
-      <section id="view-followups" class="h-full overflow-y-auto p-4 sm:p-6 hidden">
+      <section id="view-followups" class="h-full overflow-y-auto p-3.5 sm:p-6 pb-32 sm:pb-8 hidden custom-scrollbar overscroll-contain touch-pan-y">
         <div class="max-w-7xl mx-auto space-y-5">
 
           <!-- TIER 1: PRIMARY HUB MODE SWITCHER (Follow-ups vs Payment Pending) -->
@@ -6977,7 +7004,7 @@
   <div id="modal-convert-order"
     class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
     <div
-      class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] my-auto">
+      class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[94vh] sm:max-h-[90vh] my-auto">
       <!-- Header -->
       <div
         class="bg-gradient-to-r from-emerald-800 via-emerald-700 to-brand-dark p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
@@ -7000,7 +7027,7 @@
 
       <form id="order-convert-form" onsubmit="handleCreateOrder(event)"
         class="flex flex-col flex-1 overflow-hidden min-h-0">
-        <div id="order-modal-scrollable-body" class="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1">
+        <div id="order-modal-scrollable-body" class="p-3.5 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1 custom-scrollbar overscroll-contain">
           <!-- 1. Customer & Linked Query Badge Card -->
           <div
             class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 flex items-center justify-between shadow-2xs">
@@ -9296,7 +9323,7 @@
       </div>
 
       <!-- Main Scrollable Body Container (Guarantees Full Top-to-Bottom Scrolling on All Screens) -->
-      <div id="modal-share-scroll-body" class="flex-1 overflow-y-auto min-h-0 custom-chat-scroll flex flex-col">
+      <div id="modal-share-scroll-body" class="flex-1 overflow-y-auto min-h-0 custom-scrollbar overscroll-contain flex flex-col">
 
         <!-- Filter Controls: Category, Sub Category, Stock Status & Search -->
         <div class="p-3.5 sm:p-4 border-b border-slate-200 bg-slate-50/90 shrink-0 space-y-3">
@@ -9902,7 +9929,7 @@
 
       <!-- Modal Body (2-Column Responsive Layout) -->
       <form id="form-product-edit" novalidate onsubmit="handleProductFormSubmit(event)"
-        class="flex-1 overflow-y-auto custom-chat-scroll p-5 sm:p-6 text-xs">
+        class="flex-1 overflow-y-auto custom-scrollbar overscroll-contain p-4 sm:p-6 text-xs">
         <input type="hidden" id="prod-form-id" value="">
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -12035,12 +12062,12 @@
   <!-- ========================================================================= -->
   <!-- MODAL: BULK SPECIAL PRICE REQUEST -->
   <!-- ========================================================================= -->
-  <div id="modal-bulk-price-request" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 transform transition-all">
+  <div id="modal-bulk-price-request" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-slate-100 transform transition-all">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 px-6 py-4 text-white flex items-center justify-between">
+      <div class="bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 px-5 sm:px-6 py-4 text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300">
+          <div class="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 shrink-0">
             <span class="material-symbols-outlined text-[20px]">price_change</span>
           </div>
           <div>
@@ -12054,7 +12081,7 @@
       </div>
 
       <!-- Body Form -->
-      <form id="form-bulk-price-request" onsubmit="event.preventDefault(); submitBulkPriceRequest(event); return false;" class="p-6 space-y-4 text-xs">
+      <form id="form-bulk-price-request" onsubmit="event.preventDefault(); submitBulkPriceRequest(event); return false;" class="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1 overscroll-contain custom-scrollbar">
         <!-- Customer Info Strip -->
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
           <div>

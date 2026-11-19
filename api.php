@@ -2153,7 +2153,7 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
     if ($accountId === 'account_1') {
         $currentConfig['status'] = 'DISCONNECTED';
-<<<<<<< HEAD
+        $currentConfig['phone_number'] = 'Awaiting Link';
     }
     if (isset($currentConfig['connected_lines']) && is_array($currentConfig['connected_lines'])) {
         foreach ($currentConfig['connected_lines'] as &$l) {
@@ -2161,16 +2161,6 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $l['status'] = 'DISCONNECTED';
                 $l['phone_number'] = 'Awaiting Link';
                 unset($l['qr_code']);
-=======
-        $currentConfig['phone_number'] = 'Awaiting Link';
-    }
-    if (isset($currentConfig['connected_lines']) && is_array($currentConfig['connected_lines'])) {
-        foreach ($currentConfig['connected_lines'] as &$line) {
-            if (($line['id'] ?? '') === $accountId) {
-                $line['status'] = 'DISCONNECTED';
-                $line['phone_number'] = 'Awaiting Link';
-                unset($line['qr_code']);
->>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
             }
         }
     }
