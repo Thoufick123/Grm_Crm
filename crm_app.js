@@ -499,10 +499,35 @@ function canUserPerformAction(moduleName, action) {
     return false;
   }
 
-  if (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.name === 'Super Admin' || (user.title && user.title.includes('Admin'))) {
+  const isSuperAdmin = user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.name === 'Super Admin' || (user.title && user.title.includes('Admin'));
+  if (isSuperAdmin) {
     return true;
   }
 
+  // Non-admin staff can NEVER touch or perform actions on sensitive admin modules
+  const sensitiveAdminModules = ['settings', 'backup', 'masking'];
+  if (sensitiveAdminModules.includes(moduleName)) {
+    return false;
+  }
+
+  // 1. Check individual staff permissions configured by Admin during staff onboarding / editing
+  const staffId = user.staff_id || user.staffId || user.id || user.username;
+  const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === staffId || s.username === user.username || s.name === user.name);
+  const staffPerms = (staffObj && staffObj.permissions) ? staffObj.permissions : (user.permissions ? user.permissions : null);
+
+  if (staffPerms && typeof staffPerms === 'object' && typeof staffPerms[action] === 'boolean') {
+    // If Admin explicitly set this action permission to false, strictly DENY!
+    if (!staffPerms[action]) {
+      return false;
+    }
+    // If the Admin enabled this action, allow it for operational modules
+    if (moduleName === 'staff' && action !== 'view') {
+      return false; // Staff cannot create/edit/delete other staff members
+    }
+    return true;
+  }
+
+  // 2. Fallback to Role Permissions Matrix
   initRolePermissionsState();
   const roleName = getUserAssignedRoleName(user);
 
@@ -529,10 +554,7 @@ function canUserPerformAction(moduleName, action) {
   }
 
   if (moduleName === 'masking') {
-    if (rolePerms && rolePerms.masking && rolePerms.masking[action] !== undefined) {
-      return Boolean(rolePerms.masking[action]);
-    }
-    return action === 'view' || action === 'create';
+    return false; // Masking master config is strictly admin only
   }
 
   if (!rolePerms || !rolePerms[moduleName]) {
@@ -566,7 +588,7 @@ window.canUserPerformAction = canUserPerformAction;
 function enforceGranularActionPermissions() {
   const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
   const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
-  // Performance optimization: Super Admin has full unrestricted access — skip expensive 40+ querySelector scans
+  // Performance optimization: Super Admin has full unrestricted access — skip expensive scans
   if (isSuperAdmin) return;
 
   // 1. Staff Module Actions
@@ -611,21 +633,19 @@ function enforceGranularActionPermissions() {
   const navOrdersSub = document.getElementById('nav-orders-submodules');
   if (navOrdersSub && !canOrderView) navOrdersSub.style.display = 'none';
 
-  // Create controls (New standalone order booking)
-  const canBookPerm = isSuperAdmin || canUserPerformAction('orders', 'create') || canUserPerformAction('orders', 'edit') || canUserPerformAction('inbox', 'edit') || canUserPerformAction('inbox', 'create');
+  // Create controls: strictly require orders.create permission
   const btnHeaderBookOrder = document.getElementById('btn-header-book-order');
-  if (btnHeaderBookOrder) btnHeaderBookOrder.style.display = canBookPerm ? '' : 'none';
+  if (btnHeaderBookOrder) btnHeaderBookOrder.style.display = canOrderCreate ? '' : 'none';
   document.querySelectorAll('[onclick*="openOrderModal"]:not(.btn-move-to-order)').forEach(el => {
-    el.style.display = canBookPerm ? '' : 'none';
+    el.style.display = canOrderCreate ? '' : 'none';
   });
 
-  // Edit controls for Move to Order (requires Edit or Create access)
-  const canMoveToOrderPerm = isSuperAdmin || canUserPerformAction('orders', 'edit') || canUserPerformAction('orders', 'create') || canUserPerformAction('inbox', 'edit') || canUserPerformAction('inbox', 'create');
+  // Move to Order controls (converting customer conversation to a new booked order — requires create access)
   document.querySelectorAll('.btn-move-to-order, [data-action="move-to-order"], [onclick*="modal-convert-order"], [onclick*="openConvertOrderModal"], [onclick*="openOrderFromSingleChosenProduct"], [onclick*="openOrderFromSelectedChosenProducts"]').forEach(el => {
-    el.style.display = canMoveToOrderPerm ? '' : 'none';
+    el.style.display = canOrderCreate ? '' : 'none';
   });
   const chosenProductsBulkBar = document.getElementById('chosen-products-bulk-bar');
-  if (chosenProductsBulkBar && !canMoveToOrderPerm) chosenProductsBulkBar.style.display = 'none';
+  if (chosenProductsBulkBar && !canOrderCreate) chosenProductsBulkBar.style.display = 'none';
 
   // Edit controls in modal
   const btnSaveEditOrder = document.getElementById('btn-save-edit-order');
@@ -635,17 +655,40 @@ function enforceGranularActionPermissions() {
   const btnDeleteOrderModal = document.getElementById('btn-delete-order-modal');
   if (btnDeleteOrderModal) btnDeleteOrderModal.style.display = canOrderDelete ? '' : 'none';
 
-  // 3. Backup Hub Actions
-  const canBackupCreate = isSuperAdmin || canUserPerformAction('backup', 'create');
-  const canBackupEdit = isSuperAdmin || canUserPerformAction('backup', 'edit');
-  const canBackupDelete = isSuperAdmin || canUserPerformAction('backup', 'delete');
+  // 3. Inbox / Chat Module Actions
+  const canInboxCreate = isSuperAdmin || canUserPerformAction('inbox', 'create');
+  const canInboxEdit = isSuperAdmin || canUserPerformAction('inbox', 'edit');
+  const canInboxDelete = isSuperAdmin || canUserPerformAction('inbox', 'delete');
 
+  const chatInput = document.getElementById('chat-input-text');
+  const btnSend = document.getElementById('btn-send-message');
+  const btnVoice = document.getElementById('btn-voice-note');
+  if (chatInput) {
+    if (!canInboxCreate) {
+      chatInput.setAttribute('readonly', 'true');
+      chatInput.placeholder = '🔒 View-Only Mode: message sending restricted for this account';
+    } else {
+      chatInput.removeAttribute('readonly');
+      chatInput.placeholder = 'Type a message or response...';
+    }
+  }
+  if (btnSend) btnSend.style.display = canInboxCreate ? '' : 'none';
+  if (btnVoice) btnVoice.style.display = canInboxCreate ? '' : 'none';
+
+  const staffAssignSelect = document.getElementById('chat-staff-assign-select');
+  if (staffAssignSelect) staffAssignSelect.disabled = !canInboxEdit;
+
+  // 4. Backup Hub Actions (Admin Only)
   const cardExport = document.getElementById('card-backup-export');
-  if (cardExport) cardExport.style.display = canBackupCreate ? '' : 'none';
+  if (cardExport) cardExport.style.display = isSuperAdmin ? '' : 'none';
   const cardRestore = document.getElementById('card-backup-restore');
-  if (cardRestore) cardRestore.style.display = canBackupEdit ? '' : 'none';
+  if (cardRestore) cardRestore.style.display = isSuperAdmin ? '' : 'none';
   const cardReset = document.getElementById('card-backup-reset');
-  if (cardReset) cardReset.style.display = canBackupDelete ? '' : 'none';
+  if (cardReset) cardReset.style.display = isSuperAdmin ? '' : 'none';
+
+  // 5. Hide Add Line Footer from Phone Dropdown for Staff
+  const addLineFooter = document.getElementById('phone-dropdown-add-line-footer');
+  if (addLineFooter) addLineFooter.style.display = isSuperAdmin ? '' : 'none';
 
   // 4. Catalog Actions
   const canCatView = isSuperAdmin || canUserPerformAction('catalog', 'view');
@@ -756,13 +799,13 @@ function enforceGranularActionPermissions() {
   });
 
   // 8. Inbox / Enquiries Edit (Handling Staff Change)
-  const canInboxEdit = isSuperAdmin || canUserPerformAction('inbox', 'edit') || canUserPerformAction('enquiries', 'edit');
+  const canInboxReassignEdit = isSuperAdmin || canUserPerformAction('inbox', 'edit') || canUserPerformAction('enquiries', 'edit');
   document.querySelectorAll('[onclick*="openStaffAssignModal"], [onclick*="quickReassignQueryStaff"]').forEach(el => {
-    el.style.display = canInboxEdit ? '' : 'none';
+    el.style.display = canInboxReassignEdit ? '' : 'none';
   });
   document.querySelectorAll('select[onchange*="quickReassignQueryStaff"]').forEach(sel => {
     const parentContainer = sel.closest('.border-t') || sel.parentElement;
-    if (parentContainer) parentContainer.style.display = canInboxEdit ? '' : 'none';
+    if (parentContainer) parentContainer.style.display = canInboxReassignEdit ? '' : 'none';
   });
 
   // 9. Auto-Reply Hub Pre-Set Rules Actions
@@ -2298,6 +2341,7 @@ function initSocketIO() {
 
     // Real-time Bridge Status Changes
     SOCKET_IO.on('bridge:accounts', (data) => {
+<<<<<<< HEAD
       if (data && data.accounts) {
         MULTI_ACCOUNTS_STATE = data.accounts;
         if (Array.isArray(CRM_STATE.whatsappLines)) {
@@ -2339,6 +2383,10 @@ function initSocketIO() {
           saveCRMState();
           updateConfiguredPhoneDisplays();
         }
+=======
+      if (data && Array.isArray(data.accounts)) {
+        applyUpdatedAccountsDelta(data.accounts, false);
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
       }
     });
 
@@ -2372,10 +2420,29 @@ function initSocketIO() {
 function ingestInboundMessage(payload, suppressChime = false) {
   if (!payload || !CRM_STATE) return;
 
-  const rawPhone = payload.sender_phone || (payload.sender_jid ? payload.sender_jid.split('@')[0] : '+91 98765 43210');
-  const cleanPhone = rawPhone.startsWith('+') ? rawPhone : ('+' + rawPhone);
-  const normalizedDigits = cleanPhone.replace(/[^0-9]/g, '');
-  const senderName = payload.sender_name || `WhatsApp Customer (${cleanPhone.slice(-4)})`;
+  const phoneNorm = normalizeWhatsAppPhone(payload.sender_phone || payload.sender_jid || '');
+  let cleanPhone = phoneNorm.formattedPhone || '+91 98765 43210';
+  let normalizedDigits = phoneNorm.cleanDigits;
+
+  // Privacy LID Resolution (e.g. 275341797023827 -> 919943557998)
+  const lidCandidate = payload.lid || ((payload.sender_jid && payload.sender_jid.includes('@lid')) ? payload.sender_jid.split('@')[0].split(':')[0].replace(/[^0-9]/g, '') : (normalizedDigits.length >= 14 ? normalizedDigits : null));
+  if (lidCandidate) {
+    const sharedLidMap = (CRM_STATE && CRM_STATE.lidMappings) || window.LID_MAPPINGS || { '275341797023827': '919943557998' };
+    if (sharedLidMap[lidCandidate]) {
+      const mapped = String(sharedLidMap[lidCandidate]).replace(/[^0-9]/g, '');
+      if (mapped.length >= 10) {
+        normalizedDigits = mapped;
+        cleanPhone = mapped.length === 10 ? ('+91 ' + mapped.slice(0, 5) + ' ' + mapped.slice(5)) : (mapped.length === 12 && mapped.startsWith('91') ? ('+91 ' + mapped.slice(2, 7) + ' ' + mapped.slice(7)) : ('+' + mapped));
+      }
+    }
+  }
+
+  // Guard against internal WhatsApp Business line labels becoming customer names
+  const rawSenderName = payload.sender_name || '';
+  const isLineLabel = /whatsapp business|primary line|primary whatsapp|line \d|account_\d|awaiting link/i.test(rawSenderName);
+  const cleanSenderName = (!isLineLabel && rawSenderName && !rawSenderName.startsWith('WhatsApp Customer') && !rawSenderName.includes('Admin')) ? rawSenderName : null;
+  const senderName = cleanSenderName || `Customer (${cleanPhone.slice(-4)})`;
+
   const messageText = payload.message_text || payload.text || 'Message';
   const timeStr = payload.received_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const msgType = payload.type || 'text';
@@ -2411,7 +2478,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
       const cPhoneDigits = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
       const phoneMatch = (cPhoneDigits.length >= 7 && (cPhoneDigits === normalizedDigits || cPhoneDigits.slice(-10) === digits10)) ||
         (c.id && c.id.replace(/[^0-9]/g, '').endsWith(digits10)) ||
-        (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0] === payload.sender_jid.split('@')[0])));
+        (c.jid && payload.sender_jid && (c.jid === payload.sender_jid || (c.jid.includes('@') && payload.sender_jid.includes('@') && c.jid.split('@')[0].split(':')[0] === payload.sender_jid.split('@')[0].split(':')[0])));
       return phoneMatch;
     });
   }
@@ -2424,9 +2491,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
       return (cPhoneDigits.length > 5 && (cPhoneDigits === normalizedDigits || normalizedDigits.endsWith(cPhoneDigits) || cPhoneDigits.endsWith(normalizedDigits))) ||
         (cPhoneDigits.length >= 10 && normalizedDigits.length >= 10 && cPhoneDigits.slice(-10) === normalizedDigits.slice(-10));
     });
-    const finalName = (!isOutboundMsg && senderName && !senderName.startsWith('WhatsApp Customer') && !senderName.includes('Admin'))
-      ? senderName
-      : (existingOther && existingOther.name && !existingOther.name.startsWith('WhatsApp Customer') ? existingOther.name : `Customer (${cleanPhone.slice(-4)})`);
+    const finalName = cleanSenderName || (existingOther && existingOther.name && !/whatsapp business|primary line|primary whatsapp|line \d|account_\d/i.test(existingOther.name) && !existingOther.name.startsWith('WhatsApp Customer') ? existingOther.name : `Customer (${cleanPhone.slice(-4)})`);
 
     const lineTag = payloadAccountId === 'account_2' ? 'Line 2 Lead' : 'Line 1 Lead';
     customer = {
@@ -2450,10 +2515,18 @@ function ingestInboundMessage(payload, suppressChime = false) {
   } else {
     customer.accountId = payloadAccountId;
     if (payloadBusinessNum && payloadBusinessNum !== 'Primary') customer.businessNumber = payloadBusinessNum;
-    if (!isOutboundMsg && senderName && !senderName.startsWith('WhatsApp Customer') && !senderName.includes('Admin') && (customer.name.startsWith('Customer') || customer.name.startsWith('WhatsApp Customer'))) {
-      customer.name = senderName;
+
+    // Self-healing: heal customer phone and name if corrupted with trailing 0 or line slot label
+    customer.phone = cleanPhone;
+    customer.whatsapp = cleanPhone;
+    if (/whatsapp business|primary line|primary whatsapp|line \d|account_\d/i.test(customer.name)) {
+      customer.name = cleanSenderName || `Customer (${cleanPhone.slice(-4)})`;
+      customer.avatar = safeAvatar;
+    } else if (!isOutboundMsg && cleanSenderName && (customer.name.startsWith('Customer') || customer.name.startsWith('WhatsApp Customer'))) {
+      customer.name = cleanSenderName;
       customer.avatar = safeAvatar;
     }
+
     if (payload.sender_jid && !customer.jid) {
       customer.jid = payload.sender_jid;
     }
@@ -2732,6 +2805,114 @@ function applyUpdatedCustomersDelta(updatedCustomers) {
 }
 window.applyUpdatedCustomersDelta = applyUpdatedCustomersDelta;
 
+// Multi-Tab & Cross-Browser Real-Time WhatsApp Account Sync Bus
+var CRM_WHATSAPP_CHANNEL = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('crm_whatsapp_sync_bus') : null;
+if (CRM_WHATSAPP_CHANNEL) {
+  CRM_WHATSAPP_CHANNEL.onmessage = function (ev) {
+    if (ev && ev.data && ev.data.accounts) {
+      applyUpdatedAccountsDelta(ev.data.accounts, false);
+    }
+  };
+}
+
+function broadcastWhatsAppSyncEvent(data) {
+  if (CRM_WHATSAPP_CHANNEL) {
+    try {
+      CRM_WHATSAPP_CHANNEL.postMessage(data);
+    } catch (e) { }
+  }
+}
+window.broadcastWhatsAppSyncEvent = broadcastWhatsAppSyncEvent;
+
+function isPhantomWhatsAppAccount(acc) {
+  if (!acc) return true;
+  const id = String(acc.id || acc.account_slot || '');
+  const label = String(acc.label || acc.name || acc.display_name || '');
+  if (id === 'account_3' || id === 'account_4' || id === 'account_5' || id.startsWith('account_1795')) {
+    return true;
+  }
+  if (label.includes('Customer Support') || label.includes('Wholesale & Bulk') || label.includes('VIP Fast-Track')) {
+    return true;
+  }
+  return false;
+}
+window.isPhantomWhatsAppAccount = isPhantomWhatsAppAccount;
+
+function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
+  if (!Array.isArray(accounts) || accounts.length === 0) return;
+  // Strictly filter out phantom accounts (Lines 3, 4, 5 and account_1795...)
+  accounts = accounts.filter(a => !isPhantomWhatsAppAccount(a));
+
+  MULTI_ACCOUNTS_STATE = accounts;
+  if (!Array.isArray(CRM_STATE.whatsappLines)) {
+    CRM_STATE.whatsappLines = [];
+  }
+  // Purge any previously stored phantom lines
+  CRM_STATE.whatsappLines = CRM_STATE.whatsappLines.filter(a => !isPhantomWhatsAppAccount(a));
+
+  accounts.forEach(acc => {
+    let existing = CRM_STATE.whatsappLines.find(l => l.id === acc.id);
+    if (existing) {
+      // Guard: Never demote an already authenticated CONNECTED account to DISCONNECTED on transient network drops
+      // unless a live QR code is emitted (which means device was unlinked and needs scanning)
+      const isExistingLive = existing.status === 'CONNECTED' && 
+                             existing.connected_number && 
+                             existing.connected_number !== 'Awaiting Link' && 
+                             existing.connected_number !== 'Scan QR Code';
+      const incomingRawPhone = acc.phone || acc.connected_number || '';
+      const hasIncomingRealPhone = incomingRawPhone && 
+                                   incomingRawPhone !== 'Awaiting Link' && 
+                                   incomingRawPhone !== 'Scan QR Code' &&
+                                   !incomingRawPhone.includes('Awaiting');
+
+      if (isExistingLive && !hasIncomingRealPhone && !acc.qr_image && (acc.status === 'DISCONNECTED' || acc.status === 'CONNECTING' || acc.status === 'RECONNECTING')) {
+        return;
+      }
+      existing.status = (acc.status || 'DISCONNECTED').toUpperCase();
+      existing.connected_number = hasIncomingRealPhone ? incomingRawPhone : (existing.status === 'CONNECTED' ? existing.connected_number : 'Awaiting Link');
+      existing.qr_image = acc.qr_image || null;
+      existing.label = acc.label || acc.name || existing.label;
+    } else {
+      if (!Array.isArray(CRM_STATE.deletedSlots) || !CRM_STATE.deletedSlots.includes(acc.id)) {
+        CRM_STATE.whatsappLines.push({
+          id: acc.id,
+          label: acc.label || acc.name || `WhatsApp Line (${acc.id})`,
+          status: (acc.status || 'DISCONNECTED').toUpperCase(),
+          connected_number: acc.phone || acc.connected_number || 'Awaiting Link',
+          qr_image: acc.qr_image || null,
+          brand_name: acc.label || acc.name || acc.id
+        });
+      }
+    }
+  });
+
+  const primary = accounts.find(a => a.id === 'account_1') || accounts[0];
+  const anyConnected = CRM_STATE.whatsappLines.find(l => l.status === 'CONNECTED' && l.connected_number && l.connected_number !== 'Awaiting Link');
+  if (CRM_STATE.whatsappAccount) {
+    if (primary && primary.status === 'CONNECTED' && (primary.phone || primary.connected_number)) {
+      CRM_STATE.whatsappAccount.phoneNumber = primary.phone || primary.connected_number;
+      CRM_STATE.whatsappAccount.status = 'CONNECTED';
+    } else if (anyConnected) {
+      // If secondary line (e.g. account_2) is live and connected, preserve CONNECTED status on CRM_STATE.whatsappAccount
+      CRM_STATE.whatsappAccount.phoneNumber = anyConnected.connected_number;
+      CRM_STATE.whatsappAccount.status = 'CONNECTED';
+    } else {
+      CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
+    }
+  }
+
+  saveCRMState();
+  if (typeof renderMultiAccountsHub === 'function') renderMultiAccountsHub();
+  if (typeof renderQuickLineSwitcher === 'function') renderQuickLineSwitcher();
+  if (typeof renderPhoneSwitcherDropdown === 'function') renderPhoneSwitcherDropdown();
+  if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
+
+  if (shouldBroadcast && typeof getAvailableWhatsAppAccounts === 'function') {
+    broadcastWhatsAppSyncEvent({ action: 'sync_delta', accounts: getAvailableWhatsAppAccounts() });
+  }
+}
+window.applyUpdatedAccountsDelta = applyUpdatedAccountsDelta;
+
 function syncInboundMessagesNow(isInitial = false) {
   const since = isInitial ? 0 : LAST_POLL_EPOCH;
   return fetch(`api.php?action=get_inbound_messages&since=${since}`)
@@ -2870,6 +3051,10 @@ function initSSEStream() {
           let hasCustUpdates = false;
           if (Array.isArray(res.updated_customers) && res.updated_customers.length > 0) {
             hasCustUpdates = applyUpdatedCustomersDelta(res.updated_customers);
+          }
+
+          if (Array.isArray(res.whatsapp_accounts) && res.whatsapp_accounts.length > 0) {
+            applyUpdatedAccountsDelta(res.whatsapp_accounts, false);
           }
 
           if (hasAssignmentUpdates || hasMsgUpdates || hasCustUpdates) {
@@ -3490,6 +3675,123 @@ function applyAuthoritativeDatabaseState(data) {
     });
   }
 
+  // 8.1 Consolidate Privacy LID conversations, queries & customer profiles
+  const activeLidMap = (data.lidMappings && typeof data.lidMappings === 'object') ? data.lidMappings : (CRM_STATE.lidMappings || window.LID_MAPPINGS || { '275341797023827': '919943557998' });
+  if (data.lidMappings && typeof data.lidMappings === 'object') {
+    CRM_STATE.lidMappings = data.lidMappings;
+    window.LID_MAPPINGS = Object.assign(window.LID_MAPPINGS || {}, data.lidMappings);
+  }
+
+  for (const [lidDig, phoneDig] of Object.entries(activeLidMap)) {
+    const cleanLid = String(lidDig).replace(/[^0-9]/g, '');
+    const cleanPn = String(phoneDig).replace(/[^0-9]/g, '');
+    if (cleanLid.length >= 14 && cleanPn.length >= 10) {
+      const pn10 = cleanPn.slice(-10);
+      const realCust = (CRM_STATE.customers || []).find(c => {
+        const cp = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+        return cp.endsWith(pn10) || (c.id && c.id.endsWith(pn10));
+      });
+      if (realCust) {
+        const realCustId = realCust.id;
+        const lid10 = cleanLid.slice(-10);
+
+        // Find and remove placeholder customer
+        const phIdx = (CRM_STATE.customers || []).findIndex(c => {
+          if (c.id === realCustId) return false;
+          const cp = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+          return c.id === ('cust_' + cleanLid) || c.id === ('cust_' + lid10) || cp.includes(cleanLid) || (c.name && c.name.includes(cleanLid.slice(-4)));
+        });
+
+        if (phIdx !== -1) {
+          const phCust = CRM_STATE.customers[phIdx];
+          const phId = phCust.id;
+
+          // Merge conversations
+          if (CRM_STATE.conversations) {
+            const phMsgs = Array.isArray(CRM_STATE.conversations[phId]) ? CRM_STATE.conversations[phId] : [];
+            if (phMsgs.length > 0) {
+              if (!Array.isArray(CRM_STATE.conversations[realCustId])) CRM_STATE.conversations[realCustId] = [];
+              const existingUids = new Set(CRM_STATE.conversations[realCustId].map(m => m.id || m.message_uid));
+              phMsgs.forEach(m => {
+                const uid = m.id || m.message_uid;
+                if (!existingUids.has(uid)) {
+                  m.customer_id = realCustId;
+                  CRM_STATE.conversations[realCustId].push(m);
+                  existingUids.add(uid);
+                }
+              });
+              CRM_STATE.conversations[realCustId].sort((a, b) => (a.timestamp_epoch || 0) - (b.timestamp_epoch || 0));
+            }
+            delete CRM_STATE.conversations[phId];
+          }
+
+          // Remove placeholder query
+          if (Array.isArray(CRM_STATE.queries)) {
+            CRM_STATE.queries = CRM_STATE.queries.filter(q => q.customerId !== phId && q.customer_id !== phId);
+          }
+
+          // Remove placeholder customer
+          CRM_STATE.customers.splice(phIdx, 1);
+
+          // If user currently had placeholder selected, point to real customer
+          if (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID === phId) {
+            ACTIVE_CUSTOMER_ID = realCustId;
+            if (typeof selectCustomerForChat === 'function') {
+              selectCustomerForChat(realCustId);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 8.2 Purge internal company business lines from CRM_STATE.customers and CRM_STATE.queries
+  const internalBusinessPhones = ['9943557998', '8124038585', '8668007593', '9789660115'];
+  if (Array.isArray(CRM_STATE.customers)) {
+    CRM_STATE.customers = CRM_STATE.customers.filter(c => {
+      if (!c) return false;
+      const cp = (c.phone || c.whatsapp || '').replace(/[^0-9]/g, '');
+      const isBiz = internalBusinessPhones.some(bp => cp.endsWith(bp)) ||
+                    c.name === 'GRM Garments' ||
+                    c.name === 'WhatsApp Business #2' ||
+                    c.name === 'Bot (Auto-Reply)' ||
+                    (c.id && internalBusinessPhones.some(bp => c.id.includes(bp)));
+      return !isBiz;
+    });
+  }
+  if (Array.isArray(CRM_STATE.queries)) {
+    CRM_STATE.queries = CRM_STATE.queries.filter(q => {
+      if (!q) return false;
+      const qp = (q.customerPhone || q.customer_phone || '').replace(/[^0-9]/g, '');
+      const qcid = String(q.customerId || q.customer_id || '');
+      const isBiz = internalBusinessPhones.some(bp => qp.endsWith(bp) || qcid.includes(bp)) ||
+                    (q.customerName || q.customer_name) === 'WhatsApp Business #2' ||
+                    (q.customerName || q.customer_name) === 'GRM Garments' ||
+                    (q.customerName || q.customer_name) === 'Bot (Auto-Reply)';
+      return !isBiz;
+    });
+  }
+
+  // Ensure active customer is valid and not pointing to internal business line
+  if (typeof ACTIVE_CUSTOMER_ID !== 'undefined') {
+    const isCurrentActiveBiz = internalBusinessPhones.some(bp => String(ACTIVE_CUSTOMER_ID).includes(bp));
+    if (isCurrentActiveBiz || (CRM_STATE.customers && !CRM_STATE.customers.some(c => c && c.id === ACTIVE_CUSTOMER_ID))) {
+      if (CRM_STATE.customers && CRM_STATE.customers.length > 0) {
+        ACTIVE_CUSTOMER_ID = CRM_STATE.customers[0].id;
+        if (typeof selectCustomerForChat === 'function') {
+          setTimeout(() => selectCustomerForChat(ACTIVE_CUSTOMER_ID), 50);
+        }
+      }
+    }
+  }
+
+  // Persist cleaned conversations to sessionStorage
+  if (typeof sessionStorage !== 'undefined' && CRM_STATE.conversations) {
+    try {
+      sessionStorage.setItem('GRM_INBOX_CONVERSATIONS', JSON.stringify(CRM_STATE.conversations));
+    } catch (e) {}
+  }
+
   // 9. DND Records
   if (Array.isArray(data.dndRecords)) {
     CRM_STATE.dndRecords = data.dndRecords;
@@ -3543,11 +3845,13 @@ function applyAuthoritativeDatabaseState(data) {
     const liveFromDb = data.whatsappAccounts.map(a => ({
       id: a.account_slot || a.id,
       name: a.display_name || a.account_name || a.brand_name || 'WhatsApp Line',
+      label: a.display_name || a.account_name || a.brand_name || 'WhatsApp Line',
       phone: a.phone_number || a.phone || '',
       status: (a.status || 'DISCONNECTED').toUpperCase(),
       qr_image: a.qr_code || null,
-      connected_number: a.phone_number || a.phone || 'Awaiting Link'
+      connected_number: a.phone_number || a.phone || (a.status === 'CONNECTED' ? 'Connected' : 'Awaiting Link')
     }));
+<<<<<<< HEAD
 
     if (!Array.isArray(MULTI_ACCOUNTS_STATE) || MULTI_ACCOUNTS_STATE.length === 0) {
       MULTI_ACCOUNTS_STATE = liveFromDb;
@@ -3582,13 +3886,52 @@ function applyAuthoritativeDatabaseState(data) {
           line.qr_image = null;
         }
       });
+=======
+    MULTI_ACCOUNTS_STATE = liveFromDb;
+    if (!Array.isArray(CRM_STATE.whatsappLines)) {
+      CRM_STATE.whatsappLines = [];
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
     }
+    liveFromDb.forEach(dbAcc => {
+      let line = CRM_STATE.whatsappLines.find(l => l.id === dbAcc.id);
+      if (line) {
+        // Guard: If the line is already CONNECTED with an active phone, never demote it to SCAN_QR or DISCONNECTED
+        const isCurrentlyLive = line.status === 'CONNECTED' && line.connected_number && line.connected_number !== 'Awaiting Link';
+        const isIncomingDemotion = dbAcc.status === 'SCAN_QR' || dbAcc.status === 'DISCONNECTED' || dbAcc.status === 'CONNECTING';
+        if (isCurrentlyLive && isIncomingDemotion) {
+          return;
+        }
+        line.status = dbAcc.status;
+        line.connected_number = dbAcc.phone || line.connected_number;
+        line.qr_image = dbAcc.qr_image;
+        line.label = dbAcc.label || line.label;
+      } else {
+        if (!Array.isArray(CRM_STATE.deletedSlots) || !CRM_STATE.deletedSlots.includes(dbAcc.id)) {
+          CRM_STATE.whatsappLines.push({
+            id: dbAcc.id,
+            label: dbAcc.label || dbAcc.name,
+            status: dbAcc.status,
+            connected_number: dbAcc.phone || 'Awaiting Link',
+            qr_image: dbAcc.qr_image,
+            brand_name: dbAcc.label || dbAcc.name
+          });
+        }
+      }
+    });
+
+    if (typeof sessionStorage !== 'undefined' && Array.isArray(CRM_STATE.whatsappLines)) {
+      try { sessionStorage.setItem('GRM_WHATSAPP_LINES', JSON.stringify(CRM_STATE.whatsappLines)); } catch (e) {}
+    }
+    // Instant zero-lag UI render for multi-account hub and switcher
+    if (typeof renderMultiAccountsHub === 'function') renderMultiAccountsHub();
+    if (typeof renderPhoneSwitcherDropdown === 'function') renderPhoneSwitcherDropdown();
+    if (typeof renderQuickLineSwitcher === 'function') renderQuickLineSwitcher();
   }
 
-  if (data.whatsappAccount && data.whatsappAccount.status === 'CONNECTED' && data.whatsappAccount.phone_number) {
+  if (data.whatsappAccount) {
     if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
-    CRM_STATE.whatsappAccount.phoneNumber = data.whatsappAccount.phone_number;
-    CRM_STATE.whatsappAccount.status = 'CONNECTED';
+    CRM_STATE.whatsappAccount.status = (data.whatsappAccount.status || 'DISCONNECTED').toUpperCase();
+    CRM_STATE.whatsappAccount.phoneNumber = data.whatsappAccount.phone_number || CRM_STATE.whatsappAccount.phoneNumber || 'Awaiting Link';
     CRM_STATE.whatsappAccount.businessName = data.whatsappAccount.business_name || CRM_STATE.whatsappAccount.businessName;
     if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
   }
@@ -3731,7 +4074,33 @@ function initCRMState() {
           CRM_STATE.conversations = parsed;
         }
       }
+      const cachedLines = sessionStorage.getItem('GRM_WHATSAPP_LINES') || (typeof localStorage !== 'undefined' ? localStorage.getItem('GRM_WHATSAPP_LINES') : null);
+      if (cachedLines) {
+        const parsedLines = JSON.parse(cachedLines);
+        if (Array.isArray(parsedLines) && parsedLines.length > 0) {
+          const cleanLines = parsedLines.filter(a => !isPhantomWhatsAppAccount(a));
+          CRM_STATE.whatsappLines = cleanLines;
+          MULTI_ACCOUNTS_STATE = cleanLines;
+        }
+      }
     } catch (e) {}
+  }
+
+  // Restore permanently deleted slots from localStorage
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const storedDeleted = localStorage.getItem('GRM_DELETED_SLOTS');
+      if (storedDeleted) {
+        CRM_STATE.deletedSlots = JSON.parse(storedDeleted);
+      }
+    } catch (e) {}
+  }
+  if (!Array.isArray(CRM_STATE.deletedSlots)) {
+    CRM_STATE.deletedSlots = [];
+  }
+
+  if (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' && isPhantomWhatsAppAccount({ id: ACTIVE_SEND_ACCOUNT_ID })) {
+    ACTIVE_SEND_ACCOUNT_ID = 'account_1';
   }
 
   if (!CRM_STATE.whatsappAccount) {
@@ -3843,6 +4212,15 @@ function saveCRMState(immediate = false) {
         } catch (e) {}
       }
 
+      // Keep multi-account lines synchronized in storage for 0ms instant display upon refresh
+      if (CRM_STATE && Array.isArray(CRM_STATE.whatsappLines) && CRM_STATE.whatsappLines.length > 0) {
+        try {
+          const linesJson = JSON.stringify(CRM_STATE.whatsappLines);
+          sessionStorage.setItem('GRM_WHATSAPP_LINES', linesJson);
+          localStorage.setItem('GRM_WHATSAPP_LINES', linesJson);
+        } catch (e) {}
+      }
+
       if (typeof window !== 'undefined' && typeof window.broadcastCRMMutation === 'function') {
         window.broadcastCRMMutation('MUTATION');
       }
@@ -3867,13 +4245,35 @@ window.saveStateToStorage = saveCRMState;
 
 // 5 Connected WhatsApp Business Numbers Engine
 function getAvailableWhatsAppAccounts() {
+  // Instant 0ms memory fallback from storage before network returns
+  if ((!Array.isArray(CRM_STATE?.whatsappLines) || CRM_STATE.whatsappLines.length === 0) && typeof localStorage !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('GRM_WHATSAPP_LINES') || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('GRM_WHATSAPP_LINES') : null);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const clean = parsed.filter(a => !isPhantomWhatsAppAccount(a));
+          if (CRM_STATE) CRM_STATE.whatsappLines = clean;
+          MULTI_ACCOUNTS_STATE = clean;
+        }
+      }
+    } catch (e) {}
+  }
+
   const defaultAccounts = [
     {
       id: 'account_1',
-      label: 'Primary WhatsApp (Line 1)',
+      label: 'Primary WhatsApp',
       status: 'DISCONNECTED',
       connected_number: 'Awaiting Link',
       brand_name: 'Primary Line'
+    },
+    {
+      id: 'account_2',
+      label: 'WhatsApp Business #2',
+      status: 'CONNECTED',
+      connected_number: '+91 99435 57998',
+      brand_name: 'WhatsApp Business #2'
     }
   ];
 
@@ -3920,25 +4320,64 @@ function getAvailableWhatsAppAccounts() {
 
   // Merge with live MULTI_ACCOUNTS_STATE if available
   if (Array.isArray(MULTI_ACCOUNTS_STATE) && MULTI_ACCOUNTS_STATE.length > 0) {
-    accountsList = accountsList.map(acc => {
-      const liveAcc = MULTI_ACCOUNTS_STATE.find(a => a.id === acc.id);
-      if (!liveAcc) return acc;
-      return {
-        ...acc,
-        status: liveAcc.status || acc.status,
-        connected_number: (liveAcc.status === 'CONNECTED' ? (liveAcc.connected_number || liveAcc.phone || acc.connected_number) : (liveAcc.status === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link')),
-        connected_name: liveAcc.connected_name || liveAcc.name || acc.connected_name,
-        label: liveAcc.label || acc.label,
-        qr_image: liveAcc.qr_image || acc.qr_image || liveAcc.qr || acc.qr,
-        qr: liveAcc.qr_image || liveAcc.qr || acc.qr
-      };
+    MULTI_ACCOUNTS_STATE.forEach(liveAcc => {
+      if (!liveAcc || !liveAcc.id) return;
+      const existing = accountsList.find(a => a.id === liveAcc.id);
+      if (existing) {
+        existing.status = (liveAcc.status || existing.status || 'DISCONNECTED').toUpperCase();
+        existing.connected_number = (existing.status === 'CONNECTED' ? (liveAcc.connected_number || liveAcc.phone || existing.connected_number) : (existing.status === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link'));
+        existing.connected_name = liveAcc.connected_name || liveAcc.name || existing.connected_name;
+        existing.label = liveAcc.label || liveAcc.name || existing.label;
+        existing.qr_image = liveAcc.qr_image || liveAcc.qr || existing.qr_image || null;
+      } else {
+        if (!Array.isArray(CRM_STATE?.deletedSlots) || !CRM_STATE.deletedSlots.includes(liveAcc.id)) {
+          const st = (liveAcc.status || 'DISCONNECTED').toUpperCase();
+          accountsList.push({
+            id: liveAcc.id,
+            label: liveAcc.label || liveAcc.name || `WhatsApp Line (${liveAcc.id})`,
+            status: st,
+            connected_number: (st === 'CONNECTED' ? (liveAcc.connected_number || liveAcc.phone || 'Connected') : (st === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link')),
+            connected_name: liveAcc.connected_name || liveAcc.name || null,
+            brand_name: liveAcc.label || liveAcc.name || liveAcc.id,
+            qr_image: liveAcc.qr_image || liveAcc.qr || null
+          });
+        }
+      }
     });
   }
+
+  // Filter out any phantom accounts (Lines 3, 4, 5 and account_1795...)
+  accountsList = accountsList.filter(acc => !isPhantomWhatsAppAccount(acc));
 
   return accountsList;
 }
 
+<<<<<<< HEAD
 function togglePhoneSwitcherDropdown(event, triggerBtn) {
+=======
+function handleHeaderAddNewWhatsAppLine() {
+  closePhoneSwitcherDropdown();
+  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const isSuperAdmin = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
+  if (!isSuperAdmin) {
+    if (typeof showToast === 'function') {
+      showToast('Admin Panel Protected', 'Staff accounts cannot link or modify WhatsApp lines. Please contact Super Admin.', 'lock', 'rose');
+    }
+    return;
+  }
+  if (typeof switchView === 'function') {
+    switchView('settings');
+  }
+  setTimeout(() => {
+    const hub = document.getElementById('multi-accounts-container');
+    if (hub) hub.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    addNewWhatsAppAccountSlot();
+  }, 250);
+}
+window.handleHeaderAddNewWhatsAppLine = handleHeaderAddNewWhatsAppLine;
+
+function togglePhoneSwitcherDropdown(event) {
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
   if (event) event.stopPropagation();
   if (typeof isCurrentUserStaff === 'function' && isCurrentUserStaff()) {
     return; // Strictly disable opening WhatsApp line switcher / QR dropdown for staff
@@ -3986,15 +4425,80 @@ function closePhoneSwitcherDropdown() {
 function renderPhoneSwitcherDropdown() {
   const listContainer = document.getElementById('phone-dropdown-accounts-list');
   const countBadge = document.getElementById('dropdown-connected-count');
+  const addLineFooter = document.getElementById('phone-dropdown-add-line-footer');
   if (!listContainer) return;
 
+<<<<<<< HEAD
   const accounts = getAvailableWhatsAppAccounts();
   const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593').replace(/\s+/g, '');
   const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
+=======
+  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined') ? CRM_AUTH_SESSION : null);
+  const isSuperAdmin = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
+
+  // STRICT RULE: Staff login time Admin Panel cannot be touched!
+  // Hide "+ Scan New WhatsApp Line / QR" footer button completely for staff
+  if (addLineFooter) {
+    if (isSuperAdmin) {
+      addLineFooter.classList.remove('hidden');
+      addLineFooter.style.display = '';
+    } else {
+      addLineFooter.classList.add('hidden');
+      addLineFooter.style.display = 'none';
+    }
+  }
+
+  let accounts = getAvailableWhatsAppAccounts();
+
+  // STRICT RULE: "staff login time Switch WhatsApp Line showbased on admin login mobile no add there only"
+  // For Staff Workstation: show ONLY the accounts with active/connected mobile numbers added by Admin!
+  if (!isSuperAdmin) {
+    accounts = accounts.filter(acc => {
+      const phone = (acc.connected_number || acc.phone_number || acc.phone || '').trim();
+      const isLive = acc.status === 'CONNECTED';
+      const hasRealPhone = phone && phone !== 'Awaiting Link' && phone !== 'Scan QR Code';
+      return isLive || hasRealPhone;
+    });
+
+    // Fallback to Admin's configured primary line if array is empty
+    if (accounts.length === 0 && CRM_STATE?.whatsappAccount?.phoneNumber && CRM_STATE.whatsappAccount.phoneNumber !== 'Awaiting Link') {
+      accounts = [{
+        id: 'account_1',
+        label: CRM_STATE.whatsappAccount.businessName || 'Primary WhatsApp',
+        status: CRM_STATE.whatsappAccount.status || 'CONNECTED',
+        connected_number: CRM_STATE.whatsappAccount.phoneNumber,
+        brand_name: CRM_STATE.whatsappAccount.businessName || 'Primary Line'
+      }];
+    }
+
+    // If staff has a specific assigned WhatsApp line configured by Admin, filter to it
+    const staffId = currentUser?.staff_id || currentUser?.staffId || currentUser?.id || currentUser?.username;
+    const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === staffId || s.username === currentUser?.username);
+    if (staffObj && staffObj.assignedLine && staffObj.assignedLine !== 'ALL') {
+      const assignedFiltered = accounts.filter(a => a.id === staffObj.assignedLine || a.connected_number === staffObj.assignedLine);
+      if (assignedFiltered.length > 0) {
+        accounts = assignedFiltered;
+      }
+    }
+  }
+
+  const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998').replace(/\s+/g, '');
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
 
   if (countBadge) {
     countBadge.innerText = `${connectedCount} / ${accounts.length} Active Line${accounts.length > 1 ? 's' : ''}`;
     countBadge.className = connectedCount > 0 ? "text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full" : "text-[10px] bg-amber-100 text-amber-800 font-extrabold px-2 py-0.5 rounded-full";
+  }
+
+  if (accounts.length === 0) {
+    listContainer.innerHTML = `
+      <div class="p-4 text-center text-slate-400">
+        <span class="material-symbols-outlined text-[24px] text-slate-300 mb-1">phonelink_off</span>
+        <p class="font-bold text-xs text-slate-700">No WhatsApp Lines Available</p>
+        <p class="text-[11px] text-slate-400 mt-0.5">Please wait for Super Admin to connect WhatsApp in Admin Panel.</p>
+      </div>
+    `;
+    return;
   }
 
   const availableAccountIds = accounts.map(a => a.id);
@@ -4031,12 +4535,17 @@ function renderPhoneSwitcherDropdown() {
     const accCleanPhone = (acc.connected_number || '').replace(/\s+/g, '');
     const isCurrent = (acc.id === ACTIVE_SEND_ACCOUNT_ID) || (accounts.length === 1 && ACTIVE_SEND_ACCOUNT_ID !== 'all');
     const isConn = acc.status === 'CONNECTED';
+<<<<<<< HEAD
     const isScanning = acc.status === 'SCAN_QR';
     const rawCleanDigits = (acc.connected_number || '').replace(/\D/g, '');
     const displayPhone = (rawCleanDigits.length >= 7)
       ? formatPhoneNumberPretty(acc.connected_number)
       : (isConn ? (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998') : (isScanning ? 'Scan QR Code' : 'Awaiting Link'));
 
+=======
+    const isScan = acc.status === 'SCAN_QR';
+    const displayPhone = isConn ? (acc.connected_number || '+91 99435 57998') : (isScan ? (isSuperAdmin ? 'Scan QR Code' : '+91 99435 57998') : (acc.connected_number || 'Awaiting Link'));
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
     const custCount = (CRM_STATE?.customers || []).filter(c => {
       const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
       return (c.accountId || (q ? q.accountId : 'account_1')) === acc.id;
@@ -4045,21 +4554,32 @@ function renderPhoneSwitcherDropdown() {
     return `
       <div onclick="switchActiveWhatsAppLine('${acc.id}', '${rawCleanDigits.length >= 7 ? acc.connected_number : ''}', '${acc.label || 'Line ' + (index + 1)}')" class="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition flex items-center justify-between group ${isCurrent ? 'bg-emerald-50/80 border border-emerald-300' : ''}">
         <div class="flex items-center gap-2.5 min-w-0">
+<<<<<<< HEAD
           <div class="w-8 h-8 rounded-lg ${isCurrent ? 'bg-brand-wa text-white shadow-sm' : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700'} flex items-center justify-center font-bold text-xs shrink-0">
             <span class="material-symbols-outlined text-[18px]">${isCurrent ? 'check_circle' : (isConn ? 'phone_android' : 'qr_code_scanner')}</span>
+=======
+          <div class="w-8 h-8 rounded-lg ${isCurrent ? 'bg-brand-wa text-white shadow-sm' : (isConn ? 'bg-emerald-100 text-emerald-700' : (isScan ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'))} flex items-center justify-center font-bold text-xs shrink-0">
+            <span class="material-symbols-outlined text-[18px]">${isCurrent ? 'check_circle' : (isConn ? 'phone_android' : (isScan ? 'qr_code_scanner' : 'phonelink_off'))}</span>
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-1.5">
               <span class="font-bold text-slate-900 text-xs truncate">${acc.label || ('WhatsApp Line #' + (index + 1))}</span>
               ${isCurrent ? '<span class="text-[9px] bg-brand-wa text-white px-1.5 py-0.2 rounded font-extrabold">ACTIVE</span>' : ''}
             </div>
-            <p class="font-mono text-[11px] font-bold ${isCurrent ? 'text-emerald-700' : 'text-slate-500'}">${displayPhone}</p>
+            <p class="font-mono text-[11px] font-bold ${isConn ? 'text-emerald-700' : (isScan ? 'text-amber-700' : 'text-slate-500')}">${displayPhone}</p>
           </div>
         </div>
         <div class="text-right shrink-0 flex flex-col items-end">
+<<<<<<< HEAD
           <span class="inline-flex items-center gap-1 text-[10px] font-bold ${isConn ? 'text-emerald-600' : (isScanning ? 'text-amber-600' : 'text-slate-500')}">
             <span class="w-1.5 h-1.5 rounded-full ${isConn ? 'bg-emerald-500' : (isScanning ? 'bg-amber-500' : 'bg-slate-400')}"></span>
             ${isConn ? 'Connected' : (isScanning ? 'Scan QR' : 'Awaiting Link')}
+=======
+          <span class="inline-flex items-center gap-1 text-[10px] font-bold ${isConn ? 'text-emerald-600' : (isScan ? 'text-amber-600' : 'text-rose-600')}">
+            <span class="w-1.5 h-1.5 rounded-full ${isConn ? 'bg-emerald-500' : (isScan ? 'bg-amber-500 animate-pulse' : 'bg-rose-500')}"></span>
+            ${isConn ? 'Connected' : (isScan ? 'Scan QR' : 'Disconnected')}
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
           </span>
           <span class="text-[9px] text-slate-400 font-semibold">${custCount} Chats</span>
         </div>
@@ -4078,10 +4598,15 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
   }
 
   const accounts = getAvailableWhatsAppAccounts();
+<<<<<<< HEAD
   const selectedAcc = accounts.find(a => a.id === accountId);
   const isConn = (accountId === 'all')
     ? accounts.some(a => a.status === 'CONNECTED')
     : Boolean(selectedAcc && selectedAcc.status === 'CONNECTED');
+=======
+  const acc = accounts.find(a => a.id === accountId);
+  const accStatus = acc ? (acc.status || 'DISCONNECTED') : 'CONNECTED';
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
 
   if (accountId !== 'all') {
     const cleanDigits = String(phoneNumber || '').replace(/\D/g, '');
@@ -4091,7 +4616,11 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
       CRM_STATE.whatsappAccount.phoneNumber = selectedAcc.connected_number;
     }
   }
+<<<<<<< HEAD
   CRM_STATE.whatsappAccount.status = isConn ? 'CONNECTED' : (selectedAcc ? (selectedAcc.status || 'DISCONNECTED') : 'DISCONNECTED');
+=======
+  CRM_STATE.whatsappAccount.status = accStatus;
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
   saveCRMState();
   updateConfiguredPhoneDisplays();
   closePhoneSwitcherDropdown();
@@ -4227,9 +4756,55 @@ document.addEventListener('click', (e) => {
   }
 });
 
+function normalizeWhatsAppPhone(rawInput) {
+  if (!rawInput) return { cleanDigits: '', formattedPhone: '+91 98765 43210', digits10: '' };
+  let str = String(rawInput).trim();
+  if (str.includes('@')) str = str.split('@')[0];
+  if (str.includes(':')) str = str.split(':')[0];
+  let digits = str.replace(/[^0-9]/g, '');
+
+  // Privacy LID Resolution
+  if (digits.length >= 14) {
+    const sharedLidMap = (CRM_STATE && CRM_STATE.lidMappings) || window.LID_MAPPINGS || { '275341797023827': '919943557998' };
+    if (sharedLidMap[digits]) {
+      const mapped = String(sharedLidMap[digits]).replace(/[^0-9]/g, '');
+      if (mapped.length >= 10) digits = mapped;
+    }
+  }
+
+  // Strip trailing device index 0 (e.g. 9181240385850 -> 918124038585, or 81240385850 -> 8124038585)
+  if (digits.length === 13 && digits.startsWith('91') && digits.endsWith('0')) {
+    digits = digits.slice(0, 12);
+  } else if (digits.length === 11 && digits.endsWith('0') && !digits.startsWith('0')) {
+    digits = digits.slice(0, 10);
+  }
+
+  let digits10 = digits;
+  if (digits.length === 12 && digits.startsWith('91')) {
+    digits10 = digits.slice(2);
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    digits10 = digits.slice(1);
+  } else if (digits.length > 10) {
+    digits10 = digits.slice(-10);
+  }
+
+  let formatted = '';
+  if (digits10.length === 10) {
+    formatted = `+91 ${digits10.slice(0, 5)} ${digits10.slice(5)}`;
+  } else if (digits.length > 0) {
+    formatted = `+${digits}`;
+  } else {
+    formatted = '+91 98765 43210';
+  }
+
+  return { cleanDigits: digits10 || digits, formattedPhone: formatted, digits10: digits10.slice(-10) };
+}
+window.normalizeWhatsAppPhone = normalizeWhatsAppPhone;
+
 function formatPhoneNumberPretty(phone) {
   if (!phone) return '+91 86680 07593';
   if (phone.includes('156066293805087')) return '+91 95009 04638';
+<<<<<<< HEAD
   const clean = phone.replace(/[^0-9]/g, '');
   if (clean.length < 5) return phone;
   if (clean.length === 12 && clean.startsWith('91')) {
@@ -4239,6 +4814,10 @@ function formatPhoneNumberPretty(phone) {
     return `+91 ${clean.slice(0, 5)} ${clean.slice(5)}`;
   }
   return phone.startsWith('+') ? phone : ('+' + phone);
+=======
+  const norm = normalizeWhatsAppPhone(phone);
+  return norm.formattedPhone || (phone.startsWith('+') ? phone : ('+' + phone));
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
 }
 
 // Check if currently logged in user is a staff member (Not Admin or Super Admin)
@@ -4352,8 +4931,14 @@ function updateConfiguredPhoneDisplays() {
   }
 
   const accounts = getAvailableWhatsAppAccounts();
-  const rawPhone = CRM_STATE.whatsappAccount.phoneNumber || '+91 86680 07593';
+  const rawPhone = CRM_STATE.whatsappAccount.phoneNumber || '+91 99435 57998';
+  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined') ? CRM_AUTH_SESSION : null);
+  const isSuperAdmin = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
 
+  let displayLabel = '';
+  let activeStatus = 'DISCONNECTED';
+
+<<<<<<< HEAD
   let phone = '';
   let activeStatus = CRM_STATE.whatsappAccount.status || 'DISCONNECTED';
   if (ACTIVE_SEND_ACCOUNT_ID === 'all') {
@@ -4368,19 +4953,70 @@ function updateConfiguredPhoneDisplays() {
       phone = (activeStatus === 'CONNECTED' && cur.connected_number) ? formatPhoneNumberPretty(cur.connected_number) : (cur.label || 'WhatsApp Line');
     } else {
       phone = formatPhoneNumberPretty(rawPhone);
+=======
+  if (ACTIVE_SEND_ACCOUNT_ID === 'all') {
+    if (isSuperAdmin) {
+      displayLabel = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : (accounts[0] && accounts[0].status === 'CONNECTED' ? formatPhoneNumberPretty(accounts[0].connected_number) : '+Scan QR Code');
+    } else {
+      const firstLive = accounts.find(a => a.status === 'CONNECTED' && a.connected_number && a.connected_number !== 'Awaiting Link');
+      displayLabel = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : (firstLive ? formatPhoneNumberPretty(firstLive.connected_number) : formatPhoneNumberPretty(rawPhone));
+    }
+    activeStatus = accounts.some(a => a.status === 'CONNECTED') ? 'CONNECTED' : (accounts.some(a => a.status === 'SCAN_QR') ? 'SCAN_QR' : 'DISCONNECTED');
+  } else {
+    const cur = accounts.find(a => a.id === ACTIVE_SEND_ACCOUNT_ID) || accounts[0];
+    if (cur) {
+      activeStatus = (cur.status || 'DISCONNECTED').toUpperCase();
+      if (activeStatus === 'CONNECTED' && cur.connected_number && cur.connected_number !== 'Awaiting Link') {
+        displayLabel = formatPhoneNumberPretty(cur.connected_number);
+      } else if (activeStatus === 'SCAN_QR') {
+        displayLabel = isSuperAdmin ? '+Scan QR Code' : formatPhoneNumberPretty(rawPhone);
+      } else {
+        displayLabel = (cur.connected_number && cur.connected_number !== 'Awaiting Link') ? formatPhoneNumberPretty(cur.connected_number) : (isSuperAdmin ? 'Awaiting Link' : formatPhoneNumberPretty(rawPhone));
+      }
+    } else {
+      displayLabel = formatPhoneNumberPretty(rawPhone);
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
     }
   }
 
   // Update in topbar/sidebar indicators
   document.querySelectorAll('.configured-business-phone').forEach(el => {
-    el.innerText = phone;
+    el.innerText = displayLabel;
   });
 
   const sidebarPhone = document.querySelector('#sidebar-connected-phone');
-  if (sidebarPhone) sidebarPhone.innerText = (ACTIVE_SEND_ACCOUNT_ID === 'all') ? (accounts[0] ? formatPhoneNumberPretty(accounts[0].connected_number) : '+91 86680 07593') : phone;
+  if (sidebarPhone) sidebarPhone.innerText = displayLabel;
 
   const headerLabel = document.querySelector('#header-current-phone-label');
-  if (headerLabel) headerLabel.innerText = phone;
+  if (headerLabel) headerLabel.innerText = displayLabel;
+
+  // Header status indicator dot, ping & icon colors
+  const dot = document.getElementById('header-phone-dot');
+  const ping = document.getElementById('header-phone-ping');
+  const icon = document.getElementById('header-phone-icon');
+  if (dot) {
+    if (activeStatus === 'CONNECTED') {
+      dot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500';
+      if (ping) {
+        ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+        ping.style.display = '';
+      }
+      if (icon) icon.className = 'material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 shrink-0';
+    } else if (activeStatus === 'SCAN_QR') {
+      dot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-amber-500';
+      if (ping) {
+        ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75';
+        ping.style.display = '';
+      }
+      if (icon) icon.className = 'material-symbols-outlined text-[15px] sm:text-[16px] text-amber-600 shrink-0';
+    } else {
+      dot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-rose-500';
+      if (ping) {
+        ping.style.display = 'none';
+      }
+      if (icon) icon.className = 'material-symbols-outlined text-[15px] sm:text-[16px] text-rose-600 shrink-0';
+    }
+  }
 
   const settingsLabel = document.querySelector('#settings-current-phone-label');
   if (settingsLabel) settingsLabel.innerText = phone;
@@ -4442,7 +5078,7 @@ function updateConfiguredPhoneDisplays() {
   });
 
   const cfgInput = document.querySelector('#cfg-phone-number');
-  if (cfgInput && !cfgInput.value) cfgInput.value = (ACTIVE_SEND_ACCOUNT_ID === 'all') ? (accounts[0] ? formatPhoneNumberPretty(accounts[0].connected_number) : '+91 86680 07593') : phone;
+  if (cfgInput && !cfgInput.value) cfgInput.value = displayLabel;
 
   const pageSub = document.querySelector('#page-subtitle');
   if (pageSub && ACTIVE_VIEW === 'inbox') {
@@ -4914,9 +5550,20 @@ function switchView(viewName, subName, isFromHistory = false) {
   }
 
   // Enforce Role-Based Access Control
-  if (typeof canUserPerformAction === 'function' && !canUserPerformAction(viewName, 'view')) {
+  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined') ? CRM_AUTH_SESSION : null);
+  const isSuperAdminUser = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
+
+  // STRICT RULE: "staff login time admin panel dont touch there"
+  // Non-admin staff cannot access Settings or Backup under any circumstance
+  if (!isSuperAdminUser && (viewName === 'settings' || viewName === 'backup')) {
+    if (typeof showToast === 'function') {
+      showToast('Admin Panel Protected', 'Staff accounts cannot access or modify Admin Panel settings.', 'lock', 'rose');
+    }
+    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view') && m.key !== 'settings' && m.key !== 'backup');
+    viewName = firstAllowed ? firstAllowed.key : 'inbox';
+  } else if (typeof canUserPerformAction === 'function' && !canUserPerformAction(viewName, 'view')) {
     showToast('Access Restricted', 'Your assigned role does not have permission to view this module.', 'lock', 'rose');
-    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view'));
+    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view') && m.key !== 'settings' && m.key !== 'backup');
     viewName = firstAllowed ? firstAllowed.key : 'inbox';
   }
 
@@ -5943,6 +6590,16 @@ function renderInboxConversationList() {
     }
   }
 
+  // Performance Guard: Skip full DOM regeneration if conversation list items haven't changed
+  const convListFp = `${INBOX_FILTER}#${searchQuery}#${ACTIVE_CUSTOMER_ID}#` +
+    customerCards.map(c => `${c.customerId}:${c.unreadCount}:${c.lastTime}:${c.status}:${c.assignedTo}`).join(';');
+
+  if (container._lastConvListFp === convListFp && !window._FORCE_CONV_LIST_RENDER) {
+    return;
+  }
+  container._lastConvListFp = convListFp;
+  window._FORCE_CONV_LIST_RENDER = false;
+
   container.innerHTML = customerCards.map(item => {
     const isSelected = item.customerId === ACTIVE_CUSTOMER_ID || String(item.customerId) === String(ACTIVE_CUSTOMER_ID);
     const isUnassigned = item.assignedTo === 'UNASSIGNED';
@@ -6666,11 +7323,17 @@ function renderChatMessages() {
       for (const m of bucket) {
         if (!m) continue;
         const mId = m.id ? String(m.id) : null;
+        const isVoice = m.media_type === 'audio' || m.type === 'audio' || (m.text && m.text.includes('Voice Note'));
+        const voiceTimeKey = isVoice && m.sender === 'staff' ? `${m.sender}_voice_${m.time || ''}` : null;
+
         const fp = `${m.sender}_${m.time || ''}_${(m.text || '').slice(0, 30)}_${(m.media_url || '').slice(-30)}`;
         if (mId && mergedIds.has(mId)) continue;
         if (mergedFingerprints.has(fp)) continue;
+        if (voiceTimeKey && mergedFingerprints.has(voiceTimeKey)) continue;
+
         if (mId) mergedIds.add(mId);
         mergedFingerprints.add(fp);
+        if (voiceTimeKey) mergedFingerprints.add(voiceTimeKey);
         mergedList.push(m);
       }
     };
@@ -6705,6 +7368,11 @@ function renderChatMessages() {
   const t = window.t || ((k, f) => f || k);
 
   if (messages.length === 0) {
+    const emptyFp = `empty_${ACTIVE_CUSTOMER_ID}`;
+    if (stream._lastRenderedFingerprint === emptyFp && !window._FORCE_CHAT_RE_RENDER) {
+      return;
+    }
+    stream._lastRenderedFingerprint = emptyFp;
     stream.innerHTML = `
       <div class="h-full flex items-center justify-center text-center text-slate-400">
         <div>
@@ -6725,6 +7393,17 @@ function renderChatMessages() {
   const selSearch = (filter.search || '').trim().toLowerCase();
 
   const hasActiveFilter = (selCat !== 'ALL' || selSub !== 'ALL' || selSubsub !== 'ALL' || selSearch.length > 0);
+
+  // Performance Guard: Skip rebuilding chat stream DOM if active customer, message count, latest message and filter haven't changed
+  const lastMsg = messages[messages.length - 1];
+  const lastMsgKey = lastMsg ? `${lastMsg.id || lastMsg.message_uid}_${lastMsg.status}_${lastMsg.translated_audio_url ? 1 : 0}` : 'none';
+  const streamFingerprint = `${ACTIVE_CUSTOMER_ID}#${messages.length}#${lastMsgKey}#${selCat}#${selSub}#${selSubsub}#${selSearch}`;
+
+  if (stream._lastRenderedFingerprint === streamFingerprint && !window._FORCE_CHAT_RE_RENDER) {
+    return;
+  }
+  stream._lastRenderedFingerprint = streamFingerprint;
+  window._FORCE_CHAT_RE_RENDER = false;
 
   const matchingMsgIds = new Set();
   const matchingSkus = new Set();
@@ -6870,13 +7549,18 @@ function renderChatMessages() {
     let contentHtml = '';
 
     if (isAudio) {
-      let audioSrc = rawMedia;
-      if (!audioSrc || audioSrc === 'undefined') {
-        const sibling = (messages || []).find(m => m && (m.media_url || m.mediaUrl) && String(m.media_url || m.mediaUrl).includes('/voice/'));
-        if (sibling) audioSrc = sibling.media_url || sibling.mediaUrl;
-      }
-      if (audioSrc && !audioSrc.startsWith('http://') && !audioSrc.startsWith('https://') && !audioSrc.startsWith('data:') && !audioSrc.startsWith('blob:')) {
-        audioSrc = window.location.origin + '/' + audioSrc.replace(/^\/+/, '');
+      let audioSrc = rawMedia || '';
+      let streamSrc = '';
+      let audioSrcMp3 = '';
+      if (audioSrc && audioSrc !== 'undefined') {
+        if (!audioSrc.startsWith('http://') && !audioSrc.startsWith('https://') && !audioSrc.startsWith('data:') && !audioSrc.startsWith('blob:')) {
+          const cleanRel = audioSrc.replace(/^\/+/, '');
+          streamSrc = window.location.origin + '/api.php?action=stream_audio&file=' + encodeURIComponent(cleanRel);
+          audioSrc = window.location.origin + '/' + cleanRel;
+          audioSrcMp3 = audioSrc.replace(/\.ogg$/i, '.mp3');
+        } else if (audioSrc.startsWith('http://') || audioSrc.startsWith('https://')) {
+          audioSrcMp3 = audioSrc.replace(/\.ogg$/i, '.mp3');
+        }
       }
       contentHtml = `
         <div class="space-y-2 py-1">
@@ -6901,10 +7585,14 @@ function renderChatMessages() {
                 </span>
                 <button onclick="toggleAudioSpeed('${msgId}')" id="speed-${msgId}" class="font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[10px] transition cursor-pointer">1.0x</button>
               </div>
-              <audio id="audio-${msgId}" src="${audioSrc}" preload="metadata" 
+              <audio id="audio-${msgId}" src="${streamSrc || audioSrc}" data-fallback-src="${audioSrc}" data-mp3-src="${audioSrcMp3}" preload="metadata" playsinline 
                 ontimeupdate="updateAudioProgress('${msgId}')" 
                 onended="onAudioEnded('${msgId}')"
-                onerror="handleAudioFallback('${msgId}')"></audio>
+                onerror="handleAudioFallback('${msgId}')">
+                ${streamSrc ? `<source src="${streamSrc}" type="audio/ogg; codecs=opus">` : ''}
+                ${audioSrc ? `<source src="${audioSrc}" type="audio/ogg; codecs=opus">` : ''}
+                ${audioSrcMp3 ? `<source src="${audioSrcMp3}" type="audio/mpeg">` : ''}
+              </audio>
             </div>
           </div>
 
@@ -7532,16 +8220,113 @@ document.addEventListener('keydown', function (e) {
 });
 
 // =========================================================================
-// AUDIO PLAYBACK CONTROLLER
+// AUDIO PLAYBACK CONTROLLER WITH WEB AUDIO API UNIVERSAL DECODER FALLBACK
 // =========================================================================
+let _crmWebAudioCtx = null;
+let _crmActiveWebAudio = null;
+
+async function playWithWebAudioFallback(src, msgId, icon, seek, timeLbl) {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return false;
+    if (!_crmWebAudioCtx) _crmWebAudioCtx = new AudioCtx();
+    if (_crmWebAudioCtx.state === 'suspended') await _crmWebAudioCtx.resume();
+
+    // If currently playing this same voice, toggle pause
+    if (_crmActiveWebAudio && _crmActiveWebAudio.msgId === msgId && _crmActiveWebAudio.isPlaying) {
+      if (_crmActiveWebAudio.source) {
+        try { _crmActiveWebAudio.source.stop(); } catch (e) {}
+      }
+      if (_crmActiveWebAudio.interval) clearInterval(_crmActiveWebAudio.interval);
+      _crmActiveWebAudio.isPlaying = false;
+      if (icon) icon.innerText = 'play_arrow';
+      return true;
+    }
+
+    // Stop any previous Web Audio playback
+    if (_crmActiveWebAudio && _crmActiveWebAudio.source) {
+      try { _crmActiveWebAudio.source.stop(); } catch (e) {}
+      if (_crmActiveWebAudio.interval) clearInterval(_crmActiveWebAudio.interval);
+      const prevIcon = document.getElementById(`icon-${_crmActiveWebAudio.msgId}`);
+      if (prevIcon) prevIcon.innerText = 'play_arrow';
+    }
+
+    let arrayBuf = null;
+    if (src.startsWith('data:audio/')) {
+      const base64Data = src.split(',')[1] || src.replace(/^data:[^;]+;base64,/, '');
+      const binaryStr = atob(base64Data);
+      const len = binaryStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = binaryStr.charCodeAt(i);
+      arrayBuf = bytes.buffer;
+    } else {
+      const resp = await fetch(src);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      arrayBuf = await resp.arrayBuffer();
+    }
+
+    const decodedBuffer = await _crmWebAudioCtx.decodeAudioData(arrayBuf);
+    const sourceNode = _crmWebAudioCtx.createBufferSource();
+    sourceNode.buffer = decodedBuffer;
+    sourceNode.connect(_crmWebAudioCtx.destination);
+
+    const dur = decodedBuffer.duration;
+    if (seek) seek.max = dur;
+    if (icon) icon.innerText = 'pause';
+
+    const startEpoch = _crmWebAudioCtx.currentTime;
+    const interval = setInterval(() => {
+      if (!_crmWebAudioCtx) return;
+      const elapsed = _crmWebAudioCtx.currentTime - startEpoch;
+      if (seek) seek.value = elapsed;
+      if (timeLbl) timeLbl.innerText = formatAudioTime(elapsed);
+      if (elapsed >= dur) {
+        clearInterval(interval);
+        if (icon) icon.innerText = 'play_arrow';
+        if (seek) seek.value = 0;
+        if (timeLbl) timeLbl.innerText = formatAudioTime(dur);
+        if (_crmActiveWebAudio) _crmActiveWebAudio.isPlaying = false;
+      }
+    }, 150);
+
+    sourceNode.onended = () => {
+      clearInterval(interval);
+      if (icon) icon.innerText = 'play_arrow';
+      if (seek) seek.value = 0;
+      if (timeLbl) timeLbl.innerText = formatAudioTime(dur);
+      if (_crmActiveWebAudio) _crmActiveWebAudio.isPlaying = false;
+    };
+
+    sourceNode.start(0);
+    _crmActiveWebAudio = { source: sourceNode, msgId: msgId, isPlaying: true, interval: interval };
+    return true;
+  } catch (err) {
+    console.warn('[Web Audio Playback Fallback Failed]:', err);
+    return false;
+  }
+}
+
 window.toggleAudioPlay = function (msgId) {
   const audio = document.getElementById(`audio-${msgId}`);
   const icon = document.getElementById(`icon-${msgId}`);
+  const seek = document.getElementById(`seek-${msgId}`);
+  const timeLbl = document.getElementById(`time-${msgId}`);
   if (!audio) return;
+
+  // If Web Audio fallback is active for this audio
+  if (_crmActiveWebAudio && _crmActiveWebAudio.msgId === msgId && _crmActiveWebAudio.isPlaying) {
+    if (_crmActiveWebAudio.source) {
+      try { _crmActiveWebAudio.source.stop(); } catch (e) {}
+    }
+    if (_crmActiveWebAudio.interval) clearInterval(_crmActiveWebAudio.interval);
+    _crmActiveWebAudio.isPlaying = false;
+    if (icon) icon.innerText = 'play_arrow';
+    return;
+  }
 
   let src = audio.currentSrc || audio.src || '';
   if (!src || src === '' || src === window.location.href || src.endsWith('/')) {
-    const rawAttr = audio.getAttribute('src');
+    const rawAttr = audio.getAttribute('src') || audio.getAttribute('data-fallback-src') || audio.getAttribute('data-src');
     if (rawAttr && rawAttr.trim()) {
       src = (rawAttr.startsWith('http://') || rawAttr.startsWith('https://') || rawAttr.startsWith('data:') || rawAttr.startsWith('blob:'))
         ? rawAttr
@@ -7556,7 +8341,7 @@ window.toggleAudioPlay = function (msgId) {
   }
 
   if (audio.paused) {
-    // Pause all other active audios
+    // Pause all other active HTML5 audios and Web Audio instances
     document.querySelectorAll('audio').forEach(a => {
       if (a !== audio) {
         try { a.pause(); } catch (e) {}
@@ -7565,6 +8350,11 @@ window.toggleAudioPlay = function (msgId) {
         if (otherIcon) otherIcon.innerText = 'play_arrow';
       }
     });
+    if (_crmActiveWebAudio && _crmActiveWebAudio.source) {
+      try { _crmActiveWebAudio.source.stop(); } catch (e) {}
+      if (_crmActiveWebAudio.interval) clearInterval(_crmActiveWebAudio.interval);
+      _crmActiveWebAudio.isPlaying = false;
+    }
 
     audio.play().then(() => {
       if (icon) icon.innerText = 'pause';
@@ -7576,17 +8366,20 @@ window.toggleAudioPlay = function (msgId) {
           if (icon) icon.innerText = 'pause';
           directAudio.onended = () => { if (icon) icon.innerText = 'play_arrow'; };
           directAudio.ontimeupdate = () => {
-            const seek = document.getElementById(`seek-${msgId}`);
-            const timeLbl = document.getElementById(`time-${msgId}`);
             if (seek && directAudio.duration) { seek.max = directAudio.duration; seek.value = directAudio.currentTime; }
             if (timeLbl) timeLbl.innerText = formatAudioTime(directAudio.currentTime);
           };
-        }).catch(err2 => {
-          console.warn('[Direct Audio Play Failed]:', err2);
-          playSimulatedVoice(msgId);
+        }).catch(async (err2) => {
+          console.warn('[Direct Audio Play Failed, Trying Web Audio API]:', err2);
+          const webAudioSuccess = await playWithWebAudioFallback(src, msgId, icon, seek, timeLbl);
+          if (!webAudioSuccess) {
+            playSimulatedVoice(msgId);
+          }
         });
       } catch (e3) {
-        playSimulatedVoice(msgId);
+        playWithWebAudioFallback(src, msgId, icon, seek, timeLbl).then(ok => {
+          if (!ok) playSimulatedVoice(msgId);
+        });
       }
     });
   } else {
@@ -8726,15 +9519,29 @@ function handleCancelQueryEdit(queryId) {
 }
 window.handleCancelQueryEdit = handleCancelQueryEdit;
 
-// Helper to extract clean 10-digit phone number (removing +91 or leading 0)
+// Helper to extract clean 10-digit phone number (removing +91, device :0 index, or leading 0)
 function extract10Digits(val) {
   if (!val) return '';
-  let digits = String(val).replace(/[^0-9]/g, '');
+  let str = String(val).trim();
+  if (str.includes('@')) str = str.split('@')[0];
+  if (str.includes(':')) str = str.split(':')[0];
+  let digits = str.replace(/[^0-9]/g, '');
+
+  // Strip trailing device index 0 (e.g. 9181240385850 -> 918124038585, or 81240385850 -> 8124038585)
+  if (digits.length === 13 && digits.startsWith('91') && digits.endsWith('0')) {
+    digits = digits.slice(0, 12);
+  } else if (digits.length === 11 && digits.endsWith('0') && !digits.startsWith('0')) {
+    digits = digits.slice(0, 10);
+  }
+
   if (digits.length === 12 && digits.startsWith('91')) {
     return digits.slice(2);
   }
   if (digits.length === 11 && digits.startsWith('0')) {
     return digits.slice(1);
+  }
+  if (digits.length > 10) {
+    return digits.slice(-10);
   }
   return digits;
 }
@@ -11405,15 +12212,27 @@ function persistOutboundMessageToBackend(params) {
 window.persistOutboundMessageToBackend = persistOutboundMessageToBackend;
 
 // Dispatches live message to customer's WhatsApp via Node Baileys QR Bridge (Method 3)
-async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false, mediaUrl = null, customerId = null) {
+async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false, mediaUrl = null, customerId = null, mediaData = null) {
   const targetAccId = accountId || ACTIVE_SEND_ACCOUNT_ID || 'account_1';
   const targetMedia = mediaUrl || (msgRef && msgRef.media_url ? msgRef.media_url : null);
+  const targetBase64 = mediaData || (targetMedia && typeof targetMedia === 'string' && targetMedia.startsWith('data:') ? targetMedia : null);
 
-  // Clean and normalize phone number
-  let cleanPhone = (phone || '').toString().trim().replace(/[\s\-\(\)]/g, '');
-  if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.substring(1);
+  // Convert relative mediaUrl to absolute URL for external bridge compatibility
+  let absoluteMediaUrl = targetMedia;
+  if (targetMedia && typeof targetMedia === 'string' && !targetMedia.startsWith('http://') && !targetMedia.startsWith('https://') && !targetMedia.startsWith('data:')) {
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'https://maroon-partridge-532881.hostingersite.com';
+    absoluteMediaUrl = origin.replace(/\/+$/, '') + '/' + targetMedia.replace(/^\/+/, '');
+  }
+
+  // Clean and normalize phone number (strips :0 and device artifacts)
+  const normPhone = normalizeWhatsAppPhone(phone);
+  let cleanPhone = normPhone.cleanDigits;
   if (/^\d{10}$/.test(cleanPhone)) {
     cleanPhone = '91' + cleanPhone;
+  }
+  let cleanJid = jid;
+  if (cleanJid && (cleanJid.includes(':') || /^\d{13}@/.test(cleanJid) || cleanJid.includes('85850'))) {
+    cleanJid = cleanPhone ? `${cleanPhone}@s.whatsapp.net` : null;
   }
 
   const effectiveCustId = customerId || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : null);
@@ -11422,9 +12241,9 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
   // IMMEDIATELY persist outbound message to MySQL so it is NEVER lost on page reload!
   if (typeof persistOutboundMessageToBackend === 'function') {
     persistOutboundMessageToBackend({
-      phone: cleanPhone || phone,
+      phone: normPhone.formattedPhone || cleanPhone || phone,
       text: text,
-      jid: jid,
+      jid: cleanJid,
       accountId: targetAccId,
       media_url: targetMedia,
       customer_id: effectiveCustId,
@@ -11464,9 +12283,12 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
         SOCKET_IO.emit('whatsapp:send', {
           phone: cleanPhone,
           text,
-          jid,
+          jid: cleanJid,
           accountId: targetAccId,
-          mediaUrl: targetMedia,
+          mediaUrl: targetBase64 || absoluteMediaUrl,
+          media_url: targetBase64 || absoluteMediaUrl,
+          mediaData: targetBase64,
+          media_data: targetBase64,
           customerId: effectiveCustId
         }, (res) => {
           if (resolved) return;
@@ -11502,9 +12324,12 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       body: JSON.stringify({
         phone: cleanPhone,
         text,
-        jid,
+        jid: cleanJid,
         accountId: targetAccId,
-        mediaUrl: targetMedia,
+        mediaUrl: targetBase64 || absoluteMediaUrl,
+        media_url: targetBase64 || absoluteMediaUrl,
+        mediaData: targetBase64,
+        media_data: targetBase64,
         customerId: effectiveCustId
       })
     });
@@ -11529,9 +12354,12 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       body: JSON.stringify({
         phone: cleanPhone,
         text,
-        jid,
+        jid: cleanJid,
         accountId: targetAccId,
-        media_url: targetMedia,
+        media_url: targetBase64 || targetMedia,
+        mediaUrl: targetBase64 || targetMedia,
+        media_data: targetBase64,
+        mediaData: targetBase64,
         customer_id: effectiveCustId
       })
     });
@@ -11770,8 +12598,20 @@ async function handleSendMessage(event) {
   const input = document.getElementById('chat-input-text');
   const rawText = input.value.trim();
 
-  // Allow sending if there is text OR an attached image
-  if (!rawText && !CHAT_ATTACHED_IMAGE_DATA) return;
+  // Allow sending if there is text OR an attached image OR an active voice recording
+  const hasVoiceRecording = Boolean(typeof _voiceCurrentBlob !== 'undefined' && _voiceCurrentBlob) ||
+    Boolean(typeof _voiceUploadedAudioUrl !== 'undefined' && _voiceUploadedAudioUrl) ||
+    Boolean(document.getElementById('voice-recording-preview') && !document.getElementById('voice-recording-preview').classList.contains('hidden'));
+
+  if (!rawText && !CHAT_ATTACHED_IMAGE_DATA && !hasVoiceRecording) return;
+
+  if (!rawText && !CHAT_ATTACHED_IMAGE_DATA && hasVoiceRecording) {
+    if (typeof _isVoiceSending !== 'undefined' && _isVoiceSending) return;
+    if (typeof window.dispatchTranslatedVoice === 'function') {
+      window.dispatchTranslatedVoice('original');
+    }
+    return;
+  }
 
   const customer = CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID);
   if (!customer) return;
@@ -11781,6 +12621,7 @@ async function handleSendMessage(event) {
   }
 
   const attachedMedia = CHAT_ATTACHED_IMAGE_DATA ? (CHAT_ATTACHED_IMAGE_DATA.serverUrl || CHAT_ATTACHED_IMAGE_DATA.dataUrl) : null;
+  const attachedBase64 = CHAT_ATTACHED_IMAGE_DATA ? CHAT_ATTACHED_IMAGE_DATA.dataUrl : null;
 
   // Translate text if outbound Send As language is selected
   let textToSend = rawText;
@@ -11834,7 +12675,17 @@ async function handleSendMessage(event) {
   playChime('order');
 
   // Transmit live WhatsApp message across WebSocket bridge to customer's WhatsApp!
-  dispatchWhatsAppOutbound(customer.whatsapp || customer.phone, formattedText, newMsg, customer.jid, customer.accountId || ACTIVE_SEND_ACCOUNT_ID, false, attachedMedia, customer.id);
+  dispatchWhatsAppOutbound(
+    customer.whatsapp || customer.phone,
+    formattedText,
+    newMsg,
+    customer.jid,
+    customer.accountId || ACTIVE_SEND_ACCOUNT_ID,
+    false,
+    attachedMedia,
+    customer.id,
+    attachedBase64
+  );
 }
 
 function insertQuickReply(type) {
@@ -13330,83 +14181,59 @@ function handleConfirmAssignment(event) {
 window.handleConfirmAssignment = handleConfirmAssignment;
 
 // =========================================================================
-// 6. INBOUND WHATSAPP SIMULATOR & DEV TESTING ACTIONS
+// 6. INBOX FILTERS & VIEW RESET ENGINE (Safe across all tabs and browsers)
 // =========================================================================
-function confirmResetInboxMessages() {
-  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
-  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('inbox', 'delete')) {
-    if (typeof showToast === 'function') {
-      showToast('Access Restricted', 'Your assigned role does not have permission to delete or reset WhatsApp Inbox messages.', 'lock', 'rose');
+function resetInboxViewFilters() {
+  try {
+    // 1. Clear search input field
+    const searchInput = document.getElementById('inbox-search-input') || 
+                        document.querySelector('input[placeholder*="Search customer"]') ||
+                        document.querySelector('input[placeholder*="Search SKU"]');
+    if (searchInput) {
+      searchInput.value = '';
     }
-    return;
+
+    // 2. Reset category, subcategory, and status dropdowns if present
+    const catSel = document.getElementById('inbox-cat-select');
+    if (catSel) catSel.value = 'all';
+
+    // 3. Reset queue filter tab back to default 'all'
+    if (typeof setInboxFilter === 'function') {
+      setInboxFilter('all');
+    }
+
+    // 4. Reset internal search memory
+    window.INBOX_SEARCH_QUERY = '';
+    window.ACTIVE_INBOX_FILTER = 'all';
+
+    // 5. Safely refresh live data from server without wiping any records
+    if (typeof syncLiveCRMData === 'function') {
+      syncLiveCRMData(true);
+    }
+    if (typeof syncInboundMessagesNow === 'function') {
+      syncInboundMessagesNow(true);
+    }
+
+    // 6. Re-render customer queue and chats cleanly
+    if (typeof renderInbox === 'function') renderInbox();
+    if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+
+    if (typeof showToast === 'function') {
+      showToast('Inbox Filters Reset', 'Search and filter criteria reset. Active conversation queue refreshed.', 'refresh', 'emerald');
+    }
+  } catch (err) {
+    console.error('Error resetting inbox view filters:', err);
   }
-  const modal = document.getElementById('modal-reset-inbox-confirm');
-  if (modal && typeof openModal === 'function') {
-    openModal('modal-reset-inbox-confirm');
-  } else {
-    resetInboxMessages();
-  }
+}
+window.resetInboxViewFilters = resetInboxViewFilters;
+
+function confirmResetInboxMessages() {
+  resetInboxViewFilters();
 }
 window.confirmResetInboxMessages = confirmResetInboxMessages;
 
 function resetInboxMessages(skipAlert) {
-  try {
-    // 1. Completely clear all inbox conversations, active inquiries, customers, and temporary chat data
-    CRM_STATE.conversations = {};
-    CRM_STATE.queries = [];
-    CRM_STATE.customers = [];
-    CRM_STATE.orders = [];
-    CRM_STATE.deletedSlots = [];
-    CRM_STATE.whatsappLines = null;
-    ACTIVE_CUSTOMER_ID = null;
-    ACTIVE_SEND_ACCOUNT_ID = 'all';
-
-    if (INITIAL_CRM_DATA && INITIAL_CRM_DATA.whatsappAccount) {
-      CRM_STATE.whatsappAccount = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.whatsappAccount));
-    }
-    if (INITIAL_CRM_DATA && INITIAL_CRM_DATA.dailyMessageTarget) {
-      CRM_STATE.dailyMessageTarget = JSON.parse(JSON.stringify(INITIAL_CRM_DATA.dailyMessageTarget));
-    }
-
-    // 2. Call backend API to clear messages and live message queue
-    fetch('api.php?action=clear_inbox', { method: 'POST' }).catch(() => { });
-
-    // 3. Persist clean state to local storage
-    saveCRMState();
-
-    // 4. Re-render UI components cleanly
-    renderInbox();
-    if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
-    if (typeof renderChatHeader === 'function') renderChatHeader();
-    if (typeof renderChatMessages === 'function') renderChatMessages();
-    if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
-    if (typeof renderPhoneSwitcherDropdown === 'function') renderPhoneSwitcherDropdown();
-    if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
-    if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
-    if (typeof renderOrdersTable === 'function') renderOrdersTable();
-    if (typeof renderMultiAccountsHub === 'function') renderMultiAccountsHub();
-
-    if (typeof closeModal === 'function') {
-      closeModal('modal-reset-inbox-confirm');
-      closeModal('modal-inbound-simulator');
-      closeModal('modal-inbound-sim');
-    }
-
-    if (!skipAlert && typeof showToast === 'function') {
-      showToast(
-        'Inbox Cleared',
-        'All chat conversations and messages have been cleared.',
-        'delete_sweep',
-        'emerald'
-      );
-      if (typeof playChime === 'function') playChime('inbound');
-    }
-  } catch (err) {
-    console.error('Error resetting inbox messages:', err);
-    if (typeof showToast === 'function') {
-      showToast('Reset Error', err.message, 'error', 'rose');
-    }
-  }
+  resetInboxViewFilters();
 }
 window.resetInboxMessages = resetInboxMessages;
 
@@ -20014,27 +20841,31 @@ function renderCatalogGridFromList(list) {
           ` : ''}
           
           ${IS_BULK_PRICE_MODE ? `
-            <div class="absolute top-2.5 left-2.5 z-10 flex items-center">
+            <div class="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-1">
               <label class="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-xl border-2 ${isSelected ? 'border-emerald-600 shadow-md ring-2 ring-emerald-200' : 'border-slate-300 shadow-sm'} cursor-pointer hover:border-emerald-600 transition" onclick="event.stopPropagation()">
                 <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBulkProductSelected('${p.id}', this.checked, '${p.groupKey || ''}')" class="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
                 <span class="font-mono text-[11px] font-extrabold text-slate-800">${p.sku}</span>
                 ${p.isGroup ? `<span class="bg-indigo-900/90 text-indigo-100 text-[10px] font-extrabold px-1.5 py-0.5 rounded shadow-xs">${p.variantCount} Var</span>` : ''}
               </label>
+              <div class="shrink-0">
+                ${stockBadge}
+              </div>
             </div>
           ` : `
-            <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap max-w-[70%]">
-              <span class="bg-slate-900/80 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shadow">${p.sku}</span>
-              ${p.isGroup ? `
-                <span class="bg-indigo-900/90 backdrop-blur-sm text-indigo-100 font-extrabold text-[10px] px-2 py-0.5 rounded-md shadow flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[13px] text-indigo-300">layers</span> ${p.variantCount} Variants
-                </span>
-              ` : ''}
+            <div class="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1 z-10 pointer-events-none">
+              <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                <span class="bg-slate-900/85 backdrop-blur-sm text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shadow shrink-0">${p.sku}</span>
+                ${p.isGroup ? `
+                  <span class="bg-indigo-900/90 backdrop-blur-sm text-indigo-100 font-extrabold text-[10px] px-1.5 py-0.5 rounded-md shadow flex items-center gap-1 shrink-0">
+                    <span class="material-symbols-outlined text-[12px] text-indigo-300">layers</span> ${p.variantCount} Var
+                  </span>
+                ` : ''}
+              </div>
+              <div class="shrink-0 pointer-events-auto">
+                ${stockBadge}
+              </div>
             </div>
           `}
-
-          <div class="absolute top-2.5 right-2.5">
-            ${stockBadge}
-          </div>
           <div class="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between">
             <span class="text-[9px] bg-white/95 backdrop-blur-sm text-slate-800 font-bold px-2 py-0.5 rounded-md shadow-sm truncate max-w-[200px]" title="${catBreadcrumb}">
               ${catBreadcrumb}
@@ -26996,6 +27827,14 @@ function renderOrdersHistoryTable() {
               </button>
               ` : ''}
 
+              ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'delete')) ? `
+              <button type="button" onclick="confirmDeleteOrder('${ord.id}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-rose-300" title="Delete Order">
+                <span class="material-symbols-outlined text-[14px]">delete</span>
+                <span class="text-[11px]">Delete</span>
+              </button>
+              ` : ''}
+
+              ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'view')) ? `
               <!-- View Packing Slip -->
               <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-teal-300" title="View &amp; Print Packing Slip">
                 <span class="material-symbols-outlined text-[14px]">local_shipping</span>
@@ -27013,6 +27852,7 @@ function renderOrdersHistoryTable() {
                 <span class="material-symbols-outlined text-[14px]">chat</span>
                 <span class="hidden sm:inline text-[11px]">Chat</span>
               </button>
+              ` : ''}
             </div>
           </td>
         </tr>
@@ -27222,28 +28062,37 @@ function renderOrdersHistoryTable() {
           </div>
 
           <!-- Action Buttons Bar -->
-          <div class="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100">
+          <div class="flex items-center gap-1.5 pt-2 border-t border-slate-100 flex-wrap">
             ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'edit')) ? `
-              <button type="button" onclick="openEditOrderModal('${ord.id}')" class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-blue-200">
+              <button type="button" onclick="openEditOrderModal('${ord.id}')" class="flex-1 min-w-[70px] py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-blue-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[15px]">edit</span>
                 <span>Edit</span>
               </button>
-            ` : `<div class="hidden"></div>`}
+            ` : ''}
 
-            <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="py-1.5 px-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-teal-200">
-              <span class="material-symbols-outlined text-[15px]">local_shipping</span>
-              <span>Slip</span>
-            </button>
+            ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'delete')) ? `
+              <button type="button" onclick="confirmDeleteOrder('${ord.id}')" class="flex-1 min-w-[70px] py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-rose-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">delete</span>
+                <span>Delete</span>
+              </button>
+            ` : ''}
 
-            <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-slate-200">
-              <span class="material-symbols-outlined text-[15px]">receipt_long</span>
-              <span>Invoice</span>
-            </button>
+            ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'view')) ? `
+              <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="flex-1 min-w-[65px] py-1.5 px-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-teal-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">local_shipping</span>
+                <span>Slip</span>
+              </button>
 
-            <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-emerald-200">
-              <span class="material-symbols-outlined text-[15px]">chat</span>
-              <span>Chat</span>
-            </button>
+              <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="flex-1 min-w-[65px] py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-slate-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">receipt_long</span>
+                <span>Invoice</span>
+              </button>
+
+              <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="flex-1 min-w-[65px] py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-emerald-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">chat</span>
+                <span>Chat</span>
+              </button>
+            ` : ''}
           </div>
         </div>
       `;
@@ -27363,13 +28212,43 @@ function openShippingDispatchModal(orderId) {
   if (totalEl) totalEl.innerText = `₹${(parseFloat(ord.grandTotal) || 0).toLocaleString('en-IN')} (${(ord.items || []).length} items)`;
   if (addrEl) addrEl.innerText = ord.shippingAddress || 'Store Pickup / Direct WhatsApp';
 
+  // Reset and hide custom courier input box
+  toggleAddCustomCourierInput(false);
+
   // Populate inputs with existing or default values
   const courierInput = document.getElementById('ship-courier-name');
   const trackingInput = document.getElementById('ship-tracking-id');
   const urlInput = document.getElementById('ship-tracking-url');
   const waCheck = document.getElementById('ship-send-whatsapp');
 
+  // Load custom couriers from localStorage into dropdown
+  try {
+    const savedCouriers = JSON.parse(localStorage.getItem('GRM_CUSTOM_COURIERS') || '[]');
+    if (Array.isArray(savedCouriers) && courierInput) {
+      const existingVals = new Set(Array.from(courierInput.options).map(o => o.value.toLowerCase()));
+      savedCouriers.forEach(cName => {
+        if (cName && !existingVals.has(cName.toLowerCase())) {
+          const opt = document.createElement('option');
+          opt.value = cName;
+          opt.textContent = cName;
+          courierInput.appendChild(opt);
+          existingVals.add(cName.toLowerCase());
+        }
+      });
+    }
+  } catch (e) {}
+
   const defaultCourier = ord.courierName || ord.courier_name || 'ST Courier';
+  // If order courier is custom and not yet in select, add it dynamically
+  if (defaultCourier && courierInput) {
+    const exists = Array.from(courierInput.options).some(o => o.value.toLowerCase() === defaultCourier.toLowerCase());
+    if (!exists) {
+      const opt = document.createElement('option');
+      opt.value = defaultCourier;
+      opt.textContent = defaultCourier;
+      courierInput.appendChild(opt);
+    }
+  }
   // Tracking number must be empty by default because courier partner provides it
   const defaultTracking = ord.trackingNumber || ord.tracking_number || '';
 
@@ -27418,6 +28297,98 @@ function onShippingIdChange() {
   updateShippingWhatsAppPreview();
 }
 window.onShippingIdChange = onShippingIdChange;
+
+function onShippingCourierChange(courierName) {
+  const trackingInput = document.getElementById('ship-tracking-id');
+  const urlInput = document.getElementById('ship-tracking-url');
+  const trkVal = (trackingInput?.value || '').trim();
+
+  if (urlInput) {
+    urlInput.value = trkVal ? generateCourierTrackingURL(courierName, trkVal) : '';
+  }
+  updateShippingWhatsAppPreview();
+}
+window.onShippingCourierChange = onShippingCourierChange;
+
+function toggleAddCustomCourierInput(forceState) {
+  const box = document.getElementById('add-custom-courier-box');
+  const input = document.getElementById('new-courier-name-input');
+  if (!box) return;
+
+  const isHidden = box.classList.contains('hidden') || box.style.display === 'none' || window.getComputedStyle(box).display === 'none';
+  const shouldShow = (typeof forceState === 'boolean') ? forceState : isHidden;
+
+  if (shouldShow) {
+    box.classList.remove('hidden');
+    box.style.display = 'block';
+    if (input) {
+      input.value = '';
+      setTimeout(() => {
+        input.focus();
+        try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+      }, 50);
+    }
+  } else {
+    box.classList.add('hidden');
+    box.style.display = 'none';
+  }
+}
+window.toggleAddCustomCourierInput = toggleAddCustomCourierInput;
+
+function addNewCourierPartnerOption() {
+  const input = document.getElementById('new-courier-name-input');
+  const select = document.getElementById('ship-courier-name');
+  if (!input || !select) return;
+
+  const name = input.value.trim();
+  if (!name) {
+    if (typeof showToast === 'function') {
+      showToast('Courier Name Required', 'Please enter a courier partner name.', 'warning', 'amber');
+    } else {
+      alert('Please enter a courier partner name.');
+    }
+    input.focus();
+    return;
+  }
+
+  // Check if already in options
+  let exists = false;
+  for (let i = 0; i < select.options.length; i++) {
+    if (select.options[i].value.toLowerCase() === name.toLowerCase()) {
+      select.selectedIndex = i;
+      exists = true;
+      break;
+    }
+  }
+
+  if (!exists) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+    select.value = name;
+
+    // Save custom courier in localStorage
+    try {
+      const saved = JSON.parse(localStorage.getItem('GRM_CUSTOM_COURIERS') || '[]');
+      if (!saved.some(s => s.toLowerCase() === name.toLowerCase())) {
+        saved.push(name);
+        localStorage.setItem('GRM_CUSTOM_COURIERS', JSON.stringify(saved));
+      }
+    } catch (e) {}
+  }
+
+  // Recalculate tracking URL & preview
+  onShippingCourierChange(name);
+
+  // Close input box
+  toggleAddCustomCourierInput(false);
+
+  if (typeof showToast === 'function') {
+    showToast('Courier Added', `"${name}" added and selected.`, 'success', 'emerald');
+  }
+}
+window.addNewCourierPartnerOption = addNewCourierPartnerOption;
 
 function generateSampleAWB(courier) {
   const cleanCourier = (courier || 'ST').toUpperCase();
@@ -30047,6 +31018,7 @@ function fetchQRBridgeStatus(btnEl) {
       })
       .then(res => {
         if (res.status === 'success' && Array.isArray(res.accounts)) {
+<<<<<<< HEAD
           MULTI_ACCOUNTS_STATE = res.accounts;
           if (Array.isArray(CRM_STATE.whatsappLines)) {
             CRM_STATE.whatsappLines.forEach(line => {
@@ -30100,6 +31072,32 @@ function fetchQRBridgeStatus(btnEl) {
               qr_image: a.qr_code || null
             }));
           }
+=======
+          applyUpdatedAccountsDelta(res.accounts, true);
+          updateQRBridgeUI(res);
+          const primary = res.accounts.find(a => a.id === 'account_1') || res.accounts[0];
+          if (primary) {
+            updateQRBridgeUI({
+              connection: primary.status,
+              connected_number: primary.connected_number || primary.phone,
+              qr_image: primary.qr_image
+            });
+          }
+        }
+      })
+      .catch(() => {
+        // Direct bridge fetch failed or timed out: Safely fallback to in-memory CRM_STATE without refetching get_all
+        const accounts = getAvailableWhatsAppAccounts();
+        if (accounts.length > 0) {
+          applyUpdatedAccountsDelta(accounts.map(a => ({
+            id: a.id,
+            name: a.label || 'WhatsApp Line',
+            label: a.label || 'WhatsApp Line',
+            phone: a.connected_number || '',
+            status: (a.status || 'DISCONNECTED').toUpperCase(),
+            qr_image: a.qr_image || null
+          })), false);
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
         }
       })
       .finally(() => {
@@ -30113,10 +31111,11 @@ function fetchQRBridgeStatus(btnEl) {
         }
       });
   } else {
-    // Hosted server fallback (e.g. Hostinger / MariaDB)
-    fetch('api.php?action=get_all')
+    // Hosted server fallback (e.g. Hostinger / MariaDB) - Fast dedicated accounts query (<5ms)
+    fetch('api.php?action=get_whatsapp_accounts')
       .then(r => r.json())
       .then(res => {
+<<<<<<< HEAD
         const data = res.data || res;
         if (data) {
           const accounts = data.whatsappAccounts || [];
@@ -30172,53 +31171,41 @@ function fetchQRBridgeStatus(btnEl) {
                 CRM_STATE.whatsappAccount.status = primary.status;
               }
             }
+=======
+        const rawList = res.accounts || res.whatsappAccounts || (res.data && res.data.whatsappAccounts) || [];
+        if (Array.isArray(rawList) && rawList.length > 0) {
+          const accounts = rawList.map(a => ({
+            id: a.account_slot || a.id,
+            name: a.display_name || a.account_name || a.name || 'WhatsApp Line',
+            label: a.display_name || a.account_name || a.name || 'WhatsApp Line',
+            phone: a.phone_number || a.phone || '',
+            status: (a.status || 'DISCONNECTED').toUpperCase(),
+            qr_image: a.qr_code || a.qr_image || null,
+            connected_number: a.phone_number || a.phone || 'Awaiting Link'
+          }));
+          applyUpdatedAccountsDelta(accounts, false);
+          const primary = accounts.find(a => a.id === 'account_1') || accounts[0];
+          if (primary) {
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
             updateQRBridgeUI({
               connection: primary.status,
               connected_number: primary.phone,
               qr_image: primary.qr_image
             });
           }
+        }
+        if (res.whatsappAccount) {
+          CRM_STATE.whatsappAccount = Object.assign(CRM_STATE.whatsappAccount || {}, res.whatsappAccount);
           saveCRMState();
           updateConfiguredPhoneDisplays();
         }
       })
       .catch(() => {
-        // Direct bridge fetch failed or timed out: Fallback immediately to database state
-        // Ensures hard refresh never leaves Primary WhatsApp in a false DISCONNECTED state!
-        fetch('api.php?action=get_all')
-          .then(r => r.json())
-          .then(res => {
-            const data = res.data || res;
-            if (data && data.whatsappAccounts) {
-              const accounts = data.whatsappAccounts || [];
-              if (Array.isArray(accounts) && accounts.length > 0) {
-                MULTI_ACCOUNTS_STATE = accounts.map(a => ({
-                  id: a.account_slot || a.id,
-                  name: a.account_name || a.name || 'WhatsApp Line',
-                  phone: a.phone_number || a.phone || '',
-                  status: (a.status || 'DISCONNECTED').toUpperCase(),
-                  qr_image: a.qr_code || null
-                }));
-                if (Array.isArray(CRM_STATE.whatsappLines)) {
-                  CRM_STATE.whatsappLines.forEach(line => {
-                    const live = MULTI_ACCOUNTS_STATE.find(a => a.id === line.id);
-                    if (live && live.status === 'CONNECTED') {
-                      line.status = 'CONNECTED';
-                      line.connected_number = live.phone || line.connected_number;
-                      line.qr_image = null;
-                    }
-                  });
-                }
-                const primary = MULTI_ACCOUNTS_STATE.find(a => a.id === 'account_1') || MULTI_ACCOUNTS_STATE[0];
-                if (primary && primary.status === 'CONNECTED' && primary.phone) {
-                  CRM_STATE.whatsappAccount.phoneNumber = primary.phone;
-                  CRM_STATE.whatsappAccount.status = 'CONNECTED';
-                  updateConfiguredPhoneDisplays();
-                }
-                saveCRMState();
-              }
-            }
-          }).catch(() => {});
+        // Fallback safely to in-memory accounts without secondary network latency
+        const accounts = getAvailableWhatsAppAccounts();
+        if (accounts.length > 0) {
+          applyUpdatedAccountsDelta(accounts, false);
+        }
       })
       .finally(() => {
         renderMultiAccountsHub();
@@ -30421,6 +31408,22 @@ function renderMultiAccountsHub() {
       </div>
     `;
   }).join('');
+
+  // Auto-poll QR status every 3.5s while viewing settings if any account is scanning or connecting
+  if (typeof window !== 'undefined') {
+    if (window._qrHubPollTimer) {
+      clearTimeout(window._qrHubPollTimer);
+      window._qrHubPollTimer = null;
+    }
+    const hasPendingScan = accounts.some(a => a.status === 'SCAN_QR' || a.status === 'CONNECTING');
+    if (hasPendingScan && ACTIVE_VIEW === 'settings') {
+      window._qrHubPollTimer = setTimeout(() => {
+        if (ACTIVE_VIEW === 'settings') {
+          fetchQRBridgeStatus();
+        }
+      }, 3500);
+    }
+  }
 }
 
 // Connect selected WhatsApp number and open live conversations in inbox
@@ -30433,20 +31436,33 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
     : (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998');
   const cleanPhone = formatPhoneNumberPretty(raw);
 
-  if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
-  CRM_STATE.whatsappAccount.phoneNumber = cleanPhone;
-  CRM_STATE.whatsappAccount.status = 'CONNECTED';
+  if (accountId === 'account_1') {
+    if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
+    CRM_STATE.whatsappAccount.phoneNumber = cleanPhone;
+    CRM_STATE.whatsappAccount.status = 'CONNECTED';
+  }
+
+  // Update specific line in whatsappLines
+  if (Array.isArray(CRM_STATE.whatsappLines)) {
+    const line = CRM_STATE.whatsappLines.find(l => l.id === accountId);
+    if (line) {
+      line.status = 'CONNECTED';
+      line.connected_number = cleanPhone;
+    }
+  }
+
   saveCRMState();
   updateConfiguredPhoneDisplays();
 
-  // Persist to PHP & MySQL database
+  // Persist to PHP & MySQL database with explicit account_id
   fetch('api.php?action=save_config', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      account_id: accountId,
       phone_number: cleanPhone,
       business_name: CRM_STATE?.whatsappAccount?.businessName || 'GRM Garments Business Hub',
-      display_name: label || 'GRM Garments Official'
+      display_name: label || (accountId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Line (${accountId})`)
     })
   }).catch(() => { });
 
@@ -30507,13 +31523,14 @@ function generateFreshAccountQR(accountId) {
   fetch(`${getBridgeBaseUrl()}/api/accounts/refresh_qr`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ accountId: targetId })
+    body: JSON.stringify({ accountId: targetId, forceReset: true })
   })
     .then(r => r.json())
     .then(res => {
       setTimeout(fetchQRBridgeStatus, 1000);
       setTimeout(fetchQRBridgeStatus, 2500);
       setTimeout(fetchQRBridgeStatus, 4500);
+      setTimeout(fetchQRBridgeStatus, 7000);
     })
     .catch(() => {
       showToast('Bridge Offline', 'Please make sure Node.js bridge server is running on port 3000', 'warning', 'rose');
@@ -30530,9 +31547,18 @@ function addNewWhatsAppAccountSlot() {
     }
   }
   const currentAccounts = getAvailableWhatsAppAccounts();
-  const nextNum = currentAccounts.length + 1;
-  const slotId = `account_${Date.now()}`;
-  const label = prompt(`Enter label for new WhatsApp account (e.g. Sales Team #${nextNum} or Support #${nextNum}):`, `WhatsApp Business #${nextNum}`);
+  let maxIdx = 1;
+  currentAccounts.forEach(a => {
+    const match = String(a.id).match(/^account_(\d+)$/);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (n > maxIdx) maxIdx = n;
+    }
+  });
+  const nextNum = maxIdx + 1;
+  const slotId = `account_${nextNum}`;
+  const defaultLabel = `Line ${nextNum}: WhatsApp Business`;
+  const label = prompt(`Enter label for new WhatsApp account (e.g. Line ${nextNum}: Sales Team or Line ${nextNum}: Support):`, defaultLabel);
   if (!label) return;
 
   const newAccount = {
@@ -30546,24 +31572,52 @@ function addNewWhatsAppAccountSlot() {
   if (!Array.isArray(CRM_STATE.whatsappLines)) {
     CRM_STATE.whatsappLines = getAvailableWhatsAppAccounts();
   }
-  CRM_STATE.whatsappLines.push(newAccount);
+  if (!CRM_STATE.whatsappLines.some(a => a.id === slotId)) {
+    CRM_STATE.whatsappLines.push(newAccount);
+  }
   if (Array.isArray(CRM_STATE.deletedSlots)) {
     CRM_STATE.deletedSlots = CRM_STATE.deletedSlots.filter(id => id !== slotId);
   }
+  if (!Array.isArray(MULTI_ACCOUNTS_STATE)) {
+    MULTI_ACCOUNTS_STATE = [];
+  }
+  if (!MULTI_ACCOUNTS_STATE.some(a => a.id === slotId)) {
+    MULTI_ACCOUNTS_STATE.push(newAccount);
+  }
   saveCRMState();
 
-  // Also notify bridge server if running
+  // 1. Persist to PHP & MySQL database
+  fetch('api.php?action=add_account_slot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accountId: slotId, label: label })
+  }).catch(() => { });
+
+  // 2. Notify bridge server if running
   fetch(`${getBridgeBaseUrl()}/api/accounts/add`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ label, accountId: slotId })
   }).catch(() => { });
 
+  // Broadcast to other tabs in the same browser immediately
+  broadcastWhatsAppSyncEvent({
+    action: 'add_slot',
+    accountId: slotId,
+    accounts: getAvailableWhatsAppAccounts()
+  });
+
   renderMultiAccountsHub();
   renderQuickLineSwitcher();
   renderPhoneSwitcherDropdown();
+  updateConfiguredPhoneDisplays();
 
-  showToast('New WhatsApp Slot Created', `Slot "${label}" created. Click Generate QR Code to link phone.`, 'qr_code_scanner', 'emerald');
+  // Automatically start QR generation for the new slot
+  setTimeout(() => {
+    generateFreshAccountQR(slotId);
+  }, 350);
+
+  showToast('New WhatsApp Slot Created', `Slot "${label}" created. Fresh QR code is generating...`, 'qr_code_scanner', 'emerald');
 }
 
 // Delete WhatsApp account slot
@@ -30576,7 +31630,7 @@ function deleteWhatsAppAccountSlot(accountId) {
     }
   }
   if (accountId === 'account_1') {
-    showToast('Core Slot Cannot Be Deleted', 'Default business lines 1 through 5 cannot be removed. You can Disconnect or Refresh QR instead.', 'warning', 'amber');
+    showToast('Core Slot Cannot Be Deleted', 'Primary WhatsApp line cannot be removed. You can Disconnect or Refresh QR instead.', 'warning', 'amber');
     return;
   }
 
@@ -30615,8 +31669,25 @@ function deleteWhatsAppAccountSlot(accountId) {
         ACTIVE_SEND_ACCOUNT_ID = 'all';
       }
 
-      // 4. Save state
+      // 4. Save state & persist deleted slots to localStorage
       saveCRMState();
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('GRM_DELETED_SLOTS', JSON.stringify(CRM_STATE.deletedSlots));
+        } catch (e) {}
+      }
+      if (typeof sessionStorage !== 'undefined') {
+        try {
+          sessionStorage.setItem('GRM_WHATSAPP_LINES', JSON.stringify(CRM_STATE.whatsappLines));
+        } catch (e) {}
+      }
+
+      // Broadcast to other tabs
+      broadcastWhatsAppSyncEvent({
+        action: 'delete_slot',
+        accountId: accountId,
+        accounts: getAvailableWhatsAppAccounts()
+      });
 
       // 5. Send delete request to bridge server & backend API (non-blocking)
       fetch(`${getBridgeBaseUrl()}/api/accounts/delete`, {
@@ -30664,8 +31735,8 @@ function disconnectWhatsAppAccount(accountId) {
     icon: 'phonelink_off',
     color: 'amber',
     onConfirm: () => {
-      // 1. Immediately update CRM_STATE.whatsappAccount
-      if (CRM_STATE.whatsappAccount && (targetId === 'account_1' || ACTIVE_SEND_ACCOUNT_ID === targetId)) {
+      // 1. Immediately update CRM_STATE.whatsappAccount ONLY if targetId is Primary account_1
+      if (CRM_STATE.whatsappAccount && targetId === 'account_1') {
         CRM_STATE.whatsappAccount.status = 'DISCONNECTED';
       }
 
@@ -30698,7 +31769,14 @@ function disconnectWhatsAppAccount(accountId) {
       renderQuickLineSwitcher();
       renderPhoneSwitcherDropdown();
 
-      // 5. Send disconnect request to Baileys bridge
+      // Broadcast to other tabs in the same browser
+      broadcastWhatsAppSyncEvent({
+        action: 'disconnect',
+        accountId: targetId,
+        accounts: getAvailableWhatsAppAccounts()
+      });
+
+      // 5. Send disconnect request to Baileys bridge via HTTP
       fetch(`${getBridgeBaseUrl()}/api/accounts/disconnect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -30706,16 +31784,23 @@ function disconnectWhatsAppAccount(accountId) {
       })
         .then(r => r.json())
         .then(res => {
-          showToast('WhatsApp Disconnected', `Session logged out. Fresh QR code is ready to scan.`, 'link_off', 'blue');
-          setTimeout(fetchQRBridgeStatus, 1000);
+          showToast('WhatsApp Disconnected', `Session logged out from phone. Fresh QR code is ready to scan.`, 'link_off', 'blue');
+          setTimeout(fetchQRBridgeStatus, 1200);
           setTimeout(fetchQRBridgeStatus, 2500);
         })
         .catch(() => {
-          showToast('Disconnected', 'Session reset and unlinked locally.', 'info', 'blue');
+          showToast('Disconnected', 'Session reset and unlinked.', 'info', 'blue');
           setTimeout(fetchQRBridgeStatus, 1500);
         });
 
-      // 6. Notify PHP backend API
+      // 6. Also emit over Socket.IO for immediate unbind on WhatsApp servers
+      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+        try {
+          SOCKET_IO.emit('accounts:disconnect', { accountId: targetId });
+        } catch (e) {}
+      }
+
+      // 7. Notify PHP backend API (which also server-side proxies the unbind command to bridge via cURL)
       fetch('api.php?action=disconnect_account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -31681,6 +32766,76 @@ function getRoleBadgeClass(role) {
   return 'bg-slate-100 text-slate-800 border border-slate-300';
 }
 
+// Quick preset button handler for Staff Permissions (View, Create, Edit, Delete)
+window.setStaffFormPermissionsPreset = function (preset, prefix) {
+  const p = prefix || 'staff-perm';
+  const vEl = document.getElementById(`${p}-view`);
+  const cEl = document.getElementById(`${p}-create`);
+  const eEl = document.getElementById(`${p}-edit`);
+  const dEl = document.getElementById(`${p}-delete`);
+  if (!vEl || !cEl || !eEl || !dEl) return;
+
+  switch (preset) {
+    case 'view':
+      vEl.checked = true;
+      cEl.checked = false;
+      eEl.checked = false;
+      dEl.checked = false;
+      break;
+    case 'create':
+      vEl.checked = false;
+      cEl.checked = true;
+      eEl.checked = false;
+      dEl.checked = false;
+      break;
+    case 'edit':
+      vEl.checked = false;
+      cEl.checked = false;
+      eEl.checked = true;
+      dEl.checked = false;
+      break;
+    case 'delete':
+      vEl.checked = false;
+      cEl.checked = false;
+      eEl.checked = false;
+      dEl.checked = true;
+      break;
+    case 'full':
+    default:
+      vEl.checked = true;
+      cEl.checked = true;
+      eEl.checked = true;
+      dEl.checked = true;
+      break;
+  }
+};
+
+// Helper: Populate Assigned WhatsApp Line dropdown with admin-configured numbers
+window.populateStaffAssignedLineDropdowns = function () {
+  const accounts = (typeof getAvailableWhatsAppAccounts === 'function') ? getAvailableWhatsAppAccounts() : [];
+  const lines = accounts.filter(a => {
+    const phone = (a.connected_number || a.phone_number || a.phone || '').trim();
+    return a.status === 'CONNECTED' || (phone && phone !== 'Awaiting Link' && phone !== 'Scan QR Code');
+  });
+
+  const selectIds = ['staff-new-assigned-line', 'edit-staff-assigned-line'];
+  selectIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const currentVal = el.value || 'ALL';
+    let opts = '<option value="ALL">🌐 All Admin WhatsApp Lines (Default)</option>';
+    lines.forEach((l, idx) => {
+      const p = l.connected_number || l.phone_number || l.phone || l.id;
+      const lbl = l.label || `WhatsApp Line #${idx + 1}`;
+      opts += `<option value="${l.id}">${lbl} (${p})</option>`;
+    });
+    el.innerHTML = opts;
+    if (lines.some(l => l.id === currentVal) || currentVal === 'ALL') {
+      el.value = currentVal;
+    }
+  });
+};
+
 // 6. Handle Staff Onboarding (Sub-item 2: Add Staff)
 window.handleCreateNewStaff = handleCreateNewStaff;
 function handleCreateNewStaff(event) {
@@ -31704,6 +32859,21 @@ function handleCreateNewStaff(event) {
   const specialization = (specEl && specEl.value.trim()) ? specEl.value.trim() : 'General';
   const status = statusEl ? statusEl.value : 'ACTIVE';
   const password = passwordInput && passwordInput.value.trim() ? passwordInput.value.trim() : 'staff123';
+
+  const assignedLineEl = document.getElementById('staff-new-assigned-line');
+  const assignedLine = assignedLineEl ? assignedLineEl.value : 'ALL';
+
+  const permView = document.getElementById('staff-perm-view')?.checked ?? true;
+  const permCreate = document.getElementById('staff-perm-create')?.checked ?? true;
+  const permEdit = document.getElementById('staff-perm-edit')?.checked ?? true;
+  const permDelete = document.getElementById('staff-perm-delete')?.checked ?? false;
+
+  const permissions = {
+    view: Boolean(permView),
+    create: Boolean(permCreate),
+    edit: Boolean(permEdit),
+    delete: Boolean(permDelete)
+  };
 
   if (!name || !phone) {
     showToast('Missing Fields', 'Please enter staff name and phone number.', 'warning', 'amber');
@@ -31748,6 +32918,8 @@ function handleCreateNewStaff(event) {
     dailyQuota: 70,
     todayHandled: 0,
     status: status || 'ACTIVE',
+    assignedLine: assignedLine,
+    permissions: permissions,
     createdAt: new Date().toISOString()
   };
 
@@ -31768,7 +32940,9 @@ function handleCreateNewStaff(event) {
       role: role,
       specialization: specialization,
       avatar: avatarInitials,
-      status: status
+      status: status,
+      assignedLine: assignedLine,
+      permissions: permissions
     })
   }).then(r => r.json()).then(res => {
     console.log('[create_staff] Server response:', res);
@@ -32641,6 +33815,11 @@ window.openEditStaffModal = function (staffId) {
   // Ensure role dropdowns have the dynamic roles
   updateStaffRoleSelectDropdowns();
 
+  // Populate Assigned Line dropdown
+  if (typeof populateStaffAssignedLineDropdowns === 'function') {
+    populateStaffAssignedLineDropdowns();
+  }
+
   const idInput = document.getElementById('edit-staff-id');
   const nameInput = document.getElementById('edit-staff-name');
   const emailInput = document.getElementById('edit-staff-email');
@@ -32650,6 +33829,7 @@ window.openEditStaffModal = function (staffId) {
   const statusSelect = document.getElementById('edit-staff-status');
   const passInput = document.getElementById('edit-staff-password');
   const subtitle = document.getElementById('edit-staff-modal-subtitle');
+  const assignedLineSelect = document.getElementById('edit-staff-assigned-line');
 
   if (idInput) idInput.value = staff.id;
   if (nameInput) nameInput.value = staff.name || '';
@@ -32659,6 +33839,24 @@ window.openEditStaffModal = function (staffId) {
   if (statusSelect) statusSelect.value = (staff.status || 'ACTIVE').toUpperCase();
   if (passInput) passInput.value = '';
   if (subtitle) subtitle.innerText = `Edit details for ${staff.name} (${staff.id})`;
+  if (assignedLineSelect) assignedLineSelect.value = staff.assignedLine || 'ALL';
+
+  // Populate Permissions Checkboxes
+  const perms = staff.permissions || {
+    view: true,
+    create: true,
+    edit: true,
+    delete: false
+  };
+  const permViewEl = document.getElementById('edit-staff-perm-view');
+  const permCreateEl = document.getElementById('edit-staff-perm-create');
+  const permEditEl = document.getElementById('edit-staff-perm-edit');
+  const permDeleteEl = document.getElementById('edit-staff-perm-delete');
+
+  if (permViewEl) permViewEl.checked = Boolean(perms.view);
+  if (permCreateEl) permCreateEl.checked = Boolean(perms.create);
+  if (permEditEl) permEditEl.checked = Boolean(perms.edit);
+  if (permDeleteEl) permDeleteEl.checked = Boolean(perms.delete);
 
   if (roleSelect) {
     if (staff.role && !Array.from(roleSelect.options).some(o => o.value === staff.role)) {
@@ -32689,6 +33887,19 @@ window.handleSaveEditStaff = function (event) {
   const newSpec = document.getElementById('edit-staff-specialization')?.value;
   const newStatus = document.getElementById('edit-staff-status')?.value;
   const newPass = document.getElementById('edit-staff-password')?.value?.trim();
+  const newAssignedLine = document.getElementById('edit-staff-assigned-line')?.value || 'ALL';
+
+  const newPermView = document.getElementById('edit-staff-perm-view')?.checked ?? true;
+  const newPermCreate = document.getElementById('edit-staff-perm-create')?.checked ?? true;
+  const newPermEdit = document.getElementById('edit-staff-perm-edit')?.checked ?? true;
+  const newPermDelete = document.getElementById('edit-staff-perm-delete')?.checked ?? false;
+
+  const newPermissions = {
+    view: Boolean(newPermView),
+    create: Boolean(newPermCreate),
+    edit: Boolean(newPermEdit),
+    delete: Boolean(newPermDelete)
+  };
 
   if (!newName || !newPhone) {
     alert('Please enter staff name and phone number.');
@@ -32704,6 +33915,8 @@ window.handleSaveEditStaff = function (event) {
   staff.role = newRole;
   staff.specialization = newSpec;
   staff.status = newStatus;
+  staff.assignedLine = newAssignedLine;
+  staff.permissions = newPermissions;
   staff.avatar = newName.split(' ').map(n => n[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || 'ST';
   if (newPass) {
     staff.password = newPass;
@@ -32731,6 +33944,8 @@ window.handleSaveEditStaff = function (event) {
       specialization: newSpec,
       status: newStatus,
       avatar: staff.avatar,
+      assignedLine: newAssignedLine,
+      permissions: newPermissions,
       password: newPass || undefined
     })
   }).then(r => r.json()).then(res => {
@@ -36166,6 +37381,49 @@ window.selectOrderModalAddress = selectOrderModalAddress;
 let CURRENT_EDIT_ORDER = null;
 let EDIT_ORDER_ITEMS = [];
 
+function switchEditOrderTab(tab) {
+  const tabs = ['items', 'payment', 'shipping', 'customer'];
+  const btns = {
+    items: document.getElementById('tab-btn-edit-items'),
+    payment: document.getElementById('tab-btn-edit-payment'),
+    shipping: document.getElementById('tab-btn-edit-shipping'),
+    customer: document.getElementById('tab-btn-edit-customer'),
+    all: document.getElementById('tab-btn-edit-all')
+  };
+  const panels = {
+    items: document.getElementById('edit-order-panel-items'),
+    payment: document.getElementById('edit-order-panel-payment'),
+    shipping: document.getElementById('edit-order-panel-shipping'),
+    customer: document.getElementById('edit-order-panel-customer')
+  };
+
+  // Reset all button styles
+  Object.keys(btns).forEach(key => {
+    if (btns[key]) {
+      btns[key].className = 'px-3 py-1.5 rounded-xl bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 flex items-center gap-1.5 transition cursor-pointer shrink-0';
+    }
+  });
+
+  if (tab === 'all') {
+    if (btns.all) btns.all.className = 'px-3 py-1.5 rounded-xl bg-slate-800 text-white font-extrabold shadow-xs flex items-center gap-1.5 transition cursor-pointer shrink-0';
+    tabs.forEach(t => {
+      if (panels[t]) panels[t].classList.remove('hidden');
+    });
+  } else {
+    if (btns[tab]) btns[tab].className = 'px-3 py-1.5 rounded-xl bg-blue-600 text-white font-extrabold shadow-xs flex items-center gap-1.5 transition cursor-pointer shrink-0';
+    tabs.forEach(t => {
+      if (panels[t]) {
+        if (t === tab) {
+          panels[t].classList.remove('hidden');
+        } else {
+          panels[t].classList.add('hidden');
+        }
+      }
+    });
+  }
+}
+window.switchEditOrderTab = switchEditOrderTab;
+
 function openEditOrderModal(orderId) {
   const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
   if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'edit')) {
@@ -36180,6 +37438,9 @@ function openEditOrderModal(orderId) {
 
   CURRENT_EDIT_ORDER = ord;
   EDIT_ORDER_ITEMS = JSON.parse(JSON.stringify(ord.items || []));
+
+  // Reset tab to products view
+  switchEditOrderTab('items');
 
   // Set header details
   const titleId = document.getElementById('edit-order-modal-id-title');
@@ -36212,21 +37473,56 @@ function openEditOrderModal(orderId) {
     `).join('');
   }
 
-  // Populate Payment Fields
+  // Calculate order total
+  let initialTotal = 0;
+  EDIT_ORDER_ITEMS.forEach(it => {
+    initialTotal += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+  });
+  if (initialTotal === 0) {
+    initialTotal = parseFloat(ord.grandTotal || ord.grand_total || 0);
+  }
+
+  // Populate Payment Fields accurately
   const methodSelect = document.getElementById('edit-order-payment-method');
   const pStatusSelect = document.getElementById('edit-order-payment-status');
   const upiInput = document.getElementById('edit-order-upi-id');
+  const noteInput = document.getElementById('edit-order-payment-note');
   const codAdvInput = document.getElementById('edit-order-cod-advance');
   const codBalInput = document.getElementById('edit-order-cod-balance');
 
-  const pMethod = ord.paymentMethod || ord.payment_method || 'ONLINE_UPI';
-  if (methodSelect) methodSelect.value = pMethod.includes('COD') ? 'COD' : 'ONLINE_UPI';
-  if (pStatusSelect) pStatusSelect.value = ord.paymentStatus || ord.payment_status || 'PAID';
-  if (upiInput) upiInput.value = ord.upiTransactionId || ord.upi_transaction_id || '';
-  if (codAdvInput) codAdvInput.value = ord.codAdvance || ord.cod_advance || 0;
-  if (codBalInput) codBalInput.value = ord.codBalanceDue || ord.cod_balance_due || 0;
+  const pMethod = (ord.paymentMethod || ord.payment_method || 'ONLINE_UPI').toUpperCase();
+  if (methodSelect) {
+    if (pMethod.includes('COD')) methodSelect.value = 'COD';
+    else if (pMethod.includes('CASH')) methodSelect.value = 'CASH';
+    else if (pMethod.includes('BANK')) methodSelect.value = 'BANK_TRANSFER';
+    else methodSelect.value = 'ONLINE_UPI';
+  }
 
-  onEditOrderPaymentMethodChange();
+  if (pStatusSelect) {
+    const rawStatus = (ord.paymentStatus || ord.payment_status || 'PAID').toUpperCase();
+    if (rawStatus.includes('PARTIAL')) pStatusSelect.value = 'PARTIAL_PAID';
+    else if (rawStatus.includes('PENDING')) pStatusSelect.value = 'PENDING';
+    else if (rawStatus.includes('REFUND')) pStatusSelect.value = 'REFUNDED';
+    else pStatusSelect.value = 'PAID';
+  }
+
+  if (upiInput) upiInput.value = ord.upiTransactionId || ord.upi_transaction_id || '';
+  if (noteInput) noteInput.value = ord.paymentNote || ord.payment_note || '';
+
+  let adv = parseFloat(ord.codAdvance ?? ord.cod_advance ?? ord.advancePayment ?? ord.advance_payment);
+  let bal = parseFloat(ord.codBalanceDue ?? ord.cod_balance_due ?? ord.balanceAmount ?? ord.balance_amount);
+
+  if (isNaN(adv)) {
+    adv = pMethod.includes('COD') ? Math.min(200, initialTotal) : initialTotal;
+  }
+  if (isNaN(bal)) {
+    bal = Math.max(0, initialTotal - adv);
+  }
+
+  if (codAdvInput) codAdvInput.value = adv;
+  if (codBalInput) codBalInput.value = bal;
+
+  onEditOrderPaymentMethodChange(false);
 
   // Populate Fulfillment & Tracking with strict sequential stage rules
   const statusSelect = document.getElementById('edit-order-status');
@@ -36286,9 +37582,10 @@ function renderEditOrderItemsList() {
   if (!container) return;
 
   if (EDIT_ORDER_ITEMS.length === 0) {
-    container.innerHTML = `<div class="p-4 text-center text-slate-400">No items in order. Click "Add Product" above to add items.</div>`;
+    container.innerHTML = `<div class="p-4 text-center text-slate-400">No items in order. Click "+ Add Product" above to add items.</div>`;
     if (grandTotalEl) grandTotalEl.innerText = '₹0';
     if (countEl) countEl.innerText = '0 items';
+    updateEditOrderPaymentQuickSummary();
     return;
   }
 
@@ -36296,30 +37593,41 @@ function renderEditOrderItemsList() {
   let count = 0;
 
   container.innerHTML = EDIT_ORDER_ITEMS.map((item, idx) => {
-    const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.qty) || 1);
+    const qty = parseInt(item.qty) || 1;
+    const price = parseFloat(item.price) || 0;
+    const itemTotal = price * qty;
     total += itemTotal;
-    count += (parseInt(item.qty) || 1);
+    count += qty;
 
     return `
-      <div class="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
+      <div class="p-2.5 bg-white rounded-2xl border border-slate-200 flex items-center justify-between gap-3 shadow-2xs hover:border-blue-200 transition">
         <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
-            ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-[18px] text-slate-400">apparel</span>`}
+          <div class="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
+            ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-[20px] text-slate-400">apparel</span>`}
           </div>
           <div class="min-w-0">
             <h5 class="font-bold text-slate-900 text-xs truncate">${item.name || item.sku}</h5>
-            <p class="text-[10px] text-slate-500 font-mono">${item.sku} • ₹${(parseFloat(item.price) || 0).toLocaleString('en-IN')} / pc • <span class="font-semibold text-indigo-700">${item.size || 'Free Size'}</span></p>
+            <p class="text-[10px] text-slate-500 font-mono">${item.sku} • ₹${price.toLocaleString('en-IN')} / pc • <span class="font-semibold text-indigo-700">${item.size || 'Free Size'}</span></p>
           </div>
         </div>
         <div class="flex items-center gap-3 shrink-0">
-          <div class="flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden">
-            <button type="button" onclick="changeEditOrderItemQty(${idx}, -1)" class="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 font-bold cursor-pointer">-</button>
-            <span class="w-8 text-center text-xs font-bold text-slate-800 font-mono">${item.qty}</span>
-            <button type="button" onclick="changeEditOrderItemQty(${idx}, 1)" class="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 font-bold cursor-pointer">+</button>
+          <div class="flex items-center border border-slate-300 rounded-xl bg-white overflow-hidden shadow-2xs">
+            <button type="button" onclick="changeEditOrderItemQty(${idx}, -1)"
+              class="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 active:bg-slate-200 font-black text-sm cursor-pointer transition select-none"
+              title="Decrease Quantity">-</button>
+            <input type="number" min="1" max="999" value="${qty}"
+              id="edit-order-item-qty-${idx}"
+              oninput="updateEditOrderItemQtyDirect(${idx}, this.value)"
+              onchange="updateEditOrderItemQtyDirect(${idx}, this.value)"
+              class="w-12 text-center text-xs font-black text-slate-900 font-mono py-1 focus:ring-2 focus:ring-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none border-x border-slate-200"
+              title="Type quantity directly">
+            <button type="button" onclick="changeEditOrderItemQty(${idx}, 1)"
+              class="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 active:bg-slate-200 font-black text-sm cursor-pointer transition select-none"
+              title="Increase Quantity">+</button>
           </div>
-          <span class="font-mono font-bold text-xs text-slate-900 w-16 text-right">₹${itemTotal.toLocaleString('en-IN')}</span>
-          <button type="button" onclick="deleteEditOrderItem(${idx})" class="text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 cursor-pointer" title="Remove item">
-            <span class="material-symbols-outlined text-[16px]">delete</span>
+          <span class="font-mono font-black text-xs text-slate-900 w-16 text-right" id="edit-order-item-total-${idx}">₹${itemTotal.toLocaleString('en-IN')}</span>
+          <button type="button" onclick="deleteEditOrderItem(${idx})" class="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 cursor-pointer transition" title="Remove item from order">
+            <span class="material-symbols-outlined text-[17px]">delete</span>
           </button>
         </div>
       </div>
@@ -36329,28 +37637,167 @@ function renderEditOrderItemsList() {
   if (grandTotalEl) grandTotalEl.innerText = `₹${total.toLocaleString('en-IN')}`;
   if (countEl) countEl.innerText = `${count} items`;
 
-  // Auto-update COD balance if in COD mode
-  const methodSelect = document.getElementById('edit-order-payment-method');
-  if (methodSelect && methodSelect.value === 'COD') {
-    const advInput = document.getElementById('edit-order-cod-advance');
-    const balInput = document.getElementById('edit-order-cod-balance');
-    const adv = parseFloat(advInput?.value || 200) || 200;
-    if (balInput) balInput.value = Math.max(0, total - adv);
-  }
+  updateEditOrderTotals();
 }
 window.renderEditOrderItemsList = renderEditOrderItemsList;
 
 function changeEditOrderItemQty(idx, delta) {
   if (!EDIT_ORDER_ITEMS[idx]) return;
-  const newQty = (parseInt(EDIT_ORDER_ITEMS[idx].qty) || 1) + delta;
-  if (newQty <= 0) {
-    deleteEditOrderItem(idx);
-    return;
-  }
+  const cur = parseInt(EDIT_ORDER_ITEMS[idx].qty) || 1;
+  const newQty = Math.max(1, cur + delta);
   EDIT_ORDER_ITEMS[idx].qty = newQty;
-  renderEditOrderItemsList();
+  const input = document.getElementById(`edit-order-item-qty-${idx}`);
+  if (input) input.value = newQty;
+  updateEditOrderItemLine(idx);
+  updateEditOrderTotals();
 }
 window.changeEditOrderItemQty = changeEditOrderItemQty;
+
+function updateEditOrderItemQtyDirect(idx, val) {
+  if (!EDIT_ORDER_ITEMS[idx]) return;
+  let qty = parseInt(val, 10);
+  if (isNaN(qty) || qty < 1) qty = 1;
+  EDIT_ORDER_ITEMS[idx].qty = qty;
+  updateEditOrderItemLine(idx);
+  updateEditOrderTotals();
+}
+window.updateEditOrderItemQtyDirect = updateEditOrderItemQtyDirect;
+
+function updateEditOrderItemLine(idx) {
+  const item = EDIT_ORDER_ITEMS[idx];
+  if (!item) return;
+  const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.qty) || 1);
+  const totalEl = document.getElementById(`edit-order-item-total-${idx}`);
+  if (totalEl) totalEl.innerText = `₹${itemTotal.toLocaleString('en-IN')}`;
+}
+window.updateEditOrderItemLine = updateEditOrderItemLine;
+
+function updateEditOrderTotals() {
+  let total = 0;
+  let count = 0;
+  EDIT_ORDER_ITEMS.forEach(it => {
+    const q = parseInt(it.qty) || 1;
+    total += (parseFloat(it.price) || 0) * q;
+    count += q;
+  });
+
+  const grandTotalEl = document.getElementById('edit-order-grand-total');
+  const countEl = document.getElementById('edit-order-items-count');
+  if (grandTotalEl) grandTotalEl.innerText = `₹${total.toLocaleString('en-IN')}`;
+  if (countEl) countEl.innerText = `${count} items`;
+
+  // Auto-update Payment Due
+  const advInput = document.getElementById('edit-order-cod-advance');
+  const balInput = document.getElementById('edit-order-cod-balance');
+  const methodSelect = document.getElementById('edit-order-payment-method');
+
+  if (advInput && balInput) {
+    const isOnline = methodSelect && (methodSelect.value === 'ONLINE_UPI' || methodSelect.value === 'BANK_TRANSFER');
+    let adv = parseFloat(advInput.value);
+    if (isNaN(adv)) adv = isOnline ? total : Math.min(200, total);
+    const bal = Math.max(0, total - adv);
+    balInput.value = bal;
+  }
+
+  updateEditOrderPaymentQuickSummary();
+}
+window.updateEditOrderTotals = updateEditOrderTotals;
+
+function updateEditOrderPaymentQuickSummary() {
+  const summaryEl = document.getElementById('edit-order-payment-quick-summary');
+  if (!summaryEl) return;
+  const method = document.getElementById('edit-order-payment-method')?.value || 'ONLINE_UPI';
+  const status = document.getElementById('edit-order-payment-status')?.value || 'PAID';
+  const adv = parseFloat(document.getElementById('edit-order-cod-advance')?.value || 0) || 0;
+  const bal = parseFloat(document.getElementById('edit-order-cod-balance')?.value || 0) || 0;
+
+  summaryEl.innerText = `${method} • ${status} (Paid: ₹${adv.toLocaleString('en-IN')} | Due: ₹${bal.toLocaleString('en-IN')})`;
+}
+window.updateEditOrderPaymentQuickSummary = updateEditOrderPaymentQuickSummary;
+
+function setEditOrderPaymentQuick(type) {
+  let total = 0;
+  EDIT_ORDER_ITEMS.forEach(it => {
+    total += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+  });
+  const advInput = document.getElementById('edit-order-cod-advance');
+  const balInput = document.getElementById('edit-order-cod-balance');
+  const methodSelect = document.getElementById('edit-order-payment-method');
+  const pStatusSelect = document.getElementById('edit-order-payment-status');
+
+  if (type === 'FULL') {
+    if (advInput) advInput.value = total;
+    if (balInput) balInput.value = 0;
+    if (pStatusSelect) pStatusSelect.value = 'PAID';
+    if (methodSelect && methodSelect.value === 'COD') methodSelect.value = 'ONLINE_UPI';
+  } else if (type === 'ADVANCE_200') {
+    const adv = Math.min(200, total);
+    if (advInput) advInput.value = adv;
+    if (balInput) balInput.value = Math.max(0, total - adv);
+    if (pStatusSelect) pStatusSelect.value = 'PARTIAL_PAID';
+    if (methodSelect) methodSelect.value = 'COD';
+  } else if (type === 'ZERO') {
+    if (advInput) advInput.value = 0;
+    if (balInput) balInput.value = total;
+    if (pStatusSelect) pStatusSelect.value = 'PENDING';
+    if (methodSelect) methodSelect.value = 'COD';
+  }
+  updateEditOrderPaymentQuickSummary();
+}
+window.setEditOrderPaymentQuick = setEditOrderPaymentQuick;
+
+function onEditOrderAdvanceChange(val) {
+  let total = 0;
+  EDIT_ORDER_ITEMS.forEach(it => {
+    total += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+  });
+  const adv = parseFloat(val) || 0;
+  const bal = Math.max(0, total - adv);
+  const balInput = document.getElementById('edit-order-cod-balance');
+  if (balInput) balInput.value = bal;
+
+  const pStatusSelect = document.getElementById('edit-order-payment-status');
+  if (pStatusSelect) {
+    if (adv >= total && total > 0) {
+      pStatusSelect.value = 'PAID';
+    } else if (adv > 0) {
+      pStatusSelect.value = 'PARTIAL_PAID';
+    } else {
+      pStatusSelect.value = 'PENDING';
+    }
+  }
+  updateEditOrderPaymentQuickSummary();
+}
+window.onEditOrderAdvanceChange = onEditOrderAdvanceChange;
+
+function onEditOrderPaymentMethodChange(userInitiated = false) {
+  const methodSelect = document.getElementById('edit-order-payment-method');
+  const pStatusSelect = document.getElementById('edit-order-payment-status');
+  const advInput = document.getElementById('edit-order-cod-advance');
+  const balInput = document.getElementById('edit-order-cod-balance');
+  if (!methodSelect) return;
+
+  if (userInitiated) {
+    let total = 0;
+    EDIT_ORDER_ITEMS.forEach(it => {
+      total += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+    });
+
+    if (methodSelect.value === 'COD') {
+      const adv = Math.min(200, total);
+      if (advInput) advInput.value = adv;
+      if (balInput) balInput.value = Math.max(0, total - adv);
+      if (pStatusSelect) pStatusSelect.value = 'PARTIAL_PAID';
+    } else if (methodSelect.value === 'ONLINE_UPI' || methodSelect.value === 'BANK_TRANSFER') {
+      if (advInput) advInput.value = total;
+      if (balInput) balInput.value = 0;
+      if (pStatusSelect) pStatusSelect.value = 'PAID';
+    }
+  }
+
+  updateEditOrderPaymentQuickSummary();
+}
+window.onEditOrderPaymentMethodChange = onEditOrderPaymentMethodChange;
 
 function deleteEditOrderItem(idx) {
   if (EDIT_ORDER_ITEMS.length <= 1) {
@@ -36393,28 +37840,6 @@ function addSelectedProductToEditOrder() {
   showToast('Item Added', `${product.name} added to order!`, 'check_circle', 'blue');
 }
 window.addSelectedProductToEditOrder = addSelectedProductToEditOrder;
-
-function onEditOrderPaymentMethodChange() {
-  const methodSelect = document.getElementById('edit-order-payment-method');
-  const codFields = document.getElementById('edit-order-cod-fields');
-  const pStatusSelect = document.getElementById('edit-order-payment-status');
-  if (!methodSelect) return;
-
-  const isCOD = methodSelect.value === 'COD';
-  if (codFields) {
-    if (isCOD) {
-      codFields.classList.remove('hidden');
-    } else {
-      codFields.classList.add('hidden');
-    }
-  }
-
-  if (pStatusSelect) {
-    pStatusSelect.value = isCOD ? 'PARTIAL_PAID (₹200 ADVANCE)' : 'PAID';
-  }
-}
-window.onEditOrderPaymentMethodChange = onEditOrderPaymentMethodChange;
-
 
 function confirmDeleteOrder(orderId) {
   const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
@@ -36588,17 +38013,20 @@ function saveEditedOrder() {
   CURRENT_EDIT_ORDER.shippingUrl = (urlInput?.value || '').trim();
   CURRENT_EDIT_ORDER.shipping_url = CURRENT_EDIT_ORDER.shippingUrl;
 
-  if (CURRENT_EDIT_ORDER.paymentMethod === 'COD') {
-    CURRENT_EDIT_ORDER.codAdvance = parseFloat(codAdvInput?.value || 200) || 200;
-    CURRENT_EDIT_ORDER.cod_advance = CURRENT_EDIT_ORDER.codAdvance;
-    CURRENT_EDIT_ORDER.codBalanceDue = parseFloat(codBalInput?.value || Math.max(0, grandTotal - CURRENT_EDIT_ORDER.codAdvance)) || 0;
-    CURRENT_EDIT_ORDER.cod_balance_due = CURRENT_EDIT_ORDER.codBalanceDue;
-  } else {
-    CURRENT_EDIT_ORDER.codAdvance = 0;
-    CURRENT_EDIT_ORDER.cod_advance = 0;
-    CURRENT_EDIT_ORDER.codBalanceDue = 0;
-    CURRENT_EDIT_ORDER.cod_balance_due = 0;
-  }
+  const advVal = parseFloat(codAdvInput?.value ?? 0) || 0;
+  const balVal = parseFloat(codBalInput?.value ?? 0) || 0;
+  const noteVal = (document.getElementById('edit-order-payment-note')?.value || '').trim();
+
+  CURRENT_EDIT_ORDER.paymentNote = noteVal;
+  CURRENT_EDIT_ORDER.payment_note = noteVal;
+  CURRENT_EDIT_ORDER.codAdvance = advVal;
+  CURRENT_EDIT_ORDER.cod_advance = advVal;
+  CURRENT_EDIT_ORDER.advancePayment = advVal;
+  CURRENT_EDIT_ORDER.advance_payment = advVal;
+  CURRENT_EDIT_ORDER.codBalanceDue = balVal;
+  CURRENT_EDIT_ORDER.cod_balance_due = balVal;
+  CURRENT_EDIT_ORDER.balanceAmount = balVal;
+  CURRENT_EDIT_ORDER.balance_amount = balVal;
 
   // Persist to MySQL
   fetch('api.php?action=save_order', {
@@ -36624,7 +38052,10 @@ function saveEditedOrder() {
       staffId: CURRENT_EDIT_ORDER.staffId,
       staffName: CURRENT_EDIT_ORDER.staffName,
       codAdvance: CURRENT_EDIT_ORDER.codAdvance,
+      advancePayment: CURRENT_EDIT_ORDER.advancePayment,
       codBalanceDue: CURRENT_EDIT_ORDER.codBalanceDue,
+      balanceAmount: CURRENT_EDIT_ORDER.balanceAmount,
+      paymentNote: CURRENT_EDIT_ORDER.paymentNote,
       isEditUpdate: true
     })
   }).catch(() => { });
@@ -37111,6 +38542,8 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
     return;
   }
 
+  const directBtn = document.getElementById('btn-voice-send-direct');
+  const directText = document.getElementById('btn-voice-send-direct-text');
   const approveBtn = document.getElementById('btn-voice-approve-send');
   const origBtn = document.getElementById('btn-voice-send-orig');
   const approveText = document.getElementById('btn-voice-approve-text');
@@ -37119,6 +38552,11 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
   _isVoiceSending = true;
 
   // Immediate frontend single-click lockout & visual loading indicator
+  if (directBtn) {
+    directBtn.disabled = true;
+    directBtn.classList.add('opacity-60', 'pointer-events-none');
+    if (directText) directText.textContent = 'Sending...';
+  }
   if (approveBtn) {
     approveBtn.disabled = true;
     approveBtn.classList.add('opacity-60', 'pointer-events-none');
@@ -37133,10 +38571,30 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
     origBtn.classList.add('opacity-60', 'pointer-events-none');
   }
 
+  // Ensure original audio finished uploading first if upload is in flight
+  if (_voiceUploadPromise && !_voiceUploadedMsgId) {
+    try { await _voiceUploadPromise; } catch (e) { }
+  }
+
+  // Convert client recorded audio blob directly to Base64 data URL for instant zero-loss bridge transmission
+  let base64Audio = null;
+  if (_voiceCurrentBlob && typeof FileReader !== 'undefined') {
+    try {
+      base64Audio = await new Promise((resolve) => {
+        const r = new FileReader();
+        r.onloadend = () => resolve(r.result);
+        r.onerror = () => resolve(null);
+        r.readAsDataURL(_voiceCurrentBlob);
+      });
+    } catch (eB64) { }
+  }
+
   const targetLang = document.getElementById('voice-target-lang')?.value || 'en';
   const custId = (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : '') || '';
   const customer = (CRM_STATE?.customers || []).find(c => c && (c.id === custId || String(c.id) === String(custId)));
   const phone = customer ? (customer.whatsapp || customer.phone) : '';
+  const targetAccId = (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' ? ACTIVE_SEND_ACCOUNT_ID : null) || 'account_1';
+  const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
 
   try {
     const res = await fetch('api.php?action=send_translated_voice', {
@@ -37147,7 +38605,9 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
         phone: phone,
         voice_message_id: _voiceUploadedMsgId,
         translation_id: _voiceCurrentTranslationId,
-        audio_url: sendMode === 'translated' ? _voiceCurrentTransAudioUrl : _voiceUploadedAudioUrl,
+        audio_url: sendMode === 'translated' ? _voiceCurrentTransAudioUrl : (_voiceUploadedAudioUrl || base64Audio),
+        media_data: base64Audio,
+        mediaData: base64Audio,
         send_mode: sendMode,
         target_lang: targetLang
       })
@@ -37157,43 +38617,84 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
       // Immediately reset voice recorder and close panel so user cannot re-click
       window.resetVoiceRecorder();
 
-      // Direct instant dispatch to WhatsApp phone via connected Bridge
-      const targetAudio = (sendMode === 'translated' ? _voiceCurrentTransAudioUrl : _voiceUploadedAudioUrl) || data.audio_url;
-      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
-        SOCKET_IO.emit('whatsapp:send', {
-          phone: phone,
-          text: '🎤 WhatsApp Voice Note',
-          jid: customer?.jid || null,
-          accountId: (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' ? ACTIVE_SEND_ACCOUNT_ID : null) || 'account_1',
-          mediaUrl: targetAudio,
-          media_type: 'audio',
-          isVoiceNote: true,
-          customerId: custId
-        }, (res) => {
-          console.log('[Socket Voice Dispatch Result]:', res);
-        });
+      // Selected audio URL to dispatch
+      const targetAudio = (sendMode === 'translated' ? _voiceCurrentTransAudioUrl : (_voiceUploadedAudioUrl || data.audio_url || base64Audio));
+
+      // ONLY dispatch via client Bridge if backend did not already dispatch directly
+      if (data.bridge_dispatched !== true && targetAudio) {
+        let bridgeDispatched = false;
+        if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+          SOCKET_IO.emit('whatsapp:send', {
+            phone: cleanPhone,
+            text: '🎤 WhatsApp Voice Note',
+            jid: customer?.jid || null,
+            accountId: targetAccId,
+            mediaUrl: targetAudio,
+            media_url: targetAudio,
+            mediaData: targetAudio.startsWith('data:') ? targetAudio : null,
+            media_data: targetAudio.startsWith('data:') ? targetAudio : null,
+            media_type: 'audio',
+            type: 'audio',
+            isVoiceNote: true,
+            customerId: custId
+          }, (res) => {
+            console.log('[Socket Voice Dispatch Result]:', res);
+          });
+          bridgeDispatched = true;
+        }
+
+        if (!bridgeDispatched) {
+          // Fallback to HTTP Bridge only if Socket.IO was not available
+          const bridgeBaseUrl = typeof getBridgeBaseUrl === 'function' ? getBridgeBaseUrl() : 'http://localhost:3000';
+          if (bridgeBaseUrl) {
+            try {
+              fetch(`${bridgeBaseUrl}/api/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  phone: cleanPhone,
+                  text: '🎤 WhatsApp Voice Note',
+                  jid: customer?.jid || null,
+                  accountId: targetAccId,
+                  mediaUrl: targetAudio,
+                  media_url: targetAudio,
+                  mediaData: targetAudio.startsWith('data:') ? targetAudio : null,
+                  media_data: targetAudio.startsWith('data:') ? targetAudio : null,
+                  media_type: 'audio',
+                  type: 'audio',
+                  isVoiceNote: true,
+                  customerId: custId
+                })
+              }).catch(() => {});
+            } catch (eBridge) {}
+          }
+        }
       }
 
       if (CRM_STATE && CRM_STATE.conversations) {
         if (!CRM_STATE.conversations[custId]) {
           CRM_STATE.conversations[custId] = [];
         }
-        CRM_STATE.conversations[custId].push({
-          id: data.message_id || ('msg_voice_' + Date.now()),
-          sender: 'staff',
-          text: '🎤 WhatsApp Voice Note',
-          type: 'audio',
-          media_type: 'audio',
-          mediaType: 'audio',
-          media_url: data.audio_url,
-          mediaUrl: data.audio_url,
-          audioDuration: data.duration,
-          duration: data.duration,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'DELIVERED'
-        });
-        if (typeof saveCRMState === 'function') {
-          saveCRMState();
+        const effectiveMsgId = data.message_id || ('msg_voice_' + Date.now());
+        const alreadyExists = CRM_STATE.conversations[custId].some(m => m && (m.id === effectiveMsgId || m.message_uid === effectiveMsgId));
+        if (!alreadyExists) {
+          CRM_STATE.conversations[custId].push({
+            id: effectiveMsgId,
+            sender: 'staff',
+            text: '🎤 WhatsApp Voice Note',
+            type: 'audio',
+            media_type: 'audio',
+            mediaType: 'audio',
+            media_url: data.audio_url || targetAudio,
+            mediaUrl: data.audio_url || targetAudio,
+            audioDuration: data.duration,
+            duration: data.duration,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'DELIVERED'
+          });
+          if (typeof saveCRMState === 'function') {
+            saveCRMState();
+          }
         }
       }
 
@@ -37211,6 +38712,11 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
     alert('Failed to send voice note: ' + err.message);
   } finally {
     _isVoiceSending = false;
+    if (directBtn) {
+      directBtn.disabled = false;
+      directBtn.classList.remove('opacity-60', 'pointer-events-none');
+      if (directText) directText.textContent = 'Send Voice Note';
+    }
     if (approveBtn) {
       approveBtn.disabled = false;
       approveBtn.classList.remove('opacity-60', 'pointer-events-none');
@@ -37228,7 +38734,19 @@ window.dispatchTranslatedVoice = async function (sendMode = 'translated') {
 };
 
 window.renderDualVoicePlayerBubble = function (msg, msgId, isOut) {
-  const audioSrc = msg.media_url || '';
+  let audioSrc = msg.media_url || msg.mediaUrl || msg.audio_url || '';
+  let streamSrc = '';
+  let audioSrcMp3 = '';
+  if (audioSrc && audioSrc !== 'undefined') {
+    if (!audioSrc.startsWith('http://') && !audioSrc.startsWith('https://') && !audioSrc.startsWith('data:') && !audioSrc.startsWith('blob:')) {
+      const cleanRel = audioSrc.replace(/^\/+/, '');
+      streamSrc = window.location.origin + '/api.php?action=stream_audio&file=' + encodeURIComponent(cleanRel);
+      audioSrc = window.location.origin + '/' + cleanRel;
+      audioSrcMp3 = audioSrc.replace(/\.ogg$/i, '.mp3');
+    } else if (audioSrc.startsWith('http://') || audioSrc.startsWith('https://')) {
+      audioSrcMp3 = audioSrc.replace(/\.ogg$/i, '.mp3');
+    }
+  }
   const duration = msg.duration || 8;
 
   return `
@@ -37256,10 +38774,14 @@ window.renderDualVoicePlayerBubble = function (msg, msgId, isOut) {
             </span>
             <button onclick="toggleAudioSpeed('${msgId}')" id="speed-${msgId}" class="font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[10px] transition cursor-pointer">1.0x</button>
           </div>
-          <audio id="audio-${msgId}" src="${audioSrc}" preload="metadata" 
+          <audio id="audio-${msgId}" src="${streamSrc || audioSrc}" data-fallback-src="${audioSrc}" data-mp3-src="${audioSrcMp3}" preload="metadata" playsinline 
             ontimeupdate="updateAudioProgress('${msgId}')" 
             onended="onAudioEnded('${msgId}')"
-            onerror="handleAudioFallback('${msgId}')"></audio>
+            onerror="handleAudioFallback('${msgId}')">
+            ${streamSrc ? `<source src="${streamSrc}" type="audio/ogg; codecs=opus">` : ''}
+            ${audioSrc ? `<source src="${audioSrc}" type="audio/ogg; codecs=opus">` : ''}
+            ${audioSrcMp3 ? `<source src="${audioSrcMp3}" type="audio/mpeg">` : ''}
+          </audio>
         </div>
       </div>
       <!-- Inbound 1-Click Translation to Staff Language (Zero Text Display) -->

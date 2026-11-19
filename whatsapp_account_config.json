@@ -9,6 +9,7 @@
     "waba_id": "982374619283745",
     "access_token": "EAABwzLIX124BA...",
     "webhook_verify_token": "GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026",
+<<<<<<< HEAD
     "provider": "QR_CODE_BRIDGE",
     "status": "CONNECTED",
     "last_sync": "2026-11-19 09:30:00",
@@ -19,6 +20,25 @@
             "phone_number": "+91 99435 57998",
             "brand_name": "GRM Garments Central",
             "status": "CONNECTED"
+=======
+    "provider": "META_CLOUD_API",
+    "status": "DISCONNECTED",
+    "last_sync": "2026-11-19 02:14:59",
+    "connected_lines": [
+        {
+            "id": "account_1",
+            "label": "Primary WhatsApp",
+            "phone_number": "Awaiting Link",
+            "brand_name": "Primary Line",
+            "status": "DISCONNECTED"
+        },
+        {
+            "id": "account_2",
+            "label": "WhatsApp Business #2",
+            "phone_number": "Awaiting Link",
+            "brand_name": "WhatsApp Business #2",
+            "status": "DISCONNECTED"
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
         }
     ],
     "autoReplyEnabled": false,

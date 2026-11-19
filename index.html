@@ -12,9 +12,6 @@
     rel="stylesheet">
   <!-- Local Material Symbols Font (Instant, Offline, Zero Timeout) -->
   <link rel="stylesheet" href="fonts/material-symbols.css">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
-    rel="stylesheet" media="print" onload="this.media='all'" />
   <!-- Precompiled Production Stylesheet (Instant Zero-Lag First Paint, Zero CDN Latency) -->
   <link rel="stylesheet" href="css/style.min.css">
   <!-- Local Tailwind Engine (Deferred to eliminate render-blocking CPU freeze) -->
@@ -62,7 +59,24 @@
       }
     };
   </script>
-  <script defer src="js/tailwindcss.min.js"></script>
+  <script>
+    // Asynchronously load Tailwind JIT during idle time to prevent initial DOM parsing freeze (css/style.min.css already provides complete styling)
+    (function() {
+      function loadTailwind() {
+        if (window._tailwindLoaded) return;
+        window._tailwindLoaded = true;
+        var s = document.createElement('script');
+        s.src = 'js/tailwindcss.min.js';
+        s.async = true;
+        document.head.appendChild(s);
+      }
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(loadTailwind, { timeout: 2500 });
+      } else {
+        window.addEventListener('load', function() { setTimeout(loadTailwind, 500); });
+      }
+    })();
+  </script>
   <script>
       // Prevent VS Code Live Server (Port 5500) from reloading on WhatsApp background file writes
       (function () {
@@ -1514,8 +1528,8 @@
             </div>
 
             <div class="p-2 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
-              <button type="button" onclick="switchView('settings'); closePhoneSwitcherDropdown();"
-                class="w-full text-center py-1.5 px-3 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+              <button type="button" onclick="handleHeaderAddNewWhatsAppLine()"
+                class="w-full text-center py-1.5 px-3 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
                 <span class="material-symbols-outlined text-[16px] text-emerald-600">qr_code_scanner</span>
                 <span>+ Scan New WhatsApp Line / QR</span>
               </button>
@@ -1532,11 +1546,11 @@
           <span class="font-extrabold text-amber-950 text-xs" id="mask-status-label">OFF</span>
         </button>
 
-        <!-- Reset Test Inbox Messages Button (Dev / Test Helper) -->
-        <button onclick="confirmResetInboxMessages()" id="header-reset-inbox-btn"
-          class="flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
-          title="Reset all WhatsApp chat messages to default mock data (Dev Testing)">
-          <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-rose-600">restart_alt</span>
+        <!-- Reset Inbox Filters & Refresh Queue -->
+        <button onclick="resetInboxViewFilters()" id="header-reset-inbox-btn"
+          class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 hover:border-slate-300 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
+          title="Reset inbox search, active filters, and refresh conversation queue">
+          <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-slate-600">refresh</span>
           <span data-i18n="header.reset_inbox">Reset</span>
         </button>
 
@@ -1921,11 +1935,20 @@
                       </select>
                     </div>
 
-                    <button type="button" id="btn-voice-translate" onclick="executeVoiceTranslation()"
-                      class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
-                      <span class="material-symbols-outlined text-[15px]">auto_awesome</span>
-                      <span id="btn-voice-translate-text">Translate Voice</span>
-                    </button>
+                    <div class="flex items-center gap-2">
+                      <button type="button" id="btn-voice-send-direct" onclick="dispatchTranslatedVoice('original')"
+                        class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
+                        title="Send recorded voice directly to customer WhatsApp">
+                        <span class="material-symbols-outlined text-[16px]">send</span>
+                        <span id="btn-voice-send-direct-text">Send Voice Note</span>
+                      </button>
+
+                      <button type="button" id="btn-voice-translate" onclick="executeVoiceTranslation()"
+                        class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
+                        <span class="material-symbols-outlined text-[15px]">auto_awesome</span>
+                        <span id="btn-voice-translate-text">Translate Voice</span>
+                      </button>
+                    </div>
                   </div>
 
                   <!-- Translated Audio Player & Text (Visible after translation) -->
@@ -3751,18 +3774,41 @@
 
 
             <!-- Filters & Search Toolbar -->
-            <div
-              class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 w-full min-w-0">
-              <!-- Search Input -->
-              <div class="relative flex-1 max-w-md min-w-0 w-full">
-                <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
-                <input type="text" id="order-history-search" oninput="filterOrdersHistoryTable()"
-                  placeholder="Search customer, phone, order ID, product, staff..."
-                  class="w-full min-w-0 pl-9 pr-3 sm:pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+            <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3 w-full">
+              <!-- Top Row: Spacious Search Input & Staff Filter / Export Actions -->
+              <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 w-full">
+                <!-- Search Input: Guaranteed spacious width -->
+                <div class="relative flex-1 min-w-[240px] max-w-xl w-full">
+                  <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
+                  <input type="text" id="order-history-search" oninput="filterOrdersHistoryTable()"
+                    placeholder="Search customer, phone, order ID, product, staff..."
+                    class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition">
+                </div>
+
+                <!-- Staff Filter & Action Buttons -->
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                  <select id="order-history-staff-filter" onchange="filterOrdersHistoryTable()"
+                    class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none">
+                    <option value="ALL">All Staff Members</option>
+                    <!-- Populated by JS -->
+                  </select>
+                  <button type="button" onclick="downloadOrdersHistoryCSV()"
+                    class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 leading-tight"
+                    title="Download Order History as CSV">
+                    <span class="material-symbols-outlined text-[16px]">download</span>
+                    <span>Export CSV</span>
+                  </button>
+                  <button type="button" onclick="openBatchPackingSlipsModal()"
+                    class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 leading-tight"
+                    title="Print Packing Slips for all current filtered orders">
+                    <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                    <span class="min-w-0 text-center leading-tight">Packing Slips (<span id="batch-slips-count">0</span>)</span>
+                  </button>
+                </div>
               </div>
 
-              <!-- Quick Status Pills -->
-              <div class="flex overflow-x-auto pb-1 sm:flex-wrap gap-1.5 w-full min-w-0 custom-scrollbar">
+              <!-- Bottom Row: Quick Status Pills (Separated, Never Collides With Search) -->
+              <div class="flex items-center overflow-x-auto pb-1 gap-1.5 w-full custom-scrollbar pt-2 border-t border-slate-100">
                 <button type="button" onclick="setOrderHistoryStatusFilter('ALL')" id="filter-btn-status-ALL"
                   class="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white cursor-pointer text-center justify-center shadow-xs">
                   All (<span id="count-filter-all">0</span>)
@@ -3784,32 +3830,10 @@
                   class="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-orange-100 cursor-pointer text-center">
                   Out for Delivery (<span id="count-filter-out-for-delivery">0</span>)
                 </button>
-
                 <button type="button" onclick="setOrderHistoryStatusFilter('DELIVERED')"
                   id="filter-btn-status-DELIVERED"
                   class="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-700 hover:bg-emerald-100 cursor-pointer text-center">
                   Delivered (<span id="count-filter-delivered">0</span>)
-                </button>
-              </div>
-
-              <!-- Staff Filter & Download CSV -->
-              <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto min-w-0">
-                <select id="order-history-staff-filter" onchange="filterOrdersHistoryTable()"
-                  class="col-span-2 sm:col-span-1 w-full sm:w-auto min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none">
-                  <option value="ALL">All Staff Members</option>
-                  <!-- Populated by JS -->
-                </select>
-                <button type="button" onclick="downloadOrdersHistoryCSV()"
-                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 whitespace-normal text-center leading-tight"
-                  title="Download Order History as CSV">
-                  <span class="material-symbols-outlined text-[16px]">download</span>
-                  <span>Export CSV</span>
-                </button>
-                <button type="button" onclick="openBatchPackingSlipsModal()"
-                  class="w-full sm:w-auto min-w-0 px-2 sm:px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 whitespace-normal text-center leading-tight"
-                  title="Print Packing Slips for all current filtered orders">
-                  <span class="material-symbols-outlined text-[16px]">receipt_long</span>
-                  <span class="min-w-0 text-center leading-tight">Packing Slips (<span id="batch-slips-count">0</span>)</span>
                 </button>
               </div>
             </div>
@@ -4525,7 +4549,6 @@
                 <h2 class="text-base sm:text-xl font-bold text-white tracking-tight">
                   DND &amp; Opt-Out Customer Hub
                 </h2>
-                <p class="text-xs text-rose-200/80">Central registry of opted-out leads auto-excluded from marketing &amp; broadcasts</p>
               </div>
             </div>
 
@@ -4585,7 +4608,6 @@
 
               <div class="text-[11px] sm:text-xs text-slate-500 font-semibold flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 shrink-0">info</span>
-                <span>Click "Re-activate" on any customer to allow messaging again.</span>
               </div>
             </div>
 
@@ -7777,8 +7799,8 @@
             <label class="block font-bold text-slate-800 text-xs">
               Courier Partner / Name <span class="text-rose-600">*</span>
             </label>
-            <button type="button" onclick="toggleAddCustomCourierInput()"
-              class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-extrabold flex items-center gap-1 transition cursor-pointer shadow-2xs">
+            <button type="button" id="btn-add-courier-partner" onclick="toggleAddCustomCourierInput()"
+              class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-extrabold flex items-center gap-1 transition cursor-pointer shadow-2xs select-none">
               <span class="material-symbols-outlined text-[14px]">add_circle</span>
               <span>+ Add Courier</span>
             </button>
@@ -7797,6 +7819,7 @@
               <option value="Delhivery">Delhivery</option>
               <option value="Blue Dart">Blue Dart</option>
               <option value="India Post (Speed Post)">India Post (Speed Post)</option>
+              <option value="__ADD_NEW__" class="font-black text-indigo-700 bg-indigo-50">➕ + Add Custom Courier Partner...</option>
             </select>
             <span
               class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 text-[18px] pointer-events-none">expand_more</span>
@@ -7898,6 +7921,111 @@
     </div>
   </div>
 
+  <script>
+    // Standalone Courier Management Engine (Guaranteed Cache-Immune)
+    function toggleAddCustomCourierInput(forceState) {
+      var box = document.getElementById('add-custom-courier-box');
+      var input = document.getElementById('new-courier-name-input');
+      if (!box) return;
+
+      var isCurrentlyHidden = box.classList.contains('hidden') || box.style.display === 'none' || !box.style.display;
+      var shouldShow = (typeof forceState === 'boolean') ? forceState : isCurrentlyHidden;
+
+      if (shouldShow) {
+        box.classList.remove('hidden');
+        box.style.display = 'block';
+        if (input) {
+          input.value = '';
+          setTimeout(function() { input.focus(); }, 50);
+        }
+      } else {
+        box.classList.add('hidden');
+        box.style.display = 'none';
+      }
+    }
+    window.toggleAddCustomCourierInput = toggleAddCustomCourierInput;
+
+    function addNewCourierPartnerOption() {
+      var input = document.getElementById('new-courier-name-input');
+      var select = document.getElementById('ship-courier-name');
+      if (!input || !select) return;
+
+      var name = (input.value || '').trim();
+      if (!name) {
+        if (typeof showToast === 'function') {
+          showToast('Courier Name Required', 'Please enter a courier partner name.', 'warning', 'amber');
+        } else {
+          alert('Please enter a courier partner name.');
+        }
+        input.focus();
+        return;
+      }
+
+      var exists = false;
+      for (var i = 0; i < select.options.length; i++) {
+        if (select.options[i].value.toLowerCase() === name.toLowerCase()) {
+          select.selectedIndex = i;
+          exists = true;
+          break;
+        }
+      }
+
+      if (!exists) {
+        var opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        var addOpt = select.querySelector('option[value="__ADD_NEW__"]');
+        if (addOpt) {
+          select.insertBefore(opt, addOpt);
+        } else {
+          select.appendChild(opt);
+        }
+        select.value = name;
+
+        try {
+          var saved = JSON.parse(localStorage.getItem('GRM_CUSTOM_COURIERS') || '[]');
+          if (!saved.some(function(s) { return s.toLowerCase() === name.toLowerCase(); })) {
+            saved.push(name);
+            localStorage.setItem('GRM_CUSTOM_COURIERS', JSON.stringify(saved));
+          }
+        } catch (e) {}
+      }
+
+      if (typeof onShippingCourierChange === 'function') {
+        onShippingCourierChange(name);
+      } else if (typeof updateShippingWhatsAppPreview === 'function') {
+        updateShippingWhatsAppPreview();
+      }
+
+      toggleAddCustomCourierInput(false);
+
+      if (typeof showToast === 'function') {
+        showToast('Courier Added', '"' + name + '" added and selected.', 'success', 'emerald');
+      }
+    }
+    window.addNewCourierPartnerOption = addNewCourierPartnerOption;
+
+    function onShippingCourierChange(courierName) {
+      if (courierName === '__ADD_NEW__') {
+        toggleAddCustomCourierInput(true);
+        var sel = document.getElementById('ship-courier-name');
+        if (sel) sel.value = '';
+        return;
+      }
+      var trackingInput = document.getElementById('ship-tracking-id');
+      var urlInput = document.getElementById('ship-tracking-url');
+      var trkVal = (trackingInput && trackingInput.value ? trackingInput.value : '').trim();
+
+      if (urlInput && typeof generateCourierTrackingURL === 'function') {
+        urlInput.value = trkVal ? generateCourierTrackingURL(courierName, trkVal) : '';
+      }
+      if (typeof updateShippingWhatsAppPreview === 'function') {
+        updateShippingWhatsAppPreview();
+      }
+    }
+    window.onShippingCourierChange = onShippingCourierChange;
+  </script>
+
   <!-- MODAL: EDIT WHATSAPP ORDER (NEW) -->
   <div id="modal-edit-order"
     class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
@@ -7927,169 +8055,276 @@
         </button>
       </div>
 
+      <!-- Section Navigation Quick Tabs -->
+      <div class="flex items-center gap-1.5 px-4 sm:px-6 py-2.5 bg-slate-100/90 border-b border-slate-200 overflow-x-auto shrink-0 text-xs font-bold">
+        <button type="button" onclick="switchEditOrderTab('items')" id="tab-btn-edit-items"
+          class="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-extrabold shadow-xs flex items-center gap-1.5 transition cursor-pointer shrink-0">
+          <span class="material-symbols-outlined text-[15px]">inventory_2</span>
+          <span>1. Products &amp; Qty</span>
+        </button>
+        <button type="button" onclick="switchEditOrderTab('payment')" id="tab-btn-edit-payment"
+          class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 flex items-center gap-1.5 transition cursor-pointer shrink-0">
+          <span class="material-symbols-outlined text-[15px] text-emerald-600">payments</span>
+          <span>2. Payment Details</span>
+        </button>
+        <button type="button" onclick="switchEditOrderTab('shipping')" id="tab-btn-edit-shipping"
+          class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 flex items-center gap-1.5 transition cursor-pointer shrink-0">
+          <span class="material-symbols-outlined text-[15px] text-indigo-600">local_shipping</span>
+          <span>3. Shipping &amp; Delivery</span>
+        </button>
+        <button type="button" onclick="switchEditOrderTab('customer')" id="tab-btn-edit-customer"
+          class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 flex items-center gap-1.5 transition cursor-pointer shrink-0">
+          <span class="material-symbols-outlined text-[15px] text-slate-600">person</span>
+          <span>4. Customer Info</span>
+        </button>
+        <button type="button" onclick="switchEditOrderTab('all')" id="tab-btn-edit-all"
+          class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-200 text-slate-500 font-semibold border border-slate-300 flex items-center gap-1 transition cursor-pointer shrink-0 ml-auto">
+          <span class="material-symbols-outlined text-[15px]">view_agenda</span>
+          <span>Show All</span>
+        </button>
+      </div>
+
       <!-- Scrollable Form Body -->
-      <div class="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs text-slate-700">
-        <!-- 1. Customer & Staff Section -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-          <div>
-            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Name
-              *</label>
-            <input type="text" id="edit-order-cust-name"
-              class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Phone
-              *</label>
-            <input type="text" id="edit-order-cust-phone"
-              class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-          </div>
-          <div class="sm:col-span-2">
-            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Order Credited Staff
-              (Booking Specialist)</label>
-            <select id="edit-order-staff-select"
-              class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-              <!-- Populated dynamically -->
-            </select>
-          </div>
-        </div>
-
-        <!-- 2. Delivery Address -->
-        <div>
-          <label
-            class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px] text-slate-500">local_shipping</span>
-            <span>Delivery &amp; Shipping Address:</span>
-          </label>
-          <textarea id="edit-order-shipping-address" rows="2"
-            class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed"></textarea>
-        </div>
-
-        <!-- 3. Ordered Garments & Items List with Add/Edit/Quantity -->
-        <div>
-          <div class="flex items-center justify-between mb-2">
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs text-slate-700 flex-1">
+        <!-- PANEL 1: Ordered Products & Quantities -->
+        <div id="edit-order-panel-items" class="space-y-3">
+          <div class="flex items-center justify-between">
             <label class="font-extrabold text-slate-800 flex items-center gap-1.5 text-xs">
-              <span class="material-symbols-outlined text-[16px] text-blue-600">inventory_2</span>
+              <span class="material-symbols-outlined text-[17px] text-blue-600">inventory_2</span>
               <span>Ordered Products &amp; Quantities:</span>
             </label>
             <button type="button" onclick="toggleEditOrderCatalogPicker()"
-              class="text-[11px] font-bold text-blue-700 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer">
-              <span class="material-symbols-outlined text-[14px]">add_circle</span>
-              <span>Add Product</span>
+              class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition">
+              <span class="material-symbols-outlined text-[15px]">add_circle</span>
+              <span>+ Add Product</span>
             </button>
           </div>
 
           <!-- Optional Catalog Adder -->
           <div id="edit-order-catalog-row"
-            class="hidden mb-2.5 p-2.5 bg-slate-100 border border-slate-200 rounded-xl space-y-2">
+            class="hidden mb-2.5 p-3 bg-blue-50/60 border border-blue-200 rounded-2xl space-y-2">
+            <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wide block">Select item from catalog to add:</span>
             <div class="flex items-center gap-2">
               <select id="edit-order-product-select"
-                class="flex-1 bg-white border border-slate-300 text-slate-800 font-bold rounded-lg px-2.5 py-1.5 text-xs">
+                class="flex-1 bg-white border border-slate-300 text-slate-800 font-bold rounded-xl px-2.5 py-2 text-xs">
                 <!-- Dynamically populated from products -->
               </select>
               <button type="button" onclick="addSelectedProductToEditOrder()"
-                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs">
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs">
                 Add
               </button>
             </div>
           </div>
 
           <div id="edit-order-items-list"
-            class="space-y-2 max-h-48 overflow-y-auto p-1 bg-slate-50/50 rounded-xl border border-slate-200">
-            <!-- Dynamic Items Rows -->
+            class="space-y-2 max-h-56 overflow-y-auto p-1.5 bg-slate-50/50 rounded-2xl border border-slate-200">
+            <!-- Dynamic Items Rows with direct numeric input and +/- stepper -->
           </div>
 
           <!-- Total Summary Bar -->
           <div
-            class="mt-2.5 p-3 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
-            <span class="font-bold text-slate-800 text-xs">Updated Order Total:</span>
+            class="mt-2.5 p-3.5 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between shadow-2xs">
+            <div>
+              <span class="font-extrabold text-slate-800 text-xs block">Updated Order Total:</span>
+              <span id="edit-order-items-count" class="text-[11px] text-blue-700 font-semibold block">0 items</span>
+            </div>
             <div class="text-right">
-              <span id="edit-order-grand-total" class="font-mono font-black text-lg text-blue-900">₹0</span>
-              <span id="edit-order-items-count" class="text-[10px] text-blue-700 font-semibold block">0 items</span>
+              <span id="edit-order-grand-total" class="font-mono font-black text-xl text-blue-900">₹0</span>
+            </div>
+          </div>
+
+          <!-- Quick Payment Status Pill Card (Always visible on Tab 1) -->
+          <div
+            class="p-3 bg-emerald-50/80 border border-emerald-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <span class="material-symbols-outlined text-[18px]">payments</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-black text-emerald-900 uppercase tracking-wide block">Payment Status &amp; Settlement:</span>
+                <p id="edit-order-payment-quick-summary" class="text-xs font-bold text-emerald-950">ONLINE_UPI • PAID (₹0)</p>
+              </div>
+            </div>
+            <button type="button" onclick="switchEditOrderTab('payment')"
+              class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 cursor-pointer transition shadow-2xs shrink-0">
+              <span class="material-symbols-outlined text-[15px]">edit</span>
+              <span>Edit Payment Details</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PANEL 2: Payment Details & Status (Interactive Full Editor) -->
+        <div id="edit-order-panel-payment" class="hidden space-y-4">
+          <div class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-300 space-y-3.5 shadow-2xs">
+            <div class="flex items-center justify-between border-b border-emerald-200 pb-2.5">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[20px] text-emerald-700">account_balance_wallet</span>
+                <h4 class="font-extrabold text-sm text-emerald-950">Payment Details &amp; Settlement</h4>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Editable</span>
+            </div>
+
+            <!-- Quick Settlement Presets -->
+            <div>
+              <label class="block font-bold text-slate-700 text-[10px] mb-1.5 uppercase tracking-wide">Quick Settlement Presets:</label>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" onclick="setEditOrderPaymentQuick('FULL')"
+                  class="px-2.5 py-1.5 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs">
+                  <span class="material-symbols-outlined text-[14px]">check_circle</span>
+                  <span>100% Full Paid</span>
+                </button>
+                <button type="button" onclick="setEditOrderPaymentQuick('ADVANCE_200')"
+                  class="px-2.5 py-1.5 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs">
+                  <span class="material-symbols-outlined text-[14px]">local_atm</span>
+                  <span>COD (₹200 Advance)</span>
+                </button>
+                <button type="button" onclick="setEditOrderPaymentQuick('ZERO')"
+                  class="px-2.5 py-1.5 bg-white hover:bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs">
+                  <span class="material-symbols-outlined text-[14px]">pending</span>
+                  <span>Full Payment Pending (₹0 Paid)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Payment Method & Payment Status -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Payment Method *</label>
+                <select id="edit-order-payment-method" onchange="onEditOrderPaymentMethodChange(true)"
+                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer">
+                  <option value="ONLINE_UPI">ONLINE_UPI (GPay / PhonePe / QR)</option>
+                  <option value="COD">COD (Cash on Delivery)</option>
+                  <option value="CASH">Cash in Hand</option>
+                  <option value="BANK_TRANSFER">Bank Transfer / NEFT / IMPS</option>
+                  <option value="OTHER">Other Payment Method</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Payment Status *</label>
+                <select id="edit-order-payment-status" onchange="updateEditOrderPaymentQuickSummary()"
+                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer">
+                  <option value="PAID">PAID ✅ (Fully Received)</option>
+                  <option value="PARTIAL_PAID">PARTIAL_PAID ⚠️ (Advance Paid, Balance Due)</option>
+                  <option value="PENDING">PENDING ⏳ (Awaiting Payment)</option>
+                  <option value="REFUNDED">REFUNDED ↩️ (Payment Refunded)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Advance / Amount Paid & Balance Due -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide flex items-center justify-between">
+                  <span>Advance / Amount Paid (₹) *</span>
+                  <span class="text-[9.5px] text-emerald-700 font-semibold">Editable</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">₹</span>
+                  <input type="number" id="edit-order-cod-advance" min="0" step="1"
+                    oninput="onEditOrderAdvanceChange(this.value)"
+                    class="w-full pl-7 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-mono font-black text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                </div>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide flex items-center justify-between">
+                  <span>Balance Due Amount (₹)</span>
+                  <span class="text-[9.5px] text-indigo-700 font-semibold">Auto-calculated</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">₹</span>
+                  <input type="number" id="edit-order-cod-balance" min="0" step="1"
+                    oninput="updateEditOrderPaymentQuickSummary()"
+                    class="w-full pl-7 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-mono font-black text-rose-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                </div>
+              </div>
+            </div>
+
+            <!-- UPI Ref & Notes -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">UPI Ref / UTR / Cheque No.</label>
+                <input type="text" id="edit-order-upi-id" placeholder="e.g. 429381029482 / GPay Ref"
+                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 uppercase focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Payment Note / Staff Remarks</label>
+                <input type="text" id="edit-order-payment-note" placeholder="e.g. Paid via QR in WhatsApp chat"
+                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 4. Payment Details & Status -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-          <div>
-            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Payment
-              Method</label>
-            <select id="edit-order-payment-method" onchange="onEditOrderPaymentMethodChange()"
-              class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800">
-              <option value="ONLINE_UPI">ONLINE_UPI (Full Paid)</option>
-              <option value="COD">COD (₹200 Advance)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Payment
-              Status</label>
-            <select id="edit-order-payment-status"
-              class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800">
-              <option value="PAID">PAID ✅</option>
-              <option value="PARTIAL_PAID (₹200 ADVANCE)">PARTIAL_PAID (₹200 ADVANCE)</option>
-              <option value="PENDING">PENDING</option>
-              <option value="REFUNDED">REFUNDED</option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">UPI Ref / UTR</label>
-            <input type="text" id="edit-order-upi-id" placeholder="UTR Number"
-              class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono font-bold text-slate-800 uppercase">
-          </div>
-          <div id="edit-order-cod-fields" class="sm:col-span-3 grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-            <div>
-              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">COD Advance
-                (₹)</label>
-              <input type="number" id="edit-order-cod-advance"
-                class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono font-bold text-slate-800">
+        <!-- PANEL 3: Fulfillment & Courier Tracking + Shipping Address -->
+        <div id="edit-order-panel-shipping" class="hidden space-y-3">
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+              <label class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[17px] text-indigo-600">local_shipping</span>
+                <span>Fulfillment Stage &amp; Courier Tracking:</span>
+              </label>
+              <div class="w-44">
+                <select id="edit-order-status" onchange="onEditOrderStatusChange(this.value)"
+                  class="w-full bg-white border border-indigo-300 rounded-xl p-2 text-xs font-extrabold text-indigo-950 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer">
+                  <option value="PLACED">1. PLACED</option>
+                  <option value="PACKED">2. PACKED</option>
+                  <option value="SHIPPED">3. SHIPPED</option>
+                  <option value="OUT_FOR_DELIVERY">4. OUT FOR DELIVERY</option>
+                  <option value="DELIVERED">5. DELIVERED</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">COD Balance Due
-                (₹)</label>
-              <input type="number" id="edit-order-cod-balance"
-                class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono font-bold text-slate-800">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Courier Partner</label>
+                <input type="text" id="edit-order-courier-name" placeholder="ST Courier, Professional, DTDC, Delhivery..."
+                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Tracking ID / Consignment No.</label>
+                <input type="text" id="edit-order-tracking-number" placeholder="e.g. STC9823412"
+                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 uppercase">
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Shipping / Live Tracking URL</label>
+                <input type="url" id="edit-order-shipping-url" placeholder="https://..."
+                  class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono text-slate-800">
+              </div>
+            </div>
+
+            <!-- Delivery Address -->
+            <div class="pt-2 border-t border-slate-200">
+              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-slate-500">pin_drop</span>
+                <span>Delivery &amp; Shipping Address:</span>
+              </label>
+              <textarea id="edit-order-shipping-address" rows="2"
+                class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed"></textarea>
             </div>
           </div>
         </div>
 
-        <!-- 5. Order Fulfillment Status & Courier Tracking -->
-        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-          <div class="flex items-center justify-between">
-            <label class="font-bold text-slate-800 text-xs flex items-center gap-1">
-              <span class="material-symbols-outlined text-[16px] text-indigo-600">local_shipping</span>
-              <span>Fulfillment &amp; Courier Tracking:</span>
-            </label>
-            <div class="w-40">
-              <select id="edit-order-status" onchange="onEditOrderStatusChange(this.value)"
-                class="w-full bg-white border border-indigo-300 rounded-xl p-2 text-xs font-extrabold text-indigo-950 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer">
-                <option value="PLACED">1. PLACED</option>
-                <option value="PACKED">2. PACKED</option>
-                <option value="SHIPPED">3. SHIPPED</option>
-                <option value="OUT_FOR_DELIVERY">4. OUT FOR DELIVERY</option>
-                <option value="DELIVERED">5. DELIVERED</option>
-                <option value="CANCELLED">CANCELLED</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- PANEL 4: Customer & Staff Section -->
+        <div id="edit-order-panel-customer" class="hidden space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
             <div>
-              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Courier
-                Partner</label>
-              <input type="text" id="edit-order-courier-name" placeholder="ST Courier, Professional, DTDC, Delhivery..."
-                class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-800">
+              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Name *</label>
+              <input type="text" id="edit-order-cust-name"
+                class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
             </div>
             <div>
-              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Tracking ID /
-                Consignment No.</label>
-              <input type="text" id="edit-order-tracking-number" placeholder="e.g. STC9823412"
-                class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono font-bold text-slate-800 uppercase">
+              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Customer Phone *</label>
+              <input type="text" id="edit-order-cust-phone"
+                class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
             </div>
             <div class="sm:col-span-2">
-              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Shipping / Live
-                Tracking URL</label>
-              <input type="url" id="edit-order-shipping-url" placeholder="https://..."
-                class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-mono text-slate-800">
+              <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">Order Credited Staff (Booking Specialist)</label>
+              <select id="edit-order-staff-select"
+                class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                <!-- Populated dynamically -->
+              </select>
             </div>
           </div>
         </div>
@@ -8109,6 +8344,204 @@
       </div>
     </div>
   </div>
+
+  <script>
+    // Standalone Edit Order Controller (Guaranteed Cache-Immune)
+    function switchEditOrderTab(tab) {
+      var tabs = ['items', 'payment', 'shipping', 'customer'];
+      var btns = {
+        items: document.getElementById('tab-btn-edit-items'),
+        payment: document.getElementById('tab-btn-edit-payment'),
+        shipping: document.getElementById('tab-btn-edit-shipping'),
+        customer: document.getElementById('tab-btn-edit-customer'),
+        all: document.getElementById('tab-btn-edit-all')
+      };
+      var panels = {
+        items: document.getElementById('edit-order-panel-items'),
+        payment: document.getElementById('edit-order-panel-payment'),
+        shipping: document.getElementById('edit-order-panel-shipping'),
+        customer: document.getElementById('edit-order-panel-customer')
+      };
+
+      for (var key in btns) {
+        if (btns[key]) {
+          btns[key].className = 'px-3 py-1.5 rounded-xl bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 flex items-center gap-1.5 transition cursor-pointer shrink-0';
+        }
+      }
+
+      if (tab === 'all') {
+        if (btns.all) btns.all.className = 'px-3 py-1.5 rounded-xl bg-slate-800 text-white font-extrabold shadow-xs flex items-center gap-1.5 transition cursor-pointer shrink-0';
+        tabs.forEach(function(t) {
+          if (panels[t]) panels[t].classList.remove('hidden');
+        });
+      } else {
+        if (btns[tab]) btns[tab].className = 'px-3 py-1.5 rounded-xl bg-blue-600 text-white font-extrabold shadow-xs flex items-center gap-1.5 transition cursor-pointer shrink-0';
+        tabs.forEach(function(t) {
+          if (panels[t]) {
+            if (t === tab) panels[t].classList.remove('hidden');
+            else panels[t].classList.add('hidden');
+          }
+        });
+      }
+    }
+    window.switchEditOrderTab = switchEditOrderTab;
+
+    function changeEditOrderItemQty(idx, delta) {
+      if (typeof EDIT_ORDER_ITEMS === 'undefined' || !EDIT_ORDER_ITEMS[idx]) return;
+      var cur = parseInt(EDIT_ORDER_ITEMS[idx].qty) || 1;
+      var newQty = Math.max(1, cur + delta);
+      EDIT_ORDER_ITEMS[idx].qty = newQty;
+      var input = document.getElementById('edit-order-item-qty-' + idx);
+      if (input) input.value = newQty;
+      updateEditOrderItemLine(idx);
+      updateEditOrderTotals();
+    }
+    window.changeEditOrderItemQty = changeEditOrderItemQty;
+
+    function updateEditOrderItemQtyDirect(idx, val) {
+      if (typeof EDIT_ORDER_ITEMS === 'undefined' || !EDIT_ORDER_ITEMS[idx]) return;
+      var qty = parseInt(val, 10);
+      if (isNaN(qty) || qty < 1) qty = 1;
+      EDIT_ORDER_ITEMS[idx].qty = qty;
+      updateEditOrderItemLine(idx);
+      updateEditOrderTotals();
+    }
+    window.updateEditOrderItemQtyDirect = updateEditOrderItemQtyDirect;
+
+    function updateEditOrderItemLine(idx) {
+      if (typeof EDIT_ORDER_ITEMS === 'undefined' || !EDIT_ORDER_ITEMS[idx]) return;
+      var item = EDIT_ORDER_ITEMS[idx];
+      var itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.qty) || 1);
+      var totalEl = document.getElementById('edit-order-item-total-' + idx);
+      if (totalEl) totalEl.innerText = '₹' + itemTotal.toLocaleString('en-IN');
+    }
+    window.updateEditOrderItemLine = updateEditOrderItemLine;
+
+    function updateEditOrderTotals() {
+      if (typeof EDIT_ORDER_ITEMS === 'undefined') return;
+      var total = 0;
+      var count = 0;
+      EDIT_ORDER_ITEMS.forEach(function(it) {
+        var q = parseInt(it.qty) || 1;
+        total += (parseFloat(it.price) || 0) * q;
+        count += q;
+      });
+
+      var grandTotalEl = document.getElementById('edit-order-grand-total');
+      var countEl = document.getElementById('edit-order-items-count');
+      if (grandTotalEl) grandTotalEl.innerText = '₹' + total.toLocaleString('en-IN');
+      if (countEl) countEl.innerText = count + ' items';
+
+      var advInput = document.getElementById('edit-order-cod-advance');
+      var balInput = document.getElementById('edit-order-cod-balance');
+      var methodSelect = document.getElementById('edit-order-payment-method');
+
+      if (advInput && balInput) {
+        var isOnline = methodSelect && (methodSelect.value === 'ONLINE_UPI' || methodSelect.value === 'BANK_TRANSFER');
+        var adv = parseFloat(advInput.value);
+        if (isNaN(adv)) adv = isOnline ? total : Math.min(200, total);
+        var bal = Math.max(0, total - adv);
+        balInput.value = bal;
+      }
+
+      updateEditOrderPaymentQuickSummary();
+    }
+    window.updateEditOrderTotals = updateEditOrderTotals;
+
+    function updateEditOrderPaymentQuickSummary() {
+      var summaryEl = document.getElementById('edit-order-payment-quick-summary');
+      if (!summaryEl) return;
+      var method = (document.getElementById('edit-order-payment-method') || {}).value || 'ONLINE_UPI';
+      var status = (document.getElementById('edit-order-payment-status') || {}).value || 'PAID';
+      var adv = parseFloat((document.getElementById('edit-order-cod-advance') || {}).value || 0) || 0;
+      var bal = parseFloat((document.getElementById('edit-order-cod-balance') || {}).value || 0) || 0;
+
+      summaryEl.innerText = method + ' • ' + status + ' (Paid: ₹' + adv.toLocaleString('en-IN') + ' | Due: ₹' + bal.toLocaleString('en-IN') + ')';
+    }
+    window.updateEditOrderPaymentQuickSummary = updateEditOrderPaymentQuickSummary;
+
+    function setEditOrderPaymentQuick(type) {
+      if (typeof EDIT_ORDER_ITEMS === 'undefined') return;
+      var total = 0;
+      EDIT_ORDER_ITEMS.forEach(function(it) {
+        total += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+      });
+      var advInput = document.getElementById('edit-order-cod-advance');
+      var balInput = document.getElementById('edit-order-cod-balance');
+      var methodSelect = document.getElementById('edit-order-payment-method');
+      var pStatusSelect = document.getElementById('edit-order-payment-status');
+
+      if (type === 'FULL') {
+        if (advInput) advInput.value = total;
+        if (balInput) balInput.value = 0;
+        if (pStatusSelect) pStatusSelect.value = 'PAID';
+        if (methodSelect && methodSelect.value === 'COD') methodSelect.value = 'ONLINE_UPI';
+      } else if (type === 'ADVANCE_200') {
+        var adv = Math.min(200, total);
+        if (advInput) advInput.value = adv;
+        if (balInput) balInput.value = Math.max(0, total - adv);
+        if (pStatusSelect) pStatusSelect.value = 'PARTIAL_PAID';
+        if (methodSelect) methodSelect.value = 'COD';
+      } else if (type === 'ZERO') {
+        if (advInput) advInput.value = 0;
+        if (balInput) balInput.value = total;
+        if (pStatusSelect) pStatusSelect.value = 'PENDING';
+        if (methodSelect) methodSelect.value = 'COD';
+      }
+      updateEditOrderPaymentQuickSummary();
+    }
+    window.setEditOrderPaymentQuick = setEditOrderPaymentQuick;
+
+    function onEditOrderAdvanceChange(val) {
+      if (typeof EDIT_ORDER_ITEMS === 'undefined') return;
+      var total = 0;
+      EDIT_ORDER_ITEMS.forEach(function(it) {
+        total += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+      });
+      var adv = parseFloat(val) || 0;
+      var bal = Math.max(0, total - adv);
+      var balInput = document.getElementById('edit-order-cod-balance');
+      if (balInput) balInput.value = bal;
+
+      var pStatusSelect = document.getElementById('edit-order-payment-status');
+      if (pStatusSelect) {
+        if (adv >= total && total > 0) pStatusSelect.value = 'PAID';
+        else if (adv > 0) pStatusSelect.value = 'PARTIAL_PAID';
+        else pStatusSelect.value = 'PENDING';
+      }
+      updateEditOrderPaymentQuickSummary();
+    }
+    window.onEditOrderAdvanceChange = onEditOrderAdvanceChange;
+
+    function onEditOrderPaymentMethodChange(userInitiated) {
+      var methodSelect = document.getElementById('edit-order-payment-method');
+      var pStatusSelect = document.getElementById('edit-order-payment-status');
+      var advInput = document.getElementById('edit-order-cod-advance');
+      var balInput = document.getElementById('edit-order-cod-balance');
+      if (!methodSelect) return;
+
+      if (userInitiated) {
+        var total = 0;
+        if (typeof EDIT_ORDER_ITEMS !== 'undefined') {
+          EDIT_ORDER_ITEMS.forEach(function(it) {
+            total += (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1);
+          });
+        }
+        if (methodSelect.value === 'COD') {
+          var adv = Math.min(200, total);
+          if (advInput) advInput.value = adv;
+          if (balInput) balInput.value = Math.max(0, total - adv);
+          if (pStatusSelect) pStatusSelect.value = 'PARTIAL_PAID';
+        } else if (methodSelect.value === 'ONLINE_UPI' || methodSelect.value === 'BANK_TRANSFER') {
+          if (advInput) advInput.value = total;
+          if (balInput) balInput.value = 0;
+          if (pStatusSelect) pStatusSelect.value = 'PAID';
+        }
+      }
+      updateEditOrderPaymentQuickSummary();
+    }
+    window.onEditOrderPaymentMethodChange = onEditOrderPaymentMethodChange;
+  </script>
 
   <!-- MODAL: FOLLOW-UP SCHEDULER (Superseded by dynamic inline follow-up workstation) -->
   <div id="modal-followup" class="fixed inset-0 z-50 modal-backdrop hidden items-center justify-center p-3 sm:p-4"
@@ -11521,8 +11954,8 @@
     window.showToast = showToast;
   </script>
 
-  <!-- LOAD WEBSOCKET (SOCKET.IO) CLIENT -->
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <!-- LOAD WEBSOCKET (SOCKET.IO) CLIENT (Local zero-latency copy) -->
+  <script src="js/socket.io.min.js"></script>
 
   <!-- CLIENT-SIDE OCR ENGINE FOR PAYMENT SCREENSHOT VERIFICATION -->
   <!-- Tesseract OCR engine is lazy-loaded on-demand when payment screenshots are verified -->
@@ -11863,7 +12296,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261118_voice_and_counters_v13"></script>
+  <script src="crm_app.js?v=20261119_perf_optimized_v18"></script>
 </body>
 
 </html>

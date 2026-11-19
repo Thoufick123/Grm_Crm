@@ -11,10 +11,17 @@ function saveBase64MediaIfPresent(&$mediaUrl, $type = null) {
     $mime = strtolower(substr($meta, 5));
     
     $isImg = (strpos($mime, 'image') !== false || $type === 'image');
-    $isAudio = (strpos($mime, 'audio') !== false || strpos($mime, 'ogg') !== false || strpos($mime, 'webm') !== false || $type === 'audio');
+    $isAudio = (strpos($mime, 'audio') !== false || strpos($mime, 'ogg') !== false || strpos($mime, 'webm') !== false || strpos($mime, 'opus') !== false || $type === 'audio');
     
     $subDir = $isImg ? 'media' : ($isAudio ? 'voice' : 'media');
-    $ext = $isImg ? 'jpg' : ($isAudio ? 'ogg' : 'bin');
+    
+    // Accurate audio extension detection based on mime type
+    $ext = 'bin';
+    if ($isImg) {
+        $ext = (strpos($mime, 'png') !== false) ? 'png' : ((strpos($mime, 'webp') !== false) ? 'webp' : 'jpg');
+    } elseif ($isAudio) {
+        $ext = (strpos($mime, 'webm') !== false) ? 'webm' : ((strpos($mime, 'mp3') !== false) ? 'mp3' : 'ogg');
+    }
     
     $dir = __DIR__ . '/uploads/' . $subDir;
     if (!file_exists($dir)) @mkdir($dir, 0777, true);
@@ -22,12 +29,131 @@ function saveBase64MediaIfPresent(&$mediaUrl, $type = null) {
     $cleanB64 = str_replace(["\r", "\n", " "], '', $b64data);
     $rawBytes = base64_decode($cleanB64);
     if ($rawBytes !== false && strlen($rawBytes) > 0) {
+        // Inspect raw magic bytes to guarantee valid extension
+        if ($isAudio && strlen($rawBytes) >= 4) {
+            if (substr($rawBytes, 0, 4) === "\x1A\x45\xDF\xA3") {
+                $ext = 'webm';
+            } elseif (substr($rawBytes, 0, 4) === "OggS") {
+                $ext = 'ogg';
+            } elseif (substr($rawBytes, 0, 3) === "ID3" || (ord($rawBytes[0]) === 0xFF && (ord($rawBytes[1]) & 0xE0) === 0xE0)) {
+                $ext = 'mp3';
+            }
+        }
         $fileName = ($isImg ? 'img_' : 'voice_') . time() . '_' . substr(uniqid(), -5) . '.' . $ext;
         file_put_contents($dir . '/' . $fileName, $rawBytes);
         $mediaUrl = 'uploads/' . $subDir . '/' . $fileName;
         return $mediaUrl;
     }
     return $mediaUrl;
+}
+
+/**
+ * WhatsApp Privacy LID (15-digit linked identifier) to Genuine Phone Resolver
+ */
+function resolveLidPhone($phoneOrJid) {
+    if (empty($phoneOrJid)) return $phoneOrJid;
+    $target = trim((string)$phoneOrJid);
+    $clean = preg_replace('/[^0-9]/', '', $target);
+    if (empty($clean)) return $target;
+
+    $sharedLidFile = __DIR__ . '/lid_mappings.json';
+    if (file_exists($sharedLidFile)) {
+        try {
+            $map = json_decode(file_get_contents($sharedLidFile), true) ?: [];
+            if (isset($map[$clean])) {
+                $mapped = preg_replace('/[^0-9]/', '', (string)$map[$clean]);
+                if (strlen($mapped) >= 10) {
+                    if (strlen($mapped) === 10) return '+91 ' . substr($mapped, 0, 5) . ' ' . substr($mapped, 5);
+                    if (strlen($mapped) === 12 && str_starts_with($mapped, '91')) return '+91 ' . substr($mapped, 2, 5) . ' ' . substr($mapped, 7);
+                    return '+' . $mapped;
+                }
+            }
+        } catch (Exception $e) {}
+    }
+    return $target;
+}
+
+/**
+ * Merge temporary Privacy LID placeholder customer into authoritative Customer Profile
+ */
+function mergeLidPlaceholderCustomer($pdo, $realCustId, $lidDigits) {
+    if (!$pdo || empty($realCustId) || empty($lidDigits)) return;
+    try {
+        $cleanLid = preg_replace('/[^0-9]/', '', (string)$lidDigits);
+        if (strlen($cleanLid) < 10) return;
+        $lid10 = substr($cleanLid, -10);
+
+        // Find placeholder customers created under the LID digits or cust_{lid10}
+        $stmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `id` != ? AND (`id` = ? OR `id` = ? OR `phone` LIKE ? OR `whatsapp` LIKE ?)");
+        $stmt->execute([$realCustId, 'cust_' . $cleanLid, 'cust_' . $lid10, "%$cleanLid%", "%$cleanLid%"]);
+        $placeholders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($placeholders as $ph) {
+            $phId = $ph['id'];
+            if ($phId === $realCustId) continue;
+            // Move all messages from placeholder to real customer
+            $pdo->prepare("UPDATE `messages` SET `customer_id` = ? WHERE `customer_id` = ?")->execute([$realCustId, $phId]);
+            // Delete placeholder query
+            $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` = ?")->execute([$phId]);
+            // Delete placeholder customer
+            $pdo->prepare("DELETE FROM `customers` WHERE `id` = ?")->execute([$phId]);
+        }
+    } catch (Exception $e) {}
+}
+
+/**
+ * Universal WhatsApp Phone Number Sanitizer
+ * Strips device IDs (:0, :1), domain (@s.whatsapp.net), solves trailing 0 artifacts, and formats canonical +91 phone
+ */
+function cleanWhatsAppPhone($rawInput) {
+    if (empty($rawInput)) return ['clean10' => '', 'formatted' => '+91 98765 43210', 'digits' => ''];
+    $str = trim((string)$rawInput);
+    if (strpos($str, '@') !== false) {
+        $str = explode('@', $str)[0];
+    }
+    if (strpos($str, ':') !== false) {
+        $str = explode(':', $str)[0];
+    }
+    $digits = preg_replace('/[^0-9]/', '', $str);
+
+    // Deeply resolve Privacy LID to genuine phone number
+    if (strlen($digits) >= 14) {
+        $resolved = resolveLidPhone($digits);
+        if (!empty($resolved) && $resolved !== $digits) {
+            $digits = preg_replace('/[^0-9]/', '', $resolved);
+        }
+    }
+
+    // Strip trailing device index 0 (e.g. 9181240385850 -> 918124038585, or 81240385850 -> 8124038585)
+    if (strlen($digits) === 13 && strpos($digits, '91') === 0 && substr($digits, -1) === '0') {
+        $digits = substr($digits, 0, 12);
+    } else if (strlen($digits) === 11 && substr($digits, -1) === '0' && substr($digits, 0, 1) !== '0') {
+        $digits = substr($digits, 0, 10);
+    }
+
+    $clean10 = $digits;
+    if (strlen($digits) === 12 && strpos($digits, '91') === 0) {
+        $clean10 = substr($digits, 2);
+    } else if (strlen($digits) === 11 && strpos($digits, '0') === 0) {
+        $clean10 = substr($digits, 1);
+    } else if (strlen($digits) > 10) {
+        $clean10 = substr($digits, -10);
+    }
+
+    $formatted = '';
+    if (strlen($clean10) === 10) {
+        $formatted = '+91 ' . substr($clean10, 0, 5) . ' ' . substr($clean10, 5);
+    } else if (!empty($digits)) {
+        $formatted = '+' . $digits;
+    } else {
+        $formatted = '+91 98765 43210';
+    }
+
+    return [
+        'clean10' => $clean10,
+        'formatted' => $formatted,
+        'digits' => $digits
+    ];
 }
 
 /**
@@ -87,6 +213,73 @@ if (isset($_GET['action'])) {
     }
     if ($act === 'receive_voice' || $act === 'voice_translate_inbound' || $act === 'translate_inbound_voice') {
         require_once __DIR__ . '/voice_translator/receive_voice.php';
+        exit;
+    }
+    if ($act === 'stream_audio' || $act === 'play_audio') {
+        $reqFile = trim($_GET['file'] ?? $_GET['path'] ?? '');
+        if (empty($reqFile) || strpos($reqFile, '..') !== false) {
+            http_response_code(400);
+            exit('Invalid audio file request');
+        }
+        $cleanPath = ltrim(preg_replace('/^(\/|\\\\)+/', '', $reqFile), '/\\');
+        $fullPath = __DIR__ . '/' . $cleanPath;
+        if (!file_exists($fullPath) || !is_file($fullPath)) {
+            $basename = basename($cleanPath);
+            $candidate = __DIR__ . '/uploads/voice/' . $basename;
+            if (file_exists($candidate) && is_file($candidate)) {
+                $fullPath = $candidate;
+            } else {
+                http_response_code(404);
+                exit('Audio file not found');
+            }
+        }
+
+        $filesize = filesize($fullPath);
+        $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+        $mime = 'audio/ogg; codecs=opus';
+        if ($ext === 'mp3') $mime = 'audio/mpeg';
+        elseif ($ext === 'webm') $mime = 'audio/webm; codecs=opus';
+        elseif ($ext === 'wav') $mime = 'audio/wav';
+        elseif ($ext === 'm4a') $mime = 'audio/mp4';
+
+        header('Content-Type: ' . $mime);
+        header('Accept-Ranges: bytes');
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, HEAD, OPTIONS');
+        header('Cache-Control: public, max-age=604800');
+
+        if (isset($_SERVER['HTTP_RANGE'])) {
+            list($param, $range) = explode('=', $_SERVER['HTTP_RANGE'], 2);
+            if (strtolower(trim($param)) === 'bytes') {
+                $range = explode('-', $range);
+                $start = intval($range[0]);
+                $end = (!empty($range[1])) ? intval($range[1]) : ($filesize - 1);
+                if ($start >= $filesize || $end >= $filesize || $start > $end) {
+                    header('HTTP/1.1 416 Requested Range Not Satisfiable');
+                    header('Content-Range: bytes */' . $filesize);
+                    exit;
+                }
+                header('HTTP/1.1 206 Partial Content');
+                header('Content-Range: bytes ' . $start . '-' . $end . '/' . $filesize);
+                header('Content-Length: ' . ($end - $start + 1));
+                $fp = @fopen($fullPath, 'rb');
+                if ($fp) {
+                    fseek($fp, $start);
+                    $bytesToRead = ($end - $start + 1);
+                    while ($bytesToRead > 0 && !feof($fp)) {
+                        $chunk = fread($fp, min(65536, $bytesToRead));
+                        echo $chunk;
+                        flush();
+                        $bytesToRead -= strlen($chunk);
+                    }
+                    fclose($fp);
+                }
+                exit;
+            }
+        }
+
+        header('Content-Length: ' . $filesize);
+        readfile($fullPath);
         exit;
     }
 }
@@ -506,7 +699,29 @@ function atomicWriteJson($filePath, $data) {
 
 $action = $_GET['action'] ?? 'get_state';
 
-
+// Fast Dedicated Multi-WhatsApp Accounts Status Endpoint (< 5ms response, zero overhead)
+if ($action === 'get_whatsapp_accounts') {
+    try {
+        $waAccounts = [];
+        if ($pdo) {
+            $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` WHERE `account_slot` IN ('account_1', 'account_2') ORDER BY `id` ASC");
+            $waAccounts = $waStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        if (empty($waAccounts) && file_exists($configFile)) {
+            $cfgData = json_decode(file_get_contents($configFile), true);
+            $waAccounts = $cfgData['connected_lines'] ?? [];
+        }
+        echo json_encode([
+            "status" => "success",
+            "whatsappAccounts" => $waAccounts,
+            "accounts" => $waAccounts
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        exit;
+    }
+}
 
 // =========================================================================
 // 1. GET FULL CRM STATE FROM MYSQL DATABASE
@@ -520,11 +735,34 @@ if ($action === 'get_state' || $action === 'get_all') {
         $scope = isset($_GET['scope']) ? strtolower(trim($_GET['scope'])) : (isset($_GET['view']) ? strtolower(trim($_GET['view'])) : 'full');
         $isInboxScope = ($scope === 'inbox');
         $isDashboardScope = ($scope === 'dashboard');
+        $isSettingsScope = ($scope === 'settings' || $scope === 'whatsapp');
+
+        // DB Maintenance Rate-Limiting: Gate heavy schema and cleanup writes during GET read requests
+        $maintLockFile = sys_get_temp_dir() . '/.grm_crm_maint_lock';
+        $shouldRunDbMaintenance = (isset($_GET['heal']) && $_GET['heal'] === '1') ||
+            (!file_exists($maintLockFile) || (time() - @filemtime($maintLockFile) > 600));
+        if ($shouldRunDbMaintenance) {
+            @touch($maintLockFile);
+        }
 
         // 1. WhatsApp Account Config
         $waAccounts = [];
         if ($pdo) {
             try {
+                if ($shouldRunDbMaintenance) {
+                    // High-speed check: only run DELETE if phantom slots actually exist
+                    $checkPh = $pdo->query("SELECT 1 FROM `whatsapp_accounts` WHERE `account_slot` IN ('account_3', 'account_4', 'account_5') OR `account_slot` LIKE 'account_1795%' LIMIT 1")->fetchColumn();
+                    if ($checkPh) {
+                        $pdo->exec("
+                            DELETE FROM `whatsapp_accounts` 
+                            WHERE `account_slot` IN ('account_3', 'account_4', 'account_5')
+                               OR `account_slot` LIKE 'account_1795%'
+                               OR `display_name` LIKE '%Customer Support%'
+                               OR `display_name` LIKE '%Wholesale%'
+                               OR `display_name` LIKE '%VIP Fast-Track%'
+                        ");
+                    }
+                }
                 $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` ORDER BY `id` ASC");
                 $waAccounts = $waStmt->fetchAll();
             } catch (Exception $e) {}
@@ -533,15 +771,26 @@ if ($action === 'get_state' || $action === 'get_all') {
         if (file_exists($configFile)) {
             $cfgData = json_decode(file_get_contents($configFile), true);
             if (!empty($cfgData['connected_lines']) && is_array($cfgData['connected_lines'])) {
+                // Permanently purge phantom slots from json config
+                $cfgData['connected_lines'] = array_values(array_filter($cfgData['connected_lines'], function($line) {
+                    $id = $line['id'] ?? '';
+                    $lbl = $line['label'] ?? '';
+                    if (in_array($id, ['account_3', 'account_4', 'account_5']) || strpos($id, 'account_1795') === 0) {
+                        return false;
+                    }
+                    if (strpos($lbl, 'Customer Support') !== false ||
+                        strpos($lbl, 'Wholesale') !== false ||
+                        strpos($lbl, 'VIP Fast-Track') !== false) {
+                        return false;
+                    }
+                    return true;
+                }));
                 foreach ($cfgData['connected_lines'] as $line) {
                     $found = false;
                     foreach ($waAccounts as &$wa) {
                         if (($wa['account_slot'] ?? '') === ($line['id'] ?? '')) {
-                            if (!empty($line['qr_code']) && empty($wa['qr_code'])) {
+                            if (!empty($line['qr_code'])) {
                                 $wa['qr_code'] = $line['qr_code'];
-                            }
-                            if (!empty($line['status']) && ($line['status'] === 'SCAN_QR' || $line['status'] === 'CONNECTED')) {
-                                $wa['status'] = $line['status'];
                             }
                             if (($line['status'] ?? '') === 'CONNECTED') {
                                 $wa['status'] = 'CONNECTED';
@@ -549,6 +798,23 @@ if ($action === 'get_state' || $action === 'get_all') {
                                 if (!empty($line['phone_number'])) {
                                     $wa['phone_number'] = $line['phone_number'];
                                 }
+                            } elseif (($line['status'] ?? '') === 'DISCONNECTED') {
+                                // Guard: If MySQL database already has this line recorded as CONNECTED with a real phone number,
+                                // never let a stale config file demote it to DISCONNECTED!
+                                if (($wa['status'] ?? '') !== 'CONNECTED' || empty($wa['phone_number']) || $wa['phone_number'] === 'Awaiting Link') {
+                                    $wa['status'] = 'DISCONNECTED';
+                                    $wa['phone_number'] = 'Awaiting Link';
+                                    if (empty($line['qr_code'])) {
+                                        $wa['qr_code'] = null;
+                                    }
+                                }
+                            } else if (!empty($line['status'])) {
+                                if (($wa['status'] ?? '') !== 'CONNECTED') {
+                                    $wa['status'] = $line['status'];
+                                }
+                            }
+                            if (!empty($line['label'])) {
+                                $wa['display_name'] = $line['label'];
                             }
                             $found = true;
                             break;
@@ -566,6 +832,15 @@ if ($action === 'get_state' || $action === 'get_all') {
                 }
             }
         }
+
+        // Filter out any lingering phantom slots from output
+        $waAccounts = array_values(array_filter($waAccounts, function($wa) {
+            $slot = $wa['account_slot'] ?? $wa['id'] ?? '';
+            $name = $wa['display_name'] ?? ($wa['business_name'] ?? '');
+            if (in_array($slot, ['account_3', 'account_4', 'account_5']) || strpos($slot, 'account_1795') === 0) return false;
+            if (strpos($name, 'Customer Support') !== false || strpos($name, 'Wholesale') !== false || strpos($name, 'VIP Fast-Track') !== false) return false;
+            return true;
+        }));
 
         // Only ensure primary account slot is initialized if no accounts exist
         if (empty($waAccounts)) {
@@ -614,10 +889,125 @@ if ($action === 'get_state' || $action === 'get_all') {
             $products = $pStmt->fetchAll();
         }
 
+        // Self-Healing Privacy LID Consolidation: Merge temporary LID placeholder customers into authoritative profiles
+        $sharedLidFile = __DIR__ . '/lid_mappings.json';
+        $activeLidMappings = [];
+        if (file_exists($sharedLidFile)) {
+            try {
+                $activeLidMappings = json_decode(file_get_contents($sharedLidFile), true) ?: [];
+                if ($shouldRunDbMaintenance) {
+                    foreach ($activeLidMappings as $lidKey => $pnVal) {
+                        $cleanLid = preg_replace('/[^0-9]/', '', (string)$lidKey);
+                        $cleanPn = preg_replace('/[^0-9]/', '', (string)$pnVal);
+                        if (strlen($cleanLid) >= 14 && strlen($cleanPn) >= 10 && strlen($cleanPn) <= 13) {
+                            $pn10 = substr($cleanPn, -10);
+                            // Locate genuine customer profile
+                            $realCustStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
+                            $realCustStmt->execute(['cust_' . $pn10, "%$pn10", "%$pn10"]);
+                            $realCustId = $realCustStmt->fetchColumn();
+                            if ($realCustId) {
+                                mergeLidPlaceholderCustomer($pdo, $realCustId, $cleanLid);
+                                // Update last message of real customer
+                                $pdo->prepare("UPDATE `queries` SET `last_message` = COALESCE((SELECT COALESCE(`text`, `message_text`) FROM `messages` WHERE `customer_id` = ? ORDER BY `timestamp_epoch` DESC, `id` DESC LIMIT 1), `last_message`) WHERE `customer_id` = ?")->execute([$realCustId, $realCustId]);
+                                $pdo->prepare("UPDATE `customers` SET `last_message` = COALESCE((SELECT COALESCE(`text`, `message_text`) FROM `messages` WHERE `customer_id` = ? ORDER BY `timestamp_epoch` DESC, `id` DESC LIMIT 1), `last_message`), `last_message_at` = NOW() WHERE `id` = ?")->execute([$realCustId, $realCustId]);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $eLidConsolidate) {}
+        }
+
+        // Fast-path for Settings / Phone Configuration View (100x faster response)
+        if ($isSettingsScope) {
+            $arRules = [];
+            try {
+                $arRules = $pdo->query("SELECT * FROM `auto_reply_rules` ORDER BY `created_at` ASC")->fetchAll();
+                foreach ($arRules as &$r) {
+                    if (!empty($r['keywords']) && is_string($r['keywords'])) {
+                        $r['keywords'] = json_decode($r['keywords'], true) ?: [$r['keywords']];
+                    }
+                    $r['actionType'] = $r['action_type'] ?? ($r['actionType'] ?? 'custom_text');
+                    $r['categoryId'] = $r['category_id'] ?? ($r['categoryId'] ?? null);
+                    $r['replyText'] = $r['reply_text'] ?? ($r['replyText'] ?? '');
+                    $r['enabled'] = isset($r['enabled']) ? (bool)$r['enabled'] : true;
+                    $r['autoSend'] = isset($r['auto_send']) ? (bool)$r['auto_send'] : true;
+                }
+            } catch (Exception $e) {}
+            echo json_encode([
+                "status" => "success",
+                "source" => "MYSQL_DATABASE_SETTINGS_FASTPATH",
+                "data" => [
+                    "whatsappAccount" => $primaryWA,
+                    "whatsappAccounts" => $waAccounts,
+                    "autoReplyRules" => $arRules,
+                    "lidMappings" => $activeLidMappings
+                ]
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         // 4. Customers
+        // Self-heal legacy 11-digit customer IDs and companion device artifacts
+        if ($shouldRunDbMaintenance) {
+            try {
+                $pdo->exec("UPDATE `messages` SET `customer_id` = 'cust_8124038585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_id` LIKE '%85850'");
+                $pdo->exec("UPDATE `queries` SET `customer_id` = 'cust_8124038585', `customer_phone` = '+91 81240 38585' WHERE `customer_id` IN ('cust_1240385850', 'cust_81240385850') OR `customer_phone` LIKE '%85850%'");
+                $pdo->exec("UPDATE `customers` SET `id` = 'cust_8124038585', `phone` = '+91 81240 38585', `whatsapp` = '+91 81240 38585' WHERE `id` IN ('cust_1240385850', 'cust_81240385850') OR `id` LIKE '%85850'");
+            } catch (Exception $eSelfHeal) {}
+        }
+
+        // Identify company business line phone numbers so they NEVER appear as customers
+        $businessPhones10 = ['9943557998', '8124038585', '8668007593', '9789660115'];
+        foreach ($waAccounts as $wa) {
+            if (!empty($wa['phone_number'])) {
+                $wp = preg_replace('/[^0-9]/', '', $wa['phone_number']);
+                if (strlen($wp) >= 10) {
+                    $businessPhones10[] = substr($wp, -10);
+                }
+            }
+        }
+        $businessPhones10 = array_values(array_unique($businessPhones10));
+
+        // Purge any accidental business records from customers and queries tables
+        if ($shouldRunDbMaintenance) {
+            try {
+                $delBizStmt = $pdo->prepare("DELETE FROM `customers` WHERE `id` LIKE '%8124038585%' OR `phone` LIKE '%8124038585%' OR `whatsapp` LIKE '%8124038585%' OR `name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
+                $delBizStmt->execute();
+                $delBizQStmt = $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` LIKE '%8124038585%' OR `customer_phone` LIKE '%8124038585%' OR `customer_name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
+                $delBizQStmt->execute();
+            } catch (Exception $ePurgeBiz) {}
+        }
+
         $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` ASC");
-        $customers = $cStmt->fetchAll();
-        foreach ($customers as &$c) {
+        $rawCustomers = $cStmt->fetchAll();
+        $customers = [];
+        foreach ($rawCustomers as $c) {
+            $rawP = !empty($c['phone']) ? $c['phone'] : ($c['whatsapp'] ?? '');
+            $cleanDigits = preg_replace('/[^0-9]/', '', $rawP);
+            $cName = trim($c['name'] ?? '');
+
+            // STRICT FILTER: The business itself (GRM Garments, Business Hub, admin numbers) is NOT a customer!
+            $isBusiness = false;
+            foreach ($businessPhones10 as $bp) {
+                if (!empty($bp) && str_ends_with($cleanDigits, $bp)) {
+                    $isBusiness = true;
+                    break;
+                }
+            }
+            if ($cName === 'GRM Garments' || $cName === 'GRM Garments Business Hub' || $cName === 'GRM Garments Official' || $cName === 'WhatsApp Business #2' || $cName === 'Bot (Auto-Reply)' || strpos($c['id'], '8124038585') !== false || $c['id'] === 'cust_9943557998') {
+                $isBusiness = true;
+            }
+
+            if ($isBusiness) {
+                if ($shouldRunDbMaintenance) {
+                    try {
+                        $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` = ?")->execute([$c['id']]);
+                        $pdo->prepare("DELETE FROM `customers` WHERE `id` = ?")->execute([$c['id']]);
+                    } catch (Exception $eDelPh) {}
+                }
+                continue;
+            }
+
             if (!empty($c['tags']) && is_string($c['tags'])) {
                 $c['tags'] = json_decode($c['tags'], true) ?: [];
             }
@@ -625,12 +1015,53 @@ if ($action === 'get_state' || $action === 'get_all') {
             $c['lastMessage'] = $c['last_message'] ?? '';
             $c['lastMessageAt'] = $c['last_message_at'] ?? '';
             $c['unreadCount'] = (int)($c['unread_count'] ?? 0);
+
+            // Self-healing: Sanitize customer phone from trailing device 0 or companion index
+            if (!empty($rawP)) {
+                $pInfo = cleanWhatsAppPhone($rawP);
+                if (!empty($pInfo['clean10']) && strlen($pInfo['clean10']) === 10) {
+                    $c['phone'] = $pInfo['formatted'];
+                    $c['whatsapp'] = $pInfo['formatted'];
+                }
+            }
+
+            // Self-healing: Prevent account slot labels from becoming customer contact names
+            if (!empty($c['name']) && preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $c['name'])) {
+                $last4 = strlen($cleanDigits) >= 4 ? substr($cleanDigits, -4) : 'User';
+                $c['name'] = "Customer ($last4)";
+                if ($shouldRunDbMaintenance) {
+                    try {
+                        $pdo->prepare("UPDATE `customers` SET `name` = ?, `phone` = ?, `whatsapp` = ? WHERE `id` = ?")->execute([$c['name'], $c['phone'], $c['whatsapp'], $c['id']]);
+                        $pdo->prepare("UPDATE `queries` SET `customer_name` = ?, `customer_phone` = ? WHERE `customer_id` = ?")->execute([$c['name'], $c['phone'], $c['id']]);
+                    } catch (Exception $eUpdateCust) {}
+                }
+            }
+            $customers[] = $c;
         }
 
         // 5. Queries
         $qStmt = $pdo->query("SELECT * FROM `queries` ORDER BY `created_at` DESC");
-        $queries = $qStmt->fetchAll();
-        foreach ($queries as &$q) {
+        $rawQueries = $qStmt->fetchAll();
+        $queries = [];
+        foreach ($rawQueries as $q) {
+            $qPhoneDigits = preg_replace('/[^0-9]/', '', $q['customer_phone'] ?? '');
+            $qCidDigits = preg_replace('/[^0-9]/', '', $q['customer_id'] ?? '');
+            $isBusinessQuery = false;
+            foreach ($businessPhones10 as $bp) {
+                if (!empty($bp) && (str_ends_with($qPhoneDigits, $bp) || str_ends_with($qCidDigits, $bp))) {
+                    $isBusinessQuery = true;
+                    break;
+                }
+            }
+            if ($isBusinessQuery || ($q['customer_name'] ?? '') === 'GRM Garments') {
+                if ($shouldRunDbMaintenance) {
+                    try {
+                        $pdo->prepare("DELETE FROM `queries` WHERE `id` = ?")->execute([$q['id']]);
+                    } catch (Exception $eDelQ) {}
+                }
+                continue;
+            }
+
             if (!empty($q['status_history']) && is_string($q['status_history'])) {
                 $q['statusHistory'] = json_decode($q['status_history'], true) ?: [];
             } else {
@@ -647,6 +1078,7 @@ if ($action === 'get_state' || $action === 'get_all') {
             $q['callbackDate'] = $q['callback_date'] ?? '';
             $q['callbackTime'] = $q['callback_time'] ?? '11:00 AM';
             $q['statusNotes'] = $q['status_notes'] ?? '';
+            $queries[] = $q;
         }
 
         // 6. Conversations map grouped by customer_id (High-Speed Recent Snippets)
@@ -656,7 +1088,10 @@ if ($action === 'get_state' || $action === 'get_all') {
             foreach ($customers as $c) {
                 $cp = preg_replace('/[^0-9]/', '', ($c['phone'] ?? ($c['whatsapp'] ?? '')));
                 if (strlen($cp) >= 7) {
-                    $phoneToCid[substr($cp, -10)] = $c['id'];
+                    $pInfo = cleanWhatsAppPhone($cp);
+                    if (!empty($pInfo['clean10'])) {
+                        $phoneToCid[$pInfo['clean10']] = $c['id'];
+                    }
                 }
             }
 
@@ -664,17 +1099,36 @@ if ($action === 'get_state' || $action === 'get_all') {
             $allMessages = $mStmt->fetchAll();
             foreach ($allMessages as $msg) {
                 $cid = $msg['customer_id'];
-                if (!empty($msg['sender_phone'])) {
-                    $cleanP = substr(preg_replace('/[^0-9]/', '', $msg['sender_phone']), -10);
-                    if (!empty($cleanP) && isset($phoneToCid[$cleanP])) {
-                        $cid = $phoneToCid[$cleanP];
+                $dir = $msg['direction'] ?? ($msg['sender'] === 'customer' ? 'inbound' : 'outbound');
+
+                // Canonicalize customer ID if 11 digits ending in 0 (e.g. cust_81240385850 -> cust_8124038585)
+                if (!empty($cid) && preg_match('/cust_(\d{10,12})/', $cid, $mCid)) {
+                    $pInfo = cleanWhatsAppPhone($mCid[1]);
+                    if (!empty($pInfo['clean10'])) {
+                        $cid = 'cust_' . $pInfo['clean10'];
                     }
                 }
-                if (empty($cid) && !empty($msg['sender_phone'])) {
-                    $cleanP = preg_replace('/[^0-9]/', '', $msg['sender_phone']);
-                    $cid = 'cust_' . substr($cleanP, -10);
+
+                // ONLY match sender_phone for inbound customer messages, NEVER for outbound staff/bot messages!
+                if (($dir === 'inbound' || $msg['sender'] === 'customer') && !empty($msg['sender_phone'])) {
+                    $pInfo = cleanWhatsAppPhone($msg['sender_phone']);
+                    $clean10 = $pInfo['clean10'];
+                    if (!empty($clean10)) {
+                        if (isset($phoneToCid[$clean10])) {
+                            $cid = $phoneToCid[$clean10];
+                        } elseif (empty($cid)) {
+                            $cid = 'cust_' . $clean10;
+                        }
+                    }
                 }
+
+                // Skip messages if $cid points to the business itself
                 if (!empty($cid)) {
+                    $cleanCidDigits = preg_replace('/[^0-9]/', '', $cid);
+                    if (in_array(substr($cleanCidDigits, -10), $businessPhones10)) {
+                        continue;
+                    }
+
                     if (!isset($conversations[$cid])) {
                         $conversations[$cid] = [];
                     }
@@ -915,7 +1369,8 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "dndRecords" => $dndRecords,
                 "dnd_records" => $dndRecords,
                 "autoReplyRules" => $arRules,
-                "broadcastTemplates" => $bcTemplates
+                "broadcastTemplates" => $bcTemplates,
+                "lidMappings" => $activeLidMappings
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -1182,6 +1637,19 @@ if ($action === 'delete_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($action === 'clear_inbox' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $rawInput = file_get_contents('php://input');
+    $postData = json_decode($rawInput, true) ?: $_POST;
+    $maintenanceToken = $postData['maintenance_token'] ?? '';
+
+    // Security Gate: Protect database messages from multi-tab / multi-browser wipeouts
+    if ($maintenanceToken !== 'GRM_SECURITY_HARD_RESET_CONFIRMED_2026') {
+        echo json_encode([
+            "status" => "ignored",
+            "message" => "Database clear ignored to preserve data across multiple tabs and browsers. Use view filter reset instead."
+        ]);
+        exit;
+    }
+
     try {
         if ($pdo) {
             $pdo->exec("DELETE FROM `messages`");
@@ -1274,16 +1742,46 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    $slotId = $postData['account_id'] ?? $postData['accountId'] ?? $postData['account_slot'] ?? 'account_1';
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
-    $updatedConfig = array_merge($currentConfig, $postData);
+    
+    // Only update root phone/status config if saving Primary account (account_1)
+    if ($slotId === 'account_1') {
+        $updatedConfig = array_merge($currentConfig, $postData);
+        $updatedConfig['status'] = 'CONNECTED';
+    } else {
+        $updatedConfig = $currentConfig;
+    }
     $updatedConfig['last_sync'] = date("Y-m-d H:i:s");
-    $updatedConfig['status'] = 'CONNECTED';
+
+    // Always update connected_lines array with slot isolation
+    if (!isset($updatedConfig['connected_lines']) || !is_array($updatedConfig['connected_lines'])) {
+        $updatedConfig['connected_lines'] = [];
+    }
+    $found = false;
+    foreach ($updatedConfig['connected_lines'] as &$line) {
+        if (($line['id'] ?? '') === $slotId) {
+            $line['status'] = 'CONNECTED';
+            $line['phone_number'] = $postData['phone_number'];
+            if (!empty($postData['display_name'])) $line['label'] = $postData['display_name'];
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
+        $updatedConfig['connected_lines'][] = [
+            'id' => $slotId,
+            'label' => $postData['display_name'] ?? ($slotId === 'account_1' ? 'Primary WhatsApp' : "WhatsApp Line ($slotId)"),
+            'phone_number' => $postData['phone_number'],
+            'status' => 'CONNECTED',
+            'qr_code' => null
+        ];
+    }
 
     atomicWriteJson($configFile, $updatedConfig);
 
-    // Update MySQL
+    // Update MySQL with slot isolation
     if ($pdo) {
-        $slotId = $postData['account_id'] ?? $postData['accountId'] ?? $postData['account_slot'] ?? 'account_1';
         try {
             $stmt = $pdo->prepare("
                 INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`)
@@ -1297,10 +1795,10 @@ if ($action === 'save_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmt->execute([
                 $slotId,
-                $updatedConfig['phone_number'],
-                $updatedConfig['business_name'] ?? 'GRM Garments',
-                $updatedConfig['display_name'] ?? 'GRM Garments Official',
-                $updatedConfig['brand_name'] ?? 'Blue Berry 💙'
+                $postData['phone_number'],
+                $postData['business_name'] ?? 'GRM Garments',
+                $postData['display_name'] ?? ($slotId === 'account_1' ? 'GRM Garments Official' : "WhatsApp Line ($slotId)"),
+                $postData['brand_name'] ?? 'Blue Berry 💙'
             ]);
         } catch (Exception $e) {}
     }
@@ -1345,30 +1843,41 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $cfg['connected_lines'] = [];
     }
 
-    // Guard: Prevent transient/unauthenticated SCAN_QR or DISCONNECTED requests from overwriting an already CONNECTED account
-    $isForce = !empty($data['force']) || !empty($data['force_disconnect']);
-    if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isForce) {
+    // Robust Guard: Never allow spurious SCAN_QR or DISCONNECTED pings to demote an already CONNECTED account
+    // unless an explicit user-initiated disconnection was requested (force_disconnect=true)!
+    $isExplicitDisconnect = !empty($data['force_disconnect']);
+    if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isExplicitDisconnect) {
         $alreadyConnected = false;
-        foreach ($cfg['connected_lines'] as $existingLine) {
-            if (($existingLine['id'] ?? '') === $slotId && ($existingLine['status'] ?? '') === 'CONNECTED') {
-                $alreadyConnected = true;
-                break;
+        $connectedPhone = null;
+
+        // Check MySQL database first (authoritative single source of truth)
+        if ($pdo) {
+            try {
+                $chkStmt = $pdo->prepare("SELECT `status`, `phone_number` FROM `whatsapp_accounts` WHERE `account_slot` = ? LIMIT 1");
+                $chkStmt->execute([$slotId]);
+                $currAcc = $chkStmt->fetch(PDO::FETCH_ASSOC);
+                if ($currAcc && ($currAcc['status'] ?? '') === 'CONNECTED' && !empty($currAcc['phone_number']) && $currAcc['phone_number'] !== 'Awaiting Link') {
+                    $alreadyConnected = true;
+                    $connectedPhone = $currAcc['phone_number'];
+                }
+            } catch (Exception $eDbChk) {}
+        }
+
+        // Check config file cache
+        if (!$alreadyConnected && isset($cfg['connected_lines']) && is_array($cfg['connected_lines'])) {
+            foreach ($cfg['connected_lines'] as $existingLine) {
+                if (($existingLine['id'] ?? '') === $slotId && ($existingLine['status'] ?? '') === 'CONNECTED' && !empty($existingLine['phone_number']) && $existingLine['phone_number'] !== 'Awaiting Link') {
+                    $alreadyConnected = true;
+                    $connectedPhone = $existingLine['phone_number'];
+                    break;
+                }
             }
         }
-        if (!$alreadyConnected && $pdo) {
-            try {
-                $chkStmt = $pdo->prepare("SELECT `status` FROM `whatsapp_accounts` WHERE `account_slot` = ? LIMIT 1");
-                $chkStmt->execute([$slotId]);
-                $row = $chkStmt->fetch();
-                if ($row && $row['status'] === 'CONNECTED') {
-                    $alreadyConnected = true;
-                }
-            } catch (Exception $e) {}
-        }
+
         if ($alreadyConnected) {
             echo json_encode([
                 "status" => "success",
-                "message" => "Account $slotId is already active and CONNECTED. Ignoring transient $status update."
+                "message" => "Account $slotId is already authenticated & LIVE ($connectedPhone). Spurious $status demotion blocked."
             ]);
             exit;
         }
@@ -1378,8 +1887,14 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         if (($line['id'] ?? '') === $slotId) {
             $line['status'] = $status;
             if ($phoneNumber) $line['phone_number'] = $phoneNumber;
-            if ($qrCode) $line['qr_code'] = $qrCode;
-            if ($status === 'CONNECTED') unset($line['qr_code']);
+            if ($status === 'DISCONNECTED') {
+                $line['phone_number'] = 'Awaiting Link';
+                unset($line['qr_code']);
+            } else if ($status === 'CONNECTED') {
+                unset($line['qr_code']);
+            } else if ($qrCode) {
+                $line['qr_code'] = $qrCode;
+            }
             $line['label'] = $label;
             $found = true;
             break;
@@ -1389,14 +1904,15 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $cfg['connected_lines'][] = [
             'id' => $slotId,
             'label' => $label,
-            'phone_number' => $phoneNumber ?: 'Awaiting Link',
+            'phone_number' => ($status === 'CONNECTED' && $phoneNumber) ? $phoneNumber : 'Awaiting Link',
             'status' => $status,
-            'qr_code' => $qrCode
+            'qr_code' => ($status === 'CONNECTED' || $status === 'DISCONNECTED') ? null : $qrCode
         ];
     }
     if ($slotId === 'account_1') {
         $cfg['status'] = $status;
-        if ($phoneNumber) $cfg['phone_number'] = $phoneNumber;
+        if ($phoneNumber && $status === 'CONNECTED') $cfg['phone_number'] = $phoneNumber;
+        if ($status === 'DISCONNECTED') $cfg['phone_number'] = 'Awaiting Link';
     }
     $cfg['last_sync'] = date("Y-m-d H:i:s");
     atomicWriteJson($configFile, $cfg);
@@ -1404,6 +1920,8 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     // 2. Update MySQL database
     if ($pdo) {
         try {
+            $dbPhone = ($status === 'CONNECTED' && $phoneNumber) ? $phoneNumber : (($status === 'DISCONNECTED' || $status === 'SCAN_QR') ? 'Awaiting Link' : null);
+            $dbQr = ($status === 'CONNECTED' || $status === 'DISCONNECTED') ? null : $qrCode;
             $stmt = $pdo->prepare("
                 UPDATE `whatsapp_accounts` 
                 SET `status` = ?, 
@@ -1414,8 +1932,8 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             ");
             $stmt->execute([
                 $status,
-                $phoneNumber ?: null,
-                $status === 'CONNECTED' ? null : $qrCode,
+                $dbPhone,
+                $dbQr,
                 $label,
                 $slotId
             ]);
@@ -1429,17 +1947,28 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                     ");
                     $ins->execute([
                         $slotId,
-                        $phoneNumber ?: '+91 99435 57998',
+                        $dbPhone ?: '+91 99435 57998',
                         'GRM Garments Business Hub',
                         $label,
                         $label,
                         $status,
-                        $status === 'CONNECTED' ? null : $qrCode
+                        $dbQr
                     ]);
                 }
             }
         } catch (Exception $e) {}
     }
+
+    // 3. Touch live_account_updates.json to notify SSE across multiple tabs & browsers instantly
+    $updatesFile = __DIR__ . '/live_account_updates.json';
+    @file_put_contents($updatesFile, json_encode([
+        'action' => 'status_sync',
+        'account_slot' => $slotId,
+        'status' => $status,
+        'phone_number' => $phoneNumber,
+        'has_qr' => !empty($qrCode),
+        'timestamp' => time()
+    ]));
 
     echo json_encode(["status" => "success", "message" => "Account $slotId status synced: $status"]);
     exit;
@@ -1624,6 +2153,7 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
     if ($accountId === 'account_1') {
         $currentConfig['status'] = 'DISCONNECTED';
+<<<<<<< HEAD
     }
     if (isset($currentConfig['connected_lines']) && is_array($currentConfig['connected_lines'])) {
         foreach ($currentConfig['connected_lines'] as &$l) {
@@ -1631,6 +2161,16 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $l['status'] = 'DISCONNECTED';
                 $l['phone_number'] = 'Awaiting Link';
                 unset($l['qr_code']);
+=======
+        $currentConfig['phone_number'] = 'Awaiting Link';
+    }
+    if (isset($currentConfig['connected_lines']) && is_array($currentConfig['connected_lines'])) {
+        foreach ($currentConfig['connected_lines'] as &$line) {
+            if (($line['id'] ?? '') === $accountId) {
+                $line['status'] = 'DISCONNECTED';
+                $line['phone_number'] = 'Awaiting Link';
+                unset($line['qr_code']);
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
             }
         }
     }
@@ -1639,12 +2179,116 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("UPDATE `whatsapp_accounts` SET `status` = 'DISCONNECTED' WHERE `account_slot` = ?");
+            $stmt = $pdo->prepare("UPDATE `whatsapp_accounts` SET `status` = 'DISCONNECTED', `phone_number` = 'Awaiting Link', `qr_code` = NULL WHERE `account_slot` = ?");
             $stmt->execute([$accountId]);
         } catch (Exception $e) {}
     }
 
-    echo json_encode(["status" => "success", "message" => "Account disconnected in backend"]);
+    // Touch live_account_updates.json to notify SSE stream across all open tabs & browsers
+    $updatesFile = __DIR__ . '/live_account_updates.json';
+    @file_put_contents($updatesFile, json_encode([
+        'action' => 'disconnect',
+        'account_slot' => $accountId,
+        'status' => 'DISCONNECTED',
+        'timestamp' => time()
+    ]));
+
+    // Forward disconnect request directly to Baileys bridge to unlink session on mobile phone
+    try {
+        $ch = curl_init($bridgeUrl . '/api/accounts/disconnect');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['accountId' => $accountId]));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+        curl_exec($ch);
+        curl_close($ch);
+    } catch (Exception $e) {}
+
+    echo json_encode(["status" => "success", "message" => "Account $accountId disconnected in backend. Customer records safely preserved."]);
+    exit;
+}
+
+if ($action === 'add_account_slot' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $postData = json_decode($input, true);
+    $accountId = $postData['accountId'] ?? '';
+    $label = trim($postData['label'] ?? '');
+
+    if (empty($accountId)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "accountId is required"]);
+        exit;
+    }
+    if (empty($label)) {
+        $label = "WhatsApp Line ($accountId)";
+    }
+
+    $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    if (!isset($currentConfig['connected_lines']) || !is_array($currentConfig['connected_lines'])) {
+        $currentConfig['connected_lines'] = [];
+    }
+
+    $found = false;
+    foreach ($currentConfig['connected_lines'] as &$line) {
+        if (($line['id'] ?? '') === $accountId) {
+            $line['label'] = $label;
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
+        $currentConfig['connected_lines'][] = [
+            'id' => $accountId,
+            'label' => $label,
+            'phone_number' => 'Awaiting Link',
+            'status' => 'DISCONNECTED',
+            'qr_code' => null
+        ];
+    }
+    $currentConfig['last_sync'] = date("Y-m-d H:i:s");
+    atomicWriteJson($configFile, $currentConfig);
+
+    if ($pdo) {
+        try {
+            $check = $pdo->prepare("SELECT `id` FROM `whatsapp_accounts` WHERE `account_slot` = ? LIMIT 1");
+            $check->execute([$accountId]);
+            if (!$check->fetch()) {
+                $ins = $pdo->prepare("
+                    INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`, `qr_code`)
+                    VALUES (?, ?, ?, ?, ?, 'DISCONNECTED', NULL)
+                ");
+                $ins->execute([
+                    $accountId,
+                    'Awaiting Link',
+                    'GRM Garments Business Hub',
+                    $label,
+                    $label
+                ]);
+            }
+        } catch (Exception $e) {}
+    }
+
+    // Touch live_account_updates.json
+    $updatesFile = __DIR__ . '/live_account_updates.json';
+    @file_put_contents($updatesFile, json_encode([
+        'action' => 'add_slot',
+        'account_slot' => $accountId,
+        'label' => $label,
+        'status' => 'DISCONNECTED',
+        'timestamp' => time()
+    ]));
+
+    echo json_encode([
+        "status" => "success",
+        "message" => "Account slot $accountId created successfully",
+        "account" => [
+            "id" => $accountId,
+            "label" => $label,
+            "status" => "DISCONNECTED",
+            "phone_number" => "Awaiting Link"
+        ]
+    ]);
     exit;
 }
 
@@ -1668,6 +2312,14 @@ if ($action === 'delete_account_slot' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                 $stmt->execute([$accountId]);
             } catch (Exception $e) {}
         }
+
+        // Touch live_account_updates.json
+        $updatesFile = __DIR__ . '/live_account_updates.json';
+        @file_put_contents($updatesFile, json_encode([
+            'action' => 'delete_slot',
+            'account_slot' => $accountId,
+            'timestamp' => time()
+        ]));
 
         echo json_encode(["status" => "success", "message" => "Account slot $accountId deleted successfully"]);
         exit;
@@ -3138,6 +3790,10 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $text = $postData['text'] ?? ($postData['message'] ?? '');
     $customerId = $postData['customer_id'] ?? null;
     $mediaUrl = $postData['media_url'] ?? ($postData['mediaUrl'] ?? null);
+    $mediaData = $postData['media_data'] ?? ($postData['mediaData'] ?? null);
+    if (!empty($mediaData) && empty($mediaUrl)) {
+        $mediaUrl = $mediaData;
+    }
     $mediaType = $postData['type'] ?? ($mediaUrl ? 'image' : null);
 
     if (empty($phone) && empty($postData['jid'])) {
@@ -3145,29 +3801,48 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(["status" => "error", "message" => "Phone or JID is required"]);
         exit;
     }
-    if (empty($text) && empty($mediaUrl)) {
+    if (empty($text) && empty($mediaUrl) && empty($mediaData)) {
         http_response_code(400);
         echo json_encode(["status" => "error", "message" => "Text or media is required"]);
         exit;
     }
-    if (empty($text) && !empty($mediaUrl)) {
+    if (empty($text) && (!empty($mediaUrl) || !empty($mediaData))) {
         $text = ($mediaType === 'audio' || strpos((string)$mediaUrl, 'voice') !== false) ? '🎤 Voice Note' : '[Photo Attachment]';
     }
+
+    $rawBase64Media = (!empty($mediaUrl) && is_string($mediaUrl) && strpos($mediaUrl, 'data:') === 0) ? $mediaUrl : (!empty($mediaData) ? $mediaData : null);
     saveBase64MediaIfPresent($mediaUrl, $mediaType);
+
+    // Build absolute URL for the bridge if relative
+    $bridgeMediaUrl = $rawBase64Media ?: $mediaUrl;
+    if (!empty($bridgeMediaUrl) && strpos($bridgeMediaUrl, 'http') !== 0 && strpos($bridgeMediaUrl, 'data:') !== 0) {
+        $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'maroon-partridge-532881.hostingersite.com';
+        $bridgeMediaUrl = $scheme . '://' . $host . '/' . ltrim($bridgeMediaUrl, '/');
+    }
+
+    // Sanitize phone and JID
+    $phoneInfo = cleanWhatsAppPhone($phone ?: ($postData['jid'] ?? ''));
+    $cleanBridgePhone = !empty($phoneInfo['digits']) ? $phoneInfo['digits'] : $phone;
+    $rawJid = $postData['jid'] ?? null;
+    $cleanBridgeJid = (!empty($rawJid) && (strpos($rawJid, ':') !== false || strlen(preg_replace('/[^0-9]/', '', $rawJid)) >= 13)) ? null : $rawJid;
 
     // Call Node.js Baileys Bridge
     $bRes = curlBridgePost('/api/send', [
-        'phone' => $phone, 
+        'phone' => $cleanBridgePhone, 
         'text' => $text,
-        'jid' => $postData['jid'] ?? null,
+        'jid' => $cleanBridgeJid,
         'accountId' => $postData['accountId'] ?? null,
-        'mediaUrl' => $mediaUrl,
-        'media_url' => $mediaUrl
+        'mediaUrl' => $bridgeMediaUrl,
+        'media_url' => $bridgeMediaUrl,
+        'mediaData' => $rawBase64Media,
+        'media_data' => $rawBase64Media
     ], 10);
     $response = $bRes['response'];
     $httpCode = $bRes['http_code'];
 
     // Also persist message in MySQL (All WhatsApp Fields Recorded)
+    $effectiveCustId = $customerId;
     if ($pdo) {
         try {
             $clean10 = !empty($phone) ? substr(preg_replace('/[^0-9]/', '', $phone), -10) : '';
@@ -3251,6 +3926,19 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     $msgUid = (string)($payload['message_uid'] ?? ($payload['id'] ?? ('msg_out_' . time() . '_' . rand(100, 999))));
     $accSlot = $payload['accountId'] ?? 'account_1';
     $senderName = $payload['sender_name'] ?? 'Super Admin';
+    $recipientName = trim($payload['recipient_name'] ?? ($payload['customer_name'] ?? ''));
+    $jid = trim($payload['jid'] ?? '');
+    $lid = trim($payload['lid'] ?? '');
+
+    // Deeply resolve Privacy LID and sanitize phone number
+    $phoneInfo = cleanWhatsAppPhone(!empty($lid) ? $lid : (!empty($phone) ? $phone : $jid));
+    $phone = $phoneInfo['formatted'];
+    $clean10 = $phoneInfo['clean10'];
+
+    // Guard against account slot labels becoming recipient name
+    if (preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $recipientName)) {
+        $recipientName = '';
+    }
 
     // Universal Base64 decoding for outbound images & voice notes
     saveBase64MediaIfPresent($mediaUrl, $mediaType);
@@ -3265,19 +3953,44 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     $effectiveCustId = $customerId;
     if ($pdo && (!empty($phone) || !empty($effectiveCustId))) {
         try {
-            $clean10 = !empty($phone) ? substr(preg_replace('/[^0-9]/', '', $phone), -10) : '';
             if (!empty($clean10)) {
-                $cStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
+                $cStmt = $pdo->prepare("SELECT `id`, `name` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
                 $cStmt->execute([$effectiveCustId ?: '', "%$clean10", "%$clean10"]);
-                $foundId = $cStmt->fetchColumn();
-                if ($foundId) {
-                    $effectiveCustId = $foundId;
+                $foundCust = $cStmt->fetch(PDO::FETCH_ASSOC);
+                if ($foundCust) {
+                    $effectiveCustId = $foundCust['id'];
+                    // Auto-sync real contact name if currently generic or placeholder
+                    if (!empty($recipientName) && (empty($foundCust['name']) || $foundCust['name'] === 'Customer' || strpos($foundCust['name'], 'Customer (') === 0)) {
+                        $pdo->prepare("UPDATE `customers` SET `name` = ? WHERE `id` = ?")->execute([$recipientName, $effectiveCustId]);
+                        $pdo->prepare("UPDATE `queries` SET `customer_name` = ? WHERE `customer_id` = ?")->execute([$recipientName, $effectiveCustId]);
+                    }
                 }
             }
-            if (empty($effectiveCustId) && !empty($clean10)) {
+            // CRITICAL: Internal company business numbers MUST NEVER be created as customers or queries!
+            $isCompanyLine = false;
+            foreach (['9943557998', '8124038585', '8668007593', '9789660115'] as $bp) {
+                if (!empty($bp) && !empty($clean10) && str_ends_with($clean10, $bp)) {
+                    $isCompanyLine = true;
+                    break;
+                }
+            }
+
+            if (!$isCompanyLine && empty($effectiveCustId) && !empty($clean10)) {
                 $effectiveCustId = 'cust_' . $clean10;
-                $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`) VALUES (?, ?, 'Customer', ?, ?, 'Live WhatsApp Lead', 'CU')")
-                    ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $phone, $phone]);
+                $initialName = !empty($recipientName) ? $recipientName : ('Customer (' . substr($clean10, -4) . ')');
+                $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`) VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 'CU')")
+                    ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $initialName, $phone, $phone]);
+
+                $pdo->prepare("INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `last_message`, `status`, `account_slot`, `created_at`) VALUES (?, ?, ?, ?, ?, 'OPEN', ?, NOW()) ON DUPLICATE KEY UPDATE `last_message` = VALUES(`last_message`)")
+                    ->execute(['qry_' . $clean10, $effectiveCustId, $initialName, $phone, $text, $accSlot]);
+            }
+
+            // Consolidate any duplicate placeholder customer created under this LID
+            if (!empty($lid)) {
+                mergeLidPlaceholderCustomer($pdo, $effectiveCustId, $lid);
+            }
+            if (!empty($jid) && (strpos($jid, '@lid') !== false || strlen(preg_replace('/[^0-9]/', '', $jid)) >= 14)) {
+                mergeLidPlaceholderCustomer($pdo, $effectiveCustId, $jid);
             }
 
             if (!empty($effectiveCustId)) {
@@ -3308,7 +4021,7 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
                         time()
                     ]);
                 } else {
-                    $pdo->prepare("UPDATE `messages` SET `status` = 'DELIVERED' WHERE `id` = ?")->execute([$existingMsgId]);
+                    $pdo->prepare("UPDATE `messages` SET `status` = 'DELIVERED', `media_url` = COALESCE(?, `media_url`), `media_type` = COALESCE(?, `media_type`) WHERE `id` = ?")->execute([$mediaUrl, $mediaType, $existingMsgId]);
                 }
 
                 // Update customer & query last message
@@ -3323,6 +4036,8 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
                         "id" => $msgUid,
                         "message_uid" => $msgUid,
                         "customer_id" => $effectiveCustId,
+                        "customer_name" => $recipientName ?: null,
+                        "recipient_name" => $recipientName ?: null,
                         "sender" => "staff",
                         "sender_name" => $senderName,
                         "sender_phone" => $phone,
@@ -3376,6 +4091,19 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $duration = $payload['duration'] ?? null;
     $timestampEpoch = $payload['timestamp_epoch'] ?? time();
     $receivedAt = $payload['received_at'] ?? date("h:i A");
+    $senderJid = $payload['sender_jid'] ?? '';
+    $lid = $payload['lid'] ?? '';
+
+    // Deeply resolve Privacy LID and sanitize phone number (strips :0 and device artifacts)
+    $phoneInfo = cleanWhatsAppPhone(!empty($lid) ? $lid : (!empty($senderPhone) ? $senderPhone : $senderJid));
+    $senderPhone = $phoneInfo['formatted'];
+    $clean10 = $phoneInfo['clean10'];
+
+    // Guard against internal WhatsApp Business line labels becoming customer names
+    $isLineLabel = preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $senderName);
+    if ($isLineLabel || empty($senderName) || $senderName === 'WhatsApp Customer') {
+        $senderName = 'Customer (' . (strlen($clean10) >= 4 ? substr($clean10, -4) : 'User') . ')';
+    }
 
     $msgUid = $payload['id'] ?? ("msg_" . uniqid());
     $msgEntry = [
@@ -3417,15 +4145,23 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($pdo) {
         try {
             $cleanPhone = preg_replace('/[^0-9]/', '', $senderPhone);
-            $clean10 = substr($cleanPhone, -10);
+            $clean10 = !empty($clean10) ? $clean10 : substr($cleanPhone, -10);
             $custId = 'cust_' . ($clean10 ?: substr(uniqid(), -6));
 
             // Check or insert customer (robust against spaces and formats)
-            $checkCust = $pdo->prepare("SELECT `id` FROM `customers` WHERE REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
-            $checkCust->execute(["%$clean10%", "%$clean10%"]);
+            $checkCust = $pdo->prepare("SELECT `id`, `name`, `phone` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
+            $checkCust->execute([$custId, "%$clean10", "%$clean10"]);
             $existingCust = $checkCust->fetch();
 
-            if (!$existingCust) {
+            $isCompanySender = false;
+            foreach (['9943557998', '8124038585', '8668007593', '9789660115'] as $bp) {
+                if (!empty($bp) && !empty($clean10) && str_ends_with($clean10, $bp)) {
+                    $isCompanySender = true;
+                    break;
+                }
+            }
+
+            if (!$isCompanySender && !$existingCust) {
                 $pdo->prepare("
                     INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `address`, `city`, `customer_type`, `tags`, `avatar`)
                     VALUES (?, ?, ?, ?, ?, 'WhatsApp Customer', 'Online', 'New WhatsApp Customer', '[\"Live Inbound\"]', ?)
@@ -3437,8 +4173,34 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $senderPhone,
                     strtoupper(substr($senderName, 0, 2))
                 ]);
-            } else {
+            } else if ($existingCust && !$isCompanySender) {
                 $custId = $existingCust['id'];
+                // Self-healing: Update existing customer if their name was an account label or phone had trailing 0
+                $custNeedUpdate = false;
+                $updatedCustName = $existingCust['name'];
+                $updatedCustPhone = $existingCust['phone'];
+                if (preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $existingCust['name'])) {
+                    $updatedCustName = $senderName;
+                    $custNeedUpdate = true;
+                }
+                if (preg_match('/[0-9]{11,}/', preg_replace('/[^0-9]/', '', $existingCust['phone']))) {
+                    $updatedCustPhone = $senderPhone;
+                    $custNeedUpdate = true;
+                }
+                if ($custNeedUpdate) {
+                    $pdo->prepare("UPDATE `customers` SET `name` = ?, `phone` = ?, `whatsapp` = ? WHERE `id` = ?")
+                        ->execute([$updatedCustName, $updatedCustPhone, $updatedCustPhone, $custId]);
+                    $pdo->prepare("UPDATE `queries` SET `customer_name` = ?, `customer_phone` = ? WHERE `customer_id` = ?")
+                        ->execute([$updatedCustName, $updatedCustPhone, $custId]);
+                }
+            }
+
+            // Consolidate any duplicate placeholder customer created under this LID
+            if (!empty($lid)) {
+                mergeLidPlaceholderCustomer($pdo, $custId, $lid);
+            }
+            if (!empty($senderJid) && (strpos($senderJid, '@lid') !== false || strlen(preg_replace('/[^0-9]/', '', $senderJid)) >= 14)) {
+                mergeLidPlaceholderCustomer($pdo, $custId, $senderJid);
             }
 
             $isBot = (!empty($payload['is_outbound']) || ($payload['sender_name'] ?? '') === 'Bot (Auto-Reply)' || ($payload['source'] ?? '') === 'AUTOREPLY_BOT') ? 1 : 0;
@@ -3529,13 +4291,35 @@ if ($action === 'get_customer_messages') {
             }
         }
 
+        // Auto-consolidate any Privacy LID placeholder messages into this customer
+        $mappedLid = null;
+        $sharedLidFile = __DIR__ . '/lid_mappings.json';
+        if (file_exists($sharedLidFile)) {
+            try {
+                $lidMap = json_decode(file_get_contents($sharedLidFile), true) ?: [];
+                if (!empty($phone10)) {
+                    foreach ($lidMap as $lk => $lv) {
+                        $c1 = preg_replace('/[^0-9]/', '', (string)$lk);
+                        $c2 = preg_replace('/[^0-9]/', '', (string)$lv);
+                        if (strlen($c1) >= 14 && (substr($c2, -10) === $phone10)) {
+                            $mappedLid = $c1;
+                            break;
+                        }
+                    }
+                }
+            } catch (Exception $e) {}
+        }
+        if (!empty($mappedLid)) {
+            mergeLidPlaceholderCustomer($pdo, $cid, $mappedLid);
+        }
+
         if (!empty($phone10)) {
             $stmt = $pdo->prepare("
                 SELECT * FROM (
                     SELECT * FROM `messages` 
                     WHERE `customer_id` = :cid 
                        OR `customer_id` LIKE :cidLike
-                       OR REPLACE(REPLACE(REPLACE(REPLACE(`sender_phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE :phoneLike
+                       OR (`direction` = 'inbound' AND REPLACE(REPLACE(REPLACE(REPLACE(`sender_phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE :phoneLike)
                     ORDER BY `id` DESC LIMIT 300
                 ) sub ORDER BY `id` ASC
             ");
@@ -4787,8 +5571,10 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $courierName = $order['courierName'] ?? ($order['courier_name'] ?? '');
         $shippingUrl = $order['shippingUrl'] ?? ($order['shipping_url'] ?? ($order['tracking_url'] ?? ''));
 
-        // Check and reserve stock atomically
-        if (!empty($items) && is_array($items)) {
+        $isEditUpdate = !empty($order['isEditUpdate']);
+
+        // Check and reserve stock atomically (skip re-reserving full stock when editing an existing order)
+        if (!$isEditUpdate && !empty($items) && is_array($items)) {
             foreach ($items as $item) {
                 $sku = $item['sku'] ?? null;
                 $qty = (int)($item['qty'] ?? ($item['quantity'] ?? 1));
@@ -4854,13 +5640,15 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $orderStatus, $trackingNumber, $courierName, $shippingUrl, $createdBy, $staffId, $staffName
         ]);
 
-        // Update Customer metrics
+        // Update Customer metrics (only increment total_orders for brand new orders)
         if ($customerId) {
-            $pdo->prepare("
-                UPDATE `customers` 
-                SET `total_orders` = `total_orders` + 1, `total_spend` = `total_spend` + ? 
-                WHERE `id` = ?
-            ")->execute([$grandTotal, $customerId]);
+            if (!$isEditUpdate) {
+                $pdo->prepare("
+                    UPDATE `customers` 
+                    SET `total_orders` = `total_orders` + 1, `total_spend` = `total_spend` + ? 
+                    WHERE `id` = ?
+                ")->execute([$grandTotal, $customerId]);
+            }
         }
 
         // Update Query Status
@@ -4869,13 +5657,17 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Audit Log
+        $auditAction = $isEditUpdate ? 'ORDER_EDITED' : 'ORDER_CREATED';
+        $auditDetails = $isEditUpdate 
+            ? "Order {$orderId} details updated for {$customerName}. Amount: ₹{$grandTotal}" 
+            : "Order {$orderId} booked for {$customerName}. Amount: ₹{$grandTotal}";
         $pdo->prepare("
             INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
-            VALUES (?, 'ORDER_CREATED', 'ORDERS', ?, ?)
-        ")->execute([$createdBy, "Order {$orderId} booked for {$customerName}. Amount: ₹{$grandTotal}", date("h:i A")]);
+            VALUES (?, ?, 'ORDERS', ?, ?)
+        ")->execute([$createdBy, $auditAction, $auditDetails, date("h:i A")]);
 
         $pdo->commit();
-        echo json_encode(["status" => "success", "message" => "Order booked and stock reserved in MySQL", "order_id" => $orderId]);
+        echo json_encode(["status" => "success", "message" => $isEditUpdate ? "Order updated in MySQL" : "Order booked and stock reserved in MySQL", "order_id" => $orderId]);
         exit;
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {

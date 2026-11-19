@@ -32,6 +32,10 @@ class AudioConversionService {
     private function detectFFmpeg() {
         $paths = [
             dirname(__DIR__) . '/bridge/node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe',
+            dirname(__DIR__) . '/bridge/node_modules/@ffmpeg-installer/linux-x64/ffmpeg',
+            dirname(__DIR__) . '/bridge/node_modules/@ffmpeg-installer/darwin-x64/ffmpeg',
+            '/usr/bin/ffmpeg',
+            '/usr/local/bin/ffmpeg',
             'C:\\xampp\\ffmpeg\\bin\\ffmpeg.exe',
             'C:\\ffmpeg\\bin\\ffmpeg.exe',
             'ffmpeg'
@@ -42,6 +46,8 @@ class AudioConversionService {
                 if ($out && strpos($out, 'ffmpeg version') !== false) {
                     return 'ffmpeg';
                 }
+            } elseif (file_exists($p) && is_executable($p)) {
+                return $p;
             } elseif (file_exists($p)) {
                 return $p;
             }
@@ -148,13 +154,27 @@ class AudioConversionService {
         if (!file_exists($sourcePath)) return $sourcePath;
 
         $ext = strtolower(pathinfo($sourcePath, PATHINFO_EXTENSION));
+
+        // Verify if already Opus in OGG container (check magic bytes 'OggS' and 'OpusHead')
+        $isNativeOpusOgg = false;
         if ($ext === 'ogg' || $ext === 'opus') {
+            $handle = @fopen($sourcePath, 'rb');
+            if ($handle) {
+                $head = fread($handle, 64);
+                fclose($handle);
+                if (substr($head, 0, 4) === "OggS" && strpos($head, "OpusHead") !== false) {
+                    $isNativeOpusOgg = true;
+                }
+            }
+        }
+
+        if ($isNativeOpusOgg) {
             return $sourcePath;
         }
 
         if ($this->ffmpegPath) {
             $targetPath = preg_replace('/\.[^.]+$/', '.ogg', $sourcePath);
-            $output = $this->executeFFmpegCmd('-y -i "' . $sourcePath . '" -c:a libopus -b:a 32k -ar 48000 -ac 1 "' . $targetPath . '"');
+            $output = $this->executeFFmpegCmd('-y -i "' . $sourcePath . '" -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 -application voip -f ogg "' . $targetPath . '"');
             if ($output && preg_match('/Duration: (\\d{2}):(\\d{2}):(\\d{2}\\.\\d{2})/', $output, $m)) {
                 $hours = (float)$m[1];
                 $mins = (float)$m[2];
@@ -162,6 +182,11 @@ class AudioConversionService {
                 $outDuration = round(($hours * 3600) + ($mins * 60) + $secs, 2);
             }
             if (file_exists($targetPath) && filesize($targetPath) > 0) {
+                // Also create an MP3 copy for Safari browser audio playback compatibility
+                $mp3Path = preg_replace('/\.[^.]+$/', '.mp3', $sourcePath);
+                if (!file_exists($mp3Path)) {
+                    @$this->executeFFmpegCmd('-y -i "' . $targetPath . '" -c:a libmp3lame -q:a 4 "' . $mp3Path . '"');
+                }
                 return $targetPath;
             }
         }

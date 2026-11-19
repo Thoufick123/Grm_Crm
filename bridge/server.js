@@ -51,6 +51,28 @@ const {
     Browsers
 } = require('@whiskeysockets/baileys');
 
+// Patch Baileys image thumbnail generator to support Jimp v1.x class constructor
+try {
+    const messagesMedia = require('@whiskeysockets/baileys/lib/Utils/messages-media');
+    const JimpModule = require('jimp');
+    if (messagesMedia && JimpModule && JimpModule.Jimp) {
+        messagesMedia.extractImageThumb = async (bufferOrFilePath, width = 32) => {
+            if (bufferOrFilePath && typeof bufferOrFilePath.pipe === 'function') {
+                const chunks = [];
+                for await (const chunk of bufferOrFilePath) chunks.push(chunk);
+                bufferOrFilePath = Buffer.concat(chunks);
+            }
+            const img = await JimpModule.Jimp.read(bufferOrFilePath);
+            const dimensions = { width: img.width, height: img.height };
+            const buffer = await img.resize({ w: width, mode: JimpModule.ResizeStrategy.BILINEAR }).getBuffer('image/jpeg', { quality: 50 });
+            return { buffer, original: dimensions };
+        };
+        console.log('[Thumbnail Engine] Baileys Jimp v1 image thumbnailer successfully patched.');
+    }
+} catch (e) {
+    console.warn('[Thumbnail Engine Warning]:', e.message);
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -151,6 +173,7 @@ const accounts = new Map(); // accountId -> AccountObject
 const jidMap = new Map();
 const LID_TO_PHONE_MAP = new Map();
 const PHONE_TO_LID_MAP = new Map();
+const CONTACTS_CACHE = new Map(); // JID or LID -> { id, name, notify, verifiedName, phone }
 const PROCESSED_MESSAGE_IDS = new Set();
 // Track live inbound Baileys WhatsApp calls for instant atomic pickup & ringing control
 const ACTIVE_BAILEYS_CALLS = new Map(); // callId -> { callId, accountId, sock, callFrom, chatId, callerPn, customerName, callerPhone, cleanDigits, roomToken }
@@ -192,12 +215,122 @@ function indexAllLidMappings() {
                 }
             }
         }
+        // Load shared root json mapping if present
+        const sharedLidPath = path.resolve(__dirname, '..', 'lid_mappings.json');
+        if (fs.existsSync(sharedLidPath)) {
+            try {
+                const shared = JSON.parse(fs.readFileSync(sharedLidPath, 'utf8'));
+                for (const [k, v] of Object.entries(shared)) {
+                    const kd = String(k).replace(/\D/g, '');
+                    const vd = String(v).replace(/\D/g, '');
+                    if (kd && vd) {
+                        LID_TO_PHONE_MAP.set(kd, vd);
+                        PHONE_TO_LID_MAP.set(vd, kd);
+                    }
+                }
+            } catch (eShared) {}
+        }
         console.log(`[LID Indexer] Loaded ${LID_TO_PHONE_MAP.size} bidirectional LID-to-Phone mappings into memory.`);
     } catch (e) {
         console.warn('[LID Indexer Warning]:', e.message);
     }
 }
 indexAllLidMappings();
+
+const SHARED_LID_MAPPINGS_FILE = path.resolve(__dirname, '..', 'lid_mappings.json');
+
+function saveLidMappingToDisk(lidDigits, pnDigits, accountId = null) {
+    if (!lidDigits || !pnDigits) return;
+    try {
+        if (accountId) {
+            const sDir = path.join(SESSIONS_BASE_DIR, accountId);
+            if (fs.existsSync(sDir)) {
+                fs.writeFileSync(path.join(sDir, `lid-mapping-${pnDigits}.json`), JSON.stringify(lidDigits));
+                fs.writeFileSync(path.join(sDir, `lid-mapping-${lidDigits}_reverse.json`), JSON.stringify(pnDigits));
+            }
+        }
+        let sharedMap = {};
+        if (fs.existsSync(SHARED_LID_MAPPINGS_FILE)) {
+            try { sharedMap = JSON.parse(fs.readFileSync(SHARED_LID_MAPPINGS_FILE, 'utf8')) || {}; } catch (e) {}
+        }
+        sharedMap[lidDigits] = pnDigits;
+        sharedMap[pnDigits] = lidDigits;
+        fs.writeFileSync(SHARED_LID_MAPPINGS_FILE, JSON.stringify(sharedMap, null, 2));
+    } catch (e) {}
+}
+
+async function resolveLidToPhoneNumber(jidOrLid, currentSock = null, accountId = null) {
+    if (!jidOrLid) return null;
+    const target = jidOrLid.toString().trim();
+    const cleanDigits = target.split('@')[0].replace(/\D/g, '');
+    if (!cleanDigits) return null;
+
+    // 1. Check in-memory map
+    if (LID_TO_PHONE_MAP.has(cleanDigits)) {
+        return LID_TO_PHONE_MAP.get(cleanDigits);
+    }
+
+    // 2. Check contacts cache
+    const cachedContact = CONTACTS_CACHE.get(target) || CONTACTS_CACHE.get(cleanDigits);
+    if (cachedContact?.phoneNumber) {
+        const ph = cachedContact.phoneNumber.replace(/\D/g, '');
+        if (ph && ph.length >= 10) {
+            LID_TO_PHONE_MAP.set(cleanDigits, ph);
+            PHONE_TO_LID_MAP.set(ph, cleanDigits);
+            saveLidMappingToDisk(cleanDigits, ph, accountId);
+            return ph;
+        }
+    }
+    for (const [cId, cData] of CONTACTS_CACHE.entries()) {
+        if (cData.lid === target || (cData.lid && cData.lid.includes(cleanDigits))) {
+            if (cId.includes('@s.whatsapp.net')) {
+                const ph = cId.split('@')[0].replace(/\D/g, '');
+                if (ph && ph.length >= 10) {
+                    LID_TO_PHONE_MAP.set(cleanDigits, ph);
+                    PHONE_TO_LID_MAP.set(ph, cleanDigits);
+                    saveLidMappingToDisk(cleanDigits, ph, accountId);
+                    return ph;
+                }
+            }
+        }
+    }
+
+    // 3. Query Baileys Signal Repository (Async USync)
+    const activeSock = currentSock || (accountId && accounts.has(accountId) ? accounts.get(accountId)?.sock : null) || accounts.values().next().value?.sock;
+    if (activeSock?.signalRepository?.lidMapping?.getPNForLID) {
+        try {
+            const formattedLid = target.includes('@lid') ? target : `${cleanDigits}@lid`;
+            const resolvedPn = await activeSock.signalRepository.lidMapping.getPNForLID(formattedLid);
+            if (resolvedPn) {
+                const ph = resolvedPn.split('@')[0].replace(/\D/g, '');
+                if (ph && ph.length >= 10) {
+                    LID_TO_PHONE_MAP.set(cleanDigits, ph);
+                    PHONE_TO_LID_MAP.set(ph, cleanDigits);
+                    saveLidMappingToDisk(cleanDigits, ph, accountId);
+                    console.log(`[Baileys Signal USync Hit] Resolved LID ${cleanDigits} -> PN ${ph}`);
+                    return ph;
+                }
+            }
+        } catch (eSignal) {}
+    }
+
+    // 4. Check shared JSON file on disk
+    if (fs.existsSync(SHARED_LID_MAPPINGS_FILE)) {
+        try {
+            const sharedMap = JSON.parse(fs.readFileSync(SHARED_LID_MAPPINGS_FILE, 'utf8'));
+            if (sharedMap && sharedMap[cleanDigits]) {
+                const ph = String(sharedMap[cleanDigits]).replace(/\D/g, '');
+                if (ph && ph.length >= 10) {
+                    LID_TO_PHONE_MAP.set(cleanDigits, ph);
+                    PHONE_TO_LID_MAP.set(ph, cleanDigits);
+                    return ph;
+                }
+            }
+        } catch (eDisk) {}
+    }
+
+    return null;
+}
 
 // Brand Configuration
 let BRAND_NAME = 'GRM Garments'; // Overridden by whatsapp_account_config.json on load
@@ -272,10 +405,15 @@ function getInteractiveResponse(cleanMsg, custName, senderKey, senderNumber, sen
 async function getImageBuffer(url) {
     if (!url) return null;
     try {
-        // 1. Data URL (Base64)
-        if (typeof url === 'string' && url.startsWith('data:image/')) {
-            const base64Data = url.split(',')[1] || url.replace(/^data:image\/\w+;base64,/, '');
-            return Buffer.from(base64Data, 'base64');
+        // 1. Data URL (Base64) - direct memory buffer decode (0 network latency)
+        if (typeof url === 'string' && (url.startsWith('data:') || url.startsWith('/9j/') || url.startsWith('iVBORw0KGgo'))) {
+            let base64Data = url;
+            if (url.includes('base64,')) {
+                base64Data = url.split('base64,')[1];
+            } else if (url.startsWith('data:')) {
+                base64Data = url.split(',')[1] || url;
+            }
+            return Buffer.from(base64Data.trim().replace(/\s+/g, ''), 'base64');
         }
 
         // 2. Direct local file resolution for any URL or path containing uploads/
@@ -334,15 +472,28 @@ async function getImageBuffer(url) {
 
         // 5. Remote Hostinger Fallback for relative paths like uploads/media/...
         if (typeof url === 'string' && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
-            const remoteUrl = `${CRM_BASE_URL}/${url.replace(/^[/\\]+/, '')}`;
-            if (typeof fetch === 'function') {
-                try {
-                    const res = await fetch(remoteUrl);
-                    if (res.ok) {
-                        const arrayBuf = await res.arrayBuffer();
-                        return Buffer.from(arrayBuf);
-                    }
-                } catch (e) {}
+            const cleanRel = url.replace(/^[/\\]+/, '');
+            const candidateUrls = [
+                `${CRM_BASE_URL}/${cleanRel}`,
+                `https://maroon-partridge-532881.hostingersite.com/${cleanRel}`,
+                `http://localhost:8000/${cleanRel}`,
+                `http://localhost/${cleanRel}`
+            ];
+            for (const remoteUrl of candidateUrls) {
+                if (typeof fetch === 'function') {
+                    try {
+                        const res = await fetch(remoteUrl, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                            }
+                        });
+                        if (res.ok) {
+                            const arrayBuf = await res.arrayBuffer();
+                            return Buffer.from(arrayBuf);
+                        }
+                    } catch (e) {}
+                }
             }
         }
     } catch (e) {
@@ -404,9 +555,16 @@ async function getAudioBuffer(url) {
 let ffmpegBinPath = null;
 const possibleFfmpegPaths = [
     path.resolve(__dirname, 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(__dirname, 'node_modules', '@ffmpeg-installer', 'linux-x64', 'ffmpeg'),
+    path.resolve(__dirname, 'node_modules', '@ffmpeg-installer', 'darwin-x64', 'ffmpeg'),
     path.resolve(__dirname, '..', 'bridge', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(__dirname, '..', 'bridge', 'node_modules', '@ffmpeg-installer', 'linux-x64', 'ffmpeg'),
     path.resolve(__dirname, '..', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
-    path.resolve(process.cwd(), 'bridge', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe')
+    path.resolve(__dirname, '..', 'node_modules', '@ffmpeg-installer', 'linux-x64', 'ffmpeg'),
+    path.resolve(process.cwd(), 'bridge', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(process.cwd(), 'bridge', 'node_modules', '@ffmpeg-installer', 'linux-x64', 'ffmpeg'),
+    '/usr/bin/ffmpeg',
+    '/usr/local/bin/ffmpeg'
 ];
 for (const p of possibleFfmpegPaths) {
     if (fs.existsSync(p)) {
@@ -430,7 +588,17 @@ if (!ffmpegBinPath) {
                 console.log('[FFmpeg Audio Engine] Loaded binary from global @ffmpeg-installer/ffmpeg:', ffmpegBinPath);
             }
         } catch (e2) {
-            console.warn('[FFmpeg Audio Engine] Could not load @ffmpeg-installer/ffmpeg:', e2.message);
+            try {
+                const { execSync } = require('child_process');
+                const out = execSync(process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+                const firstPath = out.split(/[\r\n]+/)[0]?.trim();
+                if (firstPath && fs.existsSync(firstPath)) {
+                    ffmpegBinPath = firstPath;
+                    console.log('[FFmpeg Audio Engine] Loaded binary from system PATH:', ffmpegBinPath);
+                }
+            } catch (e3) {
+                console.warn('[FFmpeg Audio Engine] Could not load FFmpeg binary:', e2.message);
+            }
         }
     }
 }
@@ -440,26 +608,60 @@ if (!ffmpegBinPath) {
  * WhatsApp PTT voice notes STRICTLY require libopus inside an OGG container at 48000Hz mono.
  */
 async function convertToWhatsAppOpus(inputBuffer, inputExt = 'mp3') {
-    if (inputExt === 'ogg' || inputExt === 'opus') return inputBuffer;
     if (!inputBuffer || !inputBuffer.length) return null;
-    if (!ffmpegBinPath) return inputBuffer;
+
+    // Detect actual container magic bytes
+    let actualExt = inputExt || 'mp3';
+    if (inputBuffer.length >= 4) {
+        if (inputBuffer[0] === 0x1A && inputBuffer[1] === 0x45 && inputBuffer[2] === 0xDF && inputBuffer[3] === 0xA3) {
+            actualExt = 'webm';
+        } else if (inputBuffer[0] === 0x4F && inputBuffer[1] === 0x67 && inputBuffer[2] === 0x67 && inputBuffer[3] === 0x53) {
+            actualExt = 'ogg';
+        } else if (inputBuffer[0] === 0x52 && inputBuffer[1] === 0x49 && inputBuffer[2] === 0x46 && inputBuffer[3] === 0x46) {
+            actualExt = 'wav';
+        } else if ((inputBuffer[0] === 0x49 && inputBuffer[1] === 0x44 && inputBuffer[2] === 0x33) || (inputBuffer[0] === 0xFF && (inputBuffer[1] & 0xE0) === 0xE0)) {
+            actualExt = 'mp3';
+        }
+    }
+
+    // Check if ALREADY valid WhatsApp-compliant Ogg Opus (starts with OggS and contains OpusHead)
+    const isAlreadyOpusOgg = (actualExt === 'ogg' && inputBuffer.length > 28 &&
+        inputBuffer[0] === 0x4F && inputBuffer[1] === 0x67 && inputBuffer[2] === 0x67 && inputBuffer[3] === 0x53 &&
+        inputBuffer.indexOf(Buffer.from('OpusHead')) !== -1);
+
+    if (isAlreadyOpusOgg) {
+        // Already native Ogg Opus - valid for direct WhatsApp PTT delivery
+        return inputBuffer;
+    }
+
+    if (!ffmpegBinPath) {
+        console.warn('[Audio Transcode] FFmpeg binary not available, falling back to raw buffer');
+        return inputBuffer;
+    }
 
     const tempDir = path.resolve(__dirname, '..', 'uploads', 'voice', 'temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
     const rand = Math.random().toString(36).substring(2, 7);
-    const tempIn = path.join(tempDir, `ptt_in_${Date.now()}_${rand}.${inputExt}`);
+    const tempIn = path.join(tempDir, `ptt_in_${Date.now()}_${rand}.${actualExt}`);
     const tempOut = path.join(tempDir, `ptt_out_${Date.now()}_${rand}.ogg`);
 
     try {
         fs.writeFileSync(tempIn, inputBuffer);
         const { execSync } = require('child_process');
-        const cmd = `"${ffmpegBinPath}" -y -i "${tempIn}" -c:a libopus -b:a 32k -ar 48000 -ac 1 "${tempOut}"`;
-        execSync(cmd, { stdio: 'ignore', timeout: 8000 });
+        // Transcode to strict WhatsApp PTT standard: 48000Hz, mono, libopus in ogg container, voice-optimized voip profile
+        // Include -fflags +genpts+igndts -avoid_negative_ts make_zero to handle browser MediaRecorder WebM fragmented chunks
+        const cmd = `"${ffmpegBinPath}" -y -fflags +genpts+igndts -avoid_negative_ts make_zero -i "${tempIn}" -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 -application voip -f ogg "${tempOut}"`;
+        execSync(cmd, { stdio: 'ignore', timeout: 10000 });
         if (fs.existsSync(tempOut) && fs.statSync(tempOut).size > 0) {
             const converted = fs.readFileSync(tempOut);
-            console.log(`[Audio Transcode] Successfully transcoded ${inputBuffer.length} bytes (${inputExt}) -> ${converted.length} bytes (Opus OGG)`);
-            return converted;
+            const isValidOggOpus = (converted.length > 28 &&
+                converted[0] === 0x4F && converted[1] === 0x67 && converted[2] === 0x67 && converted[3] === 0x53 &&
+                converted.indexOf(Buffer.from('OpusHead')) !== -1);
+            if (isValidOggOpus) {
+                console.log(`[Audio Transcode] Successfully transcoded ${inputBuffer.length} bytes (${actualExt}) -> ${converted.length} bytes (WhatsApp Opus OGG)`);
+                return converted;
+            }
         }
     } catch (err) {
         console.warn('[Audio Transcode Warning]:', err.message);
@@ -467,7 +669,7 @@ async function convertToWhatsAppOpus(inputBuffer, inputExt = 'mp3') {
         try { if (fs.existsSync(tempIn)) fs.unlinkSync(tempIn); } catch (e) {}
         try { if (fs.existsSync(tempOut)) fs.unlinkSync(tempOut); } catch (e) {}
     }
-    return inputBuffer;
+    return null;
 }
 
 const configFilePath = path.join(__dirname, '..', 'whatsapp_account_config.json');
@@ -485,11 +687,7 @@ function loadBrandConfig() {
 loadBrandConfig();
 
 const DEFAULT_ACCOUNT_DEFINITIONS = [
-    { id: 'account_1', label: 'Primary WhatsApp (account_1)' },
-    { id: 'account_2', label: 'Line 2: Blue Berry Kids & Maternity (account_2)' },
-    { id: 'account_3', label: 'Line 3: Customer Support & Enquiries (account_3)' },
-    { id: 'account_4', label: 'Line 4: Wholesale & Bulk Orders (account_4)' },
-    { id: 'account_5', label: 'Line 5: VIP Fast-Track & Dispatch (account_5)' }
+    { id: 'account_1', label: 'Primary WhatsApp' }
 ];
 
 // Helper to get all accounts summary
@@ -508,7 +706,7 @@ function getAccountsSummary() {
             last_active: acc.lastActive
         });
     }
-    // Always include all 5 default accounts if not yet actively started
+    // Only include Primary account (account_1) if not yet actively started
     for (const def of DEFAULT_ACCOUNT_DEFINITIONS) {
         if (!seen.has(def.id)) {
             list.push({
@@ -603,6 +801,7 @@ function syncLocalConfigFile(accountId, status, phoneNumber, qrCode, label) {
 
 // Fast CRM API Dispatcher with instant local & remote sync priority
 async function callCrmApi(action, postData) {
+    const isRemoteEnv = Boolean(process.env.REMOTE_BRIDGE || process.env.RENDER || process.env.HOSTINGER || __dirname.includes('hostingersite'));
     const candidateUrls = [
         'http://localhost:8080',
         'http://127.0.0.1:8080',
@@ -610,7 +809,7 @@ async function callCrmApi(action, postData) {
         'http://127.0.0.1',
         process.env.CRM_URL,
         process.env.APP_URL,
-        'https://maroon-partridge-532881.hostingersite.com',
+        isRemoteEnv ? 'https://maroon-partridge-532881.hostingersite.com' : null,
         CRM_BASE_URL,
         'http://localhost:8000',
         'http://127.0.0.1:8000'
@@ -745,10 +944,29 @@ function resolveDestinationJid(phoneOrJid) {
     if (!phoneOrJid) return null;
     let target = phoneOrJid.toString().trim();
 
+    // Remove multi-device index if present (e.g. :0, :1, :2)
+    if (target.includes(':')) {
+        const parts = target.split(':');
+        const afterColon = parts[1] || '';
+        if (afterColon.includes('@')) {
+            target = parts[0] + '@' + afterColon.split('@')[1];
+        } else {
+            target = parts[0];
+        }
+    }
+
     // 1. Check if target has @lid or is a 14+ digit privacy LID
-    const cleanDigits = target.replace(/[^0-9]/g, '');
+    let cleanDigits = target.replace(/[^0-9]/g, '');
+
+    // Strip trailing device index 0 artifact (e.g. 9181240385850 -> 918124038585 or 81240385850 -> 8124038585)
+    if (cleanDigits.length === 13 && cleanDigits.startsWith('91') && cleanDigits.endsWith('0')) {
+        cleanDigits = cleanDigits.slice(0, 12);
+    } else if (cleanDigits.length === 11 && cleanDigits.endsWith('0') && !cleanDigits.startsWith('0')) {
+        cleanDigits = cleanDigits.slice(0, 10);
+    }
+
     if (target.includes('@lid') || cleanDigits.length >= 14) {
-        const lidDigits = target.split('@')[0].replace(/[^0-9]/g, '');
+        const lidDigits = target.split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
         if (LID_TO_PHONE_MAP.has(lidDigits)) {
             const mappedPhone = LID_TO_PHONE_MAP.get(lidDigits);
             console.log(`[JID Resolver] Resolved LID ${lidDigits} -> Standard Phone JID: ${mappedPhone}@s.whatsapp.net`);
@@ -780,7 +998,14 @@ function resolveDestinationJid(phoneOrJid) {
 
     // 2. Standard WhatsApp format
     if (target.includes('@s.whatsapp.net')) {
-        return target;
+        let userPart = target.split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
+        if (userPart.length === 13 && userPart.startsWith('91') && userPart.endsWith('0')) {
+            userPart = userPart.slice(0, 12);
+        } else if (userPart.length === 11 && userPart.endsWith('0') && !userPart.startsWith('0')) {
+            userPart = userPart.slice(0, 10);
+        }
+        if (userPart.length === 10) userPart = '91' + userPart;
+        return `${userPart}@s.whatsapp.net`;
     }
 
     // 3. Check memory cache
@@ -796,11 +1021,6 @@ function resolveDestinationJid(phoneOrJid) {
     }
 
     let clean = cleanDigits;
-    if (jidMap.has(clean)) {
-        return jidMap.get(clean);
-    }
-
-    // 4. Standard 10-digit Indian numbers
     if (clean.length === 10) {
         clean = '91' + clean;
     }
@@ -821,7 +1041,10 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
     const existingAcc = accounts.get(accountId);
     if (existingAcc && existingAcc.sock) {
+<<<<<<< HEAD
         console.log(`[QR Bridge - ${accountId}] Terminating previous socket before opening new session`);
+=======
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
         try {
             existingAcc.sock.ev.removeAllListeners();
             existingAcc.sock.end();
@@ -874,7 +1097,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, silentLogger)
             },
-            browser: Browsers.windows('Desktop'),
+            browser: Browsers.windows('Chrome'),
             syncFullHistory: false, // Prevents loading heavy history that crashes or times out after 2 min
             keepAliveIntervalMs: 25000, // Send keep-alive every 25s to keep socket alive stably
             connectTimeoutMs: 60000,
@@ -910,6 +1133,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         account_slot: accountId,
                         status: 'SCAN_QR',
                         qr_code: accountObj.qrImage,
+                        force: true,
                         label: label
                     }).catch(() => {});
                 } catch (err) {
@@ -919,7 +1143,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+                const isLoggedOut = (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403);
                 const isReplaced = statusCode === DisconnectReason.connectionReplaced || statusCode === 440;
                 console.log(`[QR Bridge - ${accountId}] Connection closed (status: ${statusCode}). Logged out: ${isLoggedOut}`);
                 accountObj.status = isLoggedOut ? 'DISCONNECTED' : 'RECONNECTING';
@@ -931,31 +1155,55 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 accountObj.isStarting = false;
                 broadcastAccountsUpdate();
 
+<<<<<<< HEAD
                 // ONLY notify CRM backend of disconnection if the session was truly logged out on phone!
                 // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) to prevent accidental unlinking.
+=======
+                // ONLY notify Hostinger CRM of disconnection if the session was truly logged out on phone!
+                // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) or unauthenticated QR expirations.
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
                 if (isLoggedOut) {
                     syncLocalConfigFile(accountId, 'DISCONNECTED', null, null, label);
                     callCrmApi('sync_account_status', {
                         account_slot: accountId,
                         status: 'DISCONNECTED',
                         phone_number: null,
+                        force: true,
                         label: label
                     }).catch(() => {});
                 }
 
                 if (isLoggedOut) {
-                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Marking disconnected...`);
-                    // Preserve session directory unless user explicitly disconnects via API to prevent accidental wipe
+                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Cleaning session dir and re-initializing fresh QR...`);
+                    // Clean invalidated session directory so fresh QR code can be generated smoothly
+                    try {
+                        if (fs.existsSync(sessionDir)) {
+                            fs.rmSync(sessionDir, { recursive: true, force: true });
+                        }
+                        if (accountId === 'account_1') {
+                            const legacyDir = path.join(__dirname, 'auth_session');
+                            if (fs.existsSync(legacyDir)) {
+                                fs.rmSync(legacyDir, { recursive: true, force: true });
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`[Session Clean Error for ${accountId}]:`, e.message);
+                    }
                     setTimeout(() => {
                         initAccountSession(accountId, label);
-                    }, 3000);
+                    }, 1200);
                 } else if (isReplaced) {
                     console.warn(`[QR Bridge - ${accountId}] Session replaced by another active connection (status: 440). Halting auto-reconnect to prevent rapid reconnect blinking loop.`);
                 } else {
-                    // Reconnect on network drops / keep-alive hiccups without clearing session
+                    // Reconnect on network drops / keep-alive hiccups / 515 restart required without clearing session
+                    const reconnectDelay = (statusCode === 515) ? 1000 : 3500;
                     setTimeout(() => {
                         initAccountSession(accountId, label);
+<<<<<<< HEAD
                     }, 5000);
+=======
+                    }, reconnectDelay);
+>>>>>>> fe4bb750ca5264fc9b5c585f15707f0da173468c
                 }
             } else if (connection === 'open') {
                 accountObj.status = 'CONNECTED';
@@ -979,6 +1227,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     phone_number: accountObj.connectedNumber,
                     qr_code: null,
                     connected_name: accountObj.connectedName,
+                    force: true,
                     label: label
                 }).catch(() => {});
             }
@@ -1153,6 +1402,55 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             }
         });
 
+        // Maintain synced contact and chat names from mobile phone
+        sock.ev.on('contacts.upsert', (contacts) => {
+            for (const c of contacts) {
+                if (!c.id) continue;
+                const existing = CONTACTS_CACHE.get(c.id) || {};
+                CONTACTS_CACHE.set(c.id, { ...existing, ...c });
+                if (c.lid && c.id.includes('@s.whatsapp.net')) {
+                    const ph = c.id.split('@')[0].replace(/[^0-9]/g, '');
+                    const lid = c.lid.split('@')[0].replace(/[^0-9]/g, '');
+                    if (ph && lid) {
+                        LID_TO_PHONE_MAP.set(lid, ph);
+                        PHONE_TO_LID_MAP.set(ph, lid);
+                    }
+                }
+            }
+        });
+        sock.ev.on('contacts.update', (updates) => {
+            for (const u of updates) {
+                if (!u.id) continue;
+                const existing = CONTACTS_CACHE.get(u.id) || {};
+                CONTACTS_CACHE.set(u.id, { ...existing, ...u });
+            }
+        });
+        sock.ev.on('chats.upsert', (chats) => {
+            for (const ch of chats) {
+                if (!ch.id) continue;
+                const existing = CONTACTS_CACHE.get(ch.id) || {};
+                if (ch.name) existing.name = ch.name;
+                CONTACTS_CACHE.set(ch.id, existing);
+            }
+        });
+
+        // Capture Baileys real-time LID-to-PN updates
+        sock.ev.on('lid-mapping.update', (mapping) => {
+            if (!mapping) return;
+            const mappings = Array.isArray(mapping) ? mapping : [mapping];
+            for (const m of mappings) {
+                if (!m.lid || !m.pn) continue;
+                const cleanLid = m.lid.split('@')[0].replace(/[^0-9]/g, '');
+                const cleanPn = m.pn.split('@')[0].replace(/[^0-9]/g, '');
+                if (cleanLid && cleanPn) {
+                    LID_TO_PHONE_MAP.set(cleanLid, cleanPn);
+                    PHONE_TO_LID_MAP.set(cleanPn, cleanLid);
+                    saveLidMappingToDisk(cleanLid, cleanPn, accountId);
+                    console.log(`[LID Sync Event] Mapped LID ${cleanLid} <-> PN ${cleanPn}`);
+                }
+            }
+        });
+
         // Listen for Real Inbound Customer Messages on this Account
         sock.ev.on('messages.upsert', async (m) => {
             if (m.type === 'notify') {
@@ -1173,71 +1471,50 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         if (senderJid.includes('@g.us') || senderJid === 'status@broadcast') continue;
 
                         let cleanNumber = senderJid.split('@')[0].split(':')[0];
+                        let originalLid = (senderJid.includes('@lid') || cleanNumber.length >= 14) ? cleanNumber : null;
                         let realPhone = null;
 
-                        // Check Baileys LID reverse mapping file if LID format
-                        if (senderJid.includes('@lid') || (cleanNumber.length >= 14 && (cleanNumber.startsWith('156') || cleanNumber.startsWith('235') || cleanNumber.startsWith('253') || cleanNumber.startsWith('275') || cleanNumber.startsWith('967')))) {
-                            // 1. Check in-memory index
-                            if (LID_TO_PHONE_MAP.has(cleanNumber)) {
-                                const digits = LID_TO_PHONE_MAP.get(cleanNumber);
-                                if (digits.length === 10) {
-                                    realPhone = '+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5);
-                                } else if (digits.length === 12 && digits.startsWith('91')) {
-                                    realPhone = '+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7);
-                                } else {
-                                    realPhone = '+' + digits;
-                                }
-                            }
-
-                            // 2. Check disk reverse file if not found
-                            if (!realPhone) {
-                                const reverseFile = path.join(sessionDir, `lid-mapping-${cleanNumber}_reverse.json`);
-                                if (fs.existsSync(reverseFile)) {
-                                    try {
-                                        const rawMapped = JSON.parse(fs.readFileSync(reverseFile, 'utf8'));
-                                        if (rawMapped && typeof rawMapped === 'string') {
-                                            const digits = rawMapped.replace(/[^0-9]/g, '');
-                                            if (digits.length >= 10) {
-                                                realPhone = digits.length === 10 ? ('+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5)) : (digits.length === 12 && digits.startsWith('91') ? ('+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7)) : ('+' + digits));
-                                            }
-                                        }
-                                    } catch (e) { }
-                                }
-                            }
-
-                            // 3. Check direct phone mapping files on disk
-                            if (!realPhone) {
-                                try {
-                                    const directFiles = fs.readdirSync(sessionDir).filter(f => f.startsWith('lid-mapping-') && !f.endsWith('_reverse.json'));
-                                    for (const pf of directFiles) {
-                                        try {
-                                            const c = JSON.parse(fs.readFileSync(path.join(sessionDir, pf), 'utf8'));
-                                            if (c && c.toString().replace(/[^0-9]/g, '') === cleanNumber) {
-                                                const digits = pf.replace('lid-mapping-', '').replace('.json', '');
-                                                LID_TO_PHONE_MAP.set(cleanNumber, digits);
-                                                PHONE_TO_LID_MAP.set(digits, cleanNumber);
-                                                realPhone = digits.length === 10 ? ('+91 ' + digits.slice(0, 5) + ' ' + digits.slice(5)) : (digits.length === 12 && digits.startsWith('91') ? ('+91 ' + digits.slice(2, 7) + ' ' + digits.slice(7)) : ('+' + digits));
-                                                break;
-                                            }
-                                        } catch (e) { }
-                                    }
-                                } catch (e) { }
+                        // Deeply resolve WhatsApp Privacy LID to genuine phone number
+                        if (originalLid) {
+                            const resolvedPn = await resolveLidToPhoneNumber(senderJid, sock, accountId);
+                            if (resolvedPn) {
+                                cleanNumber = resolvedPn;
+                                console.log(`[Inbound LID Resolved] Mapped ${originalLid} -> ${cleanNumber}`);
                             }
                         }
 
-                        if (!realPhone) {
-                            const digitsOnly = cleanNumber.replace(/[^0-9]/g, '');
-                            if (digitsOnly.length === 10) {
-                                realPhone = '+91 ' + digitsOnly.slice(0, 5) + ' ' + digitsOnly.slice(5);
-                            } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
-                                realPhone = '+91 ' + digitsOnly.slice(2, 7) + ' ' + digitsOnly.slice(7);
-                            } else {
-                                realPhone = '+' + cleanNumber;
-                            }
+                        let digitsOnly = cleanNumber.replace(/[^0-9]/g, '');
+                        // Strip trailing device index if 13 digits starting with 91 (e.g. 9181240385850 -> 918124038585)
+                        if (digitsOnly.length === 13 && digitsOnly.startsWith('91') && digitsOnly.endsWith('0')) {
+                            digitsOnly = digitsOnly.slice(0, 12);
+                        } else if (digitsOnly.length === 11 && digitsOnly.endsWith('0') && !digitsOnly.startsWith('0')) {
+                            digitsOnly = digitsOnly.slice(0, 10);
                         }
 
-                        const senderNumber = realPhone;
-                        const senderName = msg.pushName || ('Customer ' + senderNumber.slice(-4));
+                        if (digitsOnly.length === 10) {
+                            realPhone = '+91 ' + digitsOnly.slice(0, 5) + ' ' + digitsOnly.slice(5);
+                        } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+                            realPhone = '+91 ' + digitsOnly.slice(2, 7) + ' ' + digitsOnly.slice(7);
+                        } else {
+                            realPhone = '+' + cleanNumber;
+                        }
+
+                        const senderNumber = realPhone || ('+' + cleanNumber);
+
+                        let resolvedSenderName = msg.pushName;
+                        if (resolvedSenderName && /whatsapp business|primary line|primary whatsapp|line \d|account_\d/i.test(resolvedSenderName)) {
+                            resolvedSenderName = null;
+                        }
+                        if (!resolvedSenderName) {
+                            const cachedC = CONTACTS_CACHE.get(senderJid) || CONTACTS_CACHE.get(cleanNumber) || (LID_TO_PHONE_MAP.has(cleanNumber) ? CONTACTS_CACHE.get(LID_TO_PHONE_MAP.get(cleanNumber)) : null);
+                            if (cachedC) {
+                                const candName = cachedC.name || cachedC.notify || cachedC.verifiedName;
+                                if (candName && !/whatsapp business|primary line|primary whatsapp|line \d|account_\d/i.test(candName)) {
+                                    resolvedSenderName = candName;
+                                }
+                            }
+                        }
+                        const senderName = resolvedSenderName || ('Customer ' + senderNumber.slice(-4));
 
                         // Store in JID Cache (Always map to standard @s.whatsapp.net for guaranteed outbound delivery)
                         if (LID_TO_PHONE_MAP.has(cleanNumber)) {
@@ -1294,7 +1571,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 );
                                 if (audioBuffer) {
                                     // Send base64 data URI so remote Hostinger PHP receives actual file bytes and writes to uploads/voice/
-                                    mediaUrl = 'data:audio/ogg;base64,' + audioBuffer.toString('base64');
+                                    mediaUrl = 'data:audio/ogg; codecs=opus;base64,' + audioBuffer.toString('base64');
                                     console.log(`[Audio Downloaded & Base64 Encoded] (${audioBuffer.length} bytes) from ${senderName}`);
 
                                     // Also cache locally on bridge filesystem
@@ -1302,7 +1579,18 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                         const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'voice');
                                         if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
                                         const fileName = `voice_${Date.now()}_${Math.floor(Math.random() * 1000)}.ogg`;
-                                        fs.writeFileSync(path.join(uploadsDir, fileName), audioBuffer);
+                                        const filePath = path.join(uploadsDir, fileName);
+                                        fs.writeFileSync(filePath, audioBuffer);
+
+                                        // Also transcode universal MP3 copy for web browsers lacking Ogg support (Safari/iOS)
+                                        if (ffmpegBinPath) {
+                                            try {
+                                                const mp3FileName = fileName.replace('.ogg', '.mp3');
+                                                const mp3Path = path.join(uploadsDir, mp3FileName);
+                                                const { execSync } = require('child_process');
+                                                execSync(`"${ffmpegBinPath}" -y -i "${filePath}" -c:a libmp3lame -q:a 4 "${mp3Path}"`, { stdio: 'ignore', timeout: 6000 });
+                                            } catch (eMp3) {}
+                                        }
                                     } catch (e) {}
                                 }
                             } catch (err) {
@@ -1314,13 +1602,31 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             msgType = 'image';
                             messageText = rawMsg.imageMessage.caption ? ('[Photo] ' + rawMsg.imageMessage.caption) : '[Photo Attachment]';
                             try {
-                                const imgBuffer = await downloadMediaMessage(
-                                    { key: msg.key, message: rawMsg },
-                                    'buffer',
-                                    {},
-                                    { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
-                                );
-                                if (imgBuffer) {
+                                let imgBuffer = null;
+                                try {
+                                    imgBuffer = await downloadMediaMessage(
+                                        msg,
+                                        'buffer',
+                                        {},
+                                        { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+                                    );
+                                } catch (e1) {
+                                    try {
+                                        imgBuffer = await downloadMediaMessage(
+                                            { key: msg.key, message: rawMsg },
+                                            'buffer',
+                                            {},
+                                            { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+                                        );
+                                    } catch (e2) {}
+                                }
+
+                                // Fallback to embedded jpegThumbnail if network download from CDN failed
+                                if (!imgBuffer && rawMsg.imageMessage.jpegThumbnail) {
+                                    imgBuffer = Buffer.from(rawMsg.imageMessage.jpegThumbnail);
+                                }
+
+                                if (imgBuffer && imgBuffer.length > 0) {
                                     // Send base64 data URI so remote Hostinger PHP receives actual file bytes and writes to uploads/media/
                                     mediaUrl = 'data:image/jpeg;base64,' + imgBuffer.toString('base64');
                                     console.log(`[Image Downloaded & Base64 Encoded] (${imgBuffer.length} bytes) from ${senderName}`);
@@ -1572,7 +1878,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             assigned_to: 'UNASSIGNED',
                             source: 'REAL_WHATSAPP_LIVE',
                             timestamp_epoch: Math.floor(Date.now() / 1000),
-                            received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            lid: originalLid
                         };
 
                         // 1. Emit live to CRM UI over WebSocket (Instant!)
@@ -1602,11 +1909,16 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             if (replyObj) {
                                 setTimeout(async () => {
                                     try {
-                                        const targetJid = resolveDestinationJid(senderNumber || senderJid);
+                                        // Use direct WhatsApp message sender remoteJid for 100% accurate chat thread delivery
+                                        const directRemote = msg.key?.remoteJid;
+                                        const targetJid = directRemote || resolveDestinationJid(senderNumber || senderJid);
                                         let sentRes = null;
                                         let botText = '';
                                         let botType = 'text';
                                         let botMediaUrl = null;
+
+                                        // Ensure socket is active before transmitting over WhatsApp
+                                        const isSockActive = sock && typeof sock.sendMessage === 'function' && accountObj.status === 'CONNECTED';
 
                                         if (replyObj.type === 'image' && replyObj.image) {
                                             botType = 'image';
@@ -1614,30 +1926,38 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             botText = replyObj.caption;
                                             console.log(`[Auto-Reply Engine] 📸 Sending Product Photo to ${senderName} (${targetJid}): "${replyObj.caption.slice(0, 40)}..."`);
 
-                                            const imgBuf = await getImageBuffer(replyObj.image);
-                                            if (imgBuf) {
-                                                try {
-                                                    sentRes = await sock.sendMessage(targetJid, {
-                                                        image: imgBuf,
-                                                        caption: replyObj.caption
-                                                    });
-                                                } catch (imgErr) {
-                                                    console.warn('[Image Send Failed, Falling back to Text]:', imgErr.message);
+                                            if (isSockActive) {
+                                                const imgBuf = await getImageBuffer(replyObj.image);
+                                                if (imgBuf) {
+                                                    try {
+                                                        sentRes = await sock.sendMessage(targetJid, {
+                                                            image: imgBuf,
+                                                            caption: replyObj.caption
+                                                        }, { quoted: msg });
+                                                    } catch (imgErr) {
+                                                        console.warn('[Image Send Failed, Falling back to Text]:', imgErr.message);
+                                                    }
                                                 }
-                                            }
 
-                                            if (!sentRes) {
-                                                sentRes = await sock.sendMessage(targetJid, {
-                                                    text: `${replyObj.caption}\n\n🖼️ *Product Image:* ${replyObj.image}`
-                                                });
+                                                if (!sentRes) {
+                                                    sentRes = await sock.sendMessage(targetJid, {
+                                                        text: `${replyObj.caption}\n\n🖼️ *Product Image:* ${replyObj.image}`
+                                                    }, { quoted: msg });
+                                                }
                                             }
                                         } else {
                                             botText = replyObj.text || replyObj;
                                             console.log(`[Auto-Reply Engine] 🤖 Dispatching response to ${senderName} (${targetJid}): "${cleanMsg}"`);
-                                            sentRes = await sock.sendMessage(targetJid, { text: botText });
+                                            if (isSockActive) {
+                                                sentRes = await sock.sendMessage(targetJid, { text: botText }, { quoted: msg });
+                                            }
                                         }
 
-                                        console.log(`[Auto-Reply Engine] ✅ Delivered to ${targetJid} (ID: ${sentRes?.key?.id})`);
+                                        if (sentRes && sentRes.key?.id) {
+                                            console.log(`[Auto-Reply Engine] ✅ Delivered to ${targetJid} (ID: ${sentRes.key.id})`);
+                                        } else {
+                                            console.warn(`[Auto-Reply Engine] ⚠️ WhatsApp socket for line ${accountId} is awaiting QR scan or reconnecting. Message queued for delivery.`);
+                                        }
 
                                         const botPayload = {
                                             id: sentRes?.key?.id || ('bot_' + Date.now()),
@@ -1653,6 +1973,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             rule_id: replyObj.ruleId || null,
                                             direction: 'outbound',
                                             is_outbound: true,
+                                            status: sentRes?.key?.id ? 'DELIVERED' : 'PENDING_SCAN',
                                             timestamp_epoch: Math.floor(Date.now() / 1000),
                                             received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                         };
@@ -1684,14 +2005,61 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             if (!recipientJid || recipientJid.includes('@g.us') || recipientJid === 'status@broadcast') continue;
 
                             let cleanRecipient = recipientJid.split('@')[0].split(':')[0];
-                            let realRecipientPhone = null;
                             const digitsOnly = cleanRecipient.replace(/[^0-9]/g, '');
-                            if (digitsOnly.length === 10) {
-                                realRecipientPhone = '+91 ' + digitsOnly.slice(0, 5) + ' ' + digitsOnly.slice(5);
-                            } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
-                                realRecipientPhone = '+91 ' + digitsOnly.slice(2, 7) + ' ' + digitsOnly.slice(7);
+
+                            // Resolve Privacy LID to actual telephone number
+                            let mappedDigits = digitsOnly;
+                            const isLid = recipientJid.includes('@lid') || digitsOnly.length >= 14;
+                            if (isLid) {
+                                const resolvedPn = await resolveLidToPhoneNumber(recipientJid, sock, accountId);
+                                if (resolvedPn) {
+                                    mappedDigits = resolvedPn;
+                                    console.log(`[Admin Phone Reply LID Resolved] Mapped ${recipientJid} -> ${mappedDigits}`);
+                                }
+                            }
+
+                            let realRecipientPhone = null;
+                            if (mappedDigits.length === 10) {
+                                realRecipientPhone = '+91 ' + mappedDigits.slice(0, 5) + ' ' + mappedDigits.slice(5);
+                            } else if (mappedDigits.length === 12 && mappedDigits.startsWith('91')) {
+                                realRecipientPhone = '+91 ' + mappedDigits.slice(2, 7) + ' ' + mappedDigits.slice(7);
                             } else {
-                                realRecipientPhone = '+' + digitsOnly;
+                                realRecipientPhone = '+' + mappedDigits;
+                            }
+
+                            // Resolve Contact Display Name (e.g. "வனஜா") from Baileys contacts & chats cache
+                            let recipientContactName = null;
+                            const cachedContact = CONTACTS_CACHE.get(recipientJid) || 
+                                                  CONTACTS_CACHE.get(cleanRecipient) || 
+                                                  CONTACTS_CACHE.get(digitsOnly) ||
+                                                  CONTACTS_CACHE.get(mappedDigits) ||
+                                                  (mappedDigits !== digitsOnly ? CONTACTS_CACHE.get(mappedDigits + '@s.whatsapp.net') : null);
+
+                            if (cachedContact) {
+                                recipientContactName = cachedContact.name || cachedContact.notify || cachedContact.verifiedName || null;
+                            }
+
+                            if (!recipientContactName) {
+                                for (const [cId, cData] of CONTACTS_CACHE.entries()) {
+                                    if (cData.lid === recipientJid || (cData.lid && cData.lid.includes(digitsOnly))) {
+                                        recipientContactName = cData.name || cData.notify || cData.verifiedName;
+                                        if (cId.includes('@s.whatsapp.net') && digitsOnly.length >= 14) {
+                                            let ph = cId.split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
+                                            if (ph.length === 13 && ph.startsWith('91') && ph.endsWith('0')) ph = ph.slice(0, 12);
+                                            else if (ph.length === 11 && ph.endsWith('0') && !ph.startsWith('0')) ph = ph.slice(0, 10);
+                                            if (ph) {
+                                                LID_TO_PHONE_MAP.set(digitsOnly, ph);
+                                                PHONE_TO_LID_MAP.set(ph, digitsOnly);
+                                                if (ph.length === 10) {
+                                                    realRecipientPhone = '+91 ' + ph.slice(0, 5) + ' ' + ph.slice(5);
+                                                } else if (ph.length === 12 && ph.startsWith('91')) {
+                                                    realRecipientPhone = '+91 ' + ph.slice(2, 7) + ' ' + ph.slice(7);
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
                             }
 
                             // Unwrap message content
@@ -1714,29 +2082,81 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             if (rawMsg.imageMessage) {
                                 outType = 'image';
                                 outText = rawMsg.imageMessage.caption ? ('[Photo] ' + rawMsg.imageMessage.caption) : '[Photo Attachment]';
+                                let imgBuffer = null;
                                 try {
-                                    const imgBuffer = await downloadMediaMessage(
-                                        { key: msg.key, message: rawMsg },
+                                    imgBuffer = await downloadMediaMessage(
+                                        msg,
                                         'buffer',
                                         {},
                                         { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
                                     );
-                                    if (imgBuffer) {
-                                        outMediaUrl = 'data:image/jpeg;base64,' + imgBuffer.toString('base64');
-                                    }
-                                } catch (e) {}
+                                } catch (e1) {
+                                    try {
+                                        imgBuffer = await downloadMediaMessage(
+                                            { key: msg.key, message: rawMsg },
+                                            'buffer',
+                                            {},
+                                            { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+                                        );
+                                    } catch (e2) {}
+                                }
+
+                                // Guaranteed fallback to embedded protobuf jpegThumbnail buffer
+                                if (!imgBuffer && rawMsg.imageMessage.jpegThumbnail) {
+                                    imgBuffer = Buffer.from(rawMsg.imageMessage.jpegThumbnail);
+                                    console.log(`[Admin Phone Outbound Image] Used embedded jpegThumbnail (${imgBuffer.length} bytes)`);
+                                }
+
+                                if (imgBuffer && imgBuffer.length > 0) {
+                                    outMediaUrl = 'data:image/jpeg;base64,' + imgBuffer.toString('base64');
+                                    try {
+                                        const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'media');
+                                        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                                        const fileName = `img_out_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+                                        const filePath = path.join(uploadsDir, fileName);
+                                        fs.writeFileSync(filePath, imgBuffer);
+                                        console.log(`[Admin Phone Outbound Image Saved Locally]: ${fileName} (${imgBuffer.length} bytes)`);
+                                    } catch (eDisk) {}
+                                }
                             } else if (rawMsg.audioMessage) {
                                 outType = 'audio';
                                 outText = rawMsg.audioMessage.ptt ? '🎙️ Voice Message' : '🎵 Audio Message';
                                 try {
-                                    const audioBuffer = await downloadMediaMessage(
-                                        { key: msg.key, message: rawMsg },
-                                        'buffer',
-                                        {},
-                                        { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
-                                    );
+                                    let audioBuffer = null;
+                                    try {
+                                        audioBuffer = await downloadMediaMessage(
+                                            msg,
+                                            'buffer',
+                                            {},
+                                            { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+                                        );
+                                    } catch (e1) {
+                                        try {
+                                            audioBuffer = await downloadMediaMessage(
+                                                { key: msg.key, message: rawMsg },
+                                                'buffer',
+                                                {},
+                                                { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+                                            );
+                                        } catch (e2) {}
+                                    }
                                     if (audioBuffer) {
-                                        outMediaUrl = 'data:audio/ogg;base64,' + audioBuffer.toString('base64');
+                                        outMediaUrl = 'data:audio/ogg; codecs=opus;base64,' + audioBuffer.toString('base64');
+                                        try {
+                                            const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'voice');
+                                            if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                                            const fileName = `voice_out_${Date.now()}_${Math.floor(Math.random() * 1000)}.ogg`;
+                                            const filePath = path.join(uploadsDir, fileName);
+                                            fs.writeFileSync(filePath, audioBuffer);
+                                            if (ffmpegBinPath) {
+                                                try {
+                                                    const mp3FileName = fileName.replace('.ogg', '.mp3');
+                                                    const mp3Path = path.join(uploadsDir, mp3FileName);
+                                                    const { execSync } = require('child_process');
+                                                    execSync(`"${ffmpegBinPath}" -y -i "${filePath}" -c:a libmp3lame -q:a 4 "${mp3Path}"`, { stdio: 'ignore', timeout: 6000 });
+                                                } catch (eMp3) {}
+                                            }
+                                        } catch (e) {}
                                     }
                                 } catch (e) {}
                             } else if (rawMsg.conversation) {
@@ -1747,7 +2167,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                             if (!outText && !outMediaUrl) continue;
 
-                            console.log(`[Admin Mobile Direct Reply on ${accountId}] To ${realRecipientPhone}: "${outText}" [${outType}]`);
+                            console.log(`[Admin Mobile Direct Reply on ${accountId}] To ${realRecipientPhone} (${recipientContactName || 'Customer'}): "${outText}" [${outType}]`);
 
                             const outboundPayload = {
                                 id: msgId || ('msg_out_' + Date.now()),
@@ -1756,10 +2176,13 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 sender_name: 'Super Admin (WhatsApp Mobile)',
                                 sender_phone: realRecipientPhone,
                                 sender_jid: recipientJid,
+                                customer_name: recipientContactName,
+                                recipient_name: recipientContactName,
                                 message_text: outText,
                                 text: outText,
                                 type: outType,
                                 media_url: outMediaUrl,
+                                mediaUrl: outMediaUrl,
                                 account_id: accountId,
                                 received_on_number: accountObj.connectedNumber || 'Primary',
                                 direction: 'outbound',
@@ -1768,7 +2191,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 source: 'WHATSAPP_PHONE_DIRECT',
                                 status: 'DELIVERED',
                                 timestamp_epoch: Math.floor(Date.now() / 1000),
-                                received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                lid: isLid ? digitsOnly : null
                             };
 
                             // Emit live to CRM UI over WebSocket (Instant!)
@@ -1783,11 +2207,15 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                         phone: realRecipientPhone,
                                         text: outText,
                                         jid: recipientJid,
+                                        lid: isLid ? digitsOnly : null,
                                         accountId: accountId,
                                         media_url: outMediaUrl,
+                                        mediaUrl: outMediaUrl,
                                         type: outType,
                                         message_uid: msgId,
                                         sender_name: 'Super Admin (WhatsApp Mobile)',
+                                        customer_name: recipientContactName,
+                                        recipient_name: recipientContactName,
                                         source: 'WHATSAPP_PHONE_DIRECT'
                                     })
                                 }).catch(() => {});
@@ -1839,32 +2267,52 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
     let finalText = typeof text === 'string' ? text.trim() : String(text || '');
 
     let sent = null;
-    const isAudioMsg = (typeof mediaUrl === 'string' && (mediaUrl.includes('.mp3') || mediaUrl.includes('.ogg') || mediaUrl.includes('.webm') || mediaUrl.includes('/voice/') || mediaUrl.startsWith('data:audio')));
+    const isAudioMsg = (typeof mediaUrl === 'string' && (mediaUrl.includes('audio') || mediaUrl.includes('.mp3') || mediaUrl.includes('.ogg') || mediaUrl.includes('.webm') || mediaUrl.includes('.wav') || mediaUrl.includes('/voice/') || mediaUrl.startsWith('data:audio')));
     if (mediaUrl && isAudioMsg) {
         console.log(`[Outbound Voice Send via ${activeAcc.connectedNumber || activeAcc.id}] Dispatching voice note PTT to ${jid}`);
         const rawAudioBuf = await getAudioBuffer(mediaUrl);
         if (rawAudioBuf) {
             try {
-                const ext = mediaUrl.includes('.webm') ? 'webm' : (mediaUrl.includes('.ogg') ? 'ogg' : 'mp3');
-                const opusAudioBuf = await convertToWhatsAppOpus(rawAudioBuf, ext);
-                try {
+                let actualExt = 'webm';
+                if (rawAudioBuf.length >= 4) {
+                    if (rawAudioBuf[0] === 0x1A && rawAudioBuf[1] === 0x45 && rawAudioBuf[2] === 0xDF && rawAudioBuf[3] === 0xA3) {
+                        actualExt = 'webm';
+                    } else if (rawAudioBuf[0] === 0x4F && rawAudioBuf[1] === 0x67 && rawAudioBuf[2] === 0x67 && rawAudioBuf[3] === 0x53) {
+                        actualExt = 'ogg';
+                    } else if (rawAudioBuf[0] === 0x52 && rawAudioBuf[1] === 0x49 && rawAudioBuf[2] === 0x46 && rawAudioBuf[3] === 0x46) {
+                        actualExt = 'wav';
+                    } else if ((rawAudioBuf[0] === 0x49 && rawAudioBuf[1] === 0x44 && rawAudioBuf[2] === 0x33) || (rawAudioBuf[0] === 0xFF && (rawAudioBuf[1] & 0xE0) === 0xE0)) {
+                        actualExt = 'mp3';
+                    }
+                }
+                const opusAudioBuf = await convertToWhatsAppOpus(rawAudioBuf, actualExt);
+                const isOpusOgg = (opusAudioBuf && opusAudioBuf.length > 28 &&
+                    opusAudioBuf[0] === 0x4F && opusAudioBuf[1] === 0x67 && opusAudioBuf[2] === 0x67 && opusAudioBuf[3] === 0x53 &&
+                    opusAudioBuf.indexOf(Buffer.from('OpusHead')) !== -1);
+
+                if (isOpusOgg) {
                     sent = await activeAcc.sock.sendMessage(jid, {
-                        audio: opusAudioBuf || rawAudioBuf,
+                        audio: opusAudioBuf,
                         mimetype: 'audio/ogg; codecs=opus',
                         ptt: true
                     });
-                    console.log(`[Outbound Voice Delivered] Voice note delivered as PTT to ${jid} (ID: ${sent?.key?.id})`);
-                } catch (pttErr) {
-                    console.warn('[PTT Send Failed, Falling back to standard audio]:', pttErr.message);
+                    console.log(`[Outbound Voice Delivered] Voice note delivered as WhatsApp PTT to ${jid} (ID: ${sent?.key?.id})`);
+                } else {
+                    console.warn('[PTT Not Viable, Sending Playable Standard Audio]: Format is', actualExt);
+                    let safeMime = 'audio/mpeg';
+                    if (actualExt === 'ogg') safeMime = 'audio/ogg';
+                    else if (actualExt === 'wav') safeMime = 'audio/wav';
+                    else if (actualExt === 'mp4' || actualExt === 'm4a') safeMime = 'audio/mp4';
+
                     sent = await activeAcc.sock.sendMessage(jid, {
                         audio: rawAudioBuf,
-                        mimetype: ext === 'webm' ? 'audio/webm' : (ext === 'mp3' ? 'audio/mpeg' : 'audio/ogg'),
+                        mimetype: safeMime,
                         ptt: false
                     });
-                    console.log(`[Outbound Voice Fallback Delivered] Standard audio delivered to ${jid} (ID: ${sent?.key?.id})`);
+                    console.log(`[Outbound Audio Delivered] Audio delivered to ${jid} (ID: ${sent?.key?.id})`);
                 }
             } catch (aErr) {
-                console.warn('[Voice Send Failed, Falling back]:', aErr.message);
+                console.warn('[Voice Send Failed]:', aErr.message);
             }
         }
     } else if (mediaUrl) {
@@ -1872,11 +2320,25 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
         const imgBuf = await getImageBuffer(mediaUrl);
         if (imgBuf) {
             try {
-                const sendOptions = { image: imgBuf };
+                let mime = 'image/jpeg';
+                if (imgBuf.length >= 4) {
+                    if (imgBuf[0] === 0x89 && imgBuf[1] === 0x50 && imgBuf[2] === 0x4E && imgBuf[3] === 0x47) {
+                        mime = 'image/png';
+                    } else if (imgBuf[0] === 0x52 && imgBuf[1] === 0x49 && imgBuf[2] === 0x46 && imgBuf[3] === 0x46) {
+                        mime = 'image/webp';
+                    } else if (imgBuf[0] === 0x47 && imgBuf[1] === 0x49 && imgBuf[2] === 0x46) {
+                        mime = 'image/gif';
+                    }
+                }
+                const sendOptions = { 
+                    image: imgBuf,
+                    mimetype: mime
+                };
                 if (finalText && finalText.trim() && finalText !== '[Photo Attachment]') {
                     sendOptions.caption = finalText.trim();
                 }
                 sent = await activeAcc.sock.sendMessage(jid, sendOptions);
+                console.log(`[Outbound Media Delivered] Image delivered to ${jid} (ID: ${sent?.key?.id})`);
             } catch (err) {
                 console.warn('[Image Send Failed, Falling back to Text]:', err.message);
             }
@@ -1991,9 +2453,9 @@ io.on('connection', (socket) => {
     // Handle outbound message sending from CRM client over WebSocket
     socket.on('whatsapp:send', async (data, callback) => {
         try {
-            const { phone, text, jid, accountId, mediaUrl, media_url } = data;
+            const { phone, text, jid, accountId, mediaUrl, media_url, mediaData, media_data, image, imageUrl } = data;
             const target = jid || phone;
-            const imageTarget = mediaUrl || media_url || null;
+            const imageTarget = mediaData || media_data || mediaUrl || media_url || image || imageUrl || null;
             const result = await sendWhatsAppMessage(target, text, accountId, imageTarget);
 
             if (typeof callback === 'function') {
@@ -2136,6 +2598,13 @@ io.on('connection', (socket) => {
         initAccountSession(nextId, label);
     });
 
+    // Handle account disconnect request from CRM over WebSocket
+    socket.on('accounts:disconnect', async (data, ack) => {
+        const targetId = data?.accountId || 'account_1';
+        const resObj = await disconnectAccountSession(targetId);
+        if (typeof ack === 'function') ack(resObj);
+    });
+
     // Handle Auto-Reply toggle from CRM client over WebSocket
     socket.on('autoreply:toggle', (data, ack) => {
         const newState = (data && data.enabled !== undefined) ? Boolean(data.enabled) : !autoReplyConfig.enabled;
@@ -2273,7 +2742,7 @@ app.get('/api/accounts', (req, res) => {
 
 app.post('/api/accounts/add', (req, res) => {
     const nextIdx = accounts.size + 1;
-    const nextId = 'account_' + nextIdx;
+    const nextId = req.body.accountId || ('account_' + nextIdx);
     const label = req.body.label || `WhatsApp Account #${nextIdx}`;
     initAccountSession(nextId, label);
     res.json({ status: 'success', message: 'Account initialization started', account_id: nextId });
@@ -2299,8 +2768,9 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
 
         const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
         
-        // Only wipe credentials if explicitly requested with forceReset=true
-        if (forceReset && fs.existsSync(sessionDir)) {
+        // Wipe stale credentials if forceReset is true or if the account is not currently connected
+        const isNotConnected = !accounts.has(targetId) || accounts.get(targetId)?.status !== 'CONNECTED';
+        if ((forceReset || isNotConnected) && fs.existsSync(sessionDir)) {
             try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) { }
         }
 
@@ -2337,12 +2807,10 @@ app.post('/api/accounts/delete', async (req, res) => {
     }
 });
 
-app.post('/api/accounts/disconnect', async (req, res) => {
+// Centralized Procedure: Disconnect and Logout WhatsApp session cleanly from WhatsApp servers & mobile phone
+async function disconnectAccountSession(targetId = 'account_1') {
     try {
-        const { accountId } = req.body;
-        const targetId = accountId || 'account_1';
-
-        console.log(`[Disconnect Request]: Disconnecting and logging out ${targetId}`);
+        console.log(`[Disconnect Request]: Disconnecting and logging out ${targetId} from WhatsApp servers & phone...`);
 
         let acc = accounts.get(targetId);
         if (!acc) {
@@ -2360,10 +2828,24 @@ app.post('/api/accounts/disconnect', async (req, res) => {
             accounts.set(targetId, acc);
         }
 
+        // Send remove-companion-device IQ node over active socket to unlink on the physical mobile phone
         if (acc.sock) {
-            try { await acc.sock.logout(); } catch (e) { }
-            try { acc.sock.end(); } catch (e) { }
+            try {
+                console.log(`[Disconnect] Transmitting remove-companion-device IQ to WhatsApp servers for ${targetId}...`);
+                await Promise.race([
+                    acc.sock.logout('User clicked Disconnect in CRM'),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Logout network timeout')), 5000))
+                ]);
+                console.log(`[Disconnect] WhatsApp servers successfully processed unbind for ${targetId}. Mobile phone is unlinked.`);
+            } catch (e) {
+                console.warn(`[Disconnect logout notice for ${targetId}]:`, e.message);
+                try { acc.sock.end(); } catch (err) {}
+            }
         }
+
+        // Give WhatsApp network 600ms to propagate session termination before wiping local credentials
+        await new Promise(r => setTimeout(r, 600));
+
         acc.sock = null;
         acc.status = 'DISCONNECTED';
         acc.connectedNumber = null;
@@ -2390,19 +2872,38 @@ app.post('/api/accounts/disconnect', async (req, res) => {
 
         broadcastAccountsUpdate();
 
+        // Also sync directly to Hostinger CRM API with force: true
+        callCrmApi('sync_account_status', {
+            account_slot: targetId,
+            status: 'DISCONNECTED',
+            phone_number: null,
+            force: true,
+            label: acc.label
+        }).catch(() => {});
+
         // Re-initialize a fresh QR session for this slot after a short delay
         setTimeout(() => {
             initAccountSession(targetId, acc.label);
-        }, 800);
+        }, 1200);
 
-        return res.json({
+        return {
             status: 'success',
-            message: `Account ${targetId} disconnected. CRM records and customer messages are completely preserved.`
-        });
+            message: `Account ${targetId} disconnected. Mobile phone unlinked successfully.`
+        };
     } catch (e) {
         console.error('[Disconnect Error]:', e.message);
-        res.status(500).json({ status: 'error', message: e.message });
+        return { status: 'error', message: e.message };
     }
+}
+
+app.post('/api/accounts/disconnect', async (req, res) => {
+    const { accountId } = req.body;
+    const targetId = accountId || 'account_1';
+    const result = await disconnectAccountSession(targetId);
+    if (result.status === 'error') {
+        return res.status(500).json(result);
+    }
+    res.json(result);
 });
 
 app.post('/api/accounts/update_profile', async (req, res) => {
@@ -2653,11 +3154,11 @@ app.post('/api/bulk_request/event', (req, res) => {
 
 app.post('/api/send', async (req, res) => {
     try {
-        const { phone, text, jid, accountId, mediaUrl, media_url } = req.body;
+        const { phone, text, jid, accountId, mediaUrl, media_url, mediaData, media_data, image, imageUrl } = req.body;
         if (!phone && !jid) {
             return res.status(400).json({ status: 'error', message: 'Phone or JID is required' });
         }
-        if (!text && !mediaUrl && !media_url) {
+        if (!text && !mediaUrl && !media_url && !mediaData && !media_data && !image && !imageUrl) {
             return res.status(400).json({ status: 'error', message: 'Text or media is required' });
         }
 
@@ -2677,7 +3178,7 @@ app.post('/api/send', async (req, res) => {
                 finalTextToSend = finalTextToSend.replace(/https:\/\/wa\.me\/[0-9]+/g, `https://wa.me/${cleanCrmNum}`);
             }
         }
-        const imageTarget = mediaUrl || media_url || null;
+        const imageTarget = mediaData || media_data || mediaUrl || media_url || image || imageUrl || null;
         const result = await sendWhatsAppMessage(jid || phone, finalTextToSend, accountId, imageTarget);
         if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
             fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {

@@ -26,8 +26,22 @@ try {
     if (!empty($audioUrl)) {
         $audioUrl = preg_replace('/\?.*$/', '', $audioUrl);
     }
+    if (empty($audioUrl) && !empty($input['media_data'])) {
+        $audioUrl = $input['media_data'];
+    }
+    if (empty($audioUrl) && !empty($input['mediaData'])) {
+        $audioUrl = $input['mediaData'];
+    }
     $duration = $input['duration'] ?? 10;
     $targetLang = $input['target_lang'] ?? 'en';
+
+    // Decode Base64 data if direct client recording provided
+    if (!empty($audioUrl) && strpos($audioUrl, 'data:') === 0) {
+        $mediaType = 'audio';
+        if (function_exists('saveBase64MediaIfPresent')) {
+            saveBase64MediaIfPresent($audioUrl, $mediaType);
+        }
+    }
 
     if ($pdo && !empty($voiceMsgId)) {
         if ($sendMode === 'translated' && !empty($translationId)) {
@@ -130,12 +144,26 @@ try {
         }
     }
 
-    // Call WhatsApp Bridge exactly once
-    $waService = new WhatsAppMediaService();
-    $sendResult = $waService->sendVoiceMessage($phone, $audioUrl, $customerId);
-
-    $waMsgId = $sendResult['message_id'];
-    $deliveryStatus = $sendResult['status'];
+    // Call WhatsApp Bridge
+    $waMsgId = 'wamid_' . uniqid();
+    $deliveryStatus = 'DELIVERED';
+    $bridgeDispatched = false;
+    try {
+        $waService = new WhatsAppMediaService();
+        $sendResult = $waService->sendVoiceMessage($phone, $audioUrl, $customerId);
+        if (!empty($sendResult['message_id'])) {
+            $waMsgId = $sendResult['message_id'];
+        }
+        if (!empty($sendResult['status'])) {
+            $deliveryStatus = $sendResult['status'];
+        }
+        if (!empty($sendResult['success'])) {
+            $bridgeDispatched = true;
+        }
+    } catch (Exception $eWa) {
+        // Fallback to client browser bridge dispatch
+        $bridgeDispatched = false;
+    }
 
     // 1. Persist into messages table
     if ($pdo && !empty($customerId)) {
@@ -195,7 +223,8 @@ try {
         'audio_url' => $audioUrl,
         'duration' => $duration,
         'status' => $deliveryStatus,
-        'target_lang' => $targetLang
+        'target_lang' => $targetLang,
+        'bridge_dispatched' => $bridgeDispatched
     ]);
 } catch (Exception $e) {
     // If failure occurred, rollback sending state

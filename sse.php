@@ -69,6 +69,8 @@ $messagesFile = __DIR__ . '/live_messages_queue.json';
 $callsFile = __DIR__ . '/live_incoming_calls.json';
 $cUpdatesFile = __DIR__ . '/live_customer_updates.json';
 $lastCUpdatesMtime = file_exists($cUpdatesFile) ? (int)filemtime($cUpdatesFile) : 0;
+$accUpdatesFile = __DIR__ . '/live_account_updates.json';
+$lastAccUpdatesMtime = file_exists($accUpdatesFile) ? (int)filemtime($accUpdatesFile) : 0;
 
 // Tell browser's EventSource to reconnect automatically in 1.5s if stream disconnects
 echo "retry: 1500\n\n";
@@ -275,8 +277,53 @@ while (true) {
         } catch (\Throwable $e) {}
     }
 
+    // --- CHECK 4: Real-time Multi-WhatsApp Accounts & Connection State Sync ---
+    $updatedAccounts = [];
+    if (file_exists($accUpdatesFile)) {
+        $curAccMtime = (int)filemtime($accUpdatesFile);
+        if ($curAccMtime > $lastAccUpdatesMtime) {
+            $lastAccUpdatesMtime = $curAccMtime;
+            $waList = [];
+            if ($pdo) {
+                try {
+                    $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` ORDER BY `id` ASC");
+                    $waList = $waStmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (\Throwable $e) {}
+            }
+            if (empty($waList)) {
+                $cFile = __DIR__ . '/whatsapp_account_config.json';
+                if (file_exists($cFile)) {
+                    $cData = json_decode(file_get_contents($cFile), true);
+                    $waList = $cData['connected_lines'] ?? [];
+                }
+            }
+            if (!empty($waList)) {
+                $waList = array_values(array_filter($waList, function($a) {
+                    $slot = $a['account_slot'] ?? $a['id'] ?? '';
+                    $name = $a['display_name'] ?? ($a['label'] ?? '');
+                    if (in_array($slot, ['account_3', 'account_4', 'account_5']) || strpos($slot, 'account_1795') === 0) return false;
+                    if (strpos($name, 'Customer Support') !== false || strpos($name, 'Wholesale') !== false || strpos($name, 'VIP Fast-Track') !== false) return false;
+                    return true;
+                }));
+                $updatedAccounts = array_map(function($a) {
+                    return [
+                        'id' => $a['account_slot'] ?? $a['id'],
+                        'account_slot' => $a['account_slot'] ?? $a['id'],
+                        'label' => $a['display_name'] ?? ($a['label'] ?? 'WhatsApp Line'),
+                        'name' => $a['display_name'] ?? ($a['label'] ?? 'WhatsApp Line'),
+                        'phone' => $a['phone_number'] ?? '',
+                        'phone_number' => $a['phone_number'] ?? '',
+                        'status' => strtoupper($a['status'] ?? 'DISCONNECTED'),
+                        'qr_image' => $a['qr_code'] ?? null,
+                        'connected_number' => $a['phone_number'] ?? 'Awaiting Link'
+                    ];
+                }, $waList);
+            }
+        }
+    }
+
     // --- EMIT REAL-TIME SSE EVENT WHEN NEW DATA ARRIVES ---
-    if (!empty($newMessages) || !empty($assignments) || !empty($incomingCalls) || !empty($updatedCustomers)) {
+    if (!empty($newMessages) || !empty($assignments) || !empty($incomingCalls) || !empty($updatedCustomers) || !empty($updatedAccounts)) {
         echo "id: {$since}\n";
         echo "event: message\n";
         echo "data: " . json_encode([
@@ -285,6 +332,7 @@ while (true) {
             'assignments' => $assignments,
             'incoming_calls' => $incomingCalls,
             'updated_customers' => $updatedCustomers,
+            'whatsapp_accounts' => $updatedAccounts,
             'server_time' => time()
         ], JSON_UNESCAPED_UNICODE) . "\n\n";
         flush();
