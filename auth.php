@@ -101,9 +101,7 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         'staff_id' => $dbUser['id'],
                         'email' => $dbUser['email'],
                         'phone' => $dbUser['phone'],
-                        'status' => $dbUser['status'],
-                        'assignedLine' => $dbUser['assigned_line'] ?? ($dbUser['assignedLine'] ?? 'ALL'),
-                        'permissions' => !empty($dbUser['permissions']) ? (is_array($dbUser['permissions']) ? $dbUser['permissions'] : json_decode($dbUser['permissions'], true)) : null
+                        'status' => $dbUser['status']
                     ];
                 }
             }
