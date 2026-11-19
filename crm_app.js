@@ -1431,12 +1431,20 @@ function getCurrentUser() {
   }
 
   if (!user) {
-    user = { id: 'admin', staffId: 'admin', username: 'admin', role: 'admin', name: 'Super Admin' };
+    if (typeof ACTIVE_ROLE !== 'undefined' && ACTIVE_ROLE && ACTIVE_ROLE !== 'admin') {
+      const staff = (CRM_STATE?.staffList || []).find(s => s.id === ACTIVE_ROLE);
+      if (staff) user = { ...staff };
+      else user = { name: 'Sales Specialist', role: ACTIVE_ROLE, id: ACTIVE_ROLE, staffId: ACTIVE_ROLE };
+    } else {
+      user = { id: 'admin', staffId: 'admin', username: 'admin', role: 'admin', name: 'Super Admin' };
+    }
   }
 
-  if (!user.id) user.id = user.staffId || user.username || 'admin';
+  if (!user.id) user.id = user.staffId || user.role || user.username || 'admin';
   if (!user.staffId) user.staffId = user.id;
+  if (!user.name) user.name = (user.role === 'admin' || user.id === 'admin') ? 'Super Admin' : 'Staff Specialist';
 
+  CURRENT_USER = user;
   window.CURRENT_USER = user;
   window.CRM_AUTH_SESSION = user;
   CRM_AUTH_SESSION = user;
@@ -1470,42 +1478,6 @@ var SOCKET_IO = window.SOCKET_IO || null;
 var MULTI_ACCOUNTS_STATE = window.MULTI_ACCOUNTS_STATE || []; // Multi-WhatsApp accounts from Bridge
 var ACTIVE_SEND_ACCOUNT_ID = window.ACTIVE_SEND_ACCOUNT_ID || 'account_1';
 var REVEALED_CUSTOMERS = window.REVEALED_CUSTOMERS || new Set(); // Stores customer IDs whose numbers are temporarily revealed
-
-function getCurrentUser() {
-  let user = null;
-  if (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) {
-    user = CURRENT_USER;
-  } else if (typeof window !== 'undefined' && window.CURRENT_USER) {
-    user = window.CURRENT_USER;
-  } else if (typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) {
-    user = CRM_AUTH_SESSION;
-  } else if (typeof window !== 'undefined' && window.CRM_AUTH_SESSION) {
-    user = window.CRM_AUTH_SESSION;
-  } else {
-    try {
-      const sessionStr = localStorage.getItem('GRM_CRM_SESSION') || sessionStorage.getItem('GRM_CRM_SESSION');
-      if (sessionStr) {
-        user = JSON.parse(sessionStr);
-        CURRENT_USER = user;
-      }
-    } catch (e) { }
-  }
-
-  if (!user) {
-    if (typeof ACTIVE_ROLE !== 'undefined' && ACTIVE_ROLE && ACTIVE_ROLE !== 'admin') {
-      const staff = (CRM_STATE?.staffList || []).find(s => s.id === ACTIVE_ROLE);
-      if (staff) user = { ...staff };
-      else user = { name: 'Sales Specialist', role: ACTIVE_ROLE, id: ACTIVE_ROLE, staffId: ACTIVE_ROLE };
-    } else {
-      user = { id: 'admin', staffId: 'admin', username: 'admin', role: 'admin', name: 'Super Admin' };
-    }
-  }
-
-  if (!user.id) user.id = user.staffId || user.role || user.username || 'admin';
-  if (!user.staffId) user.staffId = user.id;
-  if (!user.name) user.name = (user.role === 'admin' || user.id === 'admin') ? 'Super Admin' : 'Staff Specialist';
-  return user;
-}
 
 // Global Staff Filter Helper for RBAC Isolation across Dashboard & Follow-ups
 function getStaffFilterContext() {
@@ -4776,7 +4748,8 @@ function getLoggedInStaffMobileNumber() {
 
 // Update all UI elements displaying the WhatsApp Business Phone Number
 function updateConfiguredPhoneDisplays() {
-  if (!CRM_STATE || !CRM_STATE.whatsappAccount) return;
+  try {
+    if (!CRM_STATE || !CRM_STATE.whatsappAccount) return;
 
   // =========================================================================
   // STAFF LOGIN: Replace QR scan code line with ONLY the admin-given staff mobile number
@@ -4897,7 +4870,7 @@ function updateConfiguredPhoneDisplays() {
   }
 
   const settingsLabel = document.querySelector('#settings-current-phone-label');
-  if (settingsLabel) settingsLabel.innerText = phone;
+  if (settingsLabel) settingsLabel.innerText = displayLabel || rawPhone;
 
   const isConnected = (activeStatus === 'CONNECTED');
   const isScanning = (activeStatus === 'SCAN_QR');
@@ -4962,6 +4935,9 @@ function updateConfiguredPhoneDisplays() {
   if (pageSub && ACTIVE_VIEW === 'inbox') {
     pageSub.innerText = '';
     pageSub.classList.add('hidden');
+  }
+  } catch (err) {
+    console.warn('[updateConfiguredPhoneDisplays] Notice:', err);
   }
 }
 
@@ -5428,20 +5404,15 @@ function switchView(viewName, subName, isFromHistory = false) {
   }
 
   // Enforce Role-Based Access Control
-  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined') ? CRM_AUTH_SESSION : null);
+  const currentUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : ((typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null);
   const isSuperAdminUser = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
 
-  // STRICT RULE: "staff login time admin panel dont touch there"
-  // Non-admin staff cannot access Settings or Backup under any circumstance
-  if (!isSuperAdminUser && (viewName === 'settings' || viewName === 'backup')) {
+  const canViewModule = isSuperAdminUser || (typeof canUserPerformAction === 'function' ? canUserPerformAction(viewName, 'view') : true);
+  if (!canViewModule) {
     if (typeof showToast === 'function') {
-      showToast('Admin Panel Protected', 'Staff accounts cannot access or modify Admin Panel settings.', 'lock', 'rose');
+      showToast('Access Restricted', 'Your assigned role does not have permission to view this module.', 'lock', 'rose');
     }
-    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view') && m.key !== 'settings' && m.key !== 'backup');
-    viewName = firstAllowed ? firstAllowed.key : 'inbox';
-  } else if (typeof canUserPerformAction === 'function' && !canUserPerformAction(viewName, 'view')) {
-    showToast('Access Restricted', 'Your assigned role does not have permission to view this module.', 'lock', 'rose');
-    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view') && m.key !== 'settings' && m.key !== 'backup');
+    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view'));
     viewName = firstAllowed ? firstAllowed.key : 'inbox';
   }
 
@@ -5560,57 +5531,64 @@ function switchView(viewName, subName, isFromHistory = false) {
 
   updatePageHeaderTitle();
 
-  // Trigger specific view renders
-  if (viewName === 'inbox') {
-    switchInboxSubmodule(subName || ACTIVE_INBOX_SUBMODULE || 'chats');
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      if (!ACTIVE_CUSTOMER_ID && typeof mobileBackToConversations === 'function') {
-        mobileBackToConversations();
+  // Trigger specific view renders safely
+  try {
+    if (viewName === 'inbox') {
+      switchInboxSubmodule(subName || ACTIVE_INBOX_SUBMODULE || 'chats');
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        if (!ACTIVE_CUSTOMER_ID && typeof mobileBackToConversations === 'function') {
+          mobileBackToConversations();
+        }
       }
+      renderInbox();
     }
-    renderInbox();
-  }
-  if (viewName === 'enquiries') renderEnquiriesTable();
-  if (viewName === 'dashboard') {
-    if (typeof loadOrdersOnDemand === 'function') loadOrdersOnDemand();
-    renderDashboard();
-  }
-  if (viewName === 'catalog') {
-    if (typeof loadCatalogOnDemand === 'function') loadCatalogOnDemand();
-    if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
-    renderCatalogGrid('');
-  }
-  if (viewName === 'orders') {
-    if (typeof loadOrdersOnDemand === 'function') loadOrdersOnDemand();
-    const ordersSubMenu = document.getElementById('nav-orders-submodules');
-    if (ordersSubMenu) ordersSubMenu.classList.remove('hidden');
-    switchOrdersSubmodule(subName || ACTIVE_ORDERS_SUBMODULE || 'dashboard');
-    renderOrdersModule();
-  }
-  if (viewName === 'followups') renderFollowupsCards();
-  if (viewName === 'customers') {
-    if (subName && typeof switchCustomerSubmodule === 'function') {
-      switchCustomerSubmodule(subName);
-    } else {
-      const currentSub = (typeof ACTIVE_CUSTOMERS_SUBMODULE !== 'undefined') ? ACTIVE_CUSTOMERS_SUBMODULE : 'list';
-      if (typeof switchCustomerSubmodule === 'function') {
-        switchCustomerSubmodule(currentSub);
+    if (viewName === 'enquiries') renderEnquiriesTable();
+    if (viewName === 'dashboard') {
+      if (typeof loadOrdersOnDemand === 'function') loadOrdersOnDemand();
+      renderDashboard();
+    }
+    if (viewName === 'catalog') {
+      if (typeof loadCatalogOnDemand === 'function') loadCatalogOnDemand();
+      if (typeof populateCatalogCategoryFilters === 'function') populateCatalogCategoryFilters();
+      renderCatalogGrid('');
+    }
+    if (viewName === 'orders') {
+      if (typeof loadOrdersOnDemand === 'function') loadOrdersOnDemand();
+      const ordersSubMenu = document.getElementById('nav-orders-submodules');
+      if (ordersSubMenu) ordersSubMenu.classList.remove('hidden');
+      switchOrdersSubmodule(subName || ACTIVE_ORDERS_SUBMODULE || 'dashboard');
+      renderOrdersModule();
+    }
+    if (viewName === 'followups') renderFollowupsCards();
+    if (viewName === 'customers') {
+      if (subName && typeof switchCustomerSubmodule === 'function') {
+        switchCustomerSubmodule(subName);
       } else {
-        renderCustomersGrid();
+        const currentSub = (typeof ACTIVE_CUSTOMERS_SUBMODULE !== 'undefined') ? ACTIVE_CUSTOMERS_SUBMODULE : 'list';
+        if (typeof switchCustomerSubmodule === 'function') {
+          switchCustomerSubmodule(currentSub);
+        } else {
+          renderCustomersGrid();
+        }
       }
     }
-  }
-  if (viewName === 'dnd') renderDndModule();
-  if (viewName === 'staff') {
-    if (subName && typeof switchStaffTab === 'function') switchStaffTab(subName);
-    renderStaffView();
-  }
-  if (viewName === 'audit') renderAuditTable();
-  if (viewName === 'analytics') renderAnalyticsView();
-  if (viewName === 'settings') renderWhatsAppSettings();
-  if (viewName === 'masking') renderMaskingView();
-  if (viewName === 'packing-slip-config') {
-    if (typeof renderPackingSlipConfigPage === 'function') renderPackingSlipConfigPage();
+    if (viewName === 'dnd') renderDndModule();
+    if (viewName === 'staff') {
+      if (subName && typeof switchStaffTab === 'function') switchStaffTab(subName);
+      renderStaffView();
+    }
+    if (viewName === 'audit') renderAuditTable();
+    if (viewName === 'analytics') renderAnalyticsView();
+    if (viewName === 'settings') renderWhatsAppSettings();
+    if (viewName === 'backup') {
+      if (typeof renderBackupView === 'function') renderBackupView();
+    }
+    if (viewName === 'masking') renderMaskingView();
+    if (viewName === 'packing-slip-config') {
+      if (typeof renderPackingSlipConfigPage === 'function') renderPackingSlipConfigPage();
+    }
+  } catch (renderErr) {
+    console.error('[switchView] View render exception:', renderErr);
   }
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
@@ -6038,15 +6016,17 @@ function applyRoleBasedAccessControl(user) {
     targetSubmodule = (typeof ACTIVE_CUSTOMERS_SUBMODULE !== 'undefined') ? ACTIVE_CUSTOMERS_SUBMODULE : (localStorage.getItem('GRM_CRM_ACTIVE_CUSTOMERS_SUBMODULE') || 'list');
   }
 
-  // Mobile View Landing: Staff -> 'inbox' (chats), Admin -> 'dashboard' (Desktop view untouched)
+  // Mobile View Landing: Staff -> 'inbox' (chats), Admin -> 'dashboard' (only when no explicit view in URL hash)
   const isMobile = (typeof window !== 'undefined' && window.innerWidth < 1024);
   if (isMobile) {
-    if (!isAdmin) {
-      ACTIVE_VIEW = 'inbox';
-      targetSubmodule = 'chats';
-    } else {
-      ACTIVE_VIEW = 'dashboard';
-      targetSubmodule = null;
+    if (!currentHashParts[0]) {
+      if (!isAdmin) {
+        ACTIVE_VIEW = 'inbox';
+        targetSubmodule = 'chats';
+      } else {
+        ACTIVE_VIEW = 'dashboard';
+        targetSubmodule = null;
+      }
     }
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
   }
@@ -26867,6 +26847,15 @@ function switchOrdersSubmodule(submodule) {
     localStorage.setItem('GRM_CRM_ACTIVE_ORDERS_SUBMODULE', ACTIVE_ORDERS_SUBMODULE);
   } catch (e) { }
 
+  // Clear instant-view-shield if present to allow instant view transitions
+  const shield = document.getElementById('instant-view-shield');
+  if (shield) shield.remove();
+
+  // Auto-close sidebar drawer on small/tablet screens upon navigation
+  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+    if (typeof toggleSidebar === 'function') toggleSidebar(false);
+  }
+
   // Ensure orders main view is active if not already
   if (typeof ACTIVE_VIEW === 'undefined' || ACTIVE_VIEW !== 'orders') {
     if (typeof switchView === 'function') {
@@ -32602,28 +32591,8 @@ window.populateStaffAssignedLineDropdowns = function () {
 
 // Auto-sync staff onboarding / edit action checkboxes with selected role
 function syncStaffFormPermissionsWithRole(roleName, prefix = 'staff-perm-') {
-  if (!roleName || !CRM_STATE?.rolePermissions) return;
-  const rolePerm = CRM_STATE.rolePermissions[roleName];
-  if (!rolePerm) return;
-
-  let hasView = false, hasCreate = false, hasEdit = false, hasDelete = false;
-  Object.keys(rolePerm).forEach(mod => {
-    if (mod === 'audit' || mod === 'customers') return;
-    if (rolePerm[mod]?.view) hasView = true;
-    if (rolePerm[mod]?.create) hasCreate = true;
-    if (rolePerm[mod]?.edit) hasEdit = true;
-    if (rolePerm[mod]?.delete) hasDelete = true;
-  });
-
-  const vEl = document.getElementById(`${prefix}view`);
-  const cEl = document.getElementById(`${prefix}create`);
-  const eEl = document.getElementById(`${prefix}edit`);
-  const dEl = document.getElementById(`${prefix}delete`);
-
-  if (vEl) vEl.checked = hasView;
-  if (cEl) cEl.checked = hasCreate;
-  if (eEl) eEl.checked = hasEdit;
-  if (dEl) dEl.checked = hasDelete;
+  // Action Permissions checkboxes removed from Add Staff and Edit Staff per UI design.
+  // Permissions are now resolved dynamically from the Role Base (RBAC) matrix.
 }
 window.syncStaffFormPermissionsWithRole = syncStaffFormPermissionsWithRole;
 
@@ -32653,18 +32622,6 @@ function handleCreateNewStaff(event) {
 
   const assignedLineEl = document.getElementById('staff-new-assigned-line');
   const assignedLine = assignedLineEl ? assignedLineEl.value : 'ALL';
-
-  const permView = document.getElementById('staff-perm-view')?.checked ?? true;
-  const permCreate = document.getElementById('staff-perm-create')?.checked ?? true;
-  const permEdit = document.getElementById('staff-perm-edit')?.checked ?? true;
-  const permDelete = document.getElementById('staff-perm-delete')?.checked ?? false;
-
-  const permissions = {
-    view: Boolean(permView),
-    create: Boolean(permCreate),
-    edit: Boolean(permEdit),
-    delete: Boolean(permDelete)
-  };
 
   if (!name || !phone) {
     showToast('Missing Fields', 'Please enter staff name and phone number.', 'warning', 'amber');
@@ -32710,7 +32667,7 @@ function handleCreateNewStaff(event) {
     todayHandled: 0,
     status: status || 'ACTIVE',
     assignedLine: assignedLine,
-    permissions: permissions,
+    permissions: null,
     createdAt: new Date().toISOString()
   };
 
@@ -32733,7 +32690,7 @@ function handleCreateNewStaff(event) {
       avatar: avatarInitials,
       status: status,
       assignedLine: assignedLine,
-      permissions: permissions
+      permissions: null
     })
   }).then(r => r.json()).then(res => {
     console.log('[create_staff] Server response:', res);
@@ -33632,21 +33589,6 @@ window.openEditStaffModal = function (staffId) {
   if (subtitle) subtitle.innerText = `Edit details for ${staff.name} (${staff.id})`;
   if (assignedLineSelect) assignedLineSelect.value = staff.assignedLine || 'ALL';
 
-  // Populate Permissions Checkboxes
-  const permViewEl = document.getElementById('edit-staff-perm-view');
-  const permCreateEl = document.getElementById('edit-staff-perm-create');
-  const permEditEl = document.getElementById('edit-staff-perm-edit');
-  const permDeleteEl = document.getElementById('edit-staff-perm-delete');
-
-  if (staff.permissions && typeof staff.permissions === 'object') {
-    if (permViewEl) permViewEl.checked = Boolean(staff.permissions.view);
-    if (permCreateEl) permCreateEl.checked = Boolean(staff.permissions.create);
-    if (permEditEl) permEditEl.checked = Boolean(staff.permissions.edit);
-    if (permDeleteEl) permDeleteEl.checked = Boolean(staff.permissions.delete);
-  } else {
-    syncStaffFormPermissionsWithRole(staff.role, 'edit-staff-perm-');
-  }
-
   if (roleSelect) {
     if (staff.role && !Array.from(roleSelect.options).some(o => o.value === staff.role)) {
       const opt = document.createElement('option');
@@ -33678,18 +33620,6 @@ window.handleSaveEditStaff = function (event) {
   const newPass = document.getElementById('edit-staff-password')?.value?.trim();
   const newAssignedLine = document.getElementById('edit-staff-assigned-line')?.value || 'ALL';
 
-  const newPermView = document.getElementById('edit-staff-perm-view')?.checked ?? true;
-  const newPermCreate = document.getElementById('edit-staff-perm-create')?.checked ?? true;
-  const newPermEdit = document.getElementById('edit-staff-perm-edit')?.checked ?? true;
-  const newPermDelete = document.getElementById('edit-staff-perm-delete')?.checked ?? false;
-
-  const newPermissions = {
-    view: Boolean(newPermView),
-    create: Boolean(newPermCreate),
-    edit: Boolean(newPermEdit),
-    delete: Boolean(newPermDelete)
-  };
-
   if (!newName || !newPhone) {
     alert('Please enter staff name and phone number.');
     return;
@@ -33705,7 +33635,7 @@ window.handleSaveEditStaff = function (event) {
   staff.specialization = newSpec;
   staff.status = newStatus;
   staff.assignedLine = newAssignedLine;
-  staff.permissions = newPermissions;
+  staff.permissions = null;
   staff.avatar = newName.split(' ').map(n => n[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || 'ST';
   if (newPass) {
     staff.password = newPass;
@@ -33734,7 +33664,7 @@ window.handleSaveEditStaff = function (event) {
       status: newStatus,
       avatar: staff.avatar,
       assignedLine: newAssignedLine,
-      permissions: newPermissions,
+      permissions: null,
       password: newPass || undefined
     })
   }).then(r => r.json()).then(res => {
