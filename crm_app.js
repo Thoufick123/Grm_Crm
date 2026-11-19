@@ -14064,8 +14064,15 @@ function resetInboxViewFilters() {
   try {
     const curView = (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW) ? ACTIVE_VIEW : 'inbox';
 
-    // 1. Reset Inbox View & Filters
-    const searchInput = document.getElementById('inbox-search-input') || 
+    // Visual Feedback: Spin refresh icon on header reset button
+    const resetBtn = document.getElementById('header-reset-inbox-btn');
+    const resetIcon = resetBtn ? resetBtn.querySelector('.material-symbols-outlined') : null;
+    if (resetIcon) resetIcon.classList.add('animate-spin');
+
+    // 1. Reset WhatsApp Inbox View, Search & Filters
+    const chatSearch = document.getElementById('chat-search-input');
+    if (chatSearch) chatSearch.value = '';
+    const searchInput = document.getElementById('inbox-search-input') ||
                         document.querySelector('input[placeholder*="Search customer"]') ||
                         document.querySelector('input[placeholder*="Search SKU"]');
     if (searchInput) searchInput.value = '';
@@ -14073,9 +14080,41 @@ function resetInboxViewFilters() {
     const catSel = document.getElementById('inbox-cat-select');
     if (catSel) catSel.value = 'all';
 
-    if (typeof setInboxFilter === 'function') setInboxFilter('all');
+    // Reset Line Switcher to "All Lines"
+    if (typeof switchActiveWhatsAppLine === 'function') {
+      try { switchActiveWhatsAppLine('all', 'All Lines', 'All Numbers'); } catch (e) {}
+    } else {
+      window.ACTIVE_SEND_ACCOUNT_ID = 'all';
+    }
+
+    // Reset Inbox Filter Tabs & Variables
     window.INBOX_SEARCH_QUERY = '';
+    window.INBOX_FILTER = 'all';
     window.ACTIVE_INBOX_FILTER = 'all';
+    if (typeof setInboxFilter === 'function') {
+      setInboxFilter('all');
+    }
+
+    // Break DOM cache fingerprints so conversation queue and messages immediately re-render
+    window._FORCE_CONV_LIST_RENDER = true;
+    const convContainer = document.getElementById('conversation-list-container');
+    if (convContainer) convContainer._lastConvListFp = null;
+
+    // Mobile View Handling: Return to conversation queue if viewing a specific customer
+    const isMobile = (typeof window !== 'undefined' && window.innerWidth < 768);
+    if (isMobile) {
+      window.ACTIVE_CUSTOMER_ID = null;
+      if (CRM_STATE) CRM_STATE.activeCustomerId = null;
+      const leftPanel = document.getElementById('inbox-left-panel');
+      if (leftPanel) {
+        leftPanel.classList.remove('hidden');
+        leftPanel.style.display = '';
+      }
+      const centerPanel = document.getElementById('chat-center-panel');
+      if (centerPanel) {
+        centerPanel.classList.add('hidden');
+      }
+    }
 
     // 2. Reset Catalog Filters & Search if active or present
     const catSearch = document.getElementById('catalog-search-input');
@@ -14116,14 +14155,23 @@ function resetInboxViewFilters() {
       syncInboundMessagesNow(true);
     }
 
-    if (typeof renderInbox === 'function' && curView === 'inbox') renderInbox();
+    if (typeof renderInbox === 'function' && curView === 'inbox') {
+      renderInbox();
+    }
     if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
 
+    setTimeout(() => {
+      if (resetIcon) resetIcon.classList.remove('animate-spin');
+    }, 800);
+
     if (typeof showToast === 'function') {
-      showToast('Filters & Data Reset', 'Search filters cleared and live CRM data refreshed from server.', 'refresh', 'emerald');
+      showToast('WhatsApp Inbox Reset', 'Search cleared, filters reset to All Inboxes, and live queue refreshed.', 'refresh', 'emerald');
     }
   } catch (err) {
     console.error('Error resetting view filters:', err);
+    const resetBtn = document.getElementById('header-reset-inbox-btn');
+    const resetIcon = resetBtn ? resetBtn.querySelector('.material-symbols-outlined') : null;
+    if (resetIcon) resetIcon.classList.remove('animate-spin');
   }
 }
 window.resetInboxViewFilters = resetInboxViewFilters;
@@ -14146,11 +14194,29 @@ async function resetInboxMessages(skipAlert) {
       if (CRM_STATE) {
         CRM_STATE.queries = [];
         CRM_STATE.conversations = {};
+        if (Array.isArray(CRM_STATE.customers)) {
+          CRM_STATE.customers.forEach(c => {
+            if (c) {
+              c.lastMessage = '';
+              c.last_message = '';
+              c.lastMessageAt = '';
+              c.last_message_at = '';
+              c.unreadCount = 0;
+              c.unread_count = 0;
+            }
+          });
+        }
       }
       try {
         localStorage.removeItem('GRM_CRM_STATE_V2_5');
         localStorage.removeItem('GRM_CRM_STATE');
       } catch (e) {}
+
+      window.ACTIVE_CUSTOMER_ID = null;
+      window._FORCE_CONV_LIST_RENDER = true;
+      const convContainer = document.getElementById('conversation-list-container');
+      if (convContainer) convContainer._lastConvListFp = null;
+
       if (typeof syncLiveCRMData === 'function') syncLiveCRMData(true);
       if (typeof renderInbox === 'function') renderInbox();
       if (!skipAlert && typeof showToast === 'function') {

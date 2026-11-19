@@ -1742,6 +1742,8 @@ if ($action === 'clear_inbox' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pdo) {
             $pdo->exec("DELETE FROM `messages`");
             $pdo->exec("DELETE FROM `queries`");
+            $pdo->exec("UPDATE `customers` SET `last_message` = NULL, `last_message_at` = NULL, `unread_count` = 0");
+            $pdo->exec("DELETE FROM `customers` WHERE `customer_type` = 'New WhatsApp Customer' OR `tags` LIKE '%Live Inbound%' OR `name` LIKE 'Customer (%'");
         }
         if (file_exists($messagesFile)) {
             file_put_contents($messagesFile, json_encode([]));
