@@ -1513,7 +1513,7 @@
               <!-- Rendered dynamically by JS -->
             </div>
 
-            <div class="p-2 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
+            <div id="phone-dropdown-add-line-footer" class="p-2 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between admin-only-ui">
               <button type="button" onclick="handleHeaderAddNewWhatsAppLine()"
                 class="w-full text-center py-1.5 px-3 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
                 <span class="material-symbols-outlined text-[16px] text-emerald-600">qr_code_scanner</span>
@@ -1525,7 +1525,7 @@
 
         <!-- Number Masking & Lead Privacy Toggle Button -->
         <button onclick="toggleGlobalPhoneMasking()" id="btn-mask-toggle"
-          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-semibold transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
+          class="admin-only-ui flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-semibold transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
           title="Toggle Number Masking (Protects customer phone numbers from unauthorized export)">
           <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-amber-700" id="mask-icon">lock</span>
           <span data-i18n="header.masking">Masking:</span>
@@ -4926,6 +4926,75 @@
                   </div>
                 </div>
 
+                <!-- Assigned WhatsApp Line Option (Admin-Configured Numbers) -->
+                <div>
+                  <label class="block font-bold text-slate-800 mb-1">Assigned WhatsApp Line / Business Number:</label>
+                  <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">phone_android</span>
+                    <select id="staff-new-assigned-line"
+                      class="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+                      <option value="ALL">🌐 All Admin WhatsApp Lines (Show all lines added by admin)</option>
+                    </select>
+                  </div>
+                  <span class="text-[10px] text-slate-400 mt-1 block">When this staff member logs in, "Switch WhatsApp Line" shows only the mobile number(s) added by Admin.</span>
+                </div>
+
+                <!-- Granular Action Permissions (RBAC) -->
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                    <div>
+                      <label class="block font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px] text-indigo-600">admin_panel_settings</span>
+                        <span>Staff Action Permissions (Admin Configured Access Control)</span>
+                      </label>
+                      <p class="text-[11px] text-slate-500">Configure what actions this staff member can perform upon login. Admin panel cannot be touched by staff.</p>
+                    </div>
+                    <!-- Quick Permission Presets -->
+                    <div class="flex items-center gap-1 flex-wrap">
+                      <span class="text-[10px] font-bold text-slate-400 mr-1">Presets:</span>
+                      <button type="button" onclick="setStaffFormPermissionsPreset('view', 'staff-perm')" class="px-2 py-1 bg-white hover:bg-sky-50 text-sky-700 border border-slate-200 hover:border-sky-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="Only View actions permitted">👁️ View Only</button>
+                      <button type="button" onclick="setStaffFormPermissionsPreset('create', 'staff-perm')" class="px-2 py-1 bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="Only Create actions permitted">➕ Create Only</button>
+                      <button type="button" onclick="setStaffFormPermissionsPreset('edit', 'staff-perm')" class="px-2 py-1 bg-white hover:bg-amber-50 text-amber-700 border border-slate-200 hover:border-amber-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="Only Edit actions permitted">✏️ Edit Only</button>
+                      <button type="button" onclick="setStaffFormPermissionsPreset('delete', 'staff-perm')" class="px-2 py-1 bg-white hover:bg-rose-50 text-rose-700 border border-slate-200 hover:border-rose-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="Only Delete actions permitted">🗑️ Delete Only</button>
+                      <button type="button" onclick="setStaffFormPermissionsPreset('full', 'staff-perm')" class="px-2 py-1 bg-white hover:bg-purple-50 text-purple-700 border border-slate-200 hover:border-purple-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="All actions permitted">⭐ Full Access</button>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <label class="flex items-start gap-2 p-2.5 bg-white rounded-xl border border-slate-200 hover:border-sky-300 transition cursor-pointer">
+                      <input type="checkbox" id="staff-perm-view" checked class="mt-0.5 rounded text-brand-wa focus:ring-brand-wa">
+                      <div>
+                        <span class="font-bold text-slate-900 text-xs block">View Access</span>
+                        <span class="text-[10px] text-slate-400">Can view chats, orders, catalog &amp; customer profiles</span>
+                      </div>
+                    </label>
+
+                    <label class="flex items-start gap-2 p-2.5 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 transition cursor-pointer">
+                      <input type="checkbox" id="staff-perm-create" checked class="mt-0.5 rounded text-brand-wa focus:ring-brand-wa">
+                      <div>
+                        <span class="font-bold text-slate-900 text-xs block">Create Access</span>
+                        <span class="text-[10px] text-slate-400">Can book orders, send messages &amp; register leads</span>
+                      </div>
+                    </label>
+
+                    <label class="flex items-start gap-2 p-2.5 bg-white rounded-xl border border-slate-200 hover:border-amber-300 transition cursor-pointer">
+                      <input type="checkbox" id="staff-perm-edit" checked class="mt-0.5 rounded text-brand-wa focus:ring-brand-wa">
+                      <div>
+                        <span class="font-bold text-slate-900 text-xs block">Edit Access</span>
+                        <span class="text-[10px] text-slate-400">Can modify order details, change stages &amp; status</span>
+                      </div>
+                    </label>
+
+                    <label class="flex items-start gap-2 p-2.5 bg-white rounded-xl border border-slate-200 hover:border-rose-300 transition cursor-pointer">
+                      <input type="checkbox" id="staff-perm-delete" class="mt-0.5 rounded text-brand-wa focus:ring-brand-wa">
+                      <div>
+                        <span class="font-bold text-slate-900 text-xs block">Delete Access</span>
+                        <span class="text-[10px] text-slate-400">Can delete orders, inquiries &amp; entries</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
                 <!-- Password Row -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-start">
                   <div>
@@ -6945,6 +7014,75 @@
             </button>
           </div>
           <span class="text-[10px] text-slate-400 mt-1 block">Only enter a password if you want to reset the staff member's login password.</span>
+        </div>
+
+        <!-- Assigned WhatsApp Line Option (Admin-Configured Numbers) -->
+        <div>
+          <label class="block font-bold text-slate-800 mb-1">Assigned WhatsApp Line / Business Number:</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">phone_android</span>
+            <select id="edit-staff-assigned-line"
+              class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs text-slate-800 focus:ring-2 focus:ring-brand-wa">
+              <option value="ALL">🌐 All Admin WhatsApp Lines (Show all lines added by admin)</option>
+            </select>
+          </div>
+          <span class="text-[10px] text-slate-400 mt-1 block">When this staff member logs in, "Switch WhatsApp Line" shows only the mobile number(s) added by Admin.</span>
+        </div>
+
+        <!-- Granular Action Permissions (RBAC) -->
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+            <div>
+              <label class="block font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px] text-indigo-600">admin_panel_settings</span>
+                <span>Staff Action Permissions (Admin Configured Access Control)</span>
+              </label>
+              <p class="text-[11px] text-slate-500">Configure what actions this staff member can perform upon login. Admin panel cannot be touched by staff.</p>
+            </div>
+            <!-- Quick Permission Presets -->
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="text-[10px] font-bold text-slate-400 mr-1">Presets:</span>
+              <button type="button" onclick="setStaffFormPermissionsPreset('view', 'edit-staff-perm')" class="px-2 py-1 bg-white hover:bg-sky-50 text-sky-700 border border-slate-200 hover:border-sky-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="Only View actions permitted">👁️ View Only</button>
+              <button type="button" onclick="setStaffFormPermissionsPreset('create', 'edit-staff-perm')" class="px-2 py-1 bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="Only Create actions permitted">➕ Create Only</button>
+              <button type="button" onclick="setStaffFormPermissionsPreset('edit', 'edit-staff-perm')" class="px-2 py-1 bg-white hover:bg-amber-50 text-amber-700 border border-slate-200 hover:border-amber-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="Only Edit actions permitted">✏️ Edit Only</button>
+              <button type="button" onclick="setStaffFormPermissionsPreset('delete', 'edit-staff-perm')" class="px-2 py-1 bg-white hover:bg-rose-50 text-rose-700 border border-slate-200 hover:border-rose-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="Only Delete actions permitted">🗑️ Delete Only</button>
+              <button type="button" onclick="setStaffFormPermissionsPreset('full', 'edit-staff-perm')" class="px-2 py-1 bg-white hover:bg-purple-50 text-purple-700 border border-slate-200 hover:border-purple-300 rounded-lg text-[10px] font-bold transition cursor-pointer" title="All actions permitted">⭐ Full Access</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <label class="flex items-start gap-2 p-2.5 bg-white rounded-xl border border-slate-200 hover:border-sky-300 transition cursor-pointer">
+              <input type="checkbox" id="edit-staff-perm-view" class="mt-0.5 rounded text-brand-wa focus:ring-brand-wa">
+              <div>
+                <span class="font-bold text-slate-900 text-xs block">View Access</span>
+                <span class="text-[10px] text-slate-400">Can view chats, orders, catalog &amp; customer profiles</span>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 p-2.5 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 transition cursor-pointer">
+              <input type="checkbox" id="edit-staff-perm-create" class="mt-0.5 rounded text-brand-wa focus:ring-brand-wa">
+              <div>
+                <span class="font-bold text-slate-900 text-xs block">Create Access</span>
+                <span class="text-[10px] text-slate-400">Can book orders, send messages &amp; register leads</span>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 p-2.5 bg-white rounded-xl border border-slate-200 hover:border-amber-300 transition cursor-pointer">
+              <input type="checkbox" id="edit-staff-perm-edit" class="mt-0.5 rounded text-brand-wa focus:ring-brand-wa">
+              <div>
+                <span class="font-bold text-slate-900 text-xs block">Edit Access</span>
+                <span class="text-[10px] text-slate-400">Can modify order details, change stages &amp; status</span>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 p-2.5 bg-white rounded-xl border border-slate-200 hover:border-rose-300 transition cursor-pointer">
+              <input type="checkbox" id="edit-staff-perm-delete" class="mt-0.5 rounded text-brand-wa focus:ring-brand-wa">
+              <div>
+                <span class="font-bold text-slate-900 text-xs block">Delete Access</span>
+                <span class="text-[10px] text-slate-400">Can delete orders, inquiries &amp; entries</span>
+              </div>
+            </label>
+          </div>
         </div>
 
         <div class="pt-3 flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2 border-t border-slate-200">
@@ -12282,7 +12420,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261119_edit_order_fixed_v17"></script>
+  <script src="crm_app.js?v=20261119_staff_switch_line_rbac_v18"></script>
 </body>
 
 </html>

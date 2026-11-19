@@ -499,10 +499,35 @@ function canUserPerformAction(moduleName, action) {
     return false;
   }
 
-  if (user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.name === 'Super Admin' || (user.title && user.title.includes('Admin'))) {
+  const isSuperAdmin = user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin' || user.name === 'Super Admin' || (user.title && user.title.includes('Admin'));
+  if (isSuperAdmin) {
     return true;
   }
 
+  // Non-admin staff can NEVER touch or perform actions on sensitive admin modules
+  const sensitiveAdminModules = ['settings', 'backup', 'masking'];
+  if (sensitiveAdminModules.includes(moduleName)) {
+    return false;
+  }
+
+  // 1. Check individual staff permissions configured by Admin during staff onboarding / editing
+  const staffId = user.staff_id || user.staffId || user.id || user.username;
+  const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === staffId || s.username === user.username || s.name === user.name);
+  const staffPerms = (staffObj && staffObj.permissions) ? staffObj.permissions : (user.permissions ? user.permissions : null);
+
+  if (staffPerms && typeof staffPerms === 'object' && typeof staffPerms[action] === 'boolean') {
+    // If Admin explicitly set this action permission to false, strictly DENY!
+    if (!staffPerms[action]) {
+      return false;
+    }
+    // If the Admin enabled this action, allow it for operational modules
+    if (moduleName === 'staff' && action !== 'view') {
+      return false; // Staff cannot create/edit/delete other staff members
+    }
+    return true;
+  }
+
+  // 2. Fallback to Role Permissions Matrix
   initRolePermissionsState();
   const roleName = getUserAssignedRoleName(user);
 
@@ -529,10 +554,7 @@ function canUserPerformAction(moduleName, action) {
   }
 
   if (moduleName === 'masking') {
-    if (rolePerms && rolePerms.masking && rolePerms.masking[action] !== undefined) {
-      return Boolean(rolePerms.masking[action]);
-    }
-    return action === 'view' || action === 'create';
+    return false; // Masking master config is strictly admin only
   }
 
   if (!rolePerms || !rolePerms[moduleName]) {
@@ -566,7 +588,7 @@ window.canUserPerformAction = canUserPerformAction;
 function enforceGranularActionPermissions() {
   const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
   const isSuperAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
-  // Performance optimization: Super Admin has full unrestricted access — skip expensive 40+ querySelector scans
+  // Performance optimization: Super Admin has full unrestricted access — skip expensive scans
   if (isSuperAdmin) return;
 
   // 1. Staff Module Actions
@@ -611,21 +633,19 @@ function enforceGranularActionPermissions() {
   const navOrdersSub = document.getElementById('nav-orders-submodules');
   if (navOrdersSub && !canOrderView) navOrdersSub.style.display = 'none';
 
-  // Create controls (New standalone order booking)
-  const canBookPerm = isSuperAdmin || canUserPerformAction('orders', 'create') || canUserPerformAction('orders', 'edit') || canUserPerformAction('inbox', 'edit') || canUserPerformAction('inbox', 'create');
+  // Create controls: strictly require orders.create permission
   const btnHeaderBookOrder = document.getElementById('btn-header-book-order');
-  if (btnHeaderBookOrder) btnHeaderBookOrder.style.display = canBookPerm ? '' : 'none';
+  if (btnHeaderBookOrder) btnHeaderBookOrder.style.display = canOrderCreate ? '' : 'none';
   document.querySelectorAll('[onclick*="openOrderModal"]:not(.btn-move-to-order)').forEach(el => {
-    el.style.display = canBookPerm ? '' : 'none';
+    el.style.display = canOrderCreate ? '' : 'none';
   });
 
-  // Edit controls for Move to Order (requires Edit or Create access)
-  const canMoveToOrderPerm = isSuperAdmin || canUserPerformAction('orders', 'edit') || canUserPerformAction('orders', 'create') || canUserPerformAction('inbox', 'edit') || canUserPerformAction('inbox', 'create');
+  // Move to Order controls (converting customer conversation to a new booked order — requires create access)
   document.querySelectorAll('.btn-move-to-order, [data-action="move-to-order"], [onclick*="modal-convert-order"], [onclick*="openConvertOrderModal"], [onclick*="openOrderFromSingleChosenProduct"], [onclick*="openOrderFromSelectedChosenProducts"]').forEach(el => {
-    el.style.display = canMoveToOrderPerm ? '' : 'none';
+    el.style.display = canOrderCreate ? '' : 'none';
   });
   const chosenProductsBulkBar = document.getElementById('chosen-products-bulk-bar');
-  if (chosenProductsBulkBar && !canMoveToOrderPerm) chosenProductsBulkBar.style.display = 'none';
+  if (chosenProductsBulkBar && !canOrderCreate) chosenProductsBulkBar.style.display = 'none';
 
   // Edit controls in modal
   const btnSaveEditOrder = document.getElementById('btn-save-edit-order');
@@ -635,17 +655,40 @@ function enforceGranularActionPermissions() {
   const btnDeleteOrderModal = document.getElementById('btn-delete-order-modal');
   if (btnDeleteOrderModal) btnDeleteOrderModal.style.display = canOrderDelete ? '' : 'none';
 
-  // 3. Backup Hub Actions
-  const canBackupCreate = isSuperAdmin || canUserPerformAction('backup', 'create');
-  const canBackupEdit = isSuperAdmin || canUserPerformAction('backup', 'edit');
-  const canBackupDelete = isSuperAdmin || canUserPerformAction('backup', 'delete');
+  // 3. Inbox / Chat Module Actions
+  const canInboxCreate = isSuperAdmin || canUserPerformAction('inbox', 'create');
+  const canInboxEdit = isSuperAdmin || canUserPerformAction('inbox', 'edit');
+  const canInboxDelete = isSuperAdmin || canUserPerformAction('inbox', 'delete');
 
+  const chatInput = document.getElementById('chat-input-text');
+  const btnSend = document.getElementById('btn-send-message');
+  const btnVoice = document.getElementById('btn-voice-note');
+  if (chatInput) {
+    if (!canInboxCreate) {
+      chatInput.setAttribute('readonly', 'true');
+      chatInput.placeholder = '🔒 View-Only Mode: message sending restricted for this account';
+    } else {
+      chatInput.removeAttribute('readonly');
+      chatInput.placeholder = 'Type a message or response...';
+    }
+  }
+  if (btnSend) btnSend.style.display = canInboxCreate ? '' : 'none';
+  if (btnVoice) btnVoice.style.display = canInboxCreate ? '' : 'none';
+
+  const staffAssignSelect = document.getElementById('chat-staff-assign-select');
+  if (staffAssignSelect) staffAssignSelect.disabled = !canInboxEdit;
+
+  // 4. Backup Hub Actions (Admin Only)
   const cardExport = document.getElementById('card-backup-export');
-  if (cardExport) cardExport.style.display = canBackupCreate ? '' : 'none';
+  if (cardExport) cardExport.style.display = isSuperAdmin ? '' : 'none';
   const cardRestore = document.getElementById('card-backup-restore');
-  if (cardRestore) cardRestore.style.display = canBackupEdit ? '' : 'none';
+  if (cardRestore) cardRestore.style.display = isSuperAdmin ? '' : 'none';
   const cardReset = document.getElementById('card-backup-reset');
-  if (cardReset) cardReset.style.display = canBackupDelete ? '' : 'none';
+  if (cardReset) cardReset.style.display = isSuperAdmin ? '' : 'none';
+
+  // 5. Hide Add Line Footer from Phone Dropdown for Staff
+  const addLineFooter = document.getElementById('phone-dropdown-add-line-footer');
+  if (addLineFooter) addLineFooter.style.display = isSuperAdmin ? '' : 'none';
 
   // 4. Catalog Actions
   const canCatView = isSuperAdmin || canUserPerformAction('catalog', 'view');
@@ -756,13 +799,13 @@ function enforceGranularActionPermissions() {
   });
 
   // 8. Inbox / Enquiries Edit (Handling Staff Change)
-  const canInboxEdit = isSuperAdmin || canUserPerformAction('inbox', 'edit') || canUserPerformAction('enquiries', 'edit');
+  const canInboxReassignEdit = isSuperAdmin || canUserPerformAction('inbox', 'edit') || canUserPerformAction('enquiries', 'edit');
   document.querySelectorAll('[onclick*="openStaffAssignModal"], [onclick*="quickReassignQueryStaff"]').forEach(el => {
-    el.style.display = canInboxEdit ? '' : 'none';
+    el.style.display = canInboxReassignEdit ? '' : 'none';
   });
   document.querySelectorAll('select[onchange*="quickReassignQueryStaff"]').forEach(sel => {
     const parentContainer = sel.closest('.border-t') || sel.parentElement;
-    if (parentContainer) parentContainer.style.display = canInboxEdit ? '' : 'none';
+    if (parentContainer) parentContainer.style.display = canInboxReassignEdit ? '' : 'none';
   });
 
   // 9. Auto-Reply Hub Pre-Set Rules Actions
@@ -4229,6 +4272,14 @@ function getAvailableWhatsAppAccounts() {
 
 function handleHeaderAddNewWhatsAppLine() {
   closePhoneSwitcherDropdown();
+  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null;
+  const isSuperAdmin = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
+  if (!isSuperAdmin) {
+    if (typeof showToast === 'function') {
+      showToast('Admin Panel Protected', 'Staff accounts cannot link or modify WhatsApp lines. Please contact Super Admin.', 'lock', 'rose');
+    }
+    return;
+  }
   if (typeof switchView === 'function') {
     switchView('settings');
   }
@@ -4285,13 +4336,73 @@ function closePhoneSwitcherDropdown() {
 function renderPhoneSwitcherDropdown() {
   const listContainer = document.getElementById('phone-dropdown-accounts-list');
   const countBadge = document.getElementById('dropdown-connected-count');
+  const addLineFooter = document.getElementById('phone-dropdown-add-line-footer');
   if (!listContainer) return;
 
-  const accounts = getAvailableWhatsAppAccounts();
-  const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593').replace(/\s+/g, '');
+  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined') ? CRM_AUTH_SESSION : null);
+  const isSuperAdmin = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
+
+  // STRICT RULE: Staff login time Admin Panel cannot be touched!
+  // Hide "+ Scan New WhatsApp Line / QR" footer button completely for staff
+  if (addLineFooter) {
+    if (isSuperAdmin) {
+      addLineFooter.classList.remove('hidden');
+      addLineFooter.style.display = '';
+    } else {
+      addLineFooter.classList.add('hidden');
+      addLineFooter.style.display = 'none';
+    }
+  }
+
+  let accounts = getAvailableWhatsAppAccounts();
+
+  // STRICT RULE: "staff login time Switch WhatsApp Line showbased on admin login mobile no add there only"
+  // For Staff Workstation: show ONLY the accounts with active/connected mobile numbers added by Admin!
+  if (!isSuperAdmin) {
+    accounts = accounts.filter(acc => {
+      const phone = (acc.connected_number || acc.phone_number || acc.phone || '').trim();
+      const isLive = acc.status === 'CONNECTED';
+      const hasRealPhone = phone && phone !== 'Awaiting Link' && phone !== 'Scan QR Code';
+      return isLive || hasRealPhone;
+    });
+
+    // Fallback to Admin's configured primary line if array is empty
+    if (accounts.length === 0 && CRM_STATE?.whatsappAccount?.phoneNumber && CRM_STATE.whatsappAccount.phoneNumber !== 'Awaiting Link') {
+      accounts = [{
+        id: 'account_1',
+        label: CRM_STATE.whatsappAccount.businessName || 'Primary WhatsApp',
+        status: CRM_STATE.whatsappAccount.status || 'CONNECTED',
+        connected_number: CRM_STATE.whatsappAccount.phoneNumber,
+        brand_name: CRM_STATE.whatsappAccount.businessName || 'Primary Line'
+      }];
+    }
+
+    // If staff has a specific assigned WhatsApp line configured by Admin, filter to it
+    const staffId = currentUser?.staff_id || currentUser?.staffId || currentUser?.id || currentUser?.username;
+    const staffObj = (CRM_STATE?.staffList || []).find(s => s.id === staffId || s.username === currentUser?.username);
+    if (staffObj && staffObj.assignedLine && staffObj.assignedLine !== 'ALL') {
+      const assignedFiltered = accounts.filter(a => a.id === staffObj.assignedLine || a.connected_number === staffObj.assignedLine);
+      if (assignedFiltered.length > 0) {
+        accounts = assignedFiltered;
+      }
+    }
+  }
+
+  const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998').replace(/\s+/g, '');
 
   if (countBadge) {
     countBadge.innerText = `${accounts.length} Active Line${accounts.length > 1 ? 's' : ''}`;
+  }
+
+  if (accounts.length === 0) {
+    listContainer.innerHTML = `
+      <div class="p-4 text-center text-slate-400">
+        <span class="material-symbols-outlined text-[24px] text-slate-300 mb-1">phonelink_off</span>
+        <p class="font-bold text-xs text-slate-700">No WhatsApp Lines Available</p>
+        <p class="text-[11px] text-slate-400 mt-0.5">Please wait for Super Admin to connect WhatsApp in Admin Panel.</p>
+      </div>
+    `;
+    return;
   }
 
   const availableAccountIds = accounts.map(a => a.id);
@@ -4329,7 +4440,7 @@ function renderPhoneSwitcherDropdown() {
     const isCurrent = (acc.id === ACTIVE_SEND_ACCOUNT_ID) || (accounts.length === 1) || (ACTIVE_SEND_ACCOUNT_ID !== 'all' && accCleanPhone === currentPhone);
     const isConn = acc.status === 'CONNECTED';
     const isScan = acc.status === 'SCAN_QR';
-    const displayPhone = isConn ? (acc.connected_number || '+91 86680 07593') : (isScan ? 'Scan QR Code' : 'Awaiting Link');
+    const displayPhone = isConn ? (acc.connected_number || '+91 99435 57998') : (isScan ? (isSuperAdmin ? 'Scan QR Code' : '+91 99435 57998') : (acc.connected_number || 'Awaiting Link'));
     const custCount = (CRM_STATE?.customers || []).filter(c => {
       const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
       return (c.accountId || (q ? q.accountId : 'account_1')) === acc.id;
@@ -4564,13 +4675,20 @@ function formatPhoneNumberPretty(phone) {
 function updateConfiguredPhoneDisplays() {
   if (!CRM_STATE || !CRM_STATE.whatsappAccount) return;
   const accounts = getAvailableWhatsAppAccounts();
-  const rawPhone = CRM_STATE.whatsappAccount.phoneNumber || '+91 86680 07593';
+  const rawPhone = CRM_STATE.whatsappAccount.phoneNumber || '+91 99435 57998';
+  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined') ? CRM_AUTH_SESSION : null);
+  const isSuperAdmin = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
 
   let displayLabel = '';
   let activeStatus = 'DISCONNECTED';
 
   if (ACTIVE_SEND_ACCOUNT_ID === 'all') {
-    displayLabel = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : (accounts[0] && accounts[0].status === 'CONNECTED' ? formatPhoneNumberPretty(accounts[0].connected_number) : '+Scan QR Code');
+    if (isSuperAdmin) {
+      displayLabel = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : (accounts[0] && accounts[0].status === 'CONNECTED' ? formatPhoneNumberPretty(accounts[0].connected_number) : '+Scan QR Code');
+    } else {
+      const firstLive = accounts.find(a => a.status === 'CONNECTED' && a.connected_number && a.connected_number !== 'Awaiting Link');
+      displayLabel = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : (firstLive ? formatPhoneNumberPretty(firstLive.connected_number) : formatPhoneNumberPretty(rawPhone));
+    }
     activeStatus = accounts.some(a => a.status === 'CONNECTED') ? 'CONNECTED' : (accounts.some(a => a.status === 'SCAN_QR') ? 'SCAN_QR' : 'DISCONNECTED');
   } else {
     const cur = accounts.find(a => a.id === ACTIVE_SEND_ACCOUNT_ID) || accounts[0];
@@ -4579,9 +4697,9 @@ function updateConfiguredPhoneDisplays() {
       if (activeStatus === 'CONNECTED' && cur.connected_number && cur.connected_number !== 'Awaiting Link') {
         displayLabel = formatPhoneNumberPretty(cur.connected_number);
       } else if (activeStatus === 'SCAN_QR') {
-        displayLabel = '+Scan QR Code';
+        displayLabel = isSuperAdmin ? '+Scan QR Code' : formatPhoneNumberPretty(rawPhone);
       } else {
-        displayLabel = (cur.connected_number && cur.connected_number !== 'Awaiting Link') ? formatPhoneNumberPretty(cur.connected_number) : 'Awaiting Link';
+        displayLabel = (cur.connected_number && cur.connected_number !== 'Awaiting Link') ? formatPhoneNumberPretty(cur.connected_number) : (isSuperAdmin ? 'Awaiting Link' : formatPhoneNumberPretty(rawPhone));
       }
     } else {
       displayLabel = formatPhoneNumberPretty(rawPhone);
@@ -5100,9 +5218,20 @@ function switchView(viewName, subName, isFromHistory = false) {
   }
 
   // Enforce Role-Based Access Control
-  if (typeof canUserPerformAction === 'function' && !canUserPerformAction(viewName, 'view')) {
+  const currentUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined') ? CRM_AUTH_SESSION : null);
+  const isSuperAdminUser = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
+
+  // STRICT RULE: "staff login time admin panel dont touch there"
+  // Non-admin staff cannot access Settings or Backup under any circumstance
+  if (!isSuperAdminUser && (viewName === 'settings' || viewName === 'backup')) {
+    if (typeof showToast === 'function') {
+      showToast('Admin Panel Protected', 'Staff accounts cannot access or modify Admin Panel settings.', 'lock', 'rose');
+    }
+    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view') && m.key !== 'settings' && m.key !== 'backup');
+    viewName = firstAllowed ? firstAllowed.key : 'inbox';
+  } else if (typeof canUserPerformAction === 'function' && !canUserPerformAction(viewName, 'view')) {
     showToast('Access Restricted', 'Your assigned role does not have permission to view this module.', 'lock', 'rose');
-    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view'));
+    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view') && m.key !== 'settings' && m.key !== 'backup');
     viewName = firstAllowed ? firstAllowed.key : 'inbox';
   }
 
@@ -27330,6 +27459,14 @@ function renderOrdersHistoryTable() {
               </button>
               ` : ''}
 
+              ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'delete')) ? `
+              <button type="button" onclick="confirmDeleteOrder('${ord.id}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-rose-300" title="Delete Order">
+                <span class="material-symbols-outlined text-[14px]">delete</span>
+                <span class="text-[11px]">Delete</span>
+              </button>
+              ` : ''}
+
+              ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'view')) ? `
               <!-- View Packing Slip -->
               <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-teal-300" title="View &amp; Print Packing Slip">
                 <span class="material-symbols-outlined text-[14px]">local_shipping</span>
@@ -27347,6 +27484,7 @@ function renderOrdersHistoryTable() {
                 <span class="material-symbols-outlined text-[14px]">chat</span>
                 <span class="hidden sm:inline text-[11px]">Chat</span>
               </button>
+              ` : ''}
             </div>
           </td>
         </tr>
@@ -27556,28 +27694,37 @@ function renderOrdersHistoryTable() {
           </div>
 
           <!-- Action Buttons Bar -->
-          <div class="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100">
+          <div class="flex items-center gap-1.5 pt-2 border-t border-slate-100 flex-wrap">
             ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'edit')) ? `
-              <button type="button" onclick="openEditOrderModal('${ord.id}')" class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-blue-200">
+              <button type="button" onclick="openEditOrderModal('${ord.id}')" class="flex-1 min-w-[70px] py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-blue-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[15px]">edit</span>
                 <span>Edit</span>
               </button>
-            ` : `<div class="hidden"></div>`}
+            ` : ''}
 
-            <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="py-1.5 px-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-teal-200">
-              <span class="material-symbols-outlined text-[15px]">local_shipping</span>
-              <span>Slip</span>
-            </button>
+            ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'delete')) ? `
+              <button type="button" onclick="confirmDeleteOrder('${ord.id}')" class="flex-1 min-w-[70px] py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-rose-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">delete</span>
+                <span>Delete</span>
+              </button>
+            ` : ''}
 
-            <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-slate-200">
-              <span class="material-symbols-outlined text-[15px]">receipt_long</span>
-              <span>Invoice</span>
-            </button>
+            ${(typeof canUserPerformAction === 'function' && canUserPerformAction('orders', 'view')) ? `
+              <button type="button" onclick="openOrderPackingSlipModal('${ord.id}')" class="flex-1 min-w-[65px] py-1.5 px-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-teal-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">local_shipping</span>
+                <span>Slip</span>
+              </button>
 
-            <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-emerald-200">
-              <span class="material-symbols-outlined text-[15px]">chat</span>
-              <span>Chat</span>
-            </button>
+              <button type="button" onclick="openOrderInvoiceModal('${ord.id}')" class="flex-1 min-w-[65px] py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-slate-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">receipt_long</span>
+                <span>Invoice</span>
+              </button>
+
+              <button type="button" onclick="selectCustomerChat('${ord.customerId}'); switchView('inbox');" class="flex-1 min-w-[65px] py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 border border-emerald-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">chat</span>
+                <span>Chat</span>
+              </button>
+            ` : ''}
           </div>
         </div>
       `;
@@ -32137,6 +32284,76 @@ function getRoleBadgeClass(role) {
   return 'bg-slate-100 text-slate-800 border border-slate-300';
 }
 
+// Quick preset button handler for Staff Permissions (View, Create, Edit, Delete)
+window.setStaffFormPermissionsPreset = function (preset, prefix) {
+  const p = prefix || 'staff-perm';
+  const vEl = document.getElementById(`${p}-view`);
+  const cEl = document.getElementById(`${p}-create`);
+  const eEl = document.getElementById(`${p}-edit`);
+  const dEl = document.getElementById(`${p}-delete`);
+  if (!vEl || !cEl || !eEl || !dEl) return;
+
+  switch (preset) {
+    case 'view':
+      vEl.checked = true;
+      cEl.checked = false;
+      eEl.checked = false;
+      dEl.checked = false;
+      break;
+    case 'create':
+      vEl.checked = false;
+      cEl.checked = true;
+      eEl.checked = false;
+      dEl.checked = false;
+      break;
+    case 'edit':
+      vEl.checked = false;
+      cEl.checked = false;
+      eEl.checked = true;
+      dEl.checked = false;
+      break;
+    case 'delete':
+      vEl.checked = false;
+      cEl.checked = false;
+      eEl.checked = false;
+      dEl.checked = true;
+      break;
+    case 'full':
+    default:
+      vEl.checked = true;
+      cEl.checked = true;
+      eEl.checked = true;
+      dEl.checked = true;
+      break;
+  }
+};
+
+// Helper: Populate Assigned WhatsApp Line dropdown with admin-configured numbers
+window.populateStaffAssignedLineDropdowns = function () {
+  const accounts = (typeof getAvailableWhatsAppAccounts === 'function') ? getAvailableWhatsAppAccounts() : [];
+  const lines = accounts.filter(a => {
+    const phone = (a.connected_number || a.phone_number || a.phone || '').trim();
+    return a.status === 'CONNECTED' || (phone && phone !== 'Awaiting Link' && phone !== 'Scan QR Code');
+  });
+
+  const selectIds = ['staff-new-assigned-line', 'edit-staff-assigned-line'];
+  selectIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const currentVal = el.value || 'ALL';
+    let opts = '<option value="ALL">🌐 All Admin WhatsApp Lines (Default)</option>';
+    lines.forEach((l, idx) => {
+      const p = l.connected_number || l.phone_number || l.phone || l.id;
+      const lbl = l.label || `WhatsApp Line #${idx + 1}`;
+      opts += `<option value="${l.id}">${lbl} (${p})</option>`;
+    });
+    el.innerHTML = opts;
+    if (lines.some(l => l.id === currentVal) || currentVal === 'ALL') {
+      el.value = currentVal;
+    }
+  });
+};
+
 // 6. Handle Staff Onboarding (Sub-item 2: Add Staff)
 window.handleCreateNewStaff = handleCreateNewStaff;
 function handleCreateNewStaff(event) {
@@ -32160,6 +32377,21 @@ function handleCreateNewStaff(event) {
   const specialization = (specEl && specEl.value.trim()) ? specEl.value.trim() : 'General';
   const status = statusEl ? statusEl.value : 'ACTIVE';
   const password = passwordInput && passwordInput.value.trim() ? passwordInput.value.trim() : 'staff123';
+
+  const assignedLineEl = document.getElementById('staff-new-assigned-line');
+  const assignedLine = assignedLineEl ? assignedLineEl.value : 'ALL';
+
+  const permView = document.getElementById('staff-perm-view')?.checked ?? true;
+  const permCreate = document.getElementById('staff-perm-create')?.checked ?? true;
+  const permEdit = document.getElementById('staff-perm-edit')?.checked ?? true;
+  const permDelete = document.getElementById('staff-perm-delete')?.checked ?? false;
+
+  const permissions = {
+    view: Boolean(permView),
+    create: Boolean(permCreate),
+    edit: Boolean(permEdit),
+    delete: Boolean(permDelete)
+  };
 
   if (!name || !phone) {
     showToast('Missing Fields', 'Please enter staff name and phone number.', 'warning', 'amber');
@@ -32204,6 +32436,8 @@ function handleCreateNewStaff(event) {
     dailyQuota: 70,
     todayHandled: 0,
     status: status || 'ACTIVE',
+    assignedLine: assignedLine,
+    permissions: permissions,
     createdAt: new Date().toISOString()
   };
 
@@ -32224,7 +32458,9 @@ function handleCreateNewStaff(event) {
       role: role,
       specialization: specialization,
       avatar: avatarInitials,
-      status: status
+      status: status,
+      assignedLine: assignedLine,
+      permissions: permissions
     })
   }).then(r => r.json()).then(res => {
     console.log('[create_staff] Server response:', res);
@@ -33097,6 +33333,11 @@ window.openEditStaffModal = function (staffId) {
   // Ensure role dropdowns have the dynamic roles
   updateStaffRoleSelectDropdowns();
 
+  // Populate Assigned Line dropdown
+  if (typeof populateStaffAssignedLineDropdowns === 'function') {
+    populateStaffAssignedLineDropdowns();
+  }
+
   const idInput = document.getElementById('edit-staff-id');
   const nameInput = document.getElementById('edit-staff-name');
   const emailInput = document.getElementById('edit-staff-email');
@@ -33106,6 +33347,7 @@ window.openEditStaffModal = function (staffId) {
   const statusSelect = document.getElementById('edit-staff-status');
   const passInput = document.getElementById('edit-staff-password');
   const subtitle = document.getElementById('edit-staff-modal-subtitle');
+  const assignedLineSelect = document.getElementById('edit-staff-assigned-line');
 
   if (idInput) idInput.value = staff.id;
   if (nameInput) nameInput.value = staff.name || '';
@@ -33115,6 +33357,24 @@ window.openEditStaffModal = function (staffId) {
   if (statusSelect) statusSelect.value = (staff.status || 'ACTIVE').toUpperCase();
   if (passInput) passInput.value = '';
   if (subtitle) subtitle.innerText = `Edit details for ${staff.name} (${staff.id})`;
+  if (assignedLineSelect) assignedLineSelect.value = staff.assignedLine || 'ALL';
+
+  // Populate Permissions Checkboxes
+  const perms = staff.permissions || {
+    view: true,
+    create: true,
+    edit: true,
+    delete: false
+  };
+  const permViewEl = document.getElementById('edit-staff-perm-view');
+  const permCreateEl = document.getElementById('edit-staff-perm-create');
+  const permEditEl = document.getElementById('edit-staff-perm-edit');
+  const permDeleteEl = document.getElementById('edit-staff-perm-delete');
+
+  if (permViewEl) permViewEl.checked = Boolean(perms.view);
+  if (permCreateEl) permCreateEl.checked = Boolean(perms.create);
+  if (permEditEl) permEditEl.checked = Boolean(perms.edit);
+  if (permDeleteEl) permDeleteEl.checked = Boolean(perms.delete);
 
   if (roleSelect) {
     if (staff.role && !Array.from(roleSelect.options).some(o => o.value === staff.role)) {
@@ -33145,6 +33405,19 @@ window.handleSaveEditStaff = function (event) {
   const newSpec = document.getElementById('edit-staff-specialization')?.value;
   const newStatus = document.getElementById('edit-staff-status')?.value;
   const newPass = document.getElementById('edit-staff-password')?.value?.trim();
+  const newAssignedLine = document.getElementById('edit-staff-assigned-line')?.value || 'ALL';
+
+  const newPermView = document.getElementById('edit-staff-perm-view')?.checked ?? true;
+  const newPermCreate = document.getElementById('edit-staff-perm-create')?.checked ?? true;
+  const newPermEdit = document.getElementById('edit-staff-perm-edit')?.checked ?? true;
+  const newPermDelete = document.getElementById('edit-staff-perm-delete')?.checked ?? false;
+
+  const newPermissions = {
+    view: Boolean(newPermView),
+    create: Boolean(newPermCreate),
+    edit: Boolean(newPermEdit),
+    delete: Boolean(newPermDelete)
+  };
 
   if (!newName || !newPhone) {
     alert('Please enter staff name and phone number.');
@@ -33160,6 +33433,8 @@ window.handleSaveEditStaff = function (event) {
   staff.role = newRole;
   staff.specialization = newSpec;
   staff.status = newStatus;
+  staff.assignedLine = newAssignedLine;
+  staff.permissions = newPermissions;
   staff.avatar = newName.split(' ').map(n => n[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || 'ST';
   if (newPass) {
     staff.password = newPass;
@@ -33187,6 +33462,8 @@ window.handleSaveEditStaff = function (event) {
       specialization: newSpec,
       status: newStatus,
       avatar: staff.avatar,
+      assignedLine: newAssignedLine,
+      permissions: newPermissions,
       password: newPass || undefined
     })
   }).then(r => r.json()).then(res => {

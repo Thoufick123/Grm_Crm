@@ -857,6 +857,11 @@ if ($action === 'get_state' || $action === 'get_all') {
         // 2. Staff List
         $staffStmt = $pdo->query("SELECT * FROM `users` WHERE `id` != 'admin' ORDER BY `created_at` ASC");
         $staffList = $staffStmt->fetchAll();
+        foreach ($staffList as &$s) {
+            if (!empty($s['permissions']) && is_string($s['permissions'])) {
+                $s['permissions'] = json_decode($s['permissions'], true);
+            }
+        }
 
         // 3. Products (Lazy loaded on-demand for catalog/inventory)
         $products = [];
@@ -1375,10 +1380,20 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $avatar = $staff['avatar'] ?? strtoupper(substr($staff['name'], 0, 2));
 
+        $assignedLine = $staff['assignedLine'] ?? ($staff['assigned_line'] ?? 'ALL');
+        $permsJson = !empty($staff['permissions']) ? (is_string($staff['permissions']) ? $staff['permissions'] : json_encode($staff['permissions'])) : null;
+
+        try {
+            $pdo->exec("ALTER TABLE `users` ADD COLUMN `permissions` TEXT NULL");
+        } catch (Exception $ae) {}
+        try {
+            $pdo->exec("ALTER TABLE `users` ADD COLUMN `assigned_line` VARCHAR(100) NULL");
+        } catch (Exception $be) {}
+
         $stmt = $pdo->prepare("
-            INSERT INTO `users` (`id`, `username`, `password`, `name`, `role`, `email`, `phone`, `specialization`, `avatar`, `status`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password`=VALUES(`password`), `role`=VALUES(`role`), `phone`=VALUES(`phone`), `status`=VALUES(`status`), `email`=VALUES(`email`), `specialization`=VALUES(`specialization`), `avatar`=VALUES(`avatar`)
+            INSERT INTO `users` (`id`, `username`, `password`, `name`, `role`, `email`, `phone`, `specialization`, `avatar`, `status`, `assigned_line`, `permissions`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password`=VALUES(`password`), `role`=VALUES(`role`), `phone`=VALUES(`phone`), `status`=VALUES(`status`), `email`=VALUES(`email`), `specialization`=VALUES(`specialization`), `avatar`=VALUES(`avatar`), `assigned_line`=VALUES(`assigned_line`), `permissions`=VALUES(`permissions`)
         ");
 
         $stmt->execute([
@@ -1391,7 +1406,9 @@ if ($action === 'create_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $staff['phone'],
             $staff['specialization'] ?? 'General',
             $avatar,
-            $staff['status'] ?? 'ACTIVE'
+            $staff['status'] ?? 'ACTIVE',
+            $assignedLine,
+            $permsJson
         ]);
 
         echo json_encode(["status" => "success", "message" => "Staff member created in MySQL", "staff_id" => $staffId]);
@@ -1529,6 +1546,18 @@ if ($action === 'update_staff' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($staff['password'])) {
             $fields[] = "`password` = ?";
             $params[] = password_hash($staff['password'], PASSWORD_BCRYPT);
+        }
+
+        if (isset($staff['assignedLine']) || isset($staff['assigned_line'])) {
+            try { $pdo->exec("ALTER TABLE `users` ADD COLUMN `assigned_line` VARCHAR(100) NULL"); } catch (Exception $be) {}
+            $fields[] = "`assigned_line` = ?";
+            $params[] = $staff['assignedLine'] ?? $staff['assigned_line'];
+        }
+
+        if (isset($staff['permissions'])) {
+            try { $pdo->exec("ALTER TABLE `users` ADD COLUMN `permissions` TEXT NULL"); } catch (Exception $ae) {}
+            $fields[] = "`permissions` = ?";
+            $params[] = is_string($staff['permissions']) ? $staff['permissions'] : json_encode($staff['permissions']);
         }
 
         $params[] = $staffId;
