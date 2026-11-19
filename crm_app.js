@@ -341,7 +341,7 @@ const CRM_MODULE_DEFINITIONS = [
   { key: 'followups', name: 'Customer Follow-up Scheduler', desc: 'Callback calendar, payment promises & reminders', icon: 'schedule' },
   { key: 'catalog', name: 'Live Stock & Garment Catalog', desc: 'Inventory stock, pricing, image library & 1-click sharing', icon: 'inventory_2' },
   { key: 'orders', name: 'WhatsApp Sales Orders', desc: 'Order booking, stock reservations & COD / UPI billing', icon: 'shopping_bag' },
-  { key: 'customers', name: 'Customer 360 & Profiles Directory', desc: 'Customer history, WhatsApp accounts, and tag directory', icon: 'groups', viewOnly: true },
+  { key: 'customers', name: 'Customer 360 & Profiles Directory', desc: 'Customer history, WhatsApp accounts, and tag directory', icon: 'groups' },
   { key: 'dnd', name: 'DND & Opt-Out Customer Hub', desc: 'Blacklist, opt-out compliance & marketing revocation', icon: 'block' },
   { key: 'staff', name: 'Staff & Team Management', desc: 'Team member directory, staff onboarding & role assignment', icon: 'badge' },
   { key: 'analytics', name: 'Staff Performance Analytics & KPIs', desc: 'Team conversions, response latency & volume reports', icon: 'monitoring' },
@@ -361,7 +361,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     followups: { view: true, create: true, edit: true, delete: true },
     catalog: { view: true, create: true, edit: true, delete: true },
     orders: { view: true, create: true, edit: true, delete: true },
-    customers: { view: true, create: false, edit: false, delete: false },
+    customers: { view: true, create: true, edit: true, delete: true },
     dnd: { view: true, create: true, edit: true, delete: true },
     staff: { view: true, create: true, edit: true, delete: true },
     analytics: { view: true, create: true, edit: true, delete: true },
@@ -389,15 +389,16 @@ function createRoleDefaultPermissions(roleName, isFullAccess = false) {
     'dashboard', 'inbox', 'enquiries', 'followups', 'catalog', 'orders',
     'customers', 'dnd', 'staff', 'analytics', 'audit', 'settings', 'backup', 'masking', 'packing-slip-config'
   ];
+  const adminOnlyMods = ['settings', 'backup', 'staff', 'audit', 'masking'];
   modules.forEach(m => {
+    const isAdmMod = adminOnlyMods.includes(m);
     perms[m] = {
-      view: true,
+      view: isFullAccess || !isAdmMod,
       create: isFullAccess,
       edit: isFullAccess,
       delete: isFullAccess
     };
   });
-  if (perms.customers) { perms.customers.create = false; perms.customers.edit = false; perms.customers.delete = false; }
   if (perms.audit) { perms.audit.create = false; perms.audit.edit = false; perms.audit.delete = false; }
   return perms;
 }
@@ -442,12 +443,8 @@ function initRolePermissionsState() {
   // Sanitize permissions across all configured roles
   Object.keys(CRM_STATE.rolePermissions).forEach(r => {
     if (!CRM_STATE.rolePermissions[r].masking || typeof CRM_STATE.rolePermissions[r].masking !== 'object') {
-      CRM_STATE.rolePermissions[r].masking = { view: true, create: true, edit: false, delete: false };
-    }
-    if (CRM_STATE.rolePermissions[r]?.customers) {
-      CRM_STATE.rolePermissions[r].customers.create = false;
-      CRM_STATE.rolePermissions[r].customers.edit = false;
-      CRM_STATE.rolePermissions[r].customers.delete = false;
+      const isAdmRole = (r === 'Super Admin' || r === 'Admin Manager' || r === 'admin');
+      CRM_STATE.rolePermissions[r].masking = { view: isAdmRole, create: isAdmRole, edit: isAdmRole, delete: isAdmRole };
     }
     if (CRM_STATE.rolePermissions[r]?.audit) {
       CRM_STATE.rolePermissions[r].audit.create = false;
@@ -494,8 +491,8 @@ function canUserPerformAction(moduleName, action) {
   const user = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof window !== 'undefined' && window.CURRENT_USER) ? window.CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null));
   if (!user) return true;
 
-  // Audit Logs and Customer 360 are strictly view-only modules across all roles (no manual create, edit, or delete actions)
-  if ((moduleName === 'audit' || moduleName === 'customers') && action !== 'view') {
+  // Audit Logs is strictly view-only across all roles (no manual create, edit, or delete actions)
+  if (moduleName === 'audit' && action !== 'view') {
     return false;
   }
 
@@ -546,14 +543,6 @@ function canUserPerformAction(moduleName, action) {
   // Check specific module in role permissions matrix
   if (rolePerms && rolePerms[moduleName] && rolePerms[moduleName][action] !== undefined) {
     return Boolean(rolePerms[moduleName][action]);
-  }
-
-  // For customers (Customer 360): strictly view-only directory & profile hub
-  if (moduleName === 'customers') {
-    if (action === 'view') {
-      return Boolean(rolePerms?.customers ? rolePerms.customers.view : true);
-    }
-    return false;
   }
 
   // For audit (System Audit Trail & Security Logs): strictly view-only tamper-proof log
@@ -742,20 +731,20 @@ function enforceGranularActionPermissions() {
   const canCustDelete = isSuperAdmin || canUserPerformAction('customers', 'delete');
 
   const navCustomers = document.getElementById('nav-customers');
-  if (navCustomers) navCustomers.style.display = canCustView ? '' : 'none';
+  if (navCustomers) navCustomers.style.display = (canCustView || canCustCreate || canCustEdit || canCustDelete) ? '' : 'none';
 
-  // Create controls
-  document.querySelectorAll('#btn-add-customer, [onclick*="openNewCustomerModal"], [onclick*="openAddCustomerModal"]').forEach(el => {
+  // Create controls: Add Customer & Add Requirement
+  document.querySelectorAll('#btn-add-customer, [onclick*="openNewCustomerModal"], [onclick*="openAddCustomerModal"], #btn-add-requirement, [onclick*="openAddRequirementModal"], .btn-add-requirement').forEach(el => {
     el.style.display = canCustCreate ? '' : 'none';
   });
 
-  // Edit controls (Customer Profile Edit & Save buttons)
-  document.querySelectorAll('[onclick*="toggleCustomerEditMode"], #form-quick-customer-edit button[type="submit"], #btn-edit-customer-profile').forEach(el => {
+  // Edit controls: Customer Profile Edit, Tag edit, Requirement edit
+  document.querySelectorAll('[onclick*="toggleCustomerEditMode"], #form-quick-customer-edit button[type="submit"], #btn-edit-customer-profile, [onclick*="openEditRequirementModal"], .btn-edit-requirement').forEach(el => {
     el.style.display = canCustEdit ? '' : 'none';
   });
 
-  // Delete controls
-  document.querySelectorAll('[onclick*="deleteCustomer"]').forEach(el => {
+  // Delete controls: Customer delete & Requirement delete
+  document.querySelectorAll('[onclick*="deleteCustomer"], #btn-delete-customer, [onclick*="deleteCustomerRequirement"], .btn-delete-requirement').forEach(el => {
     el.style.display = canCustDelete ? '' : 'none';
   });
 
@@ -5407,12 +5396,19 @@ function switchView(viewName, subName, isFromHistory = false) {
   const currentUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : ((typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null);
   const isSuperAdminUser = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
 
-  const canViewModule = isSuperAdminUser || (typeof canUserPerformAction === 'function' ? canUserPerformAction(viewName, 'view') : true);
-  if (!canViewModule) {
+  const canAccessModule = isSuperAdminUser || (typeof canUserPerformAction === 'function' ? (
+    canUserPerformAction(viewName, 'view') ||
+    canUserPerformAction(viewName, 'create') ||
+    canUserPerformAction(viewName, 'edit') ||
+    canUserPerformAction(viewName, 'delete')
+  ) : true);
+  if (!canAccessModule) {
     if (typeof showToast === 'function') {
-      showToast('Access Restricted', 'Your assigned role does not have permission to view this module.', 'lock', 'rose');
+      showToast('Access Restricted', 'Your assigned role does not have permission to access this module.', 'lock', 'rose');
     }
-    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => canUserPerformAction(m.key, 'view'));
+    const firstAllowed = (typeof CRM_MODULE_DEFINITIONS !== 'undefined' ? CRM_MODULE_DEFINITIONS : []).find(m => 
+      canUserPerformAction(m.key, 'view') || canUserPerformAction(m.key, 'create') || canUserPerformAction(m.key, 'edit') || canUserPerformAction(m.key, 'delete')
+    );
     viewName = firstAllowed ? firstAllowed.key : 'inbox';
   }
 
@@ -5949,15 +5945,15 @@ function applyRoleBasedAccessControl(user) {
 
   // 3. Role-Based Navigation & Granular Module Visibility Filtering
   CRM_MODULE_DEFINITIONS.forEach(mod => {
-    const canView = canUserPerformAction(mod.key, 'view');
+    const hasAnyAccess = canUserPerformAction(mod.key, 'view') || canUserPerformAction(mod.key, 'create') || canUserPerformAction(mod.key, 'edit') || canUserPerformAction(mod.key, 'delete');
     const navGroupEl = document.getElementById('nav-' + mod.key + '-group');
     const navEl = document.getElementById('nav-' + mod.key);
 
     if (navGroupEl) {
-      if (canView) navGroupEl.classList.remove('hidden');
+      if (hasAnyAccess) navGroupEl.classList.remove('hidden');
       else navGroupEl.classList.add('hidden');
     } else if (navEl) {
-      if (canView) navEl.classList.remove('hidden');
+      if (hasAnyAccess) navEl.classList.remove('hidden');
       else navEl.classList.add('hidden');
     }
   });
@@ -5965,14 +5961,18 @@ function applyRoleBasedAccessControl(user) {
   // Dynamic Section Headers
   const adminSection = document.getElementById('nav-section-settings-admin');
   if (adminSection) {
-    const hasAnyAdmin = ['settings', 'backup', 'masking', 'staff', 'analytics', 'audit'].some(k => canUserPerformAction(k, 'view'));
+    const hasAnyAdmin = ['settings', 'backup', 'masking', 'staff', 'analytics', 'audit'].some(k => 
+      canUserPerformAction(k, 'view') || canUserPerformAction(k, 'create') || canUserPerformAction(k, 'edit') || canUserPerformAction(k, 'delete')
+    );
     if (hasAnyAdmin) adminSection.classList.remove('hidden');
     else adminSection.classList.add('hidden');
   }
 
   const salesSection = document.getElementById('nav-section-sales-operations');
   if (salesSection) {
-    const hasAnySales = ['followups', 'catalog', 'orders', 'customers', 'dnd'].some(k => canUserPerformAction(k, 'view'));
+    const hasAnySales = ['followups', 'catalog', 'orders', 'customers', 'dnd'].some(k => 
+      canUserPerformAction(k, 'view') || canUserPerformAction(k, 'create') || canUserPerformAction(k, 'edit') || canUserPerformAction(k, 'delete')
+    );
     // DND nav item hidden if no view access
     const _navDndEl = document.getElementById('nav-dnd');
     if (_navDndEl) _navDndEl.style.display = canUserPerformAction('dnd', 'view') || isSuperAdmin ? '' : 'none';
@@ -26838,8 +26838,14 @@ function normalizeOrderStatus(status) {
 
 function switchOrdersSubmodule(submodule) {
   const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.role === 'admin' || CURRENT_USER.role === 'Super Admin'));
-  if (!isSuperAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('orders', 'view')) {
-    if (typeof showToast === 'function') showToast('Access Restricted', 'Your assigned role does not have permission to view sales orders.', 'lock', 'rose');
+  const hasOrdersAccess = isSuperAdmin || (typeof canUserPerformAction === 'function' && (
+    canUserPerformAction('orders', 'view') ||
+    canUserPerformAction('orders', 'create') ||
+    canUserPerformAction('orders', 'edit') ||
+    canUserPerformAction('orders', 'delete')
+  ));
+  if (!hasOrdersAccess) {
+    if (typeof showToast === 'function') showToast('Access Restricted', 'Your assigned role does not have permission to access sales orders.', 'lock', 'rose');
     return;
   }
   ACTIVE_ORDERS_SUBMODULE = submodule || 'dashboard';
@@ -27353,6 +27359,33 @@ function renderOrdersHistoryTable() {
   const tbody = document.getElementById('orders-table-body');
   const mobileContainer = document.getElementById('orders-mobile-cards-container');
   if (!tbody && !mobileContainer) return;
+
+  const canOrderView = (typeof canUserPerformAction === 'function') ? canUserPerformAction('orders', 'view') : true;
+  if (!canOrderView) {
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400">
+            <div class="flex flex-col items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-[40px] text-amber-500">lock</span>
+              <p class="font-bold text-slate-700 text-sm">Sales Orders View Restricted</p>
+              <p class="text-xs text-slate-400 max-w-sm">Your assigned role does not have permission to view sales order records.</p>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+    if (mobileContainer) {
+      mobileContainer.innerHTML = `
+        <div class="py-8 px-4 text-center bg-slate-50 border border-slate-200 rounded-2xl">
+          <span class="material-symbols-outlined text-amber-500 text-[36px]">lock</span>
+          <p class="font-bold text-slate-700 text-sm mt-1">Orders View Restricted</p>
+        </div>
+      `;
+    }
+    if (typeof enforceGranularActionPermissions === 'function') enforceGranularActionPermissions();
+    return;
+  }
 
   const orders = (typeof getOrdersDateFilteredList === 'function') ? getOrdersDateFilteredList() : (CRM_STATE?.orders || []);
   const searchInput = document.getElementById('order-history-search');
@@ -27964,6 +27997,9 @@ function renderOrdersHistoryTable() {
         </div>
       `;
     }).join('');
+  }
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
   }
 }
 window.renderOrdersHistoryTable = renderOrdersHistoryTable;
@@ -30018,6 +30054,19 @@ function renderCustomersGrid(searchFilter = '') {
   const container = document.getElementById('customers-grid-container');
   if (!container) return;
 
+  const canCustView = (typeof canUserPerformAction === 'function') ? canUserPerformAction('customers', 'view') : true;
+  if (!canCustView) {
+    container.innerHTML = `
+      <div class="col-span-full py-12 px-6 text-center bg-slate-50 border border-slate-200 rounded-2xl">
+        <span class="material-symbols-outlined text-amber-500 text-[40px]">lock</span>
+        <h3 class="font-bold text-slate-800 text-base mt-2">Customer Directory View Restricted</h3>
+        <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Your assigned role has operational permissions without directory view rights. Use permitted action buttons to add or manage records.</p>
+      </div>
+    `;
+    if (typeof enforceGranularActionPermissions === 'function') enforceGranularActionPermissions();
+    return;
+  }
+
   // 1. Run full CRM state deduplication and persistence
   if (typeof cleanupAndDeduplicateCRMState === 'function') {
     cleanupAndDeduplicateCRMState();
@@ -30113,6 +30162,9 @@ function renderCustomersGrid(searchFilter = '') {
       </div>
     </div>
   `).join('');
+  if (typeof enforceGranularActionPermissions === 'function') {
+    enforceGranularActionPermissions();
+  }
 }
 window.renderCustomersGrid = renderCustomersGrid;
 
@@ -30309,6 +30361,10 @@ function renderCustomerRequirementsTable() {
   const tbody = document.getElementById('customer-requirements-table-body');
   if (!tbody) return;
 
+  const canCustCreate = (typeof canUserPerformAction === 'function') ? canUserPerformAction('customers', 'create') : true;
+  const canCustEdit = (typeof canUserPerformAction === 'function') ? canUserPerformAction('customers', 'edit') : true;
+  const canCustDelete = (typeof canUserPerformAction === 'function') ? canUserPerformAction('customers', 'delete') : true;
+
   const filtered = (CUSTOMER_REQUIREMENTS_CACHE || []).filter(item => {
     if (CUSTOMER_REQ_SEARCH_QUERY) {
       const q = CUSTOMER_REQ_SEARCH_QUERY;
@@ -30333,18 +30389,20 @@ function renderCustomerRequirementsTable() {
           <div class="flex flex-col items-center justify-center gap-2">
             <span class="material-symbols-outlined text-[40px] text-slate-300">inventory_2</span>
             <p class="font-bold text-slate-700 text-sm">No Customer Requirements Found</p>
-            <p class="text-xs text-slate-400 max-w-sm">No custom dress requirements recorded yet or matching your search. Click "Add Requirement" to create one.</p>
+            <p class="text-xs text-slate-400 max-w-sm">No custom dress requirements recorded yet or matching your search.${canCustCreate ? ' Click "Add Requirement" to create one.' : ''}</p>
+            ${canCustCreate ? `
             <button 
               type="button" 
               onclick="openAddRequirementModal()" 
-              class="mt-2 px-3.5 py-1.5 bg-brand-wa hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-1.5">
+              class="btn-add-requirement mt-2 px-3.5 py-1.5 bg-brand-wa hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-1.5">
               <span class="material-symbols-outlined text-[16px]">add_circle</span>
               <span>Add New Requirement</span>
-            </button>
+            </button>` : ''}
           </div>
         </td>
       </tr>
     `;
+    if (typeof enforceGranularActionPermissions === 'function') enforceGranularActionPermissions();
     return;
   }
 
@@ -30386,29 +30444,37 @@ function renderCustomerRequirementsTable() {
         <td class="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">${formattedDate}</td>
         <td class="py-3.5 px-4 text-right">
           <div class="inline-flex items-center gap-1.5 justify-end">
+            ${canCustEdit ? `
             <button 
               type="button" 
               onclick="openEditRequirementModal(${req.id})" 
               title="Edit Requirement" 
-              class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center">
+              class="btn-edit-requirement p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center">
               <span class="material-symbols-outlined text-[18px]">edit</span>
-            </button>
+            </button>` : ''}
+            ${canCustDelete ? `
             <button 
               type="button" 
               onclick="deleteCustomerRequirement(${req.id})" 
               title="Delete Requirement" 
-              class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center">
+              class="btn-delete-requirement p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center">
               <span class="material-symbols-outlined text-[18px]">delete</span>
-            </button>
+            </button>` : ''}
           </div>
         </td>
       </tr>
     `;
   }).join('');
-}
-window.renderCustomerRequirementsTable = renderCustomerRequirementsTable;
+  if (typeof enforceGranularActionPermissions === "function") enforceGranularActionPermissions();
+}window.renderCustomerRequirementsTable = renderCustomerRequirementsTable;
 
 function openAddRequirementModal() {
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'create')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to add customer requirements.', 'lock', 'rose');
+    }
+    return;
+  }
   const modal = document.getElementById('modal-add-customer-requirement');
   if (!modal) return;
   const form = document.getElementById('form-add-customer-requirement');
@@ -30431,6 +30497,12 @@ function openAddRequirementModal() {
 window.openAddRequirementModal = openAddRequirementModal;
 
 function openEditRequirementModal(id) {
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'edit')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to edit customer requirements.', 'lock', 'rose');
+    }
+    return;
+  }
   const modal = document.getElementById('modal-add-customer-requirement');
   if (!modal) return;
 
@@ -30567,6 +30639,12 @@ async function submitCustomerRequirementForm(event) {
 window.submitCustomerRequirementForm = submitCustomerRequirementForm;
 
 async function deleteCustomerRequirement(id) {
+  if (typeof canUserPerformAction === 'function' && !canUserPerformAction('customers', 'delete')) {
+    if (typeof showToast === 'function') {
+      showToast('Permission Denied', 'Your assigned role does not have permission to delete customer requirements.', 'lock', 'rose');
+    }
+    return;
+  }
   showConfirmDialog({
     title: 'Delete Requirement',
     subtitle: 'Customer Requirement Action',
@@ -32777,7 +32855,7 @@ function renderRolePermissionsMatrix(roleName) {
 
   tbody.innerHTML = CRM_MODULE_DEFINITIONS.map((mod, idx) => {
     const modPerm = perms[mod.key] || { view: false, create: false, edit: false, delete: false };
-    const isViewOnlyMod = mod.key === 'customers' || mod.key === 'audit' || Boolean(mod.viewOnly);
+    const isViewOnlyMod = mod.key === 'audit' || Boolean(mod.viewOnly);
     const allChecked = isViewOnlyMod ? Boolean(modPerm.view) : (modPerm.view && modPerm.create && modPerm.edit && modPerm.delete);
     const isSuperAdmin = targetRole === 'Super Admin';
 
@@ -32893,7 +32971,7 @@ function updateRoleMatrixHeaderCheckboxes() {
     let count = 0;
     let totalEligible = 0;
     CRM_MODULE_DEFINITIONS.forEach(mod => {
-      if ((mod.key === 'customers' || mod.viewOnly) && action !== 'view') return;
+      if ((mod.key === 'audit' || mod.viewOnly) && action !== 'view') return;
       totalEligible++;
       if (rolePerms[mod.key] && rolePerms[mod.key][action]) {
         count++;
@@ -32969,7 +33047,7 @@ window.handleToggleActionForAllModules = function (action, isChecked) {
       rolePerms[mod.key] = { view: false, create: false, edit: false, delete: false };
     }
 
-    if (mod.key === 'customers' || mod.viewOnly) {
+    if (mod.key === 'audit' || mod.viewOnly) {
       if (action === 'all' || action === 'view') {
         rolePerms[mod.key].view = isChecked;
       }
@@ -32986,10 +33064,7 @@ window.handleToggleActionForAllModules = function (action, isChecked) {
       rolePerms[mod.key].delete = isChecked;
     } else {
       rolePerms[mod.key][action] = isChecked;
-      // If enabling create, edit, or delete, auto-enable view
-      if (isChecked && action !== 'view') {
-        rolePerms[mod.key].view = true;
-      }
+      // Operational actions can be set independently for View-Only, Create-Only, Edit-Only, or Delete-Only modes
     }
   });
 
@@ -33017,13 +33092,6 @@ window.handleToggleModuleAction = function (moduleKey, action, isChecked) {
 
   CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey][action] = isChecked;
 
-  // Auto-check view if create, edit, or delete was enabled
-  if (isChecked && action !== 'view') {
-    CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey].view = true;
-    const viewEl = document.getElementById(`role-mod-view-${moduleKey}`);
-    if (viewEl) viewEl.checked = true;
-  }
-
   // Keep sub-modules of inbox (autoreply, broadcast, enquiries) in sync with inbox permissions
   if (moduleKey === 'inbox') {
     ['autoreply', 'broadcast', 'enquiries'].forEach(subKey => {
@@ -33031,9 +33099,6 @@ window.handleToggleModuleAction = function (moduleKey, action, isChecked) {
         CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey] = { view: false, create: false, edit: false, delete: false };
       }
       CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey][action] = isChecked;
-      if (isChecked && action !== 'view') {
-        CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][subKey].view = true;
-      }
     });
   }
 
@@ -33075,7 +33140,7 @@ window.handleToggleModuleAll = function (moduleKey, isChecked) {
     CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE] = {};
   }
 
-  if (moduleKey === 'customers' || moduleKey === 'audit') {
+  if (moduleKey === 'audit') {
     CRM_STATE.rolePermissions[ACTIVE_MATRIX_ROLE][moduleKey] = {
       view: isChecked,
       create: false,
@@ -33118,13 +33183,19 @@ window.applyRolePreset = function (presetType) {
   const rolePerms = {};
 
   CRM_MODULE_DEFINITIONS.forEach(mod => {
-    if (mod.key === 'customers' || mod.key === 'audit' || mod.viewOnly) {
-      const viewPerm = (presetType === 'all' || presetType === 'view_only' || (presetType === 'sales' && (mod.key === 'customers' || mod.key === 'audit')));
+    if (mod.key === 'audit' || mod.viewOnly) {
+      const viewPerm = (presetType === 'all' || presetType === 'view_only' || (presetType === 'sales' && (mod.key === 'audit')));
       rolePerms[mod.key] = { view: viewPerm, create: false, edit: false, delete: false };
     } else if (presetType === 'all') {
       rolePerms[mod.key] = { view: true, create: true, edit: true, delete: true };
     } else if (presetType === 'view_only') {
       rolePerms[mod.key] = { view: true, create: false, edit: false, delete: false };
+    } else if (presetType === 'create_only') {
+      rolePerms[mod.key] = { view: false, create: true, edit: false, delete: false };
+    } else if (presetType === 'edit_only') {
+      rolePerms[mod.key] = { view: false, create: false, edit: true, delete: false };
+    } else if (presetType === 'delete_only') {
+      rolePerms[mod.key] = { view: false, create: false, edit: false, delete: true };
     } else if (presetType === 'sales') {
       const salesAllowed = ['inbox', 'followups', 'catalog', 'orders'];
       const isSalesMod = salesAllowed.includes(mod.key);
@@ -33197,7 +33268,7 @@ window.handleSaveRolePermissions = function () {
     const cEl = document.getElementById(`role-mod-create-${mod.key}`);
     const eEl = document.getElementById(`role-mod-edit-${mod.key}`);
     const dEl = document.getElementById(`role-mod-delete-${mod.key}`);
-    const isViewOnly = mod.key === 'customers' || mod.key === 'audit' || Boolean(mod.viewOnly);
+    const isViewOnly = mod.key === 'audit' || Boolean(mod.viewOnly);
     perms[mod.key] = {
       view: vEl ? Boolean(vEl.checked) : false,
       create: !isViewOnly && cEl ? Boolean(cEl.checked) : false,

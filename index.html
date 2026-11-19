@@ -4524,8 +4524,8 @@
                 </div>
 
                 <!-- Add Requirement Button -->
-                <button type="button" onclick="openAddRequirementModal()"
-                  class="px-4 py-2 bg-gradient-to-r from-brand-wa via-emerald-600 to-teal-700 hover:from-emerald-600 hover:to-teal-800 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md hover:shadow-lg transition-all cursor-pointer shrink-0">
+                <button type="button" id="btn-add-requirement" onclick="openAddRequirementModal()"
+                  class="btn-add-requirement px-4 py-2 bg-gradient-to-r from-brand-wa via-emerald-600 to-teal-700 hover:from-emerald-600 hover:to-teal-800 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md hover:shadow-lg transition-all cursor-pointer shrink-0">
                   <span class="material-symbols-outlined text-[18px]">add_circle</span>
                   <span>Add Requirement</span>
                 </button>
@@ -5109,8 +5109,23 @@
                     </button>
                     <button type="button" onclick="applyRolePreset('view_only')"
                       class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
-                      title="Read-only access (View only)">
+                      title="Read-only access (View only, Create/Edit/Delete blocked)">
                       <span class="material-symbols-outlined text-[13px] text-sky-600">visibility</span> View Only
+                    </button>
+                    <button type="button" onclick="applyRolePreset('create_only')"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                      title="Create-only access (Create only, View/Edit/Delete blocked)">
+                      <span class="material-symbols-outlined text-[13px] text-emerald-600">add_circle</span> Create Only
+                    </button>
+                    <button type="button" onclick="applyRolePreset('edit_only')"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                      title="Edit-only access (Edit only, View/Create/Delete blocked)">
+                      <span class="material-symbols-outlined text-[13px] text-amber-600">edit_square</span> Edit Only
+                    </button>
+                    <button type="button" onclick="applyRolePreset('delete_only')"
+                      class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                      title="Delete-only access (Delete only, View/Create/Edit blocked)">
+                      <span class="material-symbols-outlined text-[13px] text-rose-600">delete</span> Delete Only
                     </button>
                     <button type="button" onclick="applyRolePreset('sales')"
                       class="px-2.5 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
@@ -12339,7 +12354,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261119_perf_optimized_v22"></script>
+  <script src="crm_app.js?v=20261119_perf_optimized_v23"></script>
 </body>
 
 </html>
