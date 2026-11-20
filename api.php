@@ -6693,6 +6693,20 @@ function ensureBulkAssignmentsTable($pdo) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
     } catch (Exception $e) {}
+
+    // Resilient schema check: Add assigned_to and account_id to customers table if not present
+    try {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM `customers` LIKE 'assigned_to'")->fetch();
+        if (!$colCheck) {
+            $pdo->exec("ALTER TABLE `customers` ADD COLUMN `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED'");
+        }
+    } catch (Exception $e) {}
+    try {
+        $colCheckAcc = $pdo->query("SHOW COLUMNS FROM `customers` LIKE 'account_id'")->fetch();
+        if (!$colCheckAcc) {
+            $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1'");
+        }
+    } catch (Exception $e) {}
 }
 
 if ($action === 'get_unassigned_enquiries_count') {
@@ -6702,31 +6716,45 @@ if ($action === 'get_unassigned_enquiries_count') {
         if (!$pdo) throw new Exception("Database unavailable");
         ensureBulkAssignmentsTable($pdo);
 
-        if ($accountId && $accountId !== 'all') {
-            $stmt = $pdo->prepare("
-                SELECT COUNT(DISTINCT q.id) as unassigned_count,
-                       MIN(q.created_at) as oldest_enquiry,
-                       MAX(q.created_at) as newest_enquiry
-                FROM `queries` q
-                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '')
-                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
-                  AND (
-                      COALESCE(
-                          (SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL ORDER BY m.id DESC LIMIT 1),
-                          'account_1'
-                      ) = ?
-                  )
-            ");
-            $stmt->execute([$accountId]);
-        } else {
+        $isAll = ($accountId === 'all' || empty($accountId));
+
+        if ($isAll) {
             $stmt = $pdo->query("
                 SELECT COUNT(DISTINCT q.id) as unassigned_count,
                        MIN(q.created_at) as oldest_enquiry,
                        MAX(q.created_at) as newest_enquiry
                 FROM `queries` q
-                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '')
+                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
                   AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
             ");
+        } else {
+            // Build resilient aliases for the chosen line (e.g. account_1, 1, Primary WhatsApp)
+            $aliases = [$accountId];
+            if ($accountId === 'account_1' || $accountId === '1' || strtolower($accountId) === 'primary') {
+                $aliases = array_values(array_unique(array_merge($aliases, ['account_1', '1', 'primary', 'Primary WhatsApp', 'Primary Line', ''])));
+            } elseif (preg_match('/^account_(\d+)$/', $accountId, $m)) {
+                $aliases[] = $m[1];
+            } elseif (is_numeric($accountId)) {
+                $aliases[] = 'account_' . $accountId;
+            }
+            $inMarks = implode(',', array_fill(0, count($aliases), '?'));
+
+            $stmt = $pdo->prepare("
+                SELECT COUNT(DISTINCT q.id) as unassigned_count,
+                       MIN(q.created_at) as oldest_enquiry,
+                       MAX(q.created_at) as newest_enquiry
+                FROM `queries` q
+                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
+                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                  AND (
+                      COALESCE(
+                          NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
+                          NULLIF((SELECT c.account_id FROM `customers` c WHERE c.id = q.customer_id AND c.account_id IS NOT NULL AND c.account_id != '' LIMIT 1), ''),
+                          'account_1'
+                      ) IN ({$inMarks})
+                  )
+            ");
+            $stmt->execute($aliases);
         }
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         echo json_encode([
@@ -6768,36 +6796,51 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         if (!$pdo) throw new Exception("Database unavailable");
         ensureBulkAssignmentsTable($pdo);
 
+        $isAll = ($accountId === 'all' || empty($accountId));
+
         // Fetch candidate unassigned queries
-        if ($accountId && $accountId !== 'all') {
-            $stmt = $pdo->prepare("
+        if (!$isAll) {
+            $aliases = [$accountId];
+            if ($accountId === 'account_1' || $accountId === '1' || strtolower($accountId) === 'primary') {
+                $aliases = array_values(array_unique(array_merge($aliases, ['account_1', '1', 'primary', 'Primary WhatsApp', 'Primary Line', ''])));
+            } elseif (preg_match('/^account_(\d+)$/', $accountId, $m)) {
+                $aliases[] = $m[1];
+            } elseif (is_numeric($accountId)) {
+                $aliases[] = 'account_' . $accountId;
+            }
+            if (!empty($accountNumber)) {
+                $cleanNum = preg_replace('/[^0-9]/', '', $accountNumber);
+                if (strlen($cleanNum) >= 10) {
+                    $aliases[] = substr($cleanNum, -10);
+                }
+            }
+            $inMarks = implode(',', array_fill(0, count($aliases), '?'));
+
+            $sql = "
                 SELECT q.id, q.customer_id, q.created_at
                 FROM `queries` q
-                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '')
+                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
                   AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
                   AND (
                       COALESCE(
-                          (SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL ORDER BY m.id DESC LIMIT 1),
+                          NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
+                          NULLIF((SELECT c.account_id FROM `customers` c WHERE c.id = q.customer_id AND c.account_id IS NOT NULL AND c.account_id != '' LIMIT 1), ''),
                           'account_1'
-                      ) = ?
+                      ) IN ({$inMarks})
                   )
                 ORDER BY q.created_at {$sortOrder}
-                LIMIT ?
-            ");
-            $stmt->bindValue(1, $accountId, PDO::PARAM_STR);
-            $stmt->bindValue(2, $assignCount, PDO::PARAM_INT);
-            $stmt->execute();
+                LIMIT " . intval($assignCount);
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($aliases);
         } else {
-            $stmt = $pdo->prepare("
+            $sql = "
                 SELECT q.id, q.customer_id, q.created_at
                 FROM `queries` q
-                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '')
+                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
                   AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
                 ORDER BY q.created_at {$sortOrder}
-                LIMIT ?
-            ");
-            $stmt->bindValue(1, $assignCount, PDO::PARAM_INT);
-            $stmt->execute();
+                LIMIT " . intval($assignCount);
+            $stmt = $pdo->query($sql);
         }
         $candidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -6820,12 +6863,16 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $qUpdateParams = array_merge([$staffId], $queryIds);
         $qUpdateStmt->execute($qUpdateParams);
 
-        // Update customers to assigned staff
+        // Update customers to assigned staff safely
         if (!empty($customerIds)) {
-            $inCMarks = implode(',', array_fill(0, count($customerIds), '?'));
-            $cUpdateStmt = $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` IN ({$inCMarks})");
-            $cUpdateParams = array_merge([$staffId], $customerIds);
-            $cUpdateStmt->execute($cUpdateParams);
+            try {
+                $inCMarks = implode(',', array_fill(0, count($customerIds), '?'));
+                $cUpdateStmt = $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` IN ({$inCMarks})");
+                $cUpdateParams = array_merge([$staffId], $customerIds);
+                $cUpdateStmt->execute($cUpdateParams);
+            } catch (Exception $eCustUpdate) {
+                // Non-blocking fallback
+            }
         }
 
         // Generate Batch Code & ID
@@ -6855,18 +6902,22 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         ]);
 
         // Update staff user active query counter
-        $pdo->prepare("
-            UPDATE `users` 
-            SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED', 'DND'))
-            WHERE `id` = ?
-        ")->execute([$staffId, $staffId]);
+        try {
+            $pdo->prepare("
+                UPDATE `users` 
+                SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED', 'DND'))
+                WHERE `id` = ? OR `username` = ?
+            ")->execute([$staffId, $staffId, $staffId]);
+        } catch (Exception $eUserUpdate) {}
 
         // Audit Log
-        $auditDetails = "Bulk assigned {$actualAssigned} customer inquiries from [{$accountName} - {$accountNumber}] to {$staffName} (Phone: {$staffPhone}) in {$sortOrder} chronological order. Batch: {$batchCode}";
-        $pdo->prepare("
-            INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
-            VALUES (?, 'BULK_ASSIGN_EXECUTED', 'BULK_ASSIGN', ?, ?)
-        ")->execute([$user, $auditDetails, date("h:i A")]);
+        try {
+            $auditDetails = "Bulk assigned {$actualAssigned} customer inquiries from [{$accountName} - {$accountNumber}] to {$staffName} (Phone: {$staffPhone}) in {$sortOrder} chronological order. Batch: {$batchCode}";
+            $pdo->prepare("
+                INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+                VALUES (?, 'BULK_ASSIGN_EXECUTED', 'BULK_ASSIGN', ?, ?)
+            ")->execute([$user, $auditDetails, date("h:i A")]);
+        } catch (Exception $eAudit) {}
 
         echo json_encode([
             "status" => "success",

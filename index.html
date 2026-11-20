@@ -1588,6 +1588,14 @@
           <span class="font-extrabold text-amber-950 text-xs" id="mask-status-label">OFF</span>
         </button>
 
+        <!-- Live WhatsApp Inbox Refresh Button (Direct Queue Sync with Time Feedback) -->
+        <button onclick="refreshInboxDataNow(this)" id="header-refresh-inbox-btn"
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
+          title="Refresh WhatsApp conversation queue, fetch new messages & sync live status">
+          <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-700">sync</span>
+          <span id="header-refresh-inbox-label">Refresh</span>
+        </button>
+
         <!-- Reset Inbox Filters & Refresh Queue -->
         <button onclick="resetInboxViewFilters()" id="header-reset-inbox-btn"
           class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 hover:border-slate-300 text-xs font-bold rounded-xl transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
@@ -12735,7 +12743,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261120_bulk_assign_v2"></script>
+  <script src="crm_app.js?v=20261120_bulk_assign_v3"></script>
 </body>
 
 </html>

@@ -3509,6 +3509,7 @@ function applyAuthoritativeDatabaseState(data) {
       id: q.id,
       customerId: q.customerId || q.customer_id || '',
       assignedTo: q.assignedTo || q.assigned_to || 'UNASSIGNED',
+      accountId: q.account_id || q.accountId || q.account_slot || 'account_1',
       status: q.status || 'NEW',
       priority: q.priority || 'NORMAL',
       queryText: q.queryText || q.query_text || '',
@@ -6351,6 +6352,26 @@ function extractConversationEpoch(lastMsgObj, cust, query, timeDisplay) {
 }
 window.extractConversationEpoch = extractConversationEpoch;
 
+// Clean time formatting helper for conversation cards & inbox queue (Guarantees clean 12-hour AM/PM time)
+function formatInboxCardTime(rawTime) {
+  if (!rawTime) return 'Recent';
+  const s = String(rawTime).trim();
+  if (/^\d{1,2}:\d{2}\s*(?:AM|PM)$/i.test(s)) return s;
+  try {
+    const d = new Date(s.includes(' ') && !s.includes('T') ? s.replace(' ', 'T') : s);
+    if (!isNaN(d.getTime())) {
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      if (isToday) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  } catch (e) {}
+  return s;
+}
+window.formatInboxCardTime = formatInboxCardTime;
+
 function renderInboxConversationList() {
   renderQuickLineSwitcher();
   const container = document.getElementById('conversation-list-container');
@@ -6436,6 +6457,7 @@ function renderInboxConversationList() {
 
     // Resolve true Epoch timestamp for accurate chronological sorting (Newest message at top, older below)
     const lastTimeEpoch = extractConversationEpoch(lastMsgObj, cust, query, timeDisplay);
+    timeDisplay = formatInboxCardTime(timeDisplay);
 
     const custAccountId = cust.accountId || (query ? query.accountId : null) || 'account_1';
     const custBusinessNumber = cust.businessNumber || (query ? query.businessNumber : null) || '+91 86680 07593';
@@ -14322,6 +14344,37 @@ function resetInboxViewFilters() {
   }
 }
 window.resetInboxViewFilters = resetInboxViewFilters;
+
+// Live WhatsApp Inbox Refresh Controller (Provides visual time confirmation)
+async function refreshInboxDataNow(btn) {
+  const icon = btn ? btn.querySelector('.material-symbols-outlined') : null;
+  const label = document.getElementById('header-refresh-inbox-label');
+  if (icon) icon.classList.add('animate-spin');
+
+  try {
+    if (typeof syncLiveCRMData === 'function') syncLiveCRMData(true);
+    if (typeof syncInboundMessagesNow === 'function') syncInboundMessagesNow(true);
+    if (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID && typeof syncCustomerMessagesFromDB === 'function') {
+      syncCustomerMessagesFromDB(ACTIVE_CUSTOMER_ID);
+    }
+    window._FORCE_CONV_LIST_RENDER = true;
+    if (typeof renderInbox === 'function') renderInbox();
+    if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    if (label) label.innerText = timeStr;
+    if (typeof showToast === 'function') {
+      showToast('Inbox Refreshed', `Synced latest WhatsApp queue at ${timeStr}`, 'sync', 'emerald');
+    }
+  } catch (err) {
+    console.warn('[refreshInboxDataNow] error:', err);
+  } finally {
+    setTimeout(() => {
+      if (icon) icon.classList.remove('animate-spin');
+    }, 600);
+  }
+}
+window.refreshInboxDataNow = refreshInboxDataNow;
 
 function confirmResetInboxMessages() {
   if (typeof openModal === 'function') openModal('modal-reset-inbox-confirm');
@@ -34456,6 +34509,16 @@ function updateBadgeCounters() {
     const isActiveCard = (conv.length > 0) || Boolean(custLastMsg) || Boolean(query) || (window.ACTIVE_CUSTOMER_ID && String(cust.id) === String(window.ACTIVE_CUSTOMER_ID));
     if (!isActiveCard) return;
 
+    // Strict Staff Workstation Isolation: When a staff member is logged in, count ONLY chats assigned to them
+    if (!isSuperAdmin) {
+      const assignedVal = String(query?.assignedTo || query?.assigned_to || cust.assignedTo || cust.assigned_to || '').trim().toLowerCase();
+      const s = (CRM_STATE.staffList || []).find(st => st && (st.id === (query?.assignedTo || cust.assignedTo) || st.name === (query?.assignedTo || cust.assignedTo)));
+      const sName = String(s?.name || '').toLowerCase();
+      const sId = String(s?.id || '').toLowerCase();
+      const isAssignedToMe = myQueueIds.includes(assignedVal) || myQueueIds.includes(sName) || myQueueIds.includes(sId);
+      if (!isAssignedToMe) return;
+    }
+
     totalCardsCount++;
 
     const isFu = query ? isFollowupQuery(query) : followupCustIds.has(String(cust.id));
@@ -34470,9 +34533,9 @@ function updateBadgeCounters() {
     unreadTotal += uCount;
   });
 
-  const finalTotalChats = Math.max(totalCardsCount, visibleQueries.length);
-  const finalNewLeads = Math.max(newLeadsCount, visibleQueries.filter(isNewLeadQuery).length);
-  const finalFollowup = Math.max(followupCount, visibleQueries.filter(isFollowupQuery).length);
+  const finalTotalChats = isSuperAdmin ? Math.max(totalCardsCount, visibleQueries.length) : totalCardsCount;
+  const finalNewLeads = isSuperAdmin ? Math.max(newLeadsCount, visibleQueries.filter(isNewLeadQuery).length) : newLeadsCount;
+  const finalFollowup = isSuperAdmin ? Math.max(followupCount, visibleQueries.filter(isFollowupQuery).length) : followupCount;
 
   const countAll = document.getElementById('count-all');
   if (countAll) countAll.innerText = finalTotalChats;
@@ -42821,7 +42884,9 @@ function showAddBulkAssignPage() {
           { id: 'account_2', label: 'Line 2: Secondary WhatsApp', connected_number: '+91 86680 07593', status: 'CONNECTED' }
         ];
 
-    accSelect.innerHTML = accounts.map(a => `
+    const allLinesOpt = `<option value="all" data-name="All Scanned Lines" data-number="Global Lead Pool">All Scanned Accounts / Lines (Global Queue)</option>`;
+
+    accSelect.innerHTML = allLinesOpt + accounts.map(a => `
       <option value="${a.id}" data-name="${a.label || a.brand_name || 'Line'}" data-number="${a.connected_number || a.phone_number || ''}">
         ${a.label || a.brand_name || a.id} (${a.connected_number || a.phone_number || 'Awaiting Link'}) [${a.status || 'CONNECTED'}]
       </option>
@@ -42867,16 +42932,23 @@ async function onBulkAccountChange() {
   const countInput = document.getElementById('bulk-assign-count');
   if (!accSelect) return;
 
-  const accountId = accSelect.value || 'account_1';
+  const accountId = accSelect.value || 'all';
 
-  // Fast local instant count calculation
+  // Fast local instant count calculation with resilient account aliases
   const localUnassigned = (CRM_STATE?.queries || []).filter(q => {
     if (!q) return false;
     const isUn = !q.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
     if (!isUn) return false;
     if (q.status === 'DND' || q.status === 'RESOLVED' || q.status === 'CLOSED') return false;
-    const qAcc = q.accountId || q.account_id || 'account_1';
-    return (accountId === 'all' || qAcc === accountId);
+    if (accountId === 'all') return true;
+
+    const cust = (CRM_STATE?.customers || []).find(c => c && (c.id === q.customerId || c.id === q.customer_id));
+    const qAcc = q.accountId || q.account_id || cust?.accountId || cust?.account_id || 'account_1';
+    const aliases = [accountId];
+    if (accountId === 'account_1' || accountId === '1') {
+      aliases.push('account_1', '1', 'Primary WhatsApp', 'Primary Line');
+    }
+    return aliases.includes(qAcc);
   });
 
   let count = localUnassigned.length;
@@ -43087,8 +43159,11 @@ async function handleExecuteBulkAssign() {
 
       // Switch to list view and refresh
       showBulkAssignListView();
+      if (typeof renderBulkAssignList === 'function') renderBulkAssignList();
       if (typeof renderInbox === 'function') renderInbox();
       updateBadgeCounters();
+      updateBulkAssignBadgeCounters();
+      if (typeof syncLiveCRMData === 'function') syncLiveCRMData(true);
     } else if (result && result.status === 'warning') {
       if (typeof showToast === 'function') {
         showToast('No Inquiries Available', result.message || 'Zero unassigned leads on this account.', 'info', 'amber');

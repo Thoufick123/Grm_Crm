@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS `customers` (
     `total_orders` INT DEFAULT 0,
     `total_spend` DECIMAL(10,2) DEFAULT 0.00,
     `avatar` VARCHAR(10) NULL,
+    `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED',
+    `account_id` VARCHAR(50) DEFAULT 'account_1',
     `is_dnd` TINYINT(1) DEFAULT 0,
     `dnd_reason` TEXT NULL,
     `dnd_notes` TEXT NULL,
@@ -70,6 +72,8 @@ CREATE TABLE IF NOT EXISTS `customers` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX(`phone`),
     INDEX(`whatsapp`),
+    INDEX(`assigned_to`),
+    INDEX(`account_id`),
     INDEX(`is_dnd`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
