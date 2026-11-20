@@ -1,11 +1,24 @@
 -- =========================================================================
 -- GRM WHATSAPP CRM — COMPREHENSIVE PRODUCTION DATABASE SCHEMA
--- Compatible with: Live Hosting (Hostinger / cPanel / Plesk), Local XAMPP & Docker
--- Multi-developer unified: Voice Translation, Telephony Softphone, Staff RBAC,
--- Catalog Meta, Orders/Payment Pipeline, DND Suppression, WhatsApp Hub & Bulk Assign
+-- Single Authoritative Database Schema File
+-- Target Database: `u405685755_GRM_CRM` (or active phpMyAdmin database)
+-- Compatible with: Hostinger, cPanel, Plesk, Local XAMPP & Docker
+--
+-- STRICT ROOT-LEVEL ISOLATION:
+--  - NO `CREATE DATABASE` statement (prevents MySQL Error #1044 on shared hosting)
+--  - NO `USE` statement (imports seamlessly into whatever database is active)
+--  - 100% utf8mb4_unicode_ci charset for emoji & Tamil/multilingual support
+--  - Compound performance indexes for O(1) query matching & queue balancing
+--  - All 24 production tables unified in logical sequence
 -- =========================================================================
 
--- 1. Users & Staff Table (Role-Based Authentication & Language Preferences)
+SET FOREIGN_KEY_CHECKS = 0;
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET time_zone = "+05:30";
+
+-- =========================================================================
+-- 1. USERS & STAFF TABLE
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `users` (
     `id` VARCHAR(50) PRIMARY KEY,
     `username` VARCHAR(50) UNIQUE NOT NULL,
@@ -25,7 +38,9 @@ CREATE TABLE IF NOT EXISTS `users` (
     INDEX(`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2. WhatsApp Accounts Configuration
+-- =========================================================================
+-- 2. WHATSAPP ACCOUNTS CONFIGURATION
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `whatsapp_accounts` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `account_slot` VARCHAR(50) UNIQUE NOT NULL,
@@ -38,10 +53,14 @@ CREATE TABLE IF NOT EXISTS `whatsapp_accounts` (
     `provider` VARCHAR(50) DEFAULT 'META_CLOUD_API',
     `status` VARCHAR(50) DEFAULT 'CONNECTED',
     `webhook_url` VARCHAR(255) NULL,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX(`account_slot`),
+    INDEX(`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 3. Customers Directory (Customer 360 & DND Status)
+-- =========================================================================
+-- 3. CUSTOMERS DIRECTORY (CUSTOMER 360)
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `customers` (
     `id` VARCHAR(50) PRIMARY KEY,
     `code` VARCHAR(50) UNIQUE NOT NULL,
@@ -78,7 +97,9 @@ CREATE TABLE IF NOT EXISTS `customers` (
     INDEX(`phone`, `account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Customer Enquiries & Lead Pipeline
+-- =========================================================================
+-- 4. CUSTOMER ENQUIRIES & LEAD PIPELINE
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `queries` (
     `id` VARCHAR(50) PRIMARY KEY,
     `customer_id` VARCHAR(50) NOT NULL,
@@ -113,7 +134,9 @@ CREATE TABLE IF NOT EXISTS `queries` (
     INDEX(`account_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. WhatsApp Chat Messages & Audio Notes (All WhatsApp Values Stored)
+-- =========================================================================
+-- 5. WHATSAPP CHAT MESSAGES & AUDIO NOTES
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `messages` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `message_uid` VARCHAR(100) UNIQUE NULL,
@@ -145,7 +168,9 @@ CREATE TABLE IF NOT EXISTS `messages` (
     INDEX(`customer_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6. Products Catalog & Live Stock
+-- =========================================================================
+-- 6. PRODUCTS CATALOG & LIVE STOCK
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `products` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `sku` VARCHAR(50) UNIQUE NOT NULL,
@@ -165,12 +190,15 @@ CREATE TABLE IF NOT EXISTS `products` (
     `custom_caption` TEXT NULL,
     `delivery_note` TEXT NULL,
     `account_id` VARCHAR(50) DEFAULT 'account_1',
+    `account_slot` VARCHAR(50) DEFAULT 'account_1',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX(`category`),
     INDEX(`sku`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6.1 Categories Table
+-- =========================================================================
+-- 7. CATEGORIES TABLE
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `categories` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `name` VARCHAR(100) NOT NULL,
@@ -181,7 +209,9 @@ CREATE TABLE IF NOT EXISTS `categories` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6.2 Subcategories Table
+-- =========================================================================
+-- 8. SUBCATEGORIES TABLE
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `subcategories` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `category_id` INT NULL,
@@ -193,7 +223,9 @@ CREATE TABLE IF NOT EXISTS `subcategories` (
     INDEX(`category_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6.3 Attributes Table (Sizes, Colors, Fabrics, Role Permissions, Custom)
+-- =========================================================================
+-- 9. ATTRIBUTES TABLE (SIZES, COLORS, FABRICS, ROLES)
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `attributes` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `type` VARCHAR(50) NOT NULL,
@@ -203,7 +235,9 @@ CREATE TABLE IF NOT EXISTS `attributes` (
     INDEX(`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. WhatsApp Sales Orders & Reservations
+-- =========================================================================
+-- 10. ORDERS TABLE
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `orders` (
     `id` VARCHAR(50) PRIMARY KEY,
     `query_id` VARCHAR(50) NULL,
@@ -237,7 +271,9 @@ CREATE TABLE IF NOT EXISTS `orders` (
     INDEX(`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 8. Customer Follow-up Reminders & Payment Tracking
+-- =========================================================================
+-- 11. CUSTOMER FOLLOW-UP REMINDERS
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `followups` (
     `id` VARCHAR(50) PRIMARY KEY,
     `query_id` VARCHAR(50) NULL,
@@ -270,7 +306,9 @@ CREATE TABLE IF NOT EXISTS `followups` (
     INDEX(`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 9. Tamper-Proof Audit Trail (Dual Schema Compatible)
+-- =========================================================================
+-- 12. AUDIT TRAIL
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `audit_logs` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `user` VARCHAR(100) NULL,
@@ -285,13 +323,13 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
     `ip_address` VARCHAR(50) NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX(`user`),
-    INDEX(`actor`),
     INDEX(`action`),
-    INDEX(`module`),
     INDEX(`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 10. DND Management & Suppression List
+-- =========================================================================
+-- 13. DND SUPPRESSION LIST
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `dnd_records` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `customer_id` VARCHAR(50) NOT NULL,
@@ -314,7 +352,9 @@ CREATE TABLE IF NOT EXISTS `dnd_records` (
     INDEX(`assigned_to`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 11. Auto-Reply Rules Table (Auto-Reply Hub in WhatsApp Inbox)
+-- =========================================================================
+-- 14. AUTO-REPLY RULES
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `auto_reply_rules` (
     `id` VARCHAR(50) PRIMARY KEY,
     `name` VARCHAR(150) NOT NULL,
@@ -327,7 +367,9 @@ CREATE TABLE IF NOT EXISTS `auto_reply_rules` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 12. Broadcast Templates Table (Marketing & Announcements)
+-- =========================================================================
+-- 15. BROADCAST TEMPLATES
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `broadcast_templates` (
     `id` VARCHAR(50) PRIMARY KEY,
     `name` VARCHAR(150) NOT NULL,
@@ -342,7 +384,9 @@ CREATE TABLE IF NOT EXISTS `broadcast_templates` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 13. Staff KPI Reports Table
+-- =========================================================================
+-- 16. STAFF KPI TABLE
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `staff_kpis` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `staff_id` VARCHAR(50) NOT NULL,
@@ -357,7 +401,9 @@ CREATE TABLE IF NOT EXISTS `staff_kpis` (
     INDEX(`report_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 14. Call & Telephony Masking Settings Table
+-- =========================================================================
+-- 17. TELEPHONY MASKING SETTINGS
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `masking_settings` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `call_masking_enabled` TINYINT(1) DEFAULT 1,
@@ -372,7 +418,9 @@ CREATE TABLE IF NOT EXISTS `masking_settings` (
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 15. Call Sessions Table (Atomic Multi-agent Telephony & Softphone)
+-- =========================================================================
+-- 18. CALL SESSIONS
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `call_sessions` (
     `id` VARCHAR(50) PRIMARY KEY,
     `provider_call_id` VARCHAR(100) DEFAULT NULL,
@@ -397,7 +445,9 @@ CREATE TABLE IF NOT EXISTS `call_sessions` (
     INDEX(`customer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 16. Call Assignments Table (First Successful Claim Wins Audit)
+-- =========================================================================
+-- 19. CALL ASSIGNMENTS
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `call_assignments` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `call_session_id` VARCHAR(50) NOT NULL,
@@ -410,7 +460,9 @@ CREATE TABLE IF NOT EXISTS `call_assignments` (
     INDEX(`staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 17. Call Activity Logs Table
+-- =========================================================================
+-- 20. CALL ACTIVITY LOGS
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `call_activity_logs` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `call_session_id` VARCHAR(50) NOT NULL,
@@ -422,7 +474,9 @@ CREATE TABLE IF NOT EXISTS `call_activity_logs` (
     INDEX(`call_session_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 18. WhatsApp Multilingual Voice Messages Table
+-- =========================================================================
+-- 21. MULTILINGUAL VOICE MESSAGES
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `voice_messages` (
     `id` VARCHAR(50) PRIMARY KEY,
     `conversation_id` VARCHAR(50) NULL,
@@ -439,11 +493,12 @@ CREATE TABLE IF NOT EXISTS `voice_messages` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX(`customer_id`),
-    INDEX(`conversation_id`),
     INDEX(`processing_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 19. WhatsApp Voice Translations Table (STT -> Translate -> TTS Audio Pipeline)
+-- =========================================================================
+-- 22. VOICE TRANSLATIONS
+-- =========================================================================
 CREATE TABLE IF NOT EXISTS `voice_translations` (
     `id` VARCHAR(50) PRIMARY KEY,
     `voice_message_id` VARCHAR(50) NOT NULL,
@@ -458,20 +513,74 @@ CREATE TABLE IF NOT EXISTS `voice_translations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================================
--- INITIAL SUPER ADMIN ACCOUNT (FULL CONTROL ACCESS)
+-- 23. BULK PRICE REQUESTS TABLE
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS `bulk_price_requests` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `request_code` VARCHAR(50) NOT NULL UNIQUE,
+    `customer_name` VARCHAR(150) NOT NULL,
+    `customer_phone` VARCHAR(50) NOT NULL,
+    `product_name` VARCHAR(255) NOT NULL,
+    `size` VARCHAR(50) NOT NULL,
+    `quantity` INT NOT NULL DEFAULT 1,
+    `selling_price` DECIMAL(10, 2) NOT NULL,
+    `requested_price` DECIMAL(10, 2) NOT NULL,
+    `total_requested_amount` DECIMAL(10, 2) NOT NULL,
+    `staff_id` VARCHAR(50) NULL,
+    `staff_name` VARCHAR(150) NOT NULL,
+    `admin_phone` VARCHAR(50) NULL,
+    `status` ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+    `rejection_reason` TEXT NULL,
+    `admin_notes` TEXT NULL,
+    `approved_by` VARCHAR(150) NULL,
+    `approved_at` DATETIME NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX (`customer_phone`),
+    INDEX (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================================
+-- 24. BULK WHATSAPP INQUIRY ASSIGNMENTS TABLE
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS `bulk_assignments` (
+    `id` VARCHAR(50) PRIMARY KEY,
+    `batch_code` VARCHAR(50) UNIQUE NOT NULL,
+    `account_id` VARCHAR(50) NOT NULL,
+    `account_name` VARCHAR(100) NULL,
+    `account_number` VARCHAR(30) NULL,
+    `staff_id` VARCHAR(50) NOT NULL,
+    `staff_name` VARCHAR(100) NOT NULL,
+    `staff_phone` VARCHAR(30) NOT NULL,
+    `assigned_count` INT NOT NULL DEFAULT 0,
+    `sort_order` ENUM('ASC', 'DESC') NOT NULL DEFAULT 'ASC',
+    `customer_ids` JSON NOT NULL,
+    `query_ids` JSON NOT NULL,
+    `status` VARCHAR(30) DEFAULT 'COMPLETED',
+    `created_by` VARCHAR(100) DEFAULT 'Super Admin',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX(`account_id`),
+    INDEX(`staff_id`),
+    INDEX(`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================================
+-- INITIAL SEED: SUPER ADMIN USER
 -- =========================================================================
 INSERT INTO `users` (`id`, `username`, `password`, `name`, `role`, `email`, `phone`, `specialization`, `avatar`, `status`, `preferred_language`, `active_queries`, `converted`)
 VALUES ('admin', 'admin', '$2y$10$wT/0DqQ4pL8C3eU9ZzQ7fe7vQhK.T9K6hL4nQ8v.L7R0hU1N9p7Uq', 'Super Admin', 'Admin Manager (Full Control)', 'admin@grmgarments.com', '+91 97896 60115', 'Full Control', 'SA', 'ACTIVE', 'ta', 0, 0)
 ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
 
--- =========================================================================
--- SQL COMMANDS: QUICK DATA WIPE & RESET FOR ALL CRM TABLES
--- (Uncomment and run these queries in phpMyAdmin / MySQL CLI to clear tables)
--- =========================================================================
+SET FOREIGN_KEY_CHECKS = 1;
 
--- MASTER WIPE ALL DATA (Resets all 21 tables cleanly with auto-increment reset):
+-- =========================================================================
+-- OPTIONAL HELPER: QUICK DATA RESET / WIPE COMMANDS FOR TESTING
+-- (Uncomment and execute in phpMyAdmin if you need a clean slate wipe)
+-- =========================================================================
 /*
 SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE `bulk_assignments`;
+TRUNCATE TABLE `bulk_price_requests`;
 TRUNCATE TABLE `voice_translations`;
 TRUNCATE TABLE `voice_messages`;
 TRUNCATE TABLE `call_activity_logs`;
@@ -496,147 +605,3 @@ TRUNCATE TABLE `whatsapp_accounts`;
 DELETE FROM `users` WHERE `id` != 'admin';
 SET FOREIGN_KEY_CHECKS = 1;
 */
-
--- INDIVIDUAL TABLE DATA DELETE / TRUNCATE COMMANDS:
--- 1. Users & Staff (Deletes staff accounts while preserving Super Admin):
--- DELETE FROM `users` WHERE `id` != 'admin';
--- TRUNCATE TABLE `users`; -- Caution: removes Super Admin as well
-
--- 2. WhatsApp Business Accounts:
--- TRUNCATE TABLE `whatsapp_accounts`;
--- DELETE FROM `whatsapp_accounts`;
-
--- 3. Customers Directory (Customer 360):
--- TRUNCATE TABLE `customers`;
--- DELETE FROM `customers`;
-
--- 4. Customer Enquiries & Lead Pipeline:
--- TRUNCATE TABLE `queries`;
--- DELETE FROM `queries`;
-
--- 5. WhatsApp Chat Messages & Voice Notes:
--- TRUNCATE TABLE `messages`;
--- DELETE FROM `messages`;
-
--- 6. Products Catalog:
--- TRUNCATE TABLE `products`;
--- DELETE FROM `products`;
-
--- 6.1 Categories:
--- TRUNCATE TABLE `categories`;
--- DELETE FROM `categories`;
-
--- 6.2 Subcategories:
--- TRUNCATE TABLE `subcategories`;
--- DELETE FROM `subcategories`;
-
--- 6.3 Attributes (Sizes, Colors, Fabrics, Role Permissions):
--- TRUNCATE TABLE `attributes`;
--- DELETE FROM `attributes`;
-
--- 7. WhatsApp Sales Orders:
--- TRUNCATE TABLE `orders`;
--- DELETE FROM `orders`;
-
--- 8. Customer Follow-up Reminders:
--- TRUNCATE TABLE `followups`;
--- DELETE FROM `followups`;
-
--- 9. Tamper-Proof Audit Trail:
--- TRUNCATE TABLE `audit_logs`;
--- DELETE FROM `audit_logs`;
-
--- 10. DND Suppression List:
--- TRUNCATE TABLE `dnd_records`;
--- DELETE FROM `dnd_records`;
-
--- 11. Auto-Reply Rules:
--- TRUNCATE TABLE `auto_reply_rules`;
--- DELETE FROM `auto_reply_rules`;
-
--- 12. Broadcast Templates:
--- TRUNCATE TABLE `broadcast_templates`;
--- DELETE FROM `broadcast_templates`;
-
--- 13. Staff KPI Reports:
--- TRUNCATE TABLE `staff_kpis`;
--- DELETE FROM `staff_kpis`;
-
--- 14. Telephony & Masking Settings:
--- TRUNCATE TABLE `masking_settings`;
--- DELETE FROM `masking_settings`;
-
--- 15. Call Sessions:
--- TRUNCATE TABLE `call_sessions`;
--- DELETE FROM `call_sessions`;
-
--- 16. Call Assignments:
--- TRUNCATE TABLE `call_assignments`;
--- DELETE FROM `call_assignments`;
-
--- 17. Call Activity Logs:
--- TRUNCATE TABLE `call_activity_logs`;
--- DELETE FROM `call_activity_logs`;
-
--- 18. WhatsApp Multilingual Voice Messages:
--- TRUNCATE TABLE `voice_messages`;
--- DELETE FROM `voice_messages`;
-
--- 19. WhatsApp Voice Translations:
--- TRUNCATE TABLE `voice_translations`;
--- DELETE FROM `voice_translations`;
-
--- --------------------------------------------------------
--- Table structure for table `bulk_price_requests`
--- --------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS `bulk_price_requests` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `request_code` VARCHAR(50) NOT NULL UNIQUE,
-  `customer_name` VARCHAR(150) NOT NULL,
-  `customer_phone` VARCHAR(50) NOT NULL,
-  `product_name` VARCHAR(255) NOT NULL,
-  `size` VARCHAR(50) NOT NULL,
-  `quantity` INT NOT NULL DEFAULT 1,
-  `selling_price` DECIMAL(10, 2) NOT NULL,
-  `requested_price` DECIMAL(10, 2) NOT NULL,
-  `total_requested_amount` DECIMAL(10, 2) NOT NULL,
-  `staff_id` VARCHAR(50) NULL,
-  `staff_name` VARCHAR(150) NOT NULL,
-  `admin_phone` VARCHAR(50) NULL,
-  `status` ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
-  `rejection_reason` TEXT NULL,
-  `admin_notes` TEXT NULL,
-  `approved_by` VARCHAR(150) NULL,
-  `approved_at` DATETIME NULL,
-  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX (`customer_phone`),
-  INDEX (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
--- Table structure for table `bulk_assignments`
--- --------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS `bulk_assignments` (
-    `id` VARCHAR(50) PRIMARY KEY,
-    `batch_code` VARCHAR(50) UNIQUE NOT NULL,
-    `account_id` VARCHAR(50) NOT NULL,
-    `account_name` VARCHAR(100) NULL,
-    `account_number` VARCHAR(30) NULL,
-    `staff_id` VARCHAR(50) NOT NULL,
-    `staff_name` VARCHAR(100) NOT NULL,
-    `staff_phone` VARCHAR(30) NOT NULL,
-    `assigned_count` INT NOT NULL DEFAULT 0,
-    `sort_order` ENUM('ASC', 'DESC') NOT NULL DEFAULT 'ASC',
-    `customer_ids` JSON NOT NULL,
-    `query_ids` JSON NOT NULL,
-    `status` VARCHAR(30) DEFAULT 'COMPLETED',
-    `created_by` VARCHAR(100) DEFAULT 'Super Admin',
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX(`account_id`),
-    INDEX(`staff_id`),
-    INDEX(`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
