@@ -1020,10 +1020,11 @@ if ($action === 'get_state' || $action === 'get_all') {
             } catch (Exception $eSelfHeal) {}
         }
 
-        // Identify company business line phone numbers so they NEVER appear as customers
-        $businessPhones10 = ['9943557998', '8124038585', '8668007593', '9789660115'];
+        // Identify genuine company business line phone numbers so they NEVER appear as customers
+        // Note: Staff mobiles and genuine customer phone numbers are strictly preserved!
+        $businessPhones10 = [];
         foreach ($waAccounts as $wa) {
-            if (!empty($wa['phone_number'])) {
+            if (!empty($wa['phone_number']) && ($wa['status'] ?? '') === 'CONNECTED' && $wa['phone_number'] !== 'Awaiting Link') {
                 $wp = preg_replace('/[^0-9]/', '', $wa['phone_number']);
                 if (strlen($wp) >= 10) {
                     $businessPhones10[] = substr($wp, -10);
@@ -1035,10 +1036,32 @@ if ($action === 'get_state' || $action === 'get_all') {
         // Purge any accidental business records from customers and queries tables
         if ($shouldRunDbMaintenance) {
             try {
-                $delBizStmt = $pdo->prepare("DELETE FROM `customers` WHERE `id` LIKE '%8124038585%' OR `phone` LIKE '%8124038585%' OR `whatsapp` LIKE '%8124038585%' OR `name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
+                $delBizStmt = $pdo->prepare("DELETE FROM `customers` WHERE `name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
                 $delBizStmt->execute();
-                $delBizQStmt = $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` LIKE '%8124038585%' OR `customer_phone` LIKE '%8124038585%' OR `customer_name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
+                $delBizQStmt = $pdo->prepare("DELETE FROM `queries` WHERE `customer_name` IN ('WhatsApp Business #2', 'Bot (Auto-Reply)', 'GRM Garments')");
                 $delBizQStmt->execute();
+
+                // Phase 1 Self-Healing Table Synchronization: Maintain synchronized assigned_to columns
+                // 1. Sync queries.assigned_to -> customers.assigned_to
+                $pdo->exec("
+                    UPDATE `customers` c 
+                    JOIN `queries` q ON c.`id` = q.`customer_id` 
+                    SET c.`assigned_to` = q.`assigned_to` 
+                    WHERE q.`assigned_to` IS NOT NULL 
+                      AND q.`assigned_to` != '' 
+                      AND q.`assigned_to` != 'UNASSIGNED' 
+                      AND (c.`assigned_to` IS NULL OR c.`assigned_to` = '' OR c.`assigned_to` = 'UNASSIGNED' OR c.`assigned_to` != q.`assigned_to`)
+                ");
+                // 2. Sync customers.assigned_to -> queries.assigned_to
+                $pdo->exec("
+                    UPDATE `queries` q 
+                    JOIN `customers` c ON q.`customer_id` = c.`id` 
+                    SET q.`assigned_to` = c.`assigned_to`, q.`status` = 'ASSIGNED' 
+                    WHERE c.`assigned_to` IS NOT NULL 
+                      AND c.`assigned_to` != '' 
+                      AND c.`assigned_to` != 'UNASSIGNED' 
+                      AND (q.`assigned_to` IS NULL OR q.`assigned_to` = '' OR q.`assigned_to` = 'UNASSIGNED')
+                ");
             } catch (Exception $ePurgeBiz) {}
         }
 
@@ -1080,6 +1103,9 @@ if ($action === 'get_state' || $action === 'get_all') {
                 $c['tags'] = json_decode($c['tags'], true) ?: [];
             }
             $c['accountId'] = $c['account_id'] ?? 'account_1';
+            $c['account_id'] = $c['accountId'];
+            $c['assignedTo'] = $c['assigned_to'] ?? 'UNASSIGNED';
+            $c['assigned_to'] = $c['assignedTo'];
             $c['lastMessage'] = $c['last_message'] ?? '';
             $c['lastMessageAt'] = $c['last_message_at'] ?? '';
             $c['unreadCount'] = (int)($c['unread_count'] ?? 0);
@@ -1163,6 +1189,10 @@ if ($action === 'get_state' || $action === 'get_all') {
             $q['callbackDate'] = $q['callback_date'] ?? '';
             $q['callbackTime'] = $q['callback_time'] ?? '11:00 AM';
             $q['statusNotes'] = $q['status_notes'] ?? '';
+            $q['assignedTo'] = $q['assigned_to'] ?? 'UNASSIGNED';
+            $q['assigned_to'] = $q['assignedTo'];
+            $q['accountId'] = $q['account_id'] ?? ($q['account_slot'] ?? 'account_1');
+            $q['account_id'] = $q['accountId'];
             $queries[] = $q;
         }
 
@@ -4062,21 +4092,25 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
             }
             // CRITICAL: Internal company business numbers MUST NEVER be created as customers or queries!
             $isCompanyLine = false;
-            foreach (['9943557998', '8124038585', '8668007593', '9789660115'] as $bp) {
-                if (!empty($bp) && !empty($clean10) && str_ends_with($clean10, $bp)) {
-                    $isCompanyLine = true;
-                    break;
+            try {
+                $activeBizNums = $pdo->query("SELECT `phone_number` FROM `whatsapp_accounts` WHERE `status` = 'CONNECTED' AND `phone_number` != 'Awaiting Link'")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                foreach ($activeBizNums as $bp) {
+                    $cBp = preg_replace('/[^0-9]/', '', $bp);
+                    if (strlen($cBp) >= 10 && !empty($clean10) && str_ends_with($clean10, substr($cBp, -10))) {
+                        $isCompanyLine = true;
+                        break;
+                    }
                 }
-            }
+            } catch (Exception $eBizChk) {}
 
             if (!$isCompanyLine && empty($effectiveCustId) && !empty($clean10)) {
                 $effectiveCustId = 'cust_' . $clean10;
                 $initialName = !empty($recipientName) ? $recipientName : ('Customer (' . substr($clean10, -4) . ')');
-                $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`) VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 'CU')")
-                    ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $initialName, $phone, $phone]);
+                $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`, `account_id`) VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 'CU', ?)")
+                    ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $initialName, $phone, $phone, $accSlot]);
 
-                $pdo->prepare("INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `last_message`, `status`, `account_slot`, `created_at`) VALUES (?, ?, ?, ?, ?, 'OPEN', ?, NOW()) ON DUPLICATE KEY UPDATE `last_message` = VALUES(`last_message`)")
-                    ->execute(['qry_' . $clean10, $effectiveCustId, $initialName, $phone, $text, $accSlot]);
+                $pdo->prepare("INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `last_message`, `status`, `account_id`, `account_slot`, `created_at`) VALUES (?, ?, ?, ?, ?, 'OPEN', ?, ?, NOW()) ON DUPLICATE KEY UPDATE `last_message` = VALUES(`last_message`)")
+                    ->execute(['qry_' . $clean10, $effectiveCustId, $initialName, $phone, $text, $accSlot, $accSlot]);
             }
 
             // Consolidate any duplicate placeholder customer created under this LID
@@ -4278,12 +4312,16 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $existingCust = $checkCust->fetch();
 
             $isCompanySender = false;
-            foreach (['9943557998', '8124038585', '8668007593', '9789660115'] as $bp) {
-                if (!empty($bp) && !empty($clean10) && str_ends_with($clean10, $bp)) {
-                    $isCompanySender = true;
-                    break;
+            try {
+                $activeBizNums = $pdo->query("SELECT `phone_number` FROM `whatsapp_accounts` WHERE `status` = 'CONNECTED' AND `phone_number` != 'Awaiting Link'")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                foreach ($activeBizNums as $bp) {
+                    $cBp = preg_replace('/[^0-9]/', '', $bp);
+                    if (strlen($cBp) >= 10 && !empty($clean10) && str_ends_with($clean10, substr($cBp, -10))) {
+                        $isCompanySender = true;
+                        break;
+                    }
                 }
-            }
+            } catch (Exception $eBizChk2) {}
 
             if (!$isCompanySender && !$existingCust) {
                 $pdo->prepare("
@@ -6510,9 +6548,14 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             }
 
-            // Sync all queries for this customer
+            // Sync both customer and all queries for this customer (bidirectional persistence)
             if ($cid) {
+                $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` = ?")->execute([$assignedTo, $cid]);
                 $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ? WHERE `customer_id` = ?")->execute([$assignedTo, $status, $cid]);
+            }
+            if ($queryId) {
+                $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ? WHERE `id` = ?")->execute([$assignedTo, $status, $queryId]);
+                $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` = (SELECT `customer_id` FROM `queries` WHERE `id` = ?)")->execute([$assignedTo, $queryId]);
             }
 
             // Also synchronize live_messages_queue.json
@@ -6758,20 +6801,31 @@ function ensureBulkAssignmentsTable($pdo) {
 if ($action === 'get_unassigned_enquiries_count') {
     header('Content-Type: application/json');
     $accountId = trim($_GET['account_id'] ?? 'all');
+    $accountNumber = trim($_GET['account_number'] ?? ($_GET['number'] ?? ($_GET['phone'] ?? '')));
     try {
         if (!$pdo) throw new Exception("Database unavailable");
         ensureBulkAssignmentsTable($pdo);
 
         $isAll = ($accountId === 'all' || empty($accountId));
 
-        // Build resilient aliases for the chosen line (e.g. account_1, 1, Primary WhatsApp)
+        // Universal Account Slot Resolution: Build resilient aliases for the chosen line
         $aliases = [$accountId];
-        if ($accountId === 'account_1' || $accountId === '1' || strtolower($accountId) === 'primary') {
-            $aliases = array_values(array_unique(array_merge($aliases, ['account_1', '1', 'primary', 'Primary WhatsApp', 'Primary Line', ''])));
+        if ($accountId === 'account_1' || $accountId === '1' || strtolower($accountId) === 'primary' || strpos(strtolower($accountId), 'primary') !== false || strpos($accountId, 'account_1795') === 0) {
+            $aliases = array_values(array_unique(array_merge($aliases, ['account_1', '1', 'primary', 'Primary WhatsApp', 'Primary Line', 'account_1795149056956', ''])));
         } elseif (preg_match('/^account_(\d+)$/', $accountId, $m)) {
             $aliases[] = $m[1];
         } elseif (is_numeric($accountId)) {
             $aliases[] = 'account_' . $accountId;
+        }
+        if (!empty($accountNumber)) {
+            $cleanNum = preg_replace('/[^0-9]/', '', $accountNumber);
+            if (strlen($cleanNum) >= 10) {
+                $aliases[] = substr($cleanNum, -10);
+            }
+        }
+        $aliases = array_values(array_unique(array_filter($aliases, function($a) { return $a !== null; })));
+        if (in_array('account_1', $aliases) && !in_array('', $aliases)) {
+            $aliases[] = '';
         }
 
         if ($isAll) {
@@ -6808,8 +6862,10 @@ if ($action === 'get_unassigned_enquiries_count') {
                        MIN(created_at) as oldest_enquiry,
                        MAX(created_at) as newest_enquiry
                 FROM (
-                    SELECT q.id as candidate_id, q.created_at,
+                    SELECT q.id as candidate_id, q.customer_id, q.created_at,
                            COALESCE(
+                               NULLIF(q.account_id, ''),
+                               NULLIF(q.account_slot, ''),
                                NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
                                NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), ''),
                                'account_1'
@@ -6834,7 +6890,7 @@ if ($action === 'get_unassigned_enquiries_count') {
                           WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
                       )
                 ) u
-                WHERE u.effective_account IN ({$inMarks})
+                WHERE u.effective_account IN ({$inMarks}) OR u.effective_account IS NULL
             ");
             $stmt->execute($aliases);
         }
@@ -6880,30 +6936,37 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
         $isAll = ($accountId === 'all' || empty($accountId));
 
+        // Universal Account Slot Resolution
+        $aliases = [$accountId];
+        if ($accountId === 'account_1' || $accountId === '1' || strtolower($accountId) === 'primary' || strpos(strtolower($accountId), 'primary') !== false || strpos($accountId, 'account_1795') === 0) {
+            $aliases = array_values(array_unique(array_merge($aliases, ['account_1', '1', 'primary', 'Primary WhatsApp', 'Primary Line', 'account_1795149056956', ''])));
+        } elseif (preg_match('/^account_(\d+)$/', $accountId, $m)) {
+            $aliases[] = $m[1];
+        } elseif (is_numeric($accountId)) {
+            $aliases[] = 'account_' . $accountId;
+        }
+        if (!empty($accountNumber)) {
+            $cleanNum = preg_replace('/[^0-9]/', '', $accountNumber);
+            if (strlen($cleanNum) >= 10) {
+                $aliases[] = substr($cleanNum, -10);
+            }
+        }
+        $aliases = array_values(array_unique(array_filter($aliases, function($a) { return $a !== null; })));
+        if (in_array('account_1', $aliases) && !in_array('', $aliases)) {
+            $aliases[] = '';
+        }
+
         // Fetch candidate unassigned queries using resilient unified logic
         if (!$isAll) {
-            $aliases = [$accountId];
-            if ($accountId === 'account_1' || $accountId === '1' || strtolower($accountId) === 'primary') {
-                $aliases = array_values(array_unique(array_merge($aliases, ['account_1', '1', 'primary', 'Primary WhatsApp', 'Primary Line', ''])));
-            } elseif (preg_match('/^account_(\d+)$/', $accountId, $m)) {
-                $aliases[] = $m[1];
-            } elseif (is_numeric($accountId)) {
-                $aliases[] = 'account_' . $accountId;
-            }
-            if (!empty($accountNumber)) {
-                $cleanNum = preg_replace('/[^0-9]/', '', $accountNumber);
-                if (strlen($cleanNum) >= 10) {
-                    $aliases[] = substr($cleanNum, -10);
-                }
-            }
             $inMarks = implode(',', array_fill(0, count($aliases), '?'));
-
             $sql = "
                 SELECT candidate_id as id, customer_id, created_at, customer_name, customer_phone
                 FROM (
                     SELECT q.id as candidate_id, q.customer_id, q.created_at,
                            c.name as customer_name, c.phone as customer_phone,
                            COALESCE(
+                               NULLIF(q.account_id, ''),
+                               NULLIF(q.account_slot, ''),
                                NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
                                NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), ''),
                                'account_1'
@@ -6929,7 +6992,7 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                           WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
                       )
                 ) u
-                WHERE u.effective_account IN ({$inMarks})
+                WHERE (u.effective_account IN ({$inMarks}) OR u.effective_account IS NULL)
                 ORDER BY created_at {$sortOrder}
                 LIMIT " . intval($assignCount);
             $stmt = $pdo->prepare($sql);
@@ -6975,95 +7038,98 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             exit;
         }
 
-        $queryIds = [];
-        $customerIds = [];
+        // Phase 3: Single Atomic PDO Transaction Execution
+        $pdo->beginTransaction();
+        try {
+            $queryIds = [];
+            $customerIds = [];
 
-        foreach ($candidates as $cand) {
-            $cid = $cand['customer_id'];
-            $qid = $cand['id'];
-            $customerIds[] = $cid;
+            foreach ($candidates as $cand) {
+                $cid = $cand['customer_id'];
+                $qid = $cand['id'];
+                $customerIds[] = $cid;
 
-            // Ensure query exists in queries table
-            $checkQ = $pdo->prepare("SELECT id FROM `queries` WHERE `id` = ? OR `customer_id` = ? LIMIT 1");
-            $checkQ->execute([$qid, $cid]);
-            $existingQ = $checkQ->fetch(PDO::FETCH_ASSOC);
+                // Ensure query exists in queries table
+                $checkQ = $pdo->prepare("SELECT id FROM `queries` WHERE `id` = ? OR `customer_id` = ? LIMIT 1");
+                $checkQ->execute([$qid, $cid]);
+                $existingQ = $checkQ->fetch(PDO::FETCH_ASSOC);
 
-            if ($existingQ) {
-                $actualQId = $existingQ['id'];
-                $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE `id` = ?")
-                    ->execute([$staffId, $actualQId]);
-                $queryIds[] = $actualQId;
-            } else {
-                $actualQId = $qid ?: ('Q-' . $cid);
-                try {
+                if ($existingQ) {
+                    $actualQId = $existingQ['id'];
+                    $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE `id` = ?")
+                        ->execute([$staffId, $actualQId]);
+                    $queryIds[] = $actualQId;
+                } else {
+                    $actualQId = $qid ?: ('Q-' . $cid);
                     $pdo->prepare("
-                        INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `last_message`, `created_at`)
-                        VALUES (?, ?, ?, 'ASSIGNED', 'NORMAL', 'WhatsApp Customer Enquiry', 'WhatsApp Customer Enquiry', NOW())
-                    ")->execute([$actualQId, $cid, $staffId]);
-                } catch (Exception $eInsQ) {}
-                $queryIds[] = $actualQId;
+                        INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `last_message`, `account_id`, `account_slot`, `created_at`)
+                        VALUES (?, ?, ?, 'ASSIGNED', 'NORMAL', 'WhatsApp Customer Enquiry', 'WhatsApp Customer Enquiry', ?, ?, NOW())
+                        ON DUPLICATE KEY UPDATE `assigned_to` = VALUES(`assigned_to`), `status` = 'ASSIGNED'
+                    ")->execute([$actualQId, $cid, $staffId, $accountId, $accountId]);
+                    $queryIds[] = $actualQId;
+                }
             }
-        }
 
-        $customerIds = array_values(array_unique(array_filter($customerIds)));
-        $queryIds = array_values(array_unique(array_filter($queryIds)));
-        $actualAssigned = count($customerIds);
+            $customerIds = array_values(array_unique(array_filter($customerIds)));
+            $queryIds = array_values(array_unique(array_filter($queryIds)));
+            $actualAssigned = count($customerIds);
 
-        // Update customers to assigned staff safely
-        if (!empty($customerIds)) {
-            try {
+            // Bidirectional Persistence: Synchronously update customers table in the same transaction
+            if (!empty($customerIds)) {
                 $inCMarks = implode(',', array_fill(0, count($customerIds), '?'));
                 $cUpdateStmt = $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` IN ({$inCMarks})");
                 $cUpdateParams = array_merge([$staffId], $customerIds);
                 $cUpdateStmt->execute($cUpdateParams);
-            } catch (Exception $eCustUpdate) {
-                // Non-blocking fallback
             }
-        }
 
-        // Generate Batch Code & ID
-        $batchCode = 'BA-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
-        $batchId = 'batch_' . uniqid();
+            // Generate Batch Code & ID
+            $batchCode = 'BA-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
+            $batchId = 'batch_' . uniqid();
 
-        // Insert into bulk_assignments
-        $insBatch = $pdo->prepare("
-            INSERT INTO `bulk_assignments` 
-                (`id`, `batch_code`, `account_id`, `account_name`, `account_number`, `staff_id`, `staff_name`, `staff_phone`, `assigned_count`, `sort_order`, `customer_ids`, `query_ids`, `status`, `created_by`, `created_at`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?, NOW())
-        ");
-        $insBatch->execute([
-            $batchId,
-            $batchCode,
-            $accountId,
-            $accountName,
-            $accountNumber,
-            $staffId,
-            $staffName,
-            $staffPhone,
-            $actualAssigned,
-            $sortOrder,
-            json_encode($customerIds),
-            json_encode($queryIds),
-            $user
-        ]);
+            // Insert into bulk_assignments
+            $insBatch = $pdo->prepare("
+                INSERT INTO `bulk_assignments` 
+                    (`id`, `batch_code`, `account_id`, `account_name`, `account_number`, `staff_id`, `staff_name`, `staff_phone`, `assigned_count`, `sort_order`, `customer_ids`, `query_ids`, `status`, `created_by`, `created_at`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?, NOW())
+            ");
+            $insBatch->execute([
+                $batchId,
+                $batchCode,
+                $accountId,
+                $accountName,
+                $accountNumber,
+                $staffId,
+                $staffName,
+                $staffPhone,
+                $actualAssigned,
+                $sortOrder,
+                json_encode($customerIds),
+                json_encode($queryIds),
+                $user
+            ]);
 
-        // Update staff user active query counter
-        try {
+            // Update staff user active query counter
             $pdo->prepare("
                 UPDATE `users` 
                 SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED', 'DND'))
                 WHERE `id` = ? OR `username` = ?
             ")->execute([$staffId, $staffId, $staffId]);
-        } catch (Exception $eUserUpdate) {}
 
-        // Audit Log
-        try {
+            // Audit Log
             $auditDetails = "Bulk assigned {$actualAssigned} customer inquiries from [{$accountName} - {$accountNumber}] to {$staffName} (Phone: {$staffPhone}) in {$sortOrder} chronological order. Batch: {$batchCode}";
             $pdo->prepare("
                 INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
                 VALUES (?, 'BULK_ASSIGN_EXECUTED', 'BULK_ASSIGN', ?, ?)
             ")->execute([$user, $auditDetails, date("h:i A")]);
-        } catch (Exception $eAudit) {}
+
+            // Commit atomic transaction
+            $pdo->commit();
+        } catch (Exception $eTx) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $eTx;
+        }
 
         echo json_encode([
             "status" => "success",

@@ -100,6 +100,8 @@ CREATE TABLE IF NOT EXISTS `queries` (
     `callback_date` VARCHAR(50) NULL,
     `callback_time` VARCHAR(50) NULL DEFAULT '11:00 AM',
     `status_history` JSON NULL,
+    `account_id` VARCHAR(50) DEFAULT 'account_1',
+    `account_slot` VARCHAR(50) DEFAULT 'account_1',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX(`customer_id`),
     INDEX(`assigned_to`),

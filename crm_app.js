@@ -10863,8 +10863,11 @@ function renderCustomer360Panel() {
   }
 
   const customer = (CRM_STATE.customers || []).find(c => c && (c.id === ACTIVE_CUSTOMER_ID || String(c.id) === String(ACTIVE_CUSTOMER_ID)));
-  const query = (CRM_STATE.queries || []).find(q => q && (q.customerId === ACTIVE_CUSTOMER_ID || String(q.customerId) === String(ACTIVE_CUSTOMER_ID)));
-  const staff = query ? (CRM_STATE.staffList || []).find(s => s && (s.id === query.assignedTo || String(s.id) === String(query.assignedTo))) : null;
+  const query = (CRM_STATE.queries || []).find(q => q && (q.customerId === ACTIVE_CUSTOMER_ID || String(q.customerId) === String(ACTIVE_CUSTOMER_ID) || q.customer_id === ACTIVE_CUSTOMER_ID || String(q.customer_id) === String(ACTIVE_CUSTOMER_ID)));
+  const assignedStaffId = query?.assignedTo || query?.assigned_to || customer?.assignedTo || customer?.assigned_to || 'UNASSIGNED';
+  const staff = (assignedStaffId && assignedStaffId !== 'UNASSIGNED')
+    ? (CRM_STATE.staffList || []).find(s => s && (s.id === assignedStaffId || String(s.id) === String(assignedStaffId) || s.name === assignedStaffId || s.username === assignedStaffId))
+    : null;
   const orders = (CRM_STATE.orders || []).filter(o => o && (o.customerId === ACTIVE_CUSTOMER_ID || String(o.customerId) === String(ACTIVE_CUSTOMER_ID)));
 
   // Dynamic Follow-up Record Linkage for Customer 360
@@ -11032,9 +11035,9 @@ function renderCustomer360Panel() {
 
       <!-- Handle Staff Subtitle Badge -->
       <div class="mt-2 flex items-center justify-center">
-        <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${staff || query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'} px-2.5 py-0.5 rounded-full">
-          <span class="material-symbols-outlined text-[13px]">${staff || query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'badge' : 'person_alert'}</span>
-          <span>${t('customer.handled_by', 'Handled by:')} <strong>${staff ? staff.name : (query?.assignedTo === 'admin' || query?.assignedTo === 'Super Admin' ? 'Super Admin' : (query?.assignedTo && query.assignedTo !== 'UNASSIGNED' ? query.assignedTo : t('customer.unassigned', 'Unassigned')))}</strong></span>
+        <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${staff || assignedStaffId === 'admin' || assignedStaffId === 'Super Admin' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'} px-2.5 py-0.5 rounded-full">
+          <span class="material-symbols-outlined text-[13px]">${staff || assignedStaffId === 'admin' || assignedStaffId === 'Super Admin' ? 'badge' : 'person_alert'}</span>
+          <span>${t('customer.handled_by', 'Handled by:')} <strong>${staff ? staff.name : (assignedStaffId === 'admin' || assignedStaffId === 'Super Admin' ? 'Super Admin' : (assignedStaffId && assignedStaffId !== 'UNASSIGNED' ? assignedStaffId : t('customer.unassigned', 'Unassigned')))}</strong></span>
         </span>
       </div>
       
@@ -40767,58 +40770,15 @@ function refreshDashboardData(btnEl) {
       .then(res => {
         const data = res.data || res;
         if (data) {
-          if (data.products && Array.isArray(data.products) && typeof mergeCatalogProductsWithDB === 'function') {
-            mergeCatalogProductsWithDB(data.products);
-          }
-          if (data.customers && Array.isArray(data.customers)) {
-            CRM_STATE.customers = data.customers;
-          }
-          if (data.orders && Array.isArray(data.orders)) {
-            CRM_STATE.orders = data.orders.map(o => ({
-              id: o.id,
-              queryId: o.query_id || o.queryId || '',
-              customerId: o.customer_id || o.customerId || '',
-              customerName: o.customer_name || o.customerName || 'Customer',
-              customerPhone: o.customer_phone || o.customerPhone || '',
-              shippingAddress: o.shipping_address || o.shippingAddress || '',
-              items: Array.isArray(o.items) ? o.items : (typeof o.items_json === 'string' ? (JSON.parse(o.items_json || '[]') || []) : []),
-              grandTotal: parseFloat(o.grand_total || o.grandTotal || 0),
-              advancePayment: parseFloat(o.advance_payment || o.advancePayment || o.cod_advance || 0),
-              balanceAmount: parseFloat(o.balance_amount || o.balanceAmount || o.cod_balance_due || 0),
-              paymentMethod: o.payment_method || o.paymentMethod || 'COD',
-              paymentStatus: o.payment_status || o.paymentStatus || 'PENDING',
-              orderStatus: o.order_status || o.orderStatus || 'PLACED',
-              staffId: o.staff_id || o.staffId || '',
-              staffName: o.staff_name || o.staffName || '',
-              createdAt: o.created_at || o.createdAt || ''
-            }));
-          }
-          if (data.queries && Array.isArray(data.queries)) {
-            CRM_STATE.queries = data.queries.map(q => ({
-              id: q.id,
-              customerId: q.customer_id || q.customerId || '',
-              assignedTo: q.assigned_to || q.assignedTo || 'UNASSIGNED',
-              status: q.status || 'NEW',
-              priority: q.priority || 'NORMAL',
-              queryText: q.query_text || q.queryText || '',
-              createdAt: q.created_at || q.createdAt || ''
-            }));
-          }
-          if (data.followups && Array.isArray(data.followups)) {
-            CRM_STATE.followups = data.followups;
-          }
-          if (data.staff && Array.isArray(data.staff)) {
-            CRM_STATE.staffList = data.staff.map(s => ({
-              id: s.id,
-              name: s.name,
-              role: s.role,
-              avatar: s.avatar || (s.name ? s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'ST'),
-              activeQueries: parseInt(s.active_queries || s.activeQueries || 0),
-              converted: parseInt(s.converted || 0),
-              email: s.email || '',
-              phone: s.phone || '',
-              status: s.status || 'ACTIVE'
-            }));
+          if (typeof applyAuthoritativeDatabaseState === 'function') {
+            applyAuthoritativeDatabaseState(data);
+          } else {
+            if (data.products && Array.isArray(data.products) && typeof mergeCatalogProductsWithDB === 'function') {
+              mergeCatalogProductsWithDB(data.products);
+            }
+            if (data.customers && Array.isArray(data.customers)) {
+              CRM_STATE.customers = data.customers;
+            }
           }
         }
       })
@@ -43012,7 +42972,7 @@ function getUnassignedInquiriesList(filterAccountId = 'all') {
     if (!q) return;
     if (q.customerId) queryByCustId.set(String(q.customerId), q);
     if (q.customer_id) queryByCustId.set(String(q.customer_id), q);
-    const clean = String(q.customerId || q.customer_id || '').replace(/\D/g, '');
+    const clean = String(q.customerPhone || q.customer_phone || q.customerId || q.customer_id || '').replace(/\D/g, '');
     if (clean.length >= 7) queryByPhone10.set(clean.slice(-10), q);
   });
 
@@ -43038,14 +42998,17 @@ function getUnassignedInquiriesList(filterAccountId = 'all') {
 
     if (!isUnassigned) return;
 
-    // Account filtering
-    const effectiveAcc = query?.accountId || query?.account_id || cust.accountId || cust.account_id || 'account_1';
+    // Universal Account Slot Resolution
+    const effectiveAcc = String(query?.accountId || query?.account_id || cust.accountId || cust.account_id || 'account_1').trim();
     if (filterAccountId && filterAccountId !== 'all') {
-      const aliases = [filterAccountId];
-      if (filterAccountId === 'account_1' || filterAccountId === '1') {
-        aliases.push('account_1', '1', 'Primary WhatsApp', 'Primary Line');
+      const targetStr = String(filterAccountId).trim();
+      const isPrimaryFilter = targetStr === 'account_1' || targetStr === '1' || targetStr.toLowerCase().includes('primary') || targetStr.startsWith('account_1795');
+      const isPrimaryAcc = effectiveAcc === 'account_1' || effectiveAcc === '1' || effectiveAcc.toLowerCase().includes('primary') || effectiveAcc.startsWith('account_1795') || !effectiveAcc;
+      if (isPrimaryFilter) {
+        if (!isPrimaryAcc) return;
+      } else {
+        if (effectiveAcc !== targetStr) return;
       }
-      if (!aliases.includes(effectiveAcc)) return;
     }
 
     seenCustIds.add(String(cust.id));
@@ -43073,6 +43036,8 @@ async function onBulkAccountChange() {
   if (!accSelect) return;
 
   const accountId = accSelect.value || 'all';
+  const opt = accSelect.options[accSelect.selectedIndex];
+  const accountNumber = opt?.getAttribute('data-number') || '';
 
   // Fast local instant count calculation aligned 1:1 with WhatsApp Inbox
   const localList = getUnassignedInquiriesList(accountId);
@@ -43096,7 +43061,7 @@ async function onBulkAccountChange() {
 
   // Verify and sync live with server
   try {
-    const res = await fetch(`api.php?action=get_unassigned_enquiries_count&account_id=${encodeURIComponent(accountId)}`);
+    const res = await fetch(`api.php?action=get_unassigned_enquiries_count&account_id=${encodeURIComponent(accountId)}&account_number=${encodeURIComponent(accountNumber)}`);
     const data = await res.json();
     if (data && data.status === 'success' && typeof data.count === 'number') {
       const serverCount = Math.max(data.count, count);
@@ -43328,6 +43293,7 @@ async function handleExecuteBulkAssign() {
       if (typeof renderBulkAssignList === 'function') renderBulkAssignList();
       if (typeof renderInboxConversationList === 'function') renderInboxConversationList();
       if (typeof renderInbox === 'function') renderInbox();
+      if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
       updateBadgeCounters();
       updateBulkAssignBadgeCounters();
       if (typeof syncLiveCRMData === 'function') syncLiveCRMData(true);
