@@ -2804,23 +2804,35 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
   accounts.forEach(acc => {
     let existing = CRM_STATE.whatsappLines.find(l => l.id === acc.id);
     if (existing) {
-      // Guard: Never demote an already authenticated CONNECTED account to DISCONNECTED on transient network drops
-      // unless a live QR code is emitted (which means device was unlinked and needs scanning)
-      const isExistingLive = existing.status === 'CONNECTED' && 
-                             existing.connected_number && 
-                             existing.connected_number !== 'Awaiting Link' && 
-                             existing.connected_number !== 'Scan QR Code';
       const incomingRawPhone = acc.phone || acc.connected_number || '';
       const hasIncomingRealPhone = incomingRawPhone && 
                                    incomingRawPhone !== 'Awaiting Link' && 
                                    incomingRawPhone !== 'Scan QR Code' &&
                                    !incomingRawPhone.includes('Awaiting');
 
-      if (isExistingLive && !hasIncomingRealPhone && !acc.qr_image && (acc.status === 'DISCONNECTED' || acc.status === 'CONNECTING' || acc.status === 'RECONNECTING')) {
+      const existingPhone = (existing.connected_number && existing.connected_number !== 'Awaiting Link' && existing.connected_number !== 'Scan QR Code')
+        ? existing.connected_number
+        : (CRM_STATE?.whatsappAccount?.phoneNumber && CRM_STATE.whatsappAccount.phoneNumber !== 'Awaiting Link' && CRM_STATE.whatsappAccount.phoneNumber !== 'Scan QR Code' ? CRM_STATE.whatsappAccount.phoneNumber : '');
+
+      const isExistingLive = (existing.status === 'CONNECTED' || Boolean(existingPhone)) && Boolean(existingPhone);
+
+      // Preserve existing valid phone number - NEVER wipe it to 'Awaiting Link'!
+      if (hasIncomingRealPhone) {
+        existing.connected_number = incomingRawPhone;
+      } else if (existingPhone) {
+        existing.connected_number = existingPhone;
+      }
+
+      // Strong Protection: Never allow a transient bridge SCAN_QR or DISCONNECTED to demote an already authenticated CONNECTED account
+      // unless user explicitly unlinked it.
+      if (isExistingLive && (acc.status === 'SCAN_QR' || acc.status === 'DISCONNECTED' || acc.status === 'CONNECTING' || acc.status === 'RECONNECTING')) {
+        existing.status = 'CONNECTED';
+        existing.qr_image = acc.qr_image || existing.qr_image || null;
+        existing.label = acc.label || acc.name || existing.label;
         return;
       }
+
       existing.status = (acc.status || 'DISCONNECTED').toUpperCase();
-      existing.connected_number = hasIncomingRealPhone ? incomingRawPhone : (existing.status === 'CONNECTED' ? existing.connected_number : 'Awaiting Link');
       existing.qr_image = acc.qr_image || null;
       existing.label = acc.label || acc.name || existing.label;
     } else {
@@ -2838,7 +2850,7 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
   });
 
   const primary = accounts.find(a => a.id === 'account_1') || accounts[0];
-  const anyConnected = CRM_STATE.whatsappLines.find(l => l.status === 'CONNECTED' && l.connected_number && l.connected_number !== 'Awaiting Link');
+  const anyConnected = CRM_STATE.whatsappLines.find(l => (l.status === 'CONNECTED') && l.connected_number && l.connected_number !== 'Awaiting Link' && l.connected_number !== 'Scan QR Code');
   if (CRM_STATE.whatsappAccount) {
     if (primary && primary.status === 'CONNECTED' && (primary.phone || primary.connected_number)) {
       CRM_STATE.whatsappAccount.phoneNumber = primary.phone || primary.connected_number;
@@ -2848,7 +2860,13 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
       CRM_STATE.whatsappAccount.phoneNumber = anyConnected.connected_number;
       CRM_STATE.whatsappAccount.status = 'CONNECTED';
     } else {
-      CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
+      const currentSavedPhone = CRM_STATE.whatsappAccount.phoneNumber;
+      const hasRealSavedPhone = currentSavedPhone && currentSavedPhone !== 'Awaiting Link' && currentSavedPhone !== 'Scan QR Code';
+      if (hasRealSavedPhone) {
+        CRM_STATE.whatsappAccount.status = 'CONNECTED';
+      } else {
+        CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
+      }
     }
   }
 
@@ -4420,7 +4438,10 @@ function renderPhoneSwitcherDropdown() {
   }
 
   const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998').replace(/\s+/g, '');
-  const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
+  const connectedCount = accounts.filter(a => {
+    const ph = (a.connected_number || '').replace(/\D/g, '');
+    return a.status === 'CONNECTED' || ph.length >= 10;
+  }).length;
 
   if (countBadge) {
     countBadge.innerText = `${connectedCount} / ${accounts.length} Active Line${accounts.length > 1 ? 's' : ''}`;
@@ -4471,10 +4492,11 @@ function renderPhoneSwitcherDropdown() {
   html += accounts.map((acc, index) => {
     const accCleanPhone = (acc.connected_number || '').replace(/\s+/g, '');
     const isCurrent = (acc.id === ACTIVE_SEND_ACCOUNT_ID) || (accounts.length === 1 && ACTIVE_SEND_ACCOUNT_ID !== 'all');
-    const isConn = acc.status === 'CONNECTED';
-    const isScanning = acc.status === 'SCAN_QR';
-    const isScan = isScanning;
     const rawCleanDigits = (acc.connected_number || '').replace(/\D/g, '');
+    const hasRealPhone = rawCleanDigits.length >= 10;
+    const isConn = acc.status === 'CONNECTED' || hasRealPhone;
+    const isScanning = !isConn && acc.status === 'SCAN_QR';
+    const isScan = isScanning;
     const displayPhone = (rawCleanDigits.length >= 7)
       ? formatPhoneNumberPretty(acc.connected_number)
       : (isConn ? (acc.connected_number || CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998') : (isScanning ? 'Scan QR Code' : (acc.connected_number || 'Awaiting Link')));
@@ -4857,26 +4879,35 @@ function updateConfiguredPhoneDisplays() {
   let activeStatus = 'DISCONNECTED';
 
   if (ACTIVE_SEND_ACCOUNT_ID === 'all') {
-    if (isSuperAdmin) {
-      displayLabel = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : (accounts[0] && accounts[0].status === 'CONNECTED' ? formatPhoneNumberPretty(accounts[0].connected_number) : '+Scan QR Code');
+    const firstLive = accounts.find(a => (a.status === 'CONNECTED' || (a.connected_number && a.connected_number.replace(/\D/g, '').length >= 10)) && a.connected_number !== 'Awaiting Link' && a.connected_number !== 'Scan QR Code');
+    if (firstLive) {
+      displayLabel = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : formatPhoneNumberPretty(firstLive.connected_number);
+      activeStatus = 'CONNECTED';
     } else {
-      const firstLive = accounts.find(a => a.status === 'CONNECTED' && a.connected_number && a.connected_number !== 'Awaiting Link');
-      displayLabel = accounts.length > 1 ? `All ${accounts.length} WhatsApp Lines` : (firstLive ? formatPhoneNumberPretty(firstLive.connected_number) : formatPhoneNumberPretty(rawPhone));
+      displayLabel = isSuperAdmin ? '+Scan QR Code' : formatPhoneNumberPretty(rawPhone);
+      activeStatus = accounts.some(a => a.status === 'SCAN_QR') ? 'SCAN_QR' : 'DISCONNECTED';
     }
-    activeStatus = accounts.some(a => a.status === 'CONNECTED') ? 'CONNECTED' : (accounts.some(a => a.status === 'SCAN_QR') ? 'SCAN_QR' : 'DISCONNECTED');
   } else {
     const cur = accounts.find(a => a.id === ACTIVE_SEND_ACCOUNT_ID) || accounts[0];
     if (cur) {
+      const curPhone = (cur.connected_number && cur.connected_number !== 'Awaiting Link' && cur.connected_number !== 'Scan QR Code')
+        ? cur.connected_number
+        : ((rawPhone && rawPhone !== 'Awaiting Link' && rawPhone !== 'Scan QR Code') ? rawPhone : '');
+      const cleanDigits = (curPhone || '').replace(/\D/g, '');
+      const hasRealNumber = cleanDigits.length >= 10;
+
       activeStatus = (cur.status || 'DISCONNECTED').toUpperCase();
-      if (activeStatus === 'CONNECTED' && cur.connected_number && cur.connected_number !== 'Awaiting Link') {
-        displayLabel = formatPhoneNumberPretty(cur.connected_number);
+      if (hasRealNumber) {
+        displayLabel = formatPhoneNumberPretty(curPhone);
+        activeStatus = 'CONNECTED';
       } else if (activeStatus === 'SCAN_QR') {
-        displayLabel = isSuperAdmin ? '+Scan QR Code' : formatPhoneNumberPretty(rawPhone);
+        displayLabel = isSuperAdmin ? '+Scan QR Code' : (rawPhone ? formatPhoneNumberPretty(rawPhone) : '+Scan QR Code');
       } else {
-        displayLabel = (cur.connected_number && cur.connected_number !== 'Awaiting Link') ? formatPhoneNumberPretty(cur.connected_number) : (isSuperAdmin ? 'Awaiting Link' : formatPhoneNumberPretty(rawPhone));
+        displayLabel = isSuperAdmin ? '+Scan QR Code' : (rawPhone ? formatPhoneNumberPretty(rawPhone) : 'Awaiting Link');
       }
     } else {
       displayLabel = formatPhoneNumberPretty(rawPhone);
+      activeStatus = 'CONNECTED';
     }
   }
 

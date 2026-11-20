@@ -905,6 +905,14 @@ setInterval(async () => {
     }
 }, 60 * 1000);
 
+// Keep-Alive Self Ping: Prevents Hostinger Passenger / CloudLinux Node.js process from sleeping / idle spin-down
+setInterval(() => {
+    try {
+        const port = process.env.PORT || 3000;
+        http.get(`http://127.0.0.1:${port}/api/health`, () => {}).on('error', () => {});
+    } catch (e) {}
+}, 2 * 60 * 1000);
+
 console.log(`🚀 [Hostinger Mode]: WhatsApp Bridge connected to CRM at ${CRM_BASE_URL}`);
 
 async function forwardToCRM(data) {
@@ -1185,7 +1193,10 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         initAccountSession(accountId, label);
                     }, 1200);
                 } else if (isReplaced) {
-                    console.warn(`[QR Bridge - ${accountId}] Session replaced by another active connection (status: 440). Halting auto-reconnect to prevent rapid reconnect blinking loop.`);
+                    console.warn(`[QR Bridge - ${accountId}] Session replaced or conflict (status: 440). Waiting 10s before auto-reconnecting...`);
+                    setTimeout(() => {
+                        initAccountSession(accountId, label);
+                    }, 10000);
                 } else {
                     // Reconnect on network drops / keep-alive hiccups / 515 restart required without clearing session
                     const reconnectDelay = (statusCode === 515) ? 1000 : 3500;
@@ -2819,9 +2830,20 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
 
         const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
         
-        // Wipe stale credentials if forceReset is true or if the account is not currently connected
-        const isNotConnected = !accounts.has(targetId) || accounts.get(targetId)?.status !== 'CONNECTED';
-        if ((forceReset || isNotConnected) && fs.existsSync(sessionDir)) {
+        // Never wipe authenticated credentials on refresh! Check if valid creds exist first
+        const credsFile = path.join(sessionDir, 'creds.json');
+        let hasValidSavedSession = false;
+        if (fs.existsSync(credsFile)) {
+            try {
+                const credsData = JSON.parse(fs.readFileSync(credsFile, 'utf8'));
+                if (credsData && credsData.me && credsData.me.id) {
+                    hasValidSavedSession = true;
+                }
+            } catch (e) {}
+        }
+
+        // Only wipe credentials if explicitly forced AND no valid authenticated session exists
+        if (forceReset && !hasValidSavedSession && fs.existsSync(sessionDir)) {
             try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) { }
         }
 
