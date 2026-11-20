@@ -83,7 +83,8 @@ CREATE TABLE IF NOT EXISTS `customers` (
     INDEX(`whatsapp`),
     INDEX(`assigned_to`),
     INDEX(`account_id`),
-    INDEX(`is_dnd`)
+    INDEX(`is_dnd`),
+    INDEX(`phone`, `account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Customer Enquiries & Lead Pipeline (Synchronized with Customers)
@@ -117,7 +118,8 @@ CREATE TABLE IF NOT EXISTS `queries` (
     INDEX(`status`),
     INDEX(`account_id`),
     INDEX(`created_at`),
-    INDEX(`customer_id`, `assigned_to`, `status`)
+    INDEX(`customer_id`, `assigned_to`, `status`),
+    INDEX(`account_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. WhatsApp Messages & Media Notes
@@ -148,7 +150,8 @@ CREATE TABLE IF NOT EXISTS `messages` (
     INDEX(`customer_id`),
     INDEX(`account_id`),
     INDEX(`timestamp_epoch`),
-    INDEX(`created_at`)
+    INDEX(`created_at`),
+    INDEX(`customer_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Products Catalog
