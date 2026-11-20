@@ -599,19 +599,22 @@ function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reaso
             "Staff has been informed of rejection.";
     }
 
-    // 2. Resolve Admin Phone
+    // 2. Resolve Admin Phone (Strictly isolated from staff mobile numbers)
     $adminPhone = trim($req['admin_phone'] ?? '');
     if (empty($adminPhone)) {
         $cfgFile = __DIR__ . '/whatsapp_account_config.json';
         if (file_exists($cfgFile)) {
             $cfg = json_decode(file_get_contents($cfgFile), true);
-            if (!empty($cfg['phone_number'])) {
+            if (!empty($cfg['phone_number']) && strpos($cfg['phone_number'], '9943557998') === false) {
                 $adminPhone = $cfg['phone_number'];
             }
         }
     }
-    if (empty($adminPhone)) {
-        $adminPhone = '+91 99435 57998';
+    if (empty($adminPhone) && $pdo) {
+        try {
+            $uStmt = $pdo->query("SELECT `phone` FROM `users` WHERE `id` = 'admin' OR `role` IN ('Super Admin', 'admin') ORDER BY `id` ASC LIMIT 1");
+            $adminPhone = (string)$uStmt->fetchColumn();
+        } catch (Exception $e) {}
     }
 
     $cleanAdmin = preg_replace('/[^0-9]/', '', $adminPhone);
@@ -867,6 +870,50 @@ if ($action === 'get_state' || $action === 'get_all') {
             return true;
         }));
 
+        // Fetch all registered staff phones to guarantee staff personal details NEVER leak into Admin WhatsApp lines
+        $staffPhonesList = [];
+        try {
+            $sphStmt = $pdo->query("SELECT `phone` FROM `users` WHERE `id` != 'admin' AND `phone` IS NOT NULL AND `phone` != ''");
+            $rawSph = $sphStmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($rawSph as $sp) {
+                $cd = preg_replace('/[^0-9]/', '', $sp);
+                if (strlen($cd) >= 7) $staffPhonesList[] = $cd;
+            }
+        } catch (Exception $eSph) {}
+        $staffPhonesList[] = '9943557998'; // Explicit guard for staff Vanaja
+        $staffPhonesList = array_values(array_unique($staffPhonesList));
+
+        // Purge any staff numbers accidentally stored in whatsapp_accounts in DB
+        foreach ($staffPhonesList as $sphDigits) {
+            try {
+                $pdo->prepare("UPDATE `whatsapp_accounts` SET `phone_number` = 'Awaiting Link', `status` = 'DISCONNECTED' WHERE REPLACE(REPLACE(`phone_number`, ' ', ''), '+', '') LIKE ?")
+                    ->execute(["%$sphDigits%"]);
+            } catch (Exception $eFixWa) {}
+        }
+
+        // Cleanse waAccounts memory array of any staff numbers
+        foreach ($waAccounts as &$wa) {
+            $waPhoneDigits = preg_replace('/[^0-9]/', '', $wa['phone_number'] ?? '');
+            foreach ($staffPhonesList as $sph) {
+                if (!empty($sph) && (str_ends_with($waPhoneDigits, $sph) || str_ends_with($sph, $waPhoneDigits))) {
+                    $wa['phone_number'] = 'Awaiting Link';
+                    $wa['status'] = 'DISCONNECTED';
+                    break;
+                }
+            }
+        }
+        unset($wa);
+
+        // Sanitize cfgData phone number
+        $cfgPhone = (!empty($cfgData['phone_number'])) ? $cfgData['phone_number'] : '';
+        $cfgPhoneDigits = preg_replace('/[^0-9]/', '', $cfgPhone);
+        foreach ($staffPhonesList as $sph) {
+            if (!empty($sph) && (str_ends_with($cfgPhoneDigits, $sph) || str_ends_with($sph, $cfgPhoneDigits))) {
+                $cfgPhone = '';
+                break;
+            }
+        }
+
         // Only ensure primary account slot is initialized if no accounts exist
         if (empty($waAccounts)) {
             $waAccounts[] = [
@@ -875,8 +922,8 @@ if ($action === 'get_state' || $action === 'get_all') {
                 'display_name' => 'Primary WhatsApp',
                 'brand_name' => 'Primary Line',
                 'business_name' => 'Primary WhatsApp',
-                'phone_number' => (!empty($cfgData['phone_number'])) ? $cfgData['phone_number'] : '+91 99435 57998',
-                'status' => (!empty($cfgData['status'])) ? $cfgData['status'] : 'CONNECTED',
+                'phone_number' => $cfgPhone ?: 'Awaiting Link',
+                'status' => ($cfgPhone && !empty($cfgData['status'])) ? $cfgData['status'] : 'DISCONNECTED',
                 'qr_code' => null
             ];
         }
@@ -885,21 +932,17 @@ if ($action === 'get_state' || $action === 'get_all') {
             'business_name' => 'GRM Garments Business Hub',
             'display_name' => 'GRM Garments Official',
             'brand_name' => 'Blue Berry 💙',
-            'phone_number' => '+91 99435 57998',
+            'phone_number' => $cfgPhone ?: 'Awaiting Link',
             'status' => 'CONNECTED'
         ];
 
-        // Ensure authoritative active status from config file is never lost
-        if (!empty($cfgData['status']) && $cfgData['status'] === 'CONNECTED') {
+        // Ensure authoritative active status from config file is never lost (strictly non-staff numbers)
+        if (!empty($cfgData['status']) && $cfgData['status'] === 'CONNECTED' && !empty($cfgPhone)) {
             $primaryWA['status'] = 'CONNECTED';
-            if (!empty($cfgData['phone_number'])) {
-                $primaryWA['phone_number'] = $cfgData['phone_number'];
-            }
+            $primaryWA['phone_number'] = $cfgPhone;
             if (!empty($waAccounts) && isset($waAccounts[0])) {
                 $waAccounts[0]['status'] = 'CONNECTED';
-                if (!empty($cfgData['phone_number'])) {
-                    $waAccounts[0]['phone_number'] = $cfgData['phone_number'];
-                }
+                $waAccounts[0]['phone_number'] = $cfgPhone;
             }
         }
 
@@ -1085,7 +1128,7 @@ if ($action === 'get_state' || $action === 'get_all') {
                     break;
                 }
             }
-            if ($cName === 'GRM Garments' || $cName === 'GRM Garments Business Hub' || $cName === 'GRM Garments Official' || $cName === 'WhatsApp Business #2' || $cName === 'Bot (Auto-Reply)' || strpos($c['id'], '8124038585') !== false || $c['id'] === 'cust_9943557998') {
+            if ($cName === 'GRM Garments' || $cName === 'GRM Garments Business Hub' || $cName === 'GRM Garments Official' || $cName === 'WhatsApp Business #2' || $cName === 'Bot (Auto-Reply)' || strpos($c['id'], '8124038585') !== false) {
                 $isBusiness = true;
             }
 
@@ -2071,7 +2114,7 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                     ");
                     $ins->execute([
                         $slotId,
-                        $dbPhone ?: '+91 99435 57998',
+                        $dbPhone ?: 'Awaiting Link',
                         'GRM Garments Business Hub',
                         $label,
                         $label,
@@ -2876,7 +2919,7 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         } catch (Exception $e) {}
     }
     if (empty($adminPhone)) {
-        $adminPhone = '+91 99435 57998';
+        $adminPhone = '';
     }
 
     // Strict RBAC check: Staff in view-only mode cannot create bulk price requests
@@ -2943,12 +2986,12 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
             }
 
             // Connected WhatsApp line phone number
-            $crmPhone = '919943557998';
+            $crmPhone = '';
             if (file_exists(__DIR__ . '/whatsapp_account_config.json')) {
                 $cfgData = json_decode(file_get_contents(__DIR__ . '/whatsapp_account_config.json'), true);
                 if (!empty($cfgData['phone_number'])) {
                     $cleanCfgNum = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
-                    if (strlen($cleanCfgNum) >= 10) $crmPhone = $cleanCfgNum;
+                    if (strlen($cleanCfgNum) >= 10 && strpos($cleanCfgNum, '9943557998') === false) $crmPhone = $cleanCfgNum;
                 }
             }
 
@@ -3298,12 +3341,12 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
     $rejectUrl = "{$publicBaseUrl}/api.php?action=bulk_link_action&token={$linkToken}&code={$req['request_code']}&decision=reject";
 
     // Connected WhatsApp line phone number
-    $crmPhone = '919943557998';
+    $crmPhone = '';
     if (file_exists(__DIR__ . '/whatsapp_account_config.json')) {
         $cfgData = json_decode(file_get_contents(__DIR__ . '/whatsapp_account_config.json'), true);
         if (!empty($cfgData['phone_number'])) {
             $cleanCfgNum = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
-            if (strlen($cleanCfgNum) >= 10) $crmPhone = $cleanCfgNum;
+            if (strlen($cleanCfgNum) >= 10 && strpos($cleanCfgNum, '9943557998') === false) $crmPhone = $cleanCfgNum;
         }
     }
     $waApproveUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("APPROVE {$req['request_code']}");
@@ -8106,7 +8149,7 @@ if ($action === 'request_backup_download') {
             $adminUserStmt = $pdo->prepare("SELECT `phone` FROM `users` WHERE `role` IN ('Super Admin', 'admin') AND `status` = 'active' AND `phone` IS NOT NULL AND `phone` != '' ORDER BY id ASC LIMIT 1");
             $adminUserStmt->execute();
             $adminRow = $adminUserStmt->fetch(PDO::FETCH_ASSOC);
-            $waAdminPhone = !empty($adminRow['phone']) ? $adminRow['phone'] : '+91 99435 57998';
+            $waAdminPhone = !empty($adminRow['phone']) ? $adminRow['phone'] : '';
 
             $cleanWaPhone = preg_replace('/[^0-9]/', '', $waAdminPhone);
             if (strlen($cleanWaPhone) === 10) {
@@ -8983,7 +9026,7 @@ if ($action === 'accept_call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     `id`, `provider_call_id`, `customer_id`, `customer_name`, `customer_phone`,
                     `masked_phone`, `virtual_number`, `assigned_staff_id`, `assigned_staff_name`,
                     `status`, `started_at`, `answered_at`, `outcome`
-                ) VALUES (?, ?, 'cust_caller', 'WhatsApp Caller', '+91 97896 60115', '+91 97*** 60115', '+91 99435 57998', ?, ?, 'CLAIMED', NOW(), NOW(), 'CLAIMED')
+                ) VALUES (?, ?, 'cust_caller', 'WhatsApp Caller', '+91 97896 60115', '+91 97*** 60115', '+91 95009 04638', ?, ?, 'CLAIMED', NOW(), NOW(), 'CLAIMED')
             ");
             $insStmt->execute([$callId, 'INBOUND-' . uniqid(), $staffId, $staffName]);
         }
@@ -9281,7 +9324,7 @@ if ($action === 'simulate_incoming_call' && $_SERVER['REQUEST_METHOD'] === 'POST
             : $rawPhone;
 
         $settings = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
-        $virtualNum = $settings['virtual_company_number'] ?? '+91 99435 57998';
+        $virtualNum = $settings['virtual_company_number'] ?? '+91 95009 04638';
         $eligibleStaff = $settings['eligible_staff_ids'] ?? 'staff_05,admin,all';
         $eligibleArr = array_filter(array_map('trim', explode(',', $eligibleStaff)));
         

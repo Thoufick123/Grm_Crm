@@ -1315,7 +1315,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         customer_phone: callerPhone,
                         raw_caller_digits: cleanDigits,
                         masked_phone: maskedPhone,
-                        virtual_number: accountObj.connectedNumber || '+91 99435 57998',
+                        virtual_number: accountObj.connectedNumber || '+91 95009 04638',
                         status: 'RINGING',
                         voice_room_token: roomToken,
                         is_video: Boolean(call.isVideo),
@@ -1731,7 +1731,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         // 2. Resolve sender identity: strictly ensure sender is an authorized Admin!
                         const senderDigits10 = String(cleanNumber || senderNumber || senderJid || '').replace(/\D/g, '').slice(-10);
                         const connectedDigits10 = String(accountObj.connectedNumber || '').replace(/\D/g, '').slice(-10);
-                        const authorizedAdminSet = new Set(['9943557998', '8124038585', '9789660115', '8668007593']);
+                        const authorizedAdminSet = new Set(['8124038585', '9500904638']);
                         if (connectedDigits10 && connectedDigits10.length === 10) authorizedAdminSet.add(connectedDigits10);
                         if (typeof configFilePath !== 'undefined' && fs.existsSync(configFilePath)) {
                             try {

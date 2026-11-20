@@ -2368,10 +2368,10 @@ function ingestInboundMessage(payload, suppressChime = false) {
   let cleanPhone = phoneNorm.formattedPhone || '+91 98765 43210';
   let normalizedDigits = phoneNorm.cleanDigits;
 
-  // Privacy LID Resolution (e.g. 275341797023827 -> 919943557998)
+  // Privacy LID Resolution
   const lidCandidate = payload.lid || ((payload.sender_jid && payload.sender_jid.includes('@lid')) ? payload.sender_jid.split('@')[0].split(':')[0].replace(/[^0-9]/g, '') : (normalizedDigits.length >= 14 ? normalizedDigits : null));
   if (lidCandidate) {
-    const sharedLidMap = (CRM_STATE && CRM_STATE.lidMappings) || window.LID_MAPPINGS || { '275341797023827': '919943557998' };
+    const sharedLidMap = (CRM_STATE && CRM_STATE.lidMappings) || window.LID_MAPPINGS || {};
     if (sharedLidMap[lidCandidate]) {
       const mapped = String(sharedLidMap[lidCandidate]).replace(/[^0-9]/g, '');
       if (mapped.length >= 10) {
@@ -3116,7 +3116,7 @@ function handleInboundSimulationSubmit(event) {
     media_url: null,
     duration: type === 'audio' ? 8 : null,
     account_id: slot,
-    received_on_number: CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998',
+    received_on_number: (CRM_STATE?.whatsappAccount?.phoneNumber && !isStaffMobile(CRM_STATE.whatsappAccount.phoneNumber)) ? CRM_STATE.whatsappAccount.phoneNumber : '',
     priority: priority,
     assigned_to: 'UNASSIGNED',
     source: 'INBOUND_SIMULATOR',
@@ -3677,7 +3677,7 @@ function applyAuthoritativeDatabaseState(data) {
   }
 
   // 8.1 Consolidate Privacy LID conversations, queries & customer profiles
-  const activeLidMap = (data.lidMappings && typeof data.lidMappings === 'object') ? data.lidMappings : (CRM_STATE.lidMappings || window.LID_MAPPINGS || { '275341797023827': '919943557998' });
+  const activeLidMap = (data.lidMappings && typeof data.lidMappings === 'object') ? data.lidMappings : (CRM_STATE.lidMappings || window.LID_MAPPINGS || {});
   if (data.lidMappings && typeof data.lidMappings === 'object') {
     CRM_STATE.lidMappings = data.lidMappings;
     window.LID_MAPPINGS = Object.assign(window.LID_MAPPINGS || {}, data.lidMappings);
@@ -3747,7 +3747,21 @@ function applyAuthoritativeDatabaseState(data) {
   }
 
   // 8.2 Purge internal company business lines from CRM_STATE.customers and CRM_STATE.queries
-  const internalBusinessPhones = ['9943557998', '8124038585', '8668007593', '9789660115'];
+  // Real customer phone numbers (Abi prasath, Pavi Anand, etc.) and staff profiles are strictly preserved!
+  const internalBusinessPhones = [];
+  const waAccountsList = Array.isArray(CRM_STATE.whatsappLines) ? CRM_STATE.whatsappLines : [];
+  waAccountsList.forEach(acc => {
+    if (acc && acc.status === 'CONNECTED' && acc.connected_number && acc.connected_number !== 'Awaiting Link') {
+      const digits = acc.connected_number.replace(/[^0-9]/g, '');
+      if (digits.length >= 10 && (typeof isStaffMobile !== 'function' || !isStaffMobile(digits))) {
+        internalBusinessPhones.push(digits.slice(-10));
+      }
+    }
+  });
+  if (CRM_STATE?.whatsappAccount?.phoneNumber && CRM_STATE.whatsappAccount.status === 'CONNECTED' && (typeof isStaffMobile !== 'function' || !isStaffMobile(CRM_STATE.whatsappAccount.phoneNumber))) {
+    const mainDigits = CRM_STATE.whatsappAccount.phoneNumber.replace(/[^0-9]/g, '');
+    if (mainDigits.length >= 10) internalBusinessPhones.push(mainDigits.slice(-10));
+  }
   if (Array.isArray(CRM_STATE.customers)) {
     CRM_STATE.customers = CRM_STATE.customers.filter(c => {
       if (!c) return false;
@@ -4437,7 +4451,7 @@ function renderPhoneSwitcherDropdown() {
     }
   }
 
-  const currentPhone = (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998').replace(/\s+/g, '');
+  const currentPhone = ((CRM_STATE?.whatsappAccount?.phoneNumber && !isStaffMobile(CRM_STATE.whatsappAccount.phoneNumber)) ? CRM_STATE.whatsappAccount.phoneNumber : '').replace(/\s+/g, '');
   const connectedCount = accounts.filter(a => {
     const ph = (a.connected_number || '').replace(/\D/g, '');
     return a.status === 'CONNECTED' || ph.length >= 10;
@@ -4497,9 +4511,10 @@ function renderPhoneSwitcherDropdown() {
     const isConn = acc.status === 'CONNECTED' || hasRealPhone;
     const isScanning = !isConn && acc.status === 'SCAN_QR';
     const isScan = isScanning;
-    const displayPhone = (rawCleanDigits.length >= 7)
+    const isStaffNum = (typeof isStaffMobile === 'function') && (isStaffMobile(acc.connected_number) || isStaffMobile(rawCleanDigits));
+    const displayPhone = (rawCleanDigits.length >= 7 && !isStaffNum)
       ? formatPhoneNumberPretty(acc.connected_number)
-      : (isConn ? (acc.connected_number || CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998') : (isScanning ? 'Scan QR Code' : (acc.connected_number || 'Awaiting Link')));
+      : (isConn && !isStaffNum ? (acc.connected_number || CRM_STATE?.whatsappAccount?.phoneNumber || 'Awaiting Link') : (isScanning ? 'Scan QR Code' : (acc.connected_number || 'Awaiting Link')));
     const custCount = (CRM_STATE?.customers || []).filter(c => {
       const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
       return (c.accountId || (q ? q.accountId : 'account_1')) === acc.id;
@@ -4699,7 +4714,7 @@ function normalizeWhatsAppPhone(rawInput) {
 
   // Privacy LID Resolution
   if (digits.length >= 14) {
-    const sharedLidMap = (CRM_STATE && CRM_STATE.lidMappings) || window.LID_MAPPINGS || { '275341797023827': '919943557998' };
+    const sharedLidMap = (CRM_STATE && CRM_STATE.lidMappings) || window.LID_MAPPINGS || {};
     if (sharedLidMap[digits]) {
       const mapped = String(sharedLidMap[digits]).replace(/[^0-9]/g, '');
       if (mapped.length >= 10) digits = mapped;
@@ -4876,13 +4891,15 @@ function updateConfiguredPhoneDisplays() {
 
   // STRICT GUARD: Extract all registered staff numbers to guarantee a staff member's mobile number NEVER leaks into Admin header
   const staffPhones = (CRM_STATE?.staffList || []).map(s => (s.phone || s.mobile || '').replace(/\D/g, '')).filter(p => p.length >= 7);
+  staffPhones.push('9943557998'); // Explicit guard for staff Vanaja
   const isStaffMobile = (ph) => {
     if (!ph) return false;
     const digits = String(ph).replace(/\D/g, '');
-    return staffPhones.some(sp => (sp && digits && (digits.endsWith(sp) || sp.endsWith(digits))));
+    if (digits.length < 7) return false;
+    return staffPhones.some(sp => (sp && (digits.endsWith(sp) || sp.endsWith(digits))));
   };
 
-  let rawPhone = (CRM_STATE?.whatsappAccount?.phoneNumber && !isStaffMobile(CRM_STATE.whatsappAccount.phoneNumber) && CRM_STATE.whatsappAccount.phoneNumber !== '+91 99435 57998')
+  let rawPhone = (CRM_STATE?.whatsappAccount?.phoneNumber && !isStaffMobile(CRM_STATE.whatsappAccount.phoneNumber))
     ? CRM_STATE.whatsappAccount.phoneNumber
     : '';
 
@@ -4925,6 +4942,12 @@ function updateConfiguredPhoneDisplays() {
       displayLabel = rawPhone ? formatPhoneNumberPretty(rawPhone) : '+Scan QR Code';
       activeStatus = 'DISCONNECTED';
     }
+  }
+
+  // Final safeguard: Under no circumstance should a staff phone number be displayed in Admin Panel
+  if (isStaffMobile(displayLabel) || isStaffMobile(rawPhone)) {
+    displayLabel = '+Scan QR Code';
+    activeStatus = 'DISCONNECTED';
   }
 
   // Update in topbar/sidebar indicators
@@ -6241,9 +6264,9 @@ function renderQuickLineSwitcher() {
     const isConnected = (acc.status === 'CONNECTED');
     const custCount = getActiveCustomerCountForAccount(acc.id);
 
-    let displayPhone = acc.connected_number && acc.connected_number !== 'Awaiting Link' && acc.connected_number !== 'Scan QR Code'
+    let displayPhone = acc.connected_number && acc.connected_number !== 'Awaiting Link' && acc.connected_number !== 'Scan QR Code' && (typeof isStaffMobile !== 'function' || !isStaffMobile(acc.connected_number))
       ? formatPhoneNumberPretty(acc.connected_number)
-      : (idx === 0 ? '+91 99435 57998' : 'Line ' + (idx + 1));
+      : (acc.label || 'Line ' + (idx + 1));
 
     const lineName = (idx === 0) ? 'Line 1 (Central)' : (idx === 1 ? 'Line 2 (Blue Berry)' : (acc.label || 'Line ' + (idx + 1)));
 
@@ -7623,7 +7646,7 @@ function renderChatMessages() {
     <div class="flex justify-center my-2">
       <div class="bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-medium px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
         <span class="material-symbols-outlined text-[14px]">lock</span>
-        <span>${t('inbox.connected_business', 'Connected to Business Number:')} <strong>${CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998'}</strong> &bull; ${t('inbox.central_record', 'GRM Central Record')}</span>
+        <span>${t('inbox.connected_business', 'Connected to Business Number:')} <strong>${(CRM_STATE?.whatsappAccount?.phoneNumber && (typeof isStaffMobile !== 'function' || !isStaffMobile(CRM_STATE.whatsappAccount.phoneNumber))) ? CRM_STATE.whatsappAccount.phoneNumber : 'Business Line'}</strong> &bull; ${t('inbox.central_record', 'GRM Central Record')}</span>
       </div>
     </div>
     ${filterBannerHtml}
@@ -13746,7 +13769,7 @@ function updateAutoReplyLivePreview() {
   if (!tplArea || !previewBox) return;
 
   const rawTemplate = tplArea.value || getDefaultStockAutoReplyTemplate();
-  const sampleCustomer = { name: 'Mekha 🦋', phone: '+91 99435 57998' };
+  const sampleCustomer = { name: 'Mekha 🦋', phone: '+91 98765 43210' };
   const brand = getBrandName();
   const categoriesText = generateLiveCategoryStockText();
   const phone = CRM_STATE?.whatsappAccount?.phoneNumber || '+91 86680 07593';
@@ -16381,7 +16404,7 @@ function initOrderModal(customer, items) {
   const addrInput = document.getElementById('order-shipping-addr');
 
   if (cName) cName.innerText = customer.name;
-  if (cPhone) cPhone.innerText = customer.whatsapp || customer.phone || '+91 99435 57998';
+  if (cPhone) cPhone.innerText = customer.whatsapp || customer.phone || 'N/A';
   if (qId) qId.innerText = query ? query.id : 'Q-2026-AUTO';
   if (cAvatar) cAvatar.innerText = customer.avatar || customer.name.charAt(0);
   const primaryAddr = (customer.address && customer.address !== 'Online WhatsApp Customer') ? customer.address : '';
@@ -29132,7 +29155,7 @@ window.downloadOrdersHistoryCSV = downloadOrdersHistoryCSV;
 const CRM_PACKING_SLIP_DEFAULT_CONFIG = {
   brandName: "GRM Garments",
   gstNo: "33AAAAA0000A1Z5",
-  phone: "+91 99435 57998",
+  phone: "+91 95009 04638",
   senderAddress: "GRM Garments Warehouse, 123 Textile Market, Tirupur, Tamil Nadu - 641602",
   email: "support@grmgarments.com",
   defaultCourier: "Delhivery Surface",
@@ -29169,7 +29192,7 @@ const CRM_PACKING_SLIP_DEFAULT_CONFIG = {
   // Text Content
   returnPolicy: "7 Days Easy Exchange on unworn garments with original tags intact. Please keep parcel packaging for returns.",
   handlingNotes: "Fragile Apparel & Premium Fabrics - Handle With Care & Protect From Moisture",
-  thankYouText: "Thank you for shopping with GRM Garments! WhatsApp helpline: +91 99435 57998"
+  thankYouText: "Thank you for shopping with GRM Garments! WhatsApp helpline: +91 95009 04638"
 };
 
 function getPackingSlipConfig() {
@@ -31698,9 +31721,9 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
   ACTIVE_SEND_ACCOUNT_ID = accountId;
 
   // Format clean phone number
-  const raw = (connectedNumber && connectedNumber !== 'Awaiting Link')
+  const raw = (connectedNumber && connectedNumber !== 'Awaiting Link' && (typeof isStaffMobile !== 'function' || !isStaffMobile(connectedNumber)))
     ? connectedNumber
-    : (CRM_STATE?.whatsappAccount?.phoneNumber || '+91 99435 57998');
+    : ((CRM_STATE?.whatsappAccount?.phoneNumber && (typeof isStaffMobile !== 'function' || !isStaffMobile(CRM_STATE.whatsappAccount.phoneNumber))) ? CRM_STATE.whatsappAccount.phoneNumber : '');
   const cleanPhone = formatPhoneNumberPretty(raw);
 
   if (accountId === 'account_1') {
@@ -39335,7 +39358,7 @@ function handleSocketIncomingCall(data) {
       whatsapp: data.customer_phone || ('+' + rawDigits),
       jid: `${rawDigits}@s.whatsapp.net`,
       accountId: data.account_id || 'account_1',
-      businessNumber: data.virtual_number || '+91 99435 57998',
+      businessNumber: data.virtual_number || '+91 95009 04638',
       address: '',
       city: 'Inbound Caller',
       customerType: 'Live WhatsApp Lead',
@@ -39367,7 +39390,7 @@ function handleSocketIncomingCall(data) {
         id: `Q-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
         customerId: customer.id,
         accountId: data.account_id || 'account_1',
-        businessNumber: data.virtual_number || '+91 99435 57998',
+        businessNumber: data.virtual_number || '+91 95009 04638',
         assignedTo: 'UNASSIGNED',
         status: 'NEW',
         priority: 'HIGH',
@@ -39425,7 +39448,7 @@ function handleSocketIncomingCall(data) {
   if (callIdInput) callIdInput.value = data.call_id;
   if (nameEl) nameEl.innerText = customerDisplayName;
   if (phoneEl) phoneEl.innerText = data.masked_phone || formatDisplayPhone(data.customer_phone || '');
-  if (didEl) didEl.innerText = data.virtual_number || '+91 99435 57998';
+  if (didEl) didEl.innerText = data.virtual_number || '+91 95009 04638';
   if (avatarEl) avatarEl.innerText = (customerDisplayName || 'CU').substring(0, 2).toUpperCase();
 
   if (banner) banner.classList.add('hidden');
@@ -39777,7 +39800,7 @@ async function triggerSimulatedIncomingCall() {
   }
   const custName = prompt('Enter Customer Caller Name:', 'Ananya & Baby Aarav');
   if (!custName) return;
-  const custPhone = prompt('Enter Customer WhatsApp Number:', '+91 99435 57998');
+  const custPhone = prompt('Enter Customer WhatsApp Number:', '+91 98765 43210');
   if (!custPhone) return;
 
   try {
@@ -40141,7 +40164,7 @@ async function loadMaskingSettingsAndSessions(btnEl) {
       if (statBusyStaff) statBusyStaff.innerText = m.busy_staff || 0;
 
       // Populate Configuration inputs
-      const virtNum = s.virtual_company_number || '+91 99435 57998';
+      const virtNum = s.virtual_company_number || '+91 95009 04638';
       const inputVirtual = document.getElementById('masking-config-virtual-num');
       const selTimeout = document.getElementById('masking-config-timeout');
       const selFallback = document.getElementById('masking-config-fallback');
@@ -40252,7 +40275,7 @@ function renderActiveCallsQueueTable(activeCalls) {
           <div class="text-[11px] font-mono text-slate-500">${c.masked_phone || formatDisplayPhone(c.customer_phone)}</div>
         </td>
         <td class="py-3 px-4 font-mono font-bold text-emerald-700">
-          ${c.virtual_number || '+91 99435 57998'}
+          ${c.virtual_number || '+91 95009 04638'}
         </td>
         <td class="py-3 px-4">
           <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${isRinging ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}">
@@ -40345,7 +40368,7 @@ function renderCallSessionsTable(sessions) {
             <div class="text-[11px] font-mono text-slate-500">${call.masked_phone || formatDisplayPhone(call.customer_phone || '')}</div>
           </td>
           <td class="py-3 px-4 font-mono font-bold text-emerald-700">
-            ${call.virtual_number || '+91 99435 57998'}
+            ${call.virtual_number || '+91 95009 04638'}
           </td>
           <td class="py-3 px-4">
             <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-semibold text-[11px]">
@@ -40439,7 +40462,7 @@ function renderCallSessionsTable(sessions) {
             </div>
             <div class="text-right">
               <div class="text-[10px] text-slate-400 font-medium">${createdDate}</div>
-              <div class="text-[10px] font-semibold text-emerald-700 font-mono mt-0.5">${call.virtual_number || '+91 99435 57998'}</div>
+              <div class="text-[10px] font-semibold text-emerald-700 font-mono mt-0.5">${call.virtual_number || '+91 95009 04638'}</div>
             </div>
           </div>
 
@@ -40702,7 +40725,7 @@ async function saveMaskingConfigurationForm(event) {
     showToast('Permission Denied', 'Your assigned role does not have permission to update telephony settings.', 'lock', 'rose');
     return;
   }
-  const virtNum = document.getElementById('masking-config-virtual-num')?.value?.trim() || '+91 99435 57998';
+  const virtNum = document.getElementById('masking-config-virtual-num')?.value?.trim() || '+91 95009 04638';
   const timeout = parseInt(document.getElementById('masking-config-timeout')?.value || '30');
   const fallback = document.getElementById('masking-config-fallback')?.value || 'RETURN_TO_POOL';
   const recording = document.getElementById('masking-config-recording')?.checked ? 1 : 0;
@@ -41019,7 +41042,7 @@ function exportDashboardPDF(btnEl) {
 
     const staffCtx = (typeof getStaffFilterContext === 'function') ? getStaffFilterContext() : { isAdmin: true, staffId: 'admin', staffName: 'Super Admin', isStaffMatch: () => true };
     const isAdmin = staffCtx.isAdmin;
-    const activePhone = CRM_STATE.activeWhatsAppPhone || (CRM_STATE.availableWhatsAppAccounts && CRM_STATE.availableWhatsAppAccounts[0] ? CRM_STATE.availableWhatsAppAccounts[0].phone : '+91 99435 57998');
+    const activePhone = CRM_STATE.activeWhatsAppPhone || (CRM_STATE.availableWhatsAppAccounts && CRM_STATE.availableWhatsAppAccounts[0] ? CRM_STATE.availableWhatsAppAccounts[0].phone : '+91 95009 04638');
 
     let totalEnquiries, unassignedQueries, totalOrders, totalRevenue, totalFollowups, totalStaff, activeStaff, exportedBy;
     let staffRows, orderRows, queryRows, followupRows;
@@ -42242,8 +42265,10 @@ window.openBulkPriceRequestModal = function () {
 
   const adminPhoneInput = document.getElementById('bulk-admin-phone');
   if (adminPhoneInput) {
-    const configuredPhone = CRM_STATE?.whatsappAccount?.phoneNumber || CRM_STATE?.whatsappAccounts?.[0]?.phone_number || '+91 99435 57998';
-    if (!adminPhoneInput.value || adminPhoneInput.value === '+91 99435 57998') {
+    const configuredPhone = (CRM_STATE?.whatsappAccount?.phoneNumber && (typeof isStaffMobile !== 'function' || !isStaffMobile(CRM_STATE.whatsappAccount.phoneNumber)))
+      ? CRM_STATE.whatsappAccount.phoneNumber
+      : ((CRM_STATE?.whatsappAccounts?.[0]?.phone_number && (typeof isStaffMobile !== 'function' || !isStaffMobile(CRM_STATE.whatsappAccounts[0].phone_number))) ? CRM_STATE.whatsappAccounts[0].phone_number : '');
+    if (!adminPhoneInput.value) {
       adminPhoneInput.value = configuredPhone;
     }
   }
@@ -42327,7 +42352,7 @@ window.submitBulkPriceRequest = async function (ev) {
   const sellPrice = parseFloat(String(sellPriceRaw).replace(/[^0-9.]/g, '')) || 0;
   const reqPriceRaw = document.getElementById('bulk-requested-price')?.value || '0';
   const reqPrice = parseFloat(String(reqPriceRaw).replace(/[^0-9.]/g, '')) || 0;
-  const adminPhone = document.getElementById('bulk-admin-phone')?.value.trim() || '+91 99435 57998';
+  const adminPhone = document.getElementById('bulk-admin-phone')?.value.trim() || '';
 
   const staffUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : { id: 'admin', name: 'Super Admin' };
 
@@ -42918,7 +42943,7 @@ function showAddBulkAssignPage() {
     const accounts = (typeof getAvailableWhatsAppAccounts === 'function')
       ? getAvailableWhatsAppAccounts()
       : [
-          { id: 'account_1', label: 'Line 1: Primary WhatsApp', connected_number: '+91 99435 57998', status: 'CONNECTED' },
+          { id: 'account_1', label: 'Line 1: Primary WhatsApp', connected_number: 'Awaiting Link', status: 'DISCONNECTED' },
           { id: 'account_2', label: 'Line 2: Secondary WhatsApp', connected_number: '+91 86680 07593', status: 'CONNECTED' }
         ];
 
@@ -43125,7 +43150,7 @@ function onBulkStaffNameChange() {
     if (staff.alt_phone && staff.alt_phone !== staff.phone) phones.push({ label: 'Alternate Mobile', number: staff.alt_phone });
 
     if (phones.length === 0) {
-      phones.push({ label: 'Assigned Direct Line', number: '+91 99435 57998' });
+      phones.push({ label: 'Primary Contact Mobile', number: staff.name || 'Staff Mobile' });
     }
 
     phoneSelect.innerHTML = phones.map((p, idx) => `
@@ -43134,7 +43159,7 @@ function onBulkStaffNameChange() {
       </option>
     `).join('');
   } else {
-    phoneSelect.innerHTML = `<option value="+91 99435 57998">+91 99435 57998 (Default Line)</option>`;
+    phoneSelect.innerHTML = `<option value="">Select Staff Member First</option>`;
   }
 
   updateBulkAssignPreview();
