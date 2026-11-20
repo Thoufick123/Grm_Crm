@@ -6707,6 +6707,52 @@ function ensureBulkAssignmentsTable($pdo) {
             $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1'");
         }
     } catch (Exception $e) {}
+
+    // Resilient schema check: Add assigned_to and account_id to queries table if not present
+    try {
+        $colCheckQAsgn = $pdo->query("SHOW COLUMNS FROM `queries` LIKE 'assigned_to'")->fetch();
+        if (!$colCheckQAsgn) {
+            $pdo->exec("ALTER TABLE `queries` ADD COLUMN `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED'");
+        }
+    } catch (Exception $e) {}
+    try {
+        $colCheckQAcc = $pdo->query("SHOW COLUMNS FROM `queries` LIKE 'account_id'")->fetch();
+        if (!$colCheckQAcc) {
+            $pdo->exec("ALTER TABLE `queries` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1'");
+        }
+    } catch (Exception $e) {}
+
+    // Auto-heal missing queries for any customer in customers table
+    try {
+        $missingStmt = $pdo->query("
+            SELECT c.id, c.name, c.phone, c.last_message, c.created_at,
+                   COALESCE(NULLIF(c.assigned_to, ''), 'UNASSIGNED') as assigned_to,
+                   COALESCE(NULLIF(c.account_id, ''), 'account_1') as account_id
+            FROM `customers` c
+            WHERE c.id NOT IN (SELECT customer_id FROM `queries`)
+              AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+              AND c.name != 'System'
+              AND c.name NOT LIKE 'WhatsApp Linked%'
+            LIMIT 100
+        ");
+        $missing = $missingStmt ? $missingStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        if (!empty($missing)) {
+            $insQ = $pdo->prepare("
+                INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `last_message`, `created_at`)
+                VALUES (?, ?, ?, ?, 'NORMAL', ?, ?, ?)
+            ");
+            foreach ($missing as $mc) {
+                $cleanPhoneDigits = preg_replace('/[^0-9]/', '', $mc['phone'] ?? '');
+                $qId = 'Q-' . (strlen($cleanPhoneDigits) >= 10 ? substr($cleanPhoneDigits, -10) : $mc['id']);
+                $status = ($mc['assigned_to'] !== 'UNASSIGNED') ? 'ASSIGNED' : 'NEW';
+                $lastMsg = !empty($mc['last_message']) ? $mc['last_message'] : 'WhatsApp Customer Enquiry';
+                $createdAt = !empty($mc['created_at']) ? $mc['created_at'] : date('Y-m-d H:i:s');
+                try {
+                    $insQ->execute([$qId, $mc['id'], $mc['assigned_to'], $status, $lastMsg, $lastMsg, $createdAt]);
+                } catch (Exception $eSingle) {}
+            }
+        }
+    } catch (Exception $eHeal) {}
 }
 
 if ($action === 'get_unassigned_enquiries_count') {
@@ -6718,41 +6764,77 @@ if ($action === 'get_unassigned_enquiries_count') {
 
         $isAll = ($accountId === 'all' || empty($accountId));
 
+        // Build resilient aliases for the chosen line (e.g. account_1, 1, Primary WhatsApp)
+        $aliases = [$accountId];
+        if ($accountId === 'account_1' || $accountId === '1' || strtolower($accountId) === 'primary') {
+            $aliases = array_values(array_unique(array_merge($aliases, ['account_1', '1', 'primary', 'Primary WhatsApp', 'Primary Line', ''])));
+        } elseif (preg_match('/^account_(\d+)$/', $accountId, $m)) {
+            $aliases[] = $m[1];
+        } elseif (is_numeric($accountId)) {
+            $aliases[] = 'account_' . $accountId;
+        }
+
         if ($isAll) {
             $stmt = $pdo->query("
-                SELECT COUNT(DISTINCT q.id) as unassigned_count,
-                       MIN(q.created_at) as oldest_enquiry,
-                       MAX(q.created_at) as newest_enquiry
-                FROM `queries` q
-                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
-                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                SELECT COUNT(DISTINCT candidate_id) as unassigned_count,
+                       MIN(created_at) as oldest_enquiry,
+                       MAX(created_at) as newest_enquiry
+                FROM (
+                    SELECT q.id as candidate_id, q.created_at
+                    FROM `queries` q
+                    LEFT JOIN `customers` c ON q.customer_id = c.id
+                    WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
+                      AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+
+                    UNION
+
+                    SELECT c.id as candidate_id, COALESCE(c.created_at, NOW()) as created_at
+                    FROM `customers` c
+                    WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
+                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+                      AND c.name != 'System'
+                      AND c.name NOT LIKE 'WhatsApp Linked%'
+                      AND c.id NOT IN (
+                          SELECT customer_id FROM `queries`
+                          WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
+                      )
+                ) u
             ");
         } else {
-            // Build resilient aliases for the chosen line (e.g. account_1, 1, Primary WhatsApp)
-            $aliases = [$accountId];
-            if ($accountId === 'account_1' || $accountId === '1' || strtolower($accountId) === 'primary') {
-                $aliases = array_values(array_unique(array_merge($aliases, ['account_1', '1', 'primary', 'Primary WhatsApp', 'Primary Line', ''])));
-            } elseif (preg_match('/^account_(\d+)$/', $accountId, $m)) {
-                $aliases[] = $m[1];
-            } elseif (is_numeric($accountId)) {
-                $aliases[] = 'account_' . $accountId;
-            }
             $inMarks = implode(',', array_fill(0, count($aliases), '?'));
-
             $stmt = $pdo->prepare("
-                SELECT COUNT(DISTINCT q.id) as unassigned_count,
-                       MIN(q.created_at) as oldest_enquiry,
-                       MAX(q.created_at) as newest_enquiry
-                FROM `queries` q
-                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
-                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
-                  AND (
-                      COALESCE(
-                          NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
-                          NULLIF((SELECT c.account_id FROM `customers` c WHERE c.id = q.customer_id AND c.account_id IS NOT NULL AND c.account_id != '' LIMIT 1), ''),
-                          'account_1'
-                      ) IN ({$inMarks})
-                  )
+                SELECT COUNT(DISTINCT candidate_id) as unassigned_count,
+                       MIN(created_at) as oldest_enquiry,
+                       MAX(created_at) as newest_enquiry
+                FROM (
+                    SELECT q.id as candidate_id, q.created_at,
+                           COALESCE(
+                               NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
+                               NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), ''),
+                               'account_1'
+                           ) as effective_account
+                    FROM `queries` q
+                    LEFT JOIN `customers` c ON q.customer_id = c.id
+                    WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
+                      AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+
+                    UNION
+
+                    SELECT c.id as candidate_id, COALESCE(c.created_at, NOW()) as created_at,
+                           COALESCE(NULLIF(c.account_id, ''), 'account_1') as effective_account
+                    FROM `customers` c
+                    WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
+                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+                      AND c.name != 'System'
+                      AND c.name NOT LIKE 'WhatsApp Linked%'
+                      AND c.id NOT IN (
+                          SELECT customer_id FROM `queries`
+                          WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
+                      )
+                ) u
+                WHERE u.effective_account IN ({$inMarks})
             ");
             $stmt->execute($aliases);
         }
@@ -6798,7 +6880,7 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
         $isAll = ($accountId === 'all' || empty($accountId));
 
-        // Fetch candidate unassigned queries
+        // Fetch candidate unassigned queries using resilient unified logic
         if (!$isAll) {
             $aliases = [$accountId];
             if ($accountId === 'account_1' || $accountId === '1' || strtolower($accountId) === 'primary') {
@@ -6817,28 +6899,68 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $inMarks = implode(',', array_fill(0, count($aliases), '?'));
 
             $sql = "
-                SELECT q.id, q.customer_id, q.created_at
-                FROM `queries` q
-                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
-                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
-                  AND (
-                      COALESCE(
-                          NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
-                          NULLIF((SELECT c.account_id FROM `customers` c WHERE c.id = q.customer_id AND c.account_id IS NOT NULL AND c.account_id != '' LIMIT 1), ''),
-                          'account_1'
-                      ) IN ({$inMarks})
-                  )
-                ORDER BY q.created_at {$sortOrder}
+                SELECT candidate_id as id, customer_id, created_at, customer_name, customer_phone
+                FROM (
+                    SELECT q.id as candidate_id, q.customer_id, q.created_at,
+                           c.name as customer_name, c.phone as customer_phone,
+                           COALESCE(
+                               NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
+                               NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), ''),
+                               'account_1'
+                           ) as effective_account
+                    FROM `queries` q
+                    LEFT JOIN `customers` c ON q.customer_id = c.id
+                    WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
+                      AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+
+                    UNION
+
+                    SELECT CONCAT('Q-', c.id) as candidate_id, c.id as customer_id, COALESCE(c.created_at, NOW()) as created_at,
+                           c.name as customer_name, c.phone as customer_phone,
+                           COALESCE(NULLIF(c.account_id, ''), 'account_1') as effective_account
+                    FROM `customers` c
+                    WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
+                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+                      AND c.name != 'System'
+                      AND c.name NOT LIKE 'WhatsApp Linked%'
+                      AND c.id NOT IN (
+                          SELECT customer_id FROM `queries`
+                          WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
+                      )
+                ) u
+                WHERE u.effective_account IN ({$inMarks})
+                ORDER BY created_at {$sortOrder}
                 LIMIT " . intval($assignCount);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($aliases);
         } else {
             $sql = "
-                SELECT q.id, q.customer_id, q.created_at
-                FROM `queries` q
-                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
-                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
-                ORDER BY q.created_at {$sortOrder}
+                SELECT candidate_id as id, customer_id, created_at, customer_name, customer_phone
+                FROM (
+                    SELECT q.id as candidate_id, q.customer_id, q.created_at,
+                           c.name as customer_name, c.phone as customer_phone
+                    FROM `queries` q
+                    LEFT JOIN `customers` c ON q.customer_id = c.id
+                    WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
+                      AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+
+                    UNION
+
+                    SELECT CONCAT('Q-', c.id) as candidate_id, c.id as customer_id, COALESCE(c.created_at, NOW()) as created_at,
+                           c.name as customer_name, c.phone as customer_phone
+                    FROM `customers` c
+                    WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
+                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+                      AND c.name != 'System'
+                      AND c.name NOT LIKE 'WhatsApp Linked%'
+                      AND c.id NOT IN (
+                          SELECT customer_id FROM `queries`
+                          WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
+                      )
+                ) u
+                ORDER BY created_at {$sortOrder}
                 LIMIT " . intval($assignCount);
             $stmt = $pdo->query($sql);
         }
@@ -6853,15 +6975,39 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             exit;
         }
 
-        $queryIds = array_column($candidates, 'id');
-        $customerIds = array_values(array_unique(array_filter(array_column($candidates, 'customer_id'))));
-        $actualAssigned = count($queryIds);
+        $queryIds = [];
+        $customerIds = [];
 
-        // Update queries to ASSIGNED
-        $inQMarks = implode(',', array_fill(0, count($queryIds), '?'));
-        $qUpdateStmt = $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE `id` IN ({$inQMarks})");
-        $qUpdateParams = array_merge([$staffId], $queryIds);
-        $qUpdateStmt->execute($qUpdateParams);
+        foreach ($candidates as $cand) {
+            $cid = $cand['customer_id'];
+            $qid = $cand['id'];
+            $customerIds[] = $cid;
+
+            // Ensure query exists in queries table
+            $checkQ = $pdo->prepare("SELECT id FROM `queries` WHERE `id` = ? OR `customer_id` = ? LIMIT 1");
+            $checkQ->execute([$qid, $cid]);
+            $existingQ = $checkQ->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingQ) {
+                $actualQId = $existingQ['id'];
+                $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE `id` = ?")
+                    ->execute([$staffId, $actualQId]);
+                $queryIds[] = $actualQId;
+            } else {
+                $actualQId = $qid ?: ('Q-' . $cid);
+                try {
+                    $pdo->prepare("
+                        INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `last_message`, `created_at`)
+                        VALUES (?, ?, ?, 'ASSIGNED', 'NORMAL', 'WhatsApp Customer Enquiry', 'WhatsApp Customer Enquiry', NOW())
+                    ")->execute([$actualQId, $cid, $staffId]);
+                } catch (Exception $eInsQ) {}
+                $queryIds[] = $actualQId;
+            }
+        }
+
+        $customerIds = array_values(array_unique(array_filter($customerIds)));
+        $queryIds = array_values(array_unique(array_filter($queryIds)));
+        $actualAssigned = count($customerIds);
 
         // Update customers to assigned staff safely
         if (!empty($customerIds)) {

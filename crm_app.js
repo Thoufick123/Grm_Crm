@@ -3431,6 +3431,10 @@ function applyAuthoritativeDatabaseState(data) {
       name: c.name || 'Customer',
       phone: c.phone || '',
       whatsapp: c.whatsapp || c.phone || '',
+      assignedTo: c.assigned_to || c.assignedTo || 'UNASSIGNED',
+      assigned_to: c.assigned_to || c.assignedTo || 'UNASSIGNED',
+      accountId: c.account_id || c.accountId || 'account_1',
+      account_id: c.account_id || c.accountId || 'account_1',
       customerType: c.customer_type || c.customerType || 'Live WhatsApp Lead',
       address: c.address || '',
       altAddress: c.alt_address || c.altAddress || '',
@@ -3508,8 +3512,11 @@ function applyAuthoritativeDatabaseState(data) {
     CRM_STATE.queries = data.queries.map(q => ({
       id: q.id,
       customerId: q.customerId || q.customer_id || '',
+      customer_id: q.customerId || q.customer_id || '',
       assignedTo: q.assignedTo || q.assigned_to || 'UNASSIGNED',
+      assigned_to: q.assignedTo || q.assigned_to || 'UNASSIGNED',
       accountId: q.account_id || q.accountId || q.account_slot || 'account_1',
+      account_id: q.account_id || q.accountId || q.account_slot || 'account_1',
       status: q.status || 'NEW',
       priority: q.priority || 'NORMAL',
       queryText: q.queryText || q.query_text || '',
@@ -3528,6 +3535,30 @@ function applyAuthoritativeDatabaseState(data) {
       createdAt: q.createdAt || q.created_at || ''
     }));
   }
+
+  // Ensure all active customers have a corresponding query representation in CRM_STATE.queries
+  if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+  const existingQCustIds = new Set(CRM_STATE.queries.map(q => String(q.customerId || q.customer_id)));
+  (CRM_STATE.customers || []).forEach(c => {
+    if (c && !existingQCustIds.has(String(c.id))) {
+      const clean10 = (c.phone || c.whatsapp || '').replace(/\D/g, '').slice(-10);
+      CRM_STATE.queries.push({
+        id: clean10 ? ('Q-' + clean10) : ('Q-' + c.id),
+        customerId: c.id,
+        customer_id: c.id,
+        assignedTo: c.assignedTo || c.assigned_to || 'UNASSIGNED',
+        assigned_to: c.assignedTo || c.assigned_to || 'UNASSIGNED',
+        accountId: c.accountId || c.account_id || 'account_1',
+        account_id: c.accountId || c.account_id || 'account_1',
+        status: (c.assignedTo && c.assignedTo !== 'UNASSIGNED') ? 'ASSIGNED' : 'NEW',
+        priority: 'NORMAL',
+        queryText: c.lastMessage || 'Customer WhatsApp Enquiry',
+        lastMessage: c.lastMessage || 'Customer WhatsApp Enquiry',
+        createdAt: c.createdAt || c.lastMessageAt || ''
+      });
+      existingQCustIds.add(String(c.id));
+    }
+  });
 
   // 6. Follow-ups (Authoritative MySQL sync)
   if (Array.isArray(data.followups)) {
@@ -42925,6 +42956,68 @@ function showBulkAssignListView() {
 }
 window.showBulkAssignListView = showBulkAssignListView;
 
+function getUnassignedInquiriesList(filterAccountId = 'all') {
+  if (!CRM_STATE || !Array.isArray(CRM_STATE.customers)) return [];
+
+  const queryByCustId = new Map();
+  const queryByPhone10 = new Map();
+  (CRM_STATE.queries || []).forEach(q => {
+    if (!q) return;
+    if (q.customerId) queryByCustId.set(String(q.customerId), q);
+    if (q.customer_id) queryByCustId.set(String(q.customer_id), q);
+    const clean = String(q.customerId || q.customer_id || '').replace(/\D/g, '');
+    if (clean.length >= 7) queryByPhone10.set(clean.slice(-10), q);
+  });
+
+  const unassignedList = [];
+  const seenCustIds = new Set();
+
+  (CRM_STATE.customers || []).forEach(cust => {
+    if (!cust || cust.name === 'System' || cust.name === 'GRM Linked WhatsApp Device' || cust.name.startsWith('WhatsApp Linked')) return;
+    if (seenCustIds.has(String(cust.id))) return;
+
+    // Check DND
+    const isCustomerDND = (cust.isDND === true) || (Array.isArray(cust.tags) && cust.tags.includes('DND / Opt-Out'));
+    if (isCustomerDND) return;
+
+    const custDigits = (cust.phone || cust.whatsapp || '').replace(/\D/g, '');
+    const phone10 = custDigits.length >= 7 ? custDigits.slice(-10) : '';
+
+    const query = queryByCustId.get(String(cust.id)) || (phone10 ? queryByPhone10.get(phone10) : null);
+    if (query && (query.status === 'RESOLVED' || query.status === 'CLOSED' || query.status === 'DND')) return;
+
+    const assignedStaffId = (query?.assignedTo || query?.assigned_to || cust.assignedTo || cust.assigned_to || 'UNASSIGNED').trim();
+    const isUnassigned = !assignedStaffId || assignedStaffId.toUpperCase() === 'UNASSIGNED';
+
+    if (!isUnassigned) return;
+
+    // Account filtering
+    const effectiveAcc = query?.accountId || query?.account_id || cust.accountId || cust.account_id || 'account_1';
+    if (filterAccountId && filterAccountId !== 'all') {
+      const aliases = [filterAccountId];
+      if (filterAccountId === 'account_1' || filterAccountId === '1') {
+        aliases.push('account_1', '1', 'Primary WhatsApp', 'Primary Line');
+      }
+      if (!aliases.includes(effectiveAcc)) return;
+    }
+
+    seenCustIds.add(String(cust.id));
+    unassignedList.push({
+      customerId: cust.id,
+      customerName: cust.name || 'Customer',
+      customerPhone: cust.phone || cust.whatsapp || '',
+      queryId: query ? query.id : ('Q-' + cust.id),
+      query: query || null,
+      customer: cust,
+      accountId: effectiveAcc,
+      createdAt: query?.createdAt || query?.created_at || cust.createdAt || cust.created_at || cust.lastMessageAt || ''
+    });
+  });
+
+  return unassignedList;
+}
+window.getUnassignedInquiriesList = getUnassignedInquiriesList;
+
 async function onBulkAccountChange() {
   const accSelect = document.getElementById('bulk-account-select');
   const countEl = document.getElementById('bulk-unassigned-count');
@@ -42934,36 +43027,21 @@ async function onBulkAccountChange() {
 
   const accountId = accSelect.value || 'all';
 
-  // Fast local instant count calculation with resilient account aliases
-  const localUnassigned = (CRM_STATE?.queries || []).filter(q => {
-    if (!q) return false;
-    const isUn = !q.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
-    if (!isUn) return false;
-    if (q.status === 'DND' || q.status === 'RESOLVED' || q.status === 'CLOSED') return false;
-    if (accountId === 'all') return true;
-
-    const cust = (CRM_STATE?.customers || []).find(c => c && (c.id === q.customerId || c.id === q.customer_id));
-    const qAcc = q.accountId || q.account_id || cust?.accountId || cust?.account_id || 'account_1';
-    const aliases = [accountId];
-    if (accountId === 'account_1' || accountId === '1') {
-      aliases.push('account_1', '1', 'Primary WhatsApp', 'Primary Line');
-    }
-    return aliases.includes(qAcc);
-  });
-
-  let count = localUnassigned.length;
+  // Fast local instant count calculation aligned 1:1 with WhatsApp Inbox
+  const localList = getUnassignedInquiriesList(accountId);
+  let count = localList.length;
   window.CURRENT_BULK_UNASSIGNED_COUNT = count;
   if (countEl) countEl.innerText = count;
   if (countInput) {
     countInput.max = count > 0 ? count : 1;
-    if (parseInt(countInput.value, 10) > count) {
-      countInput.value = count > 0 ? count : 10;
+    if (count > 0 && (!countInput.value || parseInt(countInput.value, 10) > count || countInput.value === '1')) {
+      countInput.value = count;
     }
   }
 
   if (timeLabel) {
     if (count > 0) {
-      timeLabel.innerText = `${count} inquiries waiting in queue. Oldest inquiry waiting to be assigned.`;
+      timeLabel.innerText = `${count} inquiries waiting in queue. Ready for distribution.`;
     } else {
       timeLabel.innerText = `Zero pending unassigned inquiries on this account right now.`;
     }
@@ -42974,14 +43052,20 @@ async function onBulkAccountChange() {
     const res = await fetch(`api.php?action=get_unassigned_enquiries_count&account_id=${encodeURIComponent(accountId)}`);
     const data = await res.json();
     if (data && data.status === 'success' && typeof data.count === 'number') {
-      window.CURRENT_BULK_UNASSIGNED_COUNT = data.count;
-      if (countEl) countEl.innerText = data.count;
-      if (countInput) countInput.max = data.count > 0 ? data.count : 1;
+      const serverCount = Math.max(data.count, count);
+      window.CURRENT_BULK_UNASSIGNED_COUNT = serverCount;
+      if (countEl) countEl.innerText = serverCount;
+      if (countInput) {
+        countInput.max = serverCount > 0 ? serverCount : 1;
+        if (serverCount > 0 && (!countInput.value || parseInt(countInput.value, 10) > serverCount)) {
+          countInput.value = serverCount;
+        }
+      }
       if (timeLabel) {
-        if (data.count > 0 && data.oldest) {
-          timeLabel.innerText = `${data.count} enquiries waiting. Oldest arrived at: ${data.oldest}`;
-        } else if (data.count > 0) {
-          timeLabel.innerText = `${data.count} enquiries available for distribution.`;
+        if (serverCount > 0 && data.oldest) {
+          timeLabel.innerText = `${serverCount} enquiries waiting. Oldest arrived at: ${data.oldest}`;
+        } else if (serverCount > 0) {
+          timeLabel.innerText = `${serverCount} enquiries available for distribution.`;
         } else {
           timeLabel.innerText = `All inquiries on this line are assigned.`;
         }
@@ -43126,21 +43210,56 @@ async function handleExecuteBulkAssign() {
       const custIds = new Set(result.customer_ids || []);
 
       // Synchronously update local in-memory CRM_STATE
+      (CRM_STATE.customers || []).forEach(c => {
+        if (custIds.has(c.id) || assignedIds.has(c.id)) {
+          c.assignedTo = staffId;
+          c.assigned_to = staffId;
+        }
+      });
+
       (CRM_STATE.queries || []).forEach(q => {
         if (assignedIds.has(q.id) || custIds.has(q.customerId) || custIds.has(q.customer_id)) {
           q.assignedTo = staffId;
+          q.assigned_to = staffId;
           q.status = 'ASSIGNED';
         }
       });
 
-      (CRM_STATE.customers || []).forEach(c => {
-        if (custIds.has(c.id)) {
-          c.assignedTo = staffId;
+      // Ensure every customer assigned has a corresponding query in CRM_STATE.queries
+      custIds.forEach(cid => {
+        const cust = (CRM_STATE.customers || []).find(c => c.id === cid);
+        if (cust) {
+          cust.assignedTo = staffId;
+          cust.assigned_to = staffId;
+          let q = (CRM_STATE.queries || []).find(qry => qry && (qry.customerId === cid || qry.customer_id === cid));
+          if (!q) {
+            const clean10 = (cust.phone || cust.whatsapp || '').replace(/\D/g, '').slice(-10);
+            q = {
+              id: clean10 ? ('Q-' + clean10) : ('Q-' + cust.id),
+              customerId: cust.id,
+              customer_id: cust.id,
+              assignedTo: staffId,
+              assigned_to: staffId,
+              accountId: cust.accountId || cust.account_id || accountId,
+              account_id: cust.accountId || cust.account_id || accountId,
+              status: 'ASSIGNED',
+              priority: 'HIGH',
+              queryText: cust.lastMessage || 'Customer WhatsApp Enquiry',
+              lastMessage: cust.lastMessage || 'Customer WhatsApp Enquiry',
+              createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
+            CRM_STATE.queries.unshift(q);
+          } else {
+            q.assignedTo = staffId;
+            q.assigned_to = staffId;
+            q.status = 'ASSIGNED';
+          }
         }
       });
 
       // Update staff member active count
-      const staffObj = (CRM_STATE.staffList || []).find(s => s.id === staffId);
+      const staffObj = (CRM_STATE.staffList || []).find(s => s.id === staffId || s.username === staffId);
       if (staffObj) {
         staffObj.activeQueries = (staffObj.activeQueries || 0) + (result.assigned_count || assignCount);
       }
@@ -43160,6 +43279,7 @@ async function handleExecuteBulkAssign() {
       // Switch to list view and refresh
       showBulkAssignListView();
       if (typeof renderBulkAssignList === 'function') renderBulkAssignList();
+      if (typeof renderInboxConversationList === 'function') renderInboxConversationList();
       if (typeof renderInbox === 'function') renderInbox();
       updateBadgeCounters();
       updateBulkAssignBadgeCounters();
@@ -43511,13 +43631,15 @@ function updateBulkAssignBadgeCounters() {
   const badge = document.getElementById('badge-bulk-unassigned');
   if (!badge) return;
 
-  const unassignedCount = (CRM_STATE?.queries || []).filter(q => {
-    if (!q) return false;
-    const isUn = !q.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
-    return isUn && q.status !== 'DND' && q.status !== 'RESOLVED' && q.status !== 'CLOSED';
-  }).length;
+  const list = (typeof getUnassignedInquiriesList === 'function')
+    ? getUnassignedInquiriesList('all')
+    : (CRM_STATE?.queries || []).filter(q => {
+        if (!q) return false;
+        const isUn = !q.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
+        return isUn && q.status !== 'DND' && q.status !== 'RESOLVED' && q.status !== 'CLOSED';
+      });
 
-  badge.innerText = unassignedCount;
+  badge.innerText = Array.isArray(list) ? list.length : 0;
 }
 window.updateBulkAssignBadgeCounters = updateBulkAssignBadgeCounters;
 
