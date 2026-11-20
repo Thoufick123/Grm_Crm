@@ -448,6 +448,10 @@ function initRolePermissionsState() {
       const isAdmRole = (r === 'Super Admin' || r === 'Admin Manager' || r === 'admin');
       CRM_STATE.rolePermissions[r].masking = { view: isAdmRole, create: isAdmRole, edit: isAdmRole, delete: isAdmRole };
     }
+    if (!CRM_STATE.rolePermissions[r]['bulk-assign'] || typeof CRM_STATE.rolePermissions[r]['bulk-assign'] !== 'object') {
+      const isAdmRole = (r === 'Super Admin' || r === 'Admin Manager' || r === 'admin');
+      CRM_STATE.rolePermissions[r]['bulk-assign'] = { view: isAdmRole, create: isAdmRole, edit: isAdmRole, delete: isAdmRole };
+    }
     if (CRM_STATE.rolePermissions[r]?.audit) {
       CRM_STATE.rolePermissions[r].audit.create = false;
       CRM_STATE.rolePermissions[r].audit.edit = false;
@@ -5263,6 +5267,10 @@ function updatePageHeaderTitle() {
     inbox: {
       title: t('header.title.inbox', 'WhatsApp Inbox & Customer Queue'),
       sub: ''
+    },
+    'bulk-assign': {
+      title: t('header.title.bulk_assign', 'Bulk WhatsApp Inquiry Assignment Hub'),
+      sub: t('header.sub.bulk_assign', 'Mass lead distribution & real-time conversion-to-order tracking')
     },
     enquiries: {
       title: t('header.title.enquiries', 'Customer Enquiries & Staff Assignment Hub'),

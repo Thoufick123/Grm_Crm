@@ -1,12 +1,9 @@
 -- =========================================================================
 -- GRM WHATSAPP CRM — COMPREHENSIVE PRODUCTION DATABASE SCHEMA
--- Target Database: `grm_crm_db` (MySQL / MariaDB / phpMyAdmin / Docker)
+-- Compatible with: Live Hosting (Hostinger / cPanel / Plesk), Local XAMPP & Docker
 -- Multi-developer unified: Voice Translation, Telephony Softphone, Staff RBAC,
--- Catalog Meta, Orders/Payment Pipeline, DND Suppression, and WhatsApp Hub
+-- Catalog Meta, Orders/Payment Pipeline, DND Suppression, WhatsApp Hub & Bulk Assign
 -- =========================================================================
-
-CREATE DATABASE IF NOT EXISTS `grm_crm_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `grm_crm_db`;
 
 -- 1. Users & Staff Table (Role-Based Authentication & Language Preferences)
 CREATE TABLE IF NOT EXISTS `users` (
