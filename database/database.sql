@@ -606,3 +606,29 @@ CREATE TABLE IF NOT EXISTS `bulk_price_requests` (
   INDEX (`customer_phone`),
   INDEX (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+-- Table structure for table `bulk_assignments`
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `bulk_assignments` (
+    `id` VARCHAR(50) PRIMARY KEY,
+    `batch_code` VARCHAR(50) UNIQUE NOT NULL,
+    `account_id` VARCHAR(50) NOT NULL,
+    `account_name` VARCHAR(100) NULL,
+    `account_number` VARCHAR(30) NULL,
+    `staff_id` VARCHAR(50) NOT NULL,
+    `staff_name` VARCHAR(100) NOT NULL,
+    `staff_phone` VARCHAR(30) NOT NULL,
+    `assigned_count` INT NOT NULL DEFAULT 0,
+    `sort_order` ENUM('ASC', 'DESC') NOT NULL DEFAULT 'ASC',
+    `customer_ids` JSON NOT NULL,
+    `query_ids` JSON NOT NULL,
+    `status` VARCHAR(30) DEFAULT 'COMPLETED',
+    `created_by` VARCHAR(100) DEFAULT 'Super Admin',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX(`account_id`),
+    INDEX(`staff_id`),
+    INDEX(`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

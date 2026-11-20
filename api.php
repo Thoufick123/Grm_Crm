@@ -6663,6 +6663,390 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+// =========================================================================
+// 8B. BULK ASSIGN ENGINE & ORDER CONVERSION TRACKING
+// =========================================================================
+
+function ensureBulkAssignmentsTable($pdo) {
+    if (!$pdo) return;
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `bulk_assignments` (
+                `id` VARCHAR(50) PRIMARY KEY,
+                `batch_code` VARCHAR(50) UNIQUE NOT NULL,
+                `account_id` VARCHAR(50) NOT NULL,
+                `account_name` VARCHAR(100) NULL,
+                `account_number` VARCHAR(30) NULL,
+                `staff_id` VARCHAR(50) NOT NULL,
+                `staff_name` VARCHAR(100) NOT NULL,
+                `staff_phone` VARCHAR(30) NOT NULL,
+                `assigned_count` INT NOT NULL DEFAULT 0,
+                `sort_order` ENUM('ASC', 'DESC') NOT NULL DEFAULT 'ASC',
+                `customer_ids` JSON NOT NULL,
+                `query_ids` JSON NOT NULL,
+                `status` VARCHAR(30) DEFAULT 'COMPLETED',
+                `created_by` VARCHAR(100) DEFAULT 'Super Admin',
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX(`account_id`),
+                INDEX(`staff_id`),
+                INDEX(`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+    } catch (Exception $e) {}
+}
+
+if ($action === 'get_unassigned_enquiries_count') {
+    header('Content-Type: application/json');
+    $accountId = trim($_GET['account_id'] ?? 'all');
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        ensureBulkAssignmentsTable($pdo);
+
+        if ($accountId && $accountId !== 'all') {
+            $stmt = $pdo->prepare("
+                SELECT COUNT(DISTINCT q.id) as unassigned_count,
+                       MIN(q.created_at) as oldest_enquiry,
+                       MAX(q.created_at) as newest_enquiry
+                FROM `queries` q
+                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '')
+                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                  AND (
+                      COALESCE(
+                          (SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL ORDER BY m.id DESC LIMIT 1),
+                          'account_1'
+                      ) = ?
+                  )
+            ");
+            $stmt->execute([$accountId]);
+        } else {
+            $stmt = $pdo->query("
+                SELECT COUNT(DISTINCT q.id) as unassigned_count,
+                       MIN(q.created_at) as oldest_enquiry,
+                       MAX(q.created_at) as newest_enquiry
+                FROM `queries` q
+                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '')
+                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+            ");
+        }
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        echo json_encode([
+            "status" => "success",
+            "account_id" => $accountId,
+            "count" => intval($row['unassigned_count'] ?? 0),
+            "oldest" => $row['oldest_enquiry'] ?? null,
+            "newest" => $row['newest_enquiry'] ?? null
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage(), "count" => 0]);
+    }
+    exit;
+}
+
+if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?: [];
+
+    $accountId = trim($data['account_id'] ?? 'account_1');
+    $accountName = trim($data['account_name'] ?? 'Primary Line');
+    $accountNumber = trim($data['account_number'] ?? '');
+    $assignCount = max(1, intval($data['assign_count'] ?? 10));
+    $sortOrder = strtoupper(trim($data['sort_order'] ?? 'ASC')) === 'DESC' ? 'DESC' : 'ASC';
+    $staffId = trim($data['staff_id'] ?? '');
+    $staffName = trim($data['staff_name'] ?? 'Staff Member');
+    $staffPhone = trim($data['staff_phone'] ?? '');
+    $user = trim($data['user'] ?? 'Super Admin');
+
+    if (empty($staffId)) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Please select a valid staff member"]);
+        exit;
+    }
+
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        ensureBulkAssignmentsTable($pdo);
+
+        // Fetch candidate unassigned queries
+        if ($accountId && $accountId !== 'all') {
+            $stmt = $pdo->prepare("
+                SELECT q.id, q.customer_id, q.created_at
+                FROM `queries` q
+                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '')
+                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                  AND (
+                      COALESCE(
+                          (SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL ORDER BY m.id DESC LIMIT 1),
+                          'account_1'
+                      ) = ?
+                  )
+                ORDER BY q.created_at {$sortOrder}
+                LIMIT ?
+            ");
+            $stmt->bindValue(1, $accountId, PDO::PARAM_STR);
+            $stmt->bindValue(2, $assignCount, PDO::PARAM_INT);
+            $stmt->execute();
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT q.id, q.customer_id, q.created_at
+                FROM `queries` q
+                WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '')
+                  AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                ORDER BY q.created_at {$sortOrder}
+                LIMIT ?
+            ");
+            $stmt->bindValue(1, $assignCount, PDO::PARAM_INT);
+            $stmt->execute();
+        }
+        $candidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($candidates)) {
+            echo json_encode([
+                "status" => "warning",
+                "message" => "No unassigned inquiries available for the selected account.",
+                "assigned_count" => 0
+            ]);
+            exit;
+        }
+
+        $queryIds = array_column($candidates, 'id');
+        $customerIds = array_values(array_unique(array_filter(array_column($candidates, 'customer_id'))));
+        $actualAssigned = count($queryIds);
+
+        // Update queries to ASSIGNED
+        $inQMarks = implode(',', array_fill(0, count($queryIds), '?'));
+        $qUpdateStmt = $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE `id` IN ({$inQMarks})");
+        $qUpdateParams = array_merge([$staffId], $queryIds);
+        $qUpdateStmt->execute($qUpdateParams);
+
+        // Update customers to assigned staff
+        if (!empty($customerIds)) {
+            $inCMarks = implode(',', array_fill(0, count($customerIds), '?'));
+            $cUpdateStmt = $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` IN ({$inCMarks})");
+            $cUpdateParams = array_merge([$staffId], $customerIds);
+            $cUpdateStmt->execute($cUpdateParams);
+        }
+
+        // Generate Batch Code & ID
+        $batchCode = 'BA-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
+        $batchId = 'batch_' . uniqid();
+
+        // Insert into bulk_assignments
+        $insBatch = $pdo->prepare("
+            INSERT INTO `bulk_assignments` 
+                (`id`, `batch_code`, `account_id`, `account_name`, `account_number`, `staff_id`, `staff_name`, `staff_phone`, `assigned_count`, `sort_order`, `customer_ids`, `query_ids`, `status`, `created_by`, `created_at`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?, NOW())
+        ");
+        $insBatch->execute([
+            $batchId,
+            $batchCode,
+            $accountId,
+            $accountName,
+            $accountNumber,
+            $staffId,
+            $staffName,
+            $staffPhone,
+            $actualAssigned,
+            $sortOrder,
+            json_encode($customerIds),
+            json_encode($queryIds),
+            $user
+        ]);
+
+        // Update staff user active query counter
+        $pdo->prepare("
+            UPDATE `users` 
+            SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED', 'DND'))
+            WHERE `id` = ?
+        ")->execute([$staffId, $staffId]);
+
+        // Audit Log
+        $auditDetails = "Bulk assigned {$actualAssigned} customer inquiries from [{$accountName} - {$accountNumber}] to {$staffName} (Phone: {$staffPhone}) in {$sortOrder} chronological order. Batch: {$batchCode}";
+        $pdo->prepare("
+            INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+            VALUES (?, 'BULK_ASSIGN_EXECUTED', 'BULK_ASSIGN', ?, ?)
+        ")->execute([$user, $auditDetails, date("h:i A")]);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Successfully bulk-assigned {$actualAssigned} inquiries to {$staffName}!",
+            "batch_id" => $batchId,
+            "batch_code" => $batchCode,
+            "assigned_count" => $actualAssigned,
+            "staff_id" => $staffId,
+            "staff_name" => $staffName,
+            "staff_phone" => $staffPhone,
+            "customer_ids" => $customerIds,
+            "query_ids" => $queryIds,
+            "sort_order" => $sortOrder
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'get_bulk_assignments') {
+    header('Content-Type: application/json');
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        ensureBulkAssignmentsTable($pdo);
+
+        $stmt = $pdo->query("SELECT * FROM `bulk_assignments` ORDER BY `created_at` DESC LIMIT 100");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $batches = [];
+        foreach ($rows as $r) {
+            $custIds = json_decode($r['customer_ids'] ?? '[]', true) ?: [];
+            $assignedCount = intval($r['assigned_count'] ?? 0);
+            $convertedCount = 0;
+            $convertedRevenue = 0.0;
+            $ordersList = [];
+
+            if (!empty($custIds)) {
+                $inMarks = implode(',', array_fill(0, count($custIds), '?'));
+                $ordStmt = $pdo->prepare("
+                    SELECT `id`, `customer_id`, `customer_name`, `grand_total`, `order_status`, `created_at`
+                    FROM `orders`
+                    WHERE `customer_id` IN ({$inMarks}) AND `order_status` != 'CANCELLED'
+                    ORDER BY `created_at` DESC
+                ");
+                $ordStmt->execute($custIds);
+                $orders = $ordStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $seenCusts = [];
+                foreach ($orders as $o) {
+                    $cId = $o['customer_id'];
+                    if (!isset($seenCusts[$cId])) {
+                        $seenCusts[$cId] = true;
+                        $convertedCount++;
+                    }
+                    $convertedRevenue += floatval($o['grand_total'] ?? 0);
+                    $ordersList[] = [
+                        'order_id' => $o['id'],
+                        'customer_id' => $o['customer_id'],
+                        'customer_name' => $o['customer_name'],
+                        'grand_total' => floatval($o['grand_total']),
+                        'order_status' => $o['order_status'],
+                        'created_at' => $o['created_at']
+                    ];
+                }
+            }
+
+            $convRate = ($assignedCount > 0) ? round(($convertedCount / $assignedCount) * 100, 1) : 0.0;
+
+            $batches[] = [
+                'id' => $r['id'],
+                'batch_code' => $r['batch_code'],
+                'account_id' => $r['account_id'],
+                'account_name' => $r['account_name'] ?: 'Primary Line',
+                'account_number' => $r['account_number'] ?: '',
+                'staff_id' => $r['staff_id'],
+                'staff_name' => $r['staff_name'],
+                'staff_phone' => $r['staff_phone'],
+                'assigned_count' => $assignedCount,
+                'sort_order' => $r['sort_order'],
+                'customer_ids' => $custIds,
+                'query_ids' => json_decode($r['query_ids'] ?? '[]', true) ?: [],
+                'status' => $r['status'] ?: 'COMPLETED',
+                'created_by' => $r['created_by'] ?: 'Super Admin',
+                'created_at' => $r['created_at'],
+                'converted_count' => $convertedCount,
+                'conversion_rate' => $convRate,
+                'converted_revenue' => $convertedRevenue,
+                'orders' => $ordersList
+            ];
+        }
+
+        echo json_encode(["status" => "success", "batches" => $batches]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage(), "batches" => []]);
+    }
+    exit;
+}
+
+if ($action === 'get_bulk_batch_details') {
+    header('Content-Type: application/json');
+    $batchId = trim($_GET['batch_id'] ?? $_GET['id'] ?? '');
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        ensureBulkAssignmentsTable($pdo);
+
+        $stmt = $pdo->prepare("SELECT * FROM `bulk_assignments` WHERE `id` = ? OR `batch_code` = ? LIMIT 1");
+        $stmt->execute([$batchId, $batchId]);
+        $batch = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$batch) {
+            http_response_code(404);
+            echo json_encode(["status" => "error", "message" => "Batch not found"]);
+            exit;
+        }
+
+        $custIds = json_decode($batch['customer_ids'] ?? '[]', true) ?: [];
+        $customersDetails = [];
+
+        if (!empty($custIds)) {
+            $inMarks = implode(',', array_fill(0, count($custIds), '?'));
+            $cStmt = $pdo->prepare("SELECT * FROM `customers` WHERE `id` IN ({$inMarks})");
+            $cStmt->execute($custIds);
+            $cRows = $cStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Fetch latest queries for these customers
+            $qStmt = $pdo->prepare("SELECT * FROM `queries` WHERE `customer_id` IN ({$inMarks}) ORDER BY `created_at` DESC");
+            $qStmt->execute($custIds);
+            $qRows = $qStmt->fetchAll(PDO::FETCH_ASSOC);
+            $qMap = [];
+            foreach ($qRows as $qr) {
+                if (!isset($qMap[$qr['customer_id']])) $qMap[$qr['customer_id']] = $qr;
+            }
+
+            // Fetch orders for these customers
+            $oStmt = $pdo->prepare("SELECT * FROM `orders` WHERE `customer_id` IN ({$inMarks}) AND `order_status` != 'CANCELLED' ORDER BY `created_at` DESC");
+            $oStmt->execute($custIds);
+            $oRows = $oStmt->fetchAll(PDO::FETCH_ASSOC);
+            $oMap = [];
+            foreach ($oRows as $or) {
+                $oMap[$or['customer_id']][] = $or;
+            }
+
+            foreach ($cRows as $cust) {
+                $cid = $cust['id'];
+                $q = $qMap[$cid] ?? null;
+                $custOrders = $oMap[$cid] ?? [];
+                $hasConverted = !empty($custOrders);
+                $totalOrderAmt = array_sum(array_column($custOrders, 'grand_total'));
+
+                $customersDetails[] = [
+                    'customer_id' => $cid,
+                    'name' => $cust['name'],
+                    'phone' => $cust['phone'] ?: ($cust['whatsapp'] ?: ''),
+                    'query_id' => $q ? $q['id'] : '',
+                    'query_text' => $q ? ($q['last_message'] ?: $q['query_text']) : '',
+                    'status' => $q ? $q['status'] : 'ASSIGNED',
+                    'has_converted' => $hasConverted,
+                    'orders_count' => count($custOrders),
+                    'total_order_amount' => $totalOrderAmt,
+                    'orders' => $custOrders
+                ];
+            }
+        }
+
+        echo json_encode([
+            "status" => "success",
+            "batch" => $batch,
+            "customers" => $customersDetails
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+
 // Dedicated direct save endpoint for DND suppression records
 if ($action === 'save_dnd_record' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');

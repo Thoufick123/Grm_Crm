@@ -111,7 +111,7 @@
   <script>
     (function () {
       try {
-        var validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
+        var validViews = ['inbox', 'bulk-assign', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
         var rawHash = (window.location.hash || '').replace('#', '').trim().toLowerCase();
         var hashParts = rawHash.split('/');
         var mainHash = hashParts[0];
@@ -167,6 +167,7 @@
 
           var titles = {
             inbox: { title: 'WhatsApp Inbox & Customer Queue', sub: '' },
+            'bulk-assign': { title: 'Bulk WhatsApp Inquiry Assignment Hub', sub: 'Mass lead distribution & real-time conversion-to-order tracking' },
             enquiries: { title: 'Customer Enquiries & Staff Assignment Hub', sub: 'Admin control room to distribute new customer leads to staff' },
             dashboard: { title: 'WhatsApp Dashboard', sub: '' },
             catalog: { title: 'Garment Product Catalog & Live Stock', sub: '' },
@@ -1224,6 +1225,19 @@
         </div>
         <span id="badge-total-unread"
           class="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">0</span>
+      </button>
+
+      <!-- Bulk Assign (Direct Navigation below WhatsApp Inbox) -->
+      <button onclick="switchView('bulk-assign')" id="nav-bulk-assign"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-xl transition text-slate-300 hover:text-white hover:bg-surface-sidebarActive group cursor-pointer"
+        title="Bulk WhatsApp Inquiries & Staff Assignment">
+        <div class="flex items-center gap-3">
+          <span
+            class="material-symbols-outlined text-[20px] text-amber-400 group-hover:scale-110 transition">assignment_turned_in</span>
+          <span data-i18n="nav.bulk_assign">Bulk Assign</span>
+        </div>
+        <span id="badge-bulk-unassigned"
+          class="bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-500/30">0</span>
       </button>
 
       <!-- Auto-Reply Hub (Direct 1-Click Navigation) -->
@@ -2868,6 +2882,304 @@
                   <!-- Rendered by JS -->
                 </tbody>
               </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: BULK ASSIGN & CONVERSION HUB -->
+      <!-- ========================================== -->
+      <section id="view-bulk-assign" class="h-full overflow-y-auto p-3 sm:p-5 md:p-6 pb-24 md:pb-6 hidden custom-chat-scroll">
+        <div class="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+
+          <!-- Top Banner Strip -->
+          <div
+            class="bg-gradient-to-r from-slate-900 via-emerald-950 to-brand-dark rounded-2xl p-5 sm:p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-emerald-500/20">
+            <div>
+              <div class="flex items-center gap-2 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                Admin Bulk Lead Allocation Hub
+              </div>
+              <h2 class="text-xl sm:text-2xl font-black mt-1 tracking-tight flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-amber-400 text-[26px]">assignment_turned_in</span>
+                <span>Bulk WhatsApp Inquiry Assignment</span>
+              </h2>
+              <p class="text-xs text-slate-300/90 mt-1 max-w-2xl leading-relaxed">
+                Distribute incoming WhatsApp inquiries to staff members in bulk using FIFO or LIFO queues, and monitor real-time order conversions and revenue generated per batch.
+              </p>
+            </div>
+            <div class="flex items-center gap-2.5 self-stretch sm:self-auto shrink-0">
+              <button type="button" onclick="showAddBulkAssignPage()" id="btn-toggle-add-bulk"
+                class="w-full sm:w-auto px-4 py-2.5 bg-brand-wa hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                <span>+ Add Bulk Assignment</span>
+              </button>
+              <button type="button" onclick="showBulkAssignListView()" id="btn-toggle-back-list"
+                class="hidden w-full sm:w-auto px-4 py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-2 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                <span>Back to Batches List</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 1: BULK ASSIGNMENT BATCHES LIST -->
+          <div id="bulk-assign-list-view" class="space-y-5">
+            <!-- 4 KPI Summary Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <!-- KPI 1: Total Bulk Batches -->
+              <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Batches</p>
+                    <h3 id="kpi-bulk-total-batches" class="text-xl sm:text-2xl font-black text-slate-800 mt-1">0</h3>
+                  </div>
+                  <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200 shrink-0">
+                    <span class="material-symbols-outlined text-[20px]">layers</span>
+                  </div>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2 font-medium">Historical allocation runs</p>
+              </div>
+
+              <!-- KPI 2: Inquiries Assigned -->
+              <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Inquiries Assigned</p>
+                    <h3 id="kpi-bulk-total-assigned" class="text-xl sm:text-2xl font-black text-blue-700 mt-1">0</h3>
+                  </div>
+                  <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 shrink-0">
+                    <span class="material-symbols-outlined text-[20px]">assignment_ind</span>
+                  </div>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2 font-medium">Customer leads routed</p>
+              </div>
+
+              <!-- KPI 3: Orders Converted -->
+              <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Orders Converted</p>
+                    <h3 id="kpi-bulk-total-converted" class="text-xl sm:text-2xl font-black text-emerald-700 mt-1">0</h3>
+                  </div>
+                  <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200 shrink-0">
+                    <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
+                  </div>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2 font-medium">Booked sales from bulk leads</p>
+              </div>
+
+              <!-- KPI 4: Conversion Rate & Sales -->
+              <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Conversion Rate</p>
+                    <h3 id="kpi-bulk-conv-rate" class="text-xl sm:text-2xl font-black text-purple-700 mt-1">0.0%</h3>
+                  </div>
+                  <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-200 shrink-0">
+                    <span class="material-symbols-outlined text-[20px]">trending_up</span>
+                  </div>
+                </div>
+                <p id="kpi-bulk-total-revenue" class="text-[10px] text-purple-600 mt-2 font-bold truncate">₹0.00 Total Revenue</p>
+              </div>
+            </div>
+
+            <!-- Batches Table Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-slate-800 text-sm">Bulk Assignment Batches</h3>
+                  <span id="bulk-table-total-count" class="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+                </div>
+
+                <!-- Filters & Search Controls -->
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  <div class="relative flex items-center flex-1 sm:flex-initial">
+                    <span class="material-symbols-outlined absolute left-2.5 text-slate-400 text-[16px] pointer-events-none">search</span>
+                    <input type="text" id="bulk-search-input" oninput="renderBulkAssignList()"
+                      placeholder="Search batch, staff, account..."
+                      class="pl-8 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-wa focus:border-brand-wa w-full sm:w-60 transition shadow-2xs">
+                  </div>
+                  <select id="bulk-filter-staff" onchange="renderBulkAssignList()"
+                    class="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium text-slate-700">
+                    <option value="ALL">All Staff Members</option>
+                  </select>
+                  <button type="button" onclick="refreshBulkAssignments(this)"
+                    class="p-1.5 bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 rounded-lg transition cursor-pointer"
+                    title="Refresh Batches List">
+                    <span class="material-symbols-outlined text-[16px]">sync</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Batches Table -->
+              <div class="overflow-x-auto w-full">
+                <table class="w-full text-left text-xs text-slate-700 min-w-[750px]">
+                  <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider whitespace-nowrap">
+                    <tr>
+                      <th class="py-3 px-4">Batch ID & Date</th>
+                      <th class="py-3 px-4">WhatsApp Account</th>
+                      <th class="py-3 px-4">Assigned Staff & Phone</th>
+                      <th class="py-3 px-4 text-center">Assigned Leads</th>
+                      <th class="py-3 px-4 text-center">Priority Order</th>
+                      <th class="py-3 px-4">Converted Orders</th>
+                      <th class="py-3 px-4 text-center">Status</th>
+                      <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bulk-assignments-table-body" class="divide-y divide-slate-100">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 2: ADD BULK ASSIGNMENT CREATION FORM -->
+          <div id="bulk-assign-create-view" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div class="p-5 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[22px]">group_add</span>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-slate-900 text-sm sm:text-base">Configure New Bulk Assignment Batch</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Select a scanned WhatsApp line, set quantity, choose sorting order, and assign to staff.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-5 sm:p-6 space-y-6 text-xs">
+                <!-- Step 1: Scanned Account & Live Unassigned Counter -->
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <label class="block font-bold text-slate-800 text-xs">
+                      1. Select Scanned WhatsApp Account / Channel
+                    </label>
+                    <span class="text-[10px] text-slate-500">Only connected WhatsApp lines</span>
+                  </div>
+                  <select id="bulk-account-select" onchange="onBulkAccountChange()"
+                    class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-wa">
+                    <!-- Populated dynamically by JS -->
+                  </select>
+
+                  <!-- Live Counter Banner -->
+                  <div id="bulk-unassigned-counter-card"
+                    class="p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <span class="material-symbols-outlined text-[20px]">mark_chat_unread</span>
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-bold text-emerald-950">Available Unassigned Enquiries:</span>
+                          <span id="bulk-unassigned-count" class="text-base font-black text-emerald-700 px-2 py-0.5 bg-emerald-200/60 rounded-lg">0</span>
+                        </div>
+                        <p id="bulk-unassigned-time-label" class="text-[11px] text-emerald-800 mt-0.5">Scanning account inquiry queue...</p>
+                      </div>
+                    </div>
+                    <button type="button" onclick="refreshBulkUnassignedCounter()"
+                      class="px-3 py-1.5 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold text-[11px] flex items-center gap-1 cursor-pointer shrink-0">
+                      <span class="material-symbols-outlined text-[14px]">refresh</span> Check Again
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Step 2: Customer Assign Count & Presets -->
+                <div class="space-y-2 pt-2 border-t border-slate-100">
+                  <div class="flex items-center justify-between">
+                    <label class="block font-bold text-slate-800 text-xs">
+                      2. Customer Assign Count (Quantity to Distribute)
+                    </label>
+                    <span class="text-[10px] text-slate-500">Max: available unassigned count</span>
+                  </div>
+                  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <input type="number" id="bulk-assign-count" min="1" value="10" oninput="updateBulkAssignPreview()"
+                      class="w-full sm:w-44 bg-white border border-slate-300 rounded-xl px-3.5 py-2 font-bold text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-wa">
+                    
+                    <!-- Quick Chips -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <button type="button" onclick="setBulkAssignCount(5)"
+                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer">5</button>
+                      <button type="button" onclick="setBulkAssignCount(10)"
+                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer">10</button>
+                      <button type="button" onclick="setBulkAssignCount(25)"
+                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer">25</button>
+                      <button type="button" onclick="setBulkAssignCount(50)"
+                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer">50</button>
+                      <button type="button" onclick="setBulkAssignCount('all')"
+                        class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold transition cursor-pointer">All Available</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Step 3: Chronological Sorting Order -->
+                <div class="space-y-2 pt-2 border-t border-slate-100">
+                  <label class="block font-bold text-slate-800 text-xs">
+                    3. Chronological Sorting Order
+                  </label>
+                  <select id="bulk-sort-order" onchange="updateBulkAssignPreview()"
+                    class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-wa">
+                    <option value="ASC">⏳ Ascending Order (Oldest Enquiries First - FIFO)</option>
+                    <option value="DESC">⚡ Descending Order (Newest Enquiries First - LIFO)</option>
+                  </select>
+                  <p class="text-[11px] text-slate-500 leading-relaxed">
+                    <strong>Ascending (FIFO):</strong> Prioritizes customers who have been waiting the longest. <br>
+                    <strong>Descending (LIFO):</strong> Prioritizes freshest, just-arrived customer enquiries.
+                  </p>
+                </div>
+
+                <!-- Step 4: Staff Member & Dynamic Phone Number -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                  <div class="space-y-1.5">
+                    <label class="block font-bold text-slate-800 text-xs">
+                      4. Assign to Staff Member
+                    </label>
+                    <select id="bulk-staff-select" onchange="onBulkStaffNameChange()"
+                      class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-wa">
+                      <!-- Populated dynamically by JS -->
+                    </select>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    <label class="block font-bold text-slate-800 text-xs">
+                      Staff Phone Number (Dynamic)
+                    </label>
+                    <select id="bulk-staff-phone-select" onchange="updateBulkAssignPreview()"
+                      class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-wa">
+                      <!-- Populated dynamically when staff name changes -->
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Dynamic Preview Box -->
+                <div id="bulk-assign-preview-box"
+                  class="p-4 bg-amber-50/80 border border-amber-200/90 rounded-xl text-amber-950 flex items-start gap-3">
+                  <span class="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">info</span>
+                  <div class="space-y-1">
+                    <p class="font-bold text-xs" id="bulk-preview-title">Assignment Summary Preview</p>
+                    <p class="text-[11px] leading-relaxed text-amber-900" id="bulk-preview-text">
+                      Select options above to see summary.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-200">
+                  <button type="button" onclick="showBulkAssignListView()"
+                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer">
+                    Cancel
+                  </button>
+                  <button type="button" onclick="handleExecuteBulkAssign()" id="btn-execute-bulk-assign"
+                    class="px-6 py-2.5 bg-brand-wa hover:bg-brand-waDark active:scale-95 text-white rounded-xl font-bold shadow-md shadow-emerald-900/20 flex items-center gap-2 cursor-pointer transition">
+                    <span class="material-symbols-outlined text-[18px]">how_to_reg</span>
+                    <span>Execute Bulk Assignment</span>
+                  </button>
+                </div>
+
+              </div>
             </div>
           </div>
 
@@ -6925,6 +7237,75 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: BULK BATCH DETAILS & CONVERSION INSPECTOR -->
+  <div id="modal-bulk-batch-details" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-5 text-white flex items-center justify-between shrink-0">
+        <div class="min-w-0 pr-3">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-400 text-[22px]">assignment_turned_in</span>
+            <h3 class="font-bold text-base" id="modal-batch-details-title">Batch Assignment Inspection</h3>
+          </div>
+          <p id="modal-batch-details-sub" class="text-xs text-slate-300 mt-1 truncate"></p>
+        </div>
+        <button type="button" onclick="closeModal('modal-bulk-batch-details')" class="text-slate-400 hover:text-white shrink-0 p-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+
+      <!-- Conversion Summary Banner -->
+      <div class="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0 text-xs">
+        <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+          <p class="text-[10px] text-slate-500 font-bold uppercase">Total Leads Assigned</p>
+          <p id="modal-batch-count" class="text-lg font-black text-slate-800 mt-0.5">0</p>
+        </div>
+        <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+          <p class="text-[10px] text-slate-500 font-bold uppercase">Orders Converted</p>
+          <p id="modal-batch-converted" class="text-lg font-black text-emerald-700 mt-0.5">0</p>
+        </div>
+        <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+          <p class="text-[10px] text-slate-500 font-bold uppercase">Batch Conversion Rate</p>
+          <p id="modal-batch-rate" class="text-lg font-black text-purple-700 mt-0.5">0.0%</p>
+        </div>
+        <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+          <p class="text-[10px] text-slate-500 font-bold uppercase">Total Sales Generated</p>
+          <p id="modal-batch-revenue" class="text-lg font-black text-emerald-800 mt-0.5">₹0.00</p>
+        </div>
+      </div>
+
+      <!-- Customers List Table -->
+      <div class="flex-1 overflow-y-auto p-4 custom-chat-scroll text-xs">
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+          <table class="w-full text-left">
+            <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider whitespace-nowrap">
+              <tr>
+                <th class="py-2.5 px-3">Customer</th>
+                <th class="py-2.5 px-3">Phone</th>
+                <th class="py-2.5 px-3">Inquiry / Last Message</th>
+                <th class="py-2.5 px-3 text-center">Status</th>
+                <th class="py-2.5 px-3 text-center">Converted Order</th>
+                <th class="py-2.5 px-3 text-right">Order Amount</th>
+                <th class="py-2.5 px-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="modal-batch-customers-tbody" class="divide-y divide-slate-100">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end shrink-0">
+        <button type="button" onclick="closeModal('modal-bulk-batch-details')"
+          class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold cursor-pointer transition">
+          Close
+        </button>
+      </div>
     </div>
   </div>
 

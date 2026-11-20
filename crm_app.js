@@ -336,6 +336,7 @@ window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
 // =========================================================================
 const CRM_MODULE_DEFINITIONS = [
   { key: 'dashboard', name: 'WhatsApp Sales Dashboard', desc: 'Real-time sales KPI, pipeline metrics, and conversion tracking', icon: 'analytics' },
+  { key: 'bulk-assign', name: 'Bulk WhatsApp Inquiry Assignment', desc: 'Mass lead distribution, FIFO/LIFO queues & order conversion analytics', icon: 'assignment_turned_in' },
   { key: 'enquiries', name: 'Customer Enquiries Hub', desc: 'Admin lead assignment control room', icon: 'assignment' },
   { key: 'inbox', name: 'WhatsApp Inbox & Live Chat', desc: 'Realtime chats, inbound stream, templates & photo sending', icon: 'chat' },
   { key: 'followups', name: 'Customer Follow-up Scheduler', desc: 'Callback calendar, payment promises & reminders', icon: 'schedule' },
@@ -356,6 +357,7 @@ window.CRM_MODULE_DEFINITIONS = CRM_MODULE_DEFINITIONS;
 const DEFAULT_ROLE_PERMISSIONS = {
   'Super Admin': {
     dashboard: { view: true, create: true, edit: true, delete: true },
+    'bulk-assign': { view: true, create: true, edit: true, delete: true },
     inbox: { view: true, create: true, edit: true, delete: true },
     enquiries: { view: true, create: true, edit: true, delete: true },
     followups: { view: true, create: true, edit: true, delete: true },
@@ -386,10 +388,10 @@ const LEGACY_HARDCODED_DEMO_ROLES = [
 function createRoleDefaultPermissions(roleName, isFullAccess = false) {
   const perms = {};
   const modules = [
-    'dashboard', 'inbox', 'enquiries', 'followups', 'catalog', 'orders',
+    'dashboard', 'bulk-assign', 'inbox', 'enquiries', 'followups', 'catalog', 'orders',
     'customers', 'dnd', 'staff', 'analytics', 'audit', 'settings', 'backup', 'masking', 'packing-slip-config'
   ];
-  const adminOnlyMods = ['settings', 'backup', 'staff', 'audit', 'masking'];
+  const adminOnlyMods = ['settings', 'backup', 'staff', 'audit', 'masking', 'bulk-assign'];
   modules.forEach(m => {
     const isAdmMod = adminOnlyMods.includes(m);
     perms[m] = {
@@ -1442,7 +1444,7 @@ function getCurrentUser() {
 
 function getPersistedActiveView() {
   try {
-    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
+    const validViews = ['inbox', 'bulk-assign', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
     const rawHash = (typeof window !== 'undefined' && window.location && window.location.hash) ? window.location.hash.replace('#', '').trim().toLowerCase() : '';
     const mainHash = rawHash.split('/')[0];
     if (mainHash && validViews.includes(mainHash)) {
@@ -2123,6 +2125,7 @@ function updateMaskingUI() {
 
 function renderCurrentView() {
   if (ACTIVE_VIEW === 'inbox') renderInbox();
+  else if (ACTIVE_VIEW === 'bulk-assign') renderBulkAssignModule();
   else if (ACTIVE_VIEW === 'enquiries') renderEnquiriesTable();
   else if (ACTIVE_VIEW === 'customers') renderCustomersTable();
   else if (ACTIVE_VIEW === 'dnd') renderDndModule();
@@ -5452,7 +5455,7 @@ function switchView(viewName, subName, isFromHistory = false) {
       }
     }
   } catch (e) { }
-  const views = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
+  const views = ['inbox', 'bulk-assign', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
 
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
@@ -5560,6 +5563,7 @@ function switchView(viewName, subName, isFromHistory = false) {
       }
       renderInbox();
     }
+    if (viewName === 'bulk-assign') renderBulkAssignModule();
     if (viewName === 'enquiries') renderEnquiriesTable();
     if (viewName === 'dashboard') {
       if (typeof loadOrdersOnDemand === 'function') loadOrdersOnDemand();
@@ -5673,7 +5677,7 @@ function initBrowserHistoryGuard() {
     const targetView = (state && state.view) ? state.view : (hashParts[0] || 'dashboard');
     const targetSub = (state && state.sub) ? state.sub : (hashParts[1] || null);
 
-    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
+    const validViews = ['inbox', 'bulk-assign', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
     
     // If navigating back to another view:
     if (validViews.includes(targetView) && (targetView !== ACTIVE_VIEW || targetSub)) {
@@ -5705,7 +5709,7 @@ function initBrowserHistoryGuard() {
     const hashParts = rawHash.split('/');
     const mainHash = hashParts[0];
     const subHash = hashParts[1];
-    const validViews = ['inbox', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
+    const validViews = ['inbox', 'bulk-assign', 'enquiries', 'dashboard', 'catalog', 'orders', 'followups', 'customers', 'dnd', 'staff', 'audit', 'analytics', 'settings', 'backup', 'masking', 'packing-slip-config'];
     if (mainHash && validViews.includes(mainHash)) {
       let needsSwitch = false;
       if (mainHash !== ACTIVE_VIEW) {
@@ -9152,9 +9156,11 @@ function updateBadgeCounters() {
 
   // 2. Unassigned Enquiries
   const unassignedEl = document.getElementById('badge-unassigned-count');
-  if (unassignedEl) {
-    const unassignedCount = (CRM_STATE.queries || []).filter(q => q.assignedTo === 'UNASSIGNED' && q.status !== 'DND').length;
-    unassignedEl.innerText = `${unassignedCount} New`;
+  const bulkUnassignedBadge = document.getElementById('badge-bulk-unassigned');
+  if (unassignedEl || bulkUnassignedBadge) {
+    const unassignedCount = (CRM_STATE.queries || []).filter(q => (q.assignedTo === 'UNASSIGNED' || !q.assignedTo) && q.status !== 'DND' && q.status !== 'RESOLVED' && q.status !== 'CLOSED').length;
+    if (unassignedEl) unassignedEl.innerText = `${unassignedCount} New`;
+    if (bulkUnassignedBadge) bulkUnassignedBadge.innerText = `${unassignedCount}`;
   }
 
   // 3. Followup count
@@ -34477,6 +34483,8 @@ function updateBadgeCounters() {
 
   const countUnassigned = document.getElementById('count-unassigned');
   if (countUnassigned) countUnassigned.innerText = unassignedCount;
+  const bulkUnassignedBadge = document.getElementById('badge-bulk-unassigned');
+  if (bulkUnassignedBadge) bulkUnassignedBadge.innerText = unassignedCount;
 
   const countMy = document.getElementById('count-my');
   if (countMy) countMy.innerText = myQueueCount;
@@ -42760,3 +42768,673 @@ window.updateHeaderBulkRequestsBadge = async function () {
     }
   } catch (err) {}
 };
+
+// =========================================================================
+// BULK WHATSAPP INQUIRY ASSIGNMENT & ORDER CONVERSION ENGINE
+// =========================================================================
+
+window.ACTIVE_BULK_VIEW = 'list';
+window.CURRENT_BULK_UNASSIGNED_COUNT = 0;
+window.CACHED_BULK_BATCHES = [];
+
+function renderBulkAssignModule() {
+  const isSuperAdmin = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER)
+    ? (CURRENT_USER.role === 'admin' || CURRENT_USER.id === 'admin' || CURRENT_USER.role === 'Super Admin' || (CURRENT_USER.title && CURRENT_USER.title.includes('Admin Manager')))
+    : (ACTIVE_ROLE === 'admin');
+
+  if (window.ACTIVE_BULK_VIEW === 'create') {
+    showAddBulkAssignPage();
+  } else {
+    showBulkAssignListView();
+  }
+  updateBulkAssignBadgeCounters();
+}
+window.renderBulkAssignModule = renderBulkAssignModule;
+
+function showAddBulkAssignPage() {
+  window.ACTIVE_BULK_VIEW = 'create';
+  const listView = document.getElementById('bulk-assign-list-view');
+  const createView = document.getElementById('bulk-assign-create-view');
+  const addBtn = document.getElementById('btn-toggle-add-bulk');
+  const backBtn = document.getElementById('btn-toggle-back-list');
+
+  if (listView) listView.classList.add('hidden');
+  if (createView) createView.classList.remove('hidden');
+  if (addBtn) addBtn.classList.add('hidden');
+  if (backBtn) backBtn.classList.remove('hidden');
+
+  // Populate Accounts dropdown
+  const accSelect = document.getElementById('bulk-account-select');
+  if (accSelect) {
+    const accounts = (typeof getAvailableWhatsAppAccounts === 'function')
+      ? getAvailableWhatsAppAccounts()
+      : [
+          { id: 'account_1', label: 'Line 1: Primary WhatsApp', connected_number: '+91 99435 57998', status: 'CONNECTED' },
+          { id: 'account_2', label: 'Line 2: Secondary WhatsApp', connected_number: '+91 86680 07593', status: 'CONNECTED' }
+        ];
+
+    accSelect.innerHTML = accounts.map(a => `
+      <option value="${a.id}" data-name="${a.label || a.brand_name || 'Line'}" data-number="${a.connected_number || a.phone_number || ''}">
+        ${a.label || a.brand_name || a.id} (${a.connected_number || a.phone_number || 'Awaiting Link'}) [${a.status || 'CONNECTED'}]
+      </option>
+    `).join('');
+  }
+
+  // Populate Staff dropdown
+  const staffSelect = document.getElementById('bulk-staff-select');
+  if (staffSelect) {
+    const staffList = Array.isArray(CRM_STATE?.staffList) ? CRM_STATE.staffList : [];
+    staffSelect.innerHTML = staffList.map(s => `
+      <option value="${s.id}" data-name="${s.name}" data-phone="${s.phone || ''}">
+        ${s.name} (${s.role || s.specialization || 'Sales Specialist'})
+      </option>
+    `).join('');
+  }
+
+  onBulkAccountChange();
+  onBulkStaffNameChange();
+}
+window.showAddBulkAssignPage = showAddBulkAssignPage;
+
+function showBulkAssignListView() {
+  window.ACTIVE_BULK_VIEW = 'list';
+  const listView = document.getElementById('bulk-assign-list-view');
+  const createView = document.getElementById('bulk-assign-create-view');
+  const addBtn = document.getElementById('btn-toggle-add-bulk');
+  const backBtn = document.getElementById('btn-toggle-back-list');
+
+  if (listView) listView.classList.remove('hidden');
+  if (createView) createView.classList.add('hidden');
+  if (addBtn) addBtn.classList.remove('hidden');
+  if (backBtn) backBtn.classList.add('hidden');
+
+  renderBulkAssignList();
+}
+window.showBulkAssignListView = showBulkAssignListView;
+
+async function onBulkAccountChange() {
+  const accSelect = document.getElementById('bulk-account-select');
+  const countEl = document.getElementById('bulk-unassigned-count');
+  const timeLabel = document.getElementById('bulk-unassigned-time-label');
+  const countInput = document.getElementById('bulk-assign-count');
+  if (!accSelect) return;
+
+  const accountId = accSelect.value || 'account_1';
+
+  // Fast local instant count calculation
+  const localUnassigned = (CRM_STATE?.queries || []).filter(q => {
+    if (!q) return false;
+    const isUn = !q.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
+    if (!isUn) return false;
+    if (q.status === 'DND' || q.status === 'RESOLVED' || q.status === 'CLOSED') return false;
+    const qAcc = q.accountId || q.account_id || 'account_1';
+    return (accountId === 'all' || qAcc === accountId);
+  });
+
+  let count = localUnassigned.length;
+  window.CURRENT_BULK_UNASSIGNED_COUNT = count;
+  if (countEl) countEl.innerText = count;
+  if (countInput) {
+    countInput.max = count > 0 ? count : 1;
+    if (parseInt(countInput.value, 10) > count) {
+      countInput.value = count > 0 ? count : 10;
+    }
+  }
+
+  if (timeLabel) {
+    if (count > 0) {
+      timeLabel.innerText = `${count} inquiries waiting in queue. Oldest inquiry waiting to be assigned.`;
+    } else {
+      timeLabel.innerText = `Zero pending unassigned inquiries on this account right now.`;
+    }
+  }
+
+  // Verify and sync live with server
+  try {
+    const res = await fetch(`api.php?action=get_unassigned_enquiries_count&account_id=${encodeURIComponent(accountId)}`);
+    const data = await res.json();
+    if (data && data.status === 'success' && typeof data.count === 'number') {
+      window.CURRENT_BULK_UNASSIGNED_COUNT = data.count;
+      if (countEl) countEl.innerText = data.count;
+      if (countInput) countInput.max = data.count > 0 ? data.count : 1;
+      if (timeLabel) {
+        if (data.count > 0 && data.oldest) {
+          timeLabel.innerText = `${data.count} enquiries waiting. Oldest arrived at: ${data.oldest}`;
+        } else if (data.count > 0) {
+          timeLabel.innerText = `${data.count} enquiries available for distribution.`;
+        } else {
+          timeLabel.innerText = `All inquiries on this line are assigned.`;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[onBulkAccountChange] Failed to fetch server count, using local count:', e);
+  }
+
+  updateBulkAssignPreview();
+}
+window.onBulkAccountChange = onBulkAccountChange;
+
+function refreshBulkUnassignedCounter() {
+  onBulkAccountChange();
+}
+window.refreshBulkUnassignedCounter = refreshBulkUnassignedCounter;
+
+function setBulkAssignCount(n) {
+  const input = document.getElementById('bulk-assign-count');
+  if (!input) return;
+  const maxAvail = window.CURRENT_BULK_UNASSIGNED_COUNT || 50;
+
+  if (n === 'all') {
+    input.value = maxAvail > 0 ? maxAvail : 10;
+  } else {
+    input.value = Math.max(1, parseInt(n, 10));
+  }
+  updateBulkAssignPreview();
+}
+window.setBulkAssignCount = setBulkAssignCount;
+
+function onBulkStaffNameChange() {
+  const staffSelect = document.getElementById('bulk-staff-select');
+  const phoneSelect = document.getElementById('bulk-staff-phone-select');
+  if (!staffSelect || !phoneSelect) return;
+
+  const staffId = staffSelect.value;
+  const staff = (CRM_STATE?.staffList || []).find(s => s.id === staffId);
+
+  if (staff) {
+    const phones = [];
+    if (staff.phone) phones.push({ label: 'Primary Contact Mobile', number: staff.phone });
+    if (staff.whatsapp && staff.whatsapp !== staff.phone) phones.push({ label: 'WhatsApp Business Number', number: staff.whatsapp });
+    if (staff.alt_phone && staff.alt_phone !== staff.phone) phones.push({ label: 'Alternate Mobile', number: staff.alt_phone });
+
+    if (phones.length === 0) {
+      phones.push({ label: 'Assigned Direct Line', number: '+91 99435 57998' });
+    }
+
+    phoneSelect.innerHTML = phones.map((p, idx) => `
+      <option value="${p.number}" ${idx === 0 ? 'selected' : ''}>
+        ${p.number} (${p.label})
+      </option>
+    `).join('');
+  } else {
+    phoneSelect.innerHTML = `<option value="+91 99435 57998">+91 99435 57998 (Default Line)</option>`;
+  }
+
+  updateBulkAssignPreview();
+}
+window.onBulkStaffNameChange = onBulkStaffNameChange;
+
+function updateBulkAssignPreview() {
+  const accSelect = document.getElementById('bulk-account-select');
+  const countInput = document.getElementById('bulk-assign-count');
+  const sortSelect = document.getElementById('bulk-sort-order');
+  const staffSelect = document.getElementById('bulk-staff-select');
+  const phoneSelect = document.getElementById('bulk-staff-phone-select');
+  const previewText = document.getElementById('bulk-preview-text');
+  const previewTitle = document.getElementById('bulk-preview-title');
+  if (!previewText) return;
+
+  const accName = accSelect?.options[accSelect.selectedIndex]?.getAttribute('data-name') || 'Selected Account';
+  const accNumber = accSelect?.options[accSelect.selectedIndex]?.getAttribute('data-number') || '';
+  const count = parseInt(countInput?.value, 10) || 1;
+  const sort = sortSelect?.value === 'DESC' ? 'Descending (Newest First - LIFO)' : 'Ascending (Oldest First - FIFO)';
+  const staffName = staffSelect?.options[staffSelect.selectedIndex]?.text?.split('(')[0]?.trim() || 'Staff';
+  const staffPhone = phoneSelect?.value || 'Assigned Phone';
+
+  if (previewTitle) {
+    previewTitle.innerText = `Assigning ${count} Customer Inquiries → ${staffName}`;
+  }
+  previewText.innerHTML = `
+    Ready to allocate <strong>${count} customer leads</strong> from <strong>${escapeHtml(accName)}${accNumber ? ' (' + escapeHtml(accNumber) + ')' : ''}</strong> 
+    to <strong>${escapeHtml(staffName)} (Phone: ${escapeHtml(staffPhone)})</strong> using <strong>${sort}</strong> order.
+    The messages will dynamically move into <strong>${escapeHtml(staffName)}'s active WhatsApp inbox queue</strong> immediately.
+  `;
+}
+window.updateBulkAssignPreview = updateBulkAssignPreview;
+
+async function handleExecuteBulkAssign() {
+  const accSelect = document.getElementById('bulk-account-select');
+  const countInput = document.getElementById('bulk-assign-count');
+  const sortSelect = document.getElementById('bulk-sort-order');
+  const staffSelect = document.getElementById('bulk-staff-select');
+  const phoneSelect = document.getElementById('bulk-staff-phone-select');
+  const execBtn = document.getElementById('btn-execute-bulk-assign');
+
+  const accountId = accSelect?.value || 'account_1';
+  const accountName = accSelect?.options[accSelect.selectedIndex]?.getAttribute('data-name') || 'Primary Line';
+  const accountNumber = accSelect?.options[accSelect.selectedIndex]?.getAttribute('data-number') || '';
+  const assignCount = Math.max(1, parseInt(countInput?.value, 10) || 1);
+  const sortOrder = sortSelect?.value || 'ASC';
+  const staffId = staffSelect?.value;
+  const staffName = staffSelect?.options[staffSelect.selectedIndex]?.getAttribute('data-name') || staffSelect?.options[staffSelect.selectedIndex]?.text?.split('(')[0]?.trim() || 'Staff';
+  const staffPhone = phoneSelect?.value || '';
+
+  if (!staffId) {
+    alert('Please select a staff member to assign inquiries to.');
+    return;
+  }
+
+  // Button loading state
+  if (execBtn) {
+    execBtn.disabled = true;
+    execBtn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> Allocating Leads...`;
+  }
+
+  try {
+    const payload = {
+      account_id: accountId,
+      account_name: accountName,
+      account_number: accountNumber,
+      assign_count: assignCount,
+      sort_order: sortOrder,
+      staff_id: staffId,
+      staff_name: staffName,
+      staff_phone: staffPhone,
+      user: CURRENT_USER?.name || 'Super Admin'
+    };
+
+    const res = await fetch('api.php?action=execute_bulk_assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+
+    if (result && result.status === 'success') {
+      const assignedIds = new Set(result.query_ids || []);
+      const custIds = new Set(result.customer_ids || []);
+
+      // Synchronously update local in-memory CRM_STATE
+      (CRM_STATE.queries || []).forEach(q => {
+        if (assignedIds.has(q.id) || custIds.has(q.customerId) || custIds.has(q.customer_id)) {
+          q.assignedTo = staffId;
+          q.status = 'ASSIGNED';
+        }
+      });
+
+      (CRM_STATE.customers || []).forEach(c => {
+        if (custIds.has(c.id)) {
+          c.assignedTo = staffId;
+        }
+      });
+
+      // Update staff member active count
+      const staffObj = (CRM_STATE.staffList || []).find(s => s.id === staffId);
+      if (staffObj) {
+        staffObj.activeQueries = (staffObj.activeQueries || 0) + (result.assigned_count || assignCount);
+      }
+
+      saveCRMState();
+
+      if (typeof playChime === 'function') playChime('inbound');
+      if (typeof showToast === 'function') {
+        showToast(
+          'Bulk Assignment Completed',
+          `Successfully allocated ${result.assigned_count} inquiries to ${staffName}!`,
+          'how_to_reg',
+          'emerald'
+        );
+      }
+
+      // Switch to list view and refresh
+      showBulkAssignListView();
+      if (typeof renderInbox === 'function') renderInbox();
+      updateBadgeCounters();
+    } else if (result && result.status === 'warning') {
+      if (typeof showToast === 'function') {
+        showToast('No Inquiries Available', result.message || 'Zero unassigned leads on this account.', 'info', 'amber');
+      } else {
+        alert(result.message || 'No unassigned leads found.');
+      }
+    } else {
+      throw new Error(result?.message || 'Assignment failed');
+    }
+  } catch (err) {
+    console.error('[handleExecuteBulkAssign] error:', err);
+    alert('Failed to execute bulk assignment: ' + err.message);
+  } finally {
+    if (execBtn) {
+      execBtn.disabled = false;
+      execBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">how_to_reg</span> Execute Bulk Assignment`;
+    }
+  }
+}
+window.handleExecuteBulkAssign = handleExecuteBulkAssign;
+
+async function renderBulkAssignList() {
+  const tbody = document.getElementById('bulk-assignments-table-body');
+  const countBadge = document.getElementById('bulk-table-total-count');
+  const filterStaff = document.getElementById('bulk-filter-staff');
+  const searchInput = document.getElementById('bulk-search-input');
+  if (!tbody) return;
+
+  // Populate filter staff dropdown if empty
+  if (filterStaff && filterStaff.options.length <= 1) {
+    const staffList = Array.isArray(CRM_STATE?.staffList) ? CRM_STATE.staffList : [];
+    filterStaff.innerHTML = `<option value="ALL">All Staff Members</option>` + staffList.map(s => `
+      <option value="${s.id}">${s.name}</option>
+    `).join('');
+  }
+
+  // Fetch batches from backend API
+  let batches = [];
+  try {
+    const res = await fetch('api.php?action=get_bulk_assignments');
+    const data = await res.json();
+    if (data && data.status === 'success' && Array.isArray(data.batches)) {
+      batches = data.batches;
+      window.CACHED_BULK_BATCHES = batches;
+    }
+  } catch (e) {
+    batches = window.CACHED_BULK_BATCHES || [];
+  }
+
+  // Realtime Correlation with Orders: Compute conversions dynamically
+  const orders = Array.isArray(CRM_STATE?.orders) ? CRM_STATE.orders : [];
+  const ordersByCustomer = new Map();
+  orders.forEach(o => {
+    if (!o || o.order_status === 'CANCELLED' || o.status === 'CANCELLED') return;
+    const cid = String(o.customerId || o.customer_id || '');
+    if (!ordersByCustomer.has(cid)) ordersByCustomer.set(cid, []);
+    ordersByCustomer.get(cid).push(o);
+  });
+
+  // Calculate live conversion stats for each batch
+  let totalBatchesCount = batches.length;
+  let totalLeadsAssigned = 0;
+  let totalOrdersConverted = 0;
+  let totalBulkRevenue = 0.0;
+
+  batches.forEach(b => {
+    const custIds = Array.isArray(b.customer_ids) ? b.customer_ids : [];
+    const assignedCount = Number(b.assigned_count) || custIds.length || 0;
+    totalLeadsAssigned += assignedCount;
+
+    // Cross-reference customer IDs with orders
+    let localConvertedCount = 0;
+    let localRevenue = 0.0;
+    custIds.forEach(cid => {
+      const custOrders = ordersByCustomer.get(String(cid));
+      if (custOrders && custOrders.length > 0) {
+        localConvertedCount++;
+        custOrders.forEach(ord => {
+          localRevenue += parseFloat(ord.grand_total || ord.total || 0);
+        });
+      }
+    });
+
+    // Use higher of server or local calculation
+    b.converted_count = Math.max(Number(b.converted_count) || 0, localConvertedCount);
+    b.converted_revenue = Math.max(parseFloat(b.converted_revenue) || 0, localRevenue);
+    b.conversion_rate = assignedCount > 0 ? ((b.converted_count / assignedCount) * 100).toFixed(1) : '0.0';
+
+    totalOrdersConverted += b.converted_count;
+    totalBulkRevenue += b.converted_revenue;
+  });
+
+  // Update KPI Cards
+  const kpiBatches = document.getElementById('kpi-bulk-total-batches');
+  const kpiAssigned = document.getElementById('kpi-bulk-total-assigned');
+  const kpiConverted = document.getElementById('kpi-bulk-total-converted');
+  const kpiConvRate = document.getElementById('kpi-bulk-conv-rate');
+  const kpiRevenue = document.getElementById('kpi-bulk-total-revenue');
+
+  if (kpiBatches) kpiBatches.innerText = totalBatchesCount;
+  if (kpiAssigned) kpiAssigned.innerText = totalLeadsAssigned;
+  if (kpiConverted) kpiConverted.innerText = totalOrdersConverted;
+  const overallRate = totalLeadsAssigned > 0 ? ((totalOrdersConverted / totalLeadsAssigned) * 100).toFixed(1) : '0.0';
+  if (kpiConvRate) kpiConvRate.innerText = `${overallRate}%`;
+  if (kpiRevenue) kpiRevenue.innerText = `₹${totalBulkRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })} Total Revenue`;
+  if (countBadge) countBadge.innerText = totalBatchesCount;
+
+  // Apply Search & Staff Filters
+  const qSearch = (searchInput?.value || '').toLowerCase().trim();
+  const selectedStaff = filterStaff?.value || 'ALL';
+
+  let filteredBatches = batches.filter(b => {
+    if (selectedStaff !== 'ALL' && b.staff_id !== selectedStaff) return false;
+    if (qSearch) {
+      const matchCode = (b.batch_code || '').toLowerCase().includes(qSearch);
+      const matchStaff = (b.staff_name || '').toLowerCase().includes(qSearch);
+      const matchPhone = (b.staff_phone || '').toLowerCase().includes(qSearch);
+      const matchAccount = (b.account_name || '').toLowerCase().includes(qSearch);
+      if (!matchCode && !matchStaff && !matchPhone && !matchAccount) return false;
+    }
+    return true;
+  });
+
+  if (filteredBatches.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" class="text-center py-12 text-slate-400">
+          <div class="flex flex-col items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-[36px] text-slate-300">layers_clear</span>
+            <p class="font-bold text-sm text-slate-600">No bulk assignment batches found</p>
+            <p class="text-xs text-slate-400">Click "+ Add Bulk Assignment" to distribute incoming leads to your staff.</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filteredBatches.map(b => {
+    const staffInitials = (b.staff_name || 'ST').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const isAsc = b.sort_order === 'ASC';
+    const rateNum = parseFloat(b.conversion_rate || 0);
+
+    return `
+      <tr class="hover:bg-slate-50/80 transition">
+        <!-- Batch Code & Date -->
+        <td class="py-3 px-4 whitespace-nowrap">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded-md bg-slate-900 text-amber-400 font-mono font-bold text-[11px] shadow-2xs">
+              ${escapeHtml(b.batch_code || b.id)}
+            </span>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[12px]">schedule</span>
+            ${escapeHtml(b.created_at || 'Just now')}
+          </p>
+        </td>
+
+        <!-- WhatsApp Account -->
+        <td class="py-3 px-4 whitespace-nowrap">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="font-bold text-slate-800">${escapeHtml(b.account_name || 'Line 1')}</span>
+          </div>
+          <p class="text-[10px] text-slate-500 font-mono mt-0.5">${escapeHtml(b.account_number || 'Linked WhatsApp')}</p>
+        </td>
+
+        <!-- Staff Details & Phone -->
+        <td class="py-3 px-4 whitespace-nowrap">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-dark to-emerald-700 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
+              ${staffInitials}
+            </div>
+            <div>
+              <p class="font-bold text-slate-900">${escapeHtml(b.staff_name)}</p>
+              <p class="text-[11px] text-emerald-700 font-mono font-bold flex items-center gap-0.5 mt-0.5">
+                <span class="material-symbols-outlined text-[12px]">phone</span>
+                ${escapeHtml(b.staff_phone || '—')}
+              </p>
+            </div>
+          </div>
+        </td>
+
+        <!-- Assigned Leads Count -->
+        <td class="py-3 px-4 text-center whitespace-nowrap">
+          <span class="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg font-black text-xs border border-blue-200">
+            ${b.assigned_count || 0} Leads
+          </span>
+        </td>
+
+        <!-- Priority Order -->
+        <td class="py-3 px-4 text-center whitespace-nowrap">
+          ${isAsc ? `
+            <span class="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+              <span class="material-symbols-outlined text-[12px]">arrow_upward</span> FIFO (Oldest)
+            </span>
+          ` : `
+            <span class="px-2 py-0.5 bg-purple-50 text-purple-800 border border-purple-200 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+              <span class="material-symbols-outlined text-[12px]">arrow_downward</span> LIFO (Newest)
+            </span>
+          `}
+        </td>
+
+        <!-- Converted Orders Column -->
+        <td class="py-3 px-4 min-w-[190px]">
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="font-black text-slate-900 text-xs">
+                ${b.converted_count || 0} / ${b.assigned_count || 0} Converted
+              </span>
+              <span class="text-[10px] font-extrabold px-1.5 py-0.2 rounded ${rateNum > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}">
+                ${b.conversion_rate}%
+              </span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(100, rateNum)}%"></div>
+            </div>
+            <p class="text-[10px] text-emerald-800 font-bold">
+              ₹${Number(b.converted_revenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} Sales
+            </p>
+          </div>
+        </td>
+
+        <!-- Status -->
+        <td class="py-3 px-4 text-center whitespace-nowrap">
+          <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px] border border-emerald-200 inline-flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Active
+          </span>
+        </td>
+
+        <!-- Actions -->
+        <td class="py-3 px-4 text-right whitespace-nowrap">
+          <button type="button" onclick="openBulkBatchDetailsModal('${b.id || b.batch_code}')"
+            class="px-2.5 py-1 bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 ml-auto cursor-pointer shadow-2xs">
+            <span class="material-symbols-outlined text-[14px]">visibility</span>
+            <span>View Details</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+window.renderBulkAssignList = renderBulkAssignList;
+
+function refreshBulkAssignments(btn) {
+  if (btn) {
+    const icon = btn.querySelector('.material-symbols-outlined');
+    if (icon) icon.classList.add('animate-spin');
+  }
+  renderBulkAssignList().finally(() => {
+    if (btn) {
+      const icon = btn.querySelector('.material-symbols-outlined');
+      if (icon) icon.classList.remove('animate-spin');
+    }
+  });
+}
+window.refreshBulkAssignments = refreshBulkAssignments;
+
+async function openBulkBatchDetailsModal(batchId) {
+  const modal = document.getElementById('modal-bulk-batch-details');
+  const title = document.getElementById('modal-batch-details-title');
+  const sub = document.getElementById('modal-batch-details-sub');
+  const countEl = document.getElementById('modal-batch-count');
+  const convEl = document.getElementById('modal-batch-converted');
+  const rateEl = document.getElementById('modal-batch-rate');
+  const revEl = document.getElementById('modal-batch-revenue');
+  const tbody = document.getElementById('modal-batch-customers-tbody');
+  if (!modal || !tbody) return;
+
+  if (title) title.innerText = `Loading Batch Details...`;
+  if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Fetching lead progression...</td></tr>`;
+  openModal('modal-bulk-batch-details');
+
+  try {
+    const res = await fetch(`api.php?action=get_bulk_batch_details&batch_id=${encodeURIComponent(batchId)}`);
+    const data = await res.json();
+
+    if (data && data.status === 'success') {
+      const batch = data.batch || {};
+      const customers = Array.isArray(data.customers) ? data.customers : [];
+
+      if (title) title.innerText = `Batch ${batch.batch_code || batchId} — Inspection`;
+      if (sub) sub.innerText = `Assigned to: ${batch.staff_name} (${batch.staff_phone}) on ${batch.created_at || ''}`;
+
+      const assignedCount = parseInt(batch.assigned_count, 10) || customers.length;
+      const convertedCount = customers.filter(c => c.has_converted).length;
+      const totalRev = customers.reduce((sum, c) => sum + (parseFloat(c.total_order_amount) || 0), 0);
+      const convRate = assignedCount > 0 ? ((convertedCount / assignedCount) * 100).toFixed(1) : '0.0';
+
+      if (countEl) countEl.innerText = assignedCount;
+      if (convEl) convEl.innerText = convertedCount;
+      if (rateEl) rateEl.innerText = `${convRate}%`;
+      if (revEl) revEl.innerText = `₹${totalRev.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+      if (customers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">No customer records in this batch.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = customers.map(c => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="py-2.5 px-3 font-bold text-slate-900 whitespace-nowrap">${escapeHtml(c.name || 'Customer')}</td>
+          <td class="py-2.5 px-3 font-mono text-slate-600 whitespace-nowrap">${escapeHtml(c.phone || '—')}</td>
+          <td class="py-2.5 px-3 max-w-[220px] truncate text-slate-700" title="${escapeHtml(c.query_text || '')}">
+            ${escapeHtml(c.query_text ? `"${c.query_text.substring(0, 45)}..."` : '—')}
+          </td>
+          <td class="py-2.5 px-3 text-center whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'ASSIGNED' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'}">
+              ${c.status || 'ASSIGNED'}
+            </span>
+          </td>
+          <td class="py-2.5 px-3 text-center whitespace-nowrap">
+            ${c.has_converted ? `
+              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px] inline-flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[13px]">check_circle</span> Converted (${c.orders_count || 1} Orders)
+              </span>
+            ` : `
+              <span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-medium text-[10px]">
+                In Progress
+              </span>
+            `}
+          </td>
+          <td class="py-2.5 px-3 text-right font-bold text-slate-900 whitespace-nowrap">
+            ${c.total_order_amount > 0 ? `₹${Number(c.total_order_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
+          </td>
+          <td class="py-2.5 px-3 text-right whitespace-nowrap">
+            <button type="button" onclick="selectCustomerChat('${c.customer_id}'); closeModal('modal-bulk-batch-details'); switchView('inbox');"
+              class="px-2.5 py-1 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg font-bold text-[11px] shadow-2xs cursor-pointer inline-flex items-center gap-1">
+              <span class="material-symbols-outlined text-[12px]">chat</span> Chat
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-rose-500">Failed to load batch customer details.</td></tr>`;
+    }
+  } catch (err) {
+    console.error('[openBulkBatchDetailsModal] error:', err);
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-rose-500">Error loading details: ${err.message}</td></tr>`;
+  }
+}
+window.openBulkBatchDetailsModal = openBulkBatchDetailsModal;
+
+function updateBulkAssignBadgeCounters() {
+  const badge = document.getElementById('badge-bulk-unassigned');
+  if (!badge) return;
+
+  const unassignedCount = (CRM_STATE?.queries || []).filter(q => {
+    if (!q) return false;
+    const isUn = !q.assignedTo || q.assignedTo === 'UNASSIGNED' || q.assignedTo === 'unassigned';
+    return isUn && q.status !== 'DND' && q.status !== 'RESOLVED' && q.status !== 'CLOSED';
+  }).length;
+
+  badge.innerText = unassignedCount;
+}
+window.updateBulkAssignBadgeCounters = updateBulkAssignBadgeCounters;
+
