@@ -475,6 +475,8 @@ function initializeDatabaseSchema($pdo) {
         CREATE TABLE IF NOT EXISTS `queries` (
             `id` VARCHAR(50) PRIMARY KEY,
             `customer_id` VARCHAR(50) NOT NULL,
+            `customer_name` VARCHAR(150) NULL,
+            `customer_phone` VARCHAR(50) NULL,
             `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED',
             `status` VARCHAR(50) DEFAULT 'NEW',
             `priority` ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT') DEFAULT 'NORMAL',
@@ -483,6 +485,8 @@ function initializeDatabaseSchema($pdo) {
             `unread_count` INT DEFAULT 0,
             `last_message` TEXT NULL,
             `status_notes` TEXT NULL,
+            `account_id` VARCHAR(50) DEFAULT 'account_1',
+            `account_slot` VARCHAR(50) DEFAULT 'account_1',
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -773,7 +777,11 @@ function initializeDatabaseSchema($pdo) {
             'quoted_items'        => "ALTER TABLE `queries` ADD COLUMN `quoted_items` TEXT NULL",
             'callback_date'       => "ALTER TABLE `queries` ADD COLUMN `callback_date` VARCHAR(50) NULL",
             'callback_time'       => "ALTER TABLE `queries` ADD COLUMN `callback_time` VARCHAR(50) NULL DEFAULT '11:00 AM'",
-            'status_history'      => "ALTER TABLE `queries` ADD COLUMN `status_history` JSON NULL"
+            'status_history'      => "ALTER TABLE `queries` ADD COLUMN `status_history` JSON NULL",
+            'customer_name'       => "ALTER TABLE `queries` ADD COLUMN `customer_name` VARCHAR(150) NULL AFTER `customer_id`",
+            'customer_phone'      => "ALTER TABLE `queries` ADD COLUMN `customer_phone` VARCHAR(50) NULL AFTER `customer_name`",
+            'account_id'          => "ALTER TABLE `queries` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1'",
+            'account_slot'        => "ALTER TABLE `queries` ADD COLUMN `account_slot` VARCHAR(50) DEFAULT 'account_1'"
         ];
         foreach ($queryColDefs as $cName => $sql) {
             if (!in_array($cName, $existingQueryCols)) {
@@ -788,7 +796,10 @@ function initializeDatabaseSchema($pdo) {
             'dnd_reason'    => "ALTER TABLE `customers` ADD COLUMN `dnd_reason` TEXT NULL",
             'dnd_notes'     => "ALTER TABLE `customers` ADD COLUMN `dnd_notes` TEXT NULL",
             'dnd_marked_by' => "ALTER TABLE `customers` ADD COLUMN `dnd_marked_by` VARCHAR(100) NULL",
-            'dnd_timestamp' => "ALTER TABLE `customers` ADD COLUMN `dnd_timestamp` VARCHAR(50) NULL"
+            'dnd_timestamp' => "ALTER TABLE `customers` ADD COLUMN `dnd_timestamp` VARCHAR(50) NULL",
+            'assigned_to'   => "ALTER TABLE `customers` ADD COLUMN `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED'",
+            'account_id'    => "ALTER TABLE `customers` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1'",
+            'account_slot'  => "ALTER TABLE `customers` ADD COLUMN `account_slot` VARCHAR(50) DEFAULT 'account_1'"
         ];
         foreach ($custColDefs as $cName => $sql) {
             if (!in_array($cName, $existingCustCols)) {

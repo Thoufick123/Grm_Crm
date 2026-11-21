@@ -4236,11 +4236,25 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
             if (!$isCompanyLine && empty($effectiveCustId) && !empty($clean10)) {
                 $effectiveCustId = 'cust_' . $clean10;
                 $initialName = !empty($recipientName) ? $recipientName : ('Customer (' . substr($clean10, -4) . ')');
-                $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`, `account_id`) VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 'CU', ?)")
-                    ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $initialName, $phone, $phone, $accSlot]);
+                try {
+                    $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`, `account_id`) VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 'CU', ?)")
+                        ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $initialName, $phone, $phone, $accSlot]);
+                } catch (Exception $eCustIns) {
+                    try {
+                        $pdo->prepare("INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `avatar`) VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', 'CU')")
+                            ->execute([$effectiveCustId, 'CUST-' . date('Y') . '-' . rand(100, 999), $initialName, $phone, $phone]);
+                    } catch (Exception $eCustIns2) {}
+                }
 
-                $pdo->prepare("INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `last_message`, `status`, `account_id`, `account_slot`, `created_at`) VALUES (?, ?, ?, ?, ?, 'OPEN', ?, ?, NOW()) ON DUPLICATE KEY UPDATE `last_message` = VALUES(`last_message`)")
-                    ->execute(['qry_' . $clean10, $effectiveCustId, $initialName, $phone, $text, $accSlot, $accSlot]);
+                try {
+                    $pdo->prepare("INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `last_message`, `status`, `account_id`, `account_slot`, `created_at`) VALUES (?, ?, ?, ?, ?, 'OPEN', ?, ?, NOW()) ON DUPLICATE KEY UPDATE `last_message` = VALUES(`last_message`)")
+                        ->execute(['qry_' . $clean10, $effectiveCustId, $initialName, $phone, $text, $accSlot, $accSlot]);
+                } catch (Exception $eQIns) {
+                    try {
+                        $pdo->prepare("INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `last_message`, `created_at`) VALUES (?, ?, 'UNASSIGNED', 'OPEN', ?, NOW()) ON DUPLICATE KEY UPDATE `last_message` = VALUES(`last_message`)")
+                            ->execute(['qry_' . $clean10, $effectiveCustId, $text]);
+                    } catch (Exception $eQIns2) {}
+                }
             }
 
             // Consolidate any duplicate placeholder customer created under this LID
@@ -6867,31 +6881,37 @@ function ensureBulkAssignmentsTable($pdo) {
         ");
     } catch (Exception $e) {}
 
-    // Resilient schema check: Add assigned_to and account_id to customers table if not present
+    // Resilient schema check: Add assigned_to, account_id, account_slot to customers table if not present
     try {
-        $colCheck = $pdo->query("SHOW COLUMNS FROM `customers` LIKE 'assigned_to'")->fetch();
-        if (!$colCheck) {
+        $cCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if (!in_array('assigned_to', $cCols)) {
             $pdo->exec("ALTER TABLE `customers` ADD COLUMN `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED'");
         }
-    } catch (Exception $e) {}
-    try {
-        $colCheckAcc = $pdo->query("SHOW COLUMNS FROM `customers` LIKE 'account_id'")->fetch();
-        if (!$colCheckAcc) {
+        if (!in_array('account_id', $cCols)) {
             $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1'");
+        }
+        if (!in_array('account_slot', $cCols)) {
+            $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_slot` VARCHAR(50) DEFAULT 'account_1'");
         }
     } catch (Exception $e) {}
 
-    // Resilient schema check: Add assigned_to and account_id to queries table if not present
+    // Resilient schema check: Add assigned_to, account_id, account_slot, customer_name, customer_phone to queries table if not present
     try {
-        $colCheckQAsgn = $pdo->query("SHOW COLUMNS FROM `queries` LIKE 'assigned_to'")->fetch();
-        if (!$colCheckQAsgn) {
+        $qCols = $pdo->query("SHOW COLUMNS FROM `queries`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if (!in_array('assigned_to', $qCols)) {
             $pdo->exec("ALTER TABLE `queries` ADD COLUMN `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED'");
         }
-    } catch (Exception $e) {}
-    try {
-        $colCheckQAcc = $pdo->query("SHOW COLUMNS FROM `queries` LIKE 'account_id'")->fetch();
-        if (!$colCheckQAcc) {
+        if (!in_array('account_id', $qCols)) {
             $pdo->exec("ALTER TABLE `queries` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1'");
+        }
+        if (!in_array('account_slot', $qCols)) {
+            $pdo->exec("ALTER TABLE `queries` ADD COLUMN `account_slot` VARCHAR(50) DEFAULT 'account_1'");
+        }
+        if (!in_array('customer_name', $qCols)) {
+            $pdo->exec("ALTER TABLE `queries` ADD COLUMN `customer_name` VARCHAR(150) NULL");
+        }
+        if (!in_array('customer_phone', $qCols)) {
+            $pdo->exec("ALTER TABLE `queries` ADD COLUMN `customer_phone` VARCHAR(50) NULL");
         }
     } catch (Exception $e) {}
 
@@ -6986,6 +7006,27 @@ if ($action === 'get_unassigned_enquiries_count') {
                 ) u
             ");
         } else {
+            $existingQCols = [];
+            try {
+                $existingQCols = $pdo->query("SHOW COLUMNS FROM `queries`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            } catch (Exception $e) {}
+            $existingCCols = [];
+            try {
+                $existingCCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            } catch (Exception $e) {}
+
+            $qAccParts = [];
+            if (in_array('account_id', $existingQCols)) $qAccParts[] = "NULLIF(q.account_id, '')";
+            if (in_array('account_slot', $existingQCols)) $qAccParts[] = "NULLIF(q.account_slot, '')";
+            $qAccParts[] = "NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), '')";
+            if (in_array('account_id', $existingCCols)) {
+                $qAccParts[] = "NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), '')";
+            }
+            $qAccParts[] = "'account_1'";
+            $coalesceQ = implode(",\n                               ", $qAccParts);
+
+            $cAccExpr = in_array('account_id', $existingCCols) ? "COALESCE(NULLIF(c.account_id, ''), 'account_1')" : "'account_1'";
+
             $inMarks = implode(',', array_fill(0, count($aliases), '?'));
             $stmt = $pdo->prepare("
                 SELECT COUNT(DISTINCT candidate_id) as unassigned_count,
@@ -6994,11 +7035,7 @@ if ($action === 'get_unassigned_enquiries_count') {
                 FROM (
                     SELECT q.id as candidate_id, q.customer_id, q.created_at,
                            COALESCE(
-                               NULLIF(q.account_id, ''),
-                               NULLIF(q.account_slot, ''),
-                               NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
-                               NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), ''),
-                               'account_1'
+                               {$coalesceQ}
                            ) as effective_account
                     FROM `queries` q
                     LEFT JOIN `customers` c ON q.customer_id = c.id
@@ -7009,7 +7046,7 @@ if ($action === 'get_unassigned_enquiries_count') {
                     UNION
 
                     SELECT c.id as candidate_id, COALESCE(c.created_at, NOW()) as created_at,
-                           COALESCE(NULLIF(c.account_id, ''), 'account_1') as effective_account
+                           {$cAccExpr} as effective_account
                     FROM `customers` c
                     WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
                       AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
@@ -7086,8 +7123,29 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $aliases[] = '';
         }
 
+        $existingQCols = [];
+        try {
+            $existingQCols = $pdo->query("SHOW COLUMNS FROM `queries`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (Exception $e) {}
+        $existingCCols = [];
+        try {
+            $existingCCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (Exception $e) {}
+
         // Fetch candidate unassigned queries using resilient unified logic
         if (!$isAll) {
+            $qAccParts = [];
+            if (in_array('account_id', $existingQCols)) $qAccParts[] = "NULLIF(q.account_id, '')";
+            if (in_array('account_slot', $existingQCols)) $qAccParts[] = "NULLIF(q.account_slot, '')";
+            $qAccParts[] = "NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), '')";
+            if (in_array('account_id', $existingCCols)) {
+                $qAccParts[] = "NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), '')";
+            }
+            $qAccParts[] = "'account_1'";
+            $coalesceQ = implode(",\n                               ", $qAccParts);
+
+            $cAccExpr = in_array('account_id', $existingCCols) ? "COALESCE(NULLIF(c.account_id, ''), 'account_1')" : "'account_1'";
+
             $inMarks = implode(',', array_fill(0, count($aliases), '?'));
             $sql = "
                 SELECT candidate_id as id, customer_id, created_at, customer_name, customer_phone
@@ -7095,11 +7153,7 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                     SELECT q.id as candidate_id, q.customer_id, q.created_at,
                            c.name as customer_name, c.phone as customer_phone,
                            COALESCE(
-                               NULLIF(q.account_id, ''),
-                               NULLIF(q.account_slot, ''),
-                               NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), ''),
-                               NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), ''),
-                               'account_1'
+                               {$coalesceQ}
                            ) as effective_account
                     FROM `queries` q
                     LEFT JOIN `customers` c ON q.customer_id = c.id
@@ -7111,7 +7165,7 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
                     SELECT CONCAT('Q-', c.id) as candidate_id, c.id as customer_id, COALESCE(c.created_at, NOW()) as created_at,
                            c.name as customer_name, c.phone as customer_phone,
-                           COALESCE(NULLIF(c.account_id, ''), 'account_1') as effective_account
+                           {$cAccExpr} as effective_account
                     FROM `customers` c
                     WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
                       AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
@@ -7191,11 +7245,28 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                     $queryIds[] = $actualQId;
                 } else {
                     $actualQId = $qid ?: ('Q-' . $cid);
+                    $insCols = ['id', 'customer_id', 'assigned_to', 'status', 'priority', 'query_text', 'last_message', 'created_at'];
+                    $insPlaceholders = ['?', '?', '?', "'ASSIGNED'", "'NORMAL'", "'WhatsApp Customer Enquiry'", "'WhatsApp Customer Enquiry'", 'NOW()'];
+                    $insParams = [$actualQId, $cid, $staffId];
+
+                    if (in_array('account_id', $existingQCols)) {
+                        $insCols[] = 'account_id';
+                        $insPlaceholders[] = '?';
+                        $insParams[] = $accountId;
+                    }
+                    if (in_array('account_slot', $existingQCols)) {
+                        $insCols[] = 'account_slot';
+                        $insPlaceholders[] = '?';
+                        $insParams[] = $accountId;
+                    }
+                    $colSql = implode('`, `', $insCols);
+                    $valSql = implode(', ', $insPlaceholders);
+
                     $pdo->prepare("
-                        INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `last_message`, `account_id`, `account_slot`, `created_at`)
-                        VALUES (?, ?, ?, 'ASSIGNED', 'NORMAL', 'WhatsApp Customer Enquiry', 'WhatsApp Customer Enquiry', ?, ?, NOW())
+                        INSERT INTO `queries` (`{$colSql}`)
+                        VALUES ({$valSql})
                         ON DUPLICATE KEY UPDATE `assigned_to` = VALUES(`assigned_to`), `status` = 'ASSIGNED'
-                    ")->execute([$actualQId, $cid, $staffId, $accountId, $accountId]);
+                    ")->execute($insParams);
                     $queryIds[] = $actualQId;
                 }
             }
