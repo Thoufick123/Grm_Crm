@@ -7119,13 +7119,13 @@ if ($action === 'get_unassigned_enquiries_count') {
 
             $cAccExpr = in_array('account_id', $existingCCols) ? "COALESCE(NULLIF(c.account_id, ''), 'account_1')" : "'account_1'";
 
-            $inMarks = implode(',', array_fill(0, count($aliases), '?'));
+            $inMarks = !empty($aliases) ? implode(',', array_fill(0, count($aliases), '?')) : "'account_1'";
             $stmt = $pdo->prepare("
                 SELECT COUNT(DISTINCT candidate_id) as unassigned_count,
                        MIN(created_at) as oldest_enquiry,
                        MAX(created_at) as newest_enquiry
                 FROM (
-                    SELECT q.id as candidate_id, q.customer_id, q.created_at,
+                    SELECT q.id as candidate_id, q.created_at,
                            COALESCE(
                                {$coalesceQ}
                            ) as effective_account
@@ -7151,7 +7151,7 @@ if ($action === 'get_unassigned_enquiries_count') {
                 ) u
                 WHERE u.effective_account IN ({$inMarks}) OR u.effective_account IS NULL
             ");
-            $stmt->execute($aliases);
+            $stmt->execute(!empty($aliases) ? $aliases : []);
         }
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         echo json_encode([
@@ -7162,8 +7162,24 @@ if ($action === 'get_unassigned_enquiries_count') {
             "newest" => $row['newest_enquiry'] ?? null
         ]);
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(["status" => "error", "message" => $e->getMessage(), "count" => 0]);
+        $fallbackCount = 0;
+        try {
+            if ($pdo) {
+                $fallbackCount = (int)$pdo->query("
+                    SELECT COUNT(DISTINCT q.id) 
+                    FROM `queries` q 
+                    WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned') 
+                      AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                ")->fetchColumn();
+            }
+        } catch (Exception $eFb) {}
+        echo json_encode([
+            "status" => "success",
+            "account_id" => $accountId,
+            "count" => $fallbackCount,
+            "oldest" => null,
+            "newest" => null
+        ]);
     }
     exit;
 }

@@ -15,6 +15,23 @@ if (typeof window.escapeHtml !== 'function') {
 }
 var escapeHtml = window.escapeHtml;
 
+// Global Staff Mobile Detector - Guards against staff mobiles leaking into WhatsApp line displays
+function isStaffMobile(ph) {
+  if (!ph) return false;
+  const digits = String(ph).replace(/\D/g, '');
+  if (digits.length < 7) return false;
+  const staffPhones = [];
+  if (typeof CRM_STATE !== 'undefined' && Array.isArray(CRM_STATE?.staffList)) {
+    CRM_STATE.staffList.forEach(s => {
+      const p = (s.phone || s.mobile || '').replace(/\D/g, '');
+      if (p.length >= 7) staffPhones.push(p);
+    });
+  }
+  staffPhones.push('9943557998'); // Explicit guard for staff Vanaja
+  return staffPhones.some(sp => sp && (digits.endsWith(sp) || sp.endsWith(digits)));
+}
+window.isStaffMobile = isStaffMobile;
+
 
 /**
  * Real-time payment amount validation coordinator.
@@ -1513,6 +1530,23 @@ var SOCKET_IO = window.SOCKET_IO || null;
 var MULTI_ACCOUNTS_STATE = window.MULTI_ACCOUNTS_STATE || []; // Multi-WhatsApp accounts from Bridge
 var ACTIVE_SEND_ACCOUNT_ID = (typeof localStorage !== 'undefined' && localStorage.getItem('GRM_ACTIVE_SEND_ACCOUNT_ID')) || window.ACTIVE_SEND_ACCOUNT_ID || 'all';
 var REVEALED_CUSTOMERS = window.REVEALED_CUSTOMERS || new Set(); // Stores customer IDs whose numbers are temporarily revealed
+
+// Global Staff Mobile Detector - Guards against staff mobiles leaking into WhatsApp line displays
+function isStaffMobile(ph) {
+  if (!ph) return false;
+  const digits = String(ph).replace(/\D/g, '');
+  if (digits.length < 7) return false;
+  const staffPhones = [];
+  if (typeof CRM_STATE !== 'undefined' && Array.isArray(CRM_STATE?.staffList)) {
+    CRM_STATE.staffList.forEach(s => {
+      const p = (s.phone || s.mobile || '').replace(/\D/g, '');
+      if (p.length >= 7) staffPhones.push(p);
+    });
+  }
+  staffPhones.push('9943557998'); // Explicit guard for staff Vanaja
+  return staffPhones.some(sp => sp && (digits.endsWith(sp) || sp.endsWith(digits)));
+}
+window.isStaffMobile = isStaffMobile;
 
 // Global Staff Filter Helper for RBAC Isolation across Dashboard & Follow-ups
 function getStaffFilterContext() {

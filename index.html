@@ -63,6 +63,23 @@
     };
   </script>
   <script>
+    // Universal Global Staff Mobile Guard
+    window.isStaffMobile = function(ph) {
+      if (!ph) return false;
+      var digits = String(ph).replace(/\D/g, '');
+      if (digits.length < 7) return false;
+      var staffPhones = [];
+      if (typeof CRM_STATE !== 'undefined' && Array.isArray(CRM_STATE && CRM_STATE.staffList)) {
+        CRM_STATE.staffList.forEach(function(s) {
+          var p = (s.phone || s.mobile || '').replace(/\D/g, '');
+          if (p.length >= 7) staffPhones.push(p);
+        });
+      }
+      staffPhones.push('9943557998'); // Guard for staff Vanaja
+      return staffPhones.some(function(sp) { return sp && (digits.endsWith(sp) || sp.endsWith(digits)); });
+    };
+  </script>
+  <script>
     // Asynchronously load Tailwind JIT during idle time to prevent initial DOM parsing freeze (css/style.min.css already provides complete styling)
     (function() {
       function loadTailwind() {
@@ -12745,7 +12762,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261120_bulk_assign_v4"></script>
+  <script src="crm_app.js?v=20261121_fix_staff_mobile_v7"></script>
 </body>
 
 </html>
