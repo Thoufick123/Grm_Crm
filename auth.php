@@ -19,9 +19,27 @@ header("Content-Type: application/json; charset=utf-8");
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0");
 header("Pragma: no-cache");
 header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
-header("Access-Control-Allow-Origin: *");
+
+// Secure Dynamic CORS configuration
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (!empty($origin)) {
+    $allowedOrigin = false;
+    $originHost = parse_url($origin, PHP_URL_HOST);
+    $serverHost = $_SERVER['HTTP_HOST'] ?? '';
+    if ($originHost === $serverHost || strpos($serverHost, (string)$originHost) !== false || $originHost === 'localhost' || $originHost === '127.0.0.1' || strpos((string)$originHost, 'hostingersite.com') !== false) {
+        $allowedOrigin = true;
+    }
+    if ($allowedOrigin) {
+        header("Access-Control-Allow-Origin: " . $origin);
+        header("Access-Control-Allow-Credentials: true");
+    } else {
+        header("Access-Control-Allow-Origin: null");
+    }
+} else {
+    header("Access-Control-Allow-Origin: *");
+}
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, X-Requested-With, X-User-Id, X-CRM-Auth-User");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);

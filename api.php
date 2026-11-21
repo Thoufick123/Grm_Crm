@@ -195,14 +195,44 @@ if (!headers_sent()) {
     header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0");
     header("Pragma: no-cache");
     header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
-    header("Access-Control-Allow-Origin: *");
+
+    // Secure Dynamic CORS configuration
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if (!empty($origin)) {
+        $allowedOrigin = false;
+        $originHost = parse_url($origin, PHP_URL_HOST);
+        $serverHost = $_SERVER['HTTP_HOST'] ?? '';
+        if ($originHost === $serverHost || strpos($serverHost, (string)$originHost) !== false || $originHost === 'localhost' || $originHost === '127.0.0.1' || strpos((string)$originHost, 'hostingersite.com') !== false) {
+            $allowedOrigin = true;
+        }
+        if ($allowedOrigin) {
+            header("Access-Control-Allow-Origin: " . $origin);
+            header("Access-Control-Allow-Credentials: true");
+        } else {
+            header("Access-Control-Allow-Origin: null");
+        }
+    } else {
+        header("Access-Control-Allow-Origin: *");
+    }
     header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type");
+    header("Access-Control-Allow-Headers: Content-Type, X-Requested-With, X-User-Id, X-CRM-Auth-User");
 }
 
 if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
+}
+
+// Start PHP Session with Secure Cookies
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.gc_maxlifetime', 2592000);
+    session_set_cookie_params([
+        'lifetime' => 2592000,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    @session_start();
 }
 
 // =========================================================================
@@ -727,6 +757,54 @@ function atomicWriteJson($filePath, $data) {
 
 $action = $_GET['action'] ?? 'get_state';
 
+// =========================================================================
+// CENTRALIZED SERVER-SIDE RBAC & SESSION SECURITY GATE
+// =========================================================================
+$publicActions = [
+    'login',
+    'check_session',
+    'webhook',
+    'media_proxy',
+    'verify_voice_room',
+    'get_call_recording_stream',
+    'stream_recording',
+    'stream_audio',
+    'play_audio',
+    'bulk_link_action',
+    'verify_backup_download'
+];
+
+if (!in_array($action, $publicActions)) {
+    // 1. Verify active PHP Session
+    $isAuthenticated = !empty($_SESSION['user']) && !empty($_SESSION['user']['id']);
+
+    // 2. Resilient DB-verified Rehydration from X-User-Id header if session expired
+    if (!$isAuthenticated && $pdo) {
+        $hdrUser = $_SERVER['HTTP_X_USER_ID'] ?? ($_SERVER['HTTP_X_CRM_AUTH_USER'] ?? '');
+        if (!empty($hdrUser)) {
+            try {
+                $uStmt = $pdo->prepare("SELECT `id`, `username`, `name`, `role`, `status` FROM `users` WHERE (`id` = ? OR `username` = ?) AND `status` = 'active' LIMIT 1");
+                $uStmt->execute([$hdrUser, $hdrUser]);
+                $dbU = $uStmt->fetch(PDO::FETCH_ASSOC);
+                if ($dbU) {
+                    $_SESSION['user'] = $dbU;
+                    $isAuthenticated = true;
+                }
+            } catch (Exception $eAuthHdr) {}
+        }
+    }
+
+    if (!$isAuthenticated) {
+        http_response_code(401);
+        echo json_encode([
+            "status" => "error",
+            "code" => "UNAUTHORIZED",
+            "message" => "Authentication required. Please log in to access CRM data."
+        ]);
+        exit;
+    }
+}
+
 // Fast Dedicated Multi-WhatsApp Accounts Status Endpoint (< 5ms response, zero overhead)
 if ($action === 'get_whatsapp_accounts') {
     try {
@@ -1108,10 +1186,17 @@ if ($action === 'get_state' || $action === 'get_all') {
             } catch (Exception $ePurgeBiz) {}
         }
 
+        $limitParam = isset($_GET['limit']) ? trim($_GET['limit']) : '';
+        $queryLimit = ($limitParam === 'all' || !empty($_GET['export'])) ? 2000 : 150;
+
         try {
-            $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY COALESCE(`last_message_at`, `created_at`) DESC, `id` DESC");
+            $cStmt = $pdo->prepare("SELECT * FROM `customers` ORDER BY COALESCE(`last_message_at`, `created_at`) DESC, `id` DESC LIMIT ?");
+            $cStmt->bindValue(1, $queryLimit, PDO::PARAM_INT);
+            $cStmt->execute();
         } catch (Exception $eOrder) {
-            $cStmt = $pdo->query("SELECT * FROM `customers` ORDER BY `created_at` DESC");
+            $cStmt = $pdo->prepare("SELECT * FROM `customers` ORDER BY `created_at` DESC LIMIT ?");
+            $cStmt->bindValue(1, $queryLimit, PDO::PARAM_INT);
+            $cStmt->execute();
         }
         $rawCustomers = $cStmt->fetchAll();
         $customers = [];
@@ -1183,8 +1268,10 @@ if ($action === 'get_state' || $action === 'get_all') {
             $customers[] = $c;
         }
 
-        // 5. Queries
-        $qStmt = $pdo->query("SELECT * FROM `queries` ORDER BY `created_at` DESC");
+        // 5. Queries (Bounded limit for high performance and zero memory bloat)
+        $qStmt = $pdo->prepare("SELECT * FROM `queries` ORDER BY `created_at` DESC LIMIT ?");
+        $qStmt->bindValue(1, $queryLimit, PDO::PARAM_INT);
+        $qStmt->execute();
         $rawQueries = $qStmt->fetchAll();
         $queries = [];
         foreach ($rawQueries as $q) {

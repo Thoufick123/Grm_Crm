@@ -77,8 +77,20 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-// Serve CRM static files (including voice-call.html & assets) directly through Express
-app.use(express.static(path.resolve(__dirname, '..')));
+// Security Hardening: Block direct static serving of application root (.env, .php, .sql, .json)
+app.use((req, res, next) => {
+    const p = req.path.toLowerCase();
+    if (p.endsWith('.env') || p.endsWith('.php') || p.endsWith('.sql') || p.endsWith('.json') || p.includes('/.') || p.includes('auth_sessions') || p.includes('node_modules')) {
+        return res.status(403).json({ error: 'Access Denied: Static file access prohibited.' });
+    }
+    next();
+});
+
+// Serve only safe public assets needed by WebRTC and voice calling
+app.use('/assets', express.static(path.resolve(__dirname, '../assets')));
+app.get('/voice-call.html', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../voice-call.html'));
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {

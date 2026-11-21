@@ -7,6 +7,13 @@ if (typeof window.t !== 'function') {
 if (typeof window.getCurrentLanguage !== 'function') {
   window.getCurrentLanguage = function () { return { code: 'en', label: 'English' }; };
 }
+if (typeof window.escapeHtml !== 'function') {
+  window.escapeHtml = function (str) {
+    if (typeof str !== 'string') return String(str || '');
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  };
+}
+var escapeHtml = window.escapeHtml;
 
 
 /**
@@ -1445,6 +1452,39 @@ function getCurrentUser() {
   CRM_AUTH_SESSION = user;
   return user;
 }
+
+// Global Authenticated Fetch Interceptor for api.php
+(function() {
+  if (typeof window === 'undefined' || typeof window.fetch !== 'function') return;
+  const _origFetch = window.fetch;
+  window.fetch = function(resource, init) {
+    init = init || {};
+    const url = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
+    if (url.includes('api.php') || url.includes('auth.php')) {
+      init.credentials = init.credentials || 'same-origin';
+      init.headers = init.headers || {};
+      const curUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof getCurrentUser === 'function' ? getCurrentUser() : null);
+      if (curUser && curUser.id) {
+        if (typeof Headers !== 'undefined' && init.headers instanceof Headers) {
+          if (!init.headers.has('X-User-Id')) init.headers.append('X-User-Id', curUser.id);
+        } else if (typeof init.headers === 'object') {
+          if (!init.headers['X-User-Id']) init.headers['X-User-Id'] = curUser.id;
+        }
+      }
+    }
+    return _origFetch.call(this, resource, init).then(res => {
+      if (res.status === 401 && (url.includes('api.php?action=get_state') || url.includes('api.php?action=get_all'))) {
+        console.warn('[CRM Auth Guard] Session expired or invalid, redirecting to login.');
+        if (typeof window !== 'undefined' && window.location && !window.location.pathname.endsWith('login.html')) {
+          localStorage.removeItem('GRM_CRM_SESSION');
+          sessionStorage.removeItem('GRM_CRM_SESSION');
+          window.location.href = 'login.html';
+        }
+      }
+      return res;
+    });
+  };
+})();
 
 function getPersistedActiveView() {
   try {
@@ -6782,13 +6822,13 @@ function renderInboxConversationList() {
         <div class="flex-1 min-w-0">
           <div class="flex items-start justify-between gap-1.5">
             <div class="min-w-0 flex-1">
-              <h4 class="text-xs font-bold text-slate-900 truncate" title="${custDisplayName}">${custDisplayName}</h4>
-              ${displayPhone ? `<p class="text-[11px] font-mono font-semibold text-emerald-700 truncate mt-0.5">${displayPhone}</p>` : ''}
+              <h4 class="text-xs font-bold text-slate-900 truncate" title="${escapeHtml(custDisplayName)}">${escapeHtml(custDisplayName)}</h4>
+              ${displayPhone ? `<p class="text-[11px] font-mono font-semibold text-emerald-700 truncate mt-0.5">${escapeHtml(displayPhone)}</p>` : ''}
             </div>
-            <span class="text-[10px] text-slate-400 font-medium shrink-0 pt-0.5">${item.createdAt}</span>
+            <span class="text-[10px] text-slate-400 font-medium shrink-0 pt-0.5">${escapeHtml(item.createdAt || '')}</span>
           </div>
 
-          <p class="text-xs text-slate-600 line-clamp-2 mt-1 leading-snug font-medium" title="${item.lastMessage ? item.lastMessage.replace(/"/g, '&quot;') : ''}">${item.lastMessage}</p>
+          <p class="text-xs text-slate-600 line-clamp-2 mt-1 leading-snug font-medium" title="${escapeHtml(item.lastMessage || '')}">${escapeHtml(item.lastMessage || '')}</p>
 
           <div class="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
             <div class="flex items-center gap-1.5 flex-wrap">
@@ -7401,7 +7441,7 @@ function renderChatHeader() {
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-1.5 min-w-0">
-          <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate" title="${customer.name}">${customer.name}</h3>
+          <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate" title="${escapeHtml(customer.name)}">${escapeHtml(customer.name)}</h3>
           <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full shrink-0 hidden md:inline-block">${customer.customerType || t('common.customer', 'Customer')}</span>
         </div>
         <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5">
@@ -11051,16 +11091,16 @@ function renderCustomer360Panel() {
       <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-dark to-emerald-800 text-white font-bold text-xl flex items-center justify-center mx-auto shadow-md">
         ${customer.avatar}
       </div>
-      <h3 class="font-bold text-slate-900 text-sm mt-2.5">${customer.name}</h3>
+      <h3 class="font-bold text-slate-900 text-sm mt-2.5">${escapeHtml(customer.name)}</h3>
       <div class="flex items-center justify-center gap-1.5 mt-1">
-        <p class="text-xs text-emerald-800 font-mono font-bold">${displayPhone}</p>
+        <p class="text-xs text-emerald-800 font-mono font-bold">${displayPhone ? escapeHtml(displayPhone) : ''}</p>
       </div>
 
       <!-- Handle Staff Subtitle Badge -->
       <div class="mt-2 flex items-center justify-center">
         <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${staff || assignedStaffId === 'admin' || assignedStaffId === 'Super Admin' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'} px-2.5 py-0.5 rounded-full">
           <span class="material-symbols-outlined text-[13px]">${staff || assignedStaffId === 'admin' || assignedStaffId === 'Super Admin' ? 'badge' : 'person_alert'}</span>
-          <span>${t('customer.handled_by', 'Handled by:')} <strong>${staff ? staff.name : (assignedStaffId === 'admin' || assignedStaffId === 'Super Admin' ? 'Super Admin' : (assignedStaffId && assignedStaffId !== 'UNASSIGNED' ? assignedStaffId : t('customer.unassigned', 'Unassigned')))}</strong></span>
+          <span>${t('customer.handled_by', 'Handled by:')} <strong>${staff ? escapeHtml(staff.name) : (assignedStaffId === 'admin' || assignedStaffId === 'Super Admin' ? 'Super Admin' : (assignedStaffId && assignedStaffId !== 'UNASSIGNED' ? escapeHtml(assignedStaffId) : t('customer.unassigned', 'Unassigned')))}</strong></span>
         </span>
       </div>
       
@@ -11099,7 +11139,7 @@ function renderCustomer360Panel() {
         <!-- Customer Name -->
         <div>
           <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">${t('customer.name', 'Customer Name *:')}</label>
-          <input type="text" id="cust-edit-name" value="${valName}" ${isEditing ? '' : 'disabled'} required placeholder="${t('customer.full_name', 'Full Name')}" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
+          <input type="text" id="cust-edit-name" value="${escapeHtml(valName)}" ${isEditing ? '' : 'disabled'} required placeholder="${t('customer.full_name', 'Full Name')}" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">
         </div>
 
         <!-- Phone Number (Auto-Fetched from WhatsApp Message) -->
@@ -11116,7 +11156,7 @@ function renderCustomer360Panel() {
           </div>
           <div class="relative">
             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-emerald-600">call</span>
-            <input type="${isEditing ? 'tel' : 'text'}" ${isEditing ? 'inputmode="numeric" maxlength="10" pattern="[0-9]{10}" oninput="this.value = this.value.replace(/[^0-9]/g, \'\').slice(0, 10);"' : ''} id="cust-edit-phone" value="${displayInputPhone}" ${isEditing ? '' : 'disabled'} required placeholder="10-digit WhatsApp number" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-emerald-950 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-bold">
+            <input type="${isEditing ? 'tel' : 'text'}" ${isEditing ? 'inputmode="numeric" maxlength="10" pattern="[0-9]{10}" oninput="this.value = this.value.replace(/[^0-9]/g, \'\').slice(0, 10);"' : ''} id="cust-edit-phone" value="${escapeHtml(displayInputPhone)}" ${isEditing ? '' : 'disabled'} required placeholder="10-digit WhatsApp number" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-emerald-950 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-bold">
           </div>
         </div>
 
@@ -11132,7 +11172,7 @@ function renderCustomer360Panel() {
           </div>
           <div class="relative">
             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-slate-400">ring_volume</span>
-            <input type="${isEditing ? 'tel' : 'text'}" ${isEditing ? 'inputmode="numeric" maxlength="10" pattern="[0-9]{10}" oninput="this.value = this.value.replace(/[^0-9]/g, \'\').slice(0, 10);"' : ''} id="cust-edit-alt-phone" value="${displayInputAltPhone}" ${isEditing ? '' : 'disabled'} placeholder="10-digit alternate mobile" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-medium">
+            <input type="${isEditing ? 'tel' : 'text'}" ${isEditing ? 'inputmode="numeric" maxlength="10" pattern="[0-9]{10}" oninput="this.value = this.value.replace(/[^0-9]/g, \'\').slice(0, 10);"' : ''} id="cust-edit-alt-phone" value="${escapeHtml(displayInputAltPhone)}" ${isEditing ? '' : 'disabled'} placeholder="10-digit alternate mobile" class="w-full pl-8 pr-3 py-2 ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none'} border rounded-xl text-xs font-mono font-medium">
           </div>
         </div>
 
@@ -11150,7 +11190,7 @@ function renderCustomer360Panel() {
         <!-- Delivery Address (Primary) -->
         <div>
           <label class="block font-bold text-slate-700 text-[10px] mb-1 uppercase tracking-wide">${t('customer.address', 'Delivery Address:')}</label>
-          <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.address_placeholder', 'Door No, Street, Landmark, City, Pincode')}" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${valAddress}</textarea>
+          <textarea id="cust-edit-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.address_placeholder', 'Door No, Street, Landmark, City, Pincode')}" class="w-full ${isEditing ? 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${escapeHtml(valAddress)}</textarea>
         </div>
 
         <!-- Alternative Delivery Address -->
@@ -11162,7 +11202,7 @@ function renderCustomer360Panel() {
             </label>
             <span class="text-[9px] text-blue-700 font-bold bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded">Secondary</span>
           </div>
-          <textarea id="cust-edit-alt-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Alternative delivery address, office address, or hometown..." class="w-full ${isEditing ? 'bg-blue-50/40 border-blue-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${valAltAddress}</textarea>
+          <textarea id="cust-edit-alt-address" rows="2" ${isEditing ? '' : 'disabled'} placeholder="Alternative delivery address, office address, or hometown..." class="w-full ${isEditing ? 'bg-blue-50/40 border-blue-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-semibold'} border rounded-xl p-2 text-xs">${escapeHtml(valAltAddress)}</textarea>
         </div>
 
         <!-- Customer Mindset & Records Notes Field -->
@@ -11174,7 +11214,7 @@ function renderCustomer360Panel() {
             </label>
             <span class="text-[9px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">${t('customer.mindset_log', 'Mindset Log')}</span>
           </div>
-          <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.notes_placeholder', 'Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions...')}" class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${valNotes}</textarea>
+          <textarea id="cust-edit-notes" rows="2" ${isEditing ? '' : 'disabled'} placeholder="${t('customer.notes_placeholder', 'Record customer mindset, fabric/size preferences, wholesale budget, buying behavior, or special instructions...')}" class="w-full ${isEditing ? 'bg-amber-50/50 border-amber-300 text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-wa' : 'bg-slate-100/90 border-slate-200 text-slate-700 cursor-not-allowed select-none font-medium'} border rounded-xl p-2 text-xs">${escapeHtml(valNotes)}</textarea>
         </div>
 
         <!-- Action Buttons (Locked vs Editing vs View-Only RBAC) -->
@@ -18216,12 +18256,12 @@ function openFollowUpModal(prefillCustomerId = null) {
   const custDisplay = document.getElementById('followup-customer-display');
   if (custDisplay) {
     if (prefillCustomerId && customer) {
-      custDisplay.innerHTML = `<span class="text-slate-900 font-bold">${customer.name} (${customer.whatsapp || customer.phone || 'WhatsApp'})</span><input type="hidden" id="followup-chosen-customer-id" value="${customer.id}">`;
+      custDisplay.innerHTML = `<span class="text-slate-900 font-bold">${escapeHtml(customer.name)} (${escapeHtml(customer.whatsapp || customer.phone || 'WhatsApp')})</span><input type="hidden" id="followup-chosen-customer-id" value="${escapeHtml(customer.id)}">`;
     } else if (CRM_STATE.customers && CRM_STATE.customers.length > 0) {
       custDisplay.innerHTML = `
         <select id="followup-chosen-customer-id" onchange="ACTIVE_CUSTOMER_ID = this.value; checkDuplicateFollowup(this.value);" class="w-full bg-transparent font-bold text-slate-800 text-xs focus:outline-none cursor-pointer">
           ${CRM_STATE.customers.map(c => `
-            <option value="${c.id}" ${c.id === cId ? 'selected' : ''}>${c.name} (${c.whatsapp || c.phone || 'No Phone'})</option>
+            <option value="${escapeHtml(c.id)}" ${c.id === cId ? 'selected' : ''}>${escapeHtml(c.name)} (${escapeHtml(c.whatsapp || c.phone || 'No Phone')})</option>
           `).join('')}
         </select>
       `;
@@ -20271,6 +20311,7 @@ function startFollowupReminderTicker() {
   if (FOLLOWUP_TICKER_INTERVAL) clearInterval(FOLLOWUP_TICKER_INTERVAL);
 
   FOLLOWUP_TICKER_INTERVAL = setInterval(() => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     const list = CRM_STATE.followups || [];
     const currentUser = getCurrentUser();
     if (!currentUser) return;
@@ -30603,14 +30644,14 @@ function renderCustomersGrid(searchFilter = '') {
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1.5">
-            <h4 class="font-bold text-slate-900 text-sm truncate">${c.name || 'Customer'}</h4>
+            <h4 class="font-bold text-slate-900 text-sm truncate">${escapeHtml(c.name || 'Customer')}</h4>
             ${c.isDND ? '<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0">DND</span>' : ''}
           </div>
-          <p class="text-xs text-slate-500 font-mono mt-0.5">${c.whatsapp || c.phone || 'No phone'}</p>
+          <p class="text-xs text-slate-500 font-mono mt-0.5">${escapeHtml(c.whatsapp || c.phone || 'No phone')}</p>
         </div>
       </div>
       <div class="flex items-center gap-1.5 flex-wrap">
-        ${(c.tags || []).map(t => `<span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${t}</span>`).join('')}
+        ${(c.tags || []).map(t => `<span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${escapeHtml(t)}</span>`).join('')}
       </div>
       <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
         <span class="text-slate-500 font-medium">${c.totalOrders || 0} Orders &bull; ₹${(c.totalSpend || 0).toLocaleString('en-IN')} Spend</span>
@@ -42882,6 +42923,7 @@ window.openChatFromBulkHub = function (custPhone, custName) {
 };
 
 window.updateHeaderBulkRequestsBadge = async function () {
+  if (typeof document !== 'undefined' && document.hidden) return;
   const badge = document.getElementById('header-bulk-requests-badge');
   if (!badge) return;
 
