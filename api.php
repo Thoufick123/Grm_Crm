@@ -4633,8 +4633,8 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE `customers` SET `account_id` = ?, `last_message` = ?, `last_message_at` = NOW() WHERE `id` = ?")
                 ->execute([$payload['account_id'] ?? 'account_1', $messageText, $custId]);
 
-            // Update or insert query
-            $checkQ = $pdo->prepare("SELECT `id`, `unread_count` FROM `queries` WHERE `customer_id` = ? LIMIT 1");
+            // Update or insert query with full customer_name, customer_phone, account_id, and created_at
+            $checkQ = $pdo->prepare("SELECT `id`, `unread_count`, `assigned_to` FROM `queries` WHERE `customer_id` = ? LIMIT 1");
             $checkQ->execute([$custId]);
             $existingQ = $checkQ->fetch();
 
@@ -4644,14 +4644,25 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $newStatus = ($existingStaff !== 'UNASSIGNED') ? 'IN_PROGRESS' : 'NEW';
                 $pdo->prepare("
                     UPDATE `queries` 
-                    SET `unread_count` = ?, `last_message` = ?, `status` = ? 
+                    SET `unread_count` = ?, `last_message` = ?, `status` = ?,
+                        `customer_name` = COALESCE(NULLIF(?, ''), `customer_name`),
+                        `customer_phone` = COALESCE(NULLIF(?, ''), `customer_phone`),
+                        `account_id` = COALESCE(NULLIF(?, ''), `account_id`)
                     WHERE `id` = ?
-                ")->execute([$newUnread, $messageText, $newStatus, $existingQ['id']]);
+                ")->execute([$newUnread, $messageText, $newStatus, $senderName, $senderPhone, $payload['account_id'] ?? 'account_1', $existingQ['id']]);
             } else {
                 $pdo->prepare("
-                    INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `unread_count`, `last_message`)
-                    VALUES (?, ?, 'UNASSIGNED', 'NEW', 'HIGH', ?, 1, ?)
-                ")->execute(['Q-' . date('Y') . '-' . rand(100000, 999999), $custId, $messageText, $messageText]);
+                    INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `account_id`, `assigned_to`, `status`, `priority`, `query_text`, `unread_count`, `last_message`, `created_at`)
+                    VALUES (?, ?, ?, ?, ?, 'UNASSIGNED', 'NEW', 'HIGH', ?, 1, ?, NOW())
+                ")->execute([
+                    'Q-' . date('Y') . '-' . rand(100000, 999999), 
+                    $custId, 
+                    $senderName, 
+                    $senderPhone, 
+                    $payload['account_id'] ?? 'account_1', 
+                    $messageText, 
+                    $messageText
+                ]);
             }
         } catch (Exception $e) {
             // Non-blocking log

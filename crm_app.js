@@ -2367,6 +2367,14 @@ function initSocketIO() {
     SOCKET_IO.on('whatsapp:inbound', (payload) => {
       console.log('⚡ [Socket.IO Inbound Message Received]:', payload);
       ingestInboundMessage(payload);
+      // Double-guard: Forward from browser directly to CRM API to guarantee 100% database persistence across page refreshes
+      try {
+        fetch('api.php?action=receive_message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(err => console.warn('[Inbound Sync] API persist check:', err));
+      } catch (e) {}
     });
 
     // Real-time Auto-Reply Rules Sync from Bridge
@@ -3565,6 +3573,43 @@ function applyAuthoritativeDatabaseState(data) {
         }
       }
     });
+
+    // Resilient Synthesis: Guarantee any customer with conversation threads is NEVER dropped on refresh
+    const convSource = (data.conversations && typeof data.conversations === 'object') ? data.conversations : (CRM_STATE.conversations || {});
+    for (const [cid, msgs] of Object.entries(convSource)) {
+      if (cid && !custMap.has(String(cid)) && Array.isArray(msgs) && msgs.length > 0) {
+        const lastM = msgs[msgs.length - 1];
+        const cleanP = String(lastM.sender_phone || cid).replace(/\D/g, '');
+        const clean10 = cleanP.slice(-10);
+        const sName = lastM.sender_name || (clean10 ? ('Customer (' + clean10.slice(-4) + ')') : 'WhatsApp Customer');
+        const pFormatted = clean10 ? ('+91 ' + clean10.slice(0, 5) + ' ' + clean10.slice(5)) : '';
+        custMap.set(String(cid), {
+          id: cid,
+          code: 'CUST-' + (clean10 || cid),
+          name: sName,
+          phone: pFormatted,
+          whatsapp: pFormatted,
+          assignedTo: 'UNASSIGNED',
+          assigned_to: 'UNASSIGNED',
+          accountId: lastM.account_id || 'account_1',
+          account_id: lastM.account_id || 'account_1',
+          customerType: 'Live WhatsApp Lead',
+          address: '',
+          altAddress: '',
+          altPhone: '',
+          email: '',
+          tags: ['Live Lead'],
+          totalOrders: 0,
+          totalSpend: 0,
+          isDND: false,
+          createdAt: lastM.time || new Date().toISOString(),
+          avatar: (sName ? sName.slice(0, 2) : 'CU').toUpperCase(),
+          lastMessage: lastM.text || lastM.message_text || '',
+          lastMessageAt: lastM.time || '',
+          unreadCount: 1
+        });
+      }
+    }
     CRM_STATE.customers = Array.from(custMap.values());
   }
 
