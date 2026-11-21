@@ -3733,6 +3733,13 @@ function applyAuthoritativeDatabaseState(data) {
   }
   if (data.attributes && typeof data.attributes === 'object') {
     CRM_STATE.attributes = data.attributes;
+    if (CRM_STATE.attributes && CRM_STATE.attributes.custom) {
+      Object.keys(CRM_STATE.attributes.custom).forEach(key => {
+        if (!key || key.startsWith('{') || key.startsWith('[') || key.includes('dashboard') || key.includes('bulk-assign') || key.includes('inbox') || key.includes('view') || key.length > 50) {
+          delete CRM_STATE.attributes.custom[key];
+        }
+      });
+    }
   }
 
   // 3. Customers (Direct authoritative MySQL sync - strictly replaces stale lists while preserving live chat customers)
@@ -4490,6 +4497,35 @@ function initCRMState() {
   }
   if (!Array.isArray(CRM_STATE.deletedSlots)) {
     CRM_STATE.deletedSlots = [];
+  }
+
+  // Sanitize attributes: strictly purge any JSON role permissions matrix accidentally registered as custom garment attributes
+  if (CRM_STATE.attributes && CRM_STATE.attributes.custom) {
+    Object.keys(CRM_STATE.attributes.custom).forEach(key => {
+      if (!key || key.startsWith('{') || key.startsWith('[') || key.includes('dashboard') || key.includes('bulk-assign') || key.includes('inbox') || key.includes('view') || key.length > 50) {
+        delete CRM_STATE.attributes.custom[key];
+      }
+    });
+  }
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const storedAttrs = localStorage.getItem('CRM_STATE');
+      if (storedAttrs) {
+        const parsedState = JSON.parse(storedAttrs);
+        if (parsedState && parsedState.attributes && parsedState.attributes.custom) {
+          let dirty = false;
+          Object.keys(parsedState.attributes.custom).forEach(key => {
+            if (!key || key.startsWith('{') || key.startsWith('[') || key.includes('dashboard') || key.includes('bulk-assign') || key.includes('inbox') || key.includes('view') || key.length > 50) {
+              delete parsedState.attributes.custom[key];
+              dirty = true;
+            }
+          });
+          if (dirty) {
+            localStorage.setItem('CRM_STATE', JSON.stringify(parsedState));
+          }
+        }
+      }
+    } catch (e) {}
   }
 
   if (typeof localStorage !== 'undefined') {
@@ -23513,7 +23549,15 @@ function renderProductFormAttributeChips(selectedSizesArg, selectedColorsArg, se
   // 3. Dynamic Custom Attributes (e.g. Memory, Storage, RAM, etc.)
   if (customCont) {
     const customAttrs = (attrs && attrs.custom) ? attrs.custom : {};
-    const customNames = Object.keys(customAttrs);
+    const customNames = Object.keys(customAttrs).filter(attrName => {
+      if (!attrName || typeof attrName !== 'string') return false;
+      const t = attrName.trim();
+      if (t.startsWith('{') || t.startsWith('[') || t.includes('dashboard') || t.includes('bulk-assign') || t.includes('inbox') || t.includes('view') || t.length > 50) {
+        delete customAttrs[attrName];
+        return false;
+      }
+      return true;
+    });
     if (customNames.length === 0) {
       customCont.innerHTML = '';
     } else {
@@ -26224,7 +26268,15 @@ function renderAttributesManager() {
 
   // 4. Dynamic Custom Attribute Tabs in Attribute Manager
   if (customTabsCont) {
-    const customTypes = Object.keys(attrs.custom || {});
+    const customTypes = Object.keys(attrs.custom || {}).filter(attrName => {
+      if (!attrName || typeof attrName !== 'string') return false;
+      const t = attrName.trim();
+      if (t.startsWith('{') || t.startsWith('[') || t.includes('dashboard') || t.includes('bulk-assign') || t.includes('inbox') || t.includes('view') || t.length > 50) {
+        delete attrs.custom[attrName];
+        return false;
+      }
+      return true;
+    });
     customTabsCont.innerHTML = customTypes.map(attrName => {
       const vals = attrs.custom[attrName] || [];
       const isCurrentActive = ACTIVE_CUSTOM_ATTR_NAME === attrName && ACTIVE_ATTRIBUTE_TAB.includes(attrName);

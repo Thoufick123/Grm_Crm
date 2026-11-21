@@ -1537,57 +1537,83 @@ if ($action === 'get_state' || $action === 'get_all') {
             $subStmt = $pdo->query("SELECT * FROM `subcategories` ORDER BY `name` ASC");
             $subcategories = $subStmt->fetchAll();
 
+            // Auto-heal attributes table: Remove inverted permissions or update type to role_permissions
+            try {
+                $pdo->exec("DELETE FROM `attributes` WHERE `value` LIKE '{\"dashboard\"%' OR `value` LIKE '{\"bulk-assign\"%'");
+                $pdo->exec("UPDATE `attributes` SET `type` = 'role_permissions' WHERE (`extra` LIKE '{\"dashboard\"%' OR `extra` LIKE '{\"bulk-assign\"%') AND `type` != 'role_permissions'");
+            } catch (Exception $eClean) {}
+
             $attrStmt = $pdo->query("SELECT * FROM `attributes` ORDER BY `id` ASC");
             $rawAttrs = $attrStmt->fetchAll();
             foreach ($rawAttrs as $ra) {
-                $type = $ra['type'] ?? '';
-                if ($type === 'size') $attributes['sizes'][] = $ra['value'];
-                else if ($type === 'color') $attributes['colors'][] = $ra['value'];
-                else if ($type === 'fabric') $attributes['fabrics'][] = $ra['value'];
-                else if ($type === 'role_permissions') {
-                    $decoded = json_decode($ra['extra'] ?? '', true);
+                $type = strtolower(trim($ra['type'] ?? ''));
+                $extraRaw = trim($ra['extra'] ?? '');
+                $valRaw = trim($ra['value'] ?? '');
+
+                // Safety guard: If extra or value is a role_permissions JSON matrix, NEVER treat as garment attribute!
+                if (strpos($extraRaw, '"dashboard"') !== false || strpos($extraRaw, '"bulk-assign"') !== false || strpos($extraRaw, '"inbox"') !== false || str_starts_with($extraRaw, '{"')) {
+                    $decoded = json_decode($extraRaw, true);
+                    if ($decoded && is_array($decoded)) {
+                        $rolePermissions[$valRaw] = $decoded;
+                    }
+                    continue;
+                }
+                if (strpos($valRaw, '"dashboard"') !== false || strpos($valRaw, '"bulk-assign"') !== false || str_starts_with($valRaw, '{"')) {
+                    // Corrupted or inverted permissions row, discard from attributes completely
+                    continue;
+                }
+
+                if ($type === 'size') $attributes['sizes'][] = $valRaw;
+                else if ($type === 'color') $attributes['colors'][] = $valRaw;
+                else if ($type === 'fabric') $attributes['fabrics'][] = $valRaw;
+                else if ($type === 'role_permissions' || $type === 'role' || $type === 'permission') {
+                    $decoded = json_decode($extraRaw, true);
                     if ($decoded) {
-                        $rolePermissions[$ra['value']] = $decoded;
+                        $rolePermissions[$valRaw] = $decoded;
                     }
                 } else if ($type === 'specification') {
-                    $extraStr = $ra['extra'] ?? '';
+                    $extraStr = $extraRaw;
                     if (strpos($extraStr, ',') !== false) {
                         $parts = array_filter(array_map('trim', explode(',', $extraStr)));
                         foreach ($parts as $pIdx => $part) {
                             $attributes['specifications'][] = [
                                 'id' => (int)$ra['id'] * 1000 + $pIdx,
-                                'label' => $ra['value'],
+                                'label' => $valRaw,
                                 'content' => $part
                             ];
                         }
                     } else {
                         $attributes['specifications'][] = [
                             'id' => (int)$ra['id'],
-                            'label' => $ra['value'],
+                            'label' => $valRaw,
                             'content' => $extraStr
                         ];
                     }
                 } else if ($type === 'attribute_type') {
-                    $attrName = trim($ra['value']);
-                    if (!empty($attrName) && !isset($attributes['custom'][$attrName])) {
-                        $attributes['custom'][$attrName] = [];
-                    }
-                } else if ($type === 'attribute_value' || $type === 'custom') {
-                    $attrName = trim($ra['extra'] ?: 'Custom');
-                    if (!isset($attributes['custom'][$attrName])) {
-                        $attributes['custom'][$attrName] = [];
-                    }
-                    if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
-                        $attributes['custom'][$attrName][] = $ra['value'];
-                    }
-                } else {
-                    $attrName = trim($ra['extra'] ?: ucfirst($ra['type']));
-                    if (!empty($attrName)) {
+                    $attrName = $valRaw;
+                    if (!empty($attrName) && !str_starts_with($attrName, '{') && strlen($attrName) <= 50) {
                         if (!isset($attributes['custom'][$attrName])) {
                             $attributes['custom'][$attrName] = [];
                         }
-                        if (!empty($ra['value']) && !in_array($ra['value'], $attributes['custom'][$attrName])) {
-                            $attributes['custom'][$attrName][] = $ra['value'];
+                    }
+                } else if ($type === 'attribute_value' || $type === 'custom') {
+                    $attrName = !empty($extraRaw) ? $extraRaw : 'Custom';
+                    if (!empty($attrName) && !str_starts_with($attrName, '{') && strlen($attrName) <= 50) {
+                        if (!isset($attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName] = [];
+                        }
+                        if (!empty($valRaw) && !in_array($valRaw, $attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName][] = $valRaw;
+                        }
+                    }
+                } else {
+                    $attrName = !empty($extraRaw) ? $extraRaw : ucfirst($type);
+                    if (!empty($attrName) && !str_starts_with($attrName, '{') && strlen($attrName) <= 50) {
+                        if (!isset($attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName] = [];
+                        }
+                        if (!empty($valRaw) && !in_array($valRaw, $attributes['custom'][$attrName])) {
+                            $attributes['custom'][$attrName][] = $valRaw;
                         }
                     }
                 }
@@ -5705,6 +5731,12 @@ if ($action === 'save_attribute' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $val = trim($a['value'] ?? '');
     $extra = trim($a['extra'] ?? '');
 
+    // Security & sanity guard: Block any JSON permissions matrix from being stored as product attribute
+    if (strpos($val, '"dashboard"') !== false || strpos($extra, '"dashboard"') !== false || str_starts_with($val, '{"') || str_starts_with($extra, '{"') || strlen($val) > 100 || (strlen($extra) > 100 && $type !== 'specification')) {
+        echo json_encode(["status" => "error", "message" => "Invalid attribute format: Permissions or JSON matrices cannot be used as product attributes."]);
+        exit;
+    }
+
     if (empty($type) || (empty($val) && empty($extra) && $type !== 'attribute_type')) {
         http_response_code(400);
         echo json_encode(["status" => "error", "message" => "Valid attribute type and value are required"]);
@@ -7028,6 +7060,13 @@ function ensureBulkAssignmentsTable($pdo) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
     } catch (Exception $e) {}
+
+    // Clean up corrupted attributes entries where role permission matrices were saved as garment attributes
+    try {
+        $pdo->exec("DELETE FROM `attributes` WHERE `value` LIKE '{\"dashboard\"%' OR `value` LIKE '{\"bulk-assign\"%'");
+        $pdo->exec("UPDATE `attributes` SET `type` = 'role_permissions' WHERE (`extra` LIKE '{\"dashboard\"%' OR `extra` LIKE '{\"bulk-assign\"%') AND `type` != 'role_permissions'");
+        $pdo->exec("DELETE FROM `attributes` WHERE `type` != 'role_permissions' AND (`extra` LIKE '{\"dashboard\"%' OR `extra` LIKE '{\"bulk-assign\"%')");
+    } catch (Exception $eAttrClean) {}
 
     // Resilient schema check: Add assigned_to, account_id, account_slot, notes, last_message, last_message_at, unread_count to customers table if not present
     try {
