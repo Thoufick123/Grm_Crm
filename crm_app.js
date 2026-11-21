@@ -2871,7 +2871,7 @@ function isPhantomWhatsAppAccount(acc) {
 }
 window.isPhantomWhatsAppAccount = isPhantomWhatsAppAccount;
 
-function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
+function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true, isExplicitLogout = false) {
   if (!Array.isArray(accounts) || accounts.length === 0) return;
   // Strictly filter out phantom accounts (Lines 3, 4, 5 and account_1795...)
   accounts = accounts.filter(a => !isPhantomWhatsAppAccount(a));
@@ -2907,7 +2907,7 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
 
       // Strong Protection: Never allow a transient bridge SCAN_QR or DISCONNECTED to demote an already authenticated CONNECTED account
       // unless user explicitly unlinked it.
-      if (isExistingLive && (acc.status === 'SCAN_QR' || acc.status === 'DISCONNECTED' || acc.status === 'CONNECTING' || acc.status === 'RECONNECTING')) {
+      if (isExistingLive && (acc.status === 'SCAN_QR' || acc.status === 'DISCONNECTED' || acc.status === 'CONNECTING' || acc.status === 'RECONNECTING') && !isExplicitLogout) {
         existing.status = 'CONNECTED';
         existing.qr_image = acc.qr_image || existing.qr_image || null;
         existing.label = acc.label || acc.name || existing.label;
@@ -2945,7 +2945,11 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true) {
       const hasRealSavedPhone = currentSavedPhone && currentSavedPhone !== 'Awaiting Link' && currentSavedPhone !== 'Scan QR Code' && !isStaffNumber(currentSavedPhone);
       if (hasRealSavedPhone) {
         CRM_STATE.whatsappAccount.phoneNumber = currentSavedPhone;
-        CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
+        if (CRM_STATE.whatsappAccount.status === 'CONNECTED' && !isExplicitLogout) {
+          // Retain CONNECTED: Never demote an authenticated account to DISCONNECTED on network hiccup!
+        } else {
+          CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
+        }
       } else {
         CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
       }
@@ -4099,8 +4103,20 @@ function applyAuthoritativeDatabaseState(data) {
 
   if (data.whatsappAccount) {
     if (!CRM_STATE.whatsappAccount) CRM_STATE.whatsappAccount = {};
-    CRM_STATE.whatsappAccount.status = (data.whatsappAccount.status || 'DISCONNECTED').toUpperCase();
-    CRM_STATE.whatsappAccount.phoneNumber = data.whatsappAccount.phone_number || CRM_STATE.whatsappAccount.phoneNumber || 'Awaiting Link';
+    const incomingStatus = (data.whatsappAccount.status || 'DISCONNECTED').toUpperCase();
+    const incomingPhone = data.whatsappAccount.phone_number || '';
+    const currentStatus = CRM_STATE.whatsappAccount.status;
+    const currentPhone = CRM_STATE.whatsappAccount.phoneNumber;
+    const isCurrentlyConnected = currentStatus === 'CONNECTED' && currentPhone && currentPhone !== 'Awaiting Link';
+
+    if (isCurrentlyConnected && (incomingStatus === 'DISCONNECTED' || incomingStatus === 'SCAN_QR' || !incomingPhone || incomingPhone === 'Awaiting Link')) {
+      // Guard: Do not allow background sync to demote an already connected account to DISCONNECTED
+    } else {
+      CRM_STATE.whatsappAccount.status = incomingStatus;
+      if (incomingPhone && incomingPhone !== 'Awaiting Link') {
+        CRM_STATE.whatsappAccount.phoneNumber = incomingPhone;
+      }
+    }
     CRM_STATE.whatsappAccount.businessName = data.whatsappAccount.business_name || CRM_STATE.whatsappAccount.businessName;
     if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
   }
@@ -4466,15 +4482,29 @@ function getAvailableWhatsAppAccounts() {
 
   let accountsList = defaultAccounts.map(def => {
     const existing = existingMap.get(def.id);
-    if (!existing) return JSON.parse(JSON.stringify(def));
+    if (!existing) {
+      if (def.id === 'account_1' && CRM_STATE?.whatsappAccount?.phoneNumber && CRM_STATE.whatsappAccount.phoneNumber !== 'Awaiting Link' && CRM_STATE.whatsappAccount.status === 'CONNECTED') {
+        return {
+          ...def,
+          status: 'CONNECTED',
+          connected_number: CRM_STATE.whatsappAccount.phoneNumber,
+          brand_name: CRM_STATE.whatsappAccount.businessName || def.brand_name
+        };
+      }
+      return JSON.parse(JSON.stringify(def));
+    }
+    const finalPhone = (existing.connected_number && existing.connected_number !== 'Awaiting Link' && existing.connected_number !== 'Scan QR Code')
+      ? existing.connected_number
+      : (def.id === 'account_1' && CRM_STATE?.whatsappAccount?.phoneNumber && CRM_STATE.whatsappAccount.phoneNumber !== 'Awaiting Link' ? CRM_STATE.whatsappAccount.phoneNumber : def.connected_number);
+    const isLive = existing.status === 'CONNECTED' || (finalPhone && finalPhone !== 'Awaiting Link' && finalPhone !== 'Scan QR Code');
     return {
       ...def,
       ...existing,
       id: def.id,
       label: existing.label || def.label,
       brand_name: existing.brand_name || def.brand_name,
-      connected_number: existing.connected_number || def.connected_number,
-      status: existing.status || def.status,
+      connected_number: finalPhone,
+      status: isLive ? 'CONNECTED' : (existing.status || def.status),
       qr_image: existing.qr_image || null
     };
   });
@@ -4504,8 +4534,20 @@ function getAvailableWhatsAppAccounts() {
       if (!liveAcc || !liveAcc.id) return;
       const existing = accountsList.find(a => a.id === liveAcc.id);
       if (existing) {
-        existing.status = (liveAcc.status || existing.status || 'DISCONNECTED').toUpperCase();
-        existing.connected_number = (existing.status === 'CONNECTED' ? (liveAcc.connected_number || liveAcc.phone || existing.connected_number) : (existing.status === 'SCAN_QR' ? 'Scan QR Code' : 'Awaiting Link'));
+        const isLiveBefore = (existing.status === 'CONNECTED' && existing.connected_number && existing.connected_number !== 'Awaiting Link');
+        const incomingLive = (liveAcc.status === 'CONNECTED' && (liveAcc.connected_number || liveAcc.phone));
+        if (isLiveBefore && !incomingLive && (liveAcc.status === 'SCAN_QR' || liveAcc.status === 'DISCONNECTED' || liveAcc.status === 'CONNECTING')) {
+          existing.status = 'CONNECTED';
+        } else {
+          existing.status = (liveAcc.status || existing.status || 'DISCONNECTED').toUpperCase();
+        }
+        if (existing.status === 'CONNECTED') {
+          existing.connected_number = liveAcc.connected_number || liveAcc.phone || existing.connected_number;
+        } else if (existing.status === 'SCAN_QR') {
+          existing.connected_number = 'Scan QR Code';
+        } else {
+          existing.connected_number = (existing.connected_number && existing.connected_number !== 'Awaiting Link') ? existing.connected_number : 'Awaiting Link';
+        }
         existing.connected_name = liveAcc.connected_name || liveAcc.name || existing.connected_name;
         existing.label = liveAcc.label || liveAcc.name || existing.label;
         existing.qr_image = liveAcc.qr_image || liveAcc.qr || existing.qr_image || null;
@@ -31751,19 +31793,9 @@ function fetchQRBridgeStatus(btnEl) {
           }
         }
       })
-      .catch(() => {
-        // Direct bridge fetch failed or timed out: Safely fallback to in-memory CRM_STATE without refetching get_all
-        const accounts = getAvailableWhatsAppAccounts();
-        if (accounts.length > 0) {
-          applyUpdatedAccountsDelta(accounts.map(a => ({
-            id: a.id,
-            name: a.label || 'WhatsApp Line',
-            label: a.label || 'WhatsApp Line',
-            phone: a.connected_number || '',
-            status: (a.status || 'DISCONNECTED').toUpperCase(),
-            qr_image: a.qr_image || null
-          })), false);
-        }
+      .catch((err) => {
+        // Direct bridge fetch failed or timed out: Safely retain in-memory status quo without demoting accounts to DISCONNECTED
+        console.warn('[fetchQRBridgeStatus] Bridge poll blip or timeout (preserving connected state):', err);
       })
       .finally(() => {
         renderMultiAccountsHub();

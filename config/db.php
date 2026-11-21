@@ -1202,11 +1202,14 @@ function initializeDatabaseSchema($pdo) {
         if (!in_array('source', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `source` VARCHAR(50) NULL DEFAULT 'REAL_WHATSAPP_LIVE' AFTER `rule_id`");
         if (!in_array('timestamp_epoch', $existingMsgCols)) $pdo->exec("ALTER TABLE `messages` ADD COLUMN `timestamp_epoch` BIGINT NULL AFTER `source`");
 
-        $existingCustCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN);
-        if (!in_array('account_id', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_id` VARCHAR(50) NULL DEFAULT 'account_1' AFTER `customer_type`");
-        if (!in_array('last_message', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `last_message` TEXT NULL AFTER `notes`");
-        if (!in_array('last_message_at', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `last_message_at` DATETIME NULL AFTER `last_message`");
-        if (!in_array('unread_count', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `unread_count` INT NOT NULL DEFAULT 0 AFTER `last_message_at`");
+        $existingCustCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if (!in_array('account_id', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_id` VARCHAR(50) NULL DEFAULT 'account_1'");
+        if (!in_array('account_slot', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_slot` VARCHAR(50) NULL DEFAULT 'account_1'");
+        if (!in_array('assigned_to', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED'");
+        if (!in_array('notes', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `notes` TEXT NULL");
+        if (!in_array('last_message', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `last_message` TEXT NULL");
+        if (!in_array('last_message_at', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `last_message_at` DATETIME NULL");
+        if (!in_array('unread_count', $existingCustCols)) $pdo->exec("ALTER TABLE `customers` ADD COLUMN `unread_count` INT NOT NULL DEFAULT 0");
     } catch (Exception $e) {
         error_log("Messages migration note: " . $e->getMessage());
     }
@@ -1273,7 +1276,7 @@ function seedDefaultDataIfEmpty($pdo) {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
-            'account_1', 'GRM Garments Business Hub', 'GRM Garments Official', 'Blue Berry 💙', '+91 97896 60115', '109823471928374', '982374619283745', 'META_CLOUD_API', 'CONNECTED', 'http://localhost:8080/webhook.php'
+            'account_1', 'GRM Garments Business Hub', 'GRM Garments Official', 'Line 1: GRM Business Central', '+91 95009 04638', '109823471928374', '982374619283745', 'QR_CODE_BRIDGE', 'CONNECTED', 'http://localhost:8080/webhook.php'
         ]);
     }
 

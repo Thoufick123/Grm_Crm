@@ -4537,75 +4537,93 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Also persist in MySQL if database connection available
     if ($pdo) {
+        $cleanPhone = preg_replace('/[^0-9]/', '', $senderPhone);
+        $clean10 = !empty($clean10) ? $clean10 : substr($cleanPhone, -10);
+        $custId = 'cust_' . ($clean10 ?: substr(uniqid(), -6));
+
+        // 1. Check or insert customer profile (resilient with fallback)
+        $isCompanySender = false;
         try {
-            $cleanPhone = preg_replace('/[^0-9]/', '', $senderPhone);
-            $clean10 = !empty($clean10) ? $clean10 : substr($cleanPhone, -10);
-            $custId = 'cust_' . ($clean10 ?: substr(uniqid(), -6));
+            $activeBizNums = $pdo->query("SELECT `phone_number` FROM `whatsapp_accounts` WHERE `status` = 'CONNECTED' AND `phone_number` != 'Awaiting Link'")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            foreach ($activeBizNums as $bp) {
+                $cBp = preg_replace('/[^0-9]/', '', $bp);
+                if (strlen($cBp) >= 10 && !empty($clean10) && str_ends_with($clean10, substr($cBp, -10))) {
+                    $isCompanySender = true;
+                    break;
+                }
+            }
+        } catch (Exception $eBizChk2) {}
 
-            // Check or insert customer (robust against spaces and formats)
-            $checkCust = $pdo->prepare("SELECT `id`, `name`, `phone` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
-            $checkCust->execute([$custId, "%$clean10", "%$clean10"]);
-            $existingCust = $checkCust->fetch();
-
-            $isCompanySender = false;
+        if (!$isCompanySender) {
             try {
-                $activeBizNums = $pdo->query("SELECT `phone_number` FROM `whatsapp_accounts` WHERE `status` = 'CONNECTED' AND `phone_number` != 'Awaiting Link'")->fetchAll(PDO::FETCH_COLUMN) ?: [];
-                foreach ($activeBizNums as $bp) {
-                    $cBp = preg_replace('/[^0-9]/', '', $bp);
-                    if (strlen($cBp) >= 10 && !empty($clean10) && str_ends_with($clean10, substr($cBp, -10))) {
-                        $isCompanySender = true;
-                        break;
+                $checkCust = $pdo->prepare("SELECT `id`, `name`, `phone` FROM `customers` WHERE `id` = ? OR REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? LIMIT 1");
+                $checkCust->execute([$custId, "%$clean10", "%$clean10"]);
+                $existingCust = $checkCust->fetch();
+
+                if (!$existingCust) {
+                    try {
+                        $pdo->prepare("
+                            INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `address`, `city`, `customer_type`, `tags`, `avatar`)
+                            VALUES (?, ?, ?, ?, ?, 'WhatsApp Customer', 'Online', 'New WhatsApp Customer', '[\"Live Inbound\"]', ?)
+                        ")->execute([
+                            $custId,
+                            'CUST-' . date('Y') . '-' . rand(1000, 999999),
+                            $senderName,
+                            $senderPhone,
+                            $senderPhone,
+                            strtoupper(substr($senderName, 0, 2))
+                        ]);
+                    } catch (Exception $eCustFull) {
+                        $pdo->prepare("
+                            INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`)
+                            VALUES (?, ?, ?, ?, ?, 'New WhatsApp Customer')
+                        ")->execute([
+                            $custId,
+                            'CUST-' . date('Y') . '-' . rand(1000, 999999),
+                            $senderName,
+                            $senderPhone,
+                            $senderPhone
+                        ]);
+                    }
+                } else {
+                    $custId = $existingCust['id'];
+                    $custNeedUpdate = false;
+                    $updatedCustName = $existingCust['name'];
+                    $updatedCustPhone = $existingCust['phone'];
+                    if (preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $existingCust['name'])) {
+                        $updatedCustName = $senderName;
+                        $custNeedUpdate = true;
+                    }
+                    if (preg_match('/[0-9]{11,}/', preg_replace('/[^0-9]/', '', $existingCust['phone']))) {
+                        $updatedCustPhone = $senderPhone;
+                        $custNeedUpdate = true;
+                    }
+                    if ($custNeedUpdate) {
+                        try {
+                            $pdo->prepare("UPDATE `customers` SET `name` = ?, `phone` = ?, `whatsapp` = ? WHERE `id` = ?")
+                                ->execute([$updatedCustName, $updatedCustPhone, $updatedCustPhone, $custId]);
+                        } catch (Exception $eUpdC) {}
                     }
                 }
-            } catch (Exception $eBizChk2) {}
-
-            if (!$isCompanySender && !$existingCust) {
-                $pdo->prepare("
-                    INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `address`, `city`, `customer_type`, `tags`, `avatar`)
-                    VALUES (?, ?, ?, ?, ?, 'WhatsApp Customer', 'Online', 'New WhatsApp Customer', '[\"Live Inbound\"]', ?)
-                ")->execute([
-                    $custId,
-                    'CUST-' . date('Y') . '-' . rand(100, 999),
-                    $senderName,
-                    $senderPhone,
-                    $senderPhone,
-                    strtoupper(substr($senderName, 0, 2))
-                ]);
-            } else if ($existingCust && !$isCompanySender) {
-                $custId = $existingCust['id'];
-                // Self-healing: Update existing customer if their name was an account label or phone had trailing 0
-                $custNeedUpdate = false;
-                $updatedCustName = $existingCust['name'];
-                $updatedCustPhone = $existingCust['phone'];
-                if (preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $existingCust['name'])) {
-                    $updatedCustName = $senderName;
-                    $custNeedUpdate = true;
-                }
-                if (preg_match('/[0-9]{11,}/', preg_replace('/[^0-9]/', '', $existingCust['phone']))) {
-                    $updatedCustPhone = $senderPhone;
-                    $custNeedUpdate = true;
-                }
-                if ($custNeedUpdate) {
-                    $pdo->prepare("UPDATE `customers` SET `name` = ?, `phone` = ?, `whatsapp` = ? WHERE `id` = ?")
-                        ->execute([$updatedCustName, $updatedCustPhone, $updatedCustPhone, $custId]);
-                    $pdo->prepare("UPDATE `queries` SET `customer_name` = ?, `customer_phone` = ? WHERE `customer_id` = ?")
-                        ->execute([$updatedCustName, $updatedCustPhone, $custId]);
-                }
-            }
+            } catch (Exception $eCustMaster) {}
 
             // Consolidate any duplicate placeholder customer created under this LID
-            if (!empty($lid)) {
-                mergeLidPlaceholderCustomer($pdo, $custId, $lid);
-            }
-            if (!empty($senderJid) && (strpos($senderJid, '@lid') !== false || strlen(preg_replace('/[^0-9]/', '', $senderJid)) >= 14)) {
-                mergeLidPlaceholderCustomer($pdo, $custId, $senderJid);
-            }
+            try {
+                if (!empty($lid)) {
+                    mergeLidPlaceholderCustomer($pdo, $custId, $lid);
+                }
+                if (!empty($senderJid) && (strpos($senderJid, '@lid') !== false || strlen(preg_replace('/[^0-9]/', '', $senderJid)) >= 14)) {
+                    mergeLidPlaceholderCustomer($pdo, $custId, $senderJid);
+                }
+            } catch (Exception $eLid) {}
+        }
 
-            $isBot = (!empty($payload['is_outbound']) || ($payload['sender_name'] ?? '') === 'Bot (Auto-Reply)' || ($payload['source'] ?? '') === 'AUTOREPLY_BOT') ? 1 : 0;
-            $direction = $isBot ? 'outbound' : 'inbound';
-            $sender = $isBot ? 'bot' : 'customer';
+        $isBot = (!empty($payload['is_outbound']) || ($payload['sender_name'] ?? '') === 'Bot (Auto-Reply)' || ($payload['source'] ?? '') === 'AUTOREPLY_BOT') ? 1 : 0;
+        $direction = $isBot ? 'outbound' : 'inbound';
+        $sender = $isBot ? 'bot' : 'customer';
 
-            // Insert message (Deduplicated with UNIQUE message_uid, all values stored!)
+        // 2. Insert message (Deduplicated with UNIQUE message_uid, all values stored!)
+        try {
             $pdo->prepare("
                 INSERT INTO `messages` (
                     `message_uid`, `customer_id`, `sender`, `sender_name`, `sender_phone`, `sender_jid`,
@@ -4628,45 +4646,72 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $isBot, $payload['rule_name'] ?? null, $payload['rule_id'] ?? null, $payload['source'] ?? 'REAL_WHATSAPP_LIVE',
                 $receivedAt, (int)$timestampEpoch
             ]);
+        } catch (Exception $eMsgFull) {
+            try {
+                $pdo->prepare("
+                    INSERT INTO `messages` (`message_uid`, `customer_id`, `sender`, `sender_name`, `sender_phone`, `direction`, `text`, `message_text`, `status`)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'DELIVERED')
+                    ON DUPLICATE KEY UPDATE `text` = VALUES(`text`)
+                ")->execute([$msgUid, $custId, $sender, $senderName, $senderPhone, $direction, $messageText, $messageText]);
+            } catch (Exception $eMsgSimple) {}
+        }
 
-            // Update customer account_id and last_message
-            $pdo->prepare("UPDATE `customers` SET `account_id` = ?, `last_message` = ?, `last_message_at` = NOW() WHERE `id` = ?")
-                ->execute([$payload['account_id'] ?? 'account_1', $messageText, $custId]);
+        // 3. Update customer last_message and account_id
+        try {
+            $pdo->prepare("UPDATE `customers` SET `last_message` = ?, `last_message_at` = NOW() WHERE `id` = ?")
+                ->execute([$messageText, $custId]);
+        } catch (Exception $eCustMsg) {}
+        try {
+            $pdo->prepare("UPDATE `customers` SET `account_id` = ? WHERE `id` = ? AND (`account_id` IS NULL OR `account_id` = '')")
+                ->execute([$payload['account_id'] ?? 'account_1', $custId]);
+        } catch (Exception $eCustAcc) {}
 
-            // Update or insert query with full customer_name, customer_phone, account_id, and created_at
+        // 4. Update or insert query with full fallback protection
+        try {
             $checkQ = $pdo->prepare("SELECT `id`, `unread_count`, `assigned_to` FROM `queries` WHERE `customer_id` = ? LIMIT 1");
             $checkQ->execute([$custId]);
             $existingQ = $checkQ->fetch();
 
             if ($existingQ) {
-                $newUnread = ((int)$existingQ['unread_count']) + 1;
+                $newUnread = ((int)($existingQ['unread_count'] ?? 0)) + 1;
                 $existingStaff = $existingQ['assigned_to'] ?? 'UNASSIGNED';
                 $newStatus = ($existingStaff !== 'UNASSIGNED') ? 'IN_PROGRESS' : 'NEW';
-                $pdo->prepare("
-                    UPDATE `queries` 
-                    SET `unread_count` = ?, `last_message` = ?, `status` = ?,
-                        `customer_name` = COALESCE(NULLIF(?, ''), `customer_name`),
-                        `customer_phone` = COALESCE(NULLIF(?, ''), `customer_phone`),
-                        `account_id` = COALESCE(NULLIF(?, ''), `account_id`)
-                    WHERE `id` = ?
-                ")->execute([$newUnread, $messageText, $newStatus, $senderName, $senderPhone, $payload['account_id'] ?? 'account_1', $existingQ['id']]);
+                try {
+                    $pdo->prepare("
+                        UPDATE `queries` 
+                        SET `unread_count` = ?, `last_message` = ?, `status` = ?,
+                            `customer_name` = COALESCE(NULLIF(?, ''), `customer_name`),
+                            `customer_phone` = COALESCE(NULLIF(?, ''), `customer_phone`),
+                            `account_id` = COALESCE(NULLIF(?, ''), `account_id`)
+                        WHERE `id` = ?
+                    ")->execute([$newUnread, $messageText, $newStatus, $senderName, $senderPhone, $payload['account_id'] ?? 'account_1', $existingQ['id']]);
+                } catch (Exception $eQUpdFull) {
+                    $pdo->prepare("UPDATE `queries` SET `last_message` = ? WHERE `id` = ?")
+                        ->execute([$messageText, $existingQ['id']]);
+                }
             } else {
-                $pdo->prepare("
-                    INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `account_id`, `assigned_to`, `status`, `priority`, `query_text`, `unread_count`, `last_message`, `created_at`)
-                    VALUES (?, ?, ?, ?, ?, 'UNASSIGNED', 'NEW', 'HIGH', ?, 1, ?, NOW())
-                ")->execute([
-                    'Q-' . date('Y') . '-' . rand(100000, 999999), 
-                    $custId, 
-                    $senderName, 
-                    $senderPhone, 
-                    $payload['account_id'] ?? 'account_1', 
-                    $messageText, 
-                    $messageText
-                ]);
+                $newQid = 'Q-' . date('Y') . '-' . rand(100000, 999999);
+                try {
+                    $pdo->prepare("
+                        INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `account_id`, `assigned_to`, `status`, `priority`, `query_text`, `unread_count`, `last_message`, `created_at`)
+                        VALUES (?, ?, ?, ?, ?, 'UNASSIGNED', 'NEW', 'HIGH', ?, 1, ?, NOW())
+                    ")->execute([
+                        $newQid, 
+                        $custId, 
+                        $senderName, 
+                        $senderPhone, 
+                        $payload['account_id'] ?? 'account_1', 
+                        $messageText, 
+                        $messageText
+                    ]);
+                } catch (Exception $eQInsFull) {
+                    $pdo->prepare("
+                        INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `unread_count`, `last_message`, `created_at`)
+                        VALUES (?, ?, 'UNASSIGNED', 'NEW', 'HIGH', ?, 1, ?, NOW())
+                    ")->execute([$newQid, $custId, $messageText, $messageText]);
+                }
             }
-        } catch (Exception $e) {
-            // Non-blocking log
-        }
+        } catch (Exception $eQMaster) {}
     }
 
     echo json_encode(["status" => "success", "message" => "Message stored in queue and database", "entry" => $msgEntry]);
@@ -6984,37 +7029,57 @@ function ensureBulkAssignmentsTable($pdo) {
         ");
     } catch (Exception $e) {}
 
-    // Resilient schema check: Add assigned_to, account_id, account_slot to customers table if not present
+    // Resilient schema check: Add assigned_to, account_id, account_slot, notes, last_message, last_message_at, unread_count to customers table if not present
     try {
         $cCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        if (!in_array('assigned_to', $cCols)) {
+        $cColsLower = array_map('strtolower', $cCols);
+        if (!in_array('assigned_to', $cColsLower)) {
             $pdo->exec("ALTER TABLE `customers` ADD COLUMN `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED'");
         }
-        if (!in_array('account_id', $cCols)) {
+        if (!in_array('account_id', $cColsLower)) {
             $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1'");
         }
-        if (!in_array('account_slot', $cCols)) {
+        if (!in_array('account_slot', $cColsLower)) {
             $pdo->exec("ALTER TABLE `customers` ADD COLUMN `account_slot` VARCHAR(50) DEFAULT 'account_1'");
+        }
+        if (!in_array('notes', $cColsLower)) {
+            $pdo->exec("ALTER TABLE `customers` ADD COLUMN `notes` TEXT NULL");
+        }
+        if (!in_array('last_message', $cColsLower)) {
+            $pdo->exec("ALTER TABLE `customers` ADD COLUMN `last_message` TEXT NULL");
+        }
+        if (!in_array('last_message_at', $cColsLower)) {
+            $pdo->exec("ALTER TABLE `customers` ADD COLUMN `last_message_at` DATETIME NULL");
+        }
+        if (!in_array('unread_count', $cColsLower)) {
+            $pdo->exec("ALTER TABLE `customers` ADD COLUMN `unread_count` INT NOT NULL DEFAULT 0");
         }
     } catch (Exception $e) {}
 
-    // Resilient schema check: Add assigned_to, account_id, account_slot, customer_name, customer_phone to queries table if not present
+    // Resilient schema check: Add assigned_to, account_id, account_slot, customer_name, customer_phone, last_message to queries table if not present
     try {
         $qCols = $pdo->query("SHOW COLUMNS FROM `queries`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        if (!in_array('assigned_to', $qCols)) {
+        $qColsLower = array_map('strtolower', $qCols);
+        if (!in_array('assigned_to', $qColsLower)) {
             $pdo->exec("ALTER TABLE `queries` ADD COLUMN `assigned_to` VARCHAR(50) DEFAULT 'UNASSIGNED'");
         }
-        if (!in_array('account_id', $qCols)) {
+        if (!in_array('account_id', $qColsLower)) {
             $pdo->exec("ALTER TABLE `queries` ADD COLUMN `account_id` VARCHAR(50) DEFAULT 'account_1'");
         }
-        if (!in_array('account_slot', $qCols)) {
+        if (!in_array('account_slot', $qColsLower)) {
             $pdo->exec("ALTER TABLE `queries` ADD COLUMN `account_slot` VARCHAR(50) DEFAULT 'account_1'");
         }
-        if (!in_array('customer_name', $qCols)) {
+        if (!in_array('customer_name', $qColsLower)) {
             $pdo->exec("ALTER TABLE `queries` ADD COLUMN `customer_name` VARCHAR(150) NULL");
         }
-        if (!in_array('customer_phone', $qCols)) {
+        if (!in_array('customer_phone', $qColsLower)) {
             $pdo->exec("ALTER TABLE `queries` ADD COLUMN `customer_phone` VARCHAR(50) NULL");
+        }
+        if (!in_array('last_message', $qColsLower)) {
+            $pdo->exec("ALTER TABLE `queries` ADD COLUMN `last_message` TEXT NULL");
+        }
+        if (!in_array('query_text', $qColsLower)) {
+            $pdo->exec("ALTER TABLE `queries` ADD COLUMN `query_text` TEXT NULL");
         }
     } catch (Exception $e) {}
 
@@ -7118,17 +7183,20 @@ if ($action === 'get_unassigned_enquiries_count') {
                 $existingCCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
             } catch (Exception $e) {}
 
+            $qColsLower = array_map('strtolower', $existingQCols);
+            $cColsLower = array_map('strtolower', $existingCCols);
+
             $qAccParts = [];
-            if (in_array('account_id', $existingQCols)) $qAccParts[] = "NULLIF(q.account_id, '')";
-            if (in_array('account_slot', $existingQCols)) $qAccParts[] = "NULLIF(q.account_slot, '')";
+            if (in_array('account_id', $qColsLower)) $qAccParts[] = "NULLIF(q.account_id, '')";
+            if (in_array('account_slot', $qColsLower)) $qAccParts[] = "NULLIF(q.account_slot, '')";
             $qAccParts[] = "NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), '')";
-            if (in_array('account_id', $existingCCols)) {
+            if (in_array('account_id', $cColsLower)) {
                 $qAccParts[] = "NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), '')";
             }
             $qAccParts[] = "'account_1'";
             $coalesceQ = implode(",\n                               ", $qAccParts);
 
-            $cAccExpr = in_array('account_id', $existingCCols) ? "COALESCE(NULLIF(c.account_id, ''), 'account_1')" : "'account_1'";
+            $cAccExpr = in_array('account_id', $cColsLower) ? "COALESCE(NULLIF(c.account_id, ''), 'account_1')" : "'account_1'";
 
             $inMarks = !empty($aliases) ? implode(',', array_fill(0, count($aliases), '?')) : "'account_1'";
             $stmt = $pdo->prepare("
@@ -7253,17 +7321,20 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
         // Fetch candidate unassigned queries using resilient unified logic
         if (!$isAll) {
+            $qColsLower = array_map('strtolower', $existingQCols);
+            $cColsLower = array_map('strtolower', $existingCCols);
+
             $qAccParts = [];
-            if (in_array('account_id', $existingQCols)) $qAccParts[] = "NULLIF(q.account_id, '')";
-            if (in_array('account_slot', $existingQCols)) $qAccParts[] = "NULLIF(q.account_slot, '')";
+            if (in_array('account_id', $qColsLower)) $qAccParts[] = "NULLIF(q.account_id, '')";
+            if (in_array('account_slot', $qColsLower)) $qAccParts[] = "NULLIF(q.account_slot, '')";
             $qAccParts[] = "NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), '')";
-            if (in_array('account_id', $existingCCols)) {
+            if (in_array('account_id', $cColsLower)) {
                 $qAccParts[] = "NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), '')";
             }
             $qAccParts[] = "'account_1'";
             $coalesceQ = implode(",\n                               ", $qAccParts);
 
-            $cAccExpr = in_array('account_id', $existingCCols) ? "COALESCE(NULLIF(c.account_id, ''), 'account_1')" : "'account_1'";
+            $cAccExpr = in_array('account_id', $cColsLower) ? "COALESCE(NULLIF(c.account_id, ''), 'account_1')" : "'account_1'";
 
             $inMarks = implode(',', array_fill(0, count($aliases), '?'));
             $sql = "
