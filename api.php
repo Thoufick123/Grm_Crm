@@ -7090,7 +7090,7 @@ function ensureBulkAssignmentsTable($pdo) {
                    COALESCE(NULLIF(c.assigned_to, ''), 'UNASSIGNED') as assigned_to,
                    COALESCE(NULLIF(c.account_id, ''), 'account_1') as account_id
             FROM `customers` c
-            WHERE c.id NOT IN (SELECT customer_id FROM `queries`)
+            WHERE NOT EXISTS (SELECT 1 FROM `queries` q WHERE q.customer_id = c.id)
               AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
               AND c.name != 'System'
               AND c.name NOT LIKE 'WhatsApp Linked%'
@@ -7277,6 +7277,7 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     $staffName = trim($data['staff_name'] ?? 'Staff Member');
     $staffPhone = trim($data['staff_phone'] ?? '');
     $user = trim($data['user'] ?? 'Super Admin');
+    $clientCandidates = $data['candidate_leads'] ?? [];
 
     if (empty($staffId)) {
         http_response_code(400);
@@ -7319,89 +7320,128 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $existingCCols = $pdo->query("SHOW COLUMNS FROM `customers`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
         } catch (Exception $e) {}
 
-        // Fetch candidate unassigned queries using resilient unified logic
-        if (!$isAll) {
-            $qColsLower = array_map('strtolower', $existingQCols);
-            $cColsLower = array_map('strtolower', $existingCCols);
+        $qColsLower = array_map('strtolower', $existingQCols);
+        $cColsLower = array_map('strtolower', $existingCCols);
 
-            $qAccParts = [];
-            if (in_array('account_id', $qColsLower)) $qAccParts[] = "NULLIF(q.account_id, '')";
-            if (in_array('account_slot', $qColsLower)) $qAccParts[] = "NULLIF(q.account_slot, '')";
-            $qAccParts[] = "NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), '')";
-            if (in_array('account_id', $cColsLower)) {
-                $qAccParts[] = "NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), '')";
+        $candidates = [];
+
+        // Check if frontend provided candidate leads identified directly in CRM_STATE
+        if (!empty($clientCandidates) && is_array($clientCandidates)) {
+            foreach ($clientCandidates as $cc) {
+                $cId = trim($cc['customer_id'] ?? ($cc['id'] ?? ''));
+                $qId = trim($cc['query_id'] ?? ($cc['id'] ?? ''));
+                $cName = trim($cc['customer_name'] ?? ($cc['name'] ?? 'Customer'));
+                $cPhone = trim($cc['customer_phone'] ?? ($cc['phone'] ?? ''));
+                $cAcc = trim($cc['account_id'] ?? $accountId);
+
+                if (!empty($cId) || !empty($qId) || !empty($cPhone)) {
+                    $candidates[] = [
+                        'id' => !empty($qId) ? $qId : ('Q-' . ($cId ?: preg_replace('/[^0-9]/', '', $cPhone))),
+                        'customer_id' => !empty($cId) ? $cId : ('cust_' . preg_replace('/[^0-9]/', '', $cPhone)),
+                        'customer_name' => $cName,
+                        'customer_phone' => $cPhone,
+                        'account_id' => $cAcc,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+                if (count($candidates) >= $assignCount) break;
             }
-            $qAccParts[] = "'account_1'";
-            $coalesceQ = implode(",\n                               ", $qAccParts);
-
-            $cAccExpr = in_array('account_id', $cColsLower) ? "COALESCE(NULLIF(c.account_id, ''), 'account_1')" : "'account_1'";
-
-            $inMarks = implode(',', array_fill(0, count($aliases), '?'));
-            $sql = "
-                SELECT candidate_id as id, customer_id, created_at, customer_name, customer_phone
-                FROM (
-                    SELECT q.id as candidate_id, q.customer_id, q.created_at,
-                           c.name as customer_name, c.phone as customer_phone,
-                           COALESCE(
-                               {$coalesceQ}
-                           ) as effective_account
-                    FROM `queries` q
-                    LEFT JOIN `customers` c ON q.customer_id = c.id
-                    WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
-                      AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
-                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
-
-                    UNION
-
-                    SELECT CONCAT('Q-', c.id) as candidate_id, c.id as customer_id, COALESCE(c.created_at, NOW()) as created_at,
-                           c.name as customer_name, c.phone as customer_phone,
-                           {$cAccExpr} as effective_account
-                    FROM `customers` c
-                    WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
-                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
-                      AND c.name != 'System'
-                      AND c.name NOT LIKE 'WhatsApp Linked%'
-                      AND c.id NOT IN (
-                          SELECT customer_id FROM `queries`
-                          WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
-                      )
-                ) u
-                WHERE (u.effective_account IN ({$inMarks}) OR u.effective_account IS NULL)
-                ORDER BY created_at {$sortOrder}
-                LIMIT " . intval($assignCount);
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($aliases);
-        } else {
-            $sql = "
-                SELECT candidate_id as id, customer_id, created_at, customer_name, customer_phone
-                FROM (
-                    SELECT q.id as candidate_id, q.customer_id, q.created_at,
-                           c.name as customer_name, c.phone as customer_phone
-                    FROM `queries` q
-                    LEFT JOIN `customers` c ON q.customer_id = c.id
-                    WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
-                      AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
-                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
-
-                    UNION
-
-                    SELECT CONCAT('Q-', c.id) as candidate_id, c.id as customer_id, COALESCE(c.created_at, NOW()) as created_at,
-                           c.name as customer_name, c.phone as customer_phone
-                    FROM `customers` c
-                    WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
-                      AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
-                      AND c.name != 'System'
-                      AND c.name NOT LIKE 'WhatsApp Linked%'
-                      AND c.id NOT IN (
-                          SELECT customer_id FROM `queries`
-                          WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
-                      )
-                ) u
-                ORDER BY created_at {$sortOrder}
-                LIMIT " . intval($assignCount);
-            $stmt = $pdo->query($sql);
         }
-        $candidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fetch candidate unassigned queries from MySQL if client list was empty
+        if (empty($candidates)) {
+            if (!$isAll) {
+                $qAccParts = [];
+                if (in_array('account_id', $qColsLower)) $qAccParts[] = "NULLIF(q.account_id, '')";
+                if (in_array('account_slot', $qColsLower)) $qAccParts[] = "NULLIF(q.account_slot, '')";
+                $qAccParts[] = "NULLIF((SELECT m.account_id FROM `messages` m WHERE m.customer_id = q.customer_id AND m.account_id IS NOT NULL AND m.account_id != '' ORDER BY m.id DESC LIMIT 1), '')";
+                if (in_array('account_id', $cColsLower)) {
+                    $qAccParts[] = "NULLIF((SELECT c2.account_id FROM `customers` c2 WHERE c2.id = q.customer_id AND c2.account_id IS NOT NULL AND c2.account_id != '' LIMIT 1), '')";
+                }
+                $qAccParts[] = "'account_1'";
+                $coalesceQ = implode(",\n                               ", $qAccParts);
+
+                $cAccExpr = in_array('account_id', $cColsLower) ? "COALESCE(NULLIF(c.account_id, ''), 'account_1')" : "'account_1'";
+
+                $inMarks = implode(',', array_fill(0, count($aliases), '?'));
+                $sql = "
+                    SELECT candidate_id as id, customer_id, created_at, customer_name, customer_phone
+                    FROM (
+                        SELECT q.id as candidate_id, q.customer_id, q.created_at,
+                               c.name as customer_name, c.phone as customer_phone,
+                               COALESCE(
+                                   {$coalesceQ}
+                               ) as effective_account
+                        FROM `queries` q
+                        LEFT JOIN `customers` c ON q.customer_id = c.id
+                        WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
+                          AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                          AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+
+                        UNION
+
+                        SELECT CONCAT('Q-', c.id) as candidate_id, c.id as customer_id, COALESCE(c.created_at, NOW()) as created_at,
+                               c.name as customer_name, c.phone as customer_phone,
+                               {$cAccExpr} as effective_account
+                        FROM `customers` c
+                        WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
+                          AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+                          AND c.name != 'System'
+                          AND c.name NOT LIKE 'WhatsApp Linked%'
+                          AND NOT EXISTS (
+                              SELECT 1 FROM `queries` q_sub
+                              WHERE q_sub.customer_id = c.id
+                                AND q_sub.assigned_to IS NOT NULL
+                                AND q_sub.assigned_to != ''
+                                AND q_sub.assigned_to != 'UNASSIGNED'
+                                AND q_sub.assigned_to != 'unassigned'
+                          )
+                    ) u
+                    WHERE (u.effective_account IN ({$inMarks}) OR u.effective_account IS NULL)
+                    ORDER BY created_at {$sortOrder}
+                    LIMIT " . intval($assignCount);
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($aliases);
+                $candidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            // Resilient global fallback if line query returned empty
+            if (empty($candidates)) {
+                $sql = "
+                    SELECT candidate_id as id, customer_id, created_at, customer_name, customer_phone
+                    FROM (
+                        SELECT q.id as candidate_id, q.customer_id, q.created_at,
+                               c.name as customer_name, c.phone as customer_phone
+                        FROM `queries` q
+                        LEFT JOIN `customers` c ON q.customer_id = c.id
+                        WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
+                          AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
+                          AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+
+                        UNION
+
+                        SELECT CONCAT('Q-', c.id) as candidate_id, c.id as customer_id, COALESCE(c.created_at, NOW()) as created_at,
+                               c.name as customer_name, c.phone as customer_phone
+                        FROM `customers` c
+                        WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
+                          AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
+                          AND c.name != 'System'
+                          AND c.name NOT LIKE 'WhatsApp Linked%'
+                          AND NOT EXISTS (
+                              SELECT 1 FROM `queries` q_sub
+                              WHERE q_sub.customer_id = c.id
+                                AND q_sub.assigned_to IS NOT NULL
+                                AND q_sub.assigned_to != ''
+                                AND q_sub.assigned_to != 'UNASSIGNED'
+                                AND q_sub.assigned_to != 'unassigned'
+                          )
+                    ) u
+                    ORDER BY created_at {$sortOrder}
+                    LIMIT " . intval($assignCount);
+                $stmt = $pdo->query($sql);
+                $candidates = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            }
+        }
 
         if (empty($candidates)) {
             echo json_encode([
@@ -7417,11 +7457,36 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         try {
             $queryIds = [];
             $customerIds = [];
+            $hasQUpdatedAt = in_array('updated_at', $qColsLower);
+            $hasCUpdatedAt = in_array('updated_at', $cColsLower);
 
             foreach ($candidates as $cand) {
                 $cid = $cand['customer_id'];
                 $qid = $cand['id'];
+                $cName = $cand['customer_name'] ?? 'Customer';
+                $cPhone = $cand['customer_phone'] ?? '';
+                $candAcc = $cand['account_id'] ?? $accountId;
                 $customerIds[] = $cid;
+
+                // Ensure customer exists in customers table
+                $checkC = $pdo->prepare("SELECT id FROM `customers` WHERE `id` = ? OR `phone` = ? OR `whatsapp` = ? LIMIT 1");
+                $checkC->execute([$cid, $cPhone, $cPhone]);
+                $existingC = $checkC->fetch(PDO::FETCH_ASSOC);
+
+                if ($existingC) {
+                    $cid = $existingC['id'];
+                    $cUpdSql = $hasCUpdatedAt 
+                        ? "UPDATE `customers` SET `assigned_to` = ?, `updated_at` = NOW() WHERE `id` = ?"
+                        : "UPDATE `customers` SET `assigned_to` = ? WHERE `id` = ?";
+                    $pdo->prepare($cUpdSql)->execute([$staffId, $cid]);
+                } else if (!empty($cid)) {
+                    try {
+                        $pdo->prepare("
+                            INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `assigned_to`, `account_id`, `created_at`)
+                            VALUES (?, ?, ?, ?, ?, 'Live WhatsApp Lead', ?, ?, NOW())
+                        ")->execute([$cid, 'CUST-' . date('Y') . '-' . rand(100, 999), $cName, $cPhone, $cPhone, $staffId, $candAcc]);
+                    } catch (Exception $eCIns) {}
+                }
 
                 // Ensure query exists in queries table
                 $checkQ = $pdo->prepare("SELECT id FROM `queries` WHERE `id` = ? OR `customer_id` = ? LIMIT 1");
@@ -7430,8 +7495,10 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
                 if ($existingQ) {
                     $actualQId = $existingQ['id'];
-                    $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE `id` = ?")
-                        ->execute([$staffId, $actualQId]);
+                    $qUpdSql = $hasQUpdatedAt
+                        ? "UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED', `updated_at` = NOW() WHERE `id` = ?"
+                        : "UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE `id` = ?";
+                    $pdo->prepare($qUpdSql)->execute([$staffId, $actualQId]);
                     $queryIds[] = $actualQId;
                 } else {
                     $actualQId = $qid ?: ('Q-' . $cid);
@@ -7439,15 +7506,25 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                     $insPlaceholders = ['?', '?', '?', "'ASSIGNED'", "'NORMAL'", "'WhatsApp Customer Enquiry'", "'WhatsApp Customer Enquiry'", 'NOW()'];
                     $insParams = [$actualQId, $cid, $staffId];
 
-                    if (in_array('account_id', $existingQCols)) {
+                    if (in_array('account_id', $qColsLower)) {
                         $insCols[] = 'account_id';
                         $insPlaceholders[] = '?';
-                        $insParams[] = $accountId;
+                        $insParams[] = $candAcc;
                     }
-                    if (in_array('account_slot', $existingQCols)) {
+                    if (in_array('account_slot', $qColsLower)) {
                         $insCols[] = 'account_slot';
                         $insPlaceholders[] = '?';
-                        $insParams[] = $accountId;
+                        $insParams[] = $candAcc;
+                    }
+                    if (in_array('customer_name', $qColsLower)) {
+                        $insCols[] = 'customer_name';
+                        $insPlaceholders[] = '?';
+                        $insParams[] = $cName;
+                    }
+                    if (in_array('customer_phone', $qColsLower)) {
+                        $insCols[] = 'customer_phone';
+                        $insPlaceholders[] = '?';
+                        $insParams[] = $cPhone;
                     }
                     $colSql = implode('`, `', $insCols);
                     $valSql = implode(', ', $insPlaceholders);
@@ -7468,7 +7545,10 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             // Bidirectional Persistence: Synchronously update customers table in the same transaction
             if (!empty($customerIds)) {
                 $inCMarks = implode(',', array_fill(0, count($customerIds), '?'));
-                $cUpdateStmt = $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` IN ({$inCMarks})");
+                $cUpdateSql = $hasCUpdatedAt
+                    ? "UPDATE `customers` SET `assigned_to` = ?, `updated_at` = NOW() WHERE `id` IN ({$inCMarks})"
+                    : "UPDATE `customers` SET `assigned_to` = ? WHERE `id` IN ({$inCMarks})";
+                $cUpdateStmt = $pdo->prepare($cUpdateSql);
                 $cUpdateParams = array_merge([$staffId], $customerIds);
                 $cUpdateStmt->execute($cUpdateParams);
             }
@@ -7543,6 +7623,35 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             throw $eTx;
         }
 
+        // Real-Time Push: Append to live_assignments_queue.json for sub-50ms SSE broadcast to Staff Workstations
+        try {
+            $assignsQueueFile = __DIR__ . '/live_assignments_queue.json';
+            $existingAsgns = [];
+            if (file_exists($assignsQueueFile)) {
+                $existingAsgns = json_decode(@file_get_contents($assignsQueueFile), true) ?: [];
+            }
+            $nowEpoch = time();
+            $newQueueItems = [];
+            foreach ($candidates as $cand) {
+                $newQueueItems[] = [
+                    'id' => 'asgn_' . uniqid(),
+                    'batch_code' => $batchCode,
+                    'query_id' => $cand['id'],
+                    'customer_id' => $cand['customer_id'],
+                    'customer_name' => $cand['customer_name'] ?? 'Customer',
+                    'customer_phone' => $cand['customer_phone'] ?? '',
+                    'account_id' => $cand['account_id'] ?? $accountId,
+                    'assigned_to' => $staffId,
+                    'status' => 'ASSIGNED',
+                    'timestamp_epoch' => $nowEpoch,
+                    'created_at' => date('Y-m-d H:i:s')
+                ];
+            }
+            $mergedQueue = array_slice(array_merge($newQueueItems, $existingAsgns), 0, 100);
+            @file_put_contents($assignsQueueFile, json_encode($mergedQueue, JSON_UNESCAPED_UNICODE));
+            @file_put_contents(__DIR__ . '/live_account_updates.json', json_encode(['last_update' => time()]));
+        } catch (Exception $eQueue) {}
+
         echo json_encode([
             "status" => "success",
             "message" => "Successfully bulk-assigned {$actualAssigned} inquiries to {$staffName}!",
@@ -7554,7 +7663,8 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             "staff_phone" => $staffPhone,
             "customer_ids" => $customerIds,
             "query_ids" => $queryIds,
-            "sort_order" => $sortOrder
+            "sort_order" => $sortOrder,
+            "candidate_leads" => $candidates
         ]);
     } catch (Exception $e) {
         http_response_code(500);

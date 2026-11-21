@@ -71,6 +71,8 @@ $cUpdatesFile = __DIR__ . '/live_customer_updates.json';
 $lastCUpdatesMtime = file_exists($cUpdatesFile) ? (int)filemtime($cUpdatesFile) : 0;
 $accUpdatesFile = __DIR__ . '/live_account_updates.json';
 $lastAccUpdatesMtime = file_exists($accUpdatesFile) ? (int)filemtime($accUpdatesFile) : 0;
+$assignsFile = __DIR__ . '/live_assignments_queue.json';
+$lastAssignsMtime = file_exists($assignsFile) ? (int)filemtime($assignsFile) : 0;
 
 // Tell browser's EventSource to reconnect automatically in 1.5s if stream disconnects
 echo "retry: 1500\n\n";
@@ -86,6 +88,7 @@ $lastCallsMtime = file_exists($callsFile) ? (int)filemtime($callsFile) : 0;
 
 // Track emitted message IDs during this connection to prevent duplicates
 $emittedMsgUids = [];
+$emittedAsgnUids = [];
 
 while (true) {
     // Break immediately if browser closed tab or aborted connection
@@ -116,6 +119,26 @@ while (true) {
                         if ($itemEpoch > $since) {
                             $since = $itemEpoch;
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- CHECK 1B: Real-time Query / Lead Assignments from live_assignments_queue.json ---
+    if (file_exists($assignsFile)) {
+        $curAssignMtime = (int)filemtime($assignsFile);
+        if ($curAssignMtime >= $lastAssignsMtime || ($curAssignMtime >= ($since - 2))) {
+            $lastAssignsMtime = $curAssignMtime;
+            $rawAsgn = @file_get_contents($assignsFile);
+            $asgnQueue = $rawAsgn ? json_decode($rawAsgn, true) : null;
+            if (is_array($asgnQueue)) {
+                foreach ($asgnQueue as $asgnItem) {
+                    $itemEpoch = (int)($asgnItem['timestamp_epoch'] ?? 0);
+                    $asgnUid = (string)($asgnItem['id'] ?? ($asgnItem['query_id'] ?? ''));
+                    if ($itemEpoch > $since && !isset($emittedAsgnUids[$asgnUid])) {
+                        $assignments[] = $asgnItem;
+                        $emittedAsgnUids[$asgnUid] = true;
                     }
                 }
             }
