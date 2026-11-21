@@ -955,40 +955,48 @@ if ($action === 'get_state' || $action === 'get_all') {
             $rawSph = $sphStmt->fetchAll(PDO::FETCH_COLUMN);
             foreach ($rawSph as $sp) {
                 $cd = preg_replace('/[^0-9]/', '', $sp);
-                if (strlen($cd) >= 7) $staffPhonesList[] = $cd;
+                if (strlen($cd) >= 10) $staffPhonesList[] = substr($cd, -10);
             }
         } catch (Exception $eSph) {}
         $staffPhonesList[] = '9943557998'; // Explicit guard for staff Vanaja
-        $staffPhonesList = array_values(array_unique($staffPhonesList));
+        $staffPhonesList = array_values(array_unique(array_filter($staffPhonesList)));
 
-        // Purge any staff numbers accidentally stored in whatsapp_accounts in DB
+        // Purge any staff numbers accidentally stored in whatsapp_accounts in DB (strict 10-digit exact phone match only)
         foreach ($staffPhonesList as $sphDigits) {
-            try {
-                $pdo->prepare("UPDATE `whatsapp_accounts` SET `phone_number` = 'Awaiting Link', `status` = 'DISCONNECTED' WHERE REPLACE(REPLACE(`phone_number`, ' ', ''), '+', '') LIKE ?")
-                    ->execute(["%$sphDigits%"]);
-            } catch (Exception $eFixWa) {}
+            if (strlen($sphDigits) >= 10) {
+                try {
+                    $pdo->prepare("UPDATE `whatsapp_accounts` SET `phone_number` = 'Awaiting Link', `status` = 'DISCONNECTED' WHERE RIGHT(REPLACE(REPLACE(REPLACE(`phone_number`, ' ', ''), '+', ''), '-', ''), 10) = ?")
+                        ->execute([$sphDigits]);
+                } catch (Exception $eFixWa) {}
+            }
         }
 
-        // Cleanse waAccounts memory array of any staff numbers
+        // Cleanse waAccounts memory array of any staff numbers (strict 10-digit exact match only)
         foreach ($waAccounts as &$wa) {
             $waPhoneDigits = preg_replace('/[^0-9]/', '', $wa['phone_number'] ?? '');
-            foreach ($staffPhonesList as $sph) {
-                if (!empty($sph) && (str_ends_with($waPhoneDigits, $sph) || str_ends_with($sph, $waPhoneDigits))) {
-                    $wa['phone_number'] = 'Awaiting Link';
-                    $wa['status'] = 'DISCONNECTED';
-                    break;
+            if (strlen($waPhoneDigits) >= 10) {
+                $wa10 = substr($waPhoneDigits, -10);
+                foreach ($staffPhonesList as $sph) {
+                    if (strlen($sph) >= 10 && $wa10 === $sph) {
+                        $wa['phone_number'] = 'Awaiting Link';
+                        $wa['status'] = 'DISCONNECTED';
+                        break;
+                    }
                 }
             }
         }
         unset($wa);
 
-        // Sanitize cfgData phone number
+        // Sanitize cfgData phone number (strict 10-digit exact match only)
         $cfgPhone = (!empty($cfgData['phone_number'])) ? $cfgData['phone_number'] : '';
         $cfgPhoneDigits = preg_replace('/[^0-9]/', '', $cfgPhone);
-        foreach ($staffPhonesList as $sph) {
-            if (!empty($sph) && (str_ends_with($cfgPhoneDigits, $sph) || str_ends_with($sph, $cfgPhoneDigits))) {
-                $cfgPhone = '';
-                break;
+        if (strlen($cfgPhoneDigits) >= 10) {
+            $cfg10 = substr($cfgPhoneDigits, -10);
+            foreach ($staffPhonesList as $sph) {
+                if (strlen($sph) >= 10 && $cfg10 === $sph) {
+                    $cfgPhone = '';
+                    break;
+                }
             }
         }
 
@@ -1234,25 +1242,14 @@ if ($action === 'get_state' || $action === 'get_all') {
             $cleanDigits = preg_replace('/[^0-9]/', '', $rawP);
             $cName = trim($c['name'] ?? '');
 
-            // STRICT FILTER: The business itself (GRM Garments, Business Hub, admin numbers) is NOT a customer!
+            // STRICT FILTER: The business itself (internal dummy labels) is NOT a customer!
+            // Real customer profiles (e.g. Suguna, Karthik) are strictly preserved and NEVER deleted.
             $isBusiness = false;
-            foreach ($businessPhones10 as $bp) {
-                if (!empty($bp) && str_ends_with($cleanDigits, $bp)) {
-                    $isBusiness = true;
-                    break;
-                }
-            }
             if ($cName === 'GRM Garments' || $cName === 'GRM Garments Business Hub' || $cName === 'GRM Garments Official' || $cName === 'WhatsApp Business #2' || $cName === 'Bot (Auto-Reply)' || strpos($c['id'], '8124038585') !== false) {
                 $isBusiness = true;
             }
 
             if ($isBusiness) {
-                if ($shouldRunDbMaintenance) {
-                    try {
-                        $pdo->prepare("DELETE FROM `queries` WHERE `customer_id` = ?")->execute([$c['id']]);
-                        $pdo->prepare("DELETE FROM `customers` WHERE `id` = ?")->execute([$c['id']]);
-                    } catch (Exception $eDelPh) {}
-                }
                 continue;
             }
 
@@ -1307,18 +1304,11 @@ if ($action === 'get_state' || $action === 'get_all') {
             $qPhoneDigits = preg_replace('/[^0-9]/', '', $q['customer_phone'] ?? '');
             $qCidDigits = preg_replace('/[^0-9]/', '', $q['customer_id'] ?? '');
             $isBusinessQuery = false;
-            foreach ($businessPhones10 as $bp) {
-                if (!empty($bp) && (str_ends_with($qPhoneDigits, $bp) || str_ends_with($qCidDigits, $bp))) {
-                    $isBusinessQuery = true;
-                    break;
-                }
+            $qCustName = trim($q['customer_name'] ?? '');
+            if ($qCustName === 'GRM Garments' || $qCustName === 'GRM Garments Business Hub' || $qCustName === 'Bot (Auto-Reply)' || $qCustName === 'WhatsApp Business #2') {
+                $isBusinessQuery = true;
             }
-            if ($isBusinessQuery || ($q['customer_name'] ?? '') === 'GRM Garments') {
-                if ($shouldRunDbMaintenance) {
-                    try {
-                        $pdo->prepare("DELETE FROM `queries` WHERE `id` = ?")->execute([$q['id']]);
-                    } catch (Exception $eDelQ) {}
-                }
+            if ($isBusinessQuery) {
                 continue;
             }
 
@@ -2662,6 +2652,79 @@ if ($action === 'save_customer' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $data['notes'] ?? null,
                 $data['id']
             ]);
+
+            // Fallback 1: If 0 rows matched by ID, match by clean 10-digit phone
+            if ($stmt->rowCount() === 0 && strlen($rawPhone) === 10) {
+                $stmtPhone = $pdo->prepare("
+                    UPDATE `customers` 
+                    SET `name` = ?, `phone` = ?, `whatsapp` = ?, `alt_phone` = ?, `email` = ?, `gender` = ?, `age` = ?, `address` = ?, `alt_address` = ?, `notes` = COALESCE(?, `notes`), `updated_at` = NOW()
+                    WHERE RIGHT(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), 10) = ?
+                ");
+                $stmtPhone->execute([
+                    $data['name'] ?? '',
+                    $phoneToSave,
+                    $phoneToSave,
+                    $altPhoneToSave,
+                    $data['email'] ?? null,
+                    $data['gender'] ?? null,
+                    $data['age'] ?? null,
+                    $data['address'] ?? '',
+                    $data['alt_address'] ?? ($data['altAddress'] ?? ''),
+                    $data['notes'] ?? null,
+                    $rawPhone
+                ]);
+
+                // Fallback 2: If customer doesn't exist in customers table at all, insert them!
+                if ($stmtPhone->rowCount() === 0) {
+                    $cNameVal = !empty($data['name']) ? $data['name'] : 'Customer';
+                    $avatarVal = strtoupper(substr($cNameVal, 0, 2));
+                    $insCustStmt = $pdo->prepare("
+                        INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `alt_phone`, `email`, `gender`, `age`, `address`, `alt_address`, `notes`, `created_at`, `updated_at`, `avatar`)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)
+                        ON DUPLICATE KEY UPDATE 
+                            `name` = VALUES(`name`),
+                            `phone` = VALUES(`phone`),
+                            `whatsapp` = VALUES(`whatsapp`),
+                            `alt_phone` = VALUES(`alt_phone`),
+                            `email` = VALUES(`email`),
+                            `gender` = VALUES(`gender`),
+                            `age` = VALUES(`age`),
+                            `address` = VALUES(`address`),
+                            `alt_address` = VALUES(`alt_address`),
+                            `notes` = VALUES(`notes`),
+                            `updated_at` = NOW()
+                    ");
+                    $insCustStmt->execute([
+                        $data['id'],
+                        'CUST-' . $rawPhone,
+                        $cNameVal,
+                        $phoneToSave,
+                        $phoneToSave,
+                        $altPhoneToSave,
+                        $data['email'] ?? null,
+                        $data['gender'] ?? null,
+                        $data['age'] ?? null,
+                        $data['address'] ?? '',
+                        $data['alt_address'] ?? ($data['altAddress'] ?? ''),
+                        $data['notes'] ?? null,
+                        $avatarVal
+                    ]);
+                }
+            }
+
+            // Phase 3: Synchronize customer name and phone into queries table
+            if (!empty($data['name'])) {
+                $pdo->prepare("
+                    UPDATE `queries` 
+                    SET `customer_name` = ?, `customer_phone` = ?
+                    WHERE `customer_id` = ? OR RIGHT(REPLACE(REPLACE(REPLACE(`customer_phone`, ' ', ''), '+', ''), '-', ''), 10) = ?
+                ")->execute([
+                    $data['name'],
+                    $phoneToSave,
+                    $data['id'],
+                    $rawPhone
+                ]);
+            }
         } catch (Exception $e) {}
     }
 

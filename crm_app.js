@@ -1506,7 +1506,7 @@ function getPersistedActiveView() {
 
 var ACTIVE_VIEW = window.ACTIVE_VIEW || getPersistedActiveView();
 var ACTIVE_ROLE = window.ACTIVE_ROLE || 'admin'; // 'admin', 'staff_01', 'staff_02', 'staff_03', etc.
-var ACTIVE_CUSTOMER_ID = window.ACTIVE_CUSTOMER_ID || 'cust_100';
+var ACTIVE_CUSTOMER_ID = (typeof localStorage !== 'undefined' && localStorage.getItem('GRM_ACTIVE_CUSTOMER_ID')) || window.ACTIVE_CUSTOMER_ID || null;
 var INBOX_FILTER = window.INBOX_FILTER || 'all'; // 'all', 'unassigned', 'my', 'urgent'
 var LAST_POLL_EPOCH = window.LAST_POLL_EPOCH || 0;
 var SOCKET_IO = window.SOCKET_IO || null;
@@ -3845,8 +3845,9 @@ function applyAuthoritativeDatabaseState(data) {
           // If user currently had placeholder selected, point to real customer
           if (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID === phId) {
             ACTIVE_CUSTOMER_ID = realCustId;
-            if (typeof selectCustomerForChat === 'function') {
-              selectCustomerForChat(realCustId);
+            try { localStorage.setItem('GRM_ACTIVE_CUSTOMER_ID', realCustId); } catch(e) {}
+            if (typeof selectCustomerChat === 'function') {
+              selectCustomerChat(realCustId);
             }
           }
         }
@@ -3898,13 +3899,16 @@ function applyAuthoritativeDatabaseState(data) {
   // Ensure active customer is valid and not pointing to internal business line
   if (typeof ACTIVE_CUSTOMER_ID !== 'undefined') {
     const isCurrentActiveBiz = internalBusinessPhones.some(bp => String(ACTIVE_CUSTOMER_ID).includes(bp));
-    if (isCurrentActiveBiz || (CRM_STATE.customers && !CRM_STATE.customers.some(c => c && c.id === ACTIVE_CUSTOMER_ID))) {
+    if (isCurrentActiveBiz || !ACTIVE_CUSTOMER_ID || (CRM_STATE.customers && !CRM_STATE.customers.some(c => c && c.id === ACTIVE_CUSTOMER_ID))) {
       if (CRM_STATE.customers && CRM_STATE.customers.length > 0) {
         ACTIVE_CUSTOMER_ID = CRM_STATE.customers[0].id;
-        if (typeof selectCustomerForChat === 'function') {
-          setTimeout(() => selectCustomerForChat(ACTIVE_CUSTOMER_ID), 50);
+        try { localStorage.setItem('GRM_ACTIVE_CUSTOMER_ID', ACTIVE_CUSTOMER_ID); } catch(e) {}
+        if (typeof selectCustomerChat === 'function') {
+          setTimeout(() => selectCustomerChat(ACTIVE_CUSTOMER_ID), 50);
         }
       }
+    } else if (ACTIVE_CUSTOMER_ID && typeof selectCustomerChat === 'function') {
+      setTimeout(() => selectCustomerChat(ACTIVE_CUSTOMER_ID), 50);
     }
   }
 
@@ -6851,7 +6855,9 @@ function renderInboxConversationList() {
   }
 
   if (customerCards.length === 0) {
-    ACTIVE_CUSTOMER_ID = null;
+    if (!CRM_STATE.customers || CRM_STATE.customers.length === 0) {
+      ACTIVE_CUSTOMER_ID = null;
+    }
     const accObj = getAvailableWhatsAppAccounts().find(a => a.id === ACTIVE_SEND_ACCOUNT_ID);
     const lineName = accObj ? accObj.label : 'this line';
     let emptyMsg = `No conversations recorded on ${lineName}`;
@@ -6894,6 +6900,7 @@ function renderInboxConversationList() {
       if (customerCards.length > 0) {
         ACTIVE_CUSTOMER_ID = customerCards[0].customerId;
         if (CRM_STATE) CRM_STATE.activeCustomerId = ACTIVE_CUSTOMER_ID;
+        try { localStorage.setItem('GRM_ACTIVE_CUSTOMER_ID', ACTIVE_CUSTOMER_ID); } catch(e) {}
         setTimeout(() => {
           if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
           if (typeof renderChatHeader === 'function') renderChatHeader();
@@ -7036,6 +7043,11 @@ window.mobileBackToConversations = mobileBackToConversations;
 function selectCustomerChat(customerId) {
   if (!customerId) return;
   ACTIVE_CUSTOMER_ID = customerId;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('GRM_ACTIVE_CUSTOMER_ID', customerId);
+    }
+  } catch (e) {}
   if (typeof syncCustomerMessagesFromDB === 'function') syncCustomerMessagesFromDB(customerId);
   if (CRM_STATE) {
     CRM_STATE.activeCustomerId = customerId;
@@ -7091,6 +7103,8 @@ function selectCustomerChat(customerId) {
     console.error('Error checking active customer bulk requests on selectCustomerChat:', e);
   }
 }
+window.selectCustomerChat = selectCustomerChat;
+window.selectCustomerForChat = selectCustomerChat;
 
 // Slide / Hide Toggle State for Right Customer 360 Panel & Left Queue Panel
 var IS_RIGHT_PANEL_OPEN = (typeof window.IS_RIGHT_PANEL_OPEN !== 'undefined') ? window.IS_RIGHT_PANEL_OPEN : true;
