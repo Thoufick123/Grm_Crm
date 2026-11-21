@@ -1163,26 +1163,55 @@ if ($action === 'get_state' || $action === 'get_all') {
                 $delBizQStmt->execute();
 
                 // Phase 1 Self-Healing Table Synchronization: Maintain synchronized assigned_to columns
-                // 1. Sync queries.assigned_to -> customers.assigned_to
+                // 1. Sync queries.assigned_to -> customers.assigned_to (by customer_id and 10-digit phone)
                 $pdo->exec("
                     UPDATE `customers` c 
-                    JOIN `queries` q ON c.`id` = q.`customer_id` 
+                    JOIN `queries` q ON (
+                        c.`id` = q.`customer_id` OR 
+                        (LENGTH(REPLACE(REPLACE(REPLACE(q.`customer_phone`, ' ', ''), '+', ''), '-', '')) >= 7 AND 
+                         RIGHT(REPLACE(REPLACE(REPLACE(c.`phone`, ' ', ''), '+', ''), '-', ''), 10) = RIGHT(REPLACE(REPLACE(REPLACE(q.`customer_phone`, ' ', ''), '+', ''), '-', ''), 10))
+                    )
                     SET c.`assigned_to` = q.`assigned_to` 
                     WHERE q.`assigned_to` IS NOT NULL 
                       AND q.`assigned_to` != '' 
                       AND q.`assigned_to` != 'UNASSIGNED' 
                       AND (c.`assigned_to` IS NULL OR c.`assigned_to` = '' OR c.`assigned_to` = 'UNASSIGNED' OR c.`assigned_to` != q.`assigned_to`)
                 ");
-                // 2. Sync customers.assigned_to -> queries.assigned_to
+                // 2. Sync customers.assigned_to -> queries.assigned_to (by customer_id and 10-digit phone)
                 $pdo->exec("
                     UPDATE `queries` q 
-                    JOIN `customers` c ON q.`customer_id` = c.`id` 
+                    JOIN `customers` c ON (
+                        q.`customer_id` = c.`id` OR 
+                        (LENGTH(REPLACE(REPLACE(REPLACE(c.`phone`, ' ', ''), '+', ''), '-', '')) >= 7 AND 
+                         RIGHT(REPLACE(REPLACE(REPLACE(q.`customer_phone`, ' ', ''), '+', ''), '-', ''), 10) = RIGHT(REPLACE(REPLACE(REPLACE(c.`phone`, ' ', ''), '+', ''), '-', ''), 10))
+                    )
                     SET q.`assigned_to` = c.`assigned_to`, q.`status` = 'ASSIGNED' 
                     WHERE c.`assigned_to` IS NOT NULL 
                       AND c.`assigned_to` != '' 
                       AND c.`assigned_to` != 'UNASSIGNED' 
                       AND (q.`assigned_to` IS NULL OR q.`assigned_to` = '' OR q.`assigned_to` = 'UNASSIGNED')
                 ");
+
+                // 3. Auto-heal missing customer profiles from orphaned query records
+                try {
+                    $pdo->exec("
+                        INSERT INTO `customers` (`id`, `code`, `name`, `phone`, `whatsapp`, `customer_type`, `assigned_to`, `created_at`, `avatar`)
+                        SELECT DISTINCT
+                            COALESCE(NULLIF(q.`customer_id`, ''), CONCAT('cust_', RIGHT(REPLACE(REPLACE(REPLACE(q.`customer_phone`, ' ', ''), '+', ''), '-', ''), 10))),
+                            CONCAT('CUST-', RIGHT(REPLACE(REPLACE(REPLACE(COALESCE(NULLIF(q.`customer_phone`, ''), q.`customer_id`), ' ', ''), '+', ''), '-', ''), 10)),
+                            COALESCE(NULLIF(q.`customer_name`, ''), 'Customer'),
+                            COALESCE(NULLIF(q.`customer_phone`, ''), ''),
+                            COALESCE(NULLIF(q.`customer_phone`, ''), ''),
+                            'Live WhatsApp Lead',
+                            COALESCE(NULLIF(q.`assigned_to`, ''), 'UNASSIGNED'),
+                            COALESCE(q.`created_at`, NOW()),
+                            UPPER(SUBSTRING(COALESCE(NULLIF(q.`customer_name`, ''), 'CU'), 1, 2))
+                        FROM `queries` q
+                        WHERE (q.`customer_id` IS NOT NULL AND q.`customer_id` != '' AND q.`customer_id` NOT IN (SELECT `id` FROM `customers`))
+                          AND (q.`customer_name` IS NULL OR q.`customer_name` NOT IN ('GRM Garments', 'System', 'Bot (Auto-Reply)', 'WhatsApp Business #2'))
+                        ON DUPLICATE KEY UPDATE `name` = VALUES(`name`)
+                    ");
+                } catch (Exception $eAutoCust) {}
             } catch (Exception $ePurgeBiz) {}
         }
 
@@ -7281,6 +7310,27 @@ if ($action === 'execute_bulk_assign' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                 $cUpdateStmt = $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` IN ({$inCMarks})");
                 $cUpdateParams = array_merge([$staffId], $customerIds);
                 $cUpdateStmt->execute($cUpdateParams);
+            }
+
+            // Also update customers and queries by 10-digit phone to guarantee 100% sync even with divergent ID formats
+            $candPhones10 = [];
+            foreach ($candidates as $cand) {
+                $rawP = $cand['customer_phone'] ?? '';
+                $cleanP = preg_replace('/[^0-9]/', '', $rawP);
+                if (strlen($cleanP) >= 7) {
+                    $candPhones10[] = substr($cleanP, -10);
+                }
+            }
+            if (!empty($candPhones10)) {
+                $candPhones10 = array_values(array_unique($candPhones10));
+                foreach ($candPhones10 as $p10) {
+                    try {
+                        $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ?")
+                            ->execute([$staffId, "%$p10", "%$p10"]);
+                        $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE REPLACE(REPLACE(REPLACE(REPLACE(`customer_phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE ?")
+                            ->execute([$staffId, "%$p10"]);
+                    } catch (Exception $ePhSync) {}
+                }
             }
 
             // Generate Batch Code & ID

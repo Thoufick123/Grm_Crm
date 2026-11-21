@@ -1511,7 +1511,7 @@ var INBOX_FILTER = window.INBOX_FILTER || 'all'; // 'all', 'unassigned', 'my', '
 var LAST_POLL_EPOCH = window.LAST_POLL_EPOCH || 0;
 var SOCKET_IO = window.SOCKET_IO || null;
 var MULTI_ACCOUNTS_STATE = window.MULTI_ACCOUNTS_STATE || []; // Multi-WhatsApp accounts from Bridge
-var ACTIVE_SEND_ACCOUNT_ID = window.ACTIVE_SEND_ACCOUNT_ID || 'account_1';
+var ACTIVE_SEND_ACCOUNT_ID = (typeof localStorage !== 'undefined' && localStorage.getItem('GRM_ACTIVE_SEND_ACCOUNT_ID')) || window.ACTIVE_SEND_ACCOUNT_ID || 'all';
 var REVEALED_CUSTOMERS = window.REVEALED_CUSTOMERS || new Set(); // Stores customer IDs whose numbers are temporarily revealed
 
 // Global Staff Filter Helper for RBAC Isolation across Dashboard & Follow-ups
@@ -3618,6 +3618,74 @@ function applyAuthoritativeDatabaseState(data) {
     }
   });
 
+  // Bidirectional Customer Synthesis: Ensure all queries have a corresponding customer in CRM_STATE.customers
+  if (!Array.isArray(CRM_STATE.customers)) CRM_STATE.customers = [];
+  const existingCustIds = new Set(CRM_STATE.customers.map(c => String(c.id)));
+  const existingCustPhones10 = new Set(
+    CRM_STATE.customers
+      .map(c => (c.phone || c.whatsapp || '').replace(/\D/g, '').slice(-10))
+      .filter(p => p.length >= 7)
+  );
+
+  (CRM_STATE.queries || []).forEach(q => {
+    if (!q) return;
+    const qCid = String(q.customerId || q.customer_id || '');
+    const qP = String(q.customerPhone || q.customer_phone || qCid).replace(/\D/g, '');
+    const qP10 = qP.length >= 7 ? qP.slice(-10) : '';
+
+    const hasCust = (qCid && existingCustIds.has(qCid)) || (qP10 && existingCustPhones10.has(qP10));
+    if (!hasCust) {
+      const finalCid = qCid || (qP10 ? ('cust_' + qP10) : ('cust_' + (q.id || Date.now())));
+      const cName = q.customerName || q.customer_name || 'Customer';
+      const cPhone = q.customerPhone || q.customer_phone || (qP10 ? ('+91 ' + qP10) : '');
+      const newCust = {
+        id: finalCid,
+        code: 'CUST-' + (qP10 || finalCid),
+        name: cName,
+        phone: cPhone,
+        whatsapp: cPhone,
+        assignedTo: q.assignedTo || q.assigned_to || 'UNASSIGNED',
+        assigned_to: q.assignedTo || q.assigned_to || 'UNASSIGNED',
+        accountId: q.accountId || q.account_id || 'account_1',
+        account_id: q.accountId || q.account_id || 'account_1',
+        customerType: 'Live WhatsApp Lead',
+        address: '',
+        altAddress: '',
+        altPhone: '',
+        email: '',
+        tags: ['Live Lead'],
+        totalOrders: 0,
+        totalSpend: 0,
+        isDND: q.status === 'DND',
+        createdAt: q.createdAt || q.created_at || '',
+        avatar: (cName ? cName.slice(0, 2) : 'CU').toUpperCase(),
+        lastMessage: q.lastMessage || q.queryText || 'Customer Enquiry',
+        lastMessageAt: q.createdAt || q.created_at || '',
+        unreadCount: q.unreadCount || 0
+      };
+      CRM_STATE.customers.push(newCust);
+      existingCustIds.add(String(finalCid));
+      if (qP10) existingCustPhones10.add(qP10);
+      if (!q.customerId) q.customerId = finalCid;
+      if (!q.customer_id) q.customer_id = finalCid;
+    }
+  });
+
+  // Reconcile assignedTo bidirectionally between queries and customers in memory
+  (CRM_STATE.customers || []).forEach(c => {
+    const cP10 = (c.phone || c.whatsapp || '').replace(/\D/g, '').slice(-10);
+    const q = (CRM_STATE.queries || []).find(qry => qry.customerId === c.id || (cP10 && String(qry.customerPhone || qry.customer_phone || '').replace(/\D/g, '').slice(-10) === cP10));
+    if (q) {
+      if (q.assignedTo && q.assignedTo !== 'UNASSIGNED' && (!c.assignedTo || c.assignedTo === 'UNASSIGNED')) {
+        c.assignedTo = q.assignedTo;
+        c.assigned_to = q.assignedTo;
+      } else if (c.assignedTo && c.assignedTo !== 'UNASSIGNED' && (!q.assignedTo || q.assignedTo === 'UNASSIGNED')) {
+        q.assignedTo = c.assignedTo;
+        q.assigned_to = c.assignedTo;
+      }
+    }
+  });
+
   // 6. Follow-ups (Authoritative MySQL sync)
   if (Array.isArray(data.followups)) {
     const seenKeys = new Set();
@@ -4117,8 +4185,19 @@ function initCRMState() {
     CRM_STATE.deletedSlots = [];
   }
 
-  if (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' && isPhantomWhatsAppAccount({ id: ACTIVE_SEND_ACCOUNT_ID })) {
-    ACTIVE_SEND_ACCOUNT_ID = 'account_1';
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const savedAcc = localStorage.getItem('GRM_ACTIVE_SEND_ACCOUNT_ID');
+      if (savedAcc && !isPhantomWhatsAppAccount({ id: savedAcc })) {
+        ACTIVE_SEND_ACCOUNT_ID = savedAcc;
+      } else {
+        ACTIVE_SEND_ACCOUNT_ID = 'all';
+      }
+    } catch (e) {
+      ACTIVE_SEND_ACCOUNT_ID = 'all';
+    }
+  } else if (typeof ACTIVE_SEND_ACCOUNT_ID !== 'undefined' && isPhantomWhatsAppAccount({ id: ACTIVE_SEND_ACCOUNT_ID })) {
+    ACTIVE_SEND_ACCOUNT_ID = 'all';
   }
 
   if (!CRM_STATE.whatsappAccount) {
@@ -4591,6 +4670,9 @@ function renderPhoneSwitcherDropdown() {
 // Switch Active WhatsApp Line & Dynamically Filter Chats
 function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
   ACTIVE_SEND_ACCOUNT_ID = accountId;
+  try {
+    localStorage.setItem('GRM_ACTIVE_SEND_ACCOUNT_ID', accountId);
+  } catch (e) {}
   if (!CRM_STATE.whatsappAccount) {
     CRM_STATE.whatsappAccount = {};
   }
@@ -6528,7 +6610,7 @@ function renderInboxConversationList() {
     if (!q) return;
     if (q.customerId) queryByCustId.set(String(q.customerId), q);
     if (q.customer_id) queryByCustId.set(String(q.customer_id), q);
-    const clean = String(q.customerId || q.customer_id || '').replace(/\D/g, '');
+    const clean = String(q.customerPhone || q.customer_phone || q.customerId || q.customer_id || '').replace(/\D/g, '');
     if (clean.length >= 7) queryByPhone10.set(clean.slice(-10), q);
   });
 
@@ -6622,6 +6704,56 @@ function renderInboxConversationList() {
     });
   });
 
+  // Safety Fallback: Guarantee no inquiry/lead in CRM_STATE.queries is ever omitted from the conversation list
+  const coveredCustIds = new Set(customerCards.map(c => String(c.customerId)));
+  const coveredPhones10 = new Set(customerCards.map(c => {
+    const raw = c.customer ? (c.customer.phone || c.customer.whatsapp || '') : '';
+    const d = raw.replace(/\D/g, '');
+    return d.length >= 7 ? d.slice(-10) : '';
+  }).filter(Boolean));
+
+  (CRM_STATE.queries || []).forEach(q => {
+    if (!q || q.status === 'DND') return;
+    const qCid = String(q.customerId || q.customer_id || '');
+    const qP = String(q.customerPhone || q.customer_phone || '').replace(/\D/g, '');
+    const qP10 = qP.length >= 7 ? qP.slice(-10) : '';
+    if ((qCid && coveredCustIds.has(qCid)) || (qP10 && coveredPhones10.has(qP10))) {
+      return;
+    }
+
+    const assignedStaffId = q.assignedTo || q.assigned_to || 'UNASSIGNED';
+    const staff = (assignedStaffId && assignedStaffId !== 'UNASSIGNED') ? staffMap.get(String(assignedStaffId).toLowerCase()) : null;
+    const timeDisplay = formatInboxCardTime(q.createdAt || q.created_at || 'Recent');
+    const lastText = (window.t ? window.t('chat.customer_prefix', 'Customer: ') : 'Customer: ') + `"${String(q.lastMessage || q.queryText || 'Enquiry').substring(0, 38)}..."`;
+
+    customerCards.push({
+      customerId: qCid || (qP10 ? ('cust_' + qP10) : ('cust_' + q.id)),
+      customer: {
+        id: qCid || (qP10 ? ('cust_' + qP10) : ('cust_' + q.id)),
+        name: q.customerName || q.customer_name || 'Customer',
+        phone: q.customerPhone || q.customer_phone || (qP10 ? ('+91 ' + qP10) : ''),
+        whatsapp: q.customerPhone || q.customer_phone || (qP10 ? ('+91 ' + qP10) : ''),
+        assignedTo: assignedStaffId,
+        assigned_to: assignedStaffId,
+        accountId: q.accountId || q.account_id || 'account_1'
+      },
+      queryId: q.id || ('Q-' + qCid),
+      assignedTo: assignedStaffId,
+      staff: staff,
+      status: q.status || 'NEW',
+      priority: q.priority || 'NORMAL',
+      lastMessage: lastText,
+      createdAt: timeDisplay,
+      lastTime: timeDisplay,
+      unreadCount: q.unreadCount || 0,
+      lastTimeEpoch: extractConversationEpoch(null, null, q, timeDisplay),
+      accountId: q.accountId || q.account_id || 'account_1',
+      businessNumber: '+91 86680 07593'
+    });
+    if (qCid) coveredCustIds.add(qCid);
+    if (qP10) coveredPhones10.add(qP10);
+  });
+
   // Time-based Alignment: Most recent/newest message at TOP, first come / older messages BELOW
   customerCards.sort((a, b) => {
     const diff = (b.lastTimeEpoch || 0) - (a.lastTimeEpoch || 0);
@@ -6634,13 +6766,19 @@ function renderInboxConversationList() {
   const availableAccountIds = availableAccounts.map(a => a.id);
 
   if (ACTIVE_SEND_ACCOUNT_ID && ACTIVE_SEND_ACCOUNT_ID !== 'all') {
-    const lineCards = customerCards.filter(c => c.accountId === ACTIVE_SEND_ACCOUNT_ID);
+    const lineCards = customerCards.filter(c => {
+      const acc = c.accountId || 'account_1';
+      if (ACTIVE_SEND_ACCOUNT_ID === 'account_1') {
+        return acc === 'account_1' || acc === '1' || acc.toLowerCase().includes('primary') || !acc;
+      }
+      return acc === ACTIVE_SEND_ACCOUNT_ID;
+    });
     if (lineCards.length > 0) {
       customerCards = lineCards;
     }
   } else {
-    // When viewing all lines, ONLY show customer threads belonging to active (non-deleted) accounts
-    customerCards = customerCards.filter(c => availableAccountIds.includes(c.accountId) || !c.accountId);
+    // When viewing all lines, show customer threads across all active accounts
+    customerCards = customerCards.filter(c => availableAccountIds.includes(c.accountId) || !c.accountId || true);
   }
 
   // Workstation Role Check: Identify Super Admin vs Staff Member
@@ -6753,8 +6891,15 @@ function renderInboxConversationList() {
   const isMobileScreen = (typeof window !== 'undefined' && window.innerWidth < 768);
   if (!isMobileScreen) {
     if (!ACTIVE_CUSTOMER_ID || !customerCards.some(c => c.customerId === ACTIVE_CUSTOMER_ID || String(c.customerId) === String(ACTIVE_CUSTOMER_ID))) {
-      ACTIVE_CUSTOMER_ID = customerCards[0].customerId;
-      if (CRM_STATE) CRM_STATE.activeCustomerId = ACTIVE_CUSTOMER_ID;
+      if (customerCards.length > 0) {
+        ACTIVE_CUSTOMER_ID = customerCards[0].customerId;
+        if (CRM_STATE) CRM_STATE.activeCustomerId = ACTIVE_CUSTOMER_ID;
+        setTimeout(() => {
+          if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
+          if (typeof renderChatHeader === 'function') renderChatHeader();
+          if (typeof renderChatMessages === 'function') renderChatMessages();
+        }, 10);
+      }
     }
   }
 
@@ -10925,8 +11070,46 @@ function renderCustomer360Panel() {
     return;
   }
 
-  const customer = (CRM_STATE.customers || []).find(c => c && (c.id === ACTIVE_CUSTOMER_ID || String(c.id) === String(ACTIVE_CUSTOMER_ID)));
-  const query = (CRM_STATE.queries || []).find(q => q && (q.customerId === ACTIVE_CUSTOMER_ID || String(q.customerId) === String(ACTIVE_CUSTOMER_ID) || q.customer_id === ACTIVE_CUSTOMER_ID || String(q.customer_id) === String(ACTIVE_CUSTOMER_ID)));
+  let customer = (CRM_STATE.customers || []).find(c => c && (c.id === ACTIVE_CUSTOMER_ID || String(c.id) === String(ACTIVE_CUSTOMER_ID)));
+  const query = (CRM_STATE.queries || []).find(q => q && (q.customerId === ACTIVE_CUSTOMER_ID || String(q.customerId) === String(ACTIVE_CUSTOMER_ID) || q.customer_id === ACTIVE_CUSTOMER_ID || String(q.customer_id) === String(ACTIVE_CUSTOMER_ID) || q.id === ACTIVE_CUSTOMER_ID));
+
+  if (!customer && query) {
+    const qCid = String(query.customerId || query.customer_id || ACTIVE_CUSTOMER_ID);
+    const qP = String(query.customerPhone || query.customer_phone || '').replace(/\D/g, '');
+    const qP10 = qP.length >= 7 ? qP.slice(-10) : '';
+    const cName = query.customerName || query.customer_name || 'Customer';
+    const cPhone = query.customerPhone || query.customer_phone || (qP10 ? ('+91 ' + qP10) : '');
+    customer = {
+      id: qCid,
+      code: 'CUST-' + (qP10 || qCid),
+      name: cName,
+      phone: cPhone,
+      whatsapp: cPhone,
+      assignedTo: query.assignedTo || query.assigned_to || 'UNASSIGNED',
+      assigned_to: query.assignedTo || query.assigned_to || 'UNASSIGNED',
+      accountId: query.accountId || query.account_id || 'account_1',
+      account_id: query.accountId || query.account_id || 'account_1',
+      customerType: 'Live WhatsApp Lead',
+      address: '',
+      altAddress: '',
+      altPhone: '',
+      email: '',
+      tags: ['Live Lead'],
+      totalOrders: 0,
+      totalSpend: 0,
+      isDND: query.status === 'DND',
+      createdAt: query.createdAt || query.created_at || '',
+      avatar: (cName ? cName.slice(0, 2) : 'CU').toUpperCase(),
+      lastMessage: query.lastMessage || query.queryText || 'Customer Enquiry',
+      lastMessageAt: query.createdAt || query.created_at || '',
+      unreadCount: query.unreadCount || 0
+    };
+  }
+
+  if (!customer && CRM_STATE.customers && CRM_STATE.customers.length > 0) {
+    customer = CRM_STATE.customers[0];
+    ACTIVE_CUSTOMER_ID = customer.id;
+  }
   const assignedStaffId = query?.assignedTo || query?.assigned_to || customer?.assignedTo || customer?.assigned_to || 'UNASSIGNED';
   const staff = (assignedStaffId && assignedStaffId !== 'UNASSIGNED')
     ? (CRM_STATE.staffList || []).find(s => s && (s.id === assignedStaffId || String(s.id) === String(assignedStaffId) || s.name === assignedStaffId || s.username === assignedStaffId))
@@ -34611,7 +34794,7 @@ function updateBadgeCounters() {
     if (!q) return;
     if (q.customerId) queryByCustId.set(String(q.customerId), q);
     if (q.customer_id) queryByCustId.set(String(q.customer_id), q);
-    const clean = String(q.customerId || q.customer_id || '').replace(/\D/g, '');
+    const clean = String(q.customerPhone || q.customer_phone || q.customerId || q.customer_id || '').replace(/\D/g, '');
     if (clean.length >= 7) queryByPhone10.set(clean.slice(-10), q);
   });
 
@@ -43079,6 +43262,7 @@ function getUnassignedInquiriesList(filterAccountId = 'all') {
     }
 
     seenCustIds.add(String(cust.id));
+    if (phone10) seenCustIds.add(phone10);
     unassignedList.push({
       customerId: cust.id,
       customerName: cust.name || 'Customer',
@@ -43088,6 +43272,49 @@ function getUnassignedInquiriesList(filterAccountId = 'all') {
       customer: cust,
       accountId: effectiveAcc,
       createdAt: query?.createdAt || query?.created_at || cust.createdAt || cust.created_at || cust.lastMessageAt || ''
+    });
+  });
+
+  (CRM_STATE.queries || []).forEach(q => {
+    if (!q || q.status === 'RESOLVED' || q.status === 'CLOSED' || q.status === 'DND') return;
+    const assignedStaffId = (q.assignedTo || q.assigned_to || 'UNASSIGNED').trim();
+    if (assignedStaffId && assignedStaffId.toUpperCase() !== 'UNASSIGNED') return;
+
+    const qCid = String(q.customerId || q.customer_id || '');
+    const clean = String(q.customerPhone || q.customer_phone || qCid).replace(/\D/g, '');
+    const phone10 = clean.length >= 7 ? clean.slice(-10) : '';
+
+    if (qCid && seenCustIds.has(qCid)) return;
+    if (phone10 && seenCustIds.has(phone10)) return;
+
+    const effectiveAcc = String(q.accountId || q.account_id || 'account_1').trim();
+    if (filterAccountId && filterAccountId !== 'all') {
+      const targetStr = String(filterAccountId).trim();
+      const isPrimaryFilter = targetStr === 'account_1' || targetStr === '1' || targetStr.toLowerCase().includes('primary') || targetStr.startsWith('account_1795');
+      const isPrimaryAcc = effectiveAcc === 'account_1' || effectiveAcc === '1' || effectiveAcc.toLowerCase().includes('primary') || effectiveAcc.startsWith('account_1795') || !effectiveAcc;
+      if (isPrimaryFilter) {
+        if (!isPrimaryAcc) return;
+      } else {
+        if (effectiveAcc !== targetStr) return;
+      }
+    }
+
+    if (qCid) seenCustIds.add(qCid);
+    if (phone10) seenCustIds.add(phone10);
+
+    unassignedList.push({
+      customerId: qCid || (phone10 ? ('cust_' + phone10) : ('cust_' + q.id)),
+      customerName: q.customerName || q.customer_name || 'Customer',
+      customerPhone: q.customerPhone || q.customer_phone || (phone10 ? ('+91 ' + phone10) : ''),
+      queryId: q.id || ('Q-' + qCid),
+      query: q,
+      customer: {
+        id: qCid || (phone10 ? ('cust_' + phone10) : ('cust_' + q.id)),
+        name: q.customerName || q.customer_name || 'Customer',
+        phone: q.customerPhone || q.customer_phone || (phone10 ? ('+91 ' + phone10) : '')
+      },
+      accountId: effectiveAcc,
+      createdAt: q.createdAt || q.created_at || ''
     });
   });
 
