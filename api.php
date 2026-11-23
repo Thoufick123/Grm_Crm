@@ -7162,6 +7162,17 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 function ensureBulkAssignmentsTable($pdo) {
     if (!$pdo) return;
+    static $alreadyRan = false;
+    if ($alreadyRan) return;
+    $alreadyRan = true;
+
+    // Rate-limit heavy DDL schema inspection and cleanup writes to once per 10 minutes
+    $lockFile = sys_get_temp_dir() . '/.grm_bulk_assign_maint_lock';
+    if (file_exists($lockFile) && (time() - @filemtime($lockFile) < 600)) {
+        return;
+    }
+    @touch($lockFile);
+
     try {
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `bulk_assignments` (
@@ -7317,16 +7328,27 @@ if ($action === 'get_unassigned_enquiries_count') {
                        MIN(created_at) as oldest_enquiry,
                        MAX(created_at) as newest_enquiry
                 FROM (
-                    SELECT q.id as candidate_id, q.created_at
+                    SELECT COALESCE(
+                               NULLIF(RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(q.customer_phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10), ''),
+                               NULLIF(q.customer_id, ''),
+                               q.id
+                           ) as candidate_id, q.created_at
                     FROM `queries` q
-                    LEFT JOIN `customers` c ON q.customer_id = c.id
+                    LEFT JOIN `customers` c ON (
+                        q.customer_id = c.id OR 
+                        (LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(q.customer_phone, ' ', ''), '+', ''), '-', ''), '(', '')) >= 10 AND
+                         RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(q.customer_phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10) = RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(c.phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10))
+                    )
                     WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
                       AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
                       AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
 
                     UNION
 
-                    SELECT c.id as candidate_id, COALESCE(c.created_at, NOW()) as created_at
+                    SELECT COALESCE(
+                               NULLIF(RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(c.phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10), ''),
+                               c.id
+                           ) as candidate_id, COALESCE(c.created_at, NOW()) as created_at
                     FROM `customers` c
                     WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
                       AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
@@ -7334,8 +7356,12 @@ if ($action === 'get_unassigned_enquiries_count') {
                       AND c.name NOT LIKE 'WhatsApp Linked%'
                       AND c.id NOT IN (
                           SELECT customer_id FROM `queries`
-                          WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
+                          WHERE customer_id IS NOT NULL AND customer_id != ''
                       )
+                      AND (c.phone IS NULL OR c.phone = '' OR RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(c.phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10) NOT IN (
+                          SELECT RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10)
+                          FROM `queries` WHERE customer_phone IS NOT NULL AND customer_phone != ''
+                      ))
                 ) u
             ");
         } else {
@@ -7369,19 +7395,30 @@ if ($action === 'get_unassigned_enquiries_count') {
                        MIN(created_at) as oldest_enquiry,
                        MAX(created_at) as newest_enquiry
                 FROM (
-                    SELECT q.id as candidate_id, q.created_at,
+                    SELECT COALESCE(
+                               NULLIF(RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(q.customer_phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10), ''),
+                               NULLIF(q.customer_id, ''),
+                               q.id
+                           ) as candidate_id, q.created_at,
                            COALESCE(
                                {$coalesceQ}
                            ) as effective_account
                     FROM `queries` q
-                    LEFT JOIN `customers` c ON q.customer_id = c.id
+                    LEFT JOIN `customers` c ON (
+                        q.customer_id = c.id OR 
+                        (LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(q.customer_phone, ' ', ''), '+', ''), '-', ''), '(', '')) >= 10 AND
+                         RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(q.customer_phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10) = RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(c.phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10))
+                    )
                     WHERE (q.assigned_to = 'UNASSIGNED' OR q.assigned_to IS NULL OR q.assigned_to = '' OR q.assigned_to = 'unassigned')
                       AND q.status NOT IN ('RESOLVED', 'CLOSED', 'DND')
                       AND (c.is_dnd = 0 OR c.is_dnd IS NULL)
 
                     UNION
 
-                    SELECT c.id as candidate_id, COALESCE(c.created_at, NOW()) as created_at,
+                    SELECT COALESCE(
+                               NULLIF(RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(c.phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10), ''),
+                               c.id
+                           ) as candidate_id, COALESCE(c.created_at, NOW()) as created_at,
                            {$cAccExpr} as effective_account
                     FROM `customers` c
                     WHERE (c.assigned_to = 'UNASSIGNED' OR c.assigned_to IS NULL OR c.assigned_to = '' OR c.assigned_to = 'unassigned')
@@ -7390,8 +7427,12 @@ if ($action === 'get_unassigned_enquiries_count') {
                       AND c.name NOT LIKE 'WhatsApp Linked%'
                       AND c.id NOT IN (
                           SELECT customer_id FROM `queries`
-                          WHERE assigned_to IS NOT NULL AND assigned_to != '' AND assigned_to != 'UNASSIGNED' AND assigned_to != 'unassigned'
+                          WHERE customer_id IS NOT NULL AND customer_id != ''
                       )
+                      AND (c.phone IS NULL OR c.phone = '' OR RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(c.phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10) NOT IN (
+                          SELECT RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone, ' ', ''), '+', ''), '-', ''), '(', ''), 10)
+                          FROM `queries` WHERE customer_phone IS NOT NULL AND customer_phone != ''
+                      ))
                 ) u
                 WHERE u.effective_account IN ({$inMarks}) OR u.effective_account IS NULL
             ");

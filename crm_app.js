@@ -43896,7 +43896,7 @@ async function onBulkAccountChange() {
     const res = await fetch(`api.php?action=get_unassigned_enquiries_count&account_id=${encodeURIComponent(accountId)}&account_number=${encodeURIComponent(accountNumber)}`);
     const data = await res.json();
     if (data && data.status === 'success' && typeof data.count === 'number') {
-      const serverCount = Math.max(data.count, count);
+      const serverCount = data.count;
       window.CURRENT_BULK_UNASSIGNED_COUNT = serverCount;
       if (countEl) countEl.innerText = serverCount;
       if (countInput) {
@@ -43913,6 +43913,10 @@ async function onBulkAccountChange() {
         } else {
           timeLabel.innerText = `All inquiries on this line are assigned.`;
         }
+      }
+      if (accountId === 'all') {
+        const sidebarBadge = document.getElementById('badge-bulk-unassigned');
+        if (sidebarBadge) sidebarBadge.innerText = serverCount;
       }
     }
   } catch (e) {
@@ -44434,7 +44438,9 @@ function refreshBulkAssignments(btn) {
 }
 window.refreshBulkAssignments = refreshBulkAssignments;
 
-async function openBulkBatchDetailsModal(batchId) {
+window._BATCH_DETAILS_CACHE = window._BATCH_DETAILS_CACHE || new Map();
+
+function renderBatchDetailsData(data, batchId) {
   const modal = document.getElementById('modal-bulk-batch-details');
   const title = document.getElementById('modal-batch-details-title');
   const sub = document.getElementById('modal-batch-details-sub');
@@ -44443,10 +44449,79 @@ async function openBulkBatchDetailsModal(batchId) {
   const rateEl = document.getElementById('modal-batch-rate');
   const revEl = document.getElementById('modal-batch-revenue');
   const tbody = document.getElementById('modal-batch-customers-tbody');
+  if (!modal || !tbody || !data || data.status !== 'success') return false;
+
+  const batch = data.batch || {};
+  const customers = Array.isArray(data.customers) ? data.customers : [];
+
+  if (title) title.innerText = `Batch ${batch.batch_code || batchId} — Inspection`;
+  if (sub) sub.innerText = `Assigned to: ${batch.staff_name || 'Staff'} (${batch.staff_phone || ''}) on ${batch.created_at || ''}`;
+
+  const assignedCount = parseInt(batch.assigned_count, 10) || customers.length;
+  const convertedCount = customers.filter(c => c.has_converted).length;
+  const totalRev = customers.reduce((sum, c) => sum + (parseFloat(c.total_order_amount) || 0), 0);
+  const convRate = assignedCount > 0 ? ((convertedCount / assignedCount) * 100).toFixed(1) : '0.0';
+
+  if (countEl) countEl.innerText = assignedCount;
+  if (convEl) convEl.innerText = convertedCount;
+  if (rateEl) rateEl.innerText = `${convRate}%`;
+  if (revEl) revEl.innerText = `₹${totalRev.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+  if (customers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">No customer records in this batch.</td></tr>`;
+    return true;
+  }
+
+  tbody.innerHTML = customers.map(c => `
+    <tr class="hover:bg-slate-50 transition">
+      <td class="py-2.5 px-3 font-bold text-slate-900 whitespace-nowrap">${escapeHtml(c.name || 'Customer')}</td>
+      <td class="py-2.5 px-3 font-mono text-slate-600 whitespace-nowrap">${escapeHtml(c.phone || '—')}</td>
+      <td class="py-2.5 px-3 max-w-[220px] truncate text-slate-700" title="${escapeHtml(c.query_text || '')}">
+        ${escapeHtml(c.query_text ? `"${c.query_text.substring(0, 45)}..."` : '—')}
+      </td>
+      <td class="py-2.5 px-3 text-center whitespace-nowrap">
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'ASSIGNED' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'}">
+          ${c.status || 'ASSIGNED'}
+        </span>
+      </td>
+      <td class="py-2.5 px-3 text-center whitespace-nowrap">
+        ${c.has_converted ? `
+          <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px] inline-flex items-center gap-0.5">
+            <span class="material-symbols-outlined text-[13px]">check_circle</span> Converted (${c.orders_count || 1} Orders)
+          </span>
+        ` : `
+          <span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-medium text-[10px]">
+            In Progress
+          </span>
+        `}
+      </td>
+      <td class="py-2.5 px-3 text-right font-bold text-slate-900 whitespace-nowrap">
+        ${c.total_order_amount > 0 ? `₹${Number(c.total_order_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
+      </td>
+      <td class="py-2.5 px-3 text-right whitespace-nowrap">
+        <button type="button" onclick="selectCustomerChat('${c.customer_id}'); closeModal('modal-bulk-batch-details'); switchView('inbox');"
+          class="px-2.5 py-1 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg font-bold text-[11px] shadow-2xs cursor-pointer inline-flex items-center gap-1">
+          <span class="material-symbols-outlined text-[12px]">chat</span> Chat
+        </button>
+      </td>
+    </tr>
+  `).join('');
+  return true;
+}
+
+async function openBulkBatchDetailsModal(batchId) {
+  const modal = document.getElementById('modal-bulk-batch-details');
+  const title = document.getElementById('modal-batch-details-title');
+  const tbody = document.getElementById('modal-batch-customers-tbody');
   if (!modal || !tbody) return;
 
-  if (title) title.innerText = `Loading Batch Details...`;
-  if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Fetching lead progression...</td></tr>`;
+  const cached = window._BATCH_DETAILS_CACHE?.get(batchId);
+  if (cached) {
+    renderBatchDetailsData(cached, batchId);
+  } else {
+    if (title) title.innerText = `Loading Batch Details...`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400"><div class="inline-flex items-center gap-2"><span class="material-symbols-outlined animate-spin text-base text-emerald-600">sync</span> Fetching lead progression...</div></td></tr>`;
+  }
   openModal('modal-bulk-batch-details');
 
   try {
@@ -44454,67 +44529,17 @@ async function openBulkBatchDetailsModal(batchId) {
     const data = await res.json();
 
     if (data && data.status === 'success') {
-      const batch = data.batch || {};
-      const customers = Array.isArray(data.customers) ? data.customers : [];
-
-      if (title) title.innerText = `Batch ${batch.batch_code || batchId} — Inspection`;
-      if (sub) sub.innerText = `Assigned to: ${batch.staff_name} (${batch.staff_phone}) on ${batch.created_at || ''}`;
-
-      const assignedCount = parseInt(batch.assigned_count, 10) || customers.length;
-      const convertedCount = customers.filter(c => c.has_converted).length;
-      const totalRev = customers.reduce((sum, c) => sum + (parseFloat(c.total_order_amount) || 0), 0);
-      const convRate = assignedCount > 0 ? ((convertedCount / assignedCount) * 100).toFixed(1) : '0.0';
-
-      if (countEl) countEl.innerText = assignedCount;
-      if (convEl) convEl.innerText = convertedCount;
-      if (rateEl) rateEl.innerText = `${convRate}%`;
-      if (revEl) revEl.innerText = `₹${totalRev.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-
-      if (customers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">No customer records in this batch.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = customers.map(c => `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="py-2.5 px-3 font-bold text-slate-900 whitespace-nowrap">${escapeHtml(c.name || 'Customer')}</td>
-          <td class="py-2.5 px-3 font-mono text-slate-600 whitespace-nowrap">${escapeHtml(c.phone || '—')}</td>
-          <td class="py-2.5 px-3 max-w-[220px] truncate text-slate-700" title="${escapeHtml(c.query_text || '')}">
-            ${escapeHtml(c.query_text ? `"${c.query_text.substring(0, 45)}..."` : '—')}
-          </td>
-          <td class="py-2.5 px-3 text-center whitespace-nowrap">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'ASSIGNED' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'}">
-              ${c.status || 'ASSIGNED'}
-            </span>
-          </td>
-          <td class="py-2.5 px-3 text-center whitespace-nowrap">
-            ${c.has_converted ? `
-              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px] inline-flex items-center gap-0.5">
-                <span class="material-symbols-outlined text-[13px]">check_circle</span> Converted (${c.orders_count || 1} Orders)
-              </span>
-            ` : `
-              <span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-medium text-[10px]">
-                In Progress
-              </span>
-            `}
-          </td>
-          <td class="py-2.5 px-3 text-right font-bold text-slate-900 whitespace-nowrap">
-            ${c.total_order_amount > 0 ? `₹${Number(c.total_order_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
-          </td>
-          <td class="py-2.5 px-3 text-right whitespace-nowrap">
-            <button type="button" onclick="selectCustomerChat('${c.customer_id}'); closeModal('modal-bulk-batch-details'); switchView('inbox');"
-              class="px-2.5 py-1 bg-brand-wa hover:bg-brand-waDark text-white rounded-lg font-bold text-[11px] shadow-2xs cursor-pointer inline-flex items-center gap-1">
-              <span class="material-symbols-outlined text-[12px]">chat</span> Chat
-            </button>
-          </td>
-        </tr>
-      `).join('');
-    } else {
+      window._BATCH_DETAILS_CACHE = window._BATCH_DETAILS_CACHE || new Map();
+      window._BATCH_DETAILS_CACHE.set(batchId, data);
+      renderBatchDetailsData(data, batchId);
+    } else if (!cached) {
       tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-rose-500">Failed to load batch customer details.</td></tr>`;
     }
   } catch (err) {
     console.error('[openBulkBatchDetailsModal] error:', err);
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-rose-500">Error loading details: ${err.message}</td></tr>`;
+    if (!cached) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-rose-500">Error loading details: ${err.message}</td></tr>`;
+    }
   }
 }
 window.openBulkBatchDetailsModal = openBulkBatchDetailsModal;
