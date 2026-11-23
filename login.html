@@ -190,6 +190,12 @@
 
   <!-- Login Logic Script -->
   <script>
+    window.addEventListener('storage', function (event) {
+      if (event.key === 'GRM_CRM_SESSION' && event.newValue === null) {
+        sessionStorage.removeItem('GRM_CRM_SESSION');
+      }
+    });
+
     // Auto-redirect to dashboard if user is already signed in
     (function checkExistingSession() {
       try {

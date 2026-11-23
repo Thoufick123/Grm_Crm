@@ -3222,10 +3222,13 @@ function initSSEStream() {
     return false;
   }
 
-  // Close previous connection if active or stale
-  if (window.CRM_SSE_INSTANCE) {
+  const currentStream = window.CRM_SSE_INSTANCE;
+  if (currentStream && currentStream.readyState !== EventSource.CLOSED) {
+    return true;
+  }
+  if (currentStream) {
     try {
-      window.CRM_SSE_INSTANCE.close();
+      currentStream.close();
     } catch (e) { }
     window.CRM_SSE_INSTANCE = null;
   }
@@ -3236,11 +3239,13 @@ function initSSEStream() {
     window.CRM_SSE_INSTANCE = es;
 
     es.onopen = function () {
+      if (window.CRM_SSE_INSTANCE !== es) return;
       window.IS_SSE_STREAM_ACTIVE = true;
       console.log('⚡ [SSE Stream Active]: Real-time event pipeline connected (0% idle CPU, <50ms push)');
     };
 
     es.onmessage = function (event) {
+      if (window.CRM_SSE_INSTANCE !== es) return;
       if (!event || !event.data) return;
       try {
         const res = JSON.parse(event.data);
@@ -3380,6 +3385,7 @@ function initSSEStream() {
     };
 
     es.onerror = function () {
+      if (window.CRM_SSE_INSTANCE !== es) return;
       window.IS_SSE_STREAM_ACTIVE = false;
       // Note: native EventSource handles reconnect attempts automatically
     };
@@ -3393,6 +3399,9 @@ function initSSEStream() {
 }
 
 function startRealtimeMessageSync() {
+  if (window.CRM_REALTIME_SYNC_STARTED) return;
+  window.CRM_REALTIME_SYNC_STARTED = true;
+
   // 1. Initial immediate sync
   syncInboundMessagesNow(true);
 
@@ -3425,7 +3434,8 @@ function startRealtimeMessageSync() {
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
         syncInboundMessagesNow(false);
-        if (!window.IS_SSE_STREAM_ACTIVE) {
+        const stream = window.CRM_SSE_INSTANCE;
+        if (!window.IS_SSE_STREAM_ACTIVE && (!stream || stream.readyState === EventSource.CLOSED)) {
           initSSEStream();
         }
       }
@@ -6390,11 +6400,19 @@ if (typeof window !== 'undefined') {
 
 const CRM_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const CRM_IDLE_ACTIVITY_KEY = 'GRM_CRM_LAST_ACTIVITY';
+const CRM_ACTIVE_TAB_KEY_PREFIX = 'GRM_CRM_ACTIVE_TAB_';
+const CRM_ACTIVE_TAB_HEARTBEAT_MS = 30000;
+const CRM_ACTIVE_TAB_STALE_MS = 15 * 60 * 1000;
 let CRM_IDLE_LOGOUT_TIMER = null;
 let CRM_IDLE_LAST_ACTIVITY_AT = 0;
 let CRM_IDLE_LAST_STORAGE_WRITE_AT = 0;
 let CRM_IDLE_EVENTS_BOUND = false;
 let CRM_IDLE_STORAGE_WARNING_SHOWN = false;
+let CRM_ACTIVE_TAB_KEY = null;
+let CRM_ACTIVE_TAB_HEARTBEAT = null;
+let CRM_TAB_EXIT_NAVIGATION_TYPE = null;
+let CRM_TAB_CLOSE_EVENTS_BOUND = false;
+let CRM_NAVIGATION_API_AVAILABLE = false;
 
 function getCRMIdleLastActivityAt() {
   let storedAt = 0;
@@ -6457,6 +6475,125 @@ function recordCRMUserActivity() {
   }
 }
 
+function updateCRMActiveTabMarker() {
+  if (!CRM_ACTIVE_TAB_KEY) return;
+  try {
+    localStorage.setItem(CRM_ACTIVE_TAB_KEY, String(Date.now()));
+  } catch (err) {
+    if (!CRM_IDLE_STORAGE_WARNING_SHOWN) {
+      console.warn('[CRM Tab Close] Could not update active-tab marker:', err);
+      CRM_IDLE_STORAGE_WARNING_SHOWN = true;
+    }
+  }
+}
+
+function stopCRMActiveTabTracking() {
+  if (CRM_ACTIVE_TAB_HEARTBEAT) clearInterval(CRM_ACTIVE_TAB_HEARTBEAT);
+  CRM_ACTIVE_TAB_HEARTBEAT = null;
+  if (CRM_ACTIVE_TAB_KEY) {
+    try {
+      localStorage.removeItem(CRM_ACTIVE_TAB_KEY);
+    } catch (err) {
+      console.warn('[CRM Tab Close] Could not clear active-tab marker:', err);
+    }
+  }
+  CRM_ACTIVE_TAB_KEY = null;
+}
+
+function hasOtherActiveCRMTabs() {
+  const now = Date.now();
+  let hasOtherTab = false;
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith(CRM_ACTIVE_TAB_KEY_PREFIX)) continue;
+    const lastSeen = Number(localStorage.getItem(key)) || 0;
+    if (now - lastSeen > CRM_ACTIVE_TAB_STALE_MS) {
+      localStorage.removeItem(key);
+    } else if (key !== CRM_ACTIVE_TAB_KEY) {
+      hasOtherTab = true;
+    }
+  }
+  return hasOtherTab;
+}
+
+function clearCRMStoredSession() {
+  localStorage.removeItem('GRM_CRM_SESSION');
+  sessionStorage.removeItem('GRM_CRM_SESSION');
+  localStorage.removeItem('GRM_REMEMBER_FLAG');
+  localStorage.removeItem(CRM_IDLE_ACTIVITY_KEY);
+}
+
+function sendCRMLogoutBeacon() {
+  if (navigator.sendBeacon) {
+    try {
+      if (navigator.sendBeacon('auth.php?action=logout', new Blob([], { type: 'text/plain' }))) return;
+    } catch (err) {
+      console.warn('[CRM Tab Close] Logout beacon failed:', err);
+    }
+  }
+  fetch('auth.php?action=logout', { keepalive: true }).catch(err => {
+    console.warn('[CRM Tab Close] Could not clear the server session:', err);
+  });
+}
+
+function startCRMTabCloseLogout() {
+  if (!CURRENT_USER || CRM_TAB_CLOSE_EVENTS_BOUND) return;
+
+  const navigationEntries = (typeof performance !== 'undefined' && typeof performance.getEntriesByType === 'function')
+    ? performance.getEntriesByType('navigation')
+    : [];
+  const navigationEntry = navigationEntries[0];
+  const isReload = Boolean(navigationEntry && navigationEntry.type === 'reload');
+  let tabId = null;
+  try {
+    tabId = isReload ? sessionStorage.getItem('GRM_CRM_TAB_ID') : null;
+    if (!tabId) {
+      tabId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem('GRM_CRM_TAB_ID', tabId);
+    }
+  } catch (err) {
+    console.warn('[CRM Tab Close] Could not store tab identity:', err);
+  }
+
+  if (tabId) {
+    CRM_ACTIVE_TAB_KEY = `${CRM_ACTIVE_TAB_KEY_PREFIX}${tabId}`;
+    updateCRMActiveTabMarker();
+    CRM_ACTIVE_TAB_HEARTBEAT = setInterval(updateCRMActiveTabMarker, CRM_ACTIVE_TAB_HEARTBEAT_MS);
+  }
+
+  if (window.navigation && typeof window.navigation.addEventListener === 'function') {
+    CRM_NAVIGATION_API_AVAILABLE = true;
+    window.navigation.addEventListener('navigate', event => {
+      if (!event.destination || !event.destination.sameDocument) {
+        CRM_TAB_EXIT_NAVIGATION_TYPE = event.navigationType || 'navigate';
+      }
+    });
+    window.navigation.addEventListener('navigateerror', () => {
+      CRM_TAB_EXIT_NAVIGATION_TYPE = null;
+    });
+  }
+
+  window.addEventListener('pagehide', event => {
+    if (event.persisted) return;
+    const navigationType = CRM_TAB_EXIT_NAVIGATION_TYPE;
+    CRM_TAB_EXIT_NAVIGATION_TYPE = null;
+    if (navigationType === 'reload') return;
+
+    stopCRMActiveTabTracking();
+    if (!CURRENT_USER || navigationType || !CRM_NAVIGATION_API_AVAILABLE) return;
+    if (hasOtherActiveCRMTabs()) return;
+
+    CURRENT_USER = null;
+    CRM_AUTH_SESSION = null;
+    window.CURRENT_USER = null;
+    window.CRM_AUTH_SESSION = null;
+    clearCRMStoredSession();
+    sendCRMLogoutBeacon();
+  });
+
+  CRM_TAB_CLOSE_EVENTS_BOUND = true;
+}
+
 function startCRMIdleLogout() {
   if (!CURRENT_USER) return;
 
@@ -6478,6 +6615,7 @@ function startCRMIdleLogout() {
       } else if (event.key === 'GRM_CRM_SESSION' && event.newValue === null) {
         sessionStorage.removeItem('GRM_CRM_SESSION');
         if (CRM_IDLE_LOGOUT_TIMER) clearTimeout(CRM_IDLE_LOGOUT_TIMER);
+        stopCRMActiveTabTracking();
         window.location.replace('login.html');
       }
     });
@@ -6488,6 +6626,7 @@ function startCRMIdleLogout() {
     writeCRMIdleActivity(Date.now());
   }
   scheduleCRMIdleLogout();
+  if (CURRENT_USER) startCRMTabCloseLogout();
 }
 
 // Initialize user session from storage or redirect to login.html
@@ -6636,15 +6775,13 @@ function quickLogin(accountKey) {
 function handleLogout() {
   if (CRM_IDLE_LOGOUT_TIMER) clearTimeout(CRM_IDLE_LOGOUT_TIMER);
   CRM_IDLE_LOGOUT_TIMER = null;
+  stopCRMActiveTabTracking();
   CRM_IDLE_LAST_ACTIVITY_AT = 0;
   CURRENT_USER = null;
   CRM_AUTH_SESSION = null;
   window.CURRENT_USER = null;
   window.CRM_AUTH_SESSION = null;
-  localStorage.removeItem('GRM_CRM_SESSION');
-  sessionStorage.removeItem('GRM_CRM_SESSION');
-  localStorage.removeItem('GRM_REMEMBER_FLAG');
-  localStorage.removeItem(CRM_IDLE_ACTIVITY_KEY);
+  clearCRMStoredSession();
 
   // Notify backend auth API to clear PHP session
   fetch('auth.php?action=logout', { keepalive: true }).catch(err => {
