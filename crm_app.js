@@ -35487,6 +35487,7 @@ function updateBadgeCounters() {
   }
 
   // Active customer inquiry conversations visible in the inbox
+  const activeQueries = (CRM_STATE.queries || []).filter(q => q && q.status !== 'RESOLVED' && q.status !== 'CLOSED' && q.status !== 'DND');
   activeQueries.forEach(q => {
     if (q && q.customerId) {
       uniqueInboundUsersToday.add(q.customerId);
