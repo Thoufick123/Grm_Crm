@@ -8037,6 +8037,206 @@ if ($action === 'get_bulk_batch_details') {
     exit;
 }
 
+if ($action === 'edit_bulk_assignment') {
+    header('Content-Type: application/json');
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        ensureBulkAssignmentsTable($pdo);
+
+        $input = file_get_contents('php://input');
+        $p = json_decode($input, true) ?: [];
+        $batchId = trim($p['batch_id'] ?? $_POST['batch_id'] ?? $_GET['batch_id'] ?? '');
+        $newStaffId = trim($p['staff_id'] ?? $_POST['staff_id'] ?? '');
+        $newStaffName = trim($p['staff_name'] ?? $_POST['staff_name'] ?? '');
+        $newStaffPhone = trim($p['staff_phone'] ?? $_POST['staff_phone'] ?? '');
+
+        if (!$batchId) throw new Exception("Batch ID is required");
+        if (!$newStaffId) throw new Exception("Staff member is required");
+
+        $stmt = $pdo->prepare("SELECT * FROM `bulk_assignments` WHERE `id` = ? OR `batch_code` = ? LIMIT 1");
+        $stmt->execute([$batchId, $batchId]);
+        $batch = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$batch) throw new Exception("Batch record not found");
+
+        $oldStaffId = $batch['staff_id'];
+        $custIds = json_decode($batch['customer_ids'] ?? '[]', true) ?: [];
+        $queryIds = json_decode($batch['query_ids'] ?? '[]', true) ?: [];
+
+        $pdo->beginTransaction();
+
+        // 1. Update bulk_assignments record
+        $updBatch = $pdo->prepare("
+            UPDATE `bulk_assignments` 
+            SET `staff_id` = ?, `staff_name` = ?, `staff_phone` = ? 
+            WHERE `id` = ?
+        ");
+        $updBatch->execute([$newStaffId, $newStaffName, $newStaffPhone, $batch['id']]);
+
+        // 2. Update customers table assigned_to
+        if (!empty($custIds)) {
+            $inC = implode(',', array_fill(0, count($custIds), '?'));
+            $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` IN ({$inC})")
+                ->execute(array_merge([$newStaffId], $custIds));
+        }
+
+        // 3. Update queries table assigned_to
+        if (!empty($queryIds)) {
+            $inQ = implode(',', array_fill(0, count($queryIds), '?'));
+            $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE `id` IN ({$inQ})")
+                ->execute(array_merge([$newStaffId], $queryIds));
+        }
+        if (!empty($custIds)) {
+            $inC = implode(',', array_fill(0, count($custIds), '?'));
+            $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = 'ASSIGNED' WHERE `customer_id` IN ({$inC})")
+                ->execute(array_merge([$newStaffId], $custIds));
+        }
+
+        // 4. Update users active_queries for old and new staff
+        try {
+            $pdo->prepare("
+                UPDATE `users` 
+                SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED', 'DND'))
+                WHERE `id` = ? OR `username` = ?
+            ")->execute([$oldStaffId, $oldStaffId, $oldStaffId]);
+
+            $pdo->prepare("
+                UPDATE `users` 
+                SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED', 'DND'))
+                WHERE `id` = ? OR `username` = ?
+            ")->execute([$newStaffId, $newStaffId, $newStaffId]);
+        } catch (Exception $eUsr) {}
+
+        // 5. Audit log
+        $user = $_SESSION['user']['name'] ?? $_SESSION['user']['username'] ?? 'Super Admin';
+        $auditDetails = "Reassigned bulk batch {$batch['batch_code']} ({$batch['assigned_count']} leads) from {$batch['staff_name']} to {$newStaffName} ({$newStaffPhone}).";
+        try {
+            $pdo->prepare("
+                INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+                VALUES (?, 'BULK_ASSIGN_UPDATED', 'BULK_ASSIGN', ?, ?)
+            ")->execute([$user, $auditDetails, date("h:i A")]);
+        } catch (Exception $eAud) {}
+
+        $pdo->commit();
+
+        @file_put_contents(__DIR__ . '/live_account_updates.json', json_encode(['last_update' => time()]));
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Batch {$batch['batch_code']} reassigned to {$newStaffName} successfully!",
+            "batch_id" => $batch['id'],
+            "batch_code" => $batch['batch_code'],
+            "staff_id" => $newStaffId,
+            "staff_name" => $newStaffName,
+            "staff_phone" => $newStaffPhone,
+            "customer_ids" => $custIds,
+            "query_ids" => $queryIds
+        ]);
+    } catch (Exception $e) {
+        if ($pdo && $pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'delete_bulk_assignment') {
+    header('Content-Type: application/json');
+    try {
+        if (!$pdo) throw new Exception("Database unavailable");
+        ensureBulkAssignmentsTable($pdo);
+
+        $input = file_get_contents('php://input');
+        $p = json_decode($input, true) ?: [];
+        $batchId = trim($p['batch_id'] ?? $_POST['batch_id'] ?? $_GET['batch_id'] ?? '');
+
+        if (!$batchId) throw new Exception("Batch ID is required");
+
+        $stmt = $pdo->prepare("SELECT * FROM `bulk_assignments` WHERE `id` = ? OR `batch_code` = ? LIMIT 1");
+        $stmt->execute([$batchId, $batchId]);
+        $batch = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$batch) throw new Exception("Batch record not found");
+
+        $staffId = $batch['staff_id'];
+        $custIds = json_decode($batch['customer_ids'] ?? '[]', true) ?: [];
+        $queryIds = json_decode($batch['query_ids'] ?? '[]', true) ?: [];
+
+        $pdo->beginTransaction();
+
+        // 1. Unassign customer records so they return to unassigned state
+        if (!empty($custIds)) {
+            $inC = implode(',', array_fill(0, count($custIds), '?'));
+            $pdo->prepare("UPDATE `customers` SET `assigned_to` = 'UNASSIGNED' WHERE `id` IN ({$inC})")
+                ->execute($custIds);
+        }
+
+        // 2. Unassign query records and reset status to 'NEW'
+        if (!empty($queryIds)) {
+            $inQ = implode(',', array_fill(0, count($queryIds), '?'));
+            $pdo->prepare("UPDATE `queries` SET `assigned_to` = 'UNASSIGNED', `status` = 'NEW' WHERE `id` IN ({$inQ})")
+                ->execute($queryIds);
+        }
+        if (!empty($custIds)) {
+            $inC = implode(',', array_fill(0, count($custIds), '?'));
+            $pdo->prepare("UPDATE `queries` SET `assigned_to` = 'UNASSIGNED', `status` = 'NEW' WHERE `customer_id` IN ({$inC})")
+                ->execute($custIds);
+        }
+
+        // 3. Update staff user active query counter
+        try {
+            $pdo->prepare("
+                UPDATE `users` 
+                SET `active_queries` = (SELECT COUNT(*) FROM `queries` WHERE `assigned_to` = ? AND `status` NOT IN ('RESOLVED', 'CLOSED', 'DND'))
+                WHERE `id` = ? OR `username` = ?
+            ")->execute([$staffId, $staffId, $staffId]);
+        } catch (Exception $eUsr) {}
+
+        // 4. Delete the bulk batch record from bulk_assignments
+        $delStmt = $pdo->prepare("DELETE FROM `bulk_assignments` WHERE `id` = ?");
+        $delStmt->execute([$batch['id']]);
+
+        // 5. Clean live_assignments_queue.json so staff workstations no longer see these assignments
+        try {
+            $assignsQueueFile = __DIR__ . '/live_assignments_queue.json';
+            if (file_exists($assignsQueueFile)) {
+                $queue = json_decode(@file_get_contents($assignsQueueFile), true) ?: [];
+                $bCode = $batch['batch_code'];
+                $filtered = array_values(array_filter($queue, function($item) use ($bCode) {
+                    return ($item['batch_code'] ?? '') !== $bCode;
+                }));
+                @file_put_contents($assignsQueueFile, json_encode($filtered, JSON_UNESCAPED_UNICODE));
+            }
+        } catch (Exception $eQueueClean) {}
+
+        // 6. Audit log
+        $user = $_SESSION['user']['name'] ?? $_SESSION['user']['username'] ?? 'Super Admin';
+        $auditDetails = "Deleted bulk batch {$batch['batch_code']} ({$batch['assigned_count']} leads assigned to {$batch['staff_name']}). Inquiries unassigned and returned to queue.";
+        try {
+            $pdo->prepare("
+                INSERT INTO `audit_logs` (`user`, `action`, `module`, `details`, `timestamp_str`)
+                VALUES (?, 'BULK_ASSIGN_DELETED', 'BULK_ASSIGN', ?, ?)
+            ")->execute([$user, $auditDetails, date("h:i A")]);
+        } catch (Exception $eAud) {}
+
+        $pdo->commit();
+
+        @file_put_contents(__DIR__ . '/live_account_updates.json', json_encode(['last_update' => time()]));
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Batch {$batch['batch_code']} deleted successfully! {$batch['assigned_count']} customer inquiries unassigned and returned to available queue.",
+            "batch_id" => $batch['id'],
+            "batch_code" => $batch['batch_code'],
+            "customer_ids" => $custIds,
+            "query_ids" => $queryIds
+        ]);
+    } catch (Exception $e) {
+        if ($pdo && $pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
 
 // Dedicated direct save endpoint for DND suppression records
 if ($action === 'save_dnd_record' && $_SERVER['REQUEST_METHOD'] === 'POST') {

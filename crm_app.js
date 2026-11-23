@@ -44412,11 +44412,26 @@ async function renderBulkAssignList() {
 
         <!-- Actions -->
         <td class="py-3 px-4 text-right whitespace-nowrap">
-          <button type="button" onclick="openBulkBatchDetailsModal('${b.id || b.batch_code}')"
-            class="px-2.5 py-1 bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 ml-auto cursor-pointer shadow-2xs">
-            <span class="material-symbols-outlined text-[14px]">visibility</span>
-            <span>View Details</span>
-          </button>
+          <div class="flex items-center justify-end gap-1.5">
+            <button type="button" onclick="openBulkBatchDetailsModal('${b.id || b.batch_code}')"
+              title="View Details & Inspection"
+              class="px-2.5 py-1 bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs">
+              <span class="material-symbols-outlined text-[14px]">visibility</span>
+              <span class="hidden md:inline">View Details</span>
+            </button>
+            <button type="button" onclick="openEditBulkBatchModal('${b.id || b.batch_code}')"
+              title="Edit Batch Assignment Details"
+              class="px-2 py-1 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs">
+              <span class="material-symbols-outlined text-[14px]">edit</span>
+              <span class="hidden md:inline">Edit</span>
+            </button>
+            <button type="button" onclick="deleteBulkBatch('${b.id || b.batch_code}', '${escapeHtml(b.batch_code || b.id)}', ${b.assigned_count || 0})"
+              title="Delete Batch & Unassign Inquiries"
+              class="px-2 py-1 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs">
+              <span class="material-symbols-outlined text-[14px]">delete</span>
+              <span class="hidden md:inline">Delete</span>
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -44559,4 +44574,244 @@ function updateBulkAssignBadgeCounters() {
   badge.innerText = Array.isArray(list) ? list.length : 0;
 }
 window.updateBulkAssignBadgeCounters = updateBulkAssignBadgeCounters;
+
+// ==========================================
+// BULK BATCH EDIT & DELETE ACTION HANDLERS
+// ==========================================
+
+function openEditBulkBatchModal(batchId) {
+  const batch = (window.CACHED_BULK_BATCHES || []).find(b => b.id === batchId || b.batch_code === batchId);
+  if (!batch) {
+    alert('Batch data not found. Please refresh the page and try again.');
+    return;
+  }
+
+  const modal = document.getElementById('modal-edit-bulk-batch');
+  const codeEl = document.getElementById('edit-batch-code');
+  const leadsEl = document.getElementById('edit-batch-leads-count');
+  const idInput = document.getElementById('edit-batch-id');
+  const staffSelect = document.getElementById('edit-batch-staff-select');
+  if (!modal || !staffSelect) return;
+
+  if (idInput) idInput.value = batch.id || batch.batch_code;
+  if (codeEl) codeEl.innerText = batch.batch_code || batch.id;
+  if (leadsEl) leadsEl.innerText = `${batch.assigned_count || 0} Leads`;
+
+  // Populate staff select list
+  const staffList = (Array.isArray(CRM_STATE?.staffList) && CRM_STATE.staffList.length > 0)
+    ? CRM_STATE.staffList
+    : (Array.isArray(CRM_STATE?.users) ? CRM_STATE.users.filter(u => u.role !== 'admin' && u.role !== 'Super Admin') : []);
+
+  staffSelect.innerHTML = staffList.map(s => {
+    const isSelected = String(s.id) === String(batch.staff_id) || String(s.name) === String(batch.staff_name);
+    return `
+      <option value="${s.id}" data-name="${escapeHtml(s.name || s.username)}" data-phone="${escapeHtml(s.mobile || s.phone || '')}" ${isSelected ? 'selected' : ''}>
+        ${escapeHtml(s.name || s.username)} (${s.role || 'Staff'})
+      </option>
+    `;
+  }).join('');
+
+  onEditBatchStaffChange();
+  openModal('modal-edit-bulk-batch');
+}
+window.openEditBulkBatchModal = openEditBulkBatchModal;
+
+function onEditBatchStaffChange() {
+  const staffSelect = document.getElementById('edit-batch-staff-select');
+  const phoneSelect = document.getElementById('edit-batch-staff-phone-select');
+  if (!staffSelect || !phoneSelect) return;
+
+  const opt = staffSelect.options[staffSelect.selectedIndex];
+  if (!opt) return;
+
+  const phone = opt.getAttribute('data-phone') || '';
+  const phones = [];
+  if (phone) phones.push(phone);
+
+  const sObj = (CRM_STATE?.staffList || []).find(s => String(s.id) === String(staffSelect.value));
+  if (sObj) {
+    if (sObj.phone && !phones.includes(sObj.phone)) phones.push(sObj.phone);
+    if (sObj.mobile && !phones.includes(sObj.mobile)) phones.push(sObj.mobile);
+    if (sObj.whatsapp && !phones.includes(sObj.whatsapp)) phones.push(sObj.whatsapp);
+  }
+
+  if (phones.length === 0) {
+    phoneSelect.innerHTML = `<option value="">No phone registered</option>`;
+  } else {
+    phoneSelect.innerHTML = phones.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+  }
+}
+window.onEditBatchStaffChange = onEditBatchStaffChange;
+
+async function handleSaveEditBulkBatch(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const idInput = document.getElementById('edit-batch-id');
+  const staffSelect = document.getElementById('edit-batch-staff-select');
+  const phoneSelect = document.getElementById('edit-batch-staff-phone-select');
+  const btn = document.getElementById('btn-save-edit-batch');
+
+  const batchId = idInput?.value;
+  if (!batchId || !staffSelect) return;
+
+  const opt = staffSelect.options[staffSelect.selectedIndex];
+  const staffId = staffSelect.value;
+  const staffName = opt?.getAttribute('data-name') || opt?.text || staffId;
+  const staffPhone = phoneSelect?.value || opt?.getAttribute('data-phone') || '';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = 'Saving...';
+  }
+
+  try {
+    const res = await fetch('api.php?action=edit_bulk_assignment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        batch_id: batchId,
+        staff_id: staffId,
+        staff_name: staffName,
+        staff_phone: staffPhone
+      })
+    });
+    const data = await res.json();
+    if (data && data.status === 'success') {
+      if (Array.isArray(window.CACHED_BULK_BATCHES)) {
+        const b = window.CACHED_BULK_BATCHES.find(x => x.id === batchId || x.batch_code === batchId);
+        if (b) {
+          b.staff_id = staffId;
+          b.staff_name = staffName;
+          b.staff_phone = staffPhone;
+        }
+      }
+      if (window._BATCH_DETAILS_CACHE) {
+        window._BATCH_DETAILS_CACHE.delete(batchId);
+      }
+
+      const custIds = new Set((data.customer_ids || []).map(String));
+      const queryIds = new Set((data.query_ids || []).map(String));
+      if (CRM_STATE && Array.isArray(CRM_STATE.queries)) {
+        CRM_STATE.queries.forEach(q => {
+          if (!q) return;
+          if (queryIds.has(String(q.id)) || custIds.has(String(q.customerId || q.customer_id))) {
+            q.assignedTo = staffId;
+            q.assigned_to = staffId;
+          }
+        });
+      }
+      if (CRM_STATE && Array.isArray(CRM_STATE.customers)) {
+        CRM_STATE.customers.forEach(c => {
+          if (!c) return;
+          if (custIds.has(String(c.id))) {
+            c.assignedTo = staffId;
+            c.assigned_to = staffId;
+          }
+        });
+      }
+
+      closeModal('modal-edit-bulk-batch');
+      renderBulkAssignList();
+      if (typeof renderInboxConversationList === 'function') {
+        renderInboxConversationList();
+      }
+      if (typeof showToast === 'function') {
+        showToast(data.message || 'Batch reassigned successfully!', 'success');
+      } else {
+        alert(data.message || 'Batch reassigned successfully!');
+      }
+    } else {
+      alert(data.message || 'Failed to update batch.');
+    }
+  } catch (err) {
+    console.error('[handleSaveEditBulkBatch] error:', err);
+    alert('Error updating batch: ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span class="material-symbols-outlined text-[16px]">save</span> Save Changes`;
+    }
+  }
+}
+window.handleSaveEditBulkBatch = handleSaveEditBulkBatch;
+
+async function deleteBulkBatch(batchId, batchCode, assignedCount) {
+  const confirmed = confirm(
+    `Are you sure you want to delete Batch ${batchCode || batchId}?\n\n` +
+    `• All ${assignedCount || ''} assigned customer inquiries will be unassigned.\n` +
+    `• In Admin panel, they will immediately appear as Unassigned.\n` +
+    `• In Staff panel, they will no longer be visible to staff.`
+  );
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`api.php?action=delete_bulk_assignment&batch_id=${encodeURIComponent(batchId)}`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    if (data && data.status === 'success') {
+      const custIds = new Set((data.customer_ids || []).map(String));
+      const queryIds = new Set((data.query_ids || []).map(String));
+
+      // 1. Update CRM_STATE in memory: reset assigned_to to UNASSIGNED
+      if (CRM_STATE && Array.isArray(CRM_STATE.queries)) {
+        CRM_STATE.queries.forEach(q => {
+          if (!q) return;
+          const qId = String(q.id || '');
+          const qCid = String(q.customerId || q.customer_id || '');
+          if (queryIds.has(qId) || custIds.has(qCid)) {
+            q.assignedTo = 'UNASSIGNED';
+            q.assigned_to = 'UNASSIGNED';
+            q.status = 'NEW';
+          }
+        });
+      }
+      if (CRM_STATE && Array.isArray(CRM_STATE.customers)) {
+        CRM_STATE.customers.forEach(c => {
+          if (!c) return;
+          if (custIds.has(String(c.id))) {
+            c.assignedTo = 'UNASSIGNED';
+            c.assigned_to = 'UNASSIGNED';
+          }
+        });
+      }
+
+      // 2. Remove batch from cache
+      if (window._BATCH_DETAILS_CACHE) {
+        window._BATCH_DETAILS_CACHE.delete(batchId);
+        if (data.batch_id) window._BATCH_DETAILS_CACHE.delete(data.batch_id);
+      }
+      if (Array.isArray(window.CACHED_BULK_BATCHES)) {
+        window.CACHED_BULK_BATCHES = window.CACHED_BULK_BATCHES.filter(b => b.id !== batchId && b.batch_code !== batchId);
+      }
+
+      // 3. Immediately sync unassigned badge and counter
+      if (typeof updateBulkAssignBadgeCounters === 'function') {
+        updateBulkAssignBadgeCounters();
+      }
+      if (typeof onBulkAccountChange === 'function') {
+        onBulkAccountChange();
+      }
+
+      // 4. Update WhatsApp Inbox: Admin shows unassigned leads, Staff hides them
+      if (typeof renderInboxConversationList === 'function') {
+        renderInboxConversationList();
+      }
+
+      // 5. Re-render batches table and KPI cards
+      renderBulkAssignList();
+
+      if (typeof showToast === 'function') {
+        showToast(data.message || `Batch ${batchCode} deleted successfully!`, 'success');
+      } else {
+        alert(data.message || `Batch ${batchCode} deleted successfully!`);
+      }
+    } else {
+      alert(data.message || 'Failed to delete batch.');
+    }
+  } catch (err) {
+    console.error('[deleteBulkBatch] error:', err);
+    alert('Error deleting batch: ' + err.message);
+  }
+}
+window.deleteBulkBatch = deleteBulkBatch;
 
