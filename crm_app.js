@@ -5392,44 +5392,17 @@ function updateConfiguredPhoneDisplays() {
     const dropdownArrow = document.querySelector('#phone-dropdown-arrow');
     if (dropdownArrow) dropdownArrow.classList.add('hidden');
 
-    const accounts = (typeof getAvailableWhatsAppAccounts === 'function') ? getAvailableWhatsAppAccounts() : [];
-    const isLineConnected = accounts.some(a => a && (a.status === 'CONNECTED' || a.connection === 'CONNECTED'));
-    const isLineScanning = accounts.some(a => a && (a.status === 'SCAN_QR' || a.connection === 'SCAN_QR'));
-
     const headerBadge = document.getElementById('header-phone-badge');
     if (headerBadge) {
-      if (isLineConnected) {
-        headerBadge.className = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 shadow-xs select-none whitespace-nowrap cursor-default';
-        headerBadge.title = `Staff Mobile: ${displayStaffPhone} (WhatsApp Business Line Connected)`;
-      } else if (isLineScanning) {
-        headerBadge.className = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-amber-50 text-amber-900 text-xs font-bold rounded-xl border border-amber-200 shadow-xs select-none whitespace-nowrap cursor-default';
-        headerBadge.title = `Staff Mobile: ${displayStaffPhone} (WhatsApp Line Awaiting QR Scan by Admin)`;
-      } else {
-        headerBadge.className = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-rose-50 text-rose-900 text-xs font-bold rounded-xl border border-rose-200 shadow-xs select-none whitespace-nowrap cursor-default';
-        headerBadge.title = `Staff Mobile: ${displayStaffPhone} (WhatsApp Line Offline / Disconnected)`;
-      }
+      headerBadge.className = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 shadow-xs select-none whitespace-nowrap cursor-default';
+      headerBadge.title = `Staff Mobile: ${displayStaffPhone}`;
     }
 
     const pingDot = document.getElementById('header-phone-ping-dot');
+    if (pingDot) pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+
     const solidDot = document.getElementById('header-phone-solid-dot');
-    if (solidDot) {
-      if (isLineConnected) {
-        solidDot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500';
-        if (pingDot) {
-          pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
-          pingDot.style.display = '';
-        }
-      } else if (isLineScanning) {
-        solidDot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-amber-500';
-        if (pingDot) {
-          pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75';
-          pingDot.style.display = '';
-        }
-      } else {
-        solidDot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-rose-500';
-        if (pingDot) pingDot.style.display = 'none';
-      }
-    }
+    if (solidDot) solidDot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500';
 
     const headerIcon = document.getElementById('header-phone-icon');
     if (headerIcon) {
@@ -8591,20 +8564,9 @@ function renderChatMessages() {
 
             <div class="flex items-center gap-1">
               <span>${msg.time}</span>
-              ${isOut ? (
-                msg.status === 'FAILED' ? `
-                  <span class="inline-flex items-center gap-0.5 text-rose-500 font-bold" title="WhatsApp Delivery Failed (Disconnected / Scan QR required)">
-                    <span class="material-symbols-outlined text-[14px]">error</span>
-                    <span class="text-[9px]">Failed</span>
-                  </span>
-                ` : ((msg.status === 'SENDING' || msg.status === 'PENDING') ? `
-                  <span class="inline-flex items-center gap-0.5 text-slate-400 font-medium" title="Transmitting to WhatsApp...">
-                    <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
-                  </span>
-                ` : `
-                  <span class="material-symbols-outlined text-[14px] text-brand-wa font-bold" title="Delivered to WhatsApp">done_all</span>
-                `)
-              ) : ''}
+              ${isOut ? `
+                <span class="material-symbols-outlined text-[14px] text-brand-wa font-bold">done_all</span>
+              ` : ''}
             </div>
           </div>
         </div>
@@ -13125,26 +13087,10 @@ function persistOutboundMessageToBackend(params) {
 }
 window.persistOutboundMessageToBackend = persistOutboundMessageToBackend;
 
-function updateMessageStatusOnBackend(messageUid, status) {
-  if (!messageUid) return;
-  try {
-    fetch('api.php?action=update_message_status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message_uid: String(messageUid), status: status })
-    }).catch(() => {});
-  } catch (e) {}
-}
-window.updateMessageStatusOnBackend = updateMessageStatusOnBackend;
-
 // Dispatches live message to customer's WhatsApp via Node Baileys QR Bridge (Method 3)
 async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false, mediaUrl = null, customerId = null, mediaData = null) {
-  // STRICT ARCHITECTURAL ENFORCEMENT: Staff personal numbers are NEVER used.
-  // All messages, images, and voice notes MUST route strictly through Admin's connected WhatsApp Line (account_1).
   let targetAccId = accountId || ACTIVE_SEND_ACCOUNT_ID || 'account_1';
-  if (targetAccId === 'all' || !targetAccId || String(targetAccId).replace(/\D/g, '').length >= 10) {
-    targetAccId = 'account_1';
-  }
+  if (targetAccId === 'all' || !targetAccId) targetAccId = 'account_1';
   const targetMedia = mediaUrl || (msgRef && msgRef.media_url ? msgRef.media_url : null);
   const targetBase64 = mediaData || (targetMedia && typeof targetMedia === 'string' && targetMedia.startsWith('data:') ? targetMedia : null);
 
@@ -13190,7 +13136,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
   const currentSenderName = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.name || CURRENT_USER.username)) ? (CURRENT_USER.name || CURRENT_USER.username) : 'Staff';
   const currentStaffId = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.id || CURRENT_USER.staffId || CURRENT_USER.staff_id)) ? (CURRENT_USER.id || CURRENT_USER.staffId || CURRENT_USER.staff_id) : 'staff';
 
-  // Persist outbound message to MySQL with status 'SENDING' (will update to DELIVERED or FAILED upon receipt)
+  // IMMEDIATELY persist outbound message to MySQL so it is NEVER lost on page reload!
   if (typeof persistOutboundMessageToBackend === 'function') {
     persistOutboundMessageToBackend({
       phone: normPhone.formattedPhone || cleanPhone || phone,
@@ -13202,8 +13148,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       message_uid: msgUid,
       sender: 'staff',
       sender_name: currentSenderName,
-      staff_id: currentStaffId,
-      status: 'SENDING'
+      staff_id: currentStaffId
     });
   }
 
@@ -13217,7 +13162,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
         direction: 'outbound',
         text: text,
         media_url: targetMedia,
-        status: 'SENDING',
+        status: 'DELIVERED',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     });
@@ -13252,13 +13197,14 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
           clearTimeout(timer);
           if (res && res.status === 'success') {
             if (msgRef) msgRef.status = 'DELIVERED';
-            updateMessageStatusOnBackend(msgUid, 'DELIVERED');
+            if (typeof updateMessageStatusOnBackend === 'function') updateMessageStatusOnBackend(msgUid, 'DELIVERED');
             if (typeof renderChatMessages === 'function') renderChatMessages();
             if (!silent) showToast('WhatsApp Delivered', `Live message sent to (${phone})!`, 'done_all', 'emerald');
             resolve(true);
           } else {
             console.warn('[Socket Send Notice]:', res);
-            resolve(null); // triggers HTTP fallback
+            const isNoAcc = res && res.message && (res.message.includes('No WhatsApp account') || res.message.includes('scan QR code'));
+            resolve(isNoAcc ? 'NO_ACCOUNT' : null);
           }
         });
       } catch (err) {
@@ -13271,6 +13217,15 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     });
 
     if (socketDelivered === true) return true;
+    if (socketDelivered === 'NO_ACCOUNT') {
+      if (msgRef) msgRef.status = 'FAILED';
+      if (typeof updateMessageStatusOnBackend === 'function') updateMessageStatusOnBackend(msgUid, 'FAILED');
+      if (typeof renderChatMessages === 'function') renderChatMessages();
+      if (!silent) {
+        showToast('WhatsApp Delivery Notice', 'Message saved in CRM, but WhatsApp Line is disconnected. Please scan QR Code in Settings.', 'warning', 'amber');
+      }
+      return false;
+    }
   }
 
   // 2. HTTP Fallback to Node.js Bridge
@@ -13287,18 +13242,28 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
         media_url: targetBase64 || absoluteMediaUrl,
         mediaData: targetBase64,
         media_data: targetBase64,
-        customerId: effectiveCustId
+        customerId: effectiveCustId,
+        message_uid: msgUid
       })
     });
     let result = await resp.json();
     if (result && result.status === 'success') {
       if (msgRef) msgRef.status = 'DELIVERED';
-      updateMessageStatusOnBackend(msgUid, 'DELIVERED');
+      if (typeof updateMessageStatusOnBackend === 'function') updateMessageStatusOnBackend(msgUid, 'DELIVERED');
       if (typeof renderChatMessages === 'function') renderChatMessages();
       if (!silent) showToast('WhatsApp Delivered', `Live message sent to (${phone})!`, 'done_all', 'emerald');
       return true;
     } else {
       console.warn('[Bridge Send Notice]:', result);
+      if (result && result.message && (result.message.includes('No WhatsApp account') || result.message.includes('scan QR code'))) {
+        if (msgRef) msgRef.status = 'FAILED';
+        if (typeof updateMessageStatusOnBackend === 'function') updateMessageStatusOnBackend(msgUid, 'FAILED');
+        if (typeof renderChatMessages === 'function') renderChatMessages();
+        if (!silent) {
+          showToast('WhatsApp Delivery Notice', 'Message saved in CRM, but WhatsApp Line is disconnected. Please scan QR Code in Settings.', 'warning', 'amber');
+        }
+        return false;
+      }
     }
   } catch (err) {
     console.warn('[Bridge Direct HTTP Error]:', err);
@@ -13318,13 +13283,14 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
         mediaUrl: targetBase64 || targetMedia,
         media_data: targetBase64,
         mediaData: targetBase64,
-        customer_id: effectiveCustId
+        customer_id: effectiveCustId,
+        message_uid: msgUid
       })
     });
     let fResult = await fResp.json();
     if (fResult && fResult.status === 'success') {
       if (msgRef) msgRef.status = 'DELIVERED';
-      updateMessageStatusOnBackend(msgUid, 'DELIVERED');
+      if (typeof updateMessageStatusOnBackend === 'function') updateMessageStatusOnBackend(msgUid, 'DELIVERED');
       if (typeof renderChatMessages === 'function') renderChatMessages();
       if (!silent) showToast('WhatsApp Delivered', `Live message sent to (${phone})!`, 'done_all', 'emerald');
       return true;
@@ -13333,9 +13299,8 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     console.warn('[PHP Send Proxy Error]:', e);
   }
 
-  // Delivery failed - mark as FAILED in state and backend database
   if (msgRef) msgRef.status = 'FAILED';
-  updateMessageStatusOnBackend(msgUid, 'FAILED');
+  if (typeof updateMessageStatusOnBackend === 'function') updateMessageStatusOnBackend(msgUid, 'FAILED');
   if (typeof renderChatMessages === 'function') renderChatMessages();
   if (!silent) {
     showToast('WhatsApp Delivery Notice', 'Message saved in CRM, but WhatsApp Line is disconnected. Please scan QR Code in Settings.', 'warning', 'amber');
@@ -44598,16 +44563,19 @@ async function renderBulkAssignList() {
               title="View Details & Inspection"
               class="px-2.5 py-1 bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer shadow-2xs">
               <span class="material-symbols-outlined text-[14px]">visibility</span>
+              <span>View Details</span>
             </button>
             <button type="button" onclick="openEditBulkBatchModal('${b.id || b.batch_code}')"
               title="Edit Batch Assignment Details"
               class="px-2.5 py-1 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer shadow-2xs">
               <span class="material-symbols-outlined text-[14px]">edit</span>
+              <span>Edit</span>
             </button>
             <button type="button" onclick="deleteBulkBatch('${b.id || b.batch_code}', '${escapeHtml(b.batch_code || b.id)}', ${b.assigned_count || 0})"
               title="Delete Batch & Unassign Inquiries"
               class="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer shadow-2xs">
               <span class="material-symbols-outlined text-[14px]">delete</span>
+              <span>Delete</span>
             </button>
           </div>
         </td>

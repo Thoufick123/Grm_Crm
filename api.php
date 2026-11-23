@@ -4339,8 +4339,11 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     ], 10);
     $response = $bRes['response'];
     $httpCode = $bRes['http_code'];
+    $decRes = json_decode($response, true);
+    $isBridgeSuccess = ($response && $httpCode >= 200 && $httpCode < 300 && $decRes && ($decRes['status'] ?? '') === 'success');
 
-    // Also persist message in MySQL (All WhatsApp Fields Recorded)
+    // ONLY persist/update message in MySQL if bridge succeeded, or update status if message_uid is passed
+    $msgUid = $postData['message_uid'] ?? ($postData['id'] ?? null);
     $effectiveCustId = $customerId;
     if ($pdo) {
         try {
@@ -4354,42 +4357,57 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             if (!empty($effectiveCustId)) {
-                $accSlot = $postData['accountId'] ?? 'account_1';
-                $stmt = $pdo->prepare("
-                    INSERT INTO `messages` (
-                        `customer_id`, `sender`, `sender_name`, `sender_phone`, `sender_jid`,
-                        `direction`, `text`, `message_text`, `media_type`, `media_url`,
-                        `account_id`, `is_bot`, `source`, `time_str`, `timestamp_epoch`, `status`
-                    ) VALUES (?, 'staff', 'Super Admin', ?, ?, 'outbound', ?, ?, ?, ?, ?, 0, 'CRM_OUTBOUND', ?, ?, 'DELIVERED')
-                ");
-                $stmt->execute([
-                    $effectiveCustId,
-                    $phone,
-                    $postData['jid'] ?? null,
-                    $text,
-                    $text,
-                    $mediaType,
-                    $mediaUrl,
-                    $accSlot,
-                    date("h:i A"),
-                    time()
-                ]);
+                $accSlot = $sendAccSlot;
+                $deliveryStatus = $isBridgeSuccess ? 'DELIVERED' : 'FAILED';
 
-                // Update query & customer last message
-                $pdo->prepare("UPDATE `queries` SET `last_message` = ? WHERE `customer_id` = ?")->execute([$text, $effectiveCustId]);
-                $pdo->prepare("UPDATE `customers` SET `last_message` = ?, `last_message_at` = NOW() WHERE `id` = ?")->execute([$text, $effectiveCustId]);
+                // Check if already persisted by record_outbound_message to PREVENT duplicate rows!
+                $existingMsgId = null;
+                if (!empty($msgUid)) {
+                    $checkStmt = $pdo->prepare("SELECT `id` FROM `messages` WHERE `message_uid` = ? LIMIT 1");
+                    $checkStmt->execute([$msgUid]);
+                    $existingMsgId = $checkStmt->fetchColumn();
+                }
+
+                if ($existingMsgId) {
+                    $pdo->prepare("UPDATE `messages` SET `status` = ?, `media_url` = COALESCE(?, `media_url`), `media_type` = COALESCE(?, `media_type`) WHERE `id` = ?")->execute([$deliveryStatus, $mediaUrl, $mediaType, $existingMsgId]);
+                } elseif ($isBridgeSuccess) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO `messages` (
+                            `message_uid`, `customer_id`, `sender`, `sender_name`, `sender_phone`, `sender_jid`,
+                            `direction`, `text`, `message_text`, `media_type`, `media_url`,
+                            `account_id`, `is_bot`, `source`, `time_str`, `timestamp_epoch`, `status`
+                        ) VALUES (?, ?, 'staff', 'Super Admin', ?, ?, 'outbound', ?, ?, ?, ?, ?, 0, 'CRM_OUTBOUND', ?, ?, 'DELIVERED')
+                    ");
+                    $stmt->execute([
+                        $msgUid ?: ('msg_out_' . time()),
+                        $effectiveCustId,
+                        $phone,
+                        $postData['jid'] ?? null,
+                        $text,
+                        $text,
+                        $mediaType,
+                        $mediaUrl,
+                        $accSlot,
+                        date("h:i A"),
+                        time()
+                    ]);
+                }
+
+                if ($isBridgeSuccess) {
+                    // Update query & customer last message
+                    $pdo->prepare("UPDATE `queries` SET `last_message` = ? WHERE `customer_id` = ?")->execute([$text, $effectiveCustId]);
+                    $pdo->prepare("UPDATE `customers` SET `last_message` = ?, `last_message_at` = NOW() WHERE `id` = ?")->execute([$text, $effectiveCustId]);
+                }
             }
         } catch (Exception $e) {
             error_log("Error saving outbound message: " . $e->getMessage());
         }
     }
 
-    if ($response && $httpCode >= 200 && $httpCode < 300) {
-        $decRes = json_decode($response, true);
-        if ($decRes && ($decRes['status'] ?? '') === 'success') {
-            echo $response;
-            exit;
-        }
+    if ($isBridgeSuccess) {
+        echo $response;
+        exit;
+    } elseif ($response && $httpCode >= 200 && $httpCode < 300) {
         http_response_code($httpCode ?: 400);
         echo json_encode([
             "status" => "error",
