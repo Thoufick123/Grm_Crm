@@ -32263,8 +32263,10 @@ function updateQRBridgeUI(res) {
   const connectedBox = document.getElementById('qr-connected-box');
   const statusText = document.getElementById('qr-bridge-status-text');
   const phoneDisplay = document.getElementById('qr-connected-phone-display');
+  const statusDot = document.getElementById('qr-bridge-status-dot');
 
   if (res.connection === 'SCAN_QR' && res.qr_image) {
+    if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0';
     if (qrImg) {
       qrImg.src = res.qr_image;
       qrImg.classList.remove('hidden');
@@ -32273,6 +32275,7 @@ function updateQRBridgeUI(res) {
     if (connectedBox) connectedBox.classList.add('hidden');
     if (statusText) statusText.innerText = 'Bridge Status: Scan QR Code with WhatsApp on Phone';
   } else if (res.connection === 'CONNECTED') {
+    if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
     if (qrImg) qrImg.classList.add('hidden');
     if (spinner) spinner.classList.add('hidden');
     if (connectedBox) connectedBox.classList.remove('hidden');
@@ -32285,6 +32288,7 @@ function updateQRBridgeUI(res) {
       updateConfiguredPhoneDisplays();
     }
   } else {
+    if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0';
     if (qrImg) qrImg.classList.add('hidden');
     if (spinner) spinner.classList.remove('hidden');
     if (connectedBox) connectedBox.classList.add('hidden');
