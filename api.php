@@ -1359,6 +1359,13 @@ if ($action === 'get_state' || $action === 'get_all') {
                 }
             }
 
+            // Auto-recover phone from customer_id if phone field was empty
+            if (empty($phone10) && preg_match('/cust_(\d{10})/', $c['id'] ?? '', $mCid)) {
+                $phone10 = $mCid[1];
+                $c['phone'] = '+91 ' . substr($phone10, 0, 5) . ' ' . substr($phone10, 5);
+                $c['whatsapp'] = $c['phone'];
+            }
+
             // Self-healing: Prevent account slot labels from becoming customer contact names
             if (!empty($c['name']) && (preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $c['name']) || preg_match('/^Customer \([0-5]\d{3}\)$/', $c['name']))) {
                 if (!empty($phone10) && preg_match('/^[6-9]\d{9}$/', $phone10)) {
@@ -4309,14 +4316,19 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $phoneInfo = cleanWhatsAppPhone($phone ?: ($postData['jid'] ?? ''));
     $cleanBridgePhone = !empty($phoneInfo['digits']) ? $phoneInfo['digits'] : $phone;
     $rawJid = $postData['jid'] ?? null;
-    $cleanBridgeJid = (!empty($rawJid) && (strpos($rawJid, ':') !== false || strlen(preg_replace('/[^0-9]/', '', $rawJid)) >= 13)) ? null : $rawJid;
+    $cleanBridgeJid = $rawJid;
+    if (!empty($cleanBridgeJid) && strpos($cleanBridgeJid, ':') !== false) {
+        $parts = explode(':', $cleanBridgeJid);
+        $cleanBridgeJid = $parts[0] . (strpos($parts[1], '@') !== false ? ('@' . explode('@', $parts[1])[1]) : '@s.whatsapp.net');
+    }
+    $sendAccSlot = (!empty($postData['accountId']) && $postData['accountId'] !== 'all') ? $postData['accountId'] : 'account_1';
 
     // Call Node.js Baileys Bridge
     $bRes = curlBridgePost('/api/send', [
         'phone' => $cleanBridgePhone, 
         'text' => $text,
         'jid' => $cleanBridgeJid,
-        'accountId' => $postData['accountId'] ?? null,
+        'accountId' => $sendAccSlot,
         'mediaUrl' => $bridgeMediaUrl,
         'media_url' => $bridgeMediaUrl,
         'mediaData' => $rawBase64Media,
@@ -4408,7 +4420,7 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     $mediaUrl = $payload['media_url'] ?? ($payload['mediaUrl'] ?? null);
     $mediaType = $payload['type'] ?? ($mediaUrl ? 'image' : null);
     $msgUid = (string)($payload['message_uid'] ?? ($payload['id'] ?? ('msg_out_' . time() . '_' . rand(100, 999))));
-    $accSlot = $payload['accountId'] ?? 'account_1';
+    $accSlot = (!empty($payload['accountId']) && $payload['accountId'] !== 'all') ? $payload['accountId'] : 'account_1';
     $senderName = $payload['sender_name'] ?? 'Super Admin';
     $recipientName = trim($payload['recipient_name'] ?? ($payload['customer_name'] ?? ''));
     $jid = trim($payload['jid'] ?? '');

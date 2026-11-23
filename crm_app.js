@@ -13089,7 +13089,8 @@ window.persistOutboundMessageToBackend = persistOutboundMessageToBackend;
 
 // Dispatches live message to customer's WhatsApp via Node Baileys QR Bridge (Method 3)
 async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, accountId = null, silent = false, mediaUrl = null, customerId = null, mediaData = null) {
-  const targetAccId = accountId || ACTIVE_SEND_ACCOUNT_ID || 'account_1';
+  let targetAccId = accountId || ACTIVE_SEND_ACCOUNT_ID || 'account_1';
+  if (targetAccId === 'all' || !targetAccId) targetAccId = 'account_1';
   const targetMedia = mediaUrl || (msgRef && msgRef.media_url ? msgRef.media_url : null);
   const targetBase64 = mediaData || (targetMedia && typeof targetMedia === 'string' && targetMedia.startsWith('data:') ? targetMedia : null);
 
@@ -13100,15 +13101,34 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     absoluteMediaUrl = origin.replace(/\/+$/, '') + '/' + targetMedia.replace(/^\/+/, '');
   }
 
+  // Resiliently resolve target phone if missing or placeholder "-"
+  let targetPhone = phone;
+  if ((!targetPhone || targetPhone === '-' || !String(targetPhone).replace(/\D/g, '')) && customerId) {
+    const cust = (CRM_STATE?.customers || []).find(c => c && c.id === customerId);
+    if (cust && (cust.phone || cust.whatsapp)) targetPhone = cust.whatsapp || cust.phone;
+    if ((!targetPhone || targetPhone === '-') && Array.isArray(CRM_STATE?.queries)) {
+      const q = CRM_STATE.queries.find(qry => qry && (qry.customerId === customerId || qry.customer_id === customerId || qry.id === customerId));
+      if (q && (q.customerPhone || q.customer_phone)) targetPhone = q.customerPhone || q.customer_phone;
+    }
+    if ((!targetPhone || targetPhone === '-') && String(customerId).replace(/\D/g, '').length >= 10) {
+      targetPhone = String(customerId).replace(/\D/g, '').slice(-10);
+    }
+  }
+
   // Clean and normalize phone number (strips :0 and device artifacts)
-  const normPhone = normalizeWhatsAppPhone(phone);
+  const normPhone = normalizeWhatsAppPhone(targetPhone);
   let cleanPhone = normPhone.cleanDigits;
   if (/^\d{10}$/.test(cleanPhone)) {
     cleanPhone = '91' + cleanPhone;
   }
   let cleanJid = jid;
-  if (cleanJid && (cleanJid.includes(':') || /^\d{13}@/.test(cleanJid) || cleanJid.includes('85850'))) {
-    cleanJid = cleanPhone ? `${cleanPhone}@s.whatsapp.net` : null;
+  if (cleanJid && cleanJid.includes(':')) {
+    const parts = cleanJid.split(':');
+    const after = parts[1] || '';
+    cleanJid = parts[0] + (after.includes('@') ? ('@' + after.split('@')[1]) : '@s.whatsapp.net');
+  }
+  if (!cleanJid && cleanPhone && cleanPhone.length >= 10) {
+    cleanJid = `${cleanPhone}@s.whatsapp.net`;
   }
 
   const effectiveCustId = customerId || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : null);
@@ -13255,8 +13275,11 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     console.warn('[PHP Send Proxy Error]:', e);
   }
 
-  if (msgRef) msgRef.status = 'SENT';
-  if (!silent) showToast('Saved in CRM', 'Recorded locally in customer chat history.', 'info', 'blue');
+  if (msgRef) msgRef.status = 'FAILED';
+  if (typeof renderChatMessages === 'function') renderChatMessages();
+  if (!silent) {
+    showToast('WhatsApp Delivery Notice', 'Message saved in CRM, but WhatsApp Line is disconnected. Please scan QR Code in Settings.', 'warning', 'amber');
+  }
   return false;
 }
 
@@ -13571,12 +13594,58 @@ async function handleSendMessage(event) {
   playChime('order');
 
   // Transmit live WhatsApp message across WebSocket bridge to customer's WhatsApp!
+  // Resilient customer phone & JID resolution (heals missing/placeholder numbers on assigned leads)
+  let destPhone = customer.whatsapp || customer.phone || '';
+  let destJid = customer.jid || null;
+
+  if (destPhone === '-' || !destPhone.replace(/\D/g, '')) {
+    destPhone = '';
+  }
+
+  // 1. Fallback to query
+  if (!destPhone && query && (query.customerPhone || query.customer_phone)) {
+    destPhone = query.customerPhone || query.customer_phone;
+  }
+
+  // 2. Fallback to conversation messages
+  const convMsgs = CRM_STATE.conversations[ACTIVE_CUSTOMER_ID] || [];
+  if (Array.isArray(convMsgs) && convMsgs.length > 0) {
+    const latestInbound = convMsgs.slice().reverse().find(m => m && (m.sender === 'customer' || m.direction === 'inbound'));
+    if (latestInbound) {
+      if (!destPhone) destPhone = latestInbound.sender_phone || latestInbound.phone || '';
+      if (!destJid) destJid = latestInbound.sender_jid || latestInbound.jid || null;
+    }
+  }
+
+  // 3. Fallback to ACTIVE_CUSTOMER_ID digits
+  if (!destPhone) {
+    const idDigits = String(ACTIVE_CUSTOMER_ID).replace(/\D/g, '');
+    if (idDigits.length >= 10) {
+      destPhone = idDigits.slice(-10);
+    }
+  }
+
+  // Heal customer object
+  if (destPhone && (!customer.phone || customer.phone === '-')) {
+    customer.phone = destPhone;
+    customer.whatsapp = destPhone;
+  }
+  if (destJid && !customer.jid) {
+    customer.jid = destJid;
+  }
+
+  // Account ID must be a concrete line (never 'all')
+  let sendAccountId = customer.accountId || ACTIVE_SEND_ACCOUNT_ID || 'account_1';
+  if (sendAccountId === 'all' || !sendAccountId) {
+    sendAccountId = 'account_1';
+  }
+
   dispatchWhatsAppOutbound(
-    customer.whatsapp || customer.phone,
+    destPhone,
     formattedText,
     newMsg,
-    customer.jid,
-    customer.accountId || ACTIVE_SEND_ACCOUNT_ID,
+    destJid,
+    sendAccountId,
     false,
     attachedMedia,
     customer.id,
