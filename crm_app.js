@@ -3782,13 +3782,48 @@ function applyAuthoritativeDatabaseState(data) {
     }));
 
     const custMap = new Map();
-    dbCusts.forEach(dc => custMap.set(String(dc.id), dc));
+    const phoneMap = new Map();
+
+    function addOrMergeCustomer(cust) {
+      if (!cust) return;
+      const cleanP = String(cust.phone || cust.whatsapp || '').replace(/\D/g, '');
+      const p10 = cleanP.length >= 7 ? cleanP.slice(-10) : '';
+
+      const existing = (p10 ? phoneMap.get(p10) : null) || custMap.get(String(cust.id));
+      if (existing) {
+        // Upgrade generic name to genuine contact name
+        const exName = existing.name || '';
+        const curName = cust.name || '';
+        if ((!exName || exName.startsWith('Customer') || exName.startsWith('WhatsApp Customer')) && curName && !curName.startsWith('Customer') && !curName.startsWith('WhatsApp Customer')) {
+          existing.name = curName;
+          existing.avatar = (curName.slice(0, 2) || 'CU').toUpperCase();
+        }
+        if ((!existing.phone || existing.phone.length < 10) && cust.phone && cust.phone.length >= 10) {
+          existing.phone = cust.phone;
+          existing.whatsapp = cust.phone;
+        }
+        if ((!existing.assignedTo || existing.assignedTo === 'UNASSIGNED') && cust.assignedTo && cust.assignedTo !== 'UNASSIGNED') {
+          existing.assignedTo = cust.assignedTo;
+          existing.assigned_to = cust.assignedTo;
+        }
+        if (cust.lastMessageAt && (!existing.lastMessageAt || new Date(cust.lastMessageAt) > new Date(existing.lastMessageAt))) {
+          existing.lastMessage = cust.lastMessage;
+          existing.lastMessageAt = cust.lastMessageAt;
+        }
+        existing.unreadCount = Math.max(existing.unreadCount || 0, cust.unreadCount || 0);
+        return;
+      }
+
+      custMap.set(String(cust.id), cust);
+      if (p10) phoneMap.set(p10, cust);
+    }
+
+    dbCusts.forEach(addOrMergeCustomer);
     (CRM_STATE.customers || []).forEach(ec => {
-      if (ec && ec.id && !custMap.has(String(ec.id))) {
-        // Keep active customer if they have messages or recent activity
+      if (ec && ec.id) {
         const hasConv = CRM_STATE.conversations && Array.isArray(CRM_STATE.conversations[ec.id]) && CRM_STATE.conversations[ec.id].length > 0;
         if (hasConv || ec.lastMessage || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' && String(ACTIVE_CUSTOMER_ID) === String(ec.id))) {
-          custMap.set(String(ec.id), ec);
+          addOrMergeCustomer(ec);
         }
       }
     });
@@ -3796,13 +3831,16 @@ function applyAuthoritativeDatabaseState(data) {
     // Resilient Synthesis: Guarantee any customer with conversation threads is NEVER dropped on refresh
     const convSource = (data.conversations && typeof data.conversations === 'object') ? data.conversations : (CRM_STATE.conversations || {});
     for (const [cid, msgs] of Object.entries(convSource)) {
-      if (cid && !custMap.has(String(cid)) && Array.isArray(msgs) && msgs.length > 0) {
+      if (cid && Array.isArray(msgs) && msgs.length > 0) {
         const lastM = msgs[msgs.length - 1];
         const cleanP = String(lastM.sender_phone || cid).replace(/\D/g, '');
         const clean10 = cleanP.slice(-10);
+        if (clean10 && phoneMap.has(clean10)) continue;
+        if (custMap.has(String(cid))) continue;
+
         const sName = lastM.sender_name || (clean10 ? ('Customer (' + clean10.slice(-4) + ')') : 'WhatsApp Customer');
         const pFormatted = clean10 ? ('+91 ' + clean10.slice(0, 5) + ' ' + clean10.slice(5)) : '';
-        custMap.set(String(cid), {
+        addOrMergeCustomer({
           id: cid,
           code: 'CUST-' + (clean10 || cid),
           name: sName,
@@ -3895,13 +3933,23 @@ function applyAuthoritativeDatabaseState(data) {
   // Ensure all active customers have a corresponding query representation in CRM_STATE.queries
   if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
   const existingQCustIds = new Set(CRM_STATE.queries.map(q => String(q.customerId || q.customer_id)));
+  const existingQPhones10 = new Set(
+    CRM_STATE.queries
+      .map(q => String(q.customerPhone || q.customer_phone || '').replace(/\D/g, '').slice(-10))
+      .filter(p => p.length >= 7)
+  );
   (CRM_STATE.customers || []).forEach(c => {
-    if (c && !existingQCustIds.has(String(c.id))) {
-      const clean10 = (c.phone || c.whatsapp || '').replace(/\D/g, '').slice(-10);
+    if (!c) return;
+    const clean10 = (c.phone || c.whatsapp || '').replace(/\D/g, '').slice(-10);
+    if (!existingQCustIds.has(String(c.id)) && (!clean10 || !existingQPhones10.has(clean10))) {
       CRM_STATE.queries.push({
         id: clean10 ? ('Q-' + clean10) : ('Q-' + c.id),
         customerId: c.id,
         customer_id: c.id,
+        customerPhone: c.phone || c.whatsapp || '',
+        customer_phone: c.phone || c.whatsapp || '',
+        customerName: c.name || 'Customer',
+        customer_name: c.name || 'Customer',
         assignedTo: c.assignedTo || c.assigned_to || 'UNASSIGNED',
         assigned_to: c.assignedTo || c.assigned_to || 'UNASSIGNED',
         accountId: c.accountId || c.account_id || 'account_1',
@@ -3913,6 +3961,7 @@ function applyAuthoritativeDatabaseState(data) {
         createdAt: c.createdAt || c.lastMessageAt || ''
       });
       existingQCustIds.add(String(c.id));
+      if (clean10) existingQPhones10.add(clean10);
     }
   });
 
@@ -6997,8 +7046,10 @@ function renderInboxConversationList() {
     if (kDigits.length >= 7) convPhoneMap.set(kDigits.slice(-10), msgs);
   }
 
-  // Deduplication Engine: Exactly 1 item per customer!
+  // Deduplication Engine: Exactly 1 item per unique customer / phone number!
   let customerCards = [];
+  const cardByPhone10 = new Map();
+  const cardByCustId = new Map();
 
   (CRM_STATE.customers || []).forEach(cust => {
     if (!cust || cust.name === 'System' || cust.name === 'GRM Linked WhatsApp Device' || cust.name.startsWith('WhatsApp Linked')) return;
@@ -7055,7 +7106,32 @@ function renderInboxConversationList() {
     const custBusinessNumber = cust.businessNumber || (query ? query.businessNumber : null) || '+91 86680 07593';
     const qStatus = query ? (query.status || 'NEW') : 'NEW';
 
-    customerCards.push({
+    // DUPLICATION PREVENTER: If a card already exists for this 10-digit phone or customerId, MERGE into it!
+    const existingCard = (phone10 ? cardByPhone10.get(phone10) : null) || cardByCustId.get(String(cust.id));
+    if (existingCard) {
+      if (lastTimeEpoch > (existingCard.lastTimeEpoch || 0)) {
+        existingCard.lastTimeEpoch = lastTimeEpoch;
+        existingCard.lastMessage = lastText;
+        existingCard.createdAt = timeDisplay;
+        existingCard.lastTime = timeDisplay;
+      }
+      const exName = existingCard.customer?.name || '';
+      const curName = cust.name || '';
+      if ((!exName || exName.startsWith('Customer') || exName.startsWith('WhatsApp Customer')) && curName && !curName.startsWith('Customer') && !curName.startsWith('WhatsApp Customer')) {
+        existingCard.customer.name = curName;
+        existingCard.customer.avatar = (curName.slice(0, 2) || 'CU').toUpperCase();
+      }
+      if (assignedStaffId && assignedStaffId !== 'UNASSIGNED' && (!existingCard.assignedTo || existingCard.assignedTo === 'UNASSIGNED')) {
+        existingCard.assignedTo = assignedStaffId;
+        existingCard.staff = staff;
+      }
+      if (query && query.unreadCount) {
+        existingCard.unreadCount = Math.max(existingCard.unreadCount || 0, query.unreadCount);
+      }
+      return;
+    }
+
+    const card = {
       customerId: cust.id,
       customer: cust,
       queryId: query ? query.id : ('Q-' + cust.id),
@@ -7070,23 +7146,35 @@ function renderInboxConversationList() {
       lastTimeEpoch: lastTimeEpoch,
       accountId: custAccountId,
       businessNumber: custBusinessNumber
-    });
+    };
+    customerCards.push(card);
+    if (phone10) cardByPhone10.set(phone10, card);
+    cardByCustId.set(String(cust.id), card);
   });
 
   // Safety Fallback: Guarantee no inquiry/lead in CRM_STATE.queries is ever omitted from the conversation list
-  const coveredCustIds = new Set(customerCards.map(c => String(c.customerId)));
-  const coveredPhones10 = new Set(customerCards.map(c => {
-    const raw = c.customer ? (c.customer.phone || c.customer.whatsapp || '') : '';
-    const d = raw.replace(/\D/g, '');
-    return d.length >= 7 ? d.slice(-10) : '';
-  }).filter(Boolean));
-
   (CRM_STATE.queries || []).forEach(q => {
     if (!q || q.status === 'DND') return;
     const qCid = String(q.customerId || q.customer_id || '');
     const qP = String(q.customerPhone || q.customer_phone || '').replace(/\D/g, '');
     const qP10 = qP.length >= 7 ? qP.slice(-10) : '';
-    if ((qCid && coveredCustIds.has(qCid)) || (qP10 && coveredPhones10.has(qP10))) {
+
+    // DUPLICATION PREVENTER: Check if query belongs to an existing card by phone10 or customerId
+    const existingCard = (qP10 ? cardByPhone10.get(qP10) : null) || (qCid ? cardByCustId.get(qCid) : null);
+    if (existingCard) {
+      const qEpoch = extractConversationEpoch(null, null, q, q.createdAt || 'Recent');
+      if (qEpoch > (existingCard.lastTimeEpoch || 0)) {
+        existingCard.lastTimeEpoch = qEpoch;
+        existingCard.lastMessage = (window.t ? window.t('chat.customer_prefix', 'Customer: ') : 'Customer: ') + `"${String(q.lastMessage || q.queryText || 'Enquiry').substring(0, 38)}..."`;
+        existingCard.createdAt = formatInboxCardTime(q.createdAt || 'Recent');
+        existingCard.lastTime = existingCard.createdAt;
+      }
+      const exName = existingCard.customer?.name || '';
+      const qName = q.customerName || q.customer_name || '';
+      if ((!exName || exName.startsWith('Customer') || exName.startsWith('WhatsApp Customer')) && qName && !qName.startsWith('Customer') && !qName.startsWith('WhatsApp Customer')) {
+        existingCard.customer.name = qName;
+        existingCard.customer.avatar = (qName.slice(0, 2) || 'CU').toUpperCase();
+      }
       return;
     }
 
@@ -7095,7 +7183,7 @@ function renderInboxConversationList() {
     const timeDisplay = formatInboxCardTime(q.createdAt || q.created_at || 'Recent');
     const lastText = (window.t ? window.t('chat.customer_prefix', 'Customer: ') : 'Customer: ') + `"${String(q.lastMessage || q.queryText || 'Enquiry').substring(0, 38)}..."`;
 
-    customerCards.push({
+    const card = {
       customerId: qCid || (qP10 ? ('cust_' + qP10) : ('cust_' + q.id)),
       customer: {
         id: qCid || (qP10 ? ('cust_' + qP10) : ('cust_' + q.id)),
@@ -7118,9 +7206,10 @@ function renderInboxConversationList() {
       lastTimeEpoch: extractConversationEpoch(null, null, q, timeDisplay),
       accountId: q.accountId || q.account_id || 'account_1',
       businessNumber: '+91 86680 07593'
-    });
-    if (qCid) coveredCustIds.add(qCid);
-    if (qP10) coveredPhones10.add(qP10);
+    };
+    customerCards.push(card);
+    if (qP10) cardByPhone10.set(qP10, card);
+    if (qCid) cardByCustId.set(qCid, card);
   });
 
   // Time-based Alignment: Most recent/newest message at TOP, first come / older messages BELOW
@@ -7418,6 +7507,26 @@ function selectCustomerChat(customerId) {
   if (CRM_STATE) {
     CRM_STATE.activeCustomerId = customerId;
   }
+
+  // Clear unread count for this customer across state & notify backend
+  const cleanId = String(customerId);
+  const cust = (CRM_STATE?.customers || []).find(c => c && (String(c.id) === cleanId || String(c.customerId) === cleanId));
+  const clean10 = cust ? String(cust.phone || cust.whatsapp || '').replace(/\D/g, '').slice(-10) : '';
+  (CRM_STATE?.queries || []).forEach(q => {
+    if (!q) return;
+    const qCid = String(q.customerId || q.customer_id || '');
+    const qP10 = String(q.customerPhone || q.customer_phone || '').replace(/\D/g, '').slice(-10);
+    if (qCid === cleanId || (clean10 && qP10 === clean10)) {
+      q.unreadCount = 0;
+      q.unread_count = 0;
+    }
+  });
+  if (cust) {
+    cust.unreadCount = 0;
+    cust.unread_count = 0;
+  }
+  if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+  fetch('api.php?action=mark_customer_read&customer_id=' + encodeURIComponent(customerId) + (clean10 ? '&phone=' + encodeURIComponent(clean10) : '')).catch(() => {});
 
   // On mobile (< 768px), transition from conversation list view to active chat view
   if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -9830,15 +9939,25 @@ function updateBadgeCounters() {
   if (!CRM_STATE) return;
   
 
-  // 1. Unread count in inbox
+  // 1. Unread count in inbox (Strictly 1 count per person who sent messages!)
   const unreadEl = document.getElementById('badge-total-unread');
   const subtabUnread = document.getElementById('subtab-unread-badge');
-  let unreadCount = 0;
+  const unreadCustSet = new Set();
   (CRM_STATE.queries || []).forEach(q => {
-    if (q.status !== 'DND') {
-      unreadCount += (q.unreadCount || 0);
+    if (q.status !== 'DND' && (q.unreadCount || 0) > 0) {
+      const clean = String(q.customerPhone || q.customer_phone || q.customerId || q.customer_id || '').replace(/\D/g, '');
+      const p10 = clean.length >= 7 ? clean.slice(-10) : (q.customerId || q.id);
+      if (p10) unreadCustSet.add(p10);
     }
   });
+  (CRM_STATE.customers || []).forEach(c => {
+    if (!c.isDND && (c.unreadCount || 0) > 0) {
+      const clean = String(c.phone || c.whatsapp || c.id || '').replace(/\D/g, '');
+      const p10 = clean.length >= 7 ? clean.slice(-10) : c.id;
+      if (p10) unreadCustSet.add(p10);
+    }
+  });
+  const unreadCount = unreadCustSet.size;
   if (unreadEl) {
     unreadEl.innerText = unreadCount > 0 ? unreadCount : '0';
   }
@@ -35117,18 +35236,9 @@ function logAudit(action, module, details) {
 }
 
 function updateBadgeCounters() {
-  
-  const availableAccountIds = getAvailableWhatsAppAccounts().map(a => a.id);
-  // Exclude DND queries from active inbox queries count
-  const activeQueries = (CRM_STATE.queries || []).filter(q => {
-    if (!availableAccountIds.includes(q.accountId || 'account_1')) return false;
-    const cust = (CRM_STATE.customers || []).find(c => c.id === q.customerId);
-    const isDnd = (q.status === 'DND') || (cust && (cust.isDND === true || (Array.isArray(cust.tags) && cust.tags.includes('DND / Opt-Out'))));
-    return !isDnd;
-  });
+  if (!CRM_STATE) return;
 
-  const unassignedCount = activeQueries.filter(q => q.assignedTo === 'UNASSIGNED').length;
-  const unreadCount = activeQueries.reduce((acc, q) => acc + (q.unreadCount || 0), 0);
+  const availableAccountIds = getAvailableWhatsAppAccounts().map(a => a.id);
   const uCurr = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : (typeof CRM_AUTH_SESSION !== 'undefined' ? CRM_AUTH_SESSION : null);
   const myQueueIds = [
     ACTIVE_ROLE,
@@ -35143,24 +35253,7 @@ function updateBadgeCounters() {
     ? (uCurr.role === 'admin' || uCurr.id === 'admin' || uCurr.role === 'Super Admin' || (uCurr.title && uCurr.title.includes('Admin Manager')))
     : (ACTIVE_ROLE === 'admin');
 
-  const visibleQueries = isSuperAdmin
-    ? activeQueries
-    : activeQueries.filter(q => {
-      const assigned = String(q.assignedTo || '').toLowerCase();
-      const s = (CRM_STATE.staffList || []).find(st => st.id === q.assignedTo);
-      const sName = String(s?.name || '').toLowerCase();
-      return myQueueIds.includes(assigned) || myQueueIds.includes(sName);
-    });
-
-  const myQueueCount = visibleQueries.length;
-
-  const bUnassigned = document.getElementById('badge-unassigned-count');
-  if (bUnassigned) bUnassigned.innerText = `${unassignedCount} New`;
-
-  const bUnread = document.getElementById('badge-total-unread');
-  if (bUnread) bUnread.innerText = unreadCount;
-
-  // High-accuracy calculation of active inbox conversations across customers & queries (excluding DND)
+  // DND set
   const dndSet = new Set();
   (CRM_STATE.customers || []).forEach(c => {
     if (c.isDND === true || (Array.isArray(c.tags) && c.tags.includes('DND / Opt-Out'))) {
@@ -35202,10 +35295,9 @@ function updateBadgeCounters() {
     return false;
   };
 
-  let totalCardsCount = 0;
-  let newLeadsCount = 0;
-  let followupCount = 0;
-  let unreadTotal = 0;
+  // STRICT UNIQUE PERSON DEDUPLICATION MAP
+  // Exactly 1 entry per unique customer/phone number (1 PERSON = 1 COUNT!)
+  const uniquePersonMap = new Map();
 
   (CRM_STATE.customers || []).forEach(cust => {
     if (!cust || cust.name === 'System' || cust.name === 'GRM Linked WhatsApp Device' || cust.name.startsWith('WhatsApp Linked')) return;
@@ -35213,7 +35305,9 @@ function updateBadgeCounters() {
 
     const custDigits = (cust.phone || cust.whatsapp || '').replace(/\D/g, '');
     const phone10 = custDigits.length >= 7 ? custDigits.slice(-10) : '';
-    const query = queryByCustId.get(String(cust.id)) || (phone10 ? queryByPhone10.get(phone10) : null);
+    const personKey = phone10 || String(cust.id);
+
+    const query = (phone10 ? queryByPhone10.get(phone10) : null) || queryByCustId.get(String(cust.id));
     if (query && query.status === 'DND') return;
 
     const conv = (CRM_STATE.conversations && CRM_STATE.conversations[cust.id]) || (phone10 ? convPhoneMap.get(phone10) : null) || [];
@@ -35233,37 +35327,95 @@ function updateBadgeCounters() {
       if (!isAssignedToMe) return;
     }
 
-    totalCardsCount++;
+    const hasUnread = ((query && (query.unreadCount || 0) > 0) || (cust.unreadCount || 0) > 0 || (conv.length > 0 && conv[conv.length - 1].direction === 'inbound'));
 
-    const isFu = query ? isFollowupQuery(query) : followupCustIds.has(String(cust.id));
-    if (isFu) {
-      followupCount++;
-    } else {
-      const isNl = query ? isNewLeadQuery(query) : (!cust.assignedTo || cust.assignedTo === 'UNASSIGNED');
-      if (isNl) newLeadsCount++;
+    if (uniquePersonMap.has(personKey)) {
+      const ex = uniquePersonMap.get(personKey);
+      if (hasUnread) ex.hasUnread = true;
+      return;
     }
 
-    const uCount = (query && query.unreadCount) ? Number(query.unreadCount) : (Number(cust.unreadCount) || (conv.length > 0 && conv[conv.length - 1].direction === 'inbound' ? 1 : 0));
-    unreadTotal += uCount;
+    const isFu = query ? isFollowupQuery(query) : followupCustIds.has(String(cust.id));
+    const isNl = !isFu && (query ? isNewLeadQuery(query) : (!cust.assignedTo || cust.assignedTo === 'UNASSIGNED'));
+    const isUnassigned = (!query?.assignedTo || query.assignedTo === 'UNASSIGNED') && (!cust.assignedTo || cust.assignedTo === 'UNASSIGNED');
+
+    uniquePersonMap.set(personKey, {
+      customer: cust,
+      query: query,
+      hasUnread: Boolean(hasUnread),
+      isFollowup: isFu,
+      isNewLead: isNl,
+      isUnassigned: isUnassigned
+    });
   });
 
-  const finalTotalChats = isSuperAdmin ? Math.max(totalCardsCount, visibleQueries.length) : totalCardsCount;
-  const finalNewLeads = isSuperAdmin ? Math.max(newLeadsCount, visibleQueries.filter(isNewLeadQuery).length) : newLeadsCount;
-  const finalFollowup = isSuperAdmin ? Math.max(followupCount, visibleQueries.filter(isFollowupQuery).length) : followupCount;
+  // Safety Fallback: Query leads not yet covered by customers
+  (CRM_STATE.queries || []).forEach(q => {
+    if (!q || q.status === 'DND') return;
+    const qCid = String(q.customerId || q.customer_id || '');
+    const clean = String(q.customerPhone || q.customer_phone || qCid).replace(/\D/g, '');
+    const phone10 = clean.length >= 7 ? clean.slice(-10) : '';
+    const personKey = phone10 || qCid;
+    if (!personKey || uniquePersonMap.has(personKey)) return;
+
+    if (!isSuperAdmin) {
+      const assignedVal = String(q.assignedTo || q.assigned_to || '').trim().toLowerCase();
+      const s = (CRM_STATE.staffList || []).find(st => st && (st.id === q.assignedTo || st.name === q.assignedTo));
+      const sName = String(s?.name || '').toLowerCase();
+      const sId = String(s?.id || '').toLowerCase();
+      if (!myQueueIds.includes(assignedVal) && !myQueueIds.includes(sName) && !myQueueIds.includes(sId)) return;
+    }
+
+    const isFu = isFollowupQuery(q);
+    const isNl = !isFu && isNewLeadQuery(q);
+    const isUnassigned = !q.assignedTo || q.assignedTo === 'UNASSIGNED';
+    const hasUnread = (q.unreadCount || 0) > 0;
+
+    uniquePersonMap.set(personKey, {
+      customer: null,
+      query: q,
+      hasUnread: Boolean(hasUnread),
+      isFollowup: isFu,
+      isNewLead: isNl,
+      isUnassigned: isUnassigned
+    });
+  });
+
+  // Unique person aggregations: ONE PERSON SENDING MULTIPLE MESSAGES = 1 COUNT!
+  const totalUniqueChats = uniquePersonMap.size;
+  let unreadUniqueCustomers = 0;
+  let newLeadsCount = 0;
+  let followupCount = 0;
+  let unassignedCount = 0;
+
+  uniquePersonMap.forEach(p => {
+    if (p.hasUnread) unreadUniqueCustomers++;
+    if (p.isFollowup) followupCount++;
+    else if (p.isNewLead) newLeadsCount++;
+    if (p.isUnassigned) unassignedCount++;
+  });
 
   const countAll = document.getElementById('count-all');
-  if (countAll) countAll.innerText = finalTotalChats;
+  if (countAll) countAll.innerText = totalUniqueChats;
 
   const countNewLeads = document.getElementById('count-new-leads');
-  if (countNewLeads) countNewLeads.innerText = finalNewLeads;
+  if (countNewLeads) countNewLeads.innerText = newLeadsCount;
 
   const countFollowup = document.getElementById('count-followup');
-  if (countFollowup) countFollowup.innerText = finalFollowup;
+  if (countFollowup) countFollowup.innerText = followupCount;
 
-  // Synchronize sidebar WhatsApp Inbox counter with actual unread or total conversation queue
+  // Sidenav WhatsApp Inbox Badge (Strictly 1 count per person who sent messages):
+  const bUnread = document.getElementById('badge-total-unread');
   if (bUnread) {
-    const finalSidebarCount = unreadTotal > 0 ? unreadTotal : finalTotalChats;
-    bUnread.innerText = finalSidebarCount;
+    bUnread.innerText = unreadUniqueCustomers;
+  }
+  const subtabUnread = document.getElementById('subtab-unread-badge');
+  if (subtabUnread) {
+    subtabUnread.innerText = unreadUniqueCustomers;
+  }
+  const headerLiveCount = document.getElementById('header-live-queue-count');
+  if (headerLiveCount) {
+    headerLiveCount.innerText = unreadUniqueCustomers;
   }
 
   const countUnassigned = document.getElementById('count-unassigned');
@@ -35272,7 +35424,7 @@ function updateBadgeCounters() {
   if (bulkUnassignedBadge) bulkUnassignedBadge.innerText = unassignedCount;
 
   const countMy = document.getElementById('count-my');
-  if (countMy) countMy.innerText = myQueueCount;
+  if (countMy) countMy.innerText = totalUniqueChats;
 
   const followupEl = document.getElementById('badge-followup-count');
   if (followupEl) {

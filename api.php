@@ -1216,10 +1216,86 @@ if ($action === 'get_state' || $action === 'get_all') {
                             UPPER(SUBSTRING(COALESCE(NULLIF(q.`customer_name`, ''), 'CU'), 1, 2))
                         FROM `queries` q
                         WHERE (q.`customer_id` IS NOT NULL AND q.`customer_id` != '' AND q.`customer_id` NOT IN (SELECT `id` FROM `customers`))
+                          AND (LENGTH(REPLACE(REPLACE(REPLACE(q.`customer_phone`, ' ', ''), '+', ''), '-', '')) < 10 
+                               OR RIGHT(REPLACE(REPLACE(REPLACE(q.`customer_phone`, ' ', ''), '+', ''), '-', ''), 10) NOT IN (SELECT RIGHT(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), 10) FROM `customers` WHERE `phone` IS NOT NULL AND `phone` != ''))
                           AND (q.`customer_name` IS NULL OR q.`customer_name` NOT IN ('GRM Garments', 'System', 'Bot (Auto-Reply)', 'WhatsApp Business #2'))
                         ON DUPLICATE KEY UPDATE `name` = VALUES(`name`)
                     ");
                 } catch (Exception $eAutoCust) {}
+
+                // 4. Automated Customer Deduplication & Profile Consolidation
+                // Merges duplicate customer records sharing the same 10-digit phone number
+                try {
+                    $dupPhonesStmt = $pdo->query("
+                        SELECT RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', ''), 10) AS p10, COUNT(*) AS cnt
+                        FROM `customers`
+                        WHERE `phone` IS NOT NULL AND `phone` != '' AND LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', '')) >= 10
+                        GROUP BY p10
+                        HAVING cnt > 1
+                    ");
+                    $dupPhones = $dupPhonesStmt ? $dupPhonesStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+                    foreach ($dupPhones as $dp) {
+                        $p10 = $dp['p10'];
+                        if (empty($p10) || strlen($p10) < 10) continue;
+                        
+                        $cRecordsStmt = $pdo->prepare("
+                            SELECT * FROM `customers` 
+                            WHERE RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), '(', ''), 10) = ? 
+                               OR RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(`whatsapp`, ' ', ''), '+', ''), '-', ''), '(', ''), 10) = ?
+                            ORDER BY 
+                                CASE WHEN `name` NOT LIKE 'Customer%' AND `name` NOT LIKE 'WhatsApp Customer%' AND `name` != '' THEN 0 ELSE 1 END ASC,
+                                CASE WHEN `id` LIKE 'cust_%' THEN 0 ELSE 1 END ASC,
+                                COALESCE(`last_message_at`, `created_at`) DESC,
+                                `id` ASC
+                        ");
+                        $cRecordsStmt->execute([$p10, $p10]);
+                        $records = $cRecordsStmt->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        if (count($records) > 1) {
+                            $canonical = $records[0];
+                            $canonicalId = $canonical['id'];
+                            
+                            $bestName = $canonical['name'];
+                            $bestAssigned = $canonical['assigned_to'];
+                            $maxUnread = (int)($canonical['unread_count'] ?? 0);
+                            $latestMsg = $canonical['last_message'];
+                            $latestMsgAt = $canonical['last_message_at'];
+                            
+                            $dupIds = [];
+                            for ($i = 1; $i < count($records); $i++) {
+                                $dup = $records[$i];
+                                $dupIds[] = $dup['id'];
+                                if ((empty($bestName) || strpos($bestName, 'Customer') === 0) && !empty($dup['name']) && strpos($dup['name'], 'Customer') !== 0) {
+                                    $bestName = $dup['name'];
+                                }
+                                if ((empty($bestAssigned) || $bestAssigned === 'UNASSIGNED') && !empty($dup['assigned_to']) && $dup['assigned_to'] !== 'UNASSIGNED') {
+                                    $bestAssigned = $dup['assigned_to'];
+                                }
+                                if ((int)($dup['unread_count'] ?? 0) > $maxUnread) {
+                                    $maxUnread = (int)$dup['unread_count'];
+                                }
+                                if (!empty($dup['last_message_at']) && (empty($latestMsgAt) || strtotime($dup['last_message_at']) > strtotime($latestMsgAt))) {
+                                    $latestMsg = $dup['last_message'];
+                                    $latestMsgAt = $dup['last_message_at'];
+                                }
+                            }
+                            
+                            $pdo->prepare("
+                                UPDATE `customers` 
+                                SET `name` = ?, `assigned_to` = ?, `unread_count` = ?, `last_message` = COALESCE(?, `last_message`), `last_message_at` = COALESCE(?, `last_message_at`)
+                                WHERE `id` = ?
+                            ")->execute([$bestName, $bestAssigned, $maxUnread, $latestMsg, $latestMsgAt, $canonicalId]);
+                            
+                            foreach ($dupIds as $oldId) {
+                                $pdo->prepare("UPDATE `messages` SET `customer_id` = ? WHERE `customer_id` = ?")->execute([$canonicalId, $oldId]);
+                                $pdo->prepare("UPDATE `queries` SET `customer_id` = ?, `customer_name` = ? WHERE `customer_id` = ?")->execute([$canonicalId, $bestName, $oldId]);
+                                $pdo->prepare("UPDATE `orders` SET `customer_id` = ?, `customer_name` = ? WHERE `customer_id` = ?")->execute([$canonicalId, $bestName, $oldId]);
+                                $pdo->prepare("UPDATE `followups` SET `customer_id` = ?, `customer_name` = ? WHERE `customer_id` = ?")->execute([$canonicalId, $bestName, $oldId]);
+                                $pdo->prepare("DELETE FROM `customers` WHERE `id` = ?")->execute([$oldId]);
+                            }
+                        }
+                    }
+                } catch (Exception $eDedupCust) {}
             } catch (Exception $ePurgeBiz) {}
         }
 
@@ -1237,6 +1313,8 @@ if ($action === 'get_state' || $action === 'get_all') {
         }
         $rawCustomers = $cStmt->fetchAll();
         $customers = [];
+        $seenPhone10 = [];
+        $seenCustIds = [];
         foreach ($rawCustomers as $c) {
             $rawP = !empty($c['phone']) ? $c['phone'] : ($c['whatsapp'] ?? '');
             $cleanDigits = preg_replace('/[^0-9]/', '', $rawP);
@@ -1265,22 +1343,26 @@ if ($action === 'get_state' || $action === 'get_all') {
             $c['unreadCount'] = (int)($c['unread_count'] ?? 0);
 
             // Self-healing: Sanitize customer phone from trailing device 0 or companion index
+            $phone10 = '';
             if (!empty($rawP)) {
                 $pInfo = cleanWhatsAppPhone($rawP);
                 if (!empty($pInfo['clean10']) && strlen($pInfo['clean10']) === 10) {
                     $c['phone'] = $pInfo['formatted'];
                     $c['whatsapp'] = $pInfo['formatted'];
+                    $phone10 = $pInfo['clean10'];
                 } else if (preg_match('/^\+?91[[:space:]]?[0-5]/', $rawP)) {
                     // Invalid LID slice formatted as +91: Clear fake phone!
                     $c['phone'] = '';
                     $c['whatsapp'] = '';
+                } else if (strlen($cleanDigits) >= 10) {
+                    $phone10 = substr($cleanDigits, -10);
                 }
             }
 
             // Self-healing: Prevent account slot labels from becoming customer contact names
             if (!empty($c['name']) && (preg_match('/^(WhatsApp Business|Primary Line|Primary WhatsApp|Line \d|account_\d)/i', $c['name']) || preg_match('/^Customer \([0-5]\d{3}\)$/', $c['name']))) {
-                if (!empty($pInfo['clean10']) && preg_match('/^[6-9]\d{9}$/', $pInfo['clean10'])) {
-                    $c['name'] = "Customer (" . substr($pInfo['clean10'], -4) . ")";
+                if (!empty($phone10) && preg_match('/^[6-9]\d{9}$/', $phone10)) {
+                    $c['name'] = "Customer (" . substr($phone10, -4) . ")";
                 } else {
                     $c['name'] = "WhatsApp Customer";
                 }
@@ -1291,6 +1373,36 @@ if ($action === 'get_state' || $action === 'get_all') {
                     } catch (Exception $eUpdateCust) {}
                 }
             }
+
+            // IN-MEMORY DEDUPLICATION: Exactly 1 record per unique 10-digit phone number or ID!
+            $existingIndex = null;
+            if (!empty($phone10) && isset($seenPhone10[$phone10])) {
+                $existingIndex = $seenPhone10[$phone10];
+            } elseif (isset($seenCustIds[$c['id']])) {
+                $existingIndex = $seenCustIds[$c['id']];
+            }
+
+            if ($existingIndex !== null) {
+                $ex = &$customers[$existingIndex];
+                if ((empty($ex['name']) || strpos($ex['name'], 'Customer') === 0) && !empty($c['name']) && strpos($c['name'], 'Customer') !== 0) {
+                    $ex['name'] = $c['name'];
+                    $ex['avatar'] = strtoupper(substr($c['name'], 0, 2));
+                }
+                if ((empty($ex['assignedTo']) || $ex['assignedTo'] === 'UNASSIGNED') && !empty($c['assignedTo']) && $c['assignedTo'] !== 'UNASSIGNED') {
+                    $ex['assignedTo'] = $c['assignedTo'];
+                    $ex['assigned_to'] = $c['assignedTo'];
+                }
+                if (!empty($c['lastMessageAt']) && (empty($ex['lastMessageAt']) || strtotime($c['lastMessageAt']) > strtotime($ex['lastMessageAt']))) {
+                    $ex['lastMessage'] = $c['lastMessage'];
+                    $ex['lastMessageAt'] = $c['lastMessageAt'];
+                }
+                $ex['unreadCount'] = max((int)$ex['unreadCount'], (int)$c['unreadCount']);
+                continue;
+            }
+
+            $idx = count($customers);
+            if (!empty($phone10)) $seenPhone10[$phone10] = $idx;
+            $seenCustIds[$c['id']] = $idx;
             $customers[] = $c;
         }
 
@@ -4741,6 +4853,20 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     echo json_encode(["status" => "success", "message" => "Message stored in queue and database", "entry" => $msgEntry]);
+    exit;
+}
+
+if ($action === 'mark_customer_read') {
+    $cid = $_POST['customer_id'] ?? ($_GET['customer_id'] ?? '');
+    $phone = $_POST['phone'] ?? ($_GET['phone'] ?? '');
+    $clean10 = substr(preg_replace('/[^0-9]/', '', $phone), -10);
+    if ($pdo && (!empty($cid) || !empty($clean10))) {
+        try {
+            $pdo->prepare("UPDATE `customers` SET `unread_count` = 0 WHERE `id` = ? OR RIGHT(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), 10) = ?")->execute([$cid, $clean10 ?: 'NOMATCH']);
+            $pdo->prepare("UPDATE `queries` SET `unread_count` = 0 WHERE `customer_id` = ? OR RIGHT(REPLACE(REPLACE(REPLACE(`customer_phone`, ' ', ''), '+', ''), '-', ''), 10) = ?")->execute([$cid, $clean10 ?: 'NOMATCH']);
+        } catch (Exception $e) {}
+    }
+    echo json_encode(["status" => "success"]);
     exit;
 }
 
