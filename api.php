@@ -4322,6 +4322,9 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $cleanBridgeJid = $parts[0] . (strpos($parts[1], '@') !== false ? ('@' . explode('@', $parts[1])[1]) : '@s.whatsapp.net');
     }
     $sendAccSlot = (!empty($postData['accountId']) && $postData['accountId'] !== 'all') ? $postData['accountId'] : 'account_1';
+    if (empty($sendAccSlot) || strlen(preg_replace('/[^0-9]/', '', $sendAccSlot)) >= 10) {
+        $sendAccSlot = 'account_1';
+    }
 
     // Call Node.js Baileys Bridge
     $bRes = curlBridgePost('/api/send', [
@@ -4421,6 +4424,9 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     $mediaType = $payload['type'] ?? ($mediaUrl ? 'image' : null);
     $msgUid = (string)($payload['message_uid'] ?? ($payload['id'] ?? ('msg_out_' . time() . '_' . rand(100, 999))));
     $accSlot = (!empty($payload['accountId']) && $payload['accountId'] !== 'all') ? $payload['accountId'] : 'account_1';
+    if (empty($accSlot) || strlen(preg_replace('/[^0-9]/', '', $accSlot)) >= 10) {
+        $accSlot = 'account_1';
+    }
     $senderName = $payload['sender_name'] ?? 'Super Admin';
     $recipientName = trim($payload['recipient_name'] ?? ($payload['customer_name'] ?? ''));
     $jid = trim($payload['jid'] ?? '');
@@ -4512,13 +4518,15 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
                 $checkStmt->execute([$msgUid]);
                 $existingMsgId = $checkStmt->fetchColumn();
 
+                $outStatus = !empty($payload['status']) ? $payload['status'] : 'SENDING';
+
                 if (!$existingMsgId) {
                     $stmt = $pdo->prepare("
                         INSERT INTO `messages` (
                             `message_uid`, `customer_id`, `sender`, `sender_name`, `sender_phone`, `sender_jid`,
                             `direction`, `text`, `message_text`, `media_type`, `media_url`,
                             `account_id`, `is_bot`, `source`, `time_str`, `timestamp_epoch`, `status`
-                        ) VALUES (?, ?, 'staff', ?, ?, ?, 'outbound', ?, ?, ?, ?, ?, 0, 'CRM_OUTBOUND', ?, ?, 'DELIVERED')
+                        ) VALUES (?, ?, 'staff', ?, ?, ?, 'outbound', ?, ?, ?, ?, ?, 0, 'CRM_OUTBOUND', ?, ?, ?)
                     ");
                     $stmt->execute([
                         $msgUid,
@@ -4532,10 +4540,11 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
                         $mediaUrl,
                         $accSlot,
                         date("h:i A"),
-                        time()
+                        time(),
+                        $outStatus
                     ]);
                 } else {
-                    $pdo->prepare("UPDATE `messages` SET `status` = 'DELIVERED', `media_url` = COALESCE(?, `media_url`), `media_type` = COALESCE(?, `media_type`) WHERE `id` = ?")->execute([$mediaUrl, $mediaType, $existingMsgId]);
+                    $pdo->prepare("UPDATE `messages` SET `status` = ?, `media_url` = COALESCE(?, `media_url`), `media_type` = COALESCE(?, `media_type`) WHERE `id` = ?")->execute([$outStatus, $mediaUrl, $mediaType, $existingMsgId]);
                 }
 
                 // Update customer & query last message
@@ -4567,7 +4576,7 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
                         "timestamp_epoch" => time(),
                         "received_at" => date("h:i A"),
                         "time" => date("h:i A"),
-                        "status" => "DELIVERED"
+                        "status" => $outStatus
                     ];
                     if (count($queue) > 50) {
                         $queue = array_slice($queue, -50);
@@ -4581,6 +4590,26 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     }
 
     echo json_encode(["status" => "success", "message_uid" => $msgUid, "customer_id" => $effectiveCustId ?? null]);
+    exit;
+}
+
+// 4.2 UPDATE OUTBOUND MESSAGE STATUS (Marks message DELIVERED or FAILED based on Baileys receipt)
+if ($action === 'update_message_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $payload = json_decode($input, true) ?: [];
+    $msgUid = $payload['message_uid'] ?? ($payload['id'] ?? null);
+    $newStatus = $payload['status'] ?? 'FAILED';
+    if ($msgUid && $pdo) {
+        try {
+            $pdo->prepare("UPDATE `messages` SET `status` = ? WHERE `message_uid` = ? OR `id` = ?")->execute([$newStatus, (string)$msgUid, (string)$msgUid]);
+            echo json_encode(["status" => "success", "message_uid" => $msgUid, "new_status" => $newStatus]);
+            exit;
+        } catch (Exception $e) {
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "error", "message" => "Missing message_uid or database"]);
     exit;
 }
 
