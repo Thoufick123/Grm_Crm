@@ -4339,6 +4339,7 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'text' => $text,
         'jid' => $cleanBridgeJid,
         'accountId' => $sendAccSlot,
+        'message_uid' => $postData['message_uid'] ?? ($postData['id'] ?? null),
         'mediaUrl' => $bridgeMediaUrl,
         'media_url' => $bridgeMediaUrl,
         'mediaData' => $rawBase64Media,

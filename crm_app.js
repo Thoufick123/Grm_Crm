@@ -2257,7 +2257,7 @@ function initSocketIO() {
       // Toast silenced on connect/refresh to prevent intrusive notification slider
 
       // 1. Fetch latest rules
-      fetch(`${getBridgeBaseUrl()}/api/autoreply/rules`)
+      fetch('api.php?action=get_autoreply')
         .then(r => r.json())
         .then(data => {
           if (data && Array.isArray(data.rules) && data.rules.length > 0) {
@@ -2367,6 +2367,16 @@ function initSocketIO() {
     SOCKET_IO.on('whatsapp:inbound', (payload) => {
       console.log('⚡ [Socket.IO Inbound Message Received]:', payload);
       ingestInboundMessage(payload);
+      const isOutboundEcho = Boolean(
+        payload &&
+        (payload.is_outbound ||
+          payload.direction === 'outbound' ||
+          payload.source === 'CRM_OUTBOUND' ||
+          payload.source === 'WHATSAPP_PHONE_DIRECT' ||
+          payload.source === 'AUTOREPLY_BOT' ||
+          payload.source === 'STAFF_OUTBOUND')
+      );
+      if (isOutboundEcho) return;
       // Double-guard: Forward from browser directly to CRM API to guarantee 100% database persistence across page refreshes
       try {
         fetch('api.php?action=receive_message', {
@@ -2580,6 +2590,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
   const existingMsgs = CRM_STATE.conversations[customer.id];
   const payloadUid = String(payload.message_uid || payload.id || '');
   let matchingMessage = null;
+  let isDuplicate = false;
 
   if (payloadUid) {
     matchingMessage = existingMsgs.find(m =>
@@ -2596,13 +2607,14 @@ function ingestInboundMessage(payload, suppressChime = false) {
   }
 
   if (!matchingMessage && !isOutboundMsg) {
-    const isDuplicate = existingMsgs.some(m =>
+    isDuplicate = existingMsgs.some(m =>
       (payload.id && String(m.id) === String(payload.id)) ||
       (m.sender === msgSender && m.text === messageText && (m.time === timeStr || Math.abs(msgTimestamp - (m.timestamp || 0)) < 15000)) ||
       (mediaUrl && m.media_url && String(m.media_url).slice(-30) === String(mediaUrl).slice(-30))
     );
     if (isDuplicate) matchingMessage = true;
   }
+  if (matchingMessage) isDuplicate = true;
 
   if (matchingMessage && matchingMessage !== true) {
     matchingMessage.id = payloadUid || matchingMessage.id;
@@ -14290,14 +14302,7 @@ function syncAutoReplyRulesToBackend() {
     sock.emit('autoreply:save_rules', { rules: rules });
   }
 
-  // 2. Direct REST POST to Node Bridge (Port 3000)
-  fetch(`${getBridgeBaseUrl()}/api/autoreply/rules`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rules: rules })
-  }).catch(() => { });
-
-  // 3. Fallback PHP REST API
+  // 2. Persist through the same-origin PHP API, which also updates the bridge server-side.
   fetch('api.php?action=save_autoreply_rules', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -18304,7 +18309,7 @@ function setScreenshotPreview(mode, dataUrl, filename, ocrMeta) {
   }
 
   const isMismatch = Boolean(ORDER_MODAL_STATE.amountMismatch);
-  const shortage = Math.abs(expectedAmount - (effectiveAmt || 0));
+  const shortage = Math.abs(expectedAmount - (detectedAmount || 0));
 
   const submitBtn = document.getElementById('order-submit-button');
   const submitLabel = document.getElementById('order-submit-btn-label');

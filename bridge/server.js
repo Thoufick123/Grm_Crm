@@ -2527,7 +2527,7 @@ io.on('connection', (socket) => {
     // Handle outbound message sending from CRM client over WebSocket
     socket.on('whatsapp:send', async (data, callback) => {
         try {
-            const { phone, text, jid, accountId, mediaUrl, media_url, mediaData, media_data, image, imageUrl } = data;
+            const { phone, text, jid, accountId, messageUid, message_uid, mediaUrl, media_url, mediaData, media_data, image, imageUrl } = data;
             const cleanP = String(phone || '').replace(/[^0-9]/g, '');
             const directPhoneJid = (cleanP.length === 10 || (cleanP.length === 12 && cleanP.startsWith('91')))
                 ? `${cleanP.length === 10 ? ('91' + cleanP) : cleanP}@s.whatsapp.net`
@@ -2540,7 +2540,7 @@ io.on('connection', (socket) => {
                 callback({ status: 'success', result });
             }
 
-            const outboundMsgUid = result?.id || ('msg_out_' + Date.now());
+            const outboundMsgUid = String(message_uid || messageUid || result?.id || ('msg_out_' + Date.now()));
 
             // Record outbound message in CRM PHP backend so it persists in MySQL across refreshes
             if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
@@ -3285,7 +3285,7 @@ app.post('/api/send', async (req, res) => {
                     accountId: accountId || 'account_1',
                     media_url: imageTarget,
                     customer_id: req.body?.customerId || null,
-                    message_uid: result?.id || ('msg_out_' + Date.now())
+                    message_uid: String(req.body?.message_uid || req.body?.messageUid || result?.id || ('msg_out_' + Date.now()))
                 })
             }).catch(() => {});
         }
