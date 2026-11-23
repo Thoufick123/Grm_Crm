@@ -7239,15 +7239,21 @@ function renderInboxConversationList() {
   const availableAccountIds = availableAccounts.map(a => a.id);
 
   if (ACTIVE_SEND_ACCOUNT_ID && ACTIVE_SEND_ACCOUNT_ID !== 'all') {
+    const targetStr = String(ACTIVE_SEND_ACCOUNT_ID).trim().toLowerCase();
+    const isPrimaryTarget = targetStr === 'account_1' || targetStr === '1' || targetStr.includes('primary') || targetStr.startsWith('account_1795');
+
     const lineCards = customerCards.filter(c => {
-      const acc = c.accountId || 'account_1';
-      if (ACTIVE_SEND_ACCOUNT_ID === 'account_1') {
-        return acc === 'account_1' || acc === '1' || acc.toLowerCase().includes('primary') || !acc;
+      const acc = String(c.accountId || c.customer?.accountId || 'account_1').trim().toLowerCase();
+      const isPrimaryAcc = acc === 'account_1' || acc === '1' || acc.includes('primary') || acc.startsWith('account_1795') || !c.accountId;
+      if (isPrimaryTarget) {
+        return isPrimaryAcc;
       }
-      return acc === ACTIVE_SEND_ACCOUNT_ID;
+      return acc === targetStr || targetStr.includes(acc) || acc.includes(targetStr);
     });
-    // On staff workstation, only restrict to specific line if matches exist, ensuring assigned leads are never hidden!
-    if (lineCards.length > 0 || !isStaffWorkstation) {
+
+    // Guard: If matches exist on this line, filter to it. If no matches exist (e.g. ID mismatch or new slot),
+    // never wipe out the entire inbox — gracefully keep showing all customer cards!
+    if (lineCards.length > 0) {
       customerCards = lineCards;
     }
   } else {
