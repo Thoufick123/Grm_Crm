@@ -6388,6 +6388,108 @@ if (typeof window !== 'undefined') {
 // 2. AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC) SYSTEM
 // =========================================================================
 
+const CRM_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+const CRM_IDLE_ACTIVITY_KEY = 'GRM_CRM_LAST_ACTIVITY';
+let CRM_IDLE_LOGOUT_TIMER = null;
+let CRM_IDLE_LAST_ACTIVITY_AT = 0;
+let CRM_IDLE_LAST_STORAGE_WRITE_AT = 0;
+let CRM_IDLE_EVENTS_BOUND = false;
+let CRM_IDLE_STORAGE_WARNING_SHOWN = false;
+
+function getCRMIdleLastActivityAt() {
+  let storedAt = 0;
+  try {
+    storedAt = Number(localStorage.getItem(CRM_IDLE_ACTIVITY_KEY)) || 0;
+  } catch (err) {
+    if (!CRM_IDLE_STORAGE_WARNING_SHOWN) {
+      console.warn('[CRM Idle Logout] Could not read shared activity timestamp:', err);
+      CRM_IDLE_STORAGE_WARNING_SHOWN = true;
+    }
+  }
+  return Math.max(storedAt, CRM_IDLE_LAST_ACTIVITY_AT);
+}
+
+function writeCRMIdleActivity(timestamp) {
+  CRM_IDLE_LAST_ACTIVITY_AT = timestamp;
+  CRM_IDLE_LAST_STORAGE_WRITE_AT = timestamp;
+  try {
+    localStorage.setItem(CRM_IDLE_ACTIVITY_KEY, String(timestamp));
+  } catch (err) {
+    if (!CRM_IDLE_STORAGE_WARNING_SHOWN) {
+      console.warn('[CRM Idle Logout] Could not save shared activity timestamp:', err);
+      CRM_IDLE_STORAGE_WARNING_SHOWN = true;
+    }
+  }
+}
+
+function scheduleCRMIdleLogout() {
+  if (CRM_IDLE_LOGOUT_TIMER) clearTimeout(CRM_IDLE_LOGOUT_TIMER);
+  CRM_IDLE_LOGOUT_TIMER = null;
+  if (!CURRENT_USER) return;
+
+  const remainingMs = CRM_IDLE_TIMEOUT_MS - (Date.now() - getCRMIdleLastActivityAt());
+  if (remainingMs <= 0) {
+    handleLogout();
+    return;
+  }
+
+  CRM_IDLE_LOGOUT_TIMER = setTimeout(() => {
+    CRM_IDLE_LOGOUT_TIMER = null;
+    scheduleCRMIdleLogout();
+  }, remainingMs);
+}
+
+function recordCRMUserActivity() {
+  if (!CURRENT_USER) return;
+
+  const now = Date.now();
+  if (now - getCRMIdleLastActivityAt() >= CRM_IDLE_TIMEOUT_MS) {
+    handleLogout();
+    return;
+  }
+
+  CRM_IDLE_LAST_ACTIVITY_AT = now;
+  if (now - CRM_IDLE_LAST_STORAGE_WRITE_AT >= 1000) {
+    writeCRMIdleActivity(now);
+    scheduleCRMIdleLogout();
+  } else if (!CRM_IDLE_LOGOUT_TIMER) {
+    scheduleCRMIdleLogout();
+  }
+}
+
+function startCRMIdleLogout() {
+  if (!CURRENT_USER) return;
+
+  if (!CRM_IDLE_EVENTS_BOUND) {
+    const activityEvents = ['pointerdown', 'keydown', 'mousemove', 'touchstart', 'wheel'];
+    activityEvents.forEach(eventName => {
+      document.addEventListener(eventName, recordCRMUserActivity, { passive: true });
+    });
+
+    const recheckTimeout = () => scheduleCRMIdleLogout();
+    window.addEventListener('focus', recheckTimeout);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) recheckTimeout();
+    });
+    window.addEventListener('storage', event => {
+      if (event.key === CRM_IDLE_ACTIVITY_KEY) {
+        CRM_IDLE_LAST_ACTIVITY_AT = Math.max(CRM_IDLE_LAST_ACTIVITY_AT, Number(event.newValue) || 0);
+        scheduleCRMIdleLogout();
+      } else if (event.key === 'GRM_CRM_SESSION' && event.newValue === null) {
+        sessionStorage.removeItem('GRM_CRM_SESSION');
+        if (CRM_IDLE_LOGOUT_TIMER) clearTimeout(CRM_IDLE_LOGOUT_TIMER);
+        window.location.replace('login.html');
+      }
+    });
+    CRM_IDLE_EVENTS_BOUND = true;
+  }
+
+  if (!getCRMIdleLastActivityAt()) {
+    writeCRMIdleActivity(Date.now());
+  }
+  scheduleCRMIdleLogout();
+}
+
 // Initialize user session from storage or redirect to login.html
 function initAuthSystem() {
   const sessionStr = localStorage.getItem('GRM_CRM_SESSION') || sessionStorage.getItem('GRM_CRM_SESSION');
@@ -6407,6 +6509,8 @@ function initAuthSystem() {
         sessionStorage.setItem('GRM_CRM_SESSION', JSON.stringify(CURRENT_USER));
         localStorage.setItem('GRM_REMEMBER_FLAG', 'true');
       } catch (e) { }
+
+      startCRMIdleLogout();
 
       // Apply RBAC UI safely — any rendering error must NEVER boot user to login page
       try {
@@ -6497,6 +6601,7 @@ function handleLoginSubmit(event) {
       sessionStorage.setItem('GRM_CRM_SESSION', JSON.stringify(CURRENT_USER));
     }
 
+    startCRMIdleLogout();
     applyRoleBasedAccessControl(CURRENT_USER);
 
     playChime('order');
@@ -6529,6 +6634,9 @@ function quickLogin(accountKey) {
 
 // Logout handler
 function handleLogout() {
+  if (CRM_IDLE_LOGOUT_TIMER) clearTimeout(CRM_IDLE_LOGOUT_TIMER);
+  CRM_IDLE_LOGOUT_TIMER = null;
+  CRM_IDLE_LAST_ACTIVITY_AT = 0;
   CURRENT_USER = null;
   CRM_AUTH_SESSION = null;
   window.CURRENT_USER = null;
@@ -6536,9 +6644,12 @@ function handleLogout() {
   localStorage.removeItem('GRM_CRM_SESSION');
   sessionStorage.removeItem('GRM_CRM_SESSION');
   localStorage.removeItem('GRM_REMEMBER_FLAG');
+  localStorage.removeItem(CRM_IDLE_ACTIVITY_KEY);
 
   // Notify backend auth API to clear PHP session
-  fetch('auth.php?action=logout').catch(() => { });
+  fetch('auth.php?action=logout', { keepalive: true }).catch(err => {
+    console.warn('[CRM Logout] Could not clear the server session:', err);
+  });
 
   // Redirect cleanly to dedicated standalone login page
   window.location.href = 'login.html';
