@@ -1561,9 +1561,8 @@
             class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-xs cursor-pointer whitespace-nowrap"
             title="Switch active WhatsApp Line / Business Number">
             <span class="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0">
-              <span
-                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" id="header-phone-ping-dot"></span>
-              <span class="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500" id="header-phone-solid-dot"></span>
+            <span class="hidden" id="header-phone-ping-dot"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-slate-400" id="header-phone-solid-dot"></span>
             </span>
             <span class="material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 shrink-0" id="header-phone-icon">phone_android</span>
             <span id="header-current-phone-label" class="configured-business-phone font-mono font-bold text-xs">Connecting...</span>
@@ -2775,8 +2774,8 @@
                     title="Switch active WhatsApp Line / Business Number">
                     <span class="relative flex h-2.5 w-2.5 shrink-0">
                       <span
-                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" id="settings-phone-ping-dot"></span>
-                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" id="settings-phone-solid-dot"></span>
+                        class="hidden" id="settings-phone-ping-dot"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400" id="settings-phone-solid-dot"></span>
                     </span>
                     <span class="material-symbols-outlined text-[16px] text-emerald-600 shrink-0" id="settings-phone-icon">phone_android</span>
                     <span id="settings-current-phone-label" class="configured-business-phone font-mono font-bold text-xs">Connecting...</span>
@@ -12809,7 +12808,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261123_fix_duplicate_socket_init_v23"></script>
+  <script src="crm_app.js?v=20261123_fix_account_status_flicker_v24"></script>
 </body>
 
 </html>

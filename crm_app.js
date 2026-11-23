@@ -3760,6 +3760,7 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
  */
 function applyAuthoritativeDatabaseState(data) {
   if (!data || typeof data !== 'object') return;
+  const isSocketAlive = Boolean(typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected);
 
   // 1. Products & Inventory
   if (data.products && Array.isArray(data.products)) {
@@ -4359,9 +4360,12 @@ function applyAuthoritativeDatabaseState(data) {
     if (typeof enforceGranularActionPermissions === 'function') enforceGranularActionPermissions();
   }
 
-  // 14. Authoritative WhatsApp Account & Multi-Accounts State Sync from Database
+  // 14. Use database account state only until live bridge status is available
   if (Array.isArray(data.whatsappAccounts) && data.whatsappAccounts.length > 0) {
-    const isSocketAlive = Boolean(typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected);
+    const hasCachedConnectedAccount =
+      (Array.isArray(MULTI_ACCOUNTS_STATE) && MULTI_ACCOUNTS_STATE.some(a => a && (a.status || '').toUpperCase() === 'CONNECTED')) ||
+      (Array.isArray(CRM_STATE.whatsappLines) && CRM_STATE.whatsappLines.some(a => a && (a.status || '').toUpperCase() === 'CONNECTED')) ||
+      CRM_STATE.whatsappAccount?.status === 'CONNECTED';
     const liveFromDb = data.whatsappAccounts.map(a => ({
       id: a.account_slot || a.id,
       name: a.display_name || a.account_name || a.brand_name || 'WhatsApp Line',
@@ -4371,13 +4375,19 @@ function applyAuthoritativeDatabaseState(data) {
       qr_image: a.qr_code || null,
       connected_number: a.phone_number || a.phone || (a.status === 'CONNECTED' ? 'Connected' : 'Awaiting Link')
     }));
-    MULTI_ACCOUNTS_STATE = liveFromDb;
+    if (!isSocketAlive && !hasCachedConnectedAccount) {
+      MULTI_ACCOUNTS_STATE = liveFromDb;
+    }
     if (!Array.isArray(CRM_STATE.whatsappLines)) {
       CRM_STATE.whatsappLines = [];
     }
     liveFromDb.forEach(dbAcc => {
       let line = CRM_STATE.whatsappLines.find(l => l.id === dbAcc.id);
       if (line) {
+        if (isSocketAlive) {
+          line.label = dbAcc.label || line.label;
+          return;
+        }
         // Guard: If the line is already CONNECTED with an active phone, never demote it to SCAN_QR or DISCONNECTED
         const isCurrentlyLive = line.status === 'CONNECTED' && line.connected_number && line.connected_number !== 'Awaiting Link';
         const isIncomingDemotion = dbAcc.status === 'SCAN_QR' || dbAcc.status === 'DISCONNECTED' || dbAcc.status === 'CONNECTING';
@@ -4388,7 +4398,7 @@ function applyAuthoritativeDatabaseState(data) {
         line.connected_number = dbAcc.phone || line.connected_number;
         line.qr_image = dbAcc.qr_image;
         line.label = dbAcc.label || line.label;
-      } else {
+      } else if (!isSocketAlive) {
         if (!Array.isArray(CRM_STATE.deletedSlots) || !CRM_STATE.deletedSlots.includes(dbAcc.id)) {
           CRM_STATE.whatsappLines.push({
             id: dbAcc.id,
@@ -4419,9 +4429,7 @@ function applyAuthoritativeDatabaseState(data) {
     const currentPhone = CRM_STATE.whatsappAccount.phoneNumber;
     const isCurrentlyConnected = currentStatus === 'CONNECTED' && currentPhone && currentPhone !== 'Awaiting Link';
 
-    if (isCurrentlyConnected && (incomingStatus === 'DISCONNECTED' || incomingStatus === 'SCAN_QR' || !incomingPhone || incomingPhone === 'Awaiting Link')) {
-      // Guard: Do not allow background sync to demote an already connected account to DISCONNECTED
-    } else {
+    if (!isSocketAlive && !(isCurrentlyConnected && (incomingStatus === 'DISCONNECTED' || incomingStatus === 'SCAN_QR' || !incomingPhone || incomingPhone === 'Awaiting Link'))) {
       CRM_STATE.whatsappAccount.status = incomingStatus;
       if (incomingPhone && incomingPhone !== 'Awaiting Link') {
         CRM_STATE.whatsappAccount.phoneNumber = incomingPhone;
@@ -5117,7 +5125,7 @@ function renderPhoneSwitcherDropdown() {
         </div>
         <div class="text-right shrink-0 flex flex-col items-end">
           <span class="inline-flex items-center gap-1 text-[10px] font-bold ${isConn ? 'text-emerald-600' : (isScanning ? 'text-amber-600' : 'text-slate-500')}">
-            <span class="w-1.5 h-1.5 rounded-full ${isConn ? 'bg-emerald-500' : (isScanning ? 'bg-amber-500 animate-pulse' : 'bg-slate-400')}"></span>
+            <span class="w-1.5 h-1.5 rounded-full ${isConn ? 'bg-emerald-500' : (isScanning ? 'bg-amber-500' : 'bg-slate-400')}"></span>
             ${isConn ? 'Connected' : (isScanning ? 'Scan QR' : 'Awaiting Link')}
           </span>
           <span class="text-[9px] text-slate-400 font-semibold">${custCount} Chats</span>
@@ -5528,34 +5536,6 @@ function updateConfiguredPhoneDisplays() {
   const headerLabel = document.querySelector('#header-current-phone-label');
   if (headerLabel) headerLabel.innerText = displayLabel;
 
-  // Header status indicator dot, ping & icon colors
-  const dot = document.getElementById('header-phone-dot');
-  const ping = document.getElementById('header-phone-ping');
-  const icon = document.getElementById('header-phone-icon');
-  if (dot) {
-    if (activeStatus === 'CONNECTED') {
-      dot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500';
-      if (ping) {
-        ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
-        ping.style.display = '';
-      }
-      if (icon) icon.className = 'material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 shrink-0';
-    } else if (activeStatus === 'SCAN_QR') {
-      dot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-amber-500';
-      if (ping) {
-        ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75';
-        ping.style.display = '';
-      }
-      if (icon) icon.className = 'material-symbols-outlined text-[15px] sm:text-[16px] text-amber-600 shrink-0';
-    } else {
-      dot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-rose-500';
-      if (ping) {
-        ping.style.display = 'none';
-      }
-      if (icon) icon.className = 'material-symbols-outlined text-[15px] sm:text-[16px] text-rose-600 shrink-0';
-    }
-  }
-
   const settingsLabel = document.querySelector('#settings-current-phone-label');
   if (settingsLabel) settingsLabel.innerText = displayLabel || rawPhone;
 
@@ -5581,15 +5561,7 @@ function updateConfiguredPhoneDisplays() {
     const solidDot = document.getElementById(`${prefix}-solid-dot`);
     const icon = document.getElementById(`${prefix}-icon`);
 
-    if (pingDot) {
-      if (isConnected) {
-        pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
-      } else if (isScanning) {
-        pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75';
-      } else {
-        pingDot.className = 'hidden';
-      }
-    }
+    if (pingDot) pingDot.className = 'hidden';
 
     if (solidDot) {
       if (isConnected) {
@@ -6876,7 +6848,7 @@ function renderQuickLineSwitcher() {
 
     return `
       <button type="button" onclick="switchActiveWhatsAppLine('${acc.id}', '${acc.connected_number || displayPhone}', '${acc.label || lineName}')" class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 cursor-pointer shadow-xs ${activeClass}" title="${acc.label || lineName}: ${displayPhone}">
-        <span class="w-2 h-2 rounded-full ${isConnected ? (isCurrent ? 'bg-white animate-pulse' : 'bg-emerald-500') : 'bg-amber-400'}"></span>
+        <span class="w-2 h-2 rounded-full ${isConnected ? (isCurrent ? 'bg-white' : 'bg-emerald-500') : 'bg-amber-400'}"></span>
         <span>${lineName}: ${displayPhone}</span>
         <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${badgeClass}">${custCount}</span>
       </button>
@@ -32490,7 +32462,7 @@ function renderMultiAccountsHub() {
                 <span class="text-[9px] bg-slate-100 text-slate-600 font-mono px-1.5 py-0.5 rounded font-bold shrink-0">${acc.id}</span>
               </div>
               <div class="flex items-center gap-1.5 flex-wrap mt-1">
-                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-100 text-emerald-800' : (isScanning ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300 animate-pulse' : 'bg-slate-100 text-slate-800')}">
+                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-100 text-emerald-800' : (isScanning ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300' : 'bg-slate-100 text-slate-800')}">
                   ${isConnected ? '🟢 CONNECTED (LIVE)' : (isScanning ? '🟡 SCAN QR WITH PHONE' : (isConnecting ? '⚪ INITIALIZING...' : '🔴 DISCONNECTED'))}
                 </span>
                 ${isSelectedActive && isConnected ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-brand-wa text-white">⭐ ACTIVE LINE</span>' : ''}
