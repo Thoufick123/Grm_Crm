@@ -2261,9 +2261,8 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $cfg['connected_lines'] = [];
     }
 
-    // Robust Guard: Never allow spurious SCAN_QR or DISCONNECTED pings to demote an already CONNECTED account
-    // unless an explicit user-initiated disconnection was requested (force_disconnect=true)!
-    $isExplicitDisconnect = !empty($data['force_disconnect']);
+    // If explicit disconnect, forced update, or an active QR code is provided, allow the update immediately!
+    $isExplicitDisconnect = !empty($data['force_disconnect']) || !empty($data['force']) || !empty($qrCode);
     if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isExplicitDisconnect) {
         $alreadyConnected = false;
         $connectedPhone = null;

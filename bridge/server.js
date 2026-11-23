@@ -2835,32 +2835,31 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
 
         if (accounts.has(targetId)) {
             const acc = accounts.get(targetId);
-            // If already connected, do not wipe session! Keep active connection
-            if (acc.status === 'CONNECTED' && acc.connectedNumber) {
+            if (!forceReset && acc.status === 'CONNECTED' && acc.connectedNumber) {
                 return res.json({ status: 'success', message: `Account ${targetId} is already connected (${acc.connectedNumber}).` });
             }
             if (acc.sock) {
                 try { acc.sock.end(); } catch (e) { }
             }
+            if (forceReset) {
+                acc.status = 'DISCONNECTED';
+                acc.connectedNumber = null;
+                acc.connectedName = null;
+                acc.qrImage = null;
+            }
         }
 
         const sessionDir = path.join(SESSIONS_BASE_DIR, targetId);
-        
-        // Never wipe authenticated credentials on refresh! Check if valid creds exist first
-        const credsFile = path.join(sessionDir, 'creds.json');
-        let hasValidSavedSession = false;
-        if (fs.existsSync(credsFile)) {
-            try {
-                const credsData = JSON.parse(fs.readFileSync(credsFile, 'utf8'));
-                if (credsData && credsData.me && credsData.me.id) {
-                    hasValidSavedSession = true;
-                }
-            } catch (e) {}
-        }
 
-        // Only wipe credentials if explicitly forced AND no valid authenticated session exists
-        if (forceReset && !hasValidSavedSession && fs.existsSync(sessionDir)) {
+        // When forceReset is explicitly requested, wipe stale credentials so a clean QR code is generated for new scans
+        if (forceReset && fs.existsSync(sessionDir)) {
             try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) { }
+            if (targetId === 'account_1') {
+                const legacyDir = path.join(__dirname, 'auth_session');
+                if (fs.existsSync(legacyDir)) {
+                    try { fs.rmSync(legacyDir, { recursive: true, force: true }); } catch (e) { }
+                }
+            }
         }
 
         initAccountSession(targetId, label);
@@ -2967,6 +2966,7 @@ async function disconnectAccountSession(targetId = 'account_1') {
             status: 'DISCONNECTED',
             phone_number: null,
             force: true,
+            force_disconnect: true,
             label: acc.label
         }).catch(() => {});
 
