@@ -44538,19 +44538,16 @@ async function renderBulkAssignList() {
               title="View Details & Inspection"
               class="px-2.5 py-1 bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer shadow-2xs">
               <span class="material-symbols-outlined text-[14px]">visibility</span>
-              <span>View Details</span>
             </button>
             <button type="button" onclick="openEditBulkBatchModal('${b.id || b.batch_code}')"
               title="Edit Batch Assignment Details"
               class="px-2.5 py-1 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer shadow-2xs">
               <span class="material-symbols-outlined text-[14px]">edit</span>
-              <span>Edit</span>
             </button>
             <button type="button" onclick="deleteBulkBatch('${b.id || b.batch_code}', '${escapeHtml(b.batch_code || b.id)}', ${b.assigned_count || 0})"
               title="Delete Batch & Unassign Inquiries"
               class="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer shadow-2xs">
               <span class="material-symbols-outlined text-[14px]">delete</span>
-              <span>Delete</span>
             </button>
           </div>
         </td>
