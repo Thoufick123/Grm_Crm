@@ -4321,6 +4321,14 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $parts = explode(':', $cleanBridgeJid);
         $cleanBridgeJid = $parts[0] . (strpos($parts[1], '@') !== false ? ('@' . explode('@', $parts[1])[1]) : '@s.whatsapp.net');
     }
+    // Always enforce direct customer phone destination if real mobile number is known
+    $digitsClean = preg_replace('/[^0-9]/', '', (string)$cleanBridgePhone);
+    if (strlen($digitsClean) === 10) {
+        $digitsClean = '91' . $digitsClean;
+    }
+    if (strlen($digitsClean) >= 11 && (empty($cleanBridgeJid) || strpos($cleanBridgeJid, '@lid') !== false)) {
+        $cleanBridgeJid = $digitsClean . '@s.whatsapp.net';
+    }
     $sendAccSlot = (!empty($postData['accountId']) && $postData['accountId'] !== 'all') ? $postData['accountId'] : 'account_1';
     if (empty($sendAccSlot) || strlen(preg_replace('/[^0-9]/', '', $sendAccSlot)) >= 10) {
         $sendAccSlot = 'account_1';

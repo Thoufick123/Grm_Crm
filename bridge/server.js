@@ -2528,7 +2528,11 @@ io.on('connection', (socket) => {
     socket.on('whatsapp:send', async (data, callback) => {
         try {
             const { phone, text, jid, accountId, mediaUrl, media_url, mediaData, media_data, image, imageUrl } = data;
-            const target = jid || phone;
+            const cleanP = String(phone || '').replace(/[^0-9]/g, '');
+            const directPhoneJid = (cleanP.length === 10 || (cleanP.length === 12 && cleanP.startsWith('91')))
+                ? `${cleanP.length === 10 ? ('91' + cleanP) : cleanP}@s.whatsapp.net`
+                : null;
+            const target = directPhoneJid || (jid && !jid.includes('@lid') ? jid : (directPhoneJid || jid || phone));
             const imageTarget = mediaData || media_data || mediaUrl || media_url || image || imageUrl || null;
             const result = await sendWhatsAppMessage(target, text, accountId, imageTarget);
 
@@ -3264,7 +3268,12 @@ app.post('/api/send', async (req, res) => {
             }
         }
         const imageTarget = mediaData || media_data || mediaUrl || media_url || image || imageUrl || null;
-        const result = await sendWhatsAppMessage(jid || phone, finalTextToSend, accountId, imageTarget);
+        const cleanP = String(phone || '').replace(/[^0-9]/g, '');
+        const directPhoneJid = (cleanP.length === 10 || (cleanP.length === 12 && cleanP.startsWith('91')))
+            ? `${cleanP.length === 10 ? ('91' + cleanP) : cleanP}@s.whatsapp.net`
+            : null;
+        const target = directPhoneJid || (jid && !jid.includes('@lid') ? jid : (directPhoneJid || jid || phone));
+        const result = await sendWhatsAppMessage(target, finalTextToSend, accountId, imageTarget);
         if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
             fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {
                 method: 'POST',

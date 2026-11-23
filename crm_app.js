@@ -8560,7 +8560,18 @@ function renderChatMessages() {
             <div class="flex items-center gap-1">
               <span>${msg.time}</span>
               ${isOut ? `
-                <span class="material-symbols-outlined text-[14px] text-brand-wa font-bold">done_all</span>
+                ${msg.status === 'FAILED' ? `
+                  <span class="inline-flex items-center gap-0.5 text-rose-500 font-bold" title="Delivery Failed: WhatsApp Line Disconnected">
+                    <span class="material-symbols-outlined text-[13px]">error</span>
+                    <span class="text-[9px]">Failed</span>
+                  </span>
+                ` : (msg.status === 'SENDING' ? `
+                  <span class="inline-flex items-center text-slate-400 font-bold animate-spin" title="Sending to WhatsApp...">
+                    <span class="material-symbols-outlined text-[13px]">progress_activity</span>
+                  </span>
+                ` : `
+                  <span class="material-symbols-outlined text-[14px] text-brand-wa font-bold" title="Delivered to WhatsApp">done_all</span>
+                `)}
               ` : ''}
             </div>
           </div>
@@ -13122,8 +13133,11 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     const after = parts[1] || '';
     cleanJid = parts[0] + (after.includes('@') ? ('@' + after.split('@')[1]) : '@s.whatsapp.net');
   }
-  if (!cleanJid && cleanPhone && cleanPhone.length >= 10) {
-    cleanJid = `${cleanPhone}@s.whatsapp.net`;
+  // Enforce direct mobile WhatsApp destination (@s.whatsapp.net) over privacy LIDs (@lid) when real phone is available
+  if (cleanPhone && cleanPhone.length >= 10) {
+    if (!cleanJid || cleanJid.includes('@lid')) {
+      cleanJid = `${cleanPhone}@s.whatsapp.net`;
+    }
   }
 
   const effectiveCustId = customerId || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : null);
