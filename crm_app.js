@@ -6603,8 +6603,19 @@ function applyRoleBasedAccessControl(user) {
       if (staffBannerId) staffBannerId.innerText = user.staffId || user.staff_id || user.id || user.role;
 
       const staffBannerQuota = document.getElementById('staff-banner-quota');
-      const staffMember = (CRM_STATE?.staffList || []).find(s => s.id === (user.staffId || user.staff_id || user.id || user.role));
-      const handled = staffMember ? (staffMember.todayHandled || 0) : 0;
+      const staffMember = (CRM_STATE?.staffList || []).find(s => 
+        s.id === (user.staffId || user.staff_id || user.id || user.role) ||
+        (user.username && String(s.username).toLowerCase() === String(user.username).toLowerCase()) ||
+        (user.name && String(s.name).toLowerCase() === String(user.name).toLowerCase())
+      );
+      let handled = staffMember ? (staffMember.todayHandled || 0) : 0;
+      if (handled === 0 && Array.isArray(CRM_STATE?.queries) && typeof isAssignedToCurrentStaff === 'function') {
+        const activeQs = (CRM_STATE.queries || []).filter(q => q && q.status !== 'RESOLVED' && q.status !== 'CLOSED' && q.status !== 'DND');
+        handled = activeQs.filter(q => isAssignedToCurrentStaff(q, user)).length;
+        if (handled === 0 && Array.isArray(CRM_STATE.customers)) {
+          handled = CRM_STATE.customers.filter(c => isAssignedToCurrentStaff(c, user)).length;
+        }
+      }
       if (staffBannerQuota) {
         staffBannerQuota.innerText = `${handled} msgs`;
       }
@@ -13102,6 +13113,8 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
 
   const effectiveCustId = customerId || (typeof ACTIVE_CUSTOMER_ID !== 'undefined' ? ACTIVE_CUSTOMER_ID : null);
   const msgUid = (msgRef && msgRef.id) ? String(msgRef.id) : ('msg_out_' + Date.now());
+  const currentSenderName = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.name || CURRENT_USER.username)) ? (CURRENT_USER.name || CURRENT_USER.username) : 'Staff';
+  const currentStaffId = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.id || CURRENT_USER.staffId || CURRENT_USER.staff_id)) ? (CURRENT_USER.id || CURRENT_USER.staffId || CURRENT_USER.staff_id) : 'staff';
 
   // IMMEDIATELY persist outbound message to MySQL so it is NEVER lost on page reload!
   if (typeof persistOutboundMessageToBackend === 'function') {
@@ -13112,7 +13125,10 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       accountId: targetAccId,
       media_url: targetMedia,
       customer_id: effectiveCustId,
-      message_uid: msgUid
+      message_uid: msgUid,
+      sender: 'staff',
+      sender_name: currentSenderName,
+      staff_id: currentStaffId
     });
   }
 
@@ -13508,9 +13524,11 @@ async function handleSendMessage(event) {
 
   const nowMs = Date.now();
   const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const currentSenderName = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && (CURRENT_USER.name || CURRENT_USER.username)) ? (CURRENT_USER.name || CURRENT_USER.username) : 'Staff';
   const newMsg = {
     id: nowMs,
     sender: 'staff',
+    sender_name: currentSenderName,
     text: formattedText,
     time: timeStr,
     timestamp: nowMs,
@@ -35499,12 +35517,32 @@ function updateBadgeCounters() {
   // Dynamically synchronize each staff member's todayHandled with active assigned queries (remove hardcoded static numbers)
   if (Array.isArray(CRM_STATE.staffList)) {
     CRM_STATE.staffList.forEach(staff => {
-      const assignedToThisStaff = activeQueries.filter(q =>
-        (q.assignedTo === staff.id || (q.staff && q.staff.id === staff.id)) &&
-        (!q.assignedStaffName || q.assignedStaffName.toLowerCase() === staff.name.toLowerCase())
-      );
+      const staffIdentifiers = [
+        staff.id,
+        staff.username,
+        staff.name,
+        staff.phone
+      ].filter(Boolean).map(s => String(s).trim().toLowerCase());
+
+      const assignedToThisStaff = activeQueries.filter(q => {
+        const qAssigned = String(q.assignedTo || q.assigned_to || (q.staff && q.staff.id) || '').trim().toLowerCase();
+        return qAssigned && qAssigned !== 'unassigned' && staffIdentifiers.includes(qAssigned);
+      });
       staff.todayHandled = assignedToThisStaff.length;
     });
+  }
+
+  // Live update Staff Workstation Banner quota counter if logged in as staff
+  const staffBannerQuota = document.getElementById('staff-banner-quota');
+  if (staffBannerQuota && typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.role !== 'admin' && CURRENT_USER.role !== 'Super Admin') {
+    let myCount = 0;
+    if (typeof isAssignedToCurrentStaff === 'function') {
+      myCount = activeQueries.filter(q => isAssignedToCurrentStaff(q, CURRENT_USER)).length;
+    }
+    if (myCount === 0 && Array.isArray(CRM_STATE.customers)) {
+      myCount = CRM_STATE.customers.filter(c => isAssignedToCurrentStaff(c, CURRENT_USER)).length;
+    }
+    staffBannerQuota.innerText = `${myCount} msgs`;
   }
 
   const todayPct = Math.min(100, Math.round((totalReceivedToday / (target || 1)) * 100));
@@ -39881,7 +39919,14 @@ window.playInboundTranslatedVoice = playInboundTranslatedVoice;
 async function syncCustomerMessagesFromDB(customerId) {
   if (!customerId) return;
   try {
-    const res = await fetch(`api.php?action=get_customer_messages&customer_id=${encodeURIComponent(customerId)}`);
+    let phoneParam = '';
+    const cust = (CRM_STATE?.customers || []).find(c => c && (String(c.id) === String(customerId) || String(c.customerId) === String(customerId)));
+    const qry = (!cust && CRM_STATE?.queries) ? CRM_STATE.queries.find(q => q && (String(q.customerId) === String(customerId) || String(q.id) === String(customerId))) : null;
+    const phone = cust ? (cust.phone || cust.whatsapp) : (qry ? (qry.customerPhone || qry.customer_phone) : null);
+    if (phone) {
+      phoneParam = `&phone=${encodeURIComponent(phone)}`;
+    }
+    const res = await fetch(`api.php?action=get_customer_messages&customer_id=${encodeURIComponent(customerId)}${phoneParam}`);
     const data = await res.json();
     if (data.status === 'success' && Array.isArray(data.messages) && data.messages.length > 0) {
       if (!CRM_STATE.conversations) CRM_STATE.conversations = {};

@@ -1485,11 +1485,11 @@ if ($action === 'get_state' || $action === 'get_all') {
                     }
                 }
 
-                // ONLY match sender_phone for inbound customer messages, NEVER for outbound staff/bot messages!
-                if (($dir === 'inbound' || $msg['sender'] === 'customer') && !empty($msg['sender_phone'])) {
+                // Map message to customer: for inbound or outbound, sender_phone holds customer's phone (unless it's the business line itself)
+                if (!empty($msg['sender_phone'])) {
                     $pInfo = cleanWhatsAppPhone($msg['sender_phone']);
                     $clean10 = $pInfo['clean10'];
-                    if (!empty($clean10)) {
+                    if (!empty($clean10) && !in_array($clean10, $businessPhones10)) {
                         if (isset($phoneToCid[$clean10])) {
                             $cid = $phoneToCid[$clean10];
                         } elseif (empty($cid)) {
@@ -4896,6 +4896,17 @@ if ($action === 'get_customer_messages') {
                 $phone10 = substr($rawP, -10);
             }
         }
+        if (empty($phone10)) {
+            $qStmt = $pdo->prepare("SELECT `customer_phone` FROM `queries` WHERE `customer_id` = ? OR `id` = ? LIMIT 1");
+            $qStmt->execute([$cid, $cid]);
+            $qPhone = $qStmt->fetchColumn();
+            if ($qPhone) {
+                $rawP = preg_replace('/[^0-9]/', '', $qPhone);
+                if (strlen($rawP) >= 7) {
+                    $phone10 = substr($rawP, -10);
+                }
+            }
+        }
 
         // Auto-consolidate any Privacy LID placeholder messages into this customer
         $mappedLid = null;
@@ -4925,7 +4936,7 @@ if ($action === 'get_customer_messages') {
                     SELECT * FROM `messages` 
                     WHERE `customer_id` = :cid 
                        OR `customer_id` LIKE :cidLike
-                       OR (`direction` = 'inbound' AND REPLACE(REPLACE(REPLACE(REPLACE(`sender_phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE :phoneLike)
+                       OR REPLACE(REPLACE(REPLACE(REPLACE(`sender_phone`, ' ', ''), '+', ''), '-', ''), '(', '') LIKE :phoneLike
                     ORDER BY `id` DESC LIMIT 300
                 ) sub ORDER BY `id` ASC
             ");
