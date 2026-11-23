@@ -3078,87 +3078,91 @@
                 </div>
               </div>
 
-              <div class="p-5 sm:p-6 space-y-6 text-xs">
-                <!-- Step 1: Scanned Account & Live Unassigned Counter -->
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between">
-                    <label class="block font-bold text-slate-800 text-xs">
-                      1. Select Scanned WhatsApp Account / Channel
-                    </label>
-                    <span class="text-[10px] text-slate-500">Only connected WhatsApp lines</span>
+              <div class="p-5 sm:p-6 space-y-5 text-xs">
+                <!-- Row 1: Scanned Account & Live Unassigned Counter (2 fields in 1 row) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <label class="block font-bold text-slate-800 text-xs">
+                        1. Select Scanned WhatsApp Account / Channel
+                      </label>
+                      <span class="text-[10px] text-slate-500">Only connected lines</span>
+                    </div>
+                    <select id="bulk-account-select" onchange="onBulkAccountChange()"
+                      class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-wa">
+                      <!-- Populated dynamically by JS -->
+                    </select>
                   </div>
-                  <select id="bulk-account-select" onchange="onBulkAccountChange()"
-                    class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-wa">
-                    <!-- Populated dynamically by JS -->
-                  </select>
 
                   <!-- Live Counter Banner -->
                   <div id="bulk-unassigned-counter-card"
-                    class="p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                        <span class="material-symbols-outlined text-[20px]">mark_chat_unread</span>
+                    class="p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 flex items-center justify-between gap-3 transition">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <span class="material-symbols-outlined text-[18px]">mark_chat_unread</span>
                       </div>
-                      <div>
-                        <div class="flex items-center gap-2">
-                          <span class="text-xs font-bold text-emerald-950">Available Unassigned Enquiries:</span>
-                          <span id="bulk-unassigned-count" class="text-base font-black text-emerald-700 px-2 py-0.5 bg-emerald-200/60 rounded-lg">0</span>
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-xs font-bold text-emerald-950">Available Unassigned:</span>
+                          <span id="bulk-unassigned-count" class="text-sm font-black text-emerald-700 px-2 py-0.5 bg-emerald-200/60 rounded-lg">0</span>
                         </div>
-                        <p id="bulk-unassigned-time-label" class="text-[11px] text-emerald-800 mt-0.5">Scanning account inquiry queue...</p>
+                        <p id="bulk-unassigned-time-label" class="text-[10px] text-emerald-800 truncate mt-0.5">Scanning account inquiry queue...</p>
                       </div>
                     </div>
                     <button type="button" onclick="refreshBulkUnassignedCounter()"
-                      class="px-3 py-1.5 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold text-[11px] flex items-center gap-1 cursor-pointer shrink-0">
-                      <span class="material-symbols-outlined text-[14px]">refresh</span> Check Again
+                      class="px-2.5 py-1.5 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold text-[11px] flex items-center gap-1 cursor-pointer shrink-0">
+                      <span class="material-symbols-outlined text-[13px]">refresh</span> Check Again
                     </button>
                   </div>
                 </div>
 
-                <!-- Step 2: Customer Assign Count & Presets -->
-                <div class="space-y-2 pt-2 border-t border-slate-100">
-                  <div class="flex items-center justify-between">
-                    <label class="block font-bold text-slate-800 text-xs">
-                      2. Customer Assign Count (Quantity to Distribute)
-                    </label>
-                    <span class="text-[10px] text-slate-500">Max: available unassigned count</span>
-                  </div>
-                  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <input type="number" id="bulk-assign-count" min="1" value="10" oninput="updateBulkAssignPreview()"
-                      class="w-full sm:w-44 bg-white border border-slate-300 rounded-xl px-3.5 py-2 font-bold text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-wa">
-                    
-                    <!-- Quick Chips -->
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <button type="button" onclick="setBulkAssignCount(5)"
-                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer">5</button>
-                      <button type="button" onclick="setBulkAssignCount(10)"
-                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer">10</button>
-                      <button type="button" onclick="setBulkAssignCount(25)"
-                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer">25</button>
-                      <button type="button" onclick="setBulkAssignCount(50)"
-                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer">50</button>
-                      <button type="button" onclick="setBulkAssignCount('all')"
-                        class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold transition cursor-pointer">All Available</button>
+                <!-- Row 2: Customer Assign Count & Chronological Sorting Order (2 fields in 1 row) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 items-start">
+                  <!-- Step 2: Customer Assign Count & Presets -->
+                  <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <label class="block font-bold text-slate-800 text-xs">
+                        2. Customer Assign Count (Quantity to Distribute)
+                      </label>
+                      <span class="text-[10px] text-slate-500">Max: available count</span>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <input type="number" id="bulk-assign-count" min="1" value="10" oninput="updateBulkAssignPreview()"
+                        class="w-24 sm:w-28 bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-wa">
+                      
+                      <!-- Quick Chips -->
+                      <div class="flex items-center gap-1 flex-wrap">
+                        <button type="button" onclick="setBulkAssignCount(5)"
+                          class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer text-xs">5</button>
+                        <button type="button" onclick="setBulkAssignCount(10)"
+                          class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer text-xs">10</button>
+                        <button type="button" onclick="setBulkAssignCount(25)"
+                          class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer text-xs">25</button>
+                        <button type="button" onclick="setBulkAssignCount(50)"
+                          class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-brand-wa active:text-white rounded-lg font-bold text-slate-700 transition cursor-pointer text-xs">50</button>
+                        <button type="button" onclick="setBulkAssignCount('all')"
+                          class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold transition cursor-pointer text-xs">All Available</button>
+                      </div>
                     </div>
                   </div>
+
+                  <!-- Step 3: Chronological Sorting Order -->
+                  <div class="space-y-1.5">
+                    <label class="block font-bold text-slate-800 text-xs">
+                      3. Chronological Sorting Order
+                    </label>
+                    <select id="bulk-sort-order" onchange="updateBulkAssignPreview()"
+                      class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-wa">
+                      <option value="ASC">⏳ Ascending Order (Oldest Enquiries First - FIFO)</option>
+                      <option value="DESC">⚡ Descending Order (Newest Enquiries First - LIFO)</option>
+                    </select>
+                    <p class="text-[10px] text-slate-500 leading-tight">
+                      <strong>FIFO:</strong> Oldest waiting first &bull; <strong>LIFO:</strong> Freshest just-arrived first
+                    </p>
+                  </div>
                 </div>
 
-                <!-- Step 3: Chronological Sorting Order -->
-                <div class="space-y-2 pt-2 border-t border-slate-100">
-                  <label class="block font-bold text-slate-800 text-xs">
-                    3. Chronological Sorting Order
-                  </label>
-                  <select id="bulk-sort-order" onchange="updateBulkAssignPreview()"
-                    class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-wa">
-                    <option value="ASC">⏳ Ascending Order (Oldest Enquiries First - FIFO)</option>
-                    <option value="DESC">⚡ Descending Order (Newest Enquiries First - LIFO)</option>
-                  </select>
-                  <p class="text-[11px] text-slate-500 leading-relaxed">
-                    <strong>Ascending (FIFO):</strong> Prioritizes customers who have been waiting the longest. <br>
-                    <strong>Descending (LIFO):</strong> Prioritizes freshest, just-arrived customer enquiries.
-                  </p>
-                </div>
-
-                <!-- Step 4: Staff Member & Dynamic Phone Number -->
+                <!-- Step 4: Staff Member & Dynamic Phone Number (2 fields in 1 row) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
                   <div class="space-y-1.5">
                     <label class="block font-bold text-slate-800 text-xs">
