@@ -5379,37 +5379,16 @@ function updateConfiguredPhoneDisplays() {
     if (!CRM_STATE || !CRM_STATE.whatsappAccount) return;
 
   // =========================================================================
-  // STAFF LOGIN: Replace QR scan code line with ONLY the admin-given staff mobile number
-  // Do NOT add dropdown, QR scanner, or other items ("dont add another things there")
+  // STAFF LOGIN: Hide the top phone badge completely on staff module
+  // ("marked place delte on staff modue there and dont touch admin panel there")
   // =========================================================================
+  const phoneWrapper = document.getElementById('header-phone-switcher-wrapper');
+
   if (isCurrentUserStaff()) {
-    const rawStaffPhone = getLoggedInStaffMobileNumber();
-    const displayStaffPhone = rawStaffPhone ? formatPhoneNumberPretty(rawStaffPhone) : 'Staff Mobile';
-
-    const headerLabel = document.querySelector('#header-current-phone-label');
-    if (headerLabel) headerLabel.innerText = displayStaffPhone;
-
-    const dropdownArrow = document.querySelector('#phone-dropdown-arrow');
-    if (dropdownArrow) dropdownArrow.classList.add('hidden');
-
-    const headerBadge = document.getElementById('header-phone-badge');
-    if (headerBadge) {
-      headerBadge.className = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 text-emerald-900 text-xs font-bold rounded-xl border border-emerald-200 shadow-xs select-none whitespace-nowrap cursor-default';
-      headerBadge.title = `Staff Mobile: ${displayStaffPhone}`;
+    if (phoneWrapper) {
+      phoneWrapper.classList.add('hidden');
+      phoneWrapper.style.display = 'none';
     }
-
-    const pingDot = document.getElementById('header-phone-ping-dot');
-    if (pingDot) pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
-
-    const solidDot = document.getElementById('header-phone-solid-dot');
-    if (solidDot) solidDot.className = 'relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500';
-
-    const headerIcon = document.getElementById('header-phone-icon');
-    if (headerIcon) {
-      headerIcon.className = 'material-symbols-outlined text-[15px] sm:text-[16px] text-emerald-600 shrink-0';
-      headerIcon.innerText = 'phone_android';
-    }
-
     closePhoneSwitcherDropdown();
     return; // Stop here! Admin and Super Admin multi-account QR code logic is untouched!
   }
@@ -5417,6 +5396,10 @@ function updateConfiguredPhoneDisplays() {
   // =========================================================================
   // ADMIN & SUPER ADMIN CODE (100% UNTOUCHED)
   // =========================================================================
+  if (phoneWrapper) {
+    phoneWrapper.classList.remove('hidden');
+    phoneWrapper.style.display = '';
+  }
   const dropdownArrow = document.querySelector('#phone-dropdown-arrow');
   if (dropdownArrow) dropdownArrow.classList.remove('hidden');
 
@@ -6627,6 +6610,18 @@ function applyRoleBasedAccessControl(user) {
           sessionStorage.setItem('GRM_CRM_SESSION', JSON.stringify(CURRENT_USER));
         } catch (e) { }
       }
+    }
+  }
+
+  // Ensure header phone switcher is hidden for staff and visible for admin
+  const headerPhoneWrapper = document.getElementById('header-phone-switcher-wrapper');
+  if (headerPhoneWrapper) {
+    if (isAdmin) {
+      headerPhoneWrapper.classList.remove('hidden');
+      headerPhoneWrapper.style.display = '';
+    } else {
+      headerPhoneWrapper.classList.add('hidden');
+      headerPhoneWrapper.style.display = 'none';
     }
   }
 
