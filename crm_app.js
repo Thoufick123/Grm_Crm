@@ -1527,6 +1527,7 @@ var ACTIVE_CUSTOMER_ID = (typeof localStorage !== 'undefined' && localStorage.ge
 var INBOX_FILTER = window.INBOX_FILTER || 'all'; // 'all', 'unassigned', 'my', 'urgent'
 var LAST_POLL_EPOCH = window.LAST_POLL_EPOCH || 0;
 var SOCKET_IO = window.SOCKET_IO || null;
+var SOCKET_IO_BRIDGE_URL = window.SOCKET_IO_BRIDGE_URL || null;
 var MULTI_ACCOUNTS_STATE = window.MULTI_ACCOUNTS_STATE || []; // Multi-WhatsApp accounts from Bridge
 var ACTIVE_SEND_ACCOUNT_ID = (typeof localStorage !== 'undefined' && localStorage.getItem('GRM_ACTIVE_SEND_ACCOUNT_ID')) || window.ACTIVE_SEND_ACCOUNT_ID || 'all';
 var REVEALED_CUSTOMERS = window.REVEALED_CUSTOMERS || new Set(); // Stores customer IDs whose numbers are temporarily revealed
@@ -2240,17 +2241,27 @@ function initSocketIO() {
 
   try {
     const bridgeUrl = getBridgeBaseUrl();
+    if (SOCKET_IO && SOCKET_IO_BRIDGE_URL === bridgeUrl) return;
     // On remote hosting, skip localhost:3000 if not configured to prevent mixed content warnings
     if ((bridgeUrl === 'http://localhost:3000') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       console.log('ℹ️ [Bridge]: Set localStorage.setItem("GRM_BRIDGE_URL", "https://your-bridge.onrender.com") to connect Render WebSocket');
       return;
     }
+
+    if (SOCKET_IO) {
+      SOCKET_IO.removeAllListeners();
+      SOCKET_IO.disconnect();
+      SOCKET_IO = null;
+      SOCKET_IO_BRIDGE_URL = null;
+    }
+
     SOCKET_IO = io(bridgeUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1500
     });
+    SOCKET_IO_BRIDGE_URL = bridgeUrl;
 
     SOCKET_IO.on('connect', () => {
       console.log('⚡ Socket.IO Connected to Bridge (ID: ' + SOCKET_IO.id + ')');
@@ -2441,8 +2452,8 @@ function initSocketIO() {
       }
     });
 
-    SOCKET_IO.on('disconnect', () => {
-      console.warn('Socket.IO Disconnected from Bridge');
+    SOCKET_IO.on('disconnect', (reason) => {
+      console.warn('Socket.IO Disconnected from Bridge:', reason);
     });
 
   } catch (e) {
