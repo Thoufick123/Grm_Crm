@@ -2578,13 +2578,39 @@ function ingestInboundMessage(payload, suppressChime = false) {
 
   // Deduplicate against existing messages
   const existingMsgs = CRM_STATE.conversations[customer.id];
-  const isDuplicate = existingMsgs.some(m =>
-    (payload.id && String(m.id) === String(payload.id)) ||
-    (m.sender === msgSender && m.text === messageText && (m.time === timeStr || Math.abs(msgTimestamp - (m.timestamp || 0)) < 15000)) ||
-    (mediaUrl && m.media_url && String(m.media_url).slice(-30) === String(mediaUrl).slice(-30))
-  );
+  const payloadUid = String(payload.message_uid || payload.id || '');
+  let matchingMessage = null;
 
-  if (!isDuplicate) {
+  if (payloadUid) {
+    matchingMessage = existingMsgs.find(m =>
+      String(m.message_uid || m.id || '') === payloadUid
+    );
+  }
+
+  if (!matchingMessage && isOutboundMsg) {
+    matchingMessage = existingMsgs.find(m =>
+      m.sender === 'staff' &&
+      String(m.text || '') === String(messageText) &&
+      Math.abs(msgTimestamp - Number(m.timestamp || 0)) < 120000
+    );
+  }
+
+  if (!matchingMessage && !isOutboundMsg) {
+    const isDuplicate = existingMsgs.some(m =>
+      (payload.id && String(m.id) === String(payload.id)) ||
+      (m.sender === msgSender && m.text === messageText && (m.time === timeStr || Math.abs(msgTimestamp - (m.timestamp || 0)) < 15000)) ||
+      (mediaUrl && m.media_url && String(m.media_url).slice(-30) === String(mediaUrl).slice(-30))
+    );
+    if (isDuplicate) matchingMessage = true;
+  }
+
+  if (matchingMessage && matchingMessage !== true) {
+    matchingMessage.id = payloadUid || matchingMessage.id;
+    matchingMessage.message_uid = payloadUid || matchingMessage.message_uid;
+    matchingMessage.status = payload.status || 'DELIVERED';
+    matchingMessage.timestamp = matchingMessage.timestamp || msgTimestamp;
+    if (mediaUrl && !matchingMessage.media_url) matchingMessage.media_url = mediaUrl;
+  } else if (!matchingMessage) {
     const newMsg = {
       id: payload.id || msgTimestamp,
       sender: msgSender,
@@ -4686,7 +4712,7 @@ function saveCRMState(immediate = false) {
           const trimmedConvs = {};
           for (const [cid, msgs] of Object.entries(CRM_STATE.conversations)) {
             if (Array.isArray(msgs)) {
-              trimmedConvs[cid] = msgs.slice(-50).map(m => {
+              trimmedConvs[cid] = msgs.slice(-500).map(m => {
                 if (m && m.media_url && typeof m.media_url === 'string' && m.media_url.startsWith('data:')) {
                   return { ...m, media_url: '' };
                 }
@@ -13190,6 +13216,8 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
           text,
           jid: cleanJid,
           accountId: targetAccId,
+          messageUid: msgUid,
+          message_uid: msgUid,
           mediaUrl: targetBase64 || absoluteMediaUrl,
           media_url: targetBase64 || absoluteMediaUrl,
           mediaData: targetBase64,
@@ -18818,16 +18846,16 @@ function handleCreateOrder(event) {
 
   let confirmMsg = '';
   if (paymentMode === 'ONLINE') {
-    confirmMsg = `🎉 *WHATSAPP ORDER BOOKED & PAID!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${discountText}💰 *Total Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Online UPI (PAID ✅)\n🔢 *UPI Ref / UTR:* ${upiId}\n📸 *Payment Receipt:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour order is confirmed and stock reserved for packing. Tracking will be shared once dispatched! 🚚✨`;
+    confirmMsg = `🎉 *WHATSAPP ORDER BOOKED & PAID!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n📱 *Customer WhatsApp:* ${customer ? (customer.whatsapp || customer.phone || 'Not available') : 'Not available'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${discountText}💰 *Total Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Online UPI (PAID ✅)\n🔢 *UPI Ref / UTR:* ${upiId}\n📸 *Payment Receipt:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour order is confirmed and stock reserved for packing. Tracking will be shared once dispatched! 🚚✨`;
   } else {
-    confirmMsg = `🎉 *WHATSAPP COD ORDER BOOKED!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${shippingCharge > 0 ? `🚚 *Shipping Charge:* ₹${shippingCharge.toLocaleString('en-IN')}\n` : ''}${discountText}💰 *Total Order Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Cash On Delivery (COD)\n✅ *Advance Paid:* ₹${advanceAmount.toLocaleString('en-IN')} (UPI Ref: ${upiId})\n💵 *Balance to Pay at Delivery:* *₹${balanceDue.toLocaleString('en-IN')}*\n📸 *Advance Proof:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour COD parcel booking is confirmed! Please keep ₹${balanceDue.toLocaleString('en-IN')} ready for courier at doorstep delivery. 🚚✨`;
+    confirmMsg = `🎉 *WHATSAPP COD ORDER BOOKED!*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *Order ID:* #${newOrderId}\n👤 *Customer:* ${customer ? customer.name : 'Customer'}\n📱 *Customer WhatsApp:* ${customer ? (customer.whatsapp || customer.phone || 'Not available') : 'Not available'}\n\n👗 *Ordered Garments:*\n${itemsText}\n\n${shippingCharge > 0 ? `🚚 *Shipping Charge:* ₹${shippingCharge.toLocaleString('en-IN')}\n` : ''}${discountText}💰 *Total Order Amount:* ₹${grandTotal.toLocaleString('en-IN')}\n💳 *Payment Mode:* Cash On Delivery (COD)\n✅ *Advance Paid:* ₹${advanceAmount.toLocaleString('en-IN')} (UPI Ref: ${upiId})\n💵 *Balance to Pay at Delivery:* *₹${balanceDue.toLocaleString('en-IN')}*\n📸 *Advance Proof:* ${screenshot ? 'Screenshot Verified ✅' : 'Verified'}\n📍 *Shipping to:* ${address}\n━━━━━━━━━━━━━━━━━━━━━━\nYour COD parcel booking is confirmed! Please keep ₹${balanceDue.toLocaleString('en-IN')} ready for courier at doorstep delivery. 🚚✨`;
   }
 
   const custId = customer ? customer.id : ACTIVE_CUSTOMER_ID;
   if (!CRM_STATE.conversations[custId]) {
     CRM_STATE.conversations[custId] = [];
   }
-  CRM_STATE.conversations[custId].push({
+  const confirmationMessage = {
     id: Date.now(),
     sender: 'staff',
     text: confirmMsg,
@@ -18835,7 +18863,22 @@ function handleCreateOrder(event) {
     media_url: screenshot || null,
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     status: 'SENT'
-  });
+  };
+  CRM_STATE.conversations[custId].push(confirmationMessage);
+
+  // Deliver the order confirmation to the customer's WhatsApp and persist it in message history.
+  if (customer && typeof dispatchWhatsAppOutbound === 'function') {
+    dispatchWhatsAppOutbound(
+      customer.whatsapp || customer.phone || '',
+      confirmMsg,
+      confirmationMessage,
+      customer.jid || null,
+      customer.accountId || customer.account_id || 'account_1',
+      false,
+      null,
+      customer.id
+    );
+  }
 
   // Audit trail
   logAudit('ORDER_CREATED', 'ORDERS', `Order ${newOrderId} created (${paymentMethodDisplay}: ₹${grandTotal}) for ${customer ? customer.name : 'Customer'}. Stock reserved.`);

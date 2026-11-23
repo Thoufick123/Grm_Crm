@@ -6260,6 +6260,21 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $courierName = $order['courierName'] ?? ($order['courier_name'] ?? '');
         $shippingUrl = $order['shippingUrl'] ?? ($order['shipping_url'] ?? ($order['tracking_url'] ?? ''));
 
+        // Resolve the customer phone from the order, customer directory, or linked query.
+        if (empty($customerPhone) && !empty($customerId)) {
+            $custPhoneStmt = $pdo->prepare("SELECT `phone`, `whatsapp` FROM `customers` WHERE `id` = ? LIMIT 1");
+            $custPhoneStmt->execute([$customerId]);
+            $custPhoneRow = $custPhoneStmt->fetch(PDO::FETCH_ASSOC);
+            if ($custPhoneRow) {
+                $customerPhone = trim($custPhoneRow['whatsapp'] ?: $custPhoneRow['phone'] ?: '');
+            }
+        }
+        if (empty($customerPhone) && !empty($customerId)) {
+            $queryPhoneStmt = $pdo->prepare("SELECT `customer_phone` FROM `queries` WHERE `customer_id` = ? OR `id` = ? LIMIT 1");
+            $queryPhoneStmt->execute([$customerId, $queryId ?: $customerId]);
+            $customerPhone = trim((string)($queryPhoneStmt->fetchColumn() ?: ''));
+        }
+
         $isEditUpdate = !empty($order['isEditUpdate']);
 
         // Check and reserve stock atomically (skip re-reserving full stock when editing an existing order)
@@ -6337,6 +6352,23 @@ if ($action === 'save_order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     SET `total_orders` = `total_orders` + 1, `total_spend` = `total_spend` + ? 
                     WHERE `id` = ?
                 ")->execute([$grandTotal, $customerId]);
+            }
+            $customerUpdateFields = [];
+            $customerUpdateParams = [];
+            if (!empty($customerPhone)) {
+                $customerUpdateFields[] = "`phone` = ?";
+                $customerUpdateFields[] = "`whatsapp` = ?";
+                $customerUpdateParams[] = $customerPhone;
+                $customerUpdateParams[] = $customerPhone;
+            }
+            if (!empty($shippingAddress)) {
+                $customerUpdateFields[] = "`address` = ?";
+                $customerUpdateParams[] = $shippingAddress;
+            }
+            if (!empty($customerUpdateFields)) {
+                $customerUpdateParams[] = $customerId;
+                $pdo->prepare("UPDATE `customers` SET " . implode(', ', $customerUpdateFields) . " WHERE `id` = ?")
+                    ->execute($customerUpdateParams);
             }
         }
 

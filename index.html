@@ -5234,6 +5234,7 @@
               </div>
 
               <form onsubmit="handleCreateNewStaff(event)" class="space-y-3.5 sm:space-y-5 text-xs">
+                <input type="hidden" id="staff-new-phone" value="N/A">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Full Name <span
@@ -5257,18 +5258,7 @@
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div>
-                    <label class="block font-bold text-slate-800 mb-1">Mobile / WhatsApp Number <span
-                        class="text-rose-500">*</span>:</label>
-                    <div class="relative">
-                      <span
-                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">phone</span>
-                      <input type="text" id="staff-new-phone" required placeholder="e.g. +91 98765 12345"
-                        class="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
-                    </div>
-                  </div>
-
+                <div class="grid grid-cols-1 gap-3 sm:gap-4">
                   <div>
                     <label class="block font-bold text-slate-800 mb-1">Primary Role <span
                         class="text-rose-500">*</span>:</label>
@@ -7419,6 +7409,7 @@
 
       <form onsubmit="handleSaveEditStaff(event)" class="p-6 space-y-4 text-xs">
         <input type="hidden" id="edit-staff-id">
+        <input type="hidden" id="edit-staff-phone">
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -7440,16 +7431,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block font-bold text-slate-800 mb-1">Mobile / WhatsApp Number <span class="text-rose-500">*</span>:</label>
-            <div class="relative">
-              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">phone</span>
-              <input type="text" id="edit-staff-phone" required placeholder="e.g. +91 98765 12345"
-                class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-brand-wa focus:bg-white transition">
-            </div>
-          </div>
-
+        <div class="grid grid-cols-1 gap-3">
           <div>
             <label class="block font-bold text-slate-800 mb-1">Primary Role <span class="text-rose-500">*</span>:</label>
             <select id="edit-staff-role" required onchange="syncStaffFormPermissionsWithRole(this.value, 'edit-staff-perm-')"
