@@ -486,6 +486,15 @@ if ($pdo) {
     try {
         $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `reconnect_attempts` INT DEFAULT 0");
     } catch (Exception $rae) {}
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `whatsapp_auth_sessions` (
+            `account_slot` VARCHAR(50) NOT NULL,
+            `file_id` VARCHAR(150) NOT NULL,
+            `data` LONGTEXT NOT NULL,
+            `updated_at` DATETIME NOT NULL,
+            PRIMARY KEY (`account_slot`, `file_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } catch (Exception $wse) {}
 }
 if (isset($_GET['action']) && $_GET['action'] === 'reset_customer_payment') {
     $raw = file_get_contents('php://input');
@@ -2361,8 +2370,10 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     }
 
     // If explicit disconnect or forced unbind is provided by authenticated admin, allow the update immediately!
-    $isExplicitDisconnect = !empty($data['force_disconnect']) || !empty($data['explicit_disconnect']);
-    if (($status === 'SCAN_QR' || $status === 'DISCONNECTED' || $status === 'LOGGED_OUT') && !$isExplicitDisconnect) {
+    $isExplicitDisconnect = !empty($data['force_disconnect']) || !empty($data['explicit_disconnect']) || !empty($data['force']);
+    $hasValidQr = ($status === 'SCAN_QR' && !empty($qrCode));
+
+    if (($status === 'DISCONNECTED' || $status === 'LOGGED_OUT' || ($status === 'SCAN_QR' && empty($qrCode))) && !$isExplicitDisconnect) {
         $alreadyConnected = false;
         $connectedPhone = null;
 
@@ -2530,6 +2541,77 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     ]));
 
     echo json_encode(["status" => "success", "message" => "Account $slotId status synced: $status"]);
+    exit;
+}
+
+// =========================================================================
+// WHATSAPP BAILEYS PERMANENT SESSION PERSISTENCE (Survives Reboots & Git Deploys)
+// =========================================================================
+if ($action === 'save_auth_session' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true) ?: $_POST;
+    $slotId = $data['account_slot'] ?? $data['account_id'] ?? 'account_1';
+    $files = $data['files'] ?? [];
+    if (!empty($data['file_id']) && isset($data['data'])) {
+        $files[$data['file_id']] = $data['data'];
+    }
+
+    if ($pdo && !empty($files) && is_array($files)) {
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO `whatsapp_auth_sessions` (`account_slot`, `file_id`, `data`, `updated_at`)
+                VALUES (?, ?, ?, NOW())
+                ON DUPLICATE KEY UPDATE `data` = VALUES(`data`), `updated_at` = NOW()
+            ");
+            foreach ($files as $fileId => $content) {
+                if (is_string($fileId) && strlen($fileId) > 0 && is_string($content)) {
+                    $stmt->execute([$slotId, $fileId, $content]);
+                }
+            }
+            echo json_encode(["status" => "success", "message" => "Saved " . count($files) . " session files for $slotId"]);
+            exit;
+        } catch (Exception $e) {
+            echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+            exit;
+        }
+    }
+    echo json_encode(["status" => "success", "message" => "No files to save"]);
+    exit;
+}
+
+if ($action === 'get_auth_session') {
+    $slotId = $_GET['account_slot'] ?? $_GET['account_id'] ?? ($_POST['account_slot'] ?? 'account_1');
+    $filesMap = [];
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("SELECT `file_id`, `data` FROM `whatsapp_auth_sessions` WHERE `account_slot` = ?");
+            $stmt->execute([$slotId]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $r) {
+                $filesMap[$r['file_id']] = $r['data'];
+            }
+        } catch (Exception $e) {}
+    }
+    echo json_encode([
+        "status" => "success",
+        "account_slot" => $slotId,
+        "files" => $filesMap,
+        "count" => count($filesMap)
+    ]);
+    exit;
+}
+
+if ($action === 'clear_auth_session' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true) ?: $_POST;
+    $slotId = $data['account_slot'] ?? $data['account_id'] ?? 'account_1';
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM `whatsapp_auth_sessions` WHERE `account_slot` = ?");
+            $stmt->execute([$slotId]);
+        } catch (Exception $e) {}
+    }
+    echo json_encode(["status" => "success", "message" => "Auth session for $slotId cleared from database"]);
     exit;
 }
 

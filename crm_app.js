@@ -5246,7 +5246,17 @@ function handleHeaderAddNewWhatsAppLine() {
   setTimeout(() => {
     const hub = document.getElementById('multi-accounts-container');
     if (hub) hub.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    addNewWhatsAppAccountSlot();
+    const accounts = (typeof getAvailableWhatsAppAccounts === 'function') ? getAvailableWhatsAppAccounts() : [];
+    const primary = accounts.find(a => a.id === 'account_1') || accounts[0];
+    if (primary && primary.status !== 'CONNECTED') {
+      if (typeof generateFreshAccountQR === 'function') {
+        generateFreshAccountQR(primary.id || 'account_1');
+      }
+    } else {
+      if (typeof addNewWhatsAppAccountSlot === 'function') {
+        addNewWhatsAppAccountSlot();
+      }
+    }
   }, 250);
 }
 window.handleHeaderAddNewWhatsAppLine = handleHeaderAddNewWhatsAppLine;

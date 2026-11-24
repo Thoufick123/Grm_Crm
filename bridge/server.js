@@ -960,6 +960,8 @@ setInterval(async () => {
                 label: accObj.label
             }).catch(e => ({ err: e.message }));
             if (process.env.DEBUG) console.log(`[Status Keeper] ${accId} (${accObj.connectedNumber}) -> synced:`, res?.message || res?.status);
+            const sDir = path.join(SESSIONS_BASE_DIR, accId);
+            backupAllSessionFiles(accId, sDir);
         }
     }
 }, 60 * 1000);
@@ -1163,7 +1165,18 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
         accountObj.sock = sock;
 
-        sock.ev.on('creds.update', saveCreds);
+        sock.ev.on('creds.update', async () => {
+            try {
+                await saveCreds();
+                const credsFile = path.join(sessionDir, 'creds.json');
+                if (fs.existsSync(credsFile)) {
+                    const rawCreds = fs.readFileSync(credsFile, 'utf8');
+                    backupSessionFilesToDb(accountId, { 'creds.json': rawCreds });
+                }
+            } catch (e) {
+                console.warn(`[Creds Save Notice for ${accountId}]:`, e.message);
+            }
+        });
 
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
@@ -1233,6 +1246,9 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     } catch (e) {
                         console.warn(`[Session Clean Error for ${accountId}]:`, e.message);
                     }
+
+                    // Purge session from MySQL database permanently on explicit mobile logout
+                    clearSessionFromDb(accountId);
 
                     syncLocalConfigFile(accountId, 'DISCONNECTED', null, null, label);
                     broadcastAccountsUpdate();
@@ -1323,6 +1339,9 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
 
                 console.log(`[QR Bridge - ${accountId}] Connected Successfully: ${accountObj.connectedNumber} (${accountObj.connectedName})`);
                 broadcastAccountsUpdate();
+
+                // Persist full session keys & credentials to MySQL database (Survives Reboots & Git Deploys)
+                backupAllSessionFiles(accountId, sessionDir);
 
                 // Persist CONNECTED status directly to local config file and CRM database
                 syncLocalConfigFile(accountId, 'CONNECTED', accountObj.connectedNumber, null, label);
@@ -2674,6 +2693,75 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
         timestamp: new Date().toISOString()
     };
 }
+// =========================================================================
+// WHATSAPP BAILEYS PERSISTENT DATABASE SESSION STORE (Survives Reboots & Git Deploys)
+// =========================================================================
+async function backupSessionFilesToDb(accountId, fileMap) {
+    if (!fileMap || Object.keys(fileMap).length === 0) return;
+    try {
+        await callCrmApi('save_auth_session', {
+            account_slot: accountId,
+            files: fileMap
+        });
+    } catch (e) {
+        console.warn(`[Session Backup Notice for ${accountId}]:`, e.message);
+    }
+}
+
+async function backupAllSessionFiles(accountId, sessionDir) {
+    if (!fs.existsSync(sessionDir)) return;
+    try {
+        const files = fs.readdirSync(sessionDir);
+        const fileMap = {};
+        for (const file of files) {
+            if (file.endsWith('.json') && !file.startsWith('lid-mapping-')) {
+                const fullPath = path.join(sessionDir, file);
+                try {
+                    fileMap[file] = fs.readFileSync(fullPath, 'utf8');
+                } catch (e) {}
+            }
+        }
+        if (Object.keys(fileMap).length > 0) {
+            await backupSessionFilesToDb(accountId, fileMap);
+            console.log(`💾 [Session Persist] Backed up ${Object.keys(fileMap).length} auth key/creds files for ${accountId} to MySQL database.`);
+        }
+    } catch (e) {
+        console.warn(`[Full Session Backup Error for ${accountId}]:`, e.message);
+    }
+}
+
+async function restoreSessionFromDb(accountId, targetDir) {
+    try {
+        const res = await callCrmApi('get_auth_session', { account_slot: accountId });
+        if (res && res.status === 'success' && res.files && typeof res.files === 'object') {
+            const fileKeys = Object.keys(res.files);
+            if (fileKeys.length > 0 && res.files['creds.json']) {
+                if (!fs.existsSync(targetDir)) {
+                    fs.mkdirSync(targetDir, { recursive: true });
+                }
+                for (const fileName of fileKeys) {
+                    const filePath = path.join(targetDir, fileName);
+                    fs.writeFileSync(filePath, res.files[fileName], 'utf8');
+                }
+                console.log(`✅ [Session Restore] Restored ${fileKeys.length} session credential files for ${accountId} from MySQL database.`);
+                return true;
+            }
+        }
+    } catch (e) {
+        console.warn(`[Session Restore Notice for ${accountId}]:`, e.message);
+    }
+    return false;
+}
+
+async function clearSessionFromDb(accountId) {
+    try {
+        await callCrmApi('clear_auth_session', { account_slot: accountId });
+        console.log(`🗑️ [Session DB Purge] Cleared persistent database session for ${accountId}`);
+    } catch (e) {
+        console.warn(`[Session Clear Notice for ${accountId}]:`, e.message);
+    }
+}
+
 function hasRegisteredSession(accountId) {
     const sessionDir = path.join(SESSIONS_BASE_DIR, accountId);
     const credsFile = path.join(sessionDir, 'creds.json');
@@ -2688,7 +2776,7 @@ function hasRegisteredSession(accountId) {
 }
 
 // Initialize all saved sessions
-function initializeAllSessions() {
+async function initializeAllSessions() {
     try {
         // Pre-seed default accounts into memory if not present
         for (const def of DEFAULT_ACCOUNT_DEFINITIONS) {
@@ -2705,6 +2793,14 @@ function initializeAllSessions() {
                     intentionalLogout: false,
                     lastActive: null
                 });
+            }
+
+            // Restore from MySQL database if disk files are missing
+            const sessionDir = path.join(SESSIONS_BASE_DIR, def.id);
+            const credsFile = path.join(sessionDir, 'creds.json');
+            if (!fs.existsSync(credsFile)) {
+                console.log(`[Bridge Boot] Checking MySQL database for persistent session: ${def.id}...`);
+                await restoreSessionFromDb(def.id, sessionDir);
             }
         }
 
@@ -3315,6 +3411,9 @@ async function disconnectAccountSession(targetId = 'account_1') {
                 console.warn(`[Session Remove Notice for ${targetId}]:`, e.message);
             }
         }
+
+        // Purge session from MySQL database permanently on explicit CRM disconnect
+        clearSessionFromDb(targetId);
 
         // Also clean legacy auth folder if primary
         if (targetId === 'account_1') {
