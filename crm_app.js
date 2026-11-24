@@ -33256,28 +33256,6 @@ function renderMultiAccountsHub() {
     `;
   }).join('');
 
-            ${(acc.id !== 'account_1' && canSettingsDelete) ? `
-              <button type="button" onclick="deleteWhatsAppAccountSlot('${acc.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Delete account slot">
-                <span class="material-symbols-outlined text-[14px]">delete</span> Delete Slot
-              </button>
-            ` : ''}
-
-            ${(!canSettingsEdit && !canSettingsCreate && !canSettingsDelete) ? `
-              <span class="text-[10px] text-slate-400 font-semibold flex items-center gap-0.5">
-                <span class="material-symbols-outlined text-[12px]">lock</span> View Only
-              </span>
-            ` : ''}
-          </div>
-          
-          <button type="button" onclick="refreshSpecificAccount('${acc.id}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs flex items-center gap-1 transition">
-            <span class="material-symbols-outlined text-[14px]">refresh</span> Refresh Status
-          </button>
-        </div>
-
-      </div>
-    `;
-  }).join('');
-
   // Auto-poll QR status every 3.5s while viewing settings if any account is scanning or connecting
   if (typeof window !== 'undefined') {
     if (window._qrHubPollTimer) {
