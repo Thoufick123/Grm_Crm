@@ -468,6 +468,12 @@ if ($pdo) {
     try {
         $pdo->exec("ALTER TABLE `users` ADD COLUMN `permissions` TEXT NULL DEFAULT NULL");
     } catch (Exception $pe) {}
+    try {
+        $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `qr_code` MEDIUMTEXT NULL AFTER `status`");
+    } catch (Exception $qe) {}
+    try {
+        $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `account_slot` VARCHAR(50) DEFAULT 'account_1'");
+    } catch (Exception $se) {}
 }
 if (isset($_GET['action']) && $_GET['action'] === 'reset_customer_payment') {
     $raw = file_get_contents('php://input');
@@ -2670,12 +2676,14 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("
                 UPDATE `whatsapp_accounts` 
                 SET `status` = 'DISCONNECTED', 
-                    `phone_number` = 'Awaiting Link', 
-                    `qr_code` = NULL 
+                    `phone_number` = 'Awaiting Link'
                 WHERE `account_slot` = ? 
                    OR (`id` = 1 AND ? = 'account_1')
             ");
             $stmt->execute([$accountId, $accountId]);
+            try {
+                $pdo->prepare("UPDATE `whatsapp_accounts` SET `qr_code` = NULL WHERE `account_slot` = ? OR (`id` = 1 AND ? = 'account_1')")->execute([$accountId, $accountId]);
+            } catch (Exception $eqr) {}
         } catch (Exception $e) {}
     }
 
