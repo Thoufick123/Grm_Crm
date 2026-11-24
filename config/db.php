@@ -66,28 +66,38 @@ if (file_exists($cfgFileForBridge)) {
     }
 }
 
+$isLocalServer = empty($_SERVER['HTTP_HOST']) || in_array(strtolower(explode(':', $_SERVER['HTTP_HOST'])[0]), ['localhost', '127.0.0.1', '::1']);
+
+$isLocalhostUrl = function($url) {
+    if (empty($url)) return false;
+    $host = parse_url($url, PHP_URL_HOST) ?: '';
+    return in_array(strtolower($host), ['localhost', '127.0.0.1', '::1']);
+};
+
 // Validate bridge URL: Prevent self-referencing Apache domain loops while supporting Hostinger Node.js bridge
 $isWebHostUrl = function($url) {
     if (empty($url)) return true;
     $host = parse_url($url, PHP_URL_HOST) ?: '';
     // Only reject if it's pointing to the exact same host as the CRM web app to prevent self-loop
-    if (!empty($_SERVER['HTTP_HOST']) && strtolower($host) === strtolower($_SERVER['HTTP_HOST'])) return true;
+    if (!empty($_SERVER['HTTP_HOST']) && strtolower($host) === strtolower(explode(':', $_SERVER['HTTP_HOST'])[0])) return true;
     return false;
 };
 
-$envBridgeUrl = (!empty($envConfig['BRIDGE_URL']) && !$isWebHostUrl($envConfig['BRIDGE_URL']) && $envConfig['BRIDGE_URL'] !== 'http://localhost:3000') 
-    ? rtrim($envConfig['BRIDGE_URL'], '/') 
-    : null;
+// On a remote host, localhost bridge URLs are completely invalid!
+$isValidBridge = function($url) use ($isLocalServer, $isLocalhostUrl, $isWebHostUrl) {
+    if (empty($url)) return false;
+    if ($isWebHostUrl($url)) return false;
+    if (!$isLocalServer && $isLocalhostUrl($url)) return false;
+    return true;
+};
 
 $activeBridge = null;
-if ($dynamicBridgeUrl && !$isWebHostUrl($dynamicBridgeUrl)) {
+if ($dynamicBridgeUrl && $isValidBridge($dynamicBridgeUrl)) {
     $activeBridge = $dynamicBridgeUrl;
-} elseif ($envBridgeUrl) {
-    $activeBridge = $envBridgeUrl;
+} elseif (!empty($envConfig['BRIDGE_URL']) && $isValidBridge($envConfig['BRIDGE_URL'])) {
+    $activeBridge = rtrim($envConfig['BRIDGE_URL'], '/');
 } else {
-    $activeBridge = (!empty($envConfig['BRIDGE_URL']) && !$isWebHostUrl($envConfig['BRIDGE_URL'])) 
-        ? rtrim($envConfig['BRIDGE_URL'], '/') 
-        : 'https://mediumturquoise-dugong-987946.hostingersite.com';
+    $activeBridge = $isLocalServer ? 'http://localhost:3000' : 'https://mediumturquoise-dugong-987946.hostingersite.com';
 }
 
 define('BRIDGE_URL', $activeBridge);
@@ -372,6 +382,32 @@ function getDBConnection() {
                 @touch($migratedFlagFile);
             }
 
+            // Auto-heal / self-migration: Ensure chat_read_status table exists on Hostinger without requiring manual phpMyAdmin import
+            static $chatReadStatusChecked = false;
+            if (!$chatReadStatusChecked) {
+                try {
+                    $checkCrs = $pdo->query("SHOW TABLES LIKE 'chat_read_status'")->fetch();
+                    if (!$checkCrs) {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS `chat_read_status` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `user_id` VARCHAR(50) NOT NULL,
+                                `customer_id` VARCHAR(50) NOT NULL,
+                                `unread_count` INT NOT NULL DEFAULT 0,
+                                `last_read_message_uid` VARCHAR(100) NULL,
+                                `last_read_at` DATETIME NULL,
+                                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                UNIQUE KEY `uk_user_customer` (`user_id`, `customer_id`),
+                                INDEX `idx_crs_user` (`user_id`),
+                                INDEX `idx_crs_customer` (`customer_id`),
+                                INDEX `idx_crs_unread` (`user_id`, `unread_count`)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+                    }
+                } catch (Exception $e) {}
+                $chatReadStatusChecked = true;
+            }
+
             return $pdo;
         } catch (PDOException $e) {
             error_log("Database Connection Error on $host: " . $e->getMessage());
@@ -558,6 +594,23 @@ function initializeDatabaseSchema($pdo) {
             INDEX(`account_id`),
             INDEX(`timestamp_epoch`),
             INDEX(`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    // 5b. Multi-Staff User-Specific Chat Read Status Table (WhatsApp-Style Unread Tracking & Strict Staff Isolation)
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS `chat_read_status` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `user_id` VARCHAR(50) NOT NULL,
+            `customer_id` VARCHAR(50) NOT NULL,
+            `unread_count` INT NOT NULL DEFAULT 0,
+            `last_read_message_uid` VARCHAR(100) NULL,
+            `last_read_at` DATETIME NULL,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY `uk_user_customer` (`user_id`, `customer_id`),
+            INDEX `idx_crs_user` (`user_id`),
+            INDEX `idx_crs_customer` (`customer_id`),
+            INDEX `idx_crs_unread` (`user_id`, `unread_count`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 

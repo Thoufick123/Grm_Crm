@@ -2213,23 +2213,72 @@ function renderCurrentView() {
 }
 
 
-// Initialize Realtime WebSocket (Socket.IO) Connection
-// Dynamic Bridge URL Resolver (supports local and Render deployment)
-function getBridgeBaseUrl() {
-  if (typeof window !== 'undefined' && window.BRIDGE_URL && !window.BRIDGE_URL.includes('trycloudflare.com')) {
-    return window.BRIDGE_URL.replace(/\/+$/, '');
+// Helper to update socket connection status indicators in UI
+function updateSocketConnectionStatusUI(status) {
+  const statusDot = document.getElementById('qr-bridge-status-dot');
+  const statusText = document.getElementById('qr-bridge-status-text');
+  if (!statusDot && !statusText) return;
+  if (status === 'connected') {
+    if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
+    if (statusText && (statusText.innerText.includes('Disconnected') || statusText.innerText.includes('Connecting') || statusText.innerText.includes('Initializing'))) {
+      statusText.innerText = 'Bridge Status: Real-time Socket Connected';
+    }
+  } else if (status === 'connecting') {
+    if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0';
+    if (statusText && !statusText.innerText.includes('Scan QR')) {
+      statusText.innerText = 'Bridge Status: Connecting Socket...';
+    }
+  } else if (status === 'disconnected') {
+    if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
+    if (statusText && !statusText.innerText.includes('Scan QR')) {
+      statusText.innerText = 'Bridge Status: Disconnected (Reconnecting...)';
+    }
   }
+}
+window.updateSocketConnectionStatusUI = updateSocketConnectionStatusUI;
+
+// Initialize Realtime WebSocket (Socket.IO) Connection
+// Dynamic Bridge URL Resolver (supports local and Hostinger production deployment)
+function getBridgeBaseUrl() {
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const defaultHostedBridge = 'https://mediumturquoise-dugong-987946.hostingersite.com';
+
+  // 1. If running on remote domain, cleanse any stale localhost / local domain values from localStorage
+  if (!isLocal && typeof localStorage !== 'undefined') {
+    try {
+      const storedVal = localStorage.getItem('GRM_BRIDGE_URL');
+      if (storedVal && (storedVal.includes('localhost') || storedVal.includes('127.0.0.1') || (window.location.hostname && storedVal.includes(window.location.hostname)) || storedVal.includes('trycloudflare.com'))) {
+        localStorage.removeItem('GRM_BRIDGE_URL');
+      }
+    } catch (e) {}
+  }
+
+  // 2. Check window.BRIDGE_URL (injected dynamically by PHP)
+  if (typeof window !== 'undefined' && window.BRIDGE_URL && !window.BRIDGE_URL.includes('trycloudflare.com')) {
+    const wUrl = window.BRIDGE_URL.replace(/\/+$/, '');
+    if (isLocal || (!wUrl.includes('localhost') && !wUrl.includes('127.0.0.1') && !wUrl.includes(window.location.hostname))) {
+      return wUrl;
+    }
+  }
+
+  // 3. Check localStorage
   const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_BRIDGE_URL') : null;
   if (stored && !stored.includes('trycloudflare.com')) {
-    return stored.replace(/\/+$/, '');
-  } else if (stored && stored.includes('trycloudflare.com')) {
-    try { localStorage.removeItem('GRM_BRIDGE_URL'); } catch (e) { }
+    const sUrl = stored.replace(/\/+$/, '');
+    if (isLocal || (!sUrl.includes('localhost') && !sUrl.includes('127.0.0.1') && !sUrl.includes(window.location.hostname))) {
+      return sUrl;
+    }
   }
+
+  // 4. Check CRM_STATE settings
   if (typeof CRM_STATE !== 'undefined' && CRM_STATE?.settings?.bridgeUrl && !CRM_STATE.settings.bridgeUrl.includes('trycloudflare.com')) {
-    return CRM_STATE.settings.bridgeUrl.replace(/\/+$/, '');
+    const cUrl = CRM_STATE.settings.bridgeUrl.replace(/\/+$/, '');
+    if (isLocal || (!cUrl.includes('localhost') && !cUrl.includes('127.0.0.1') && !cUrl.includes(window.location.hostname))) {
+      return cUrl;
+    }
   }
-  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  return isLocal ? 'http://localhost:3000' : 'https://mediumturquoise-dugong-987946.hostingersite.com';
+
+  return isLocal ? 'http://localhost:3000' : defaultHostedBridge;
 }
 window.getBridgeBaseUrl = getBridgeBaseUrl;
 
@@ -2241,12 +2290,7 @@ function initSocketIO() {
 
   try {
     const bridgeUrl = getBridgeBaseUrl();
-    if (SOCKET_IO && SOCKET_IO_BRIDGE_URL === bridgeUrl) return;
-    // On remote hosting, skip localhost:3000 if not configured to prevent mixed content warnings
-    if ((bridgeUrl === 'http://localhost:3000') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      console.log('ℹ️ [Bridge]: Set localStorage.setItem("GRM_BRIDGE_URL", "https://your-bridge.onrender.com") to connect Render WebSocket');
-      return;
-    }
+    if (SOCKET_IO && SOCKET_IO_BRIDGE_URL === bridgeUrl && SOCKET_IO.connected) return;
 
     if (SOCKET_IO) {
       SOCKET_IO.removeAllListeners();
@@ -2255,20 +2299,34 @@ function initSocketIO() {
       SOCKET_IO_BRIDGE_URL = null;
     }
 
+    console.log(`🔌 [Socket.IO] Initializing connection to Bridge at ${bridgeUrl}...`);
+    updateSocketConnectionStatusUI('connecting');
+
     SOCKET_IO = io(bridgeUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
-      reconnectionDelay: 1500
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 10000,
+      autoConnect: true
     });
     SOCKET_IO_BRIDGE_URL = bridgeUrl;
 
     SOCKET_IO.on('connect', () => {
       console.log('⚡ Socket.IO Connected to Bridge (ID: ' + SOCKET_IO.id + ')');
-      // Toast silenced on connect/refresh to prevent intrusive notification slider
+      updateSocketConnectionStatusUI('connected');
+
+      const curUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null);
+      const currentUserId = curUser ? (curUser.id || curUser.staff_id || curUser.username || 'admin') : 'admin';
+      SOCKET_IO.emit('client:connected', {
+        userId: currentUserId,
+        socketId: SOCKET_IO.id,
+        timestamp: Date.now()
+      });
 
       // 1. Fetch latest rules
-      fetch('api.php?action=get_autoreply')
+      fetch('api.php?action=get_autoreply&_t=' + Date.now(), { cache: 'no-store' })
         .then(r => r.json())
         .then(data => {
           if (data && Array.isArray(data.rules) && data.rules.length > 0) {
@@ -2281,7 +2339,7 @@ function initSocketIO() {
         }).catch(() => { });
 
       // 2. Fetch live Auto-Reply master status from Bridge
-      fetch(`${getBridgeBaseUrl()}/api/autoreply/status`)
+      fetch(`${getBridgeBaseUrl()}/api/autoreply/status?_t=` + Date.now(), { cache: 'no-store' })
         .then(r => r.json())
         .then(data => {
           if (data && typeof data.enabled === 'boolean') {
@@ -2378,6 +2436,19 @@ function initSocketIO() {
     SOCKET_IO.on('whatsapp:inbound', (payload) => {
       console.log('⚡ [Socket.IO Inbound Message Received]:', payload);
       ingestInboundMessage(payload);
+
+      // Feature: Instant Client Ack back to Socket.IO Bridge
+      if (SOCKET_IO && SOCKET_IO.connected) {
+        const curUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null);
+        const currentUserId = curUser ? (curUser.id || curUser.staff_id || curUser.username || 'admin') : 'admin';
+        SOCKET_IO.emit('whatsapp:client_ack', {
+          message_uid: payload.message_uid || payload.id,
+          userId: currentUserId,
+          socketId: SOCKET_IO.id,
+          received_at: Date.now()
+        });
+      }
+
       const isOutboundEcho = Boolean(
         payload &&
         (payload.is_outbound ||
@@ -2452,8 +2523,91 @@ function initSocketIO() {
       }
     });
 
+    // Real-time Chat Read Status Sync (Respects isolated per-user unread tracking)
+    SOCKET_IO.on('chat:read_status', (data) => {
+      console.log('⚡ [Socket.IO Chat Read Status Received]:', data);
+      if (!data || !data.customer_id) return;
+      const curUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null);
+      const currentUserId = curUser ? (curUser.id || curUser.staff_id || curUser.username || 'admin') : 'admin';
+
+      // Only update local unread badge if this read event was performed by the currently logged-in user!
+      // This strictly prevents Staff A opening a chat from wiping Staff B's or Admin's unread badges.
+      if (String(data.user_id).toLowerCase() === String(currentUserId).toLowerCase()) {
+        const custId = String(data.customer_id);
+        const clean10 = custId.replace(/\D/g, '').slice(-10);
+        if (CRM_STATE) {
+          if (!CRM_STATE.userUnreadMap) CRM_STATE.userUnreadMap = {};
+          CRM_STATE.userUnreadMap[custId] = 0;
+          if (clean10) CRM_STATE.userUnreadMap['cust_' + clean10] = 0;
+
+          const cust = (CRM_STATE.customers || []).find(c => c && (String(c.id) === custId || (clean10 && String(c.phone || c.whatsapp || '').replace(/\D/g, '').endsWith(clean10))));
+          if (cust) {
+            cust.unreadCount = 0;
+            cust.unread_count = 0;
+          }
+          (CRM_STATE.queries || []).forEach(q => {
+            if (!q) return;
+            if (String(q.customerId || q.customer_id) === custId || (clean10 && String(q.customerPhone || q.customer_phone || '').replace(/\D/g, '').endsWith(clean10))) {
+              q.unreadCount = 0;
+              q.unread_count = 0;
+            }
+          });
+        }
+        window._FORCE_CONV_LIST_RENDER = true;
+        if (typeof renderInboxConversationList === 'function') {
+          renderInboxConversationList();
+        }
+        if (typeof updateBadgeCounters === 'function') {
+          updateBadgeCounters();
+        }
+      }
+    });
+
+    SOCKET_IO.on('reconnect', (attemptNumber) => {
+      console.log(`🔄 [Socket.IO] Reconnected to Bridge after ${attemptNumber} attempts (Socket ID: ${SOCKET_IO.id})`);
+      updateSocketConnectionStatusUI('connected');
+
+      const curUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null);
+      const currentUserId = curUser ? (curUser.id || curUser.staff_id || curUser.username || 'admin') : 'admin';
+      SOCKET_IO.emit('client:reconnected', {
+        userId: currentUserId,
+        socketId: SOCKET_IO.id,
+        attempt: attemptNumber,
+        timestamp: Date.now()
+      });
+
+      // Automatic Catch-up Recovery: sync inbound messages and live state that arrived during disconnection
+      if (typeof syncInboundMessagesNow === 'function') {
+        syncInboundMessagesNow(false);
+      }
+      if (typeof syncLiveCRMData === 'function') {
+        syncLiveCRMData(true);
+      }
+      if (typeof syncCustomerMessagesFromDB === 'function' && typeof ACTIVE_CUSTOMER_ID !== 'undefined' && ACTIVE_CUSTOMER_ID) {
+        syncCustomerMessagesFromDB(ACTIVE_CUSTOMER_ID);
+      }
+      // Re-synchronize unread counts from server database
+      fetch('api.php?action=get_unread_counts&_t=' + Date.now(), { cache: 'no-store' })
+        .then(r => r.json())
+        .then(res => {
+          if (res && res.status === 'success' && res.unread_counts) {
+            if (CRM_STATE) {
+              CRM_STATE.userUnreadMap = res.unread_counts;
+            }
+            if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+            if (typeof renderInboxConversationList === 'function') renderInboxConversationList();
+          }
+        }).catch(() => {});
+    });
+
     SOCKET_IO.on('disconnect', (reason) => {
-      console.warn('Socket.IO Disconnected from Bridge:', reason);
+      console.warn('⚠️ Socket.IO Disconnected from Bridge:', reason);
+      updateSocketConnectionStatusUI('disconnected');
+    });
+
+    SOCKET_IO.on('connect_error', (err) => {
+      console.warn('⚠️ Socket.IO Connection Error:', err ? err.message : err);
+      updateSocketConnectionStatusUI('disconnected');
     });
 
   } catch (e) {
@@ -2678,18 +2832,12 @@ function ingestInboundMessage(payload, suppressChime = false) {
     } else if (customer.assignedTo && customer.assignedTo !== 'UNASSIGNED') {
       query.assignedTo = customer.assignedTo;
     }
-    if (!isDuplicate && !isOutboundMsg) {
-      query.unreadCount = (query.unreadCount || 0) + 1;
-    }
     query.lastMessage = isBotMsg ? `Bot: "${messageText.slice(0, 35)}..."` : (isOutboundMsg ? `Staff: "${messageText.slice(0, 35)}..."` : `Customer: "${messageText}"`);
     if (!isOutboundMsg) {
       query.status = (query.status === 'CLOSED' || query.status === 'RESOLVED') ? 'NEW' : query.status;
     }
     query.createdAt = timeStr;
     query.lastTimeEpoch = msgTimestamp;
-
-    // Move query to top of queries array
-    CRM_STATE.queries = [query, ...CRM_STATE.queries.filter(q => q.id !== query.id)];
   } else {
     const initAssigned = (payload.assigned_to && payload.assigned_to !== 'UNASSIGNED') ? payload.assigned_to : (customer.assignedTo || 'UNASSIGNED');
     query = {
@@ -2703,7 +2851,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
       queryText: messageText,
       productSku: null,
       createdAt: timeStr,
-      unreadCount: isOutboundMsg ? 0 : 1,
+      unreadCount: 0,
       lastMessage: isBotMsg ? `Bot: "${messageText.slice(0, 35)}..."` : (isOutboundMsg ? `Staff: "${messageText.slice(0, 35)}..."` : `Customer: "${messageText}"`),
       lastTimeEpoch: msgTimestamp
     };
@@ -2717,14 +2865,76 @@ function ingestInboundMessage(payload, suppressChime = false) {
   customer.last_message_at = new Date(msgTimestamp).toISOString().slice(0, 19).replace('T', ' ');
   customer.lastTimeEpoch = msgTimestamp;
 
+  // Resolve current workstation user & chat open status
+  const curUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null);
+  const currentUserId = curUser ? (curUser.id || curUser.staff_id || curUser.username || 'admin') : 'admin';
+  const isSuperAdminUser = curUser ? (curUser.role === 'admin' || curUser.id === 'admin' || curUser.role === 'Super Admin' || (curUser.title && curUser.title.includes('Admin Manager'))) : (ACTIVE_ROLE === 'admin');
+  const isAssignedToThisStaff = isSuperAdminUser || (
+    customer.assignedTo && (
+      String(customer.assignedTo).toLowerCase() === String(currentUserId).toLowerCase() ||
+      (curUser?.name && String(customer.assignedTo).toLowerCase() === String(curUser.name).toLowerCase())
+    )
+  );
+
+  const isChatOpenNow = Boolean(
+    ACTIVE_VIEW === 'inbox' &&
+    ACTIVE_CUSTOMER_ID &&
+    (
+      String(ACTIVE_CUSTOMER_ID) === String(customer.id) ||
+      (customer.phone && String(ACTIVE_CUSTOMER_ID).replace(/\D/g, '').endsWith(String(customer.phone).replace(/\D/g, '').slice(-10)))
+    ) &&
+    !document.hidden
+  );
+
+  // Feature 2 & 3 & 4: Unread message count management per-user
+  if (!isDuplicate && !isOutboundMsg) {
+    if (!CRM_STATE.userUnreadMap) CRM_STATE.userUnreadMap = {};
+
+    if (isChatOpenNow) {
+      // If the chat is ACTIVELY open right now on the user's screen, mark as read immediately
+      CRM_STATE.userUnreadMap[customer.id] = 0;
+      customer.unreadCount = 0;
+      customer.unread_count = 0;
+      if (query) {
+        query.unreadCount = 0;
+        query.unread_count = 0;
+      }
+      fetch(`api.php?action=mark_customer_read&customer_id=${encodeURIComponent(customer.id)}&user_id=${encodeURIComponent(currentUserId)}`).catch(() => {});
+    } else if (isAssignedToThisStaff) {
+      // If the chat is NOT open and visible to this staff/admin, increment unread count
+      const currentUnread = CRM_STATE.userUnreadMap[customer.id] !== undefined
+        ? Number(CRM_STATE.userUnreadMap[customer.id])
+        : Number(customer.unreadCount || query?.unreadCount || 0);
+      const nextUnread = currentUnread + 1;
+      CRM_STATE.userUnreadMap[customer.id] = nextUnread;
+      customer.unreadCount = nextUnread;
+      customer.unread_count = nextUnread;
+      if (query) {
+        query.unreadCount = nextUnread;
+        query.unread_count = nextUnread;
+      }
+    }
+  } else if (isOutboundMsg) {
+    if (CRM_STATE.userUnreadMap && CRM_STATE.userUnreadMap[customer.id] === undefined) {
+      CRM_STATE.userUnreadMap[customer.id] = 0;
+    }
+  }
+
+  // Feature 1: Automatic Chat Sorting (Move customer & query to top of lists)
+  if (query) {
+    CRM_STATE.queries = [query, ...CRM_STATE.queries.filter(q => q && q.id !== query.id)];
+  }
+  CRM_STATE.customers = [customer, ...CRM_STATE.customers.filter(c => c && c.id !== customer.id)];
+  window._FORCE_CONV_LIST_RENDER = true;
+
   // 5. Update last poll epoch
   if (payload.timestamp_epoch) {
     LAST_POLL_EPOCH = Math.max(LAST_POLL_EPOCH, payload.timestamp_epoch);
   }
 
-  // 6. Ensure ACTIVE_CUSTOMER_ID is valid
-  if (!ACTIVE_CUSTOMER_ID || !CRM_STATE.customers.some(c => c.id === ACTIVE_CUSTOMER_ID)) {
-    ACTIVE_CUSTOMER_ID = customer.id;
+  // 6. Ensure ACTIVE_CUSTOMER_ID is valid (do not hijack active chat if user is viewing someone else)
+  if (ACTIVE_CUSTOMER_ID && !CRM_STATE.customers.some(c => c && c.id === ACTIVE_CUSTOMER_ID)) {
+    ACTIVE_CUSTOMER_ID = null;
   }
 
   // 7. Save state & refresh UI
@@ -2732,9 +2942,12 @@ function ingestInboundMessage(payload, suppressChime = false) {
 
   // Re-render Views instantly in-place (Zero Page Refresh)
   if (ACTIVE_VIEW === 'inbox') {
-    renderInbox();
-    const stream = document.getElementById('chat-messages-stream');
-    if (stream) stream.scrollTop = stream.scrollHeight;
+    if (typeof renderInboxConversationList === 'function') renderInboxConversationList();
+    if (isChatOpenNow) {
+      if (typeof renderChatMessages === 'function') renderChatMessages();
+      const stream = document.getElementById('chat-messages-stream');
+      if (stream) stream.scrollTop = stream.scrollHeight;
+    }
   } else if (ACTIVE_VIEW === 'enquiries') {
     if (typeof renderEnquiriesTable === 'function') renderEnquiriesTable();
   } else if (ACTIVE_VIEW === 'dashboard') {
@@ -3159,7 +3372,13 @@ window.applyUpdatedAccountsDelta = applyUpdatedAccountsDelta;
 
 function syncInboundMessagesNow(isInitial = false) {
   const since = isInitial ? 0 : LAST_POLL_EPOCH;
-  return fetch(`api.php?action=get_inbound_messages&since=${since}`)
+  return fetch(`api.php?action=get_inbound_messages&since=${since}&_t=${Date.now()}`, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
+  })
     .then(r => r.json())
     .then(res => {
       if (res && res.status === 'success') {
@@ -4303,17 +4522,36 @@ function applyAuthoritativeDatabaseState(data) {
   // Ensure active customer is valid and not pointing to internal business line
   if (typeof ACTIVE_CUSTOMER_ID !== 'undefined') {
     const isCurrentActiveBiz = internalBusinessPhones.some(bp => String(ACTIVE_CUSTOMER_ID).includes(bp));
-    if (isCurrentActiveBiz || !ACTIVE_CUSTOMER_ID || (CRM_STATE.customers && !CRM_STATE.customers.some(c => c && c.id === ACTIVE_CUSTOMER_ID))) {
-      if (CRM_STATE.customers && CRM_STATE.customers.length > 0) {
-        ACTIVE_CUSTOMER_ID = CRM_STATE.customers[0].id;
-        try { localStorage.setItem('GRM_ACTIVE_CUSTOMER_ID', ACTIVE_CUSTOMER_ID); } catch(e) {}
-        if (typeof selectCustomerChat === 'function') {
-          setTimeout(() => selectCustomerChat(ACTIVE_CUSTOMER_ID), 50);
-        }
-      }
-    } else if (ACTIVE_CUSTOMER_ID && typeof selectCustomerChat === 'function') {
-      setTimeout(() => selectCustomerChat(ACTIVE_CUSTOMER_ID), 50);
+    if (isCurrentActiveBiz || (ACTIVE_CUSTOMER_ID && CRM_STATE.customers && !CRM_STATE.customers.some(c => c && c.id === ACTIVE_CUSTOMER_ID))) {
+      ACTIVE_CUSTOMER_ID = null;
+      try { localStorage.removeItem('GRM_ACTIVE_CUSTOMER_ID'); } catch(e) {}
     }
+  }
+
+  // Authoritative Per-User Unread Map Reconciliation
+  if (data.userUnreadMap && typeof data.userUnreadMap === 'object') {
+    CRM_STATE.userUnreadMap = data.userUnreadMap;
+  }
+  if (CRM_STATE.userUnreadMap && typeof CRM_STATE.userUnreadMap === 'object') {
+    (CRM_STATE.customers || []).forEach(c => {
+      if (!c) return;
+      const clean10 = String(c.phone || c.whatsapp || '').replace(/\D/g, '').slice(-10);
+      const val = CRM_STATE.userUnreadMap[c.id] ?? (clean10 ? CRM_STATE.userUnreadMap['cust_' + clean10] : undefined);
+      if (val !== undefined) {
+        c.unreadCount = Number(val);
+        c.unread_count = Number(val);
+      }
+    });
+    (CRM_STATE.queries || []).forEach(q => {
+      if (!q) return;
+      const qCid = String(q.customerId || q.customer_id || '');
+      const clean10 = String(q.customerPhone || q.customer_phone || '').replace(/\D/g, '').slice(-10);
+      const val = CRM_STATE.userUnreadMap[qCid] ?? (clean10 ? CRM_STATE.userUnreadMap['cust_' + clean10] : undefined);
+      if (val !== undefined) {
+        q.unreadCount = Number(val);
+        q.unread_count = Number(val);
+      }
+    });
   }
 
   // Persist cleaned conversations to sessionStorage
@@ -4539,6 +4777,9 @@ window.syncLiveCRMData = syncLiveCRMData;
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
+      if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && !SOCKET_IO.connected) {
+        try { SOCKET_IO.connect(); } catch (e) {}
+      }
       if (typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'inbox') {
         // In inbox: quietly poll new messages without re-rendering or wiping chat
         if (typeof syncInboundMessagesNow === 'function') syncInboundMessagesNow(false);
@@ -7166,22 +7407,53 @@ window.isAssignedToCurrentStaff = isAssignedToCurrentStaff;
 
 /**
  * Accurate Conversation Sort Key Generator
- * Bulletproof time-based sorting: parses the exact time displayed on each card
- * (e.g. "03:43 PM", "02:46 PM") and date references into a comparable numeric sort key:
- * YYYYMMDDHHMMSS (e.g. 20261119154300 for 03:43 PM, 20261119144600 for 02:46 PM).
- * Strictly guarantees:
- * - RECENT message comes FIRST (top of list)
- * - PREVIOUS message goes to the BOTTOM
+ * Guarantees strict chronological sorting:
+ * 1. Resolves true millisecond timestamp (epoch ms) from message, customer, or query.
+ * 2. Parses full date and time strings if present.
+ * 3. Guarantees latest incoming or outgoing message moves conversation immediately to the top.
  */
 function extractConversationEpoch(lastMsgObj, cust, query, timeDisplay) {
-  const rawStr = String(timeDisplay || lastMsgObj?.time || cust?.lastMessageAt || cust?.last_message_at || query?.createdAt || '').trim();
+  // 1. Direct millisecond epoch from message object
+  if (lastMsgObj) {
+    if (typeof lastMsgObj.timestamp === 'number' && lastMsgObj.timestamp > 1e11) {
+      return lastMsgObj.timestamp;
+    }
+    if (typeof lastMsgObj.timestamp_epoch === 'number' && lastMsgObj.timestamp_epoch > 0) {
+      return lastMsgObj.timestamp_epoch * 1000;
+    }
+    if (lastMsgObj.created_at && typeof lastMsgObj.created_at === 'string') {
+      const parsed = Date.parse(lastMsgObj.created_at.replace(' ', 'T'));
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
 
-  // 1. Extract hours, minutes, seconds from the visible time string (12-hour or 24-hour)
-  let hrs = 0;
-  let mins = 0;
-  let secs = 0;
-  let hasTime = false;
+  // 2. Direct millisecond epoch from customer object
+  if (cust) {
+    if (typeof cust.lastTimeEpoch === 'number' && cust.lastTimeEpoch > 0) {
+      return cust.lastTimeEpoch;
+    }
+    const custAt = cust.last_message_at || cust.lastMessageAt;
+    if (custAt && typeof custAt === 'string') {
+      const parsed = Date.parse(custAt.replace(' ', 'T'));
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
 
+  // 3. Direct millisecond epoch from query object
+  if (query) {
+    if (typeof query.lastTimeEpoch === 'number' && query.lastTimeEpoch > 0) {
+      return query.lastTimeEpoch;
+    }
+    const qAt = query.updated_at || query.createdAt || query.created_at;
+    if (qAt && typeof qAt === 'string') {
+      const parsed = Date.parse(qAt.replace(' ', 'T'));
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
+
+  // 4. Fallback: Parse time string if only time string was passed
+  const rawStr = String(timeDisplay || lastMsgObj?.time || '').trim();
+  let hrs = 0, mins = 0, secs = 0, hasTime = false;
   const timeMatch = rawStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?/i);
   if (timeMatch) {
     hasTime = true;
@@ -7193,73 +7465,20 @@ function extractConversationEpoch(lastMsgObj, cust, query, timeDisplay) {
     if (ampm === 'AM' && hrs === 12) hrs = 0;
   }
 
-  // 2. Extract Year, Month, Day
   const now = new Date();
   let year = now.getFullYear();
-  let month = now.getMonth() + 1;
+  let month = now.getMonth();
   let day = now.getDate();
 
-  // Check if rawStr contains date e.g. "2026-11-19" or "19/11/2026"
-  const dateMatchYMD = rawStr.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-  const dateMatchDMY = rawStr.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
-  if (dateMatchYMD) {
-    year = parseInt(dateMatchYMD[1], 10);
-    month = parseInt(dateMatchYMD[2], 10);
-    day = parseInt(dateMatchYMD[3], 10);
-  } else if (dateMatchDMY) {
-    day = parseInt(dateMatchDMY[1], 10);
-    month = parseInt(dateMatchDMY[2], 10);
-    year = parseInt(dateMatchDMY[3], 10);
-  } else if (/yesterday/i.test(rawStr)) {
-    const yest = new Date();
-    yest.setDate(yest.getDate() - 1);
-    year = yest.getFullYear();
-    month = yest.getMonth() + 1;
-    day = yest.getDate();
-  } else if (!hasTime) {
-    // Only check date references if no direct time string (like "03:43 PM") was present
-    const refDate = lastMsgObj?.created_at || cust?.last_message_at || cust?.lastMessageAt || query?.createdAt;
-    if (refDate && typeof refDate === 'string') {
-      const ym = refDate.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-      if (ym) {
-        year = parseInt(ym[1], 10);
-        month = parseInt(ym[2], 10);
-        day = parseInt(ym[3], 10);
-      }
-    }
+  if (/yesterday/i.test(rawStr)) {
+    day -= 1;
   }
 
-  // 3. Fallback: if no time was found in timeDisplay, try numeric timestamp from lastMsgObj, cust, or query
-  if (!hasTime) {
-    let fallbackMs = 0;
-    if (lastMsgObj) {
-      if (typeof lastMsgObj.timestamp === 'number' && lastMsgObj.timestamp > 1e11) fallbackMs = lastMsgObj.timestamp;
-      else if (typeof lastMsgObj.timestamp_epoch === 'number' && lastMsgObj.timestamp_epoch > 0) fallbackMs = lastMsgObj.timestamp_epoch * 1000;
-    }
-    if (!fallbackMs && cust) {
-      if (typeof cust.lastTimeEpoch === 'number' && cust.lastTimeEpoch > 0) fallbackMs = cust.lastTimeEpoch;
-      else if (cust.last_message_at) fallbackMs = Date.parse(String(cust.last_message_at).replace(' ', 'T'));
-    }
-    if (!fallbackMs && query && typeof query.lastTimeEpoch === 'number') fallbackMs = query.lastTimeEpoch;
-
-    if (fallbackMs && Number.isFinite(fallbackMs) && fallbackMs > 0) {
-      const d = new Date(fallbackMs);
-      year = d.getFullYear();
-      month = d.getMonth() + 1;
-      day = d.getDate();
-      hrs = d.getHours();
-      mins = d.getMinutes();
-      secs = d.getSeconds();
-    } else {
-      // No time and no fallback timestamp: Return 0 so contact is at the bottom
-      return 0;
-    }
+  if (hasTime) {
+    return new Date(year, month, day, hrs, mins, secs).getTime();
   }
 
-  // Generate numeric sort key: YYYYMMDDHHMMSS (e.g. 20261119154300 for 03:43 PM, 20261119144600 for 02:46 PM)
-  const pad = (n, len = 2) => String(n).padStart(len, '0');
-  const sortKeyStr = `${pad(year, 4)}${pad(month)}${pad(day)}${pad(hrs)}${pad(mins)}${pad(secs)}`;
-  return Number(sortKeyStr) || 0;
+  return 0;
 }
 window.extractConversationEpoch = extractConversationEpoch;
 
@@ -7377,6 +7596,9 @@ function renderInboxConversationList() {
     const qStatus = query ? (query.status || 'NEW') : 'NEW';
 
     // DUPLICATION PREVENTER: If a card already exists for this 10-digit phone or customerId, MERGE into it!
+    const custUnreadVal = CRM_STATE.userUnreadMap ? (CRM_STATE.userUnreadMap[cust.id] ?? (phone10 ? CRM_STATE.userUnreadMap['cust_' + phone10] : undefined)) : undefined;
+    const custUnreadNum = custUnreadVal !== undefined ? Number(custUnreadVal) : Number(cust.unreadCount || query?.unreadCount || 0);
+
     const existingCard = (phone10 ? cardByPhone10.get(phone10) : null) || cardByCustId.get(String(cust.id));
     if (existingCard) {
       if (lastTimeEpoch > (existingCard.lastTimeEpoch || 0)) {
@@ -7395,8 +7617,8 @@ function renderInboxConversationList() {
         existingCard.assignedTo = assignedStaffId;
         existingCard.staff = staff;
       }
-      if (query && query.unreadCount) {
-        existingCard.unreadCount = Math.max(existingCard.unreadCount || 0, query.unreadCount);
+      if (custUnreadNum > 0) {
+        existingCard.unreadCount = Math.max(existingCard.unreadCount || 0, custUnreadNum);
       }
       return;
     }
@@ -7412,7 +7634,7 @@ function renderInboxConversationList() {
       lastMessage: lastText,
       createdAt: timeDisplay,
       lastTime: timeDisplay,
-      unreadCount: query ? (query.unreadCount || 0) : 0,
+      unreadCount: custUnreadNum,
       lastTimeEpoch: lastTimeEpoch,
       accountId: custAccountId,
       businessNumber: custBusinessNumber
@@ -7429,6 +7651,9 @@ function renderInboxConversationList() {
     const qP = String(q.customerPhone || q.customer_phone || '').replace(/\D/g, '');
     const qP10 = qP.length >= 7 ? qP.slice(-10) : '';
 
+    const qUnreadVal = CRM_STATE.userUnreadMap ? (CRM_STATE.userUnreadMap[qCid] ?? (qP10 ? CRM_STATE.userUnreadMap['cust_' + qP10] : undefined)) : undefined;
+    const qUnreadNum = qUnreadVal !== undefined ? Number(qUnreadVal) : Number(q.unreadCount || 0);
+
     // DUPLICATION PREVENTER: Check if query belongs to an existing card by phone10 or customerId
     const existingCard = (qP10 ? cardByPhone10.get(qP10) : null) || (qCid ? cardByCustId.get(qCid) : null);
     if (existingCard) {
@@ -7444,6 +7669,9 @@ function renderInboxConversationList() {
       if ((!exName || exName.startsWith('Customer') || exName.startsWith('WhatsApp Customer')) && qName && !qName.startsWith('Customer') && !qName.startsWith('WhatsApp Customer')) {
         existingCard.customer.name = qName;
         existingCard.customer.avatar = (qName.slice(0, 2) || 'CU').toUpperCase();
+      }
+      if (qUnreadNum > 0) {
+        existingCard.unreadCount = Math.max(existingCard.unreadCount || 0, qUnreadNum);
       }
       return;
     }
@@ -7472,7 +7700,7 @@ function renderInboxConversationList() {
       lastMessage: lastText,
       createdAt: timeDisplay,
       lastTime: timeDisplay,
-      unreadCount: q.unreadCount || 0,
+      unreadCount: qUnreadNum,
       lastTimeEpoch: extractConversationEpoch(null, null, q, timeDisplay),
       accountId: q.accountId || q.account_id || 'account_1',
       businessNumber: '+91 86680 07593'
@@ -7625,18 +7853,15 @@ function renderInboxConversationList() {
 
   // Ensure ACTIVE_CUSTOMER_ID strictly points to a visible conversation thread on desktop.
   // On mobile (< 768px), keep ACTIVE_CUSTOMER_ID null until user explicitly selects a customer so the list remains visible!
+  // Do not mark messages as read merely because the chat list is visible.
   const isMobileScreen = (typeof window !== 'undefined' && window.innerWidth < 768);
   if (!isMobileScreen) {
     if (!ACTIVE_CUSTOMER_ID || !customerCards.some(c => c.customerId === ACTIVE_CUSTOMER_ID || String(c.customerId) === String(ACTIVE_CUSTOMER_ID))) {
-      if (customerCards.length > 0) {
-        ACTIVE_CUSTOMER_ID = customerCards[0].customerId;
-        if (CRM_STATE) CRM_STATE.activeCustomerId = ACTIVE_CUSTOMER_ID;
-        try { localStorage.setItem('GRM_ACTIVE_CUSTOMER_ID', ACTIVE_CUSTOMER_ID); } catch(e) {}
-        setTimeout(() => {
-          if (typeof renderCustomer360Panel === 'function') renderCustomer360Panel();
-          if (typeof renderChatHeader === 'function') renderChatHeader();
-          if (typeof renderChatMessages === 'function') renderChatMessages();
-        }, 10);
+      const storedId = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_ACTIVE_CUSTOMER_ID') : null;
+      if (storedId && customerCards.some(c => c.customerId === storedId || String(c.customerId) === String(storedId))) {
+        ACTIVE_CUSTOMER_ID = storedId;
+      } else {
+        ACTIVE_CUSTOMER_ID = null;
       }
     }
   }
@@ -7660,6 +7885,13 @@ function renderInboxConversationList() {
     if (/^Customer \([0-5]\d{3}\)$/.test(custDisplayName)) {
       custDisplayName = 'WhatsApp Customer';
     }
+
+    // Feature 2: WhatsApp-style Notification Badge beside customer name (1-99, 99+)
+    const unreadNum = Number(item.unreadCount || 0);
+    const displayBadgeCount = unreadNum > 99 ? '99+' : String(unreadNum);
+    const unreadBadge = unreadNum > 0
+      ? `<span class="inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 text-[10px] font-black text-white bg-[#25D366] rounded-full shadow-sm leading-none shrink-0" title="${unreadNum} unread message${unreadNum === 1 ? '' : 's'}">${displayBadgeCount}</span>`
+      : '';
 
     // Priority badge
     let priorityBadge = '';
@@ -7705,13 +7937,16 @@ function renderInboxConversationList() {
         <div class="flex-1 min-w-0">
           <div class="flex items-start justify-between gap-1.5">
             <div class="min-w-0 flex-1">
-              <h4 class="text-xs font-bold text-slate-900 truncate" title="${escapeHtml(custDisplayName)}">${escapeHtml(custDisplayName)}</h4>
+              <div class="flex items-center gap-1.5 min-w-0">
+                <h4 class="text-xs font-bold text-slate-900 truncate" title="${escapeHtml(custDisplayName)}">${escapeHtml(custDisplayName)}</h4>
+                ${unreadBadge}
+              </div>
               ${displayPhone ? `<p class="text-[11px] font-mono font-semibold text-emerald-700 truncate mt-0.5">${escapeHtml(displayPhone)}</p>` : ''}
             </div>
-            <span class="text-[10px] text-slate-400 font-medium shrink-0 pt-0.5">${escapeHtml(item.createdAt || '')}</span>
+            <span class="text-[10px] ${unreadNum > 0 ? 'text-[#25D366] font-bold' : 'text-slate-400 font-medium'} shrink-0 pt-0.5">${escapeHtml(item.createdAt || '')}</span>
           </div>
 
-          <p class="text-xs text-slate-600 line-clamp-2 mt-1 leading-snug font-medium" title="${escapeHtml(item.lastMessage || '')}">${escapeHtml(item.lastMessage || '')}</p>
+          <p class="text-xs ${unreadNum > 0 ? 'text-slate-900 font-semibold' : 'text-slate-600 font-medium'} line-clamp-2 mt-1 leading-snug" title="${escapeHtml(item.lastMessage || '')}">${escapeHtml(item.lastMessage || '')}</p>
 
           <div class="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
             <div class="flex items-center gap-1.5 flex-wrap">
@@ -7771,7 +8006,7 @@ function mobileBackToConversations() {
 }
 window.mobileBackToConversations = mobileBackToConversations;
 
-function selectCustomerChat(customerId) {
+function selectCustomerChat(customerId, markAsRead = true) {
   if (!customerId) return;
   ACTIVE_CUSTOMER_ID = customerId;
   try {
@@ -7787,22 +8022,50 @@ function selectCustomerChat(customerId) {
   // Clear unread count for this customer across state & notify backend
   const cleanId = String(customerId);
   const cust = (CRM_STATE?.customers || []).find(c => c && (String(c.id) === cleanId || String(c.customerId) === cleanId));
-  const clean10 = cust ? String(cust.phone || cust.whatsapp || '').replace(/\D/g, '').slice(-10) : '';
-  (CRM_STATE?.queries || []).forEach(q => {
-    if (!q) return;
-    const qCid = String(q.customerId || q.customer_id || '');
-    const qP10 = String(q.customerPhone || q.customer_phone || '').replace(/\D/g, '').slice(-10);
-    if (qCid === cleanId || (clean10 && qP10 === clean10)) {
-      q.unreadCount = 0;
-      q.unread_count = 0;
+  const clean10 = cust ? String(cust.phone || cust.whatsapp || '').replace(/\D/g, '').slice(-10) : (cleanId.replace(/\D/g, '').slice(-10) || '');
+
+  // Resolve current workstation user ID
+  const curUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null);
+  const currentUserId = curUser ? (curUser.id || curUser.staff_id || curUser.username || 'admin') : 'admin';
+
+  if (markAsRead) {
+    // Clear unread count for this customer in userUnreadMap, customers & queries
+    if (CRM_STATE) {
+      if (!CRM_STATE.userUnreadMap) CRM_STATE.userUnreadMap = {};
+      CRM_STATE.userUnreadMap[cleanId] = 0;
+      if (clean10) CRM_STATE.userUnreadMap['cust_' + clean10] = 0;
     }
-  });
-  if (cust) {
-    cust.unreadCount = 0;
-    cust.unread_count = 0;
+
+    (CRM_STATE?.queries || []).forEach(q => {
+      if (!q) return;
+      const qCid = String(q.customerId || q.customer_id || '');
+      const qP10 = String(q.customerPhone || q.customer_phone || '').replace(/\D/g, '').slice(-10);
+      if (qCid === cleanId || (clean10 && qP10 === clean10)) {
+        q.unreadCount = 0;
+        q.unread_count = 0;
+      }
+    });
+
+    if (cust) {
+      cust.unreadCount = 0;
+      cust.unread_count = 0;
+    }
+
+    window._FORCE_CONV_LIST_RENDER = true;
+    if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
+
+    // Call backend API with user_id to reset unread_count strictly for this staff/admin in database
+    fetch(`api.php?action=mark_customer_read&customer_id=${encodeURIComponent(customerId)}&user_id=${encodeURIComponent(currentUserId)}${clean10 ? '&phone=' + encodeURIComponent(clean10) : ''}`).catch(() => {});
+
+    // Broadcast real-time read event via Socket.IO
+    if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
+      SOCKET_IO.emit('chat:mark_read', {
+        customer_id: cleanId,
+        user_id: currentUserId,
+        phone: clean10
+      });
+    }
   }
-  if (typeof updateBadgeCounters === 'function') updateBadgeCounters();
-  fetch('api.php?action=mark_customer_read&customer_id=' + encodeURIComponent(customerId) + (clean10 ? '&phone=' + encodeURIComponent(clean10) : '')).catch(() => {});
 
   // On mobile (< 768px), transition from conversation list view to active chat view
   if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -10231,17 +10494,22 @@ function updateBadgeCounters() {
   const subtabUnread = document.getElementById('subtab-unread-badge');
   const unreadCustSet = new Set();
   (CRM_STATE.queries || []).forEach(q => {
-    if (q.status !== 'DND' && (q.unreadCount || 0) > 0) {
-      const clean = String(q.customerPhone || q.customer_phone || q.customerId || q.customer_id || '').replace(/\D/g, '');
-      const p10 = clean.length >= 7 ? clean.slice(-10) : (q.customerId || q.id);
-      if (p10) unreadCustSet.add(p10);
+    const qCid = String(q.customerId || q.customer_id || '');
+    const clean = String(q.customerPhone || q.customer_phone || qCid).replace(/\D/g, '');
+    const p10 = clean.length >= 7 ? clean.slice(-10) : '';
+    const uVal = CRM_STATE.userUnreadMap ? (CRM_STATE.userUnreadMap[qCid] ?? (p10 ? CRM_STATE.userUnreadMap['cust_' + p10] : undefined)) : undefined;
+    const uNum = uVal !== undefined ? Number(uVal) : Number(q.unreadCount || 0);
+    if (q.status !== 'DND' && uNum > 0) {
+      if (p10 || qCid) unreadCustSet.add(p10 || qCid);
     }
   });
   (CRM_STATE.customers || []).forEach(c => {
-    if (!c.isDND && (c.unreadCount || 0) > 0) {
-      const clean = String(c.phone || c.whatsapp || c.id || '').replace(/\D/g, '');
-      const p10 = clean.length >= 7 ? clean.slice(-10) : c.id;
-      if (p10) unreadCustSet.add(p10);
+    const clean = String(c.phone || c.whatsapp || c.id || '').replace(/\D/g, '');
+    const p10 = clean.length >= 7 ? clean.slice(-10) : '';
+    const uVal = CRM_STATE.userUnreadMap ? (CRM_STATE.userUnreadMap[c.id] ?? (p10 ? CRM_STATE.userUnreadMap['cust_' + p10] : undefined)) : undefined;
+    const uNum = uVal !== undefined ? Number(uVal) : Number(c.unreadCount || 0);
+    if (!c.isDND && uNum > 0) {
+      if (p10 || c.id) unreadCustSet.add(p10 || c.id);
     }
   });
   const unreadCount = unreadCustSet.size;
@@ -13441,6 +13709,24 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
     });
   }
 
+  // Feature 1: Automatic Chat Sorting (Move customer & query to top on outbound dispatch)
+  if (effectiveCustId && CRM_STATE?.customers) {
+    const cust = CRM_STATE.customers.find(c => c && String(c.id) === String(effectiveCustId));
+    if (cust) {
+      const nowMs = Date.now();
+      cust.lastTimeEpoch = nowMs;
+      cust.lastMessage = text || cust.lastMessage;
+      CRM_STATE.customers = [cust, ...CRM_STATE.customers.filter(c => c && c.id !== cust.id)];
+      const q = (CRM_STATE.queries || []).find(qry => qry && (String(qry.customerId || qry.customer_id) === String(cust.id)));
+      if (q) {
+        q.lastTimeEpoch = nowMs;
+        CRM_STATE.queries = [q, ...CRM_STATE.queries.filter(qry => qry && qry.id !== q.id)];
+      }
+      window._FORCE_CONV_LIST_RENDER = true;
+      if (typeof renderInboxConversationList === 'function') renderInboxConversationList();
+    }
+  }
+
   // 1. Try Instant WebSocket (Socket.IO) Dispatch
   if (typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected) {
     const socketDelivered = await new Promise((resolve) => {
@@ -13882,6 +14168,15 @@ async function handleSendMessage(event) {
       }
     }
   }
+
+  // Feature 1: Automatic Chat Sorting (Move customer & query to top on outgoing message)
+  if (customer) {
+    CRM_STATE.customers = [customer, ...CRM_STATE.customers.filter(c => c && c.id !== customer.id)];
+  }
+  if (query) {
+    CRM_STATE.queries = [query, ...CRM_STATE.queries.filter(q => q && q.id !== query.id)];
+  }
+  window._FORCE_CONV_LIST_RENDER = true;
 
   // Audit log
   logAudit('MESSAGE_SENT', 'INBOX', `Staff replied to customer ${customer.name} (${customer.phone}) under brand ${getBrandName()}`);
@@ -35743,7 +36038,9 @@ function updateBadgeCounters() {
       if (!isAssignedToMe) return;
     }
 
-    const hasUnread = ((query && (query.unreadCount || 0) > 0) || (cust.unreadCount || 0) > 0 || (conv.length > 0 && conv[conv.length - 1].direction === 'inbound'));
+    const userUnreadVal = CRM_STATE.userUnreadMap ? (CRM_STATE.userUnreadMap[cust.id] ?? (phone10 ? CRM_STATE.userUnreadMap['cust_' + phone10] : undefined)) : undefined;
+    const effectiveUnread = userUnreadVal !== undefined ? Number(userUnreadVal) : Number(cust.unreadCount || query?.unreadCount || 0);
+    const hasUnread = effectiveUnread > 0;
 
     if (uniquePersonMap.has(personKey)) {
       const ex = uniquePersonMap.get(personKey);
@@ -35785,7 +36082,9 @@ function updateBadgeCounters() {
     const isFu = isFollowupQuery(q);
     const isNl = !isFu && isNewLeadQuery(q);
     const isUnassigned = !q.assignedTo || q.assignedTo === 'UNASSIGNED';
-    const hasUnread = (q.unreadCount || 0) > 0;
+    const qUnreadVal = CRM_STATE.userUnreadMap ? (CRM_STATE.userUnreadMap[qCid] ?? (phone10 ? CRM_STATE.userUnreadMap['cust_' + phone10] : undefined)) : undefined;
+    const effectiveQUnread = qUnreadVal !== undefined ? Number(qUnreadVal) : Number(q.unreadCount || 0);
+    const hasUnread = effectiveQUnread > 0;
 
     uniquePersonMap.set(personKey, {
       customer: null,

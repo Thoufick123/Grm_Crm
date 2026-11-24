@@ -97,7 +97,9 @@ const io = new Server(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
-    }
+    },
+    transports: ['websocket', 'polling'],
+    allowEIO3: true
 });
 
 // --- Server-Sent Events (SSE) Client Registry & Broadcaster ---
@@ -935,7 +937,14 @@ async function forwardToCRM(data) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
-            }).catch(() => {});
+            })
+            .then(res => res.json())
+            .then(json => {
+                console.log(`💾 [Message Saved] Inbound message ${data.id || data.message_uid} saved to CRM database successfully (Status: ${json?.status || 'OK'})`);
+            })
+            .catch(err => {
+                console.warn(`⚠️ [Message Save Check] Failed forwarding to CRM API: ${err.message}`);
+            });
         }
         // Also support local port 8000 if developing locally
         if (process.env.NODE_ENV !== 'production') {
@@ -1939,6 +1948,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         }
                         const payload = {
                             id: msgId || ('msg_' + Date.now()),
+                            message_uid: msgId || ('msg_' + Date.now()),
+                            customer_id: 'cust_' + (digitsOnly ? digitsOnly.slice(-10) : '0000000000'),
                             sender_name: senderName,
                             sender_phone: senderNumber,
                             sender_jid: senderJid,
@@ -1951,13 +1962,18 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             priority: 'HIGH',
                             assigned_to: 'UNASSIGNED',
                             source: 'REAL_WHATSAPP_LIVE',
+                            timestamp: Date.now(),
                             timestamp_epoch: Math.floor(Date.now() / 1000),
                             received_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                             lid: originalLid
                         };
 
+                        console.log(`📥 [WhatsApp Inbound Received] From: "${senderName}" (${senderNumber}) | UID: ${payload.message_uid} | Type: ${msgType} | Text: "${(messageText || '').slice(0, 50)}"`);
+
                         // 1. Emit live to CRM UI over WebSocket (Instant!)
                         io.emit('whatsapp:inbound', payload);
+                        const activeClientCount = io.sockets.sockets ? io.sockets.sockets.size : 0;
+                        console.log(`📢 [Socket Event Emitted] 'whatsapp:inbound' broadcasted to ${activeClientCount} active client(s) for message UID: ${payload.message_uid}`);
 
                         // 2. Forward to CRM PHP API for persistent file storage
                         forwardToCRM(payload);
@@ -2515,7 +2531,25 @@ async function executeCallClaimProcedure(data) {
 // SOCKET.IO REALTIME WEBSOCKET HANDLERS
 // -------------------------------------------------------------
 io.on('connection', (socket) => {
-    console.log(`[Socket.IO] New CRM Client Connected (${socket.id})`);
+    const origin = socket.handshake.headers.origin || socket.handshake.headers.referer || 'direct';
+    const address = socket.handshake.address || socket.conn.remoteAddress || 'unknown';
+    console.log(`⚡ [Socket Connected] Socket ID: ${socket.id} | Address: ${address} | Origin: ${origin}`);
+
+    socket.on('disconnect', (reason) => {
+        console.log(`🔌 [Socket Disconnected] Socket ID: ${socket.id} | Reason: ${reason}`);
+    });
+
+    socket.on('client:connected', (data) => {
+        console.log(`👤 [Client Identified] Socket ID: ${socket.id} registered for User: ${data?.userId || 'unknown'}`);
+    });
+
+    socket.on('client:reconnected', (data) => {
+        console.log(`🔄 [Socket Reconnected] Client restored connection! Socket ID: ${socket.id} | User: ${data?.userId || 'unknown'} | Attempt: ${data?.attempt || 1} | Time: ${new Date().toISOString()}`);
+    });
+
+    socket.on('whatsapp:client_ack', (ack) => {
+        console.log(`✅ [Client ACK Received] Message UID: ${ack?.message_uid || ack?.id} confirmed received by Socket ID: ${socket.id} (User: ${ack?.userId || 'unknown'})`);
+    });
 
     // Immediately send current multi-account status
     socket.emit('bridge:accounts', {
@@ -2599,6 +2633,25 @@ io.on('connection', (socket) => {
             console.error('[Socket Send Error]:', err.message);
             if (typeof callback === 'function') {
                 callback({ status: 'error', message: err.message });
+            }
+        }
+    });
+
+    // Realtime User-Specific Chat Read Notification (Zero Page Refresh Badge Clear)
+    socket.on('chat:mark_read', async (data) => {
+        const { customer_id, user_id, phone } = data || {};
+        if (customer_id && user_id) {
+            console.log(`[Socket.IO Read Event] User "${user_id}" marked customer "${customer_id}" as READ.`);
+            io.emit('chat:read_status', {
+                customer_id,
+                user_id,
+                phone: phone || null,
+                unread_count: 0,
+                timestamp: Date.now()
+            });
+            // Forward to CRM PHP API to update chat_read_status in MySQL database
+            if (typeof callCrmApi === 'function') {
+                callCrmApi('mark_customer_read', { customer_id, user_id, phone: phone || null }).catch(() => {});
             }
         }
     });

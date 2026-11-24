@@ -4,6 +4,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <script>
+    (function() {
+      var isRemote = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      if (isRemote) {
+        try {
+          var stored = localStorage.getItem('GRM_BRIDGE_URL');
+          if (stored && (stored.indexOf('localhost') !== -1 || stored.indexOf('127.0.0.1') !== -1 || stored.indexOf(window.location.hostname) !== -1 || stored.indexOf('trycloudflare.com') !== -1)) {
+            localStorage.removeItem('GRM_BRIDGE_URL');
+          }
+        } catch (e) {}
+        window.BRIDGE_URL = 'https://mediumturquoise-dugong-987946.hostingersite.com';
+      }
+    })();
+  </script>
   <title>GRM WhatsApp CRM — Modern Customer Communication & Assignment Hub</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12808,7 +12825,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261123_crm_last_tab_logout_v29"></script>
+  <script src="crm_app.js?v=20261124_realtime_sync_v35"></script>
 </body>
 
 </html>

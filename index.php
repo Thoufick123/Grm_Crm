@@ -14,6 +14,10 @@ session_set_cookie_params([
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+// Prevent caching of the main CRM HTML wrapper so dynamic asset versioning is always applied
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 require_once __DIR__ . '/config/db.php';
 
 // Server-Side Authentication Verification
@@ -68,12 +72,29 @@ $jsVer = file_exists(__DIR__ . '/crm_app.js') ? filemtime(__DIR__ . '/crm_app.js
 $html = preg_replace('/crm_app\.js(\?v=[^\"]*)?/', 'crm_app.js?v=' . $jsVer, $html);
 
 // Inject the server-side authentication session script and bridge URL into <head>
-$bridgeUrl = defined('BRIDGE_URL') ? BRIDGE_URL : 'http://localhost:3000';
+$isLocalHost = empty($_SERVER['HTTP_HOST']) || in_array(strtolower(explode(':', $_SERVER['HTTP_HOST'])[0]), ['localhost', '127.0.0.1', '::1']);
+$bridgeUrl = defined('BRIDGE_URL') ? BRIDGE_URL : ($isLocalHost ? 'http://localhost:3000' : 'https://mediumturquoise-dugong-987946.hostingersite.com');
+if (!$isLocalHost && (strpos($bridgeUrl, 'localhost') !== false || strpos($bridgeUrl, '127.0.0.1') !== false)) {
+    $bridgeUrl = 'https://mediumturquoise-dugong-987946.hostingersite.com';
+}
 $sessionScript = '<script>
-  window.BRIDGE_URL = ' . json_encode($bridgeUrl) . ';
-  try {
-    localStorage.setItem("GRM_BRIDGE_URL", ' . json_encode($bridgeUrl) . ');
-  } catch(e) {}
+  (function() {
+    var isRemote = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+    var bUrl = ' . json_encode($bridgeUrl) . ';
+    if (isRemote && (!bUrl || bUrl.indexOf("localhost") !== -1 || bUrl.indexOf("127.0.0.1") !== -1)) {
+      bUrl = "https://mediumturquoise-dugong-987946.hostingersite.com";
+    }
+    window.BRIDGE_URL = bUrl;
+    try {
+      if (isRemote) {
+        var st = localStorage.getItem("GRM_BRIDGE_URL");
+        if (st && (st.indexOf("localhost") !== -1 || st.indexOf("127.0.0.1") !== -1 || st.indexOf(window.location.hostname) !== -1)) {
+          localStorage.removeItem("GRM_BRIDGE_URL");
+        }
+      }
+      localStorage.setItem("GRM_BRIDGE_URL", bUrl);
+    } catch(e) {}
+  })();
   window.PHP_USER_SESSION = ' . json_encode($currentUser) . ';
   try {
     localStorage.setItem("GRM_CRM_SESSION", JSON.stringify(window.PHP_USER_SESSION));

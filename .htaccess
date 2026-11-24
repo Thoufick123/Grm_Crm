@@ -3,7 +3,7 @@
 # Security Hardening, MIME Types, Compression & File Protection
 # =========================================================================
 
-DirectoryIndex index.html index.php login.html login.php
+DirectoryIndex index.php index.html login.php login.html
 
 Options -Indexes -MultiViews
 
@@ -70,6 +70,14 @@ AddType audio/wav .wav
 <FilesMatch "\.(js|css|woff2|woff|ttf|svg|png|jpg|jpeg|webp|ico)$">
     <IfModule mod_headers.c>
         Header set Cache-Control "public, max-age=2592000, stale-while-revalidate=86400"
+    </IfModule>
+</FilesMatch>
+
+# Override for Core Application Script: Always revalidate to guarantee real-time updates across desktop and mobile
+<FilesMatch "^crm_app\.js$">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-cache, must-revalidate"
+        Header set Pragma "no-cache"
     </IfModule>
 </FilesMatch>
 

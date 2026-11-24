@@ -843,6 +843,17 @@ if ($action === 'get_state' || $action === 'get_all') {
         $isDashboardScope = ($scope === 'dashboard');
         $isSettingsScope = ($scope === 'settings' || $scope === 'whatsapp');
 
+        // Resolve current logged-in user ID for multi-staff unread tracking isolation
+        $currentUserId = $_SESSION['user']['id'] ?? ($_SERVER['HTTP_X_USER_ID'] ?? ($_GET['user_id'] ?? 'admin'));
+        $userUnreadMap = [];
+        if ($pdo) {
+            try {
+                $crsStmt = $pdo->prepare("SELECT `customer_id`, `unread_count` FROM `chat_read_status` WHERE `user_id` = ?");
+                $crsStmt->execute([$currentUserId]);
+                $userUnreadMap = $crsStmt->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+            } catch (Exception $eCRS) {}
+        }
+
         // DB Maintenance Rate-Limiting: Gate heavy schema and cleanup writes during GET read requests
         $maintLockFile = sys_get_temp_dir() . '/.grm_crm_maint_lock';
         $shouldRunDbMaintenance = (isset($_GET['heal']) && $_GET['heal'] === '1') ||
@@ -1340,7 +1351,22 @@ if ($action === 'get_state' || $action === 'get_all') {
             $c['assigned_to'] = $c['assignedTo'];
             $c['lastMessage'] = $c['last_message'] ?? '';
             $c['lastMessageAt'] = $c['last_message_at'] ?? '';
-            $c['unreadCount'] = (int)($c['unread_count'] ?? 0);
+
+            // User-specific WhatsApp unread badge count (Multi-Staff isolation)
+            $custUnread = 0;
+            if (isset($userUnreadMap[$c['id']])) {
+                $custUnread = (int)$userUnreadMap[$c['id']];
+            } else {
+                $isAssignedToThisUser = (!empty($c['assignedTo']) && (
+                    strtolower($c['assignedTo']) === strtolower($currentUserId) ||
+                    (isset($_SESSION['user']['username']) && strtolower($c['assignedTo']) === strtolower($_SESSION['user']['username']))
+                ));
+                if ($currentUserId === 'admin' || $isAssignedToThisUser) {
+                    $custUnread = (int)($c['unread_count'] ?? 0);
+                }
+            }
+            $c['unreadCount'] = $custUnread;
+            $c['unread_count'] = $custUnread;
 
             // Self-healing: Sanitize customer phone from trailing device 0 or companion index
             $phone10 = '';
@@ -1461,6 +1487,24 @@ if ($action === 'get_state' || $action === 'get_all') {
             $q['assigned_to'] = $q['assignedTo'];
             $q['accountId'] = $q['account_id'] ?? ($q['account_slot'] ?? 'account_1');
             $q['account_id'] = $q['accountId'];
+
+            // User-specific WhatsApp unread badge count (Multi-Staff isolation)
+            $qUnread = 0;
+            $qCustId = $q['customer_id'] ?? '';
+            if (!empty($qCustId) && isset($userUnreadMap[$qCustId])) {
+                $qUnread = (int)$userUnreadMap[$qCustId];
+            } else {
+                $isAssignedToThisUser = (!empty($q['assignedTo']) && (
+                    strtolower($q['assignedTo']) === strtolower($currentUserId) ||
+                    (isset($_SESSION['user']['username']) && strtolower($q['assignedTo']) === strtolower($_SESSION['user']['username']))
+                ));
+                if ($currentUserId === 'admin' || $isAssignedToThisUser) {
+                    $qUnread = (int)($q['unread_count'] ?? 0);
+                }
+            }
+            $q['unreadCount'] = $qUnread;
+            $q['unread_count'] = $qUnread;
+
             $queries[] = $q;
         }
 
@@ -1779,7 +1823,9 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "dnd_records" => $dndRecords,
                 "autoReplyRules" => $arRules,
                 "broadcastTemplates" => $bcTemplates,
-                "lidMappings" => $activeLidMappings
+                "lidMappings" => $activeLidMappings,
+                "userUnreadMap" => $userUnreadMap,
+                "currentUserId" => $currentUserId
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -4917,6 +4963,37 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         } catch (Exception $eQMaster) {}
+        // 5. Atomic Multi-Staff Unread Tracking in chat_read_status
+        if (!$isBot) {
+            try {
+                // A. Super Admin always gets incremented unread count
+                $pdo->prepare("
+                    INSERT INTO `chat_read_status` (`user_id`, `customer_id`, `unread_count`, `updated_at`)
+                    VALUES ('admin', ?, 1, NOW())
+                    ON DUPLICATE KEY UPDATE `unread_count` = `unread_count` + 1, `updated_at` = NOW()
+                ")->execute([$custId]);
+
+                // B. If query or customer is assigned to a specific staff member, increment their unread count too
+                $assignedTarget = $payload['assigned_to'] ?? ($existingStaff ?? null);
+                if (empty($assignedTarget) || $assignedTarget === 'UNASSIGNED') {
+                    $cAssignedStmt = $pdo->prepare("SELECT `assigned_to` FROM `customers` WHERE `id` = ? LIMIT 1");
+                    $cAssignedStmt->execute([$custId]);
+                    $assignedTarget = $cAssignedStmt->fetchColumn();
+                }
+                if (!empty($assignedTarget) && $assignedTarget !== 'UNASSIGNED' && $assignedTarget !== 'admin') {
+                    $uStmt = $pdo->prepare("SELECT `id` FROM `users` WHERE `id` = ? OR LOWER(`username`) = LOWER(?) OR LOWER(`name`) = LOWER(?) LIMIT 1");
+                    $uStmt->execute([$assignedTarget, $assignedTarget, $assignedTarget]);
+                    $staffUserId = $uStmt->fetchColumn() ?: $assignedTarget;
+                    if (!empty($staffUserId) && $staffUserId !== 'admin') {
+                        $pdo->prepare("
+                            INSERT INTO `chat_read_status` (`user_id`, `customer_id`, `unread_count`, `updated_at`)
+                            VALUES (?, ?, 1, NOW())
+                            ON DUPLICATE KEY UPDATE `unread_count` = `unread_count` + 1, `updated_at` = NOW()
+                        ")->execute([$staffUserId, $custId]);
+                    }
+                }
+            } catch (Exception $eCRS) {}
+        }
     }
 
     echo json_encode(["status" => "success", "message" => "Message stored in queue and database", "entry" => $msgEntry]);
@@ -4926,14 +5003,64 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($action === 'mark_customer_read') {
     $cid = $_POST['customer_id'] ?? ($_GET['customer_id'] ?? '');
     $phone = $_POST['phone'] ?? ($_GET['phone'] ?? '');
+    $userId = $_POST['user_id'] ?? ($_GET['user_id'] ?? ($_SESSION['user']['id'] ?? ($_SERVER['HTTP_X_USER_ID'] ?? 'admin')));
+    if (empty($userId)) {
+        $userId = 'admin';
+    }
     $clean10 = substr(preg_replace('/[^0-9]/', '', $phone), -10);
     if ($pdo && (!empty($cid) || !empty($clean10))) {
         try {
-            $pdo->prepare("UPDATE `customers` SET `unread_count` = 0 WHERE `id` = ? OR RIGHT(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), 10) = ?")->execute([$cid, $clean10 ?: 'NOMATCH']);
-            $pdo->prepare("UPDATE `queries` SET `unread_count` = 0 WHERE `customer_id` = ? OR RIGHT(REPLACE(REPLACE(REPLACE(`customer_phone`, ' ', ''), '+', ''), '-', ''), 10) = ?")->execute([$cid, $clean10 ?: 'NOMATCH']);
+            // Resolve canonical customer id
+            if (!empty($clean10)) {
+                $cStmt = $pdo->prepare("SELECT `id` FROM `customers` WHERE `id` = ? OR RIGHT(REPLACE(REPLACE(REPLACE(`phone`, ' ', ''), '+', ''), '-', ''), 10) = ? LIMIT 1");
+                $cStmt->execute([$cid ?: 'NOMATCH', $clean10]);
+                $foundCid = $cStmt->fetchColumn();
+                if ($foundCid) {
+                    $cid = $foundCid;
+                }
+            }
+
+            if (!empty($cid) && !empty($userId)) {
+                // Strictly mark as read for THIS specific user only!
+                $pdo->prepare("
+                    INSERT INTO `chat_read_status` (`user_id`, `customer_id`, `unread_count`, `last_read_at`, `updated_at`)
+                    VALUES (?, ?, 0, NOW(), NOW())
+                    ON DUPLICATE KEY UPDATE `unread_count` = 0, `last_read_at` = NOW(), `updated_at` = NOW()
+                ")->execute([$userId, $cid]);
+
+                // Also update legacy counters if admin or assigned staff reads
+                $pdo->prepare("UPDATE `customers` SET `unread_count` = 0 WHERE `id` = ?")->execute([$cid]);
+                $pdo->prepare("UPDATE `queries` SET `unread_count` = 0 WHERE `customer_id` = ?")->execute([$cid]);
+
+                // Broadcast read status across connected sockets
+                try {
+                    curlBridgePost('/api/calls/event', [
+                        'event' => 'chat:read_status',
+                        'data' => [
+                            'customer_id' => $cid,
+                            'user_id' => $userId,
+                            'unread_count' => 0
+                        ]
+                    ], 2);
+                } catch (Exception $eBrdg) {}
+            }
         } catch (Exception $e) {}
     }
-    echo json_encode(["status" => "success"]);
+    echo json_encode(["status" => "success", "customer_id" => $cid, "user_id" => $userId]);
+    exit;
+}
+
+if ($action === 'get_unread_counts') {
+    $userId = $_GET['user_id'] ?? ($_SESSION['user']['id'] ?? ($_SERVER['HTTP_X_USER_ID'] ?? 'admin'));
+    $unreadMap = [];
+    if ($pdo && !empty($userId)) {
+        try {
+            $stmt = $pdo->prepare("SELECT `customer_id`, `unread_count` FROM `chat_read_status` WHERE `user_id` = ?");
+            $stmt->execute([$userId]);
+            $unreadMap = $stmt->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+        } catch (Exception $e) {}
+    }
+    echo json_encode(["status" => "success", "user_id" => $userId, "unread_counts" => $unreadMap]);
     exit;
 }
 
@@ -7112,6 +7239,25 @@ if ($action === 'assign_query' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($cid) {
                 $pdo->prepare("UPDATE `customers` SET `assigned_to` = ? WHERE `id` = ?")->execute([$assignedTo, $cid]);
                 $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ? WHERE `customer_id` = ?")->execute([$assignedTo, $status, $cid]);
+
+                // Initialize staff unread tracking for newly assigned lead if unread messages exist
+                if (!empty($assignedTo) && $assignedTo !== 'UNASSIGNED') {
+                    try {
+                        $uStmt = $pdo->prepare("SELECT `id` FROM `users` WHERE `id` = ? OR LOWER(`username`) = LOWER(?) OR LOWER(`name`) = LOWER(?) LIMIT 1");
+                        $uStmt->execute([$assignedTo, $assignedTo, $assignedTo]);
+                        $stUserId = $uStmt->fetchColumn() ?: $assignedTo;
+                        if (!empty($stUserId) && $stUserId !== 'admin') {
+                            $curUnread = (int)$pdo->query("SELECT `unread_count` FROM `queries` WHERE `customer_id` = " . $pdo->quote($cid))->fetchColumn();
+                            if ($curUnread > 0) {
+                                $pdo->prepare("
+                                    INSERT INTO `chat_read_status` (`user_id`, `customer_id`, `unread_count`, `updated_at`)
+                                    VALUES (?, ?, ?, NOW())
+                                    ON DUPLICATE KEY UPDATE `unread_count` = VALUES(`unread_count`), `updated_at` = NOW()
+                                ")->execute([$stUserId, $cid, $curUnread]);
+                            }
+                        }
+                    } catch (Exception $eAssignCRS) {}
+                }
             }
             if ($queryId) {
                 $pdo->prepare("UPDATE `queries` SET `assigned_to` = ?, `status` = ? WHERE `id` = ?")->execute([$assignedTo, $status, $queryId]);
@@ -9741,10 +9887,13 @@ function notifySocketBridge($event, $data = []) {
         $bridgeBase = rtrim(BRIDGE_URL, '/');
     }
 
-    $endpoints = [
-        'http://127.0.0.1:3000/api/calls/event',
-        'http://localhost:3000/api/calls/event'
-    ];
+    $endpoints = [];
+    if (!empty($bridgeBase)) {
+        $endpoints[] = $bridgeBase . '/api/calls/event';
+    }
+    if ($bridgeBase !== 'http://127.0.0.1:3000' && $bridgeBase !== 'http://localhost:3000') {
+        $endpoints[] = 'http://127.0.0.1:3000/api/calls/event';
+    }
     $payload = json_encode(['event' => $event, 'data' => $data]);
     foreach ($endpoints as $ep) {
         $ch = @curl_init($ep);
