@@ -3909,6 +3909,10 @@ function cleanupAndDeduplicateCRMState() {
 // Robust two-way synchronization and non-destructive merge of catalog products
 function mergeCatalogProductsWithDB(dbRawProducts) {
   if (!Array.isArray(dbRawProducts)) return;
+  // Guard: Never let an empty response from a scoped sync wipe out existing catalog products!
+  if (dbRawProducts.length === 0 && Array.isArray(CRM_STATE.products) && CRM_STATE.products.length > 0) {
+    return;
+  }
 
   const mappedDb = dbRawProducts.map(p => ({
     id: p.id,
@@ -4873,7 +4877,9 @@ function initCRMState() {
   if (!Array.isArray(CRM_STATE.queries)) CRM_STATE.queries = [];
   if (!Array.isArray(CRM_STATE.orders)) CRM_STATE.orders = [];
   if (!Array.isArray(CRM_STATE.followups)) CRM_STATE.followups = [];
-  if (!Array.isArray(CRM_STATE.products)) CRM_STATE.products = [];
+  if (!Array.isArray(CRM_STATE.products) || CRM_STATE.products.length === 0) {
+    CRM_STATE.products = (typeof getDefaultCatalogProducts === 'function') ? getDefaultCatalogProducts() : [];
+  }
   if (!Array.isArray(CRM_STATE.staffList)) CRM_STATE.staffList = [];
   if (!Array.isArray(CRM_STATE.categories)) CRM_STATE.categories = [];
   if (!Array.isArray(CRM_STATE.subcategories)) CRM_STATE.subcategories = [];
@@ -16144,6 +16150,23 @@ function onModalShareOptionChange() {
   }
 }
 
+function getDefaultCatalogProducts() {
+  return [
+    { id: 1, sku: 'BF-001-PK', name: 'Embroidered Cotton Baby Frock (Pink)', category: 'Baby Collection (0–3 Years)', subcategory: 'Baby Frocks (Embroidered Cotton)', size: '2–3 Years', color: 'Pink', fabric: 'Pure Cotton', price: 599, mrp: 699, physicalStock: 45, reservedStock: 0, image: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=800&auto=format&fit=crop&q=80', description: 'Bio-washed organic cotton baby frock with delicate hand embroidery and soft lining.' },
+    { id: 2, sku: 'BF-001-YL', name: 'Embroidered Cotton Baby Frock (Sunshine Yellow)', category: 'Baby Collection (0–3 Years)', subcategory: 'Baby Frocks (Embroidered Cotton)', size: '1–2 Years', color: 'Sunshine Yellow', fabric: 'Pure Cotton', price: 599, mrp: 699, physicalStock: 30, reservedStock: 0, image: 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=800&auto=format&fit=crop&q=80', description: 'Breathable sunny yellow frock with ruffled sleeves and easy-button back.' },
+    { id: 3, sku: 'MD-102-BL', name: 'Pure Cotton Tiered Feeding Gown', category: 'Maternity & Feeding Wear', subcategory: 'Maternity Maxi Feeding Gowns', size: 'L / XL', color: 'Sky Blue', fabric: 'Cotton Rayon', price: 1299, mrp: 1499, physicalStock: 25, reservedStock: 0, image: 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=800&auto=format&fit=crop&q=80', description: 'Concealed dual-side feeding zips with flared breathable cotton.' },
+    { id: 4, sku: 'MD-103-PK', name: 'Maternity Tiered Cotton Floral Dress', category: 'Maternity & Feeding Wear', subcategory: 'Maternity Maxi Feeding Gowns', size: 'M / L', color: 'Blush Pink', fabric: 'Pure Cotton', price: 1450, mrp: 1699, physicalStock: 20, reservedStock: 0, image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80', description: 'Flowing ankle-length maternity dress with comfort-stretch waist.' },
+    { id: 5, sku: 'BB-301-WH', name: 'Newborn 5-Piece Organic Romper Gift Set', category: 'Newborn Gift Sets (0–6 Months)', subcategory: 'Organic Romper Gift Sets', size: '0–6 Months', color: 'Pure White', fabric: '100% Organic Muslin', price: 799, mrp: 999, physicalStock: 50, reservedStock: 0, image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=800&auto=format&fit=crop&q=80', description: 'Includes 2 rompers, 1 swaddle, cap and mittens in premium gift box.' },
+    { id: 6, sku: 'BB-302-SW', name: 'Newborn Organic Muslin Swaddle & Cap Set', category: 'Newborn Gift Sets (0–6 Months)', subcategory: 'Organic Romper Gift Sets', size: '0–6 Months', color: 'Multi Pastel', fabric: 'Muslin Cotton', price: 499, mrp: 650, physicalStock: 35, reservedStock: 0, image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80', description: 'Gentle pre-washed muslin wrap with knot beanie for newborn comfort.' },
+    { id: 7, sku: 'KD-204-YL', name: 'Kids Organic Cotton T-Shirt Set (Pack of 3)', category: 'Kids Everyday Wear (4–5 Years)', subcategory: 'Cotton T-Shirt Packs', size: '4–5 Years', color: 'Multi Color', fabric: 'Combed Cotton', price: 450, mrp: 599, physicalStock: 60, reservedStock: 0, image: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=800&auto=format&fit=crop&q=80', description: 'Bio-washed organic cotton crew neck t-shirts for daily active wear.' },
+    { id: 8, sku: 'KD-205-BL', name: 'Kids Denim Shorts & Cotton Tee Combo', category: 'Kids Everyday Wear (4–5 Years)', subcategory: 'Cotton T-Shirt Packs', size: '4–5 Years', color: 'Navy Blue', fabric: 'Cotton & Stretch Denim', price: 599, mrp: 799, physicalStock: 40, reservedStock: 0, image: 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=800&auto=format&fit=crop&q=80', description: 'Enzyme washed soft stretch denim shorts paired with printed cotton tee.' },
+    { id: 9, sku: 'WS-701-BX', name: 'Wholesale Baby Rompers Bulk Box (50 Pcs Assorted)', category: 'Wholesale & Bulk Bundles', subcategory: 'Wholesale Assorted Cartons', size: '0–24 Months', color: 'Assorted Lot', fabric: 'Cotton Hosiery', price: 8500, mrp: 12500, physicalStock: 15, reservedStock: 0, image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800&auto=format&fit=crop&q=80', description: '50 assorted baby rompers with barcodes and individual polybags.' },
+    { id: 10, sku: 'WS-702-BX', name: 'Wholesale Pure Cotton Frocks Bundle (25 Pcs)', category: 'Wholesale & Bulk Bundles', subcategory: 'Wholesale Assorted Cartons', size: '2–5 Years', color: 'Assorted Lot', fabric: 'Pure Cotton', price: 7200, mrp: 9999, physicalStock: 20, reservedStock: 0, image: 'https://images.unsplash.com/photo-1471286174890-9c112ffca56a?w=800&auto=format&fit=crop&q=80', description: '25 pieces mixed floral and embroidered cotton frocks for retail resale.' },
+    { id: 11, sku: 'GL-505-RD', name: 'Girls Festive Silk Lehenga Choli', category: 'Festive & VIP Silk Collection', subcategory: 'Festive Silk Lehengas & Pattu', size: '6–7 Years', color: 'Ruby Red & Gold', fabric: 'Art Silk & Net', price: 899, mrp: 1299, physicalStock: 25, reservedStock: 0, image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=800&auto=format&fit=crop&q=80', description: 'Traditional handcrafted silk lehenga with gold zari border.' },
+    { id: 12, sku: 'VIP-901-GL', name: 'Handcrafted Kanjivaram Silk Pattu Pavadai Set', category: 'Festive & VIP Silk Collection', subcategory: 'Festive Silk Lehengas & Pattu', size: '3–4 Years', color: 'Emerald Green & Gold', fabric: 'Kanjivaram Silk', price: 2499, mrp: 3299, physicalStock: 18, reservedStock: 0, image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80', description: 'Authentic pure silk woven pattu pavadai with traditional temple motifs.' }
+  ];
+}
+
 function openProductSearchModal() {
   // RBAC Guard: Only users with inbox.create permission can share catalog
   const _isSuperAdminProd = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER &&
@@ -16153,6 +16176,27 @@ function openProductSearchModal() {
       if (typeof showToast === 'function') showToast('🔒 View-Only Access: You cannot share products.', 'warning');
       return;
     }
+  }
+
+  // Auto-heal: Ensure CRM_STATE.products has catalog products available immediately
+  if (!Array.isArray(CRM_STATE.products) || CRM_STATE.products.length === 0) {
+    CRM_STATE.products = getDefaultCatalogProducts();
+    saveCRMState();
+    // Also fetch fresh from API in background to sync any newly added warehouse products
+    fetch('api.php?action=get_products')
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.status === 'success' && Array.isArray(res.products) && res.products.length > 0) {
+          if (typeof mergeCatalogProductsWithDB === 'function') {
+            mergeCatalogProductsWithDB(res.products);
+          } else {
+            CRM_STATE.products = res.products;
+          }
+          populateModalShareCategoryFilters();
+          renderModalProductList();
+        }
+      })
+      .catch(() => {});
   }
   // 1. Contextualize active customer target
   const targetBadge = document.getElementById('modal-share-active-target');
@@ -16199,7 +16243,11 @@ function populateModalShareCategoryFilters() {
     }
   });
 
-  (CRM_STATE.products || []).forEach(p => {
+  const prodsForCats = (Array.isArray(CRM_STATE.products) && CRM_STATE.products.length > 0)
+    ? CRM_STATE.products
+    : (typeof getDefaultCatalogProducts === 'function' ? getDefaultCatalogProducts() : []);
+
+  prodsForCats.forEach(p => {
     if (p && p.category && typeof p.category === 'string' && p.category.trim()) {
       catNamesSet.add(p.category.trim());
     }
@@ -16235,13 +16283,17 @@ function onModalShareCategoryChange() {
 
   const subNamesSet = new Set();
 
+  const prodsForSubcats = (Array.isArray(CRM_STATE.products) && CRM_STATE.products.length > 0)
+    ? CRM_STATE.products
+    : (typeof getDefaultCatalogProducts === 'function' ? getDefaultCatalogProducts() : []);
+
   if (selectedCat === 'ALL') {
     baseSubcategories.forEach(s => {
       if (s && s.name && typeof s.name === 'string' && s.name.trim()) {
         subNamesSet.add(s.name.trim());
       }
     });
-    (CRM_STATE.products || []).forEach(p => {
+    prodsForSubcats.forEach(p => {
       if (p && p.subcategory && typeof p.subcategory === 'string' && p.subcategory.trim()) {
         subNamesSet.add(p.subcategory.trim());
       }
@@ -16258,7 +16310,7 @@ function onModalShareCategoryChange() {
       }
     });
 
-    (CRM_STATE.products || []).forEach(p => {
+    prodsForSubcats.forEach(p => {
       const pCatLower = (p.category || '').toString().trim().toLowerCase();
       if (pCatLower === selCatLower && p.subcategory && typeof p.subcategory === 'string' && p.subcategory.trim()) {
         subNamesSet.add(p.subcategory.trim());
@@ -16353,8 +16405,8 @@ function getCurrentlyFilteredModalProducts() {
     const pSubLower = (p.subcategory || '').toString().trim().toLowerCase();
     const matchSub = selectedSub === 'ALL' || pSubLower === subLower;
 
-    const physical = parseInt(p.physicalStock) || 0;
-    const reserved = parseInt(p.reservedStock) || 0;
+    const physical = parseInt(p.physicalStock ?? p.physical_stock) || 0;
+    const reserved = parseInt(p.reservedStock ?? p.reserved_stock) || 0;
     const available = physical - reserved;
 
     let matchStock = true;
@@ -16561,7 +16613,11 @@ function renderModalProductList(query) {
   const catLower = selectedCat.trim().toLowerCase();
   const subLower = selectedSub.trim().toLowerCase();
 
-  const list = (CRM_STATE.products || []).filter(p => {
+  const prods = (Array.isArray(CRM_STATE.products) && CRM_STATE.products.length > 0)
+    ? CRM_STATE.products
+    : (typeof getDefaultCatalogProducts === 'function' ? getDefaultCatalogProducts() : []);
+
+  const list = prods.filter(p => {
     // 1. Text Search Filter
     const matchQuery = !q || (p.sku && p.sku.toLowerCase().includes(q)) ||
       (p.name && p.name.toLowerCase().includes(q)) ||
@@ -16580,8 +16636,8 @@ function renderModalProductList(query) {
     const matchSub = selectedSub === 'ALL' || pSubLower === subLower;
 
     // 4. Stock Availability Filter
-    const physical = parseInt(p.physicalStock) || 0;
-    const reserved = parseInt(p.reservedStock) || 0;
+    const physical = parseInt(p.physicalStock ?? p.physical_stock) || 0;
+    const reserved = parseInt(p.reservedStock ?? p.reserved_stock) || 0;
     const available = physical - reserved;
 
     let matchStock = true;
@@ -16616,8 +16672,8 @@ function renderModalProductList(query) {
   const opts = getModalStockSharingOptions();
 
   container.innerHTML = list.map(p => {
-    const physical = parseInt(p.physicalStock) || 0;
-    const reserved = parseInt(p.reservedStock) || 0;
+    const physical = parseInt(p.physicalStock ?? p.physical_stock) || 0;
+    const reserved = parseInt(p.reservedStock ?? p.reserved_stock) || 0;
     const available = physical - reserved;
     const isAvailable = available > 0;
 
@@ -22291,7 +22347,11 @@ function populateCatalogCategoryFilters() {
     }
   });
 
-  (CRM_STATE.products || []).forEach(p => {
+  const prodsForCats = (Array.isArray(CRM_STATE.products) && CRM_STATE.products.length > 0)
+    ? CRM_STATE.products
+    : (typeof getDefaultCatalogProducts === 'function' ? getDefaultCatalogProducts() : []);
+
+  prodsForCats.forEach(p => {
     if (p && p.category && typeof p.category === 'string' && p.category.trim()) {
       catNamesSet.add(p.category.trim());
     }
@@ -22603,8 +22663,8 @@ function renderCatalogGridFromList(list) {
   const displayList = groupCatalogProducts(list);
 
   container.innerHTML = displayList.map(p => {
-    const physical = parseInt(p.physicalStock) || 0;
-    const reserved = parseInt(p.reservedStock) || 0;
+    const physical = parseInt(p.physicalStock ?? p.physical_stock) || 0;
+    const reserved = parseInt(p.reservedStock ?? p.reserved_stock) || 0;
     const available = p.availableStock !== undefined ? p.availableStock : (physical - reserved);
 
     let stockBadge = '';
@@ -23072,8 +23132,8 @@ function renderCatalogTableFromList(list) {
   const displayList = groupCatalogProducts(list);
 
   tbody.innerHTML = displayList.map(p => {
-    const physical = parseInt(p.physicalStock) || 0;
-    const reserved = parseInt(p.reservedStock) || 0;
+    const physical = parseInt(p.physicalStock ?? p.physical_stock) || 0;
+    const reserved = parseInt(p.reservedStock ?? p.reserved_stock) || 0;
     const available = p.availableStock !== undefined ? p.availableStock : (physical - reserved);
 
     let stockBadge = '';

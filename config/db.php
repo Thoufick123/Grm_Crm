@@ -216,6 +216,7 @@ function getDBConnection() {
                                 `total_requested_amount` DECIMAL(10, 2) NOT NULL,
                                 `staff_id` VARCHAR(50) NULL,
                                 `staff_name` VARCHAR(150) NOT NULL,
+                                `staff_phone` VARCHAR(50) NULL,
                                 `admin_phone` VARCHAR(50) NULL,
                                 `link_token` VARCHAR(64) NULL,
                                 `send_count` INT NOT NULL DEFAULT 1,
@@ -245,6 +246,10 @@ function getDBConnection() {
                                     ADD COLUMN `max_sends` INT NOT NULL DEFAULT 3 AFTER `link_click_count`,
                                     ADD INDEX `idx_link_token` (`link_token`);
                                 ");
+                            }
+                            $spCol = $pdo->query("SHOW COLUMNS FROM `bulk_price_requests` LIKE 'staff_phone'")->fetch();
+                            if (!$spCol) {
+                                $pdo->exec("ALTER TABLE `bulk_price_requests` ADD COLUMN `staff_phone` VARCHAR(50) NULL AFTER `staff_name`");
                             }
                         } catch (Exception $colEx) {}
                     }
@@ -1341,6 +1346,50 @@ function seedDefaultDataIfEmpty($pdo) {
             VALUES (1, 1, 1, 30, 'RETURN_TO_POOL', '+91 97896 60115', 'admin', 1, 'Super Admin');
         ");
     }
+
+    // 4. Default Products & Categories Catalog Seeding
+    try {
+        $prodCount = (int)$pdo->query("SELECT COUNT(*) FROM `products`")->fetchColumn();
+        if ($prodCount === 0) {
+            $defaultCategories = [
+                ['name' => 'Baby Collection (0–3 Years)', 'slug' => 'baby-collection', 'icon' => 'child_care'],
+                ['name' => 'Maternity & Feeding Wear', 'slug' => 'maternity-feeding', 'icon' => 'pregnant_woman'],
+                ['name' => 'Newborn Gift Sets (0–6 Months)', 'slug' => 'newborn-gift-sets', 'icon' => 'featured_seasonal_and_gifts'],
+                ['name' => 'Kids Everyday Wear (4–5 Years)', 'slug' => 'kids-wear', 'icon' => 'checkroom'],
+                ['name' => 'Wholesale & Bulk Bundles', 'slug' => 'wholesale-bulk', 'icon' => 'inventory_2'],
+                ['name' => 'Festive & VIP Silk Collection', 'slug' => 'festive-silk', 'icon' => 'loyalty']
+            ];
+            $catStmt = $pdo->prepare("INSERT IGNORE INTO `categories` (`name`, `slug`, `icon`) VALUES (?, ?, ?)");
+            foreach ($defaultCategories as $c) {
+                $catStmt->execute([$c['name'], $c['slug'], $c['icon']]);
+            }
+
+            $defaultProducts = [
+                ['sku' => 'BF-001-PK', 'name' => 'Embroidered Cotton Baby Frock (Pink)', 'category' => 'Baby Collection (0–3 Years)', 'subcategory' => 'Baby Frocks (Embroidered Cotton)', 'size' => '2–3 Years', 'color' => 'Pink', 'fabric' => 'Pure Cotton', 'price' => 599.00, 'mrp' => 699.00, 'stock' => 45, 'img' => 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=800&auto=format&fit=crop&q=80', 'desc' => 'Bio-washed organic cotton baby frock with delicate hand embroidery and soft lining.'],
+                ['sku' => 'BF-001-YL', 'name' => 'Embroidered Cotton Baby Frock (Sunshine Yellow)', 'category' => 'Baby Collection (0–3 Years)', 'subcategory' => 'Baby Frocks (Embroidered Cotton)', 'size' => '1–2 Years', 'color' => 'Sunshine Yellow', 'fabric' => 'Pure Cotton', 'price' => 599.00, 'mrp' => 699.00, 'stock' => 30, 'img' => 'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=800&auto=format&fit=crop&q=80', 'desc' => 'Breathable sunny yellow frock with ruffled sleeves and easy-button back.'],
+                ['sku' => 'MD-102-BL', 'name' => 'Pure Cotton Tiered Feeding Gown', 'category' => 'Maternity & Feeding Wear', 'subcategory' => 'Maternity Maxi Feeding Gowns', 'size' => 'L / XL', 'color' => 'Sky Blue', 'fabric' => 'Cotton Rayon', 'price' => 1299.00, 'mrp' => 1499.00, 'stock' => 25, 'img' => 'https://images.unsplash.com/photo-1583846783977-d2b0993d4265?w=800&auto=format&fit=crop&q=80', 'desc' => 'Concealed dual-side feeding zips with flared breathable cotton.'],
+                ['sku' => 'MD-103-PK', 'name' => 'Maternity Tiered Cotton Floral Dress', 'category' => 'Maternity & Feeding Wear', 'subcategory' => 'Maternity Maxi Feeding Gowns', 'size' => 'M / L', 'color' => 'Blush Pink', 'fabric' => 'Pure Cotton', 'price' => 1450.00, 'mrp' => 1699.00, 'stock' => 20, 'img' => 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80', 'desc' => 'Flowing ankle-length maternity dress with comfort-stretch waist.'],
+                ['sku' => 'BB-301-WH', 'name' => 'Newborn 5-Piece Organic Romper Gift Set', 'category' => 'Newborn Gift Sets (0–6 Months)', 'subcategory' => 'Organic Romper Gift Sets', 'size' => '0–6 Months', 'color' => 'Pure White', 'fabric' => '100% Organic Muslin', 'price' => 799.00, 'mrp' => 999.00, 'stock' => 50, 'img' => 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=800&auto=format&fit=crop&q=80', 'desc' => 'Includes 2 rompers, 1 swaddle, cap and mittens in premium gift box.'],
+                ['sku' => 'BB-302-SW', 'name' => 'Newborn Organic Muslin Swaddle & Cap Set', 'category' => 'Newborn Gift Sets (0–6 Months)', 'subcategory' => 'Organic Romper Gift Sets', 'size' => '0–6 Months', 'color' => 'Multi Pastel', 'fabric' => 'Muslin Cotton', 'price' => 499.00, 'mrp' => 650.00, 'stock' => 35, 'img' => 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80', 'desc' => 'Gentle pre-washed muslin wrap with knot beanie for newborn comfort.'],
+                ['sku' => 'KD-204-YL', 'name' => 'Kids Organic Cotton T-Shirt Set (Pack of 3)', 'category' => 'Kids Everyday Wear (4–5 Years)', 'subcategory' => 'Cotton T-Shirt Packs', 'size' => '4–5 Years', 'color' => 'Multi Color', 'fabric' => 'Combed Cotton', 'price' => 450.00, 'mrp' => 599.00, 'stock' => 60, 'img' => 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=800&auto=format&fit=crop&q=80', 'desc' => 'Bio-washed organic cotton crew neck t-shirts for daily active wear.'],
+                ['sku' => 'KD-205-BL', 'name' => 'Kids Denim Shorts & Cotton Tee Combo', 'category' => 'Kids Everyday Wear (4–5 Years)', 'subcategory' => 'Cotton T-Shirt Packs', 'size' => '4–5 Years', 'color' => 'Navy Blue', 'fabric' => 'Cotton & Stretch Denim', 'price' => 599.00, 'mrp' => 799.00, 'stock' => 40, 'img' => 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=800&auto=format&fit=crop&q=80', 'desc' => 'Enzyme washed soft stretch denim shorts paired with printed cotton tee.'],
+                ['sku' => 'WS-701-BX', 'name' => 'Wholesale Baby Rompers Bulk Box (50 Pcs Assorted)', 'category' => 'Wholesale & Bulk Bundles', 'subcategory' => 'Wholesale Assorted Cartons', 'size' => '0–24 Months', 'color' => 'Assorted Lot', 'fabric' => 'Cotton Hosiery', 'price' => 8500.00, 'mrp' => 12500.00, 'stock' => 15, 'img' => 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800&auto=format&fit=crop&q=80', 'desc' => '50 assorted baby rompers with barcodes and individual polybags.'],
+                ['sku' => 'WS-702-BX', 'name' => 'Wholesale Pure Cotton Frocks Bundle (25 Pcs)', 'category' => 'Wholesale & Bulk Bundles', 'subcategory' => 'Wholesale Assorted Cartons', 'size' => '2–5 Years', 'color' => 'Assorted Lot', 'fabric' => 'Pure Cotton', 'price' => 7200.00, 'mrp' => 9999.00, 'stock' => 20, 'img' => 'https://images.unsplash.com/photo-1471286174890-9c112ffca56a?w=800&auto=format&fit=crop&q=80', 'desc' => '25 pieces mixed floral and embroidered cotton frocks for retail resale.'],
+                ['sku' => 'GL-505-RD', 'name' => 'Girls Festive Silk Lehenga Choli', 'category' => 'Festive & VIP Silk Collection', 'subcategory' => 'Festive Silk Lehengas & Pattu', 'size' => '6–7 Years', 'color' => 'Ruby Red & Gold', 'fabric' => 'Art Silk & Net', 'price' => 899.00, 'mrp' => 1299.00, 'stock' => 25, 'img' => 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=800&auto=format&fit=crop&q=80', 'desc' => 'Traditional handcrafted silk lehenga with gold zari border.'],
+                ['sku' => 'VIP-901-GL', 'name' => 'Handcrafted Kanjivaram Silk Pattu Pavadai Set', 'category' => 'Festive & VIP Silk Collection', 'subcategory' => 'Festive Silk Lehengas & Pattu', 'size' => '3–4 Years', 'color' => 'Emerald Green & Gold', 'fabric' => 'Kanjivaram Silk', 'price' => 2499.00, 'mrp' => 3299.00, 'stock' => 18, 'img' => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80', 'desc' => 'Authentic pure silk woven pattu pavadai with traditional temple motifs.']
+            ];
+
+            $pIns = $pdo->prepare("
+                INSERT INTO `products` 
+                (`sku`, `name`, `category`, `subcategory`, `size`, `color`, `fabric`, `price`, `mrp`, `physical_stock`, `reserved_stock`, `image`, `description`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+                ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `price`=VALUES(`price`), `physical_stock`=VALUES(`physical_stock`)
+            ");
+            foreach ($defaultProducts as $dp) {
+                $pIns->execute([$dp['sku'], $dp['name'], $dp['category'], $dp['subcategory'], $dp['size'], $dp['color'], $dp['fabric'], $dp['price'], $dp['mrp'], $dp['stock'], $dp['img'], $dp['desc']]);
+            }
+        }
+    } catch (Exception $eProdSeed) {}
 }
 
 

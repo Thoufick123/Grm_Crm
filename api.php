@@ -487,6 +487,9 @@ if ($pdo) {
         $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `reconnect_attempts` INT DEFAULT 0");
     } catch (Exception $rae) {}
     try {
+        $pdo->exec("ALTER TABLE `bulk_price_requests` ADD COLUMN `staff_phone` VARCHAR(50) NULL AFTER `staff_name`");
+    } catch (Exception $bpre) {}
+    try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS `whatsapp_auth_sessions` (
             `account_slot` VARCHAR(50) NOT NULL,
             `file_id` VARCHAR(150) NOT NULL,
@@ -807,6 +810,8 @@ $publicActions = [
     'approve_bulk_price_request',
     'reject_bulk_price_request',
     'get_bulk_price_requests',
+    'get_products',
+    'get_catalog_meta',
     'media_proxy',
     'verify_voice_room',
     'get_call_recording_stream',
@@ -1099,9 +1104,9 @@ if ($action === 'get_state' || $action === 'get_all') {
         }
         unset($st);
 
-        // 3. Products (Lazy loaded on-demand for catalog/inventory)
+        // 3. Products (Available for Inbox Stock & Share as well as catalog)
         $products = [];
-        if (!$isInboxScope && !$isDashboardScope) {
+        if (!$isDashboardScope) {
             $pStmt = $pdo->query("SELECT * FROM `products` ORDER BY `id` ASC");
             $products = $pStmt->fetchAll();
         }
@@ -3501,14 +3506,42 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
 
     try {
         $linkToken = bin2hex(random_bytes(16));
-        $stmt = $pdo->prepare("
-            INSERT INTO `bulk_price_requests`
-            (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `staff_phone`, `admin_phone`, `link_token`, `send_count`, `link_click_count`, `max_sends`, `status`, `created_at`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 3, 'PENDING', NOW())
-        ");
-        $stmt->execute([
-            $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $staffPhone, $adminPhone, $linkToken
-        ]);
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO `bulk_price_requests`
+                (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `staff_phone`, `admin_phone`, `link_token`, `send_count`, `link_click_count`, `max_sends`, `status`, `created_at`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 3, 'PENDING', NOW())
+            ");
+            $stmt->execute([
+                $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $staffPhone, $adminPhone, $linkToken
+            ]);
+        } catch (Exception $eIns) {
+            // Auto-heal missing staff_phone column if database was not migrated
+            if (strpos($eIns->getMessage(), 'staff_phone') !== false || strpos($eIns->getMessage(), '1054') !== false) {
+                try {
+                    $pdo->exec("ALTER TABLE `bulk_price_requests` ADD COLUMN `staff_phone` VARCHAR(50) NULL AFTER `staff_name`");
+                    $stmtRetry = $pdo->prepare("
+                        INSERT INTO `bulk_price_requests`
+                        (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `staff_phone`, `admin_phone`, `link_token`, `send_count`, `link_click_count`, `max_sends`, `status`, `created_at`)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 3, 'PENDING', NOW())
+                    ");
+                    $stmtRetry->execute([
+                        $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $staffPhone, $adminPhone, $linkToken
+                    ]);
+                } catch (Exception $eRetry) {
+                    $stmtFallback = $pdo->prepare("
+                        INSERT INTO `bulk_price_requests`
+                        (`request_code`, `customer_name`, `customer_phone`, `product_name`, `size`, `quantity`, `selling_price`, `requested_price`, `total_requested_amount`, `staff_id`, `staff_name`, `admin_phone`, `link_token`, `send_count`, `link_click_count`, `max_sends`, `status`, `created_at`)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 3, 'PENDING', NOW())
+                    ");
+                    $stmtFallback->execute([
+                        $requestCode, $customerName, $customerPhone, $productName, $size, $quantity, $sellingPrice, $requestedPrice, $totalRequestedAmount, $staffId, $staffName, $adminPhone, $linkToken
+                    ]);
+                }
+            } else {
+                throw $eIns;
+            }
+        }
         $newId = (int)$pdo->lastInsertId();
 
         $fetchStmt = $pdo->prepare("SELECT * FROM `bulk_price_requests` WHERE `id` = ?");
