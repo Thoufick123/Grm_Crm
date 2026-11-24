@@ -5243,6 +5243,9 @@ function handleHeaderAddNewWhatsAppLine() {
   if (typeof switchView === 'function') {
     switchView('settings');
   }
+  if (typeof switchSettingsTab === 'function') {
+    switchSettingsTab('qr');
+  }
   setTimeout(() => {
     const hub = document.getElementById('multi-accounts-container');
     if (hub) hub.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -33404,7 +33407,7 @@ function generateFreshAccountQR(accountId) {
       setTimeout(fetchQRBridgeStatus, 7000);
     })
     .catch(() => {
-      showToast('Bridge Offline', 'Please make sure Node.js bridge server is running on port 3000', 'warning', 'rose');
+      showToast('Bridge Offline', 'WhatsApp Bridge server is currently unreachable. Please verify connection.', 'warning', 'rose');
     });
 }
 
