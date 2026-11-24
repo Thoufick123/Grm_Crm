@@ -859,16 +859,17 @@ async function callCrmApi(action, postData) {
         }
     } catch (e) {}
 
-    const candidateUrls = [
-        localHtdocsUrl,
-        'http://localhost:8080',
-        'http://127.0.0.1:8080',
-        'http://localhost',
-        'http://127.0.0.1',
+    const candidateUrls = isRemoteEnv ? [
         process.env.CRM_URL,
         process.env.APP_URL,
-        isRemoteEnv ? 'https://maroon-partridge-532881.hostingersite.com' : null,
-        CRM_BASE_URL,
+        'https://maroon-partridge-532881.hostingersite.com',
+        CRM_BASE_URL
+    ].filter(Boolean) : [
+        localHtdocsUrl,
+        'http://localhost',
+        'http://127.0.0.1',
+        'http://localhost:8080',
+        'http://127.0.0.1:8080',
         'http://localhost:8000',
         'http://127.0.0.1:8000'
     ].filter(Boolean);

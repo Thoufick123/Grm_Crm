@@ -2360,9 +2360,9 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $cfg['connected_lines'] = [];
     }
 
-    // If explicit disconnect, forced update, or an active QR code is provided, allow the update immediately!
-    $isExplicitDisconnect = !empty($data['force_disconnect']) || !empty($data['force']) || !empty($qrCode) || ($status === 'DISCONNECTED');
-    if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isExplicitDisconnect) {
+    // If explicit disconnect or forced unbind is provided by authenticated admin, allow the update immediately!
+    $isExplicitDisconnect = !empty($data['force_disconnect']) || !empty($data['explicit_disconnect']);
+    if (($status === 'SCAN_QR' || $status === 'DISCONNECTED' || $status === 'LOGGED_OUT') && !$isExplicitDisconnect) {
         $alreadyConnected = false;
         $connectedPhone = null;
 

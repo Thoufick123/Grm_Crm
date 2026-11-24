@@ -1,1 +1,1 @@
-{"action":"status_sync","account_slot":"account_1","status":"DISCONNECTED","phone_number":null,"has_qr":false,"timestamp":1795514546}
+{"action":"status_sync","account_slot":"account_1","status":"SCAN_QR","phone_number":null,"has_qr":true,"timestamp":1795515380}

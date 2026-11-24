@@ -2208,20 +2208,24 @@ function updateSocketConnectionStatusUI(status) {
   const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
   const isAnyReconnecting = accounts.some(a => a.status === 'RECONNECTING');
 
+  const bUrl = (typeof getBridgeBaseUrl === 'function') ? getBridgeBaseUrl() : '';
+  const isLocal = bUrl.includes('localhost') || bUrl.includes('127.0.0.1');
+  const serverLabel = isLocal ? 'Port 3000' : 'Cloud Bridge';
+
   if (status === 'connected') {
     if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
     if (statusText) {
-      statusText.innerText = 'Bridge Server: WebSocket Active (Port 3000 Live)';
+      statusText.innerText = `Bridge Server: WebSocket Active (${serverLabel})`;
     }
   } else if (status === 'connecting') {
     if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0';
     if (statusText) {
-      statusText.innerText = 'Bridge Server: Connecting WebSocket...';
+      statusText.innerText = `Bridge Server: Connecting (${serverLabel})...`;
     }
   } else if (status === 'disconnected') {
     if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
     if (statusText) {
-      statusText.innerText = 'Bridge Server: Offline (Port 3000 Reconnecting...)';
+      statusText.innerText = `Bridge Server: Offline (${serverLabel} Reconnecting...)`;
     }
   }
 
@@ -32906,11 +32910,15 @@ function updateQRBridgeUI(res) {
 
   const isSocketAlive = Boolean(typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected);
 
+  const bUrl = (typeof getBridgeBaseUrl === 'function') ? getBridgeBaseUrl() : '';
+  const isLocal = bUrl.includes('localhost') || bUrl.includes('127.0.0.1');
+  const serverLabel = isLocal ? 'Port 3000' : 'Cloud Bridge';
+
   if (statusDot) {
     statusDot.className = isSocketAlive ? 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0' : 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
   }
   if (statusText) {
-    statusText.innerText = isSocketAlive ? 'Bridge Server: WebSocket Active (Port 3000 Live)' : 'Bridge Server: Offline (Port 3000)';
+    statusText.innerText = isSocketAlive ? `Bridge Server: WebSocket Active (${serverLabel})` : `Bridge Server: Offline (${serverLabel})`;
   }
 
   if (linesBadge) {
