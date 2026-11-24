@@ -12422,6 +12422,8 @@
     // Clean, lightweight floating toast notification handler
     function showToast(title, message, icon = 'info', color = 'emerald', duration = 2800) {
       if (!title && !message) return;
+      // User Requirement: Suppress intrusive chat delivery & received alert toasts inside CRM software
+      if (title === 'WhatsApp Delivered' || title === 'New WhatsApp Message Received') return;
       try {
         const container = document.getElementById('toast-container');
         if (!container) return;
@@ -12827,7 +12829,7 @@
   <script src="assets/js/crm-voice.js"></script>
 
   <!-- LOAD MAIN APPLICATION LOGIC -->
-  <script src="crm_app.js?v=20261124_twoway_sync_v36"></script>
+  <script src="crm_app.js?v=20261124_twoway_sync_v37_suppress_toasts"></script>
 </body>
 
 </html>

@@ -2994,15 +2994,16 @@ function ingestInboundMessage(payload, suppressChime = false) {
   updateBadgeCounters();
 
   // 8. Audio chime & Live notification (if not suppressing initial batch)
-  if (!suppressChime && !isDuplicate) {
-    if (typeof playChime === 'function') playChime('inbound');
-    showToast(
-      'New WhatsApp Message Received',
-      `${customer.name}: "${messageText.length > 50 ? messageText.slice(0, 50) + '...' : messageText}"`,
-      'chat',
-      'emerald'
-    );
-    
+  // STRICT GUARDS:
+  // - Never chime or show toast for outbound messages, staff messages, or bot auto-replies!
+  // - Never show floating toast alerts for chat messages inside CRM software ("MARKED ALERT MESSAGE NOT SHOW IN CRM SOFTWARE FOR ME").
+  // - Play subtle audio chime only for genuine inbound customer messages when user is not actively viewing this chat.
+  const isRealInboundFromCustomer = !isOutboundMsg && !isBotMsg && payload.source !== 'AUTOREPLY_BOT' && payload.source !== 'STAFF_OUTBOUND' && payload.source !== 'CRM_OUTBOUND';
+  if (!suppressChime && !isDuplicate && isRealInboundFromCustomer) {
+    if (!isChatOpenNow && typeof playChime === 'function') {
+      playChime('inbound');
+    }
+    // "New WhatsApp Message Received" floating toast alert suppressed in CRM software as requested
   }
 
   // 9. Automated Stock Category Instant Auto-Responder Engine
@@ -5545,6 +5546,8 @@ try {
 
 window.showToast = function (title, message, icon = 'info', color = 'emerald', duration = 2800) {
   if (!title && !message) return;
+  // User Requirement: Suppress intrusive chat delivery & received alert toasts inside CRM software
+  if (title === 'WhatsApp Delivered' || title === 'New WhatsApp Message Received') return;
   try {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -13868,7 +13871,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
             if (msgRef) msgRef.status = 'DELIVERED';
             if (typeof updateMessageStatusOnBackend === 'function') updateMessageStatusOnBackend(msgUid, 'DELIVERED');
             if (typeof renderChatMessages === 'function') renderChatMessages();
-            if (!silent) showToast('WhatsApp Delivered', `Live message sent to (${phone})!`, 'done_all', 'emerald');
+            // Routine delivery toast suppressed: double ticks ✓✓ on chat bubble indicate delivery cleanly
             resolve(true);
           } else {
             console.warn('[Socket Send Notice]:', res);
@@ -13920,7 +13923,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       if (msgRef) msgRef.status = 'DELIVERED';
       if (typeof updateMessageStatusOnBackend === 'function') updateMessageStatusOnBackend(msgUid, 'DELIVERED');
       if (typeof renderChatMessages === 'function') renderChatMessages();
-      if (!silent) showToast('WhatsApp Delivered', `Live message sent to (${phone})!`, 'done_all', 'emerald');
+      // Routine delivery toast suppressed: double ticks ✓✓ on chat bubble indicate delivery cleanly
       return true;
     } else {
       console.warn('[Bridge Send Notice]:', result);
@@ -13961,7 +13964,7 @@ async function dispatchWhatsAppOutbound(phone, text, msgRef, jid = null, account
       if (msgRef) msgRef.status = 'DELIVERED';
       if (typeof updateMessageStatusOnBackend === 'function') updateMessageStatusOnBackend(msgUid, 'DELIVERED');
       if (typeof renderChatMessages === 'function') renderChatMessages();
-      if (!silent) showToast('WhatsApp Delivered', `Live message sent to (${phone})!`, 'done_all', 'emerald');
+      // Routine delivery toast suppressed: double ticks ✓✓ on chat bubble indicate delivery cleanly
       return true;
     }
   } catch (e) {
