@@ -474,6 +474,18 @@ if ($pdo) {
     try {
         $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `account_slot` VARCHAR(50) DEFAULT 'account_1'");
     } catch (Exception $se) {}
+    try {
+        $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `last_connected_at` DATETIME NULL");
+    } catch (Exception $lce) {}
+    try {
+        $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `last_disconnected_at` DATETIME NULL");
+    } catch (Exception $lde) {}
+    try {
+        $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `last_disconnect_reason` VARCHAR(150) NULL");
+    } catch (Exception $re) {}
+    try {
+        $pdo->exec("ALTER TABLE `whatsapp_accounts` ADD COLUMN `reconnect_attempts` INT DEFAULT 0");
+    } catch (Exception $rae) {}
 }
 if (isset($_GET['action']) && $_GET['action'] === 'reset_customer_payment') {
     $raw = file_get_contents('php://input');
@@ -2391,7 +2403,7 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
         if (($line['id'] ?? '') === $slotId) {
             $line['status'] = $status;
             if ($phoneNumber) $line['phone_number'] = $phoneNumber;
-            if ($status === 'DISCONNECTED') {
+            if ($status === 'DISCONNECTED' || $status === 'LOGGED_OUT') {
                 $line['phone_number'] = 'Awaiting Link';
                 unset($line['qr_code']);
             } else if ($status === 'CONNECTED') {
@@ -2410,13 +2422,13 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
             'label' => $label,
             'phone_number' => ($status === 'CONNECTED' && $phoneNumber) ? $phoneNumber : 'Awaiting Link',
             'status' => $status,
-            'qr_code' => ($status === 'CONNECTED' || $status === 'DISCONNECTED') ? null : $qrCode
+            'qr_code' => ($status === 'CONNECTED' || $status === 'DISCONNECTED' || $status === 'LOGGED_OUT') ? null : $qrCode
         ];
     }
     if ($slotId === 'account_1') {
         $cfg['status'] = $status;
         if ($phoneNumber && $status === 'CONNECTED') $cfg['phone_number'] = $phoneNumber;
-        if ($status === 'DISCONNECTED') $cfg['phone_number'] = 'Awaiting Link';
+        if ($status === 'DISCONNECTED' || $status === 'LOGGED_OUT') $cfg['phone_number'] = 'Awaiting Link';
     }
     $cfg['last_sync'] = date("Y-m-d H:i:s");
     atomicWriteJson($configFile, $cfg);
@@ -2424,30 +2436,69 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     // 2. Update MySQL database
     if ($pdo) {
         try {
-            $dbPhone = ($status === 'CONNECTED' && $phoneNumber) ? $phoneNumber : (($status === 'DISCONNECTED' || $status === 'SCAN_QR') ? 'Awaiting Link' : null);
-            $dbQr = ($status === 'CONNECTED' || $status === 'DISCONNECTED') ? null : $qrCode;
-            $stmt = $pdo->prepare("
-                UPDATE `whatsapp_accounts` 
-                SET `status` = ?, 
-                    `phone_number` = COALESCE(?, `phone_number`), 
-                    `qr_code` = ?, 
-                    `display_name` = COALESCE(?, `display_name`) 
-                WHERE `account_slot` = ?
-            ");
-            $stmt->execute([
-                $status,
-                $dbPhone,
-                $dbQr,
-                $label,
-                $slotId
-            ]);
+            $disconnectReason = $data['disconnect_reason'] ?? $data['last_disconnect_reason'] ?? null;
+            $reconnectAttempts = isset($data['reconnect_attempts']) ? (int)$data['reconnect_attempts'] : 0;
+            $now = date('Y-m-d H:i:s');
+            $dbPhone = ($status === 'CONNECTED' && $phoneNumber) ? $phoneNumber : (($status === 'DISCONNECTED' || $status === 'LOGGED_OUT' || $status === 'SCAN_QR') ? 'Awaiting Link' : null);
+            $dbQr = ($status === 'CONNECTED' || $status === 'DISCONNECTED' || $status === 'LOGGED_OUT') ? null : $qrCode;
+
+            if ($status === 'CONNECTED') {
+                $stmt = $pdo->prepare("
+                    UPDATE `whatsapp_accounts` 
+                    SET `status` = ?, 
+                        `phone_number` = COALESCE(?, `phone_number`), 
+                        `qr_code` = NULL, 
+                        `display_name` = COALESCE(?, `display_name`),
+                        `last_connected_at` = ?,
+                        `last_disconnect_reason` = NULL,
+                        `reconnect_attempts` = 0
+                    WHERE `account_slot` = ?
+                ");
+                $stmt->execute([$status, $dbPhone, $label, $now, $slotId]);
+            } else if ($status === 'RECONNECTING') {
+                $stmt = $pdo->prepare("
+                    UPDATE `whatsapp_accounts` 
+                    SET `status` = ?, 
+                        `display_name` = COALESCE(?, `display_name`),
+                        `last_disconnected_at` = ?,
+                        `last_disconnect_reason` = COALESCE(?, `last_disconnect_reason`),
+                        `reconnect_attempts` = ?
+                    WHERE `account_slot` = ?
+                ");
+                $stmt->execute([$status, $label, $now, $disconnectReason, $reconnectAttempts, $slotId]);
+            } else if ($status === 'DISCONNECTED' || $status === 'LOGGED_OUT') {
+                $stmt = $pdo->prepare("
+                    UPDATE `whatsapp_accounts` 
+                    SET `status` = ?, 
+                        `phone_number` = 'Awaiting Link', 
+                        `qr_code` = NULL, 
+                        `display_name` = COALESCE(?, `display_name`),
+                        `last_disconnected_at` = ?,
+                        `last_disconnect_reason` = COALESCE(?, 'Disconnected'),
+                        `reconnect_attempts` = 0
+                    WHERE `account_slot` = ?
+                ");
+                $stmt->execute([$status, $label, $now, $disconnectReason, $slotId]);
+            } else {
+                $stmt = $pdo->prepare("
+                    UPDATE `whatsapp_accounts` 
+                    SET `status` = ?, 
+                        `phone_number` = COALESCE(?, `phone_number`), 
+                        `qr_code` = ?, 
+                        `display_name` = COALESCE(?, `display_name`),
+                        `reconnect_attempts` = ?
+                    WHERE `account_slot` = ?
+                ");
+                $stmt->execute([$status, $dbPhone, $dbQr, $label, $reconnectAttempts, $slotId]);
+            }
+
             if ($stmt->rowCount() === 0) {
                 $check = $pdo->prepare("SELECT `id` FROM `whatsapp_accounts` WHERE `account_slot` = ? LIMIT 1");
                 $check->execute([$slotId]);
                 if (!$check->fetch()) {
                     $ins = $pdo->prepare("
-                        INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`, `qr_code`)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO `whatsapp_accounts` (`account_slot`, `phone_number`, `business_name`, `display_name`, `brand_name`, `status`, `qr_code`, `last_connected_at`, `last_disconnected_at`, `last_disconnect_reason`, `reconnect_attempts`)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $ins->execute([
                         $slotId,
@@ -2456,7 +2507,11 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
                         $label,
                         $label,
                         $status,
-                        $dbQr
+                        $dbQr,
+                        ($status === 'CONNECTED' ? $now : null),
+                        (in_array($status, ['DISCONNECTED', 'LOGGED_OUT', 'RECONNECTING']) ? $now : null),
+                        $disconnectReason,
+                        $reconnectAttempts
                     ]);
                 }
             }
@@ -2676,14 +2731,15 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("
                 UPDATE `whatsapp_accounts` 
                 SET `status` = 'DISCONNECTED', 
-                    `phone_number` = 'Awaiting Link'
+                    `phone_number` = 'Awaiting Link',
+                    `qr_code` = NULL,
+                    `last_disconnected_at` = NOW(),
+                    `last_disconnect_reason` = 'Admin disconnected via CRM',
+                    `reconnect_attempts` = 0
                 WHERE `account_slot` = ? 
                    OR (`id` = 1 AND ? = 'account_1')
             ");
             $stmt->execute([$accountId, $accountId]);
-            try {
-                $pdo->prepare("UPDATE `whatsapp_accounts` SET `qr_code` = NULL WHERE `account_slot` = ? OR (`id` = 1 AND ? = 'account_1')")->execute([$accountId, $accountId]);
-            } catch (Exception $eqr) {}
         } catch (Exception $e) {}
     }
 

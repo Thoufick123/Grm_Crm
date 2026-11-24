@@ -11,7 +11,7 @@
     "webhook_verify_token": "GRM_WHATSAPP_SECRET_VERIFY_TOKEN_2026",
     "provider": "QR_CODE_BRIDGE",
     "status": "DISCONNECTED",
-    "last_sync": "2026-11-24 14:55:01",
+    "last_sync": "2026-11-24 15:32:26",
     "connected_lines": [
         {
             "id": "account_1",

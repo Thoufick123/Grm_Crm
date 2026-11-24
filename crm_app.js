@@ -2201,21 +2201,40 @@ function renderCurrentView() {
 function updateSocketConnectionStatusUI(status) {
   const statusDot = document.getElementById('qr-bridge-status-dot');
   const statusText = document.getElementById('qr-bridge-status-text');
+  const linesBadge = document.getElementById('qr-whatsapp-lines-status');
   if (!statusDot && !statusText) return;
+
+  const accounts = (typeof getAvailableWhatsAppAccounts === 'function') ? getAvailableWhatsAppAccounts() : [];
+  const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
+  const isAnyReconnecting = accounts.some(a => a.status === 'RECONNECTING');
+
   if (status === 'connected') {
     if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
-    if (statusText && (statusText.innerText.includes('Disconnected') || statusText.innerText.includes('Connecting') || statusText.innerText.includes('Initializing'))) {
-      statusText.innerText = 'Bridge Status: Real-time Socket Connected';
+    if (statusText) {
+      statusText.innerText = 'Bridge Server: WebSocket Active (Port 3000 Live)';
     }
   } else if (status === 'connecting') {
     if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0';
-    if (statusText && !statusText.innerText.includes('Scan QR')) {
-      statusText.innerText = 'Bridge Status: Connecting Socket...';
+    if (statusText) {
+      statusText.innerText = 'Bridge Server: Connecting WebSocket...';
     }
   } else if (status === 'disconnected') {
     if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
-    if (statusText && !statusText.innerText.includes('Scan QR')) {
-      statusText.innerText = 'Bridge Status: Disconnected (Reconnecting...)';
+    if (statusText) {
+      statusText.innerText = 'Bridge Server: Offline (Port 3000 Reconnecting...)';
+    }
+  }
+
+  if (linesBadge) {
+    if (connectedCount > 0) {
+      linesBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+      linesBadge.innerText = `WhatsApp Lines: ${connectedCount}/${accounts.length} Connected`;
+    } else if (isAnyReconnecting) {
+      linesBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 animate-pulse';
+      linesBadge.innerText = 'WhatsApp Lines: Reconnecting...';
+    } else {
+      linesBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800';
+      linesBadge.innerText = 'WhatsApp Lines: 0 Connected (Awaiting Link)';
     }
   }
 }
@@ -3321,10 +3340,14 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true, isExplicitL
         existing.status = 'SCAN_QR';
         existing.qr_image = acc.qr_image || existing.qr_image || null;
         existing.connected_number = 'Scan QR Code';
-      } else if (acc.status === 'DISCONNECTED' || isExplicitLogout) {
+      } else if (acc.status === 'DISCONNECTED' || acc.status === 'LOGGED_OUT' || isExplicitLogout) {
         existing.status = 'DISCONNECTED';
         existing.qr_image = null;
         existing.connected_number = 'Awaiting Link';
+      } else if (acc.status === 'RECONNECTING') {
+        existing.status = 'RECONNECTING';
+        existing.qr_image = null;
+        if (hasIncomingRealPhone) existing.connected_number = incomingRawPhone;
       } else if (acc.status === 'CONNECTED') {
         existing.status = 'CONNECTED';
         existing.connected_number = hasIncomingRealPhone ? incomingRawPhone : (existingPhone || acc.connected_number);
@@ -3361,6 +3384,12 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true, isExplicitL
       CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
       CRM_STATE.whatsappAccount.phoneNumber = 'Awaiting Link';
       CRM_STATE.whatsappAccount.connected_number = 'Awaiting Link';
+    } else if (primary && primary.status === 'RECONNECTING') {
+      CRM_STATE.whatsappAccount.status = 'RECONNECTING';
+      if (primaryPhone && primaryPhone !== 'Awaiting Link') {
+        CRM_STATE.whatsappAccount.phoneNumber = primaryPhone;
+        CRM_STATE.whatsappAccount.connected_number = primaryPhone;
+      }
     } else if (isPrimaryConn) {
       CRM_STATE.whatsappAccount.phoneNumber = primaryPhone;
       CRM_STATE.whatsappAccount.connected_number = primaryPhone;
@@ -4655,7 +4684,7 @@ function applyAuthoritativeDatabaseState(data) {
         }
         // Guard: If the line is already CONNECTED with an active phone, never demote it to SCAN_QR or CONNECTING unless database explicitly records it as DISCONNECTED with phone unlinked
         const isCurrentlyLive = line.status === 'CONNECTED' && line.connected_number && line.connected_number !== 'Awaiting Link';
-        const isExplicitDisconnect = dbAcc.status === 'DISCONNECTED' && (!dbAcc.phone || dbAcc.phone === 'Awaiting Link' || dbAcc.explicit_disconnect);
+        const isExplicitDisconnect = (dbAcc.status === 'DISCONNECTED' || dbAcc.status === 'LOGGED_OUT') && (!dbAcc.phone || dbAcc.phone === 'Awaiting Link' || dbAcc.explicit_disconnect);
         const isIncomingDemotion = (dbAcc.status === 'SCAN_QR' || dbAcc.status === 'DISCONNECTED' || dbAcc.status === 'CONNECTING') && !isExplicitDisconnect;
         if (isCurrentlyLive && isIncomingDemotion) {
           return;
@@ -32869,23 +32898,46 @@ function updateQRBridgeUI(res) {
   const statusText = document.getElementById('qr-bridge-status-text');
   const phoneDisplay = document.getElementById('qr-connected-phone-display');
   const statusDot = document.getElementById('qr-bridge-status-dot');
+  const linesBadge = document.getElementById('qr-whatsapp-lines-status');
+
+  const accounts = (typeof getAvailableWhatsAppAccounts === 'function') ? getAvailableWhatsAppAccounts() : [];
+  const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
+  const isAnyReconnecting = accounts.some(a => a.status === 'RECONNECTING');
+
+  const isSocketAlive = Boolean(typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected);
+
+  if (statusDot) {
+    statusDot.className = isSocketAlive ? 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0' : 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
+  }
+  if (statusText) {
+    statusText.innerText = isSocketAlive ? 'Bridge Server: WebSocket Active (Port 3000 Live)' : 'Bridge Server: Offline (Port 3000)';
+  }
+
+  if (linesBadge) {
+    if (connectedCount > 0) {
+      linesBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+      linesBadge.innerText = `WhatsApp Lines: ${connectedCount}/${accounts.length} Connected`;
+    } else if (isAnyReconnecting) {
+      linesBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 animate-pulse';
+      linesBadge.innerText = 'WhatsApp Lines: Reconnecting...';
+    } else {
+      linesBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800';
+      linesBadge.innerText = 'WhatsApp Lines: 0 Connected (Awaiting Link)';
+    }
+  }
 
   if (res.connection === 'SCAN_QR' && res.qr_image) {
-    if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0';
     if (qrImg) {
       qrImg.src = res.qr_image;
       qrImg.classList.remove('hidden');
     }
     if (spinner) spinner.classList.add('hidden');
     if (connectedBox) connectedBox.classList.add('hidden');
-    if (statusText) statusText.innerText = 'Bridge Status: Scan QR Code with WhatsApp on Phone';
   } else if (res.connection === 'CONNECTED') {
-    if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
     if (qrImg) qrImg.classList.add('hidden');
     if (spinner) spinner.classList.add('hidden');
     if (connectedBox) connectedBox.classList.remove('hidden');
     if (phoneDisplay) phoneDisplay.innerText = res.connected_number || CRM_STATE.whatsappAccount.phoneNumber;
-    if (statusText) statusText.innerText = `Bridge Status: Connected to ${res.connected_number || CRM_STATE.whatsappAccount.phoneNumber}`;
 
     if (res.connected_number && CRM_STATE.whatsappAccount.phoneNumber !== res.connected_number) {
       CRM_STATE.whatsappAccount.phoneNumber = res.connected_number;
@@ -32893,11 +32945,9 @@ function updateQRBridgeUI(res) {
       updateConfiguredPhoneDisplays();
     }
   } else {
-    if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0';
     if (qrImg) qrImg.classList.add('hidden');
-    if (spinner) spinner.classList.remove('hidden');
+    if (spinner) spinner.classList.add('hidden');
     if (connectedBox) connectedBox.classList.add('hidden');
-    if (statusText) statusText.innerText = 'Bridge Status: Initializing WhatsApp Socket...';
   }
 }
 
@@ -33050,20 +33100,22 @@ function renderMultiAccountsHub() {
 
   container.innerHTML = accounts.map((acc, index) => {
     const isConnected = acc.status === 'CONNECTED';
+    const isReconnecting = acc.status === 'RECONNECTING';
     const isScanning = (acc.status === 'SCAN_QR' && acc.qr_image);
     const isConnecting = acc.status === 'CONNECTING';
-    const isDisconnected = acc.status === 'DISCONNECTED';
+    const isLoggingOut = acc.status === 'LOGGING_OUT';
+    const isDisconnected = (!isConnected && !isReconnecting && !isScanning && !isConnecting && !isLoggingOut);
     const phoneNum = acc.connected_number || 'Awaiting Link';
     const isSelectedActive = (ACTIVE_SEND_ACCOUNT_ID === acc.id);
 
     return `
-      <div class="bg-white rounded-2xl border ${isSelectedActive ? 'border-brand-wa ring-2 ring-brand-wa/30 shadow-md' : (isConnected ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-amber-200 shadow-sm')} p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 flex flex-col justify-between transition-all">
+      <div class="bg-white rounded-2xl border ${isSelectedActive ? 'border-brand-wa ring-2 ring-brand-wa/30 shadow-md' : (isConnected ? 'border-emerald-300 ring-1 ring-emerald-200' : (isReconnecting ? 'border-amber-300 ring-1 ring-amber-200 shadow-sm' : 'border-amber-200 shadow-sm'))} p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 flex flex-col justify-between transition-all">
         
         <!-- Account Card Header -->
         <div class="flex items-start justify-between gap-2">
           <div class="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
-            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${isConnected ? 'bg-emerald-50 text-emerald-700' : (isScanning ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600')} flex items-center justify-center font-bold text-sm shrink-0">
-              <span class="material-symbols-outlined text-[20px] sm:text-[22px]">${isConnected ? 'phone_android' : (isScanning ? 'qr_code_scanner' : 'sync')}</span>
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${isConnected ? 'bg-emerald-50 text-emerald-700' : (isReconnecting ? 'bg-amber-50 text-amber-700' : (isScanning ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'))} flex items-center justify-center font-bold text-sm shrink-0">
+              <span class="material-symbols-outlined text-[20px] sm:text-[22px] ${isReconnecting ? 'animate-spin' : ''}">${isConnected ? 'phone_android' : (isScanning ? 'qr_code_scanner' : 'sync')}</span>
             </div>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2 flex-wrap">
@@ -33071,12 +33123,12 @@ function renderMultiAccountsHub() {
                 <span class="text-[9px] bg-slate-100 text-slate-600 font-mono px-1.5 py-0.5 rounded font-bold shrink-0">${acc.id}</span>
               </div>
               <div class="flex items-center gap-1.5 flex-wrap mt-1">
-                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-100 text-emerald-800' : (isScanning ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300' : 'bg-slate-100 text-slate-800')}">
-                  ${isConnected ? '🟢 CONNECTED (LIVE)' : (isScanning ? '🟡 SCAN QR WITH PHONE' : (isConnecting ? '⚪ INITIALIZING...' : '🔴 DISCONNECTED'))}
+                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-100 text-emerald-800' : (isReconnecting ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300 animate-pulse' : (isScanning ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300' : 'bg-slate-100 text-slate-800'))}">
+                  ${isConnected ? '🟢 CONNECTED (LIVE)' : (isReconnecting ? '🟡 RECONNECTING...' : (isScanning ? '🟡 SCAN QR WITH PHONE' : (isConnecting ? '⚪ INITIALIZING...' : (isLoggingOut ? '⏳ LOGGING OUT...' : '🔴 DISCONNECTED'))))}
                 </span>
                 ${isSelectedActive && isConnected ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-brand-wa text-white">⭐ ACTIVE LINE</span>' : ''}
               </div>
-              <p class="text-[11px] sm:text-xs font-mono font-bold text-slate-600 mt-1 truncate">${isConnected ? (acc.connected_number || 'Device Linked') : '📱 Scan QR code below with WhatsApp mobile'}</p>
+              <p class="text-[11px] sm:text-xs font-mono font-bold text-slate-600 mt-1 truncate">${isConnected ? (acc.connected_number || 'Device Linked') : (isReconnecting ? ('📱 Preserving line (' + (acc.connected_number || 'session') + ') • Retrying connection...') : (isScanning ? '📱 Scan QR code below with WhatsApp mobile' : (isLoggingOut ? '⏳ Unlinking session from WhatsApp servers...' : '📱 Scan QR code below with WhatsApp mobile')))}</p>
             </div>
           </div>
         </div>
@@ -33133,10 +33185,24 @@ function renderMultiAccountsHub() {
           </div>
         ` : ''}
 
-        <!-- 3. DISCONNECTED / INITIALIZING STATE BUTTON -->
-        ${(!isConnected && !isScanning) ? `
+        <!-- 3. RECONNECTING BANNER (Preserving Session) -->
+        ${isReconnecting ? `
+          <div class="bg-amber-50 p-3 sm:p-3.5 rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-2.5 text-amber-950">
+              <span class="material-symbols-outlined text-[22px] text-amber-600 shrink-0 animate-spin">sync</span>
+              <div>
+                <p class="font-bold text-xs text-amber-900">Temporary Connection Blip — Reconnecting...</p>
+                <p class="text-[11px] text-amber-700">Baileys session active for <b class="font-mono">${acc.connected_number || 'this line'}</b>. Retrying...</p>
+              </div>
+            </div>
+            <span class="font-mono text-amber-900 font-extrabold text-xs bg-amber-200/70 px-2.5 py-1 rounded-lg shrink-0 self-start sm:self-auto">${acc.connected_number || 'Reconnecting'}</span>
+          </div>
+        ` : ''}
+
+        <!-- 4. DISCONNECTED / INITIALIZING STATE BUTTON -->
+        ${(!isConnected && !isScanning && !isReconnecting) ? `
           <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center space-y-2.5">
-            <p class="text-xs font-bold text-slate-700">${isConnecting ? 'Connecting to WhatsApp Socket...' : 'Device not linked. Click below to generate scan QR code.'}</p>
+            <p class="text-xs font-bold text-slate-700">${isLoggingOut ? 'Unlinking session from mobile phone...' : (isConnecting ? 'Connecting to WhatsApp Socket...' : 'Device not linked. Click below to generate scan QR code.')}</p>
             ${canSettingsCreate ? `
             <button type="button" onclick="generateFreshAccountQR('${acc.id}')" class="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-brand-wa to-emerald-600 hover:from-brand-waDark hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow flex items-center justify-center gap-2 transition cursor-pointer">
               <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
@@ -33154,7 +33220,7 @@ function renderMultiAccountsHub() {
         <!-- Actions Strip -->
         <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-2">
-            ${isConnected ? (
+            ${(isConnected || isReconnecting) ? (
         canSettingsEdit ? `
                 <button type="button" onclick="disconnectWhatsAppAccount('${acc.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Log out device session">
                   <span class="material-symbols-outlined text-[14px]">link_off</span> Disconnect
@@ -33167,6 +33233,28 @@ function renderMultiAccountsHub() {
                 </button>
               ` : ''
       )}
+
+            ${(acc.id !== 'account_1' && canSettingsDelete) ? `
+              <button type="button" onclick="deleteWhatsAppAccountSlot('${acc.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Delete account slot">
+                <span class="material-symbols-outlined text-[14px]">delete</span> Delete Slot
+              </button>
+            ` : ''}
+
+            ${(!canSettingsEdit && !canSettingsCreate && !canSettingsDelete) ? `
+              <span class="text-[10px] text-slate-400 font-semibold flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[12px]">lock</span> View Only
+              </span>
+            ` : ''}
+          </div>
+          
+          <button type="button" onclick="refreshSpecificAccount('${acc.id}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs flex items-center gap-1 transition">
+            <span class="material-symbols-outlined text-[14px]">refresh</span> Refresh Status
+          </button>
+        </div>
+
+      </div>
+    `;
+  }).join('');
 
             ${(acc.id !== 'account_1' && canSettingsDelete) ? `
               <button type="button" onclick="deleteWhatsAppAccountSlot('${acc.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-lg font-bold text-xs flex items-center gap-1 transition" title="Delete account slot">

@@ -183,6 +183,15 @@ if (fs.existsSync(legacyAuth) && !fs.existsSync(primaryAuth)) {
 
 // Multi-Account Registry
 const accounts = new Map(); // accountId -> AccountObject
+const accountLocks = new Map(); // accountId -> { isConnecting: boolean, attempts: number }
+const reconnectTimers = new Map(); // accountId -> NodeJS.Timeout
+
+function clearReconnectTimer(accountId) {
+    if (reconnectTimers.has(accountId)) {
+        clearTimeout(reconnectTimers.get(accountId));
+        reconnectTimers.delete(accountId);
+    }
+}
 // Map phone/LID to destination JIDs
 const jidMap = new Map();
 const LID_TO_PHONE_MAP = new Map();
@@ -1068,9 +1077,14 @@ function resolveDestinationJid(phoneOrJid) {
 
 // Initialize a specific WhatsApp Account session
 async function initAccountSession(accountId, label = 'WhatsApp Account') {
-    if (accounts.has(accountId) && accounts.get(accountId).isStarting) {
+    clearReconnectTimer(accountId);
+    const lock = accountLocks.get(accountId) || { isConnecting: false, attempts: 0 };
+    if (lock.isConnecting) {
+        console.log(`[QR Bridge - ${accountId}] Session initialization already in progress, skipping concurrent call.`);
         return accounts.get(accountId);
     }
+    lock.isConnecting = true;
+    accountLocks.set(accountId, lock);
 
     const sessionDir = path.join(SESSIONS_BASE_DIR, accountId);
     if (!fs.existsSync(sessionDir)) {
@@ -1096,6 +1110,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
         connectedNumber: existingAcc?.connectedNumber || null,
         connectedName: existingAcc?.connectedName || null,
         isStarting: true,
+        intentionalLogout: false,
         lastActive: new Date().toISOString()
     };
 
@@ -1179,33 +1194,31 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 const isLoggedOut = (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403);
-                const isReplaced = statusCode === DisconnectReason.connectionReplaced || statusCode === 440;
+                const isReplaced = (statusCode === DisconnectReason.connectionReplaced || statusCode === 440);
                 console.log(`[QR Bridge - ${accountId}] Connection closed (status: ${statusCode}). Logged out: ${isLoggedOut}`);
-                accountObj.status = isLoggedOut ? 'DISCONNECTED' : 'RECONNECTING';
-                accountObj.qrImage = null;
+
+                if (accountObj.intentionalLogout) {
+                    console.log(`[QR Bridge - ${accountId}] Connection closed due to intentional CRM disconnect. Skipping reconnect.`);
+                    return;
+                }
+
                 if (isLoggedOut) {
+                    clearReconnectTimer(accountId);
+                    accountLocks.set(accountId, { isConnecting: false, attempts: 0 });
+                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on mobile phone. Cleaning session credentials...`);
+
+                    accountObj.status = 'LOGGED_OUT';
+                    accountObj.qrImage = null;
                     accountObj.connectedNumber = null;
                     accountObj.connectedName = null;
-                }
-                accountObj.isStarting = false;
-                broadcastAccountsUpdate();
+                    accountObj.isStarting = false;
 
-                // ONLY notify CRM / Hostinger backend of disconnection if the session was truly logged out on phone!
-                // Never mark as DISCONNECTED on temporary network drops/timeouts (status 408, 515) to prevent accidental unlinking.
-                if (isLoggedOut) {
-                    syncLocalConfigFile(accountId, 'DISCONNECTED', null, null, label);
-                    callCrmApi('sync_account_status', {
-                        account_slot: accountId,
-                        status: 'DISCONNECTED',
-                        phone_number: null,
-                        force: true,
-                        label: label
-                    }).catch(() => {});
-                }
+                    try {
+                        sock.ev.removeAllListeners();
+                        sock.end();
+                    } catch (e) {}
+                    accountObj.sock = null;
 
-                if (isLoggedOut) {
-                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Cleaning session dir...`);
-                    // Clean invalidated session directory so fresh QR code can be generated when requested
                     try {
                         if (fs.existsSync(sessionDir)) {
                             fs.rmSync(sessionDir, { recursive: true, force: true });
@@ -1219,21 +1232,85 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     } catch (e) {
                         console.warn(`[Session Clean Error for ${accountId}]:`, e.message);
                     }
-                    // A session should only start when the admin explicitly requests a QR code.
-                } else if (isReplaced) {
-                    console.warn(`[QR Bridge - ${accountId}] Session replaced or conflict (status: 440). Waiting 10s before auto-reconnecting...`);
-                    setTimeout(() => {
-                        initAccountSession(accountId, label);
-                    }, 10000);
-                } else {
-                    // Reconnect on network drops / keep-alive hiccups / 515 restart required without clearing session
-                    const reconnectDelay = (statusCode === 515) ? 1000 : 3500;
-                    setTimeout(() => {
-                        initAccountSession(accountId, label);
-                    }, reconnectDelay);
+
+                    syncLocalConfigFile(accountId, 'DISCONNECTED', null, null, label);
+                    broadcastAccountsUpdate();
+
+                    callCrmApi('sync_account_status', {
+                        account_slot: accountId,
+                        status: 'LOGGED_OUT',
+                        phone_number: null,
+                        qr_code: null,
+                        disconnect_reason: `Logged out from WhatsApp mobile device (code ${statusCode})`,
+                        reconnect_attempts: 0,
+                        force: true,
+                        force_disconnect: true,
+                        label: label
+                    }).catch(() => {});
+
+                    return; // Crucial: ZERO auto-reconnection on logged out!
                 }
+
+                // If credentials don't exist on disk, we cannot reconnect anyway
+                const credsFile = path.join(sessionDir, 'creds.json');
+                if (!fs.existsSync(credsFile)) {
+                    console.log(`[QR Bridge - ${accountId}] No session credentials on disk. Setting to DISCONNECTED.`);
+                    clearReconnectTimer(accountId);
+                    accountObj.status = 'DISCONNECTED';
+                    accountObj.qrImage = null;
+                    accountObj.connectedNumber = null;
+                    accountObj.isStarting = false;
+                    broadcastAccountsUpdate();
+                    return;
+                }
+
+                // Temporary disconnect (network drop, 515 restartRequired, 408 timeout, 428 connection lost)
+                const currentLock = accountLocks.get(accountId) || { isConnecting: false, attempts: 0 };
+                currentLock.attempts = (currentLock.attempts || 0) + 1;
+                currentLock.isConnecting = false;
+                accountLocks.set(accountId, currentLock);
+
+                accountObj.status = 'RECONNECTING';
+                accountObj.qrImage = null;
+                accountObj.isStarting = false;
+                // Preserve accountObj.connectedNumber so CRM doesn't reset to "Device not linked"
+                broadcastAccountsUpdate();
+
+                const reasonStr = (statusCode === 515)
+                    ? 'Baileys protocol restart (515)'
+                    : (isReplaced ? 'Connection replaced / conflict (440)' : `Temporary network drop (${statusCode || 'network'})`);
+
+                callCrmApi('sync_account_status', {
+                    account_slot: accountId,
+                    status: 'RECONNECTING',
+                    disconnect_reason: reasonStr,
+                    reconnect_attempts: currentLock.attempts,
+                    label: label
+                }).catch(() => {});
+
+                clearReconnectTimer(accountId);
+
+                let reconnectDelay = 3500;
+                if (statusCode === 515) {
+                    reconnectDelay = 1200;
+                } else if (isReplaced) {
+                    reconnectDelay = 10000;
+                } else {
+                    reconnectDelay = Math.min(30000, 1500 * Math.pow(1.5, Math.min(currentLock.attempts, 6))) + Math.floor(Math.random() * 800);
+                }
+
+                console.log(`[QR Bridge - ${accountId}] Scheduling reconnection attempt #${currentLock.attempts} in ${reconnectDelay}ms (${reasonStr})`);
+                const timer = setTimeout(() => {
+                    reconnectTimers.delete(accountId);
+                    initAccountSession(accountId, label);
+                }, reconnectDelay);
+                reconnectTimers.set(accountId, timer);
             } else if (connection === 'open') {
+                accountLocks.set(accountId, { isConnecting: false, attempts: 0 });
+                clearReconnectTimer(accountId);
+
                 accountObj.status = 'CONNECTED';
+                accountObj.intentionalLogout = false;
                 accountObj.qrImage = null;
                 accountObj.isStarting = false;
                 accountObj.lastActive = new Date().toISOString();
@@ -1254,6 +1331,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     phone_number: accountObj.connectedNumber,
                     qr_code: null,
                     connected_name: accountObj.connectedName,
+                    disconnect_reason: null,
+                    reconnect_attempts: 0,
                     force: true,
                     label: label
                 }).catch(() => {});
@@ -2594,36 +2673,61 @@ async function sendWhatsAppMessage(target, text, accountId = null, mediaUrl = nu
         timestamp: new Date().toISOString()
     };
 }
+function hasRegisteredSession(accountId) {
+    const sessionDir = path.join(SESSIONS_BASE_DIR, accountId);
+    const credsFile = path.join(sessionDir, 'creds.json');
+    if (!fs.existsSync(credsFile)) return false;
+    try {
+        const raw = fs.readFileSync(credsFile, 'utf8');
+        const parsed = JSON.parse(raw);
+        return Boolean(parsed && (parsed.registered || parsed.me?.id));
+    } catch (e) {
+        return false;
+    }
+}
+
 // Initialize all saved sessions
 function initializeAllSessions() {
     try {
+        // Pre-seed default accounts into memory if not present
+        for (const def of DEFAULT_ACCOUNT_DEFINITIONS) {
+            if (!accounts.has(def.id)) {
+                accounts.set(def.id, {
+                    id: def.id,
+                    label: def.label,
+                    status: 'DISCONNECTED',
+                    sock: null,
+                    qrImage: null,
+                    connectedNumber: null,
+                    connectedName: null,
+                    isStarting: false,
+                    intentionalLogout: false,
+                    lastActive: null
+                });
+            }
+        }
+
         const dirs = fs.readdirSync(SESSIONS_BASE_DIR, { withFileTypes: true })
             .filter(d => d.isDirectory())
             .map(d => d.name);
 
-        const validDirs = dirs.filter(dir => {
-            if (dir === 'account_1') return true;
-            const credsFile = path.join(SESSIONS_BASE_DIR, dir, 'creds.json');
-            return fs.existsSync(credsFile);
-        });
+        const registeredDirs = dirs.filter(dir => hasRegisteredSession(dir));
 
-        // Keep registered slot directories intact so scanning is never interrupted
-        dirs.forEach(dir => {
-            if (dir !== 'account_1') {
-                // Preserved slot directory
-            }
-        });
+        console.log(`[Bridge Boot] Registered sessions detected on disk:`, registeredDirs.length > 0 ? registeredDirs.join(', ') : 'None (Awaiting Link)');
 
-        if (validDirs.length === 0) {
-            initAccountSession('account_1', 'Primary WhatsApp');
+        if (registeredDirs.length === 0) {
+            // Keep slots DISCONNECTED until user generates QR explicitly
+            broadcastAccountsUpdate();
         } else {
-            validDirs.forEach((dir, idx) => {
-                const label = idx === 0 ? 'Primary WhatsApp' : `WhatsApp Business #${idx + 1}`;
+            registeredDirs.forEach((dir, idx) => {
+                const def = DEFAULT_ACCOUNT_DEFINITIONS.find(d => d.id === dir);
+                const label = def ? def.label : (idx === 0 ? 'Primary WhatsApp' : `WhatsApp Business #${idx + 1}`);
                 initAccountSession(dir, label);
             });
         }
     } catch (e) {
-        initAccountSession('account_1', 'Primary WhatsApp');
+        console.warn('[Bridge Boot Notice]:', e.message);
+        broadcastAccountsUpdate();
     }
 }
 
@@ -3075,13 +3179,18 @@ app.post('/api/accounts/refresh_qr', async (req, res) => {
         const defaultDef = DEFAULT_ACCOUNT_DEFINITIONS.find(d => d.id === targetId);
         const label = accounts.get(targetId)?.label || (defaultDef ? defaultDef.label : (targetId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Business`));
 
+        clearReconnectTimer(targetId);
+        accountLocks.set(targetId, { isConnecting: false, attempts: 0 });
+
         if (accounts.has(targetId)) {
             const acc = accounts.get(targetId);
+            acc.intentionalLogout = false;
             if (!forceReset && acc.status === 'CONNECTED' && acc.connectedNumber) {
                 return res.json({ status: 'success', message: `Account ${targetId} is already connected (${acc.connectedNumber}).` });
             }
             if (acc.sock) {
-                try { acc.sock.end(); } catch (e) { }
+                try { acc.sock.ev.removeAllListeners(); acc.sock.end(); } catch (e) { }
+                acc.sock = null;
             }
             if (forceReset) {
                 acc.status = 'DISCONNECTED';
@@ -3141,6 +3250,8 @@ app.post('/api/accounts/delete', async (req, res) => {
 async function disconnectAccountSession(targetId = 'account_1') {
     try {
         console.log(`[Disconnect Request]: Disconnecting and logging out ${targetId} from WhatsApp servers & phone...`);
+        clearReconnectTimer(targetId);
+        accountLocks.set(targetId, { isConnecting: false, attempts: 0 });
 
         let acc = accounts.get(targetId);
         if (!acc) {
@@ -3153,10 +3264,18 @@ async function disconnectAccountSession(targetId = 'account_1') {
                 connectedNumber: null,
                 connectedName: null,
                 isStarting: false,
+                intentionalLogout: true,
                 lastActive: new Date().toISOString()
             };
             accounts.set(targetId, acc);
+        } else {
+            acc.intentionalLogout = true;
+            acc.status = 'LOGGING_OUT';
+            acc.isStarting = false;
         }
+
+        // Inform clients logout is in progress
+        broadcastAccountsUpdate();
 
         // Send remove-companion-device IQ node over active socket to unlink on the physical mobile phone
         if (acc.sock) {
@@ -3164,17 +3283,21 @@ async function disconnectAccountSession(targetId = 'account_1') {
                 console.log(`[Disconnect] Transmitting remove-companion-device IQ to WhatsApp servers for ${targetId}...`);
                 await Promise.race([
                     acc.sock.logout('User clicked Disconnect in CRM'),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Logout network timeout')), 5000))
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Logout network timeout')), 4000))
                 ]);
                 console.log(`[Disconnect] WhatsApp servers successfully processed unbind for ${targetId}. Mobile phone is unlinked.`);
             } catch (e) {
                 console.warn(`[Disconnect logout notice for ${targetId}]:`, e.message);
-                try { acc.sock.end(); } catch (err) {}
             }
+            try {
+                acc.sock.ev.removeAllListeners();
+                acc.sock.end();
+            } catch (err) {}
+            acc.sock = null;
         }
 
-        // Give WhatsApp network 600ms to propagate session termination before wiping local credentials
-        await new Promise(r => setTimeout(r, 600));
+        // Give WhatsApp network 400ms to propagate session termination before wiping local credentials
+        await new Promise(r => setTimeout(r, 400));
 
         acc.sock = null;
         acc.status = 'DISCONNECTED';
@@ -3200,6 +3323,7 @@ async function disconnectAccountSession(targetId = 'account_1') {
             }
         }
 
+        syncLocalConfigFile(targetId, 'DISCONNECTED', null, null, acc.label);
         broadcastAccountsUpdate();
 
         // Also sync directly to Hostinger CRM API with force: true
@@ -3207,6 +3331,8 @@ async function disconnectAccountSession(targetId = 'account_1') {
             account_slot: targetId,
             status: 'DISCONNECTED',
             phone_number: null,
+            disconnect_reason: 'Admin disconnected via CRM',
+            reconnect_attempts: 0,
             force: true,
             force_disconnect: true,
             label: acc.label
