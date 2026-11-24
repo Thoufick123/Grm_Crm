@@ -2420,6 +2420,23 @@ function initSocketIO() {
     // Real-time Bulk Price Request Approval / Rejection Update from Admin Link or WhatsApp
     SOCKET_IO.on('bulk_request:updated', (data) => {
       console.log('⚡ [Socket.IO Bulk Request Updated]:', data);
+      if (data && data.request) {
+        // Immediate UI banner update for active customer chat
+        const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
+        const currentCustDigits = String(customer?.whatsapp || customer?.phone || '').replace(/\D/g, '').slice(-10);
+        const reqCustDigits = String(data.request?.customer_phone || '').replace(/\D/g, '').slice(-10);
+
+        if (!currentCustDigits || currentCustDigits === reqCustDigits || !reqCustDigits) {
+          const reqObj = Object.assign({}, data.request, {
+            status: data.status || data.request.status,
+            rejection_reason: data.reason || data.request.rejection_reason
+          });
+          window.CURRENT_BULK_REQUEST = reqObj;
+          if (typeof window.renderBulkRequestBanner === 'function') {
+            window.renderBulkRequestBanner(reqObj);
+          }
+        }
+      }
       if (typeof checkActiveCustomerBulkRequests === 'function') {
         checkActiveCustomerBulkRequests();
       }
@@ -44160,10 +44177,11 @@ window.checkActiveCustomerBulkRequests = async function () {
   if (!banner) return;
 
   const customer = (CRM_STATE && CRM_STATE.customers) ? CRM_STATE.customers.find(c => c.id === ACTIVE_CUSTOMER_ID) : null;
-  const custPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
+  const rawPhone = customer ? (customer.whatsapp || customer.phone || '') : '';
+  const custDigits = String(rawPhone).replace(/\D/g, '').slice(-10);
 
   try {
-    const url = custPhone ? `api.php?action=get_bulk_price_requests&customer_phone=${encodeURIComponent(custPhone)}&limit=5` : 'api.php?action=get_bulk_price_requests&limit=5';
+    const url = custDigits ? `api.php?action=get_bulk_price_requests&customer_phone=${encodeURIComponent(custDigits)}&limit=5` : 'api.php?action=get_bulk_price_requests&limit=5';
     const res = await fetch(url);
     const data = await res.json();
 

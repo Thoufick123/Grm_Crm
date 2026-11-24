@@ -642,7 +642,7 @@ function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reaso
             "Approved Price: *₹{$reqPriceFormatted}/pc* (Total: *₹{$totalAmtFormatted}*)\n\n" .
             "Status: Special price activated. Staff can now take the order.";
     } else {
-        $cleanReason = trim($reason ?: ($req['rejection_reason'] ?? 'Price too low for this bulk order quantity amount too low'));
+        $cleanReason = trim($reason ?: ($req['rejection_reason'] ?? 'Price too low for this bulk order quantity.'));
         $reqPriceFormatted = number_format((float)($req['requested_price'] ?? 0), 2, '.', '');
         $totalAmtFormatted = number_format((float)($req['total_requested_amount'] ?? 0), 2, '.', '');
         $sizeStr = !empty($req['size']) ? " ({$req['size']})" : " (Free Size)";
@@ -665,20 +665,21 @@ function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reaso
         $cfgFile = __DIR__ . '/whatsapp_account_config.json';
         if (file_exists($cfgFile)) {
             $cfg = json_decode(file_get_contents($cfgFile), true);
-            if (!empty($cfg['phone_number'])) {
+            if (!empty($cfg['phone_number']) && $cfg['phone_number'] !== 'Awaiting Link') {
                 $adminPhone = $cfg['phone_number'];
             }
         }
     }
     if (empty($adminPhone) && $pdo) {
         try {
-            $uStmt = $pdo->query("SELECT `phone` FROM `users` WHERE `id` = 'admin' OR `role` IN ('Super Admin', 'admin') ORDER BY `id` ASC LIMIT 1");
+            $uStmt = $pdo->query("SELECT `phone` FROM `users` WHERE `id` = 'admin' OR `role` LIKE '%Admin%' ORDER BY `id` ASC LIMIT 1");
             $adminPhone = (string)$uStmt->fetchColumn();
         } catch (Exception $e) {}
     }
 
     $cleanAdmin = preg_replace('/[^0-9]/', '', $adminPhone);
     if (strlen($cleanAdmin) === 10) $cleanAdmin = '91' . $cleanAdmin;
+    if (empty($cleanAdmin)) $cleanAdmin = '919943557998'; // Super Admin fallback
 
     // 3. Resolve Staff Phone
     $staffPhone = trim($req['staff_phone'] ?? '');
@@ -3407,18 +3408,31 @@ if ($action === 'get_bulk_price_requests') {
     $statusFilter = $_GET['status'] ?? null;
     $customerPhone = $_GET['customer_phone'] ?? null;
     $staffId = $_GET['staff_id'] ?? null;
+    $codeFilter = trim($_GET['code'] ?? ($_GET['request_code'] ?? ''));
     $limit = (int)($_GET['limit'] ?? 100);
 
     $sql = "SELECT * FROM `bulk_price_requests` WHERE 1=1";
     $params = [];
 
+    if (!empty($codeFilter)) {
+        $sql .= " AND `request_code` = ?";
+        $params[] = $codeFilter;
+    }
     if (!empty($statusFilter) && $statusFilter !== 'ALL') {
         $sql .= " AND `status` = ?";
         $params[] = $statusFilter;
     }
     if (!empty($customerPhone)) {
-        $sql .= " AND `customer_phone` = ?";
-        $params[] = $customerPhone;
+        $cleanPhoneDigits = preg_replace('/\D/', '', $customerPhone);
+        $clean10 = substr($cleanPhoneDigits, -10);
+        if (strlen($clean10) === 10) {
+            $sql .= " AND (RIGHT(REGEXP_REPLACE(`customer_phone`, '[^0-9]', ''), 10) = ? OR `customer_phone` = ?)";
+            $params[] = $clean10;
+            $params[] = $customerPhone;
+        } else {
+            $sql .= " AND `customer_phone` = ?";
+            $params[] = $customerPhone;
+        }
     }
     if (!empty($staffId)) {
         $sql .= " AND `staff_id` = ?";
@@ -3578,14 +3592,40 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 $publicBaseUrl = rtrim(APP_URL, '/');
             }
 
-            // Connected WhatsApp line phone number
+            // Connected WhatsApp line phone number for in-chat Action links
             $crmPhone = '';
             if (file_exists(__DIR__ . '/whatsapp_account_config.json')) {
                 $cfgData = json_decode(file_get_contents(__DIR__ . '/whatsapp_account_config.json'), true);
-                if (!empty($cfgData['phone_number'])) {
+                if (!empty($cfgData['phone_number']) && $cfgData['phone_number'] !== 'Awaiting Link') {
                     $cleanCfgNum = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
-                    if (strlen($cleanCfgNum) >= 10) $crmPhone = $cleanCfgNum;
+                    if (strlen($cleanCfgNum) >= 10) $crmPhone = (strlen($cleanCfgNum) === 10) ? ('91' . $cleanCfgNum) : $cleanCfgNum;
                 }
+                if (empty($crmPhone) && !empty($cfgData['connected_lines']) && is_array($cfgData['connected_lines'])) {
+                    foreach ($cfgData['connected_lines'] as $line) {
+                        if (!empty($line['phone_number']) && $line['phone_number'] !== 'Awaiting Link') {
+                            $cleanLineNum = preg_replace('/[^0-9]/', '', $line['phone_number']);
+                            if (strlen($cleanLineNum) >= 10) {
+                                $crmPhone = (strlen($cleanLineNum) === 10) ? ('91' . $cleanLineNum) : $cleanLineNum;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (empty($crmPhone) && $pdo) {
+                try {
+                    $waStmt = $pdo->query("SELECT `phone_number` FROM `whatsapp_accounts` WHERE `phone_number` IS NOT NULL AND `phone_number` != '' AND `phone_number` != 'Awaiting Link' ORDER BY (`status` = 'CONNECTED') DESC, `id` ASC LIMIT 1");
+                    $dbNum = (string)$waStmt->fetchColumn();
+                    $dbDigits = preg_replace('/[^0-9]/', '', $dbNum);
+                    if (strlen($dbDigits) >= 10) {
+                        $crmPhone = (strlen($dbDigits) === 10) ? ('91' . $dbDigits) : $dbDigits;
+                    }
+                } catch (Exception $e) {}
+            }
+
+            if (empty($crmPhone)) {
+                $crmPhone = '918925972476';
             }
 
             // In-WhatsApp Zero-Navigation Action Links (Never leaves WhatsApp, stays in same screen)
@@ -3691,6 +3731,18 @@ if ($action === 'approve_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === '
         echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
         exit;
     }
+
+    // Security check: Customer cannot approve their own discount request!
+    $senderPhone = trim($data['sender_phone'] ?? '');
+    if (!empty($senderPhone) && !empty($currReq['customer_phone'])) {
+        $cleanSender = substr(preg_replace('/\D/', '', $senderPhone), -10);
+        $cleanCustomer = substr(preg_replace('/\D/', '', $currReq['customer_phone']), -10);
+        if ($cleanSender === $cleanCustomer && strlen($cleanSender) === 10) {
+            http_response_code(403);
+            echo json_encode(["status" => "error", "message" => "Security violation: Customer cannot approve their own discount request."]);
+            exit;
+        }
+    }
     $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
     $skipWhatsApp = ($fromChannel === 'whatsapp_cmd');
 
@@ -3793,6 +3845,18 @@ if ($action === 'reject_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         http_response_code(404);
         echo json_encode(["status" => "error", "message" => "Bulk price request not found."]);
         exit;
+    }
+
+    // Security check: Customer cannot approve their own discount request!
+    $senderPhone = trim($data['sender_phone'] ?? '');
+    if (!empty($senderPhone) && !empty($currReq['customer_phone'])) {
+        $cleanSender = substr(preg_replace('/\D/', '', $senderPhone), -10);
+        $cleanCustomer = substr(preg_replace('/\D/', '', $currReq['customer_phone']), -10);
+        if ($cleanSender === $cleanCustomer && strlen($cleanSender) === 10) {
+            http_response_code(403);
+            echo json_encode(["status" => "error", "message" => "Security violation: Customer cannot approve their own discount request."]);
+            exit;
+        }
     }
     $fromChannel = trim($data['source'] ?? ($data['channel'] ?? 'web'));
     $skipWhatsApp = ($fromChannel === 'whatsapp_cmd');

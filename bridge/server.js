@@ -1994,29 +1994,48 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                         const isGarmentSpecOrQty = /^\d+\s*(?:XL|XXL|XXXL|XS|S|M|L|PCS?|PIECES?|METERS?|MTRS?|M|KG|COMBO|SET|DRESS|SAREE|COLOR|COLOUR|INCH)\b/i.test(cleanUpperMsg) ||
                                                    /^\d+[A-Z]/i.test(cleanUpperMsg);
 
-                        // 2. Resolve sender identity: strictly ensure sender is an authorized Admin!
+                        // 2. Resolve sender identity & command intent:
                         const senderDigits10 = String(cleanNumber || senderNumber || senderJid || '').replace(/\D/g, '').slice(-10);
                         const connectedDigits10 = String(accountObj.connectedNumber || '').replace(/\D/g, '').slice(-10);
-                        const authorizedAdminSet = new Set(['8124038585', '9500904638']);
+                        
+                        // Authorized Admin phones (Jerry +91 99435 57998, Super Admin lines, Business lines)
+                        const authorizedAdminSet = new Set(['9943557998', '8124038585', '9789660115', '8248452433', '8925972476']);
                         if (connectedDigits10 && connectedDigits10.length === 10) authorizedAdminSet.add(connectedDigits10);
                         if (typeof configFilePath !== 'undefined' && fs.existsSync(configFilePath)) {
                             try {
                                 const rawCfg = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
                                 const p = (rawCfg.phone_number || '').replace(/\D/g, '').slice(-10);
-                                if (p.length === 10) authorizedAdminSet.add(p);
+                                if (p.length === 10 && p !== 'Awaiting Link') authorizedAdminSet.add(p);
+                                if (rawCfg.admin_phone) {
+                                    const ap = String(rawCfg.admin_phone).replace(/\D/g, '').slice(-10);
+                                    if (ap.length === 10) authorizedAdminSet.add(ap);
+                                }
+                                if (Array.isArray(rawCfg.connected_lines)) {
+                                    for (const cl of rawCfg.connected_lines) {
+                                        if (cl.phone_number) {
+                                            const clp = String(cl.phone_number).replace(/\D/g, '').slice(-10);
+                                            if (clp.length === 10) authorizedAdminSet.add(clp);
+                                        }
+                                    }
+                                }
                             } catch (eCfg) {}
                         }
                         const isSenderAdmin = authorizedAdminSet.has(senderDigits10) || msg.key?.fromMe === true;
 
+                        // Check for explicit Request Code (e.g. BPR-0001, BPR-0002)
+                        const codeMatch = messageText.match(/BPR-\d+/i);
+                        const reqCode = codeMatch ? codeMatch[0].toUpperCase() : null;
+                        const hasExplicitBprCode = Boolean(reqCode);
+
                         // 3. Strict Command Matching (Never loosely check startsWith('2')!)
-                        const isApproveCmd = !isGarmentSpecOrQty && isSenderAdmin && (
+                        const isApproveKeyword = (
                             cleanUpperMsg === '1' ||
                             cleanUpperMsg === 'APPROVE' ||
                             /^APPROVE(?:\s+BPR-\d+|\s+\d+)?$/i.test(cleanUpperMsg) ||
                             /^APPROVE:\s*(?:BPR-\d+|\d+)?$/i.test(cleanUpperMsg) ||
                             /^ACCEPT(?:\s+BPR-\d+|\s+\d+)?$/i.test(cleanUpperMsg)
                         );
-                        const isRejectCmd = !isGarmentSpecOrQty && isSenderAdmin && (
+                        const isRejectKeyword = (
                             cleanUpperMsg === '2' ||
                             /^2\s+[A-Za-z0-9]/.test(cleanUpperMsg) ||
                             cleanUpperMsg === 'REJECT' ||
@@ -2025,9 +2044,13 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             /^DECLINE(?:\s+BPR-\d+)?(?:\s+.*)?$/i.test(cleanUpperMsg)
                         );
 
+                        // If the message contains an explicit request code (e.g. "APPROVE BPR-0001" or "REJECT BPR-0001 ..."),
+                        // it is automatically recognized as an Admin decision command (link tap or exact reply).
+                        // If it's a short reply ("1", "2"), the sender must be an authorized admin.
+                        const isApproveCmd = !isGarmentSpecOrQty && isApproveKeyword && (hasExplicitBprCode || isSenderAdmin);
+                        const isRejectCmd = !isGarmentSpecOrQty && isRejectKeyword && (hasExplicitBprCode || isSenderAdmin);
+
                         if (isApproveCmd || isRejectCmd) {
-                            const codeMatch = messageText.match(/BPR-\d+/i);
-                            const reqCode = codeMatch ? codeMatch[0].toUpperCase() : null;
                             const replyTargetJid = msg.key?.remoteJid || resolveDestinationJid(senderNumber || senderJid) || senderJid;
 
                             if (isApproveCmd) {
@@ -2070,11 +2093,14 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     // Send to WhatsApp chat only if not already dispatched by API (prevents duplicate messages)
                                     const alreadyDispatched = d && d.wa_dispatch && d.wa_dispatch.dispatched_by_api === true;
                                     if (!alreadyDispatched) {
-                                        // Send to Admin in same chat ONLY if reply target belongs to an authorized admin
-                                        const replyTarget10 = String(replyTargetJid || '').replace(/\D/g, '').slice(-10);
-                                        if (authorizedAdminSet.has(replyTarget10)) {
-                                            await sock.sendMessage(replyTargetJid, { text: confirmText });
-                                            console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to Admin ${replyTargetJid}`);
+                                        // Send to Admin in same chat immediately
+                                        if (replyTargetJid) {
+                                            try {
+                                                await sock.sendMessage(replyTargetJid, { text: confirmText });
+                                                console.log(`[Bulk Interceptor] Sent APPROVE confirmation with amount details to Admin ${replyTargetJid}`);
+                                            } catch (errAdminSend) {
+                                                console.warn(`[Bulk Interceptor] Failed to send APPROVE confirmation to Admin ${replyTargetJid}:`, errAdminSend.message);
+                                            }
                                         }
 
                                         // Send to Staff WhatsApp inbox only if staff is a different person from sender (prevents duplicate messages)
@@ -2102,6 +2128,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             }
                                         }
                                     }
+                                    r.status = 'APPROVED';
+                                    r.approved_by = r.approved_by || (senderName ? `${senderName} (via WhatsApp)` : 'Super Admin (via WhatsApp)');
                                     io.emit('bulk_request:updated', { status: 'APPROVED', request: r });
                                 } catch (e) {
                                     console.error('[Bulk Approve via WhatsApp Error]:', e.message);
@@ -2152,11 +2180,14 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                     // Send to WhatsApp chat only if not already dispatched by API (prevents duplicate messages)
                                     const alreadyDispatched = d && d.wa_dispatch && d.wa_dispatch.dispatched_by_api === true;
                                     if (!alreadyDispatched) {
-                                        // Send to Admin in same chat ONLY if reply target belongs to an authorized admin
-                                        const replyTarget10 = String(replyTargetJid || '').replace(/\D/g, '').slice(-10);
-                                        if (authorizedAdminSet.has(replyTarget10)) {
-                                            await sock.sendMessage(replyTargetJid, { text: rejectText });
-                                            console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to Admin ${replyTargetJid}`);
+                                        // Send to Admin in same chat immediately
+                                        if (replyTargetJid) {
+                                            try {
+                                                await sock.sendMessage(replyTargetJid, { text: rejectText });
+                                                console.log(`[Bulk Interceptor] Sent REJECT confirmation with amount details to Admin ${replyTargetJid}`);
+                                            } catch (errAdminSend) {
+                                                console.warn(`[Bulk Interceptor] Failed to send REJECT confirmation to Admin ${replyTargetJid}:`, errAdminSend.message);
+                                            }
                                         }
 
                                         // Send to Staff's WhatsApp inbox only if staff is a different person from sender (prevents duplicate messages)
@@ -2184,6 +2215,9 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                             }
                                         }
                                     }
+                                    r.status = 'REJECTED';
+                                    r.rejection_reason = cleanReason;
+                                    r.approved_by = r.approved_by || (senderName ? `${senderName} (via WhatsApp)` : 'Super Admin (via WhatsApp)');
                                     io.emit('bulk_request:updated', { status: 'REJECTED', request: r, reason: cleanReason });
                                 } catch (e) {
                                     console.error('[Bulk Reject via WhatsApp Error]:', e.message);
