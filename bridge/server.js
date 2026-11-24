@@ -703,7 +703,8 @@ function loadBrandConfig() {
 loadBrandConfig();
 
 const DEFAULT_ACCOUNT_DEFINITIONS = [
-    { id: 'account_1', label: 'Primary WhatsApp' }
+    { id: 'account_1', label: 'Primary WhatsApp' },
+    { id: 'account_2', label: 'WhatsApp Business (account_2)' }
 ];
 
 // Helper to get all accounts summary
@@ -783,7 +784,7 @@ function getPublicBaseUrl() {
     return 'https://maroon-partridge-532881.hostingersite.com';
 }
 
-// Synchronize account status directly to local whatsapp_account_config.json
+// Synchronize account status directly to local whatsapp_account_config.json with strict slot isolation
 function syncLocalConfigFile(accountId, status, phoneNumber, qrCode, label) {
     try {
         const localCfgPath = path.join(__dirname, '..', 'whatsapp_account_config.json');
@@ -792,18 +793,27 @@ function syncLocalConfigFile(accountId, status, phoneNumber, qrCode, label) {
             if (!Array.isArray(cfg.connected_lines)) cfg.connected_lines = [];
             let line = cfg.connected_lines.find(l => l.id === accountId);
             if (!line) {
-                line = { id: accountId, label: label || 'WhatsApp Line' };
+                line = { id: accountId, label: label || (accountId === 'account_1' ? 'Primary WhatsApp' : `WhatsApp Business (${accountId})`) };
                 cfg.connected_lines.push(line);
             }
             line.status = status;
-            if (phoneNumber) line.phone_number = phoneNumber;
-            if (qrCode) line.qr_code = qrCode;
-            if (status === 'CONNECTED') delete line.qr_code;
+            if (phoneNumber) {
+                line.phone_number = phoneNumber;
+            } else if (status === 'DISCONNECTED') {
+                line.phone_number = 'Awaiting Link';
+            }
+            if (qrCode) {
+                line.qr_code = qrCode;
+            } else if (status === 'CONNECTED' || status === 'DISCONNECTED') {
+                delete line.qr_code;
+            }
             if (label) line.label = label;
 
+            // Only update root configuration if primary line (account_1)
             if (accountId === 'account_1') {
                 cfg.status = status;
-                if (phoneNumber) cfg.phone_number = phoneNumber;
+                if (phoneNumber && status === 'CONNECTED') cfg.phone_number = phoneNumber;
+                if (status === 'DISCONNECTED') cfg.phone_number = 'Awaiting Link';
                 cfg.provider = 'QR_CODE_BRIDGE';
             }
             cfg.last_sync = new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -1183,8 +1193,8 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                 }
 
                 if (isLoggedOut) {
-                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Cleaning session dir and re-initializing fresh QR...`);
-                    // Clean invalidated session directory so fresh QR code can be generated smoothly
+                    console.log(`[QR Bridge - ${accountId}] Session unlinked / logged out on phone. Cleaning session dir...`);
+                    // Clean invalidated session directory so fresh QR code can be generated when requested
                     try {
                         if (fs.existsSync(sessionDir)) {
                             fs.rmSync(sessionDir, { recursive: true, force: true });
@@ -1198,9 +1208,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                     } catch (e) {
                         console.warn(`[Session Clean Error for ${accountId}]:`, e.message);
                     }
-                    setTimeout(() => {
-                        initAccountSession(accountId, label);
-                    }, 1200);
+                    // A session should only start when the admin explicitly requests a QR code.
                 } else if (isReplaced) {
                     console.warn(`[QR Bridge - ${accountId}] Session replaced or conflict (status: 440). Waiting 10s before auto-reconnecting...`);
                     setTimeout(() => {
@@ -3193,11 +3201,6 @@ async function disconnectAccountSession(targetId = 'account_1') {
             force_disconnect: true,
             label: acc.label
         }).catch(() => {});
-
-        // Re-initialize a fresh QR session for this slot after a short delay
-        setTimeout(() => {
-            initAccountSession(targetId, acc.label);
-        }, 1200);
 
         return {
             status: 'success',

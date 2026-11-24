@@ -767,6 +767,8 @@ $publicActions = [
     'receive_message',
     'record_outbound_message',
     'sync_account_status',
+    'disconnect_account',
+    'add_account_slot',
     'mark_customer_read',
     'get_unread_counts',
     'get_whatsapp_accounts',
@@ -820,7 +822,7 @@ if ($action === 'get_whatsapp_accounts') {
     try {
         $waAccounts = [];
         if ($pdo) {
-            $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` WHERE `account_slot` IN ('account_1', 'account_2') ORDER BY `id` ASC");
+            $waStmt = $pdo->query("SELECT * FROM `whatsapp_accounts` ORDER BY `id` ASC");
             $waAccounts = $waStmt->fetchAll(PDO::FETCH_ASSOC);
         }
         if (empty($waAccounts) && file_exists($configFile)) {
@@ -1043,7 +1045,9 @@ if ($action === 'get_state' || $action === 'get_all') {
         ];
 
         // Ensure authoritative active status from config file is never lost (strictly non-staff numbers)
-        if (!empty($cfgData['status']) && $cfgData['status'] === 'CONNECTED' && !empty($cfgPhone)) {
+        // Respect explicit DISCONNECTED state if recorded in database
+        $dbPrimaryStatus = $waAccounts[0]['status'] ?? '';
+        if ($dbPrimaryStatus !== 'DISCONNECTED' && !empty($cfgData['status']) && $cfgData['status'] === 'CONNECTED' && !empty($cfgPhone)) {
             $primaryWA['status'] = 'CONNECTED';
             $primaryWA['phone_number'] = $cfgPhone;
             if (!empty($waAccounts) && isset($waAccounts[0])) {
@@ -1177,6 +1181,18 @@ if ($action === 'get_state' || $action === 'get_all') {
                 $wp = preg_replace('/[^0-9]/', '', $wa['phone_number']);
                 if (strlen($wp) >= 10) {
                     $businessPhones10[] = substr($wp, -10);
+                }
+            }
+        }
+        if (!empty($cfgPhone)) {
+            $cp = preg_replace('/[^0-9]/', '', $cfgPhone);
+            if (strlen($cp) >= 10) $businessPhones10[] = substr($cp, -10);
+        }
+        if (!empty($cfgData['connected_lines']) && is_array($cfgData['connected_lines'])) {
+            foreach ($cfgData['connected_lines'] as $cl) {
+                if (!empty($cl['phone_number']) && ($cl['status'] ?? '') === 'CONNECTED' && $cl['phone_number'] !== 'Awaiting Link') {
+                    $cp = preg_replace('/[^0-9]/', '', $cl['phone_number']);
+                    if (strlen($cp) >= 10) $businessPhones10[] = substr($cp, -10);
                 }
             }
         }
@@ -1399,6 +1415,11 @@ if ($action === 'get_state' || $action === 'get_all') {
                 $phone10 = $mCid[1];
                 $c['phone'] = '+91 ' . substr($phone10, 0, 5) . ' ' . substr($phone10, 5);
                 $c['whatsapp'] = $c['phone'];
+            }
+
+            // Exclude internal business numbers from customer queue
+            if (!empty($phone10) && in_array($phone10, $businessPhones10)) {
+                continue;
             }
 
             // Self-healing: Prevent account slot labels from becoming customer contact names
@@ -2319,7 +2340,7 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     }
 
     // If explicit disconnect, forced update, or an active QR code is provided, allow the update immediately!
-    $isExplicitDisconnect = !empty($data['force_disconnect']) || !empty($data['force']) || !empty($qrCode);
+    $isExplicitDisconnect = !empty($data['force_disconnect']) || !empty($data['force']) || !empty($qrCode) || ($status === 'DISCONNECTED' && (empty($phoneNumber) || $phoneNumber === 'Awaiting Link'));
     if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isExplicitDisconnect) {
         $alreadyConnected = false;
         $connectedPhone = null;
@@ -2621,8 +2642,8 @@ if ($action === 'save_autoreply_rules' && $_SERVER['REQUEST_METHOD'] === 'POST')
 
 if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
-    $postData = json_decode($input, true);
-    $accountId = $postData['accountId'] ?? 'account_1';
+    $postData = json_decode($input, true) ?: $_POST;
+    $accountId = $postData['accountId'] ?? $postData['account_id'] ?? $postData['account_slot'] ?? $_POST['accountId'] ?? $_POST['account_id'] ?? 'account_1';
 
     $currentConfig = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
     if ($accountId === 'account_1') {
