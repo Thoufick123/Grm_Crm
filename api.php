@@ -771,6 +771,7 @@ $publicActions = [
     'add_account_slot',
     'mark_customer_read',
     'get_unread_counts',
+    'get_customer_messages',
     'get_whatsapp_accounts',
     'get_config',
     'approve_bulk_price_request',
@@ -829,6 +830,12 @@ if ($action === 'get_whatsapp_accounts') {
             $cfgData = json_decode(file_get_contents($configFile), true);
             $waAccounts = $cfgData['connected_lines'] ?? [];
         }
+        foreach ($waAccounts as &$wa) {
+            if (!empty($wa['account_slot'])) {
+                $wa['id'] = $wa['account_slot'];
+            }
+        }
+        unset($wa);
         echo json_encode([
             "status" => "success",
             "whatsappAccounts" => $waAccounts,
@@ -879,16 +886,12 @@ if ($action === 'get_state' || $action === 'get_all') {
         if ($pdo) {
             try {
                 if ($shouldRunDbMaintenance) {
-                    // High-speed check: only run DELETE if phantom slots actually exist
-                    $checkPh = $pdo->query("SELECT 1 FROM `whatsapp_accounts` WHERE `account_slot` IN ('account_3', 'account_4', 'account_5') OR `account_slot` LIKE 'account_1795%' LIMIT 1")->fetchColumn();
+                    // High-speed check: only run DELETE if phantom timestamp slots actually exist
+                    $checkPh = $pdo->query("SELECT 1 FROM `whatsapp_accounts` WHERE `account_slot` LIKE 'account_1795%' LIMIT 1")->fetchColumn();
                     if ($checkPh) {
                         $pdo->exec("
                             DELETE FROM `whatsapp_accounts` 
-                            WHERE `account_slot` IN ('account_3', 'account_4', 'account_5')
-                               OR `account_slot` LIKE 'account_1795%'
-                               OR `display_name` LIKE '%Customer Support%'
-                               OR `display_name` LIKE '%Wholesale%'
-                               OR `display_name` LIKE '%VIP Fast-Track%'
+                            WHERE `account_slot` LIKE 'account_1795%'
                         ");
                     }
                 }
@@ -900,16 +903,10 @@ if ($action === 'get_state' || $action === 'get_all') {
         if (file_exists($configFile)) {
             $cfgData = json_decode(file_get_contents($configFile), true);
             if (!empty($cfgData['connected_lines']) && is_array($cfgData['connected_lines'])) {
-                // Permanently purge phantom slots from json config
+                // Permanently purge phantom timestamp slots from json config
                 $cfgData['connected_lines'] = array_values(array_filter($cfgData['connected_lines'], function($line) {
                     $id = $line['id'] ?? '';
-                    $lbl = $line['label'] ?? '';
-                    if (in_array($id, ['account_3', 'account_4', 'account_5']) || strpos($id, 'account_1795') === 0) {
-                        return false;
-                    }
-                    if (strpos($lbl, 'Customer Support') !== false ||
-                        strpos($lbl, 'Wholesale') !== false ||
-                        strpos($lbl, 'VIP Fast-Track') !== false) {
+                    if (strpos($id, 'account_1795') === 0) {
                         return false;
                     }
                     return true;
@@ -962,14 +959,20 @@ if ($action === 'get_state' || $action === 'get_all') {
             }
         }
 
-        // Filter out any lingering phantom slots from output
+        // Filter out any lingering phantom timestamp slots from output
         $waAccounts = array_values(array_filter($waAccounts, function($wa) {
             $slot = $wa['account_slot'] ?? $wa['id'] ?? '';
-            $name = $wa['display_name'] ?? ($wa['business_name'] ?? '');
-            if (in_array($slot, ['account_3', 'account_4', 'account_5']) || strpos($slot, 'account_1795') === 0) return false;
-            if (strpos($name, 'Customer Support') !== false || strpos($name, 'Wholesale') !== false || strpos($name, 'VIP Fast-Track') !== false) return false;
+            if (strpos($slot, 'account_1795') === 0) return false;
             return true;
         }));
+
+        // Normalize account ID so id === account_slot across all slots ('account_1', 'account_2', etc.)
+        foreach ($waAccounts as &$wa) {
+            if (!empty($wa['account_slot'])) {
+                $wa['id'] = $wa['account_slot'];
+            }
+        }
+        unset($wa);
 
         // Fetch all registered staff phones to guarantee staff personal details NEVER leak into Admin WhatsApp lines
         $staffPhonesList = [];
@@ -2340,7 +2343,7 @@ if ($action === 'sync_account_status' && $_SERVER['REQUEST_METHOD'] === 'POST') 
     }
 
     // If explicit disconnect, forced update, or an active QR code is provided, allow the update immediately!
-    $isExplicitDisconnect = !empty($data['force_disconnect']) || !empty($data['force']) || !empty($qrCode) || ($status === 'DISCONNECTED' && (empty($phoneNumber) || $phoneNumber === 'Awaiting Link'));
+    $isExplicitDisconnect = !empty($data['force_disconnect']) || !empty($data['force']) || !empty($qrCode) || ($status === 'DISCONNECTED');
     if (($status === 'SCAN_QR' || $status === 'DISCONNECTED') && !$isExplicitDisconnect) {
         $alreadyConnected = false;
         $connectedPhone = null;
@@ -2664,8 +2667,15 @@ if ($action === 'disconnect_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("UPDATE `whatsapp_accounts` SET `status` = 'DISCONNECTED', `phone_number` = 'Awaiting Link', `qr_code` = NULL WHERE `account_slot` = ?");
-            $stmt->execute([$accountId]);
+            $stmt = $pdo->prepare("
+                UPDATE `whatsapp_accounts` 
+                SET `status` = 'DISCONNECTED', 
+                    `phone_number` = 'Awaiting Link', 
+                    `qr_code` = NULL 
+                WHERE `account_slot` = ? 
+                   OR (`id` = 1 AND ? = 'account_1')
+            ");
+            $stmt->execute([$accountId, $accountId]);
         } catch (Exception $e) {}
     }
 
@@ -4445,6 +4455,7 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($effectiveCustId)) {
                 $accSlot = $sendAccSlot;
                 $deliveryStatus = $isBridgeSuccess ? 'DELIVERED' : 'FAILED';
+                $staffSenderName = !empty($_SESSION['user']['name']) ? $_SESSION['user']['name'] : (!empty($postData['sender_name']) ? $postData['sender_name'] : 'Staff');
 
                 // Check if already persisted by record_outbound_message to PREVENT duplicate rows!
                 $existingMsgId = null;
@@ -4462,11 +4473,12 @@ if ($action === 'send_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                             `message_uid`, `customer_id`, `sender`, `sender_name`, `sender_phone`, `sender_jid`,
                             `direction`, `text`, `message_text`, `media_type`, `media_url`,
                             `account_id`, `is_bot`, `source`, `time_str`, `timestamp_epoch`, `status`
-                        ) VALUES (?, ?, 'staff', 'Super Admin', ?, ?, 'outbound', ?, ?, ?, ?, ?, 0, 'CRM_OUTBOUND', ?, ?, 'DELIVERED')
+                        ) VALUES (?, ?, 'staff', ?, ?, ?, 'outbound', ?, ?, ?, ?, ?, 0, 'CRM_OUTBOUND', ?, ?, 'DELIVERED')
                     ");
                     $stmt->execute([
                         $msgUid ?: ('msg_out_' . time()),
                         $effectiveCustId,
+                        $staffSenderName,
                         $phone,
                         $postData['jid'] ?? null,
                         $text,
@@ -4531,7 +4543,7 @@ if ($action === 'record_outbound_message' && $_SERVER['REQUEST_METHOD'] === 'POS
     if (empty($accSlot) || strlen(preg_replace('/[^0-9]/', '', $accSlot)) >= 10) {
         $accSlot = 'account_1';
     }
-    $senderName = $payload['sender_name'] ?? 'Super Admin';
+    $senderName = !empty($_SESSION['user']['name']) ? $_SESSION['user']['name'] : ($payload['sender_name'] ?? 'Staff');
     $recipientName = trim($payload['recipient_name'] ?? ($payload['customer_name'] ?? ''));
     $jid = trim($payload['jid'] ?? '');
     $lid = trim($payload['lid'] ?? '');

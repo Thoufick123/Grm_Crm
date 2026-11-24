@@ -194,6 +194,17 @@ const UNREAD_KEYS_BY_CHAT = new Map(); // phone/jid/customer_id -> [{ key, messa
 // Track live inbound Baileys WhatsApp calls for instant atomic pickup & ringing control
 const ACTIVE_BAILEYS_CALLS = new Map(); // callId -> { callId, accountId, sock, callFrom, chatId, callerPn, customerName, callerPhone, cleanDigits, roomToken }
 
+// Periodic cleanup for stale calls in memory (TTL 10 mins) to prevent memory leaks
+setInterval(() => {
+    const now = Date.now();
+    for (const [cId, bCall] of ACTIVE_BAILEYS_CALLS.entries()) {
+        const callTime = bCall.timestamp ? (bCall.timestamp > 1e11 ? bCall.timestamp : bCall.timestamp * 1000) : 0;
+        if (callTime && (now - callTime) > 600000) {
+            ACTIVE_BAILEYS_CALLS.delete(cId);
+        }
+    }
+}, 300000);
+
 // Scan and index all Baileys LID <-> Phone mappings
 function indexAllLidMappings() {
     try {
@@ -2422,7 +2433,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             };
 
                             // Emit live to CRM UI over WebSocket (Instant!)
-                            io.emit('whatsapp:inbound', outboundPayload);
+                            io.emit('whatsapp:outbound', outboundPayload);
 
                             // Forward to CRM PHP API for database & queue persistence
                             callCrmApi('record_outbound_message', {
@@ -2741,7 +2752,6 @@ io.on('connection', (socket) => {
 
             // Real-time broadcast to all connected staff tabs & browsers
             io.emit('whatsapp:outbound', outboundPayload);
-            io.emit('whatsapp:inbound', outboundPayload);
 
             io.emit('whatsapp:sent_ack', {
                 recipient: phone,

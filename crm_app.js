@@ -1533,22 +1533,6 @@ var MULTI_ACCOUNTS_STATE = window.MULTI_ACCOUNTS_STATE || []; // Multi-WhatsApp 
 var ACTIVE_SEND_ACCOUNT_ID = (typeof localStorage !== 'undefined' && localStorage.getItem('GRM_ACTIVE_SEND_ACCOUNT_ID')) || window.ACTIVE_SEND_ACCOUNT_ID || 'all';
 var REVEALED_CUSTOMERS = window.REVEALED_CUSTOMERS || new Set(); // Stores customer IDs whose numbers are temporarily revealed
 
-// Global Staff Mobile Detector - Guards against staff mobiles leaking into WhatsApp line displays
-function isStaffMobile(ph) {
-  if (!ph) return false;
-  const digits = String(ph).replace(/\D/g, '');
-  if (digits.length < 7) return false;
-  const staffPhones = [];
-  if (typeof CRM_STATE !== 'undefined' && Array.isArray(CRM_STATE?.staffList)) {
-    CRM_STATE.staffList.forEach(s => {
-      const p = (s.phone || s.mobile || '').replace(/\D/g, '');
-      if (p.length >= 7) staffPhones.push(p);
-    });
-  }
-  return staffPhones.some(sp => sp && (digits.endsWith(sp) || sp.endsWith(digits)));
-}
-window.isStaffMobile = isStaffMobile;
-
 // Global Staff Filter Helper for RBAC Isolation across Dashboard & Follow-ups
 function getStaffFilterContext() {
   const user = getCurrentUser();
@@ -3370,28 +3354,21 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true, isExplicitL
 
   if (CRM_STATE.whatsappAccount) {
     const primaryPhone = primary?.phone || primary?.connected_number;
-    if (primary && primary.status === 'CONNECTED' && primaryPhone && !isStaffNumber(primaryPhone) && primaryPhone !== 'Awaiting Link') {
+    const isPrimaryConn = primary && primary.status === 'CONNECTED' && primaryPhone && !isStaffNumber(primaryPhone) && primaryPhone !== 'Awaiting Link';
+    const isPrimaryDisc = (primary && (primary.status === 'DISCONNECTED' || primary.status === 'SCAN_QR')) || isExplicitLogout;
+
+    if (isPrimaryDisc && !isPrimaryConn) {
+      CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
+      CRM_STATE.whatsappAccount.phoneNumber = 'Awaiting Link';
+      CRM_STATE.whatsappAccount.connected_number = 'Awaiting Link';
+    } else if (isPrimaryConn) {
       CRM_STATE.whatsappAccount.phoneNumber = primaryPhone;
+      CRM_STATE.whatsappAccount.connected_number = primaryPhone;
       CRM_STATE.whatsappAccount.status = 'CONNECTED';
     } else {
-      const currentSavedPhone = CRM_STATE.whatsappAccount.phoneNumber;
-      const hasRealSavedPhone = currentSavedPhone && currentSavedPhone !== 'Awaiting Link' && currentSavedPhone !== 'Scan QR Code' && !isStaffNumber(currentSavedPhone);
-      const isPrimaryExplicitDisconnect = primary && primary.status === 'DISCONNECTED' && (!primaryPhone || primaryPhone === 'Awaiting Link' || primaryPhone === 'null');
-      if (isPrimaryExplicitDisconnect || isExplicitLogout) {
-        CRM_STATE.whatsappAccount.status = 'DISCONNECTED';
-        CRM_STATE.whatsappAccount.phoneNumber = 'Awaiting Link';
-        CRM_STATE.whatsappAccount.connected_number = 'Awaiting Link';
-      } else if (hasRealSavedPhone) {
-        CRM_STATE.whatsappAccount.phoneNumber = currentSavedPhone;
-        if (CRM_STATE.whatsappAccount.status === 'CONNECTED') {
-          // Retain CONNECTED: Never demote an authenticated account to DISCONNECTED on network hiccup!
-        } else {
-          CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
-        }
-      } else {
-        CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
-        CRM_STATE.whatsappAccount.phoneNumber = 'Awaiting Link';
-      }
+      CRM_STATE.whatsappAccount.status = (primary?.status || 'DISCONNECTED').toUpperCase();
+      CRM_STATE.whatsappAccount.phoneNumber = 'Awaiting Link';
+      CRM_STATE.whatsappAccount.connected_number = 'Awaiting Link';
     }
   }
 
@@ -4723,7 +4700,15 @@ function applyAuthoritativeDatabaseState(data) {
     const currentPhone = CRM_STATE.whatsappAccount.phoneNumber;
     const isCurrentlyConnected = currentStatus === 'CONNECTED' && currentPhone && currentPhone !== 'Awaiting Link';
 
-    if (!isSocketAlive && !(isCurrentlyConnected && (incomingStatus === 'DISCONNECTED' || incomingStatus === 'SCAN_QR' || !incomingPhone || incomingPhone === 'Awaiting Link'))) {
+    if (incomingStatus === 'DISCONNECTED') {
+      CRM_STATE.whatsappAccount.status = 'DISCONNECTED';
+      CRM_STATE.whatsappAccount.phoneNumber = 'Awaiting Link';
+      CRM_STATE.whatsappAccount.connected_number = 'Awaiting Link';
+    } else if (incomingStatus === 'CONNECTED' && incomingPhone && incomingPhone !== 'Awaiting Link') {
+      CRM_STATE.whatsappAccount.status = 'CONNECTED';
+      CRM_STATE.whatsappAccount.phoneNumber = incomingPhone;
+      CRM_STATE.whatsappAccount.connected_number = incomingPhone;
+    } else if (!isSocketAlive) {
       CRM_STATE.whatsappAccount.status = incomingStatus;
       if (incomingPhone && incomingPhone !== 'Awaiting Link') {
         CRM_STATE.whatsappAccount.phoneNumber = incomingPhone;
@@ -5358,8 +5343,9 @@ function renderPhoneSwitcherDropdown() {
   const availableAccountIds = accounts.map(a => a.id);
   const totalChats = (CRM_STATE?.customers || []).filter(c => {
     const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
-    const accId = c.accountId || (q ? q.accountId : 'account_1');
-    return availableAccountIds.includes(accId);
+    const accId = String(c.accountId || c.account_id || (q ? (q.accountId || q.account_id) : '') || 'account_1').trim().toLowerCase();
+    const isPrimary = accId === 'account_1' || accId === '1' || accId.includes('primary') || !accId || accId === 'null';
+    return isPrimary || availableAccountIds.some(aid => String(aid).toLowerCase() === accId);
   }).length;
 
   let html = '';
@@ -5397,9 +5383,14 @@ function renderPhoneSwitcherDropdown() {
     const displayPhone = (rawCleanDigits.length >= 7 && !isStaffNum)
       ? formatPhoneNumberPretty(acc.connected_number)
       : (isConn && !isStaffNum ? (acc.connected_number || CRM_STATE?.whatsappAccount?.phoneNumber || 'Awaiting Link') : (isScanning ? 'Scan QR Code' : (acc.connected_number || 'Awaiting Link')));
+    const targetSlot = String(acc.id || acc.account_slot || '').trim().toLowerCase();
+    const isTargetPrimary = targetSlot === 'account_1' || targetSlot === '1' || targetSlot.includes('primary');
     const custCount = (CRM_STATE?.customers || []).filter(c => {
       const q = (CRM_STATE?.queries || []).find(qry => qry.customerId === c.id);
-      return (c.accountId || (q ? q.accountId : 'account_1')) === acc.id;
+      const accId = String(c.accountId || c.account_id || (q ? (q.accountId || q.account_id) : '') || 'account_1').trim().toLowerCase();
+      const isAccPrimary = accId === 'account_1' || accId === '1' || accId.includes('primary') || !accId || accId === 'null' || accId === 'undefined';
+      if (isTargetPrimary) return isAccPrimary;
+      return accId === targetSlot || targetSlot.includes(accId);
     }).length;
 
     return `
