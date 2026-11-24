@@ -635,7 +635,7 @@ function dispatchBulkDecisionWhatsAppNotifications($pdo, $req, $decision, $reaso
         $cfgFile = __DIR__ . '/whatsapp_account_config.json';
         if (file_exists($cfgFile)) {
             $cfg = json_decode(file_get_contents($cfgFile), true);
-            if (!empty($cfg['phone_number']) && strpos($cfg['phone_number'], '9943557998') === false) {
+            if (!empty($cfg['phone_number'])) {
                 $adminPhone = $cfg['phone_number'];
             }
         }
@@ -764,6 +764,16 @@ $publicActions = [
     'login',
     'check_session',
     'webhook',
+    'receive_message',
+    'record_outbound_message',
+    'sync_account_status',
+    'mark_customer_read',
+    'get_unread_counts',
+    'get_whatsapp_accounts',
+    'get_config',
+    'approve_bulk_price_request',
+    'reject_bulk_price_request',
+    'get_bulk_price_requests',
     'media_proxy',
     'verify_voice_room',
     'get_call_recording_stream',
@@ -969,7 +979,6 @@ if ($action === 'get_state' || $action === 'get_all') {
                 if (strlen($cd) >= 10) $staffPhonesList[] = substr($cd, -10);
             }
         } catch (Exception $eSph) {}
-        $staffPhonesList[] = '9943557998'; // Explicit guard for staff Vanaja
         $staffPhonesList = array_values(array_unique(array_filter($staffPhonesList)));
 
         // Purge any staff numbers accidentally stored in whatsapp_accounts in DB (strict 10-digit exact phone match only)
@@ -3362,7 +3371,7 @@ if ($action === 'create_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
                 $cfgData = json_decode(file_get_contents(__DIR__ . '/whatsapp_account_config.json'), true);
                 if (!empty($cfgData['phone_number'])) {
                     $cleanCfgNum = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
-                    if (strlen($cleanCfgNum) >= 10 && strpos($cleanCfgNum, '9943557998') === false) $crmPhone = $cleanCfgNum;
+                    if (strlen($cleanCfgNum) >= 10) $crmPhone = $cleanCfgNum;
                 }
             }
 
@@ -3717,7 +3726,7 @@ if ($action === 'resend_bulk_price_request' && $_SERVER['REQUEST_METHOD'] === 'P
         $cfgData = json_decode(file_get_contents(__DIR__ . '/whatsapp_account_config.json'), true);
         if (!empty($cfgData['phone_number'])) {
             $cleanCfgNum = preg_replace('/[^0-9]/', '', $cfgData['phone_number']);
-            if (strlen($cleanCfgNum) >= 10 && strpos($cleanCfgNum, '9943557998') === false) $crmPhone = $cleanCfgNum;
+            if (strlen($cleanCfgNum) >= 10) $crmPhone = $cleanCfgNum;
         }
     }
     $waApproveUrl = "https://wa.me/{$crmPhone}?text=" . rawurlencode("APPROVE {$req['request_code']}");

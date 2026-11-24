@@ -27,7 +27,6 @@ function isStaffMobile(ph) {
       if (p.length >= 7) staffPhones.push(p);
     });
   }
-  staffPhones.push('9943557998'); // Explicit guard for staff Vanaja
   return staffPhones.some(sp => sp && (digits.endsWith(sp) || sp.endsWith(digits)));
 }
 window.isStaffMobile = isStaffMobile;
@@ -1546,7 +1545,6 @@ function isStaffMobile(ph) {
       if (p.length >= 7) staffPhones.push(p);
     });
   }
-  staffPhones.push('9943557998'); // Explicit guard for staff Vanaja
   return staffPhones.some(sp => sp && (digits.endsWith(sp) || sp.endsWith(digits)));
 }
 window.isStaffMobile = isStaffMobile;
@@ -5747,7 +5745,6 @@ function updateConfiguredPhoneDisplays() {
 
   // STRICT GUARD: Extract all registered staff numbers to guarantee a staff member's mobile number NEVER leaks into Admin header
   const staffPhones = (CRM_STATE?.staffList || []).map(s => (s.phone || s.mobile || '').replace(/\D/g, '')).filter(p => p.length >= 7);
-  staffPhones.push('9943557998'); // Explicit guard for staff Vanaja
   const isStaffMobile = (ph) => {
     if (!ph) return false;
     const digits = String(ph).replace(/\D/g, '');

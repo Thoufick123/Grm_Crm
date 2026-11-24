@@ -818,7 +818,19 @@ function syncLocalConfigFile(accountId, status, phoneNumber, qrCode, label) {
 // Fast CRM API Dispatcher with instant local & remote sync priority
 async function callCrmApi(action, postData) {
     const isRemoteEnv = Boolean(process.env.REMOTE_BRIDGE || process.env.RENDER || process.env.HOSTINGER || __dirname.includes('hostingersite'));
+    let localHtdocsUrl = null;
+    try {
+        const normDir = path.resolve(__dirname, '..').replace(/\\/g, '/');
+        if (/htdocs\//i.test(normDir)) {
+            const rel = normDir.split(/htdocs\//i)[1];
+            if (rel) {
+                localHtdocsUrl = 'http://localhost/' + encodeURI(rel);
+            }
+        }
+    } catch (e) {}
+
     const candidateUrls = [
+        localHtdocsUrl,
         'http://localhost:8080',
         'http://127.0.0.1:8080',
         'http://localhost',
@@ -933,37 +945,11 @@ console.log(`🚀 [Hostinger Mode]: WhatsApp Bridge connected to CRM at ${CRM_BA
 
 async function forwardToCRM(data) {
     try {
-        // Forward to live CRM (e.g. Hostinger or custom CRM_URL)
-        if (typeof fetch === 'function') {
-            fetch(`${CRM_BASE_URL}/api.php?action=receive_message`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(res => res.json())
-            .then(json => {
-                console.log(`💾 [Message Saved] Inbound message ${data.id || data.message_uid} saved to CRM database successfully (Status: ${json?.status || 'OK'})`);
-            })
-            .catch(err => {
-                console.warn(`⚠️ [Message Save Check] Failed forwarding to CRM API: ${err.message}`);
-            });
-        }
-        // Also support local port 8000 if developing locally
-        if (process.env.NODE_ENV !== 'production') {
-            const postData = JSON.stringify(data);
-            const req = http.request({
-                hostname: 'localhost',
-                port: 8000,
-                path: '/api.php?action=receive_message',
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(postData)
-                }
-            }, () => {});
-            req.on('error', () => {});
-            req.write(postData);
-            req.end();
+        const json = await callCrmApi('receive_message', data);
+        if (json && (json.status === 'success' || json.status === 'OK')) {
+            console.log(`💾 [Message Saved] Inbound message ${data.id || data.message_uid} saved to CRM database successfully (Status: ${json?.status || 'OK'})`);
+        } else {
+            console.log(`💾 [Message Dispatched] Inbound message ${data.id || data.message_uid} forwarded to CRM`);
         }
     } catch (e) {
         console.error('Error forwarding message to CRM:', e.message);
@@ -2431,27 +2417,21 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             io.emit('whatsapp:inbound', outboundPayload);
 
                             // Forward to CRM PHP API for database & queue persistence
-                            if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
-                                fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        phone: realRecipientPhone,
-                                        text: outText,
-                                        jid: recipientJid,
-                                        lid: isLid ? digitsOnly : null,
-                                        accountId: accountId,
-                                        media_url: outMediaUrl,
-                                        mediaUrl: outMediaUrl,
-                                        type: outType,
-                                        message_uid: msgId,
-                                        sender_name: 'Super Admin (WhatsApp Mobile)',
-                                        customer_name: recipientContactName,
-                                        recipient_name: recipientContactName,
-                                        source: 'WHATSAPP_PHONE_DIRECT'
-                                    })
-                                }).catch(() => {});
-                            }
+                            callCrmApi('record_outbound_message', {
+                                phone: realRecipientPhone,
+                                text: outText,
+                                jid: recipientJid,
+                                lid: isLid ? digitsOnly : null,
+                                accountId: accountId,
+                                media_url: outMediaUrl,
+                                mediaUrl: outMediaUrl,
+                                type: outType,
+                                message_uid: msgId,
+                                sender_name: 'Super Admin (WhatsApp Mobile)',
+                                customer_name: recipientContactName,
+                                recipient_name: recipientContactName,
+                                source: 'WHATSAPP_PHONE_DIRECT'
+                            }).catch(() => {});
                         } catch (errFromMe) {
                             console.warn('[Admin Phone Reply Capture Notice]:', errFromMe.message);
                         }
@@ -2719,21 +2699,15 @@ io.on('connection', (socket) => {
             const outboundMsgUid = String(message_uid || messageUid || result?.id || ('msg_out_' + Date.now()));
 
             // Record outbound message in CRM PHP backend so it persists in MySQL across refreshes
-            if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
-                fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        phone: phone || '',
-                        text: text || '',
-                        jid: result?.jid || jid || null,
-                        accountId: accountId || 'account_1',
-                        media_url: imageTarget,
-                        customer_id: data.customerId || null,
-                        message_uid: outboundMsgUid
-                    })
-                }).catch(() => {});
-            }
+            callCrmApi('record_outbound_message', {
+                phone: phone || '',
+                text: text || '',
+                jid: result?.jid || jid || null,
+                accountId: accountId || 'account_1',
+                media_url: imageTarget,
+                customer_id: data.customerId || null,
+                message_uid: outboundMsgUid
+            }).catch(() => {});
 
             const outboundPayload = {
                 id: outboundMsgUid,
@@ -3524,21 +3498,15 @@ app.post('/api/send', async (req, res) => {
             : null;
         const target = directPhoneJid || (jid && !jid.includes('@lid') ? jid : (directPhoneJid || jid || phone));
         const result = await sendWhatsAppMessage(target, finalTextToSend, accountId, imageTarget);
-        if (typeof fetch === 'function' && typeof CRM_BASE_URL !== 'undefined') {
-            fetch(`${CRM_BASE_URL}/api.php?action=record_outbound_message`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    phone: phone || '',
-                    text: finalTextToSend || '',
-                    jid: result?.jid || jid || null,
-                    accountId: accountId || 'account_1',
-                    media_url: imageTarget,
-                    customer_id: req.body?.customerId || null,
-                    message_uid: String(req.body?.message_uid || req.body?.messageUid || result?.id || ('msg_out_' + Date.now()))
-                })
-            }).catch(() => {});
-        }
+        callCrmApi('record_outbound_message', {
+            phone: phone || '',
+            text: finalTextToSend || '',
+            jid: result?.jid || jid || null,
+            accountId: accountId || 'account_1',
+            media_url: imageTarget,
+            customer_id: req.body?.customerId || null,
+            message_uid: String(req.body?.message_uid || req.body?.messageUid || result?.id || ('msg_out_' + Date.now()))
+        }).catch(() => {});
         res.json(result);
     } catch (err) {
         console.error('[REST Send Error]:', err.message);
