@@ -1523,7 +1523,9 @@ function getPersistedActiveView() {
 
 var ACTIVE_VIEW = window.ACTIVE_VIEW || getPersistedActiveView();
 var ACTIVE_ROLE = window.ACTIVE_ROLE || 'admin'; // 'admin', 'staff_01', 'staff_02', 'staff_03', etc.
-var ACTIVE_CUSTOMER_ID = (typeof localStorage !== 'undefined' && localStorage.getItem('GRM_ACTIVE_CUSTOMER_ID')) || window.ACTIVE_CUSTOMER_ID || null;
+// Strict WhatsApp Web parity: Never auto-select or restore previous customer chat on page refresh!
+var ACTIVE_CUSTOMER_ID = null;
+try { if (typeof localStorage !== 'undefined') localStorage.removeItem('GRM_ACTIVE_CUSTOMER_ID'); } catch (e) {}
 var INBOX_FILTER = window.INBOX_FILTER || 'all'; // 'all', 'unassigned', 'my', 'urgent'
 var LAST_POLL_EPOCH = window.LAST_POLL_EPOCH || 0;
 var SOCKET_IO = window.SOCKET_IO || null;
@@ -2237,6 +2239,22 @@ function updateSocketConnectionStatusUI(status) {
 }
 window.updateSocketConnectionStatusUI = updateSocketConnectionStatusUI;
 
+// Universal Media URL Resolver (supports local subfolders and remote Hostinger production paths)
+function resolveAppMediaUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  url = url.trim();
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
+    return url;
+  }
+  const cleanRel = url.replace(/^[/\\]+/, '');
+  const baseDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
+    ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
+    : '/';
+  const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+  return origin + baseDir + cleanRel;
+}
+window.resolveAppMediaUrl = resolveAppMediaUrl;
+
 // Initialize Realtime WebSocket (Socket.IO) Connection
 // Dynamic Bridge URL Resolver (supports local and Hostinger production deployment)
 function getBridgeBaseUrl() {
@@ -2530,9 +2548,16 @@ function initSocketIO() {
       const curUser = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : ((typeof CRM_AUTH_SESSION !== 'undefined' && CRM_AUTH_SESSION) ? CRM_AUTH_SESSION : null);
       const currentUserId = curUser ? (curUser.id || curUser.staff_id || curUser.username || 'admin') : 'admin';
 
-      // Only update local unread badge if this read event was performed by the currently logged-in user!
-      // This strictly prevents Staff A opening a chat from wiping Staff B's or Admin's unread badges.
-      if (String(data.user_id).toLowerCase() === String(currentUserId).toLowerCase()) {
+      // Check if read event applies to current user session:
+      // 1. Matches this staff/admin's user_id
+      // 2. OR read event originated directly from WhatsApp Business mobile phone app (Scenario A) and current user is Admin
+      // 3. OR broadcast to all (user_id === 'all')
+      const isMatchingUser = Boolean(data.user_id && String(data.user_id).toLowerCase() === String(currentUserId).toLowerCase());
+      const isAdminRole = (currentUserId === 'admin' || (curUser && curUser.role === 'admin'));
+      const isPhoneReadSync = Boolean(data.source === 'WHATSAPP_PHONE_READ');
+      const shouldApplyRead = isMatchingUser || (isPhoneReadSync && isAdminRole) || data.user_id === 'all';
+
+      if (shouldApplyRead) {
         const custId = String(data.customer_id);
         const clean10 = custId.replace(/\D/g, '').slice(-10);
         if (CRM_STATE) {
@@ -2772,11 +2797,17 @@ function ingestInboundMessage(payload, suppressChime = false) {
   }
 
   if (!matchingMessage && !isOutboundMsg) {
-    isDuplicate = existingMsgs.some(m =>
-      (payload.id && String(m.id) === String(payload.id)) ||
-      (m.sender === msgSender && m.text === messageText && (m.time === timeStr || Math.abs(msgTimestamp - (m.timestamp || 0)) < 15000)) ||
-      (mediaUrl && m.media_url && String(m.media_url).slice(-30) === String(mediaUrl).slice(-30))
-    );
+    isDuplicate = existingMsgs.some(m => {
+      if (payload.id && m.id && String(m.id) === String(payload.id)) return true;
+      if (payloadUid && m.message_uid && String(m.message_uid) === String(payloadUid)) return true;
+      // For media/image messages: DO NOT deduplicate by generic text "[Photo Attachment]"!
+      const isMediaMsg = Boolean(msgType === 'image' || msgType === 'audio' || msgType === 'video' || msgType === 'document' || mediaUrl);
+      if (isMediaMsg) {
+        if (mediaUrl && m.media_url && String(m.media_url).slice(-30) === String(mediaUrl).slice(-30)) return true;
+        return false;
+      }
+      return (m.sender === msgSender && m.text === messageText && (m.time === timeStr || Math.abs(msgTimestamp - (m.timestamp || 0)) < 15000));
+    });
     if (isDuplicate) matchingMessage = true;
   }
   if (matchingMessage) isDuplicate = true;
@@ -2887,11 +2918,13 @@ function ingestInboundMessage(payload, suppressChime = false) {
   );
 
   // Feature 2 & 3 & 4: Unread message count management per-user
-  if (!isDuplicate && !isOutboundMsg) {
+  // STRICT GUARD: Never increment unread counts on initial page load, catch-up polling, or duplicate messages!
+  const isInitialCatchUp = Boolean(suppressChime === true || (payload && payload._isInitial));
+  if (!isDuplicate && !isOutboundMsg && !isInitialCatchUp) {
     if (!CRM_STATE.userUnreadMap) CRM_STATE.userUnreadMap = {};
 
     if (isChatOpenNow) {
-      // If the chat is ACTIVELY open right now on the user's screen, mark as read immediately
+      // If the chat is ACTIVELY open right now on the user's screen AND tab is visible, mark as read immediately
       CRM_STATE.userUnreadMap[customer.id] = 0;
       customer.unreadCount = 0;
       customer.unread_count = 0;
@@ -2901,7 +2934,7 @@ function ingestInboundMessage(payload, suppressChime = false) {
       }
       fetch(`api.php?action=mark_customer_read&customer_id=${encodeURIComponent(customer.id)}&user_id=${encodeURIComponent(currentUserId)}`).catch(() => {});
     } else if (isAssignedToThisStaff) {
-      // If the chat is NOT open and visible to this staff/admin, increment unread count
+      // If the chat is NOT actively open or tab is in background, increment unread count
       const currentUnread = CRM_STATE.userUnreadMap[customer.id] !== undefined
         ? Number(CRM_STATE.userUnreadMap[customer.id])
         : Number(customer.unreadCount || query?.unreadCount || 0);
@@ -3371,7 +3404,7 @@ function applyUpdatedAccountsDelta(accounts, shouldBroadcast = true, isExplicitL
 window.applyUpdatedAccountsDelta = applyUpdatedAccountsDelta;
 
 function syncInboundMessagesNow(isInitial = false) {
-  const since = isInitial ? 0 : LAST_POLL_EPOCH;
+  const since = isInitial ? (LAST_POLL_EPOCH || Math.floor(Date.now() / 1000)) : LAST_POLL_EPOCH;
   return fetch(`api.php?action=get_inbound_messages&since=${since}&_t=${Date.now()}`, {
     cache: 'no-store',
     headers: {
@@ -3384,7 +3417,10 @@ function syncInboundMessagesNow(isInitial = false) {
       if (res && res.status === 'success') {
         let hasMsgUpdates = false;
         if (res.messages && res.messages.length > 0) {
-          res.messages.forEach(msg => ingestInboundMessage(msg, isInitial));
+          res.messages.forEach(msg => {
+            if (isInitial) msg._isInitial = true;
+            ingestInboundMessage(msg, isInitial);
+          });
           hasMsgUpdates = true;
           if (res.server_time) {
             LAST_POLL_EPOCH = Math.max(LAST_POLL_EPOCH, res.server_time);
@@ -4687,15 +4723,11 @@ function applyAuthoritativeDatabaseState(data) {
     if (typeof updateConfiguredPhoneDisplays === 'function') updateConfiguredPhoneDisplays();
   }
 
-  // Auto-select first active customer if none selected
-  if (!ACTIVE_CUSTOMER_ID && Array.isArray(CRM_STATE.customers) && CRM_STATE.customers.length > 0) {
-    const activeOne = CRM_STATE.customers.find(c => {
-      const conv = (CRM_STATE.conversations && typeof CRM_STATE.conversations === 'object') ? CRM_STATE.conversations[c.id] : null;
-      return (conv && conv.length > 0) || c.lastMessage || c.last_message;
-    });
-    if (activeOne) {
-      ACTIVE_CUSTOMER_ID = activeOne.id;
-    }
+  // Update server poll epoch to prevent polling past messages
+  if (data.server_time) {
+    LAST_POLL_EPOCH = Math.max(LAST_POLL_EPOCH, Number(data.server_time));
+  } else {
+    LAST_POLL_EPOCH = Math.max(LAST_POLL_EPOCH, Math.floor(Date.now() / 1000));
   }
 
   // Update badges & UI for the active view
@@ -5430,16 +5462,14 @@ function switchActiveWhatsAppLine(accountId, phoneNumber, label) {
     renderInboxSettingsView();
   }
 
-  // Auto-switch ACTIVE_CUSTOMER_ID to the first available conversation in this line
-  const availableCusts = (CRM_STATE.customers || []).filter(c => {
-    if (accountId === 'all') return true;
-    const q = (CRM_STATE.queries || []).find(qry => qry.customerId === c.id);
-    const cAcc = c.accountId || (q ? q.accountId : 'account_1');
-    return cAcc === accountId;
-  });
-
-  if (availableCusts.length > 0 && !availableCusts.some(c => c.id === ACTIVE_CUSTOMER_ID)) {
-    ACTIVE_CUSTOMER_ID = availableCusts[0].id;
+  // If a chat is currently open that does not belong to the selected line, deselect it
+  if (ACTIVE_CUSTOMER_ID && accountId !== 'all') {
+    const activeCust = (CRM_STATE.customers || []).find(c => c.id === ACTIVE_CUSTOMER_ID);
+    const q = activeCust ? (CRM_STATE.queries || []).find(qry => qry.customerId === activeCust.id) : null;
+    const cAcc = activeCust ? (activeCust.accountId || (q ? q.accountId : 'account_1')) : null;
+    if (cAcc && cAcc !== accountId) {
+      ACTIVE_CUSTOMER_ID = null;
+    }
   }
 
   // Refresh inbox conversation list & header & chat messages & customer 360
@@ -7617,7 +7647,9 @@ function renderInboxConversationList() {
         existingCard.assignedTo = assignedStaffId;
         existingCard.staff = staff;
       }
-      if (custUnreadNum > 0) {
+      if (custUnreadVal !== undefined) {
+        existingCard.unreadCount = Number(custUnreadVal);
+      } else if (custUnreadNum > 0) {
         existingCard.unreadCount = Math.max(existingCard.unreadCount || 0, custUnreadNum);
       }
       return;
@@ -7670,7 +7702,9 @@ function renderInboxConversationList() {
         existingCard.customer.name = qName;
         existingCard.customer.avatar = (qName.slice(0, 2) || 'CU').toUpperCase();
       }
-      if (qUnreadNum > 0) {
+      if (qUnreadVal !== undefined) {
+        existingCard.unreadCount = Number(qUnreadVal);
+      } else if (qUnreadNum > 0) {
         existingCard.unreadCount = Math.max(existingCard.unreadCount || 0, qUnreadNum);
       }
       return;
@@ -7851,19 +7885,10 @@ function renderInboxConversationList() {
     return String(b.customerId || '').localeCompare(String(a.customerId || ''));
   });
 
-  // Ensure ACTIVE_CUSTOMER_ID strictly points to a visible conversation thread on desktop.
-  // On mobile (< 768px), keep ACTIVE_CUSTOMER_ID null until user explicitly selects a customer so the list remains visible!
-  // Do not mark messages as read merely because the chat list is visible.
-  const isMobileScreen = (typeof window !== 'undefined' && window.innerWidth < 768);
-  if (!isMobileScreen) {
-    if (!ACTIVE_CUSTOMER_ID || !customerCards.some(c => c.customerId === ACTIVE_CUSTOMER_ID || String(c.customerId) === String(ACTIVE_CUSTOMER_ID))) {
-      const storedId = (typeof localStorage !== 'undefined') ? localStorage.getItem('GRM_ACTIVE_CUSTOMER_ID') : null;
-      if (storedId && customerCards.some(c => c.customerId === storedId || String(c.customerId) === String(storedId))) {
-        ACTIVE_CUSTOMER_ID = storedId;
-      } else {
-        ACTIVE_CUSTOMER_ID = null;
-      }
-    }
+  // Strict WhatsApp Web parity: Never automatically open or restore a customer chat on refresh!
+  // Only maintain ACTIVE_CUSTOMER_ID if the user had actively selected a visible conversation
+  if (ACTIVE_CUSTOMER_ID && !customerCards.some(c => c.customerId === ACTIVE_CUSTOMER_ID || String(c.customerId) === String(ACTIVE_CUSTOMER_ID))) {
+    ACTIVE_CUSTOMER_ID = null;
   }
 
   // Performance Guard: Skip full DOM regeneration if conversation list items haven't changed
@@ -8009,11 +8034,6 @@ window.mobileBackToConversations = mobileBackToConversations;
 function selectCustomerChat(customerId, markAsRead = true) {
   if (!customerId) return;
   ACTIVE_CUSTOMER_ID = customerId;
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('GRM_ACTIVE_CUSTOMER_ID', customerId);
-    }
-  } catch (e) {}
   if (typeof syncCustomerMessagesFromDB === 'function') syncCustomerMessagesFromDB(customerId);
   if (CRM_STATE) {
     CRM_STATE.activeCustomerId = customerId;
@@ -8646,6 +8666,30 @@ function renderChatMessages() {
 
   if (!CRM_STATE || !CRM_STATE.conversations) return;
 
+  const inputBar = document.getElementById('chat-input-bar-container');
+
+  // WhatsApp Web parity: When no chat is selected, display empty area and hide composer input bar
+  if (!ACTIVE_CUSTOMER_ID) {
+    if (inputBar) inputBar.classList.add('hidden');
+    stream.innerHTML = `
+      <div class="h-full flex flex-col items-center justify-center text-center text-slate-400 p-8 select-none">
+        <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3 text-slate-400 shadow-inner">
+          <span class="material-symbols-outlined text-[36px] text-brand-wa">chat</span>
+        </div>
+        <h3 class="text-base font-bold text-slate-700">WhatsApp Web</h3>
+        <p class="text-xs text-slate-500 mt-1 max-w-xs">Select a conversation from the left to start messaging</p>
+        <div class="mt-4 flex items-center gap-1.5 text-[11px] text-slate-400">
+          <span class="material-symbols-outlined text-[14px] text-emerald-600">lock</span>
+          <span>End-to-end encrypted real-time messaging</span>
+        </div>
+      </div>
+    `;
+    stream._lastRenderedFingerprint = 'no_chat_selected';
+    return;
+  }
+
+  if (inputBar) inputBar.classList.remove('hidden');
+
   let rawMessages = [];
   if (ACTIVE_CUSTOMER_ID) {
     const cust = (CRM_STATE.customers || []).find(c => c && String(c.id) === String(ACTIVE_CUSTOMER_ID));
@@ -8975,34 +9019,40 @@ function renderChatMessages() {
         </div>
       `;
     } else if (isImage) {
-      const hasValidMediaUrl = Boolean(msg.media_url && typeof msg.media_url === 'string' && msg.media_url.trim() !== '');
-      let imgSrc = hasValidMediaUrl ? msg.media_url.trim() : '';
-      if (imgSrc && !imgSrc.startsWith('http://') && !imgSrc.startsWith('https://') && !imgSrc.startsWith('data:') && !imgSrc.startsWith('blob:')) {
-        imgSrc = window.location.origin + '/' + imgSrc.replace(/^\/+/, '');
-      }
+      const rawMedia = msg.media_url || msg.mediaUrl || msg.image || msg.imageUrl || msg.media_data || '';
+      const hasValidMediaUrl = Boolean(rawMedia && typeof rawMedia === 'string' && rawMedia.trim() !== '');
+      let imgSrc = hasValidMediaUrl ? resolveAppMediaUrl(rawMedia) : '';
       const isBadTruncatedB64 = imgSrc && imgSrc.startsWith('data:image/') && imgSrc.length < 500;
-      if (isBadTruncatedB64 || !hasValidMediaUrl) {
+      const cleanCaption = (msg.text && msg.text !== '[Photo Attachment]' && msg.text !== '[Photo]')
+        ? msg.text.replace(/^\[Photo\]\s*/i, '').trim()
+        : '';
+
+      if (isBadTruncatedB64 || !hasValidMediaUrl || !imgSrc) {
         contentHtml = `
           <div class="space-y-1.5">
             <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 text-xs text-emerald-900">
               <span class="material-symbols-outlined text-[18px] text-emerald-600">image</span>
-              <span class="font-bold">📷 Photo Attachment (Delivered via WhatsApp)</span>
+              <span class="font-bold">📷 Photo Attachment</span>
             </div>
-            ${msg.text && msg.text !== '[Photo Attachment]' ? `<p class="text-xs leading-relaxed font-normal">${(typeof escapeHtml === 'function' ? escapeHtml(msg.text) : msg.text).replace(/\n/g, '<br>')}</p>` : ''}
+            ${cleanCaption ? `<p class="text-xs leading-relaxed font-normal">${(typeof escapeHtml === 'function' ? escapeHtml(cleanCaption) : cleanCaption).replace(/\n/g, '<br>')}</p>` : ''}
           </div>
         `;
       } else {
+        const safeCaptionAttr = typeof escapeHtml === 'function' ? escapeHtml(cleanCaption || 'WhatsApp Photo') : (cleanCaption || 'WhatsApp Photo');
         contentHtml = `
-          <div class="space-y-2">
-            <div class="group relative rounded-2xl overflow-hidden border border-slate-200/90 bg-slate-900/5 shadow-sm hover:shadow-md transition cursor-pointer" onclick="openImageLightbox('${msgId}')">
-              <img src="${imgSrc}" id="chat-img-${msgId}" alt="Customer Attachment" onerror="if(!this.dataset.retry){this.dataset.retry=1;if(this.getAttribute('src')&&!this.getAttribute('src').startsWith('http')&&!this.getAttribute('src').startsWith('data:')){this.src=window.location.origin+'/'+this.getAttribute('src').replace(/^\/+/,'');}}" class="w-full max-h-[380px] object-contain rounded-2xl block mx-auto transition duration-200 group-hover:brightness-95">
+          <div class="space-y-2 max-w-[340px]">
+            <div class="group relative rounded-2xl overflow-hidden border border-slate-200/90 bg-slate-900/5 shadow-sm hover:shadow-md transition cursor-pointer" onclick="openImageLightbox('${imgSrc.replace(/'/g, "\\'")}', '${safeCaptionAttr.replace(/'/g, "\\'")}')">
+              <img src="${imgSrc}" id="chat-img-${msgId}" alt="Customer Photo" class="w-full max-h-[380px] object-cover rounded-2xl block mx-auto transition duration-200 group-hover:brightness-95" loading="lazy" onerror="if(!this.dataset.retry){this.dataset.retry=1;const raw='${(rawMedia || '').replace(/'/g, "\\'")}';if(raw&&!raw.startsWith('http')&&!raw.startsWith('data:')){this.src=window.location.origin+'/'+raw.replace(/^\\/+/,'');}}">
               <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
                 <span class="px-3 py-1.5 rounded-full bg-slate-900/90 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg border border-white/20">
-                  <span class="material-symbols-outlined text-[16px] text-emerald-400">zoom_in</span> Click to Enlarge / Inspect
+                  <span class="material-symbols-outlined text-[16px] text-emerald-400">zoom_in</span> Click to Enlarge
                 </span>
+                <a href="${imgSrc}" download="whatsapp_photo_${msgId}.jpg" onclick="event.stopPropagation();" class="p-1.5 rounded-full bg-slate-900/90 text-white hover:text-emerald-400 transition shadow-lg border border-white/20" title="Download Photo">
+                  <span class="material-symbols-outlined text-[16px]">download</span>
+                </a>
               </div>
             </div>
-            ${msg.text && msg.text !== '[Photo Attachment]' ? `<p class="text-xs leading-relaxed font-normal">${(typeof escapeHtml === 'function' ? escapeHtml(msg.text) : msg.text).replace(/\n/g, '<br>')}</p>` : ''}
+            ${cleanCaption ? `<p class="text-xs leading-relaxed font-normal px-0.5">${(typeof escapeHtml === 'function' ? escapeHtml(cleanCaption) : cleanCaption).replace(/\n/g, '<br>')}</p>` : ''}
           </div>
         `;
       }
@@ -9440,19 +9490,21 @@ window.openImageLightbox = function (msgIdOrSrc, customTitle) {
   const conv = (CRM_STATE?.conversations && ACTIVE_CUSTOMER_ID && CRM_STATE.conversations[ACTIVE_CUSTOMER_ID]) || customer?.chat || [];
   if (Array.isArray(conv)) {
     const msg = conv.find(m => String(m.id) === String(msgIdOrSrc));
-    if (msg && msg.media_url) {
-      imgSrc = msg.media_url;
+    if (msg && (msg.media_url || msg.mediaUrl)) {
+      imgSrc = resolveAppMediaUrl(msg.media_url || msg.mediaUrl);
       title = `${customer ? customer.name : 'Customer'} - Photo (${msg.time || 'Chat Attachment'})`;
     }
   }
 
   // Fallback if direct src was passed or found in DOM
   if (!imgSrc) {
-    const el = document.getElementById(`chat-img-${msgIdOrSrc}`);
-    if (el && el.src) {
-      imgSrc = el.src;
-    } else if (typeof msgIdOrSrc === 'string' && (msgIdOrSrc.startsWith('data:') || msgIdOrSrc.startsWith('http') || msgIdOrSrc.startsWith('/') || msgIdOrSrc.startsWith('blob:'))) {
-      imgSrc = msgIdOrSrc;
+    if (typeof msgIdOrSrc === 'string' && (msgIdOrSrc.startsWith('data:') || msgIdOrSrc.startsWith('http') || msgIdOrSrc.startsWith('/') || msgIdOrSrc.startsWith('blob:') || msgIdOrSrc.includes('uploads/'))) {
+      imgSrc = resolveAppMediaUrl(msgIdOrSrc);
+    } else {
+      const el = document.getElementById(`chat-img-${msgIdOrSrc}`);
+      if (el && el.src) {
+        imgSrc = el.src;
+      }
     }
   }
 
@@ -9460,6 +9512,8 @@ window.openImageLightbox = function (msgIdOrSrc, customTitle) {
     console.warn('[Lightbox] No valid image source found for:', msgIdOrSrc);
     return;
   }
+
+  imgSrc = resolveAppMediaUrl(imgSrc);
 
   CURRENT_LIGHTBOX_SRC = imgSrc;
   CURRENT_LIGHTBOX_ZOOM = 1.0;
@@ -12160,9 +12214,17 @@ function renderCustomer360Panel() {
     };
   }
 
-  if (!customer && CRM_STATE.customers && CRM_STATE.customers.length > 0) {
-    customer = CRM_STATE.customers[0];
-    ACTIVE_CUSTOMER_ID = customer.id;
+  if (!ACTIVE_CUSTOMER_ID || !customer) {
+    panel.innerHTML = `
+      <div class="h-full flex flex-col items-center justify-center text-center text-slate-400 p-6 select-none">
+        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-2 text-slate-300">
+          <span class="material-symbols-outlined text-[28px]">person</span>
+        </div>
+        <p class="text-xs font-semibold text-slate-600">No Customer Selected</p>
+        <p class="text-[11px] text-slate-400 mt-1">Select a conversation from the left to view customer details and order history</p>
+      </div>
+    `;
+    return;
   }
   const assignedStaffId = query?.assignedTo || query?.assigned_to || customer?.assignedTo || customer?.assigned_to || 'UNASSIGNED';
   const staff = (assignedStaffId && assignedStaffId !== 'UNASSIGNED')
@@ -33187,13 +33249,6 @@ function connectAndOpenWhatsAppChats(accountId, connectedNumber, label) {
 
   // Immediately pull all queued messages from backend
   syncInboundMessagesNow(true).then(() => {
-    // If ACTIVE_CUSTOMER_ID is not set or has no card, select first customer
-    if (!ACTIVE_CUSTOMER_ID || !CRM_STATE.customers.some(c => c.id === ACTIVE_CUSTOMER_ID)) {
-      if (CRM_STATE.customers.length > 0) {
-        ACTIVE_CUSTOMER_ID = CRM_STATE.customers[0].id;
-      }
-    }
-
     // Switch to Inbox and render chats
     switchView('inbox');
     setInboxFilter('all');

@@ -1804,7 +1804,9 @@ if ($action === 'get_state' || $action === 'get_all') {
         echo json_encode([
             "status" => "success",
             "source" => "MYSQL_DATABASE",
+            "server_time" => time(),
             "data" => [
+                "server_time" => time(),
                 "whatsappAccount" => $primaryWA,
                 "whatsappAccounts" => $waAccounts,
                 "staffList" => $staffList,
@@ -4873,7 +4875,19 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $direction = $isBot ? 'outbound' : 'inbound';
         $sender = $isBot ? 'bot' : 'customer';
 
-        // 2. Insert message (Deduplicated with UNIQUE message_uid, all values stored!)
+        // 2. Check if this message already exists in database (strict deduplication to prevent unread count increment on duplicate requests)
+        $isBrandNewMessage = false;
+        try {
+            $msgCheck = $pdo->prepare("SELECT `id` FROM `messages` WHERE `message_uid` = ? LIMIT 1");
+            $msgCheck->execute([$msgUid]);
+            if (!$msgCheck->fetch()) {
+                $isBrandNewMessage = true;
+            }
+        } catch (Exception $eMsgEx) {
+            $isBrandNewMessage = true;
+        }
+
+        // Insert message (Deduplicated with UNIQUE message_uid, all values stored!)
         try {
             $pdo->prepare("
                 INSERT INTO `messages` (
@@ -4924,7 +4938,11 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $existingQ = $checkQ->fetch();
 
             if ($existingQ) {
-                $newUnread = ((int)($existingQ['unread_count'] ?? 0)) + 1;
+                // ONLY increment unread_count if this is a brand-new genuine inbound message!
+                $newUnread = (int)($existingQ['unread_count'] ?? 0);
+                if ($isBrandNewMessage && !$isBot && $direction === 'inbound') {
+                    $newUnread += 1;
+                }
                 $existingStaff = $existingQ['assigned_to'] ?? 'UNASSIGNED';
                 $newStatus = ($existingStaff !== 'UNASSIGNED') ? 'IN_PROGRESS' : 'NEW';
                 try {
@@ -4942,10 +4960,11 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } else {
                 $newQid = 'Q-' . date('Y') . '-' . rand(100000, 999999);
+                $initialUnread = ($isBrandNewMessage && !$isBot && $direction === 'inbound') ? 1 : 0;
                 try {
                     $pdo->prepare("
                         INSERT INTO `queries` (`id`, `customer_id`, `customer_name`, `customer_phone`, `account_id`, `assigned_to`, `status`, `priority`, `query_text`, `unread_count`, `last_message`, `created_at`)
-                        VALUES (?, ?, ?, ?, ?, 'UNASSIGNED', 'NEW', 'HIGH', ?, 1, ?, NOW())
+                        VALUES (?, ?, ?, ?, ?, 'UNASSIGNED', 'NEW', 'HIGH', ?, ?, ?, NOW())
                     ")->execute([
                         $newQid, 
                         $custId, 
@@ -4953,18 +4972,20 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         $senderPhone, 
                         $payload['account_id'] ?? 'account_1', 
                         $messageText, 
+                        $initialUnread,
                         $messageText
                     ]);
                 } catch (Exception $eQInsFull) {
                     $pdo->prepare("
                         INSERT INTO `queries` (`id`, `customer_id`, `assigned_to`, `status`, `priority`, `query_text`, `unread_count`, `last_message`, `created_at`)
-                        VALUES (?, ?, 'UNASSIGNED', 'NEW', 'HIGH', ?, 1, ?, NOW())
-                    ")->execute([$newQid, $custId, $messageText, $messageText]);
+                        VALUES (?, ?, 'UNASSIGNED', 'NEW', 'HIGH', ?, ?, ?, NOW())
+                    ")->execute([$newQid, $custId, $messageText, $initialUnread, $messageText]);
                 }
             }
         } catch (Exception $eQMaster) {}
-        // 5. Atomic Multi-Staff Unread Tracking in chat_read_status
-        if (!$isBot) {
+
+        // 5. Atomic Multi-Staff Unread Tracking in chat_read_status (STRICTLY ONLY FOR BRAND NEW INBOUND MESSAGES)
+        if ($isBrandNewMessage && !$isBot && $direction === 'inbound') {
             try {
                 // A. Super Admin always gets incremented unread count
                 $pdo->prepare("
@@ -5003,6 +5024,7 @@ if ($action === 'receive_message' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($action === 'mark_customer_read') {
     $cid = $_POST['customer_id'] ?? ($_GET['customer_id'] ?? '');
     $phone = $_POST['phone'] ?? ($_GET['phone'] ?? '');
+    $source = $_POST['source'] ?? ($_GET['source'] ?? '');
     $userId = $_POST['user_id'] ?? ($_GET['user_id'] ?? ($_SESSION['user']['id'] ?? ($_SERVER['HTTP_X_USER_ID'] ?? 'admin')));
     if (empty($userId)) {
         $userId = 'admin';
@@ -5021,14 +5043,19 @@ if ($action === 'mark_customer_read') {
             }
 
             if (!empty($cid) && !empty($userId)) {
-                // Strictly mark as read for THIS specific user only!
+                // Strictly mark as read for THIS specific user in chat_read_status
                 $pdo->prepare("
                     INSERT INTO `chat_read_status` (`user_id`, `customer_id`, `unread_count`, `last_read_at`, `updated_at`)
                     VALUES (?, ?, 0, NOW(), NOW())
                     ON DUPLICATE KEY UPDATE `unread_count` = 0, `last_read_at` = NOW(), `updated_at` = NOW()
                 ")->execute([$userId, $cid]);
 
-                // Also update legacy counters if admin or assigned staff reads
+                // If read event originated directly from WhatsApp Business phone, update all recipients for this customer
+                if ($source === 'whatsapp_phone' || $userId === 'all') {
+                    $pdo->prepare("UPDATE `chat_read_status` SET `unread_count` = 0, `last_read_at` = NOW(), `updated_at` = NOW() WHERE `customer_id` = ?")->execute([$cid]);
+                }
+
+                // Also update legacy counters
                 $pdo->prepare("UPDATE `customers` SET `unread_count` = 0 WHERE `id` = ?")->execute([$cid]);
                 $pdo->prepare("UPDATE `queries` SET `unread_count` = 0 WHERE `customer_id` = ?")->execute([$cid]);
 
@@ -5039,6 +5066,7 @@ if ($action === 'mark_customer_read') {
                         'data' => [
                             'customer_id' => $cid,
                             'user_id' => $userId,
+                            'source' => $source ?: 'crm',
                             'unread_count' => 0
                         ]
                     ], 2);

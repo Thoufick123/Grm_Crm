@@ -189,6 +189,8 @@ const LID_TO_PHONE_MAP = new Map();
 const PHONE_TO_LID_MAP = new Map();
 const CONTACTS_CACHE = new Map(); // JID or LID -> { id, name, notify, verifiedName, phone }
 const PROCESSED_MESSAGE_IDS = new Set();
+// Track unread incoming message keys for two-way read receipts (Scenario B: CRM -> WhatsApp)
+const UNREAD_KEYS_BY_CHAT = new Map(); // phone/jid/customer_id -> [{ key, messageTimestamp }]
 // Track live inbound Baileys WhatsApp calls for instant atomic pickup & ringing control
 const ACTIVE_BAILEYS_CALLS = new Map(); // callId -> { callId, accountId, sock, callFrom, chatId, callerPn, customerName, callerPhone, cleanDigits, roomToken }
 
@@ -1454,6 +1456,105 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
             }
         });
 
+        // =========================================================================
+        // SCENARIO A: TWO-WAY READ SYNC — WHATSAPP PHONE TO CRM
+        // Captures chats read/opened on WhatsApp Business mobile phone!
+        // =========================================================================
+        sock.ev.on('chats.update', async (chatUpdates) => {
+            try {
+                if (!Array.isArray(chatUpdates)) return;
+                for (const cu of chatUpdates) {
+                    const isMarkedRead = (cu.unreadCount === 0 || cu.unreadCount === false || (typeof cu.unreadCount === 'number' && cu.unreadCount <= 0));
+                    if (isMarkedRead && cu.id) {
+                        const jid = cu.id;
+                        if (jid.includes('@g.us') || jid === 'status@broadcast') continue;
+
+                        let cleanDigits = jid.split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
+                        if (jid.includes('@lid') && LID_TO_PHONE_MAP.has(cleanDigits)) {
+                            cleanDigits = LID_TO_PHONE_MAP.get(cleanDigits);
+                        }
+                        const phone10 = cleanDigits.slice(-10);
+                        if (phone10.length === 10) {
+                            const customerId = 'cust_' + phone10;
+                            console.log(`📱 [Two-Way Read Sync] Chat ${jid} marked as read on WhatsApp Business Phone! Syncing to CRM...`);
+
+                            // Clear unread message keys in memory
+                            UNREAD_KEYS_BY_CHAT.delete(phone10);
+                            UNREAD_KEYS_BY_CHAT.delete(customerId);
+                            UNREAD_KEYS_BY_CHAT.delete(jid);
+                            UNREAD_KEYS_BY_CHAT.delete(`91${phone10}@s.whatsapp.net`);
+
+                            // Broadcast instantly to all CRM browser tabs (Mobile & Desktop) via Socket.IO
+                            io.emit('chat:read_status', {
+                                customer_id: customerId,
+                                user_id: 'admin',
+                                phone: phone10,
+                                unread_count: 0,
+                                source: 'WHATSAPP_PHONE_READ',
+                                timestamp: Date.now()
+                            });
+
+                            // Forward to CRM PHP API to update database
+                            if (typeof callCrmApi === 'function') {
+                                callCrmApi('mark_customer_read', {
+                                    customer_id: customerId,
+                                    user_id: 'admin',
+                                    phone: phone10,
+                                    source: 'whatsapp_phone'
+                                }).catch(() => {});
+                            }
+                        }
+                    }
+                }
+            } catch (errCu) {
+                console.error('[Two-Way Read Sync - chats.update Error]:', errCu.message);
+            }
+        });
+
+        // Also detect message read receipts from WhatsApp
+        sock.ev.on('message-receipt.update', async (receiptUpdates) => {
+            try {
+                if (!Array.isArray(receiptUpdates)) return;
+                for (const ru of receiptUpdates) {
+                    if (ru.receipt && (ru.receipt.readTimestamp || ru.receipt.readAt)) {
+                        const jid = ru.key?.remoteJid;
+                        if (!jid || jid.includes('@g.us') || jid === 'status@broadcast') continue;
+
+                        let cleanDigits = jid.split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
+                        if (jid.includes('@lid') && LID_TO_PHONE_MAP.has(cleanDigits)) {
+                            cleanDigits = LID_TO_PHONE_MAP.get(cleanDigits);
+                        }
+                        const phone10 = cleanDigits.slice(-10);
+                        if (phone10.length === 10) {
+                            const customerId = 'cust_' + phone10;
+                            UNREAD_KEYS_BY_CHAT.delete(phone10);
+                            UNREAD_KEYS_BY_CHAT.delete(customerId);
+                            UNREAD_KEYS_BY_CHAT.delete(jid);
+                            UNREAD_KEYS_BY_CHAT.delete(`91${phone10}@s.whatsapp.net`);
+
+                            io.emit('chat:read_status', {
+                                customer_id: customerId,
+                                user_id: 'admin',
+                                phone: phone10,
+                                unread_count: 0,
+                                source: 'WHATSAPP_PHONE_READ',
+                                timestamp: Date.now()
+                            });
+
+                            if (typeof callCrmApi === 'function') {
+                                callCrmApi('mark_customer_read', {
+                                    customer_id: customerId,
+                                    user_id: 'admin',
+                                    phone: phone10,
+                                    source: 'whatsapp_phone'
+                                }).catch(() => {});
+                            }
+                        }
+                    }
+                }
+            } catch (errRu) {}
+        });
+
         // Capture Baileys real-time LID-to-PN updates
         sock.ev.on('lid-mapping.update', (mapping) => {
             if (!mapping) return;
@@ -1571,6 +1672,33 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             jidMap.set(cleanNumber, senderJid);
                         }
 
+                        // Store unread message key for Two-Way Read Sync (Scenario B: CRM -> WhatsApp)
+                        const clean10 = (digitsOnly || '').slice(-10);
+                        const msgKeyEntry = {
+                            key: {
+                                remoteJid: msg.key.remoteJid,
+                                id: msg.key.id,
+                                participant: msg.key.participant || undefined,
+                                fromMe: false
+                            },
+                            messageTimestamp: Number(msg.messageTimestamp) || Math.floor(Date.now() / 1000)
+                        };
+                        const trackUnreadKey = (mapKey) => {
+                            if (!mapKey) return;
+                            if (!UNREAD_KEYS_BY_CHAT.has(mapKey)) UNREAD_KEYS_BY_CHAT.set(mapKey, []);
+                            const arr = UNREAD_KEYS_BY_CHAT.get(mapKey);
+                            if (!arr.some(k => k.key.id === msg.key.id)) {
+                                arr.push(msgKeyEntry);
+                                if (arr.length > 50) arr.shift();
+                            }
+                        };
+                        trackUnreadKey(senderJid);
+                        if (clean10) {
+                            trackUnreadKey(clean10);
+                            trackUnreadKey('cust_' + clean10);
+                            trackUnreadKey('91' + clean10 + '@s.whatsapp.net');
+                        }
+
                         // Unwrap nested WhatsApp message formats (Ephemeral, ViewOnce, Disappearing, Edited, Linked Device, etc.)
                         let rawMsg = msg.message || {};
                         let unwrapCycles = 10;
@@ -1642,14 +1770,17 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                             }
                         }
                         // 2. Check for Photo / Image Attachment (Resilient Wrapped Download + Remote Hostinger Base64 Sync)
-                        else if (rawMsg.imageMessage) {
+                        else if (rawMsg.imageMessage || rawMsg.stickerMessage || (rawMsg.documentMessage && rawMsg.documentMessage.mimetype && rawMsg.documentMessage.mimetype.startsWith('image/'))) {
                             msgType = 'image';
-                            messageText = rawMsg.imageMessage.caption ? ('[Photo] ' + rawMsg.imageMessage.caption) : '[Photo Attachment]';
+                            const rawImgMsg = rawMsg.imageMessage || rawMsg.documentMessage || rawMsg.stickerMessage || {};
+                            const imgCaption = rawImgMsg.caption || '';
+                            messageText = imgCaption ? ('[Photo] ' + imgCaption) : '[Photo Attachment]';
                             try {
                                 let imgBuffer = null;
+                                const mediaPayload = { key: msg.key, message: rawMsg };
                                 try {
                                     imgBuffer = await downloadMediaMessage(
-                                        msg,
+                                        mediaPayload,
                                         'buffer',
                                         {},
                                         { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
@@ -1657,7 +1788,7 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 } catch (e1) {
                                     try {
                                         imgBuffer = await downloadMediaMessage(
-                                            { key: msg.key, message: rawMsg },
+                                            msg,
                                             'buffer',
                                             {},
                                             { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
@@ -1666,20 +1797,30 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 }
 
                                 // Fallback to embedded jpegThumbnail if network download from CDN failed
-                                if (!imgBuffer && rawMsg.imageMessage.jpegThumbnail) {
-                                    imgBuffer = Buffer.from(rawMsg.imageMessage.jpegThumbnail);
+                                if (!imgBuffer && rawImgMsg.jpegThumbnail) {
+                                    imgBuffer = Buffer.from(rawImgMsg.jpegThumbnail);
                                 }
 
                                 if (imgBuffer && imgBuffer.length > 0) {
+                                    let ext = 'jpg';
+                                    let mime = 'image/jpeg';
+                                    if (rawMsg.stickerMessage || rawImgMsg.mimetype === 'image/webp') {
+                                        ext = 'webp';
+                                        mime = 'image/webp';
+                                    } else if (rawImgMsg.mimetype === 'image/png') {
+                                        ext = 'png';
+                                        mime = 'image/png';
+                                    }
+
                                     // Send base64 data URI so remote Hostinger PHP receives actual file bytes and writes to uploads/media/
-                                    mediaUrl = 'data:image/jpeg;base64,' + imgBuffer.toString('base64');
-                                    console.log(`[Image Downloaded & Base64 Encoded] (${imgBuffer.length} bytes) from ${senderName}`);
+                                    mediaUrl = `data:${mime};base64,` + imgBuffer.toString('base64');
+                                    console.log(`[Image Downloaded & Base64 Encoded] (${imgBuffer.length} bytes, ${ext}) from ${senderName}`);
                                     
                                     // Also cache locally on bridge filesystem
                                     try {
                                         const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'media');
                                         if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-                                        const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+                                        const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
                                         fs.writeFileSync(path.join(uploadsDir, fileName), imgBuffer);
                                     } catch (e) {}
                                 }
@@ -1946,9 +2087,10 @@ async function initAccountSession(accountId, label = 'WhatsApp Account') {
                                 continue;
                             }
                         }
+                        const uniqueSuffix = '_' + Math.random().toString(36).slice(2, 7);
                         const payload = {
-                            id: msgId || ('msg_' + Date.now()),
-                            message_uid: msgId || ('msg_' + Date.now()),
+                            id: msgId || ('msg_' + Date.now() + uniqueSuffix),
+                            message_uid: msgId || ('msg_' + Date.now() + uniqueSuffix),
                             customer_id: 'cust_' + (digitsOnly ? digitsOnly.slice(-10) : '0000000000'),
                             sender_name: senderName,
                             sender_phone: senderNumber,
@@ -2637,7 +2779,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Realtime User-Specific Chat Read Notification (Zero Page Refresh Badge Clear)
+    // Realtime User-Specific Chat Read Notification (Zero Page Refresh Badge Clear + Scenario B: WhatsApp Read Sync)
     socket.on('chat:mark_read', async (data) => {
         const { customer_id, user_id, phone } = data || {};
         if (customer_id && user_id) {
@@ -2649,9 +2791,64 @@ io.on('connection', (socket) => {
                 unread_count: 0,
                 timestamp: Date.now()
             });
+
             // Forward to CRM PHP API to update chat_read_status in MySQL database
             if (typeof callCrmApi === 'function') {
                 callCrmApi('mark_customer_read', { customer_id, user_id, phone: phone || null }).catch(() => {});
+            }
+
+            // =========================================================================
+            // SCENARIO B: TRANSMIT READ RECEIPTS TO WHATSAPP BUSINESS VIA BAILEYS
+            // Tells WhatsApp servers that messages are read & clears phone unread badge
+            // =========================================================================
+            try {
+                const cleanDigits = String(phone || customer_id || '').replace(/\D/g, '').slice(-10);
+                const targetKeys = UNREAD_KEYS_BY_CHAT.get(cleanDigits) ||
+                                   UNREAD_KEYS_BY_CHAT.get(customer_id) ||
+                                   (cleanDigits ? UNREAD_KEYS_BY_CHAT.get('91' + cleanDigits + '@s.whatsapp.net') : null) ||
+                                   [];
+
+                let targetSock = null;
+                for (const acc of accounts.values()) {
+                    if (acc.status === 'CONNECTED' && acc.sock) {
+                        targetSock = acc.sock;
+                        break;
+                    }
+                }
+
+                if (targetSock) {
+                    const destJid = resolveDestinationJid(phone || customer_id) || (cleanDigits ? `91${cleanDigits}@s.whatsapp.net` : null);
+                    if (destJid) {
+                        // 1. Send Baileys read receipts (blue ticks) for unread messages
+                        if (targetKeys.length > 0) {
+                            const keysToRead = targetKeys.map(item => item.key);
+                            await targetSock.readMessages(keysToRead).catch(err => {
+                                console.warn('[Baileys readMessages warning]:', err.message);
+                            });
+                            console.log(`[Two-Way Read Sync] Sent read receipts (blue ticks) for ${keysToRead.length} message(s) to WhatsApp chat ${destJid}`);
+                        }
+
+                        // 2. Modify chat state to mark as read on WhatsApp Business phone app
+                        const lastMsgRange = targetKeys.length > 0 ? [targetKeys[targetKeys.length - 1]] : undefined;
+                        await targetSock.chatModify({
+                            markRead: true,
+                            lastMessages: lastMsgRange
+                        }, destJid).catch(err => {
+                            console.warn('[Baileys chatModify warning]:', err.message);
+                        });
+                        console.log(`[Two-Way Read Sync] WhatsApp chat ${destJid} marked as read via chatModify`);
+                    }
+                }
+
+                // Clear unread message keys in memory for this customer
+                UNREAD_KEYS_BY_CHAT.delete(cleanDigits);
+                UNREAD_KEYS_BY_CHAT.delete(customer_id);
+                if (cleanDigits) {
+                    UNREAD_KEYS_BY_CHAT.delete('cust_' + cleanDigits);
+                    UNREAD_KEYS_BY_CHAT.delete('91' + cleanDigits + '@s.whatsapp.net');
+                }
+            } catch (errSync) {
+                console.error('[Two-Way Read Sync Error]:', errSync.message);
             }
         }
     });
