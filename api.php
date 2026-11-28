@@ -1156,6 +1156,14 @@ if ($action === 'get_state' || $action === 'get_all') {
                     $r['autoSend'] = isset($r['auto_send']) ? (bool)$r['auto_send'] : true;
                 }
             } catch (Exception $e) {}
+            $maskingSettingsFast = null;
+            try {
+                $mStmtFast = $pdo->query("SELECT * FROM `masking_settings` ORDER BY `id` ASC LIMIT 1");
+                $maskingSettingsFast = $mStmtFast ? $mStmtFast->fetch(PDO::FETCH_ASSOC) : null;
+                if ($maskingSettingsFast && !array_key_exists('call_module_enabled', $maskingSettingsFast)) {
+                    $maskingSettingsFast['call_module_enabled'] = 1;
+                }
+            } catch (Exception $e) {}
             echo json_encode([
                 "status" => "success",
                 "source" => "MYSQL_DATABASE_SETTINGS_FASTPATH",
@@ -1163,7 +1171,8 @@ if ($action === 'get_state' || $action === 'get_all') {
                     "whatsappAccount" => $primaryWA,
                     "whatsappAccounts" => $waAccounts,
                     "autoReplyRules" => $arRules,
-                    "lidMappings" => $activeLidMappings
+                    "lidMappings" => $activeLidMappings,
+                    "maskingSettings" => $maskingSettingsFast
                 ]
             ], JSON_UNESCAPED_UNICODE);
             exit;

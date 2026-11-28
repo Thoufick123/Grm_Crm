@@ -33837,6 +33837,7 @@ function refreshSpecificAccount(accountId) {
 }
 
 function renderWhatsAppSettings() {
+  if (typeof applyCallAndMaskingVisibility === 'function') applyCallAndMaskingVisibility();
   fetchQRBridgeStatus();
 
   // Fetch the latest brand config from the bridge config file first, then populate
@@ -42527,11 +42528,28 @@ window.isCallAndMaskingEnabled = isCallAndMaskingEnabled;
 function applyCallAndMaskingVisibility() {
   const isEnabled = isCallAndMaskingEnabled();
 
-  // 1. Sync Master Toggle UI in WhatsApp Settings (#view-settings)
+  // 1. Sync Master Toggle UI in WhatsApp Settings (#view-settings) & Control Hub (#view-masking)
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const isAdminUser = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
+  const canEditMaster = isAdminUser || (typeof canUserPerformAction === 'function' && canUserPerformAction('masking', 'edit'));
+
+  const masterCard = document.getElementById('settings-master-call-masking-card');
+  if (masterCard) {
+    masterCard.style.display = canEditMaster ? '' : 'none';
+  }
+
   const masterChk = document.getElementById('toggle-master-call-module');
+  const hubMasterChk = document.getElementById('toggle-hub-master-call-module');
   const masterBadge = document.getElementById('settings-master-call-badge');
   const masterLabel = document.getElementById('settings-master-call-label');
-  if (masterChk) masterChk.checked = isEnabled;
+  if (masterChk) {
+    masterChk.checked = isEnabled;
+    masterChk.disabled = !canEditMaster;
+  }
+  if (hubMasterChk) {
+    hubMasterChk.checked = isEnabled;
+    hubMasterChk.disabled = !canEditMaster;
+  }
   if (masterBadge) {
     masterBadge.innerText = isEnabled ? 'ACTIVE' : 'INACTIVE';
     masterBadge.className = isEnabled
@@ -42602,6 +42620,7 @@ async function toggleMasterCallMaskingModule(isChecked) {
   CRM_STATE.maskingSettings.call_module_enabled = nextVal;
   if (!CRM_STATE.settings) CRM_STATE.settings = {};
   CRM_STATE.settings.maskCustomerNumbers = isChecked && (parseInt(CRM_STATE.maskingSettings.chat_masking_enabled ?? 1) === 1);
+  if (typeof saveCRMState === 'function') saveCRMState();
 
   applyCallAndMaskingVisibility();
   if (typeof updateMaskingUI === 'function') updateMaskingUI();
