@@ -980,6 +980,7 @@ function initializeDatabaseSchema($pdo) {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS `masking_settings` (
             `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `call_module_enabled` TINYINT(1) DEFAULT 1,
             `call_masking_enabled` TINYINT(1) DEFAULT 1,
             `chat_masking_enabled` TINYINT(1) DEFAULT 1,
             `call_timeout_seconds` INT DEFAULT 30,
@@ -992,6 +993,12 @@ function initializeDatabaseSchema($pdo) {
             `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
+    try {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM `masking_settings` LIKE 'call_module_enabled'")->fetch();
+        if (!$colCheck) {
+            $pdo->exec("ALTER TABLE `masking_settings` ADD COLUMN `call_module_enabled` TINYINT(1) DEFAULT 1 AFTER `id`");
+        }
+    } catch (Exception $e) {}
 
     // 15. Call Sessions Table
     $pdo->exec("
@@ -1342,8 +1349,8 @@ function seedDefaultDataIfEmpty($pdo) {
     $maskCount = $pdo->query("SELECT COUNT(*) FROM `masking_settings`")->fetchColumn();
     if ($maskCount == 0) {
         $pdo->exec("
-            INSERT INTO `masking_settings` (`id`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `updated_by`)
-            VALUES (1, 1, 1, 30, 'RETURN_TO_POOL', '+91 97896 60115', 'admin', 1, 'Super Admin');
+            INSERT INTO `masking_settings` (`id`, `call_module_enabled`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `updated_by`)
+            VALUES (1, 1, 1, 1, 30, 'RETURN_TO_POOL', '+91 97896 60115', 'admin', 1, 'Super Admin');
         ");
     }
 

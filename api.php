@@ -1870,6 +1870,15 @@ if ($action === 'get_state' || $action === 'get_all') {
             $bcTemplates = $pdo->query("SELECT * FROM `broadcast_templates` ORDER BY `created_at` ASC")->fetchAll();
         } catch (Exception $e) {}
 
+        $maskingSettings = null;
+        try {
+            $mStmt = $pdo->query("SELECT * FROM `masking_settings` ORDER BY `id` ASC LIMIT 1");
+            $maskingSettings = $mStmt ? $mStmt->fetch(PDO::FETCH_ASSOC) : null;
+            if ($maskingSettings && !array_key_exists('call_module_enabled', $maskingSettings)) {
+                $maskingSettings['call_module_enabled'] = 1;
+            }
+        } catch (Exception $e) {}
+
         echo json_encode([
             "status" => "success",
             "source" => "MYSQL_DATABASE",
@@ -1896,7 +1905,8 @@ if ($action === 'get_state' || $action === 'get_all') {
                 "broadcastTemplates" => $bcTemplates,
                 "lidMappings" => $activeLidMappings,
                 "userUnreadMap" => $userUnreadMap,
-                "currentUserId" => $currentUserId
+                "currentUserId" => $currentUserId,
+                "maskingSettings" => $maskingSettings
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -10233,10 +10243,16 @@ if ($action === 'get_masking_settings') {
     header('Content-Type: application/json');
     try {
         if (!$pdo) throw new Exception("Database connection unavailable");
+        try {
+            $colCheck = $pdo->query("SHOW COLUMNS FROM `masking_settings` LIKE 'call_module_enabled'")->fetch();
+            if (!$colCheck) {
+                $pdo->exec("ALTER TABLE `masking_settings` ADD COLUMN `call_module_enabled` TINYINT(1) DEFAULT 1 AFTER `id`");
+            }
+        } catch (Exception $ce) {}
         $stmt = $pdo->query("SELECT * FROM `masking_settings` ORDER BY `id` ASC LIMIT 1");
         $settings = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$settings) {
-            $pdo->exec("INSERT INTO `masking_settings` (`id`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `simultaneous_ring_limit`, `updated_by`) VALUES (1, 1, 1, 30, 'RETURN_TO_POOL', '+91 97896 60115', 'staff_01,staff_02,staff_03', 1, 5, 'Super Admin')");
+            $pdo->exec("INSERT INTO `masking_settings` (`id`, `call_module_enabled`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `simultaneous_ring_limit`, `updated_by`) VALUES (1, 1, 1, 1, 30, 'RETURN_TO_POOL', '+91 97896 60115', 'staff_01,staff_02,staff_03', 1, 5, 'Super Admin')");
             $settings = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
         }
 
@@ -10305,22 +10321,32 @@ if ($action === 'save_masking_settings' && $_SERVER['REQUEST_METHOD'] === 'POST'
     $data = json_decode($input, true) ?? [];
     try {
         if (!$pdo) throw new Exception("Database connection unavailable");
-        $callMasking = isset($data['call_masking_enabled']) ? ($data['call_masking_enabled'] ? 1 : 0) : 1;
-        $chatMasking = isset($data['chat_masking_enabled']) ? ($data['chat_masking_enabled'] ? 1 : 0) : 1;
-        $timeout = intval($data['call_timeout_seconds'] ?? 30);
-        $strategy = $data['fallback_strategy'] ?? 'RETURN_TO_POOL';
-        $virtualNum = trim($data['virtual_company_number'] ?? '+91 97896 60115');
-        $recording = isset($data['recording_enabled']) ? ($data['recording_enabled'] ? 1 : 0) : 1;
-        $ringLimit = intval($data['simultaneous_ring_limit'] ?? 5);
-        $eligibleStaff = is_array($data['eligible_staff_ids'] ?? null) 
-            ? implode(',', $data['eligible_staff_ids']) 
-            : ($data['eligible_staff_ids'] ?? 'staff_01,staff_02,staff_03');
+        try {
+            $colCheck = $pdo->query("SHOW COLUMNS FROM `masking_settings` LIKE 'call_module_enabled'")->fetch();
+            if (!$colCheck) {
+                $pdo->exec("ALTER TABLE `masking_settings` ADD COLUMN `call_module_enabled` TINYINT(1) DEFAULT 1 AFTER `id`");
+            }
+        } catch (Exception $ce) {}
+
+        $existing = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+        $callModule = array_key_exists('call_module_enabled', $data) ? ($data['call_module_enabled'] ? 1 : 0) : (isset($existing['call_module_enabled']) ? (int)$existing['call_module_enabled'] : 1);
+        $callMasking = array_key_exists('call_masking_enabled', $data) ? ($data['call_masking_enabled'] ? 1 : 0) : (isset($existing['call_masking_enabled']) ? (int)$existing['call_masking_enabled'] : 1);
+        $chatMasking = array_key_exists('chat_masking_enabled', $data) ? ($data['chat_masking_enabled'] ? 1 : 0) : (isset($existing['chat_masking_enabled']) ? (int)$existing['chat_masking_enabled'] : 1);
+        $timeout = array_key_exists('call_timeout_seconds', $data) ? intval($data['call_timeout_seconds']) : intval($existing['call_timeout_seconds'] ?? 30);
+        $strategy = array_key_exists('fallback_strategy', $data) ? $data['fallback_strategy'] : ($existing['fallback_strategy'] ?? 'RETURN_TO_POOL');
+        $virtualNum = array_key_exists('virtual_company_number', $data) ? trim($data['virtual_company_number']) : ($existing['virtual_company_number'] ?? '+91 97896 60115');
+        $recording = array_key_exists('recording_enabled', $data) ? ($data['recording_enabled'] ? 1 : 0) : (isset($existing['recording_enabled']) ? (int)$existing['recording_enabled'] : 1);
+        $ringLimit = array_key_exists('simultaneous_ring_limit', $data) ? intval($data['simultaneous_ring_limit']) : intval($existing['simultaneous_ring_limit'] ?? 5);
+        $eligibleStaff = array_key_exists('eligible_staff_ids', $data)
+            ? (is_array($data['eligible_staff_ids']) ? implode(',', $data['eligible_staff_ids']) : $data['eligible_staff_ids'])
+            : ($existing['eligible_staff_ids'] ?? 'staff_01,staff_02,staff_03');
         $updatedBy = $data['updated_by'] ?? 'Super Admin';
 
         $stmt = $pdo->prepare("
-            INSERT INTO `masking_settings` (`id`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `simultaneous_ring_limit`, `updated_by`)
-            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO `masking_settings` (`id`, `call_module_enabled`, `call_masking_enabled`, `chat_masking_enabled`, `call_timeout_seconds`, `fallback_strategy`, `virtual_company_number`, `eligible_staff_ids`, `recording_enabled`, `simultaneous_ring_limit`, `updated_by`)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
+                `call_module_enabled` = VALUES(`call_module_enabled`),
                 `call_masking_enabled` = VALUES(`call_masking_enabled`),
                 `chat_masking_enabled` = VALUES(`chat_masking_enabled`),
                 `call_timeout_seconds` = VALUES(`call_timeout_seconds`),
@@ -10331,14 +10357,15 @@ if ($action === 'save_masking_settings' && $_SERVER['REQUEST_METHOD'] === 'POST'
                 `simultaneous_ring_limit` = VALUES(`simultaneous_ring_limit`),
                 `updated_by` = VALUES(`updated_by`)
         ");
-        $stmt->execute([$callMasking, $chatMasking, $timeout, $strategy, $virtualNum, $eligibleStaff, $recording, $ringLimit, $updatedBy]);
+        $stmt->execute([$callModule, $callMasking, $chatMasking, $timeout, $strategy, $virtualNum, $eligibleStaff, $recording, $ringLimit, $updatedBy]);
 
         try {
             $auditStmt = $pdo->prepare("INSERT INTO `audit_logs` (`action_type`, `category`, `actor`, `description`, `created_at`) VALUES ('CALL_MASKING_UPDATED', 'TELEPHONY', ?, ?, NOW())");
-            $auditStmt->execute([$updatedBy, "Updated Call & Number Masking settings. Virtual DID: $virtualNum, Call Masking: " . ($callMasking ? 'ON' : 'OFF') . ", Ring Timeout: {$timeout}s, Eligible: $eligibleStaff"]);
+            $auditStmt->execute([$updatedBy, "Updated Call & Number Masking settings. Module: " . ($callModule ? 'ACTIVE' : 'INACTIVE') . ", Virtual DID: $virtualNum, Call Masking: " . ($callMasking ? 'ON' : 'OFF') . ", Ring Timeout: {$timeout}s"]);
         } catch (Exception $ae) {}
 
-        echo json_encode(["status" => "success", "message" => "Call masking settings saved successfully!"]);
+        $updatedSettings = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
+        echo json_encode(["status" => "success", "message" => "Call masking settings saved successfully!", "settings" => $updatedSettings]);
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(["status" => "error", "message" => $e->getMessage()]);
@@ -10351,6 +10378,13 @@ if ($action === 'get_incoming_calls') {
     $calls = [];
     try {
         if ($pdo) {
+            try {
+                $modRow = $pdo->query("SELECT `call_module_enabled` FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
+                if ($modRow && isset($modRow['call_module_enabled']) && (int)$modRow['call_module_enabled'] === 0) {
+                    echo json_encode(["status" => "success", "incoming_calls" => [], "server_time" => time(), "module_disabled" => true]);
+                    exit;
+                }
+            } catch (Exception $me) {}
             // 1. Auto-expire any stale calls (> 45 seconds old) from RINGING to MISSED
             $pdo->query("
                 UPDATE `call_sessions`
@@ -10708,6 +10742,10 @@ if ($action === 'initiate_outbound_call' && $_SERVER['REQUEST_METHOD'] === 'POST
             : $rawPhone;
 
         $settings = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
+        if ($settings && isset($settings['call_module_enabled']) && (int)$settings['call_module_enabled'] === 0) {
+            echo json_encode(["status" => "disabled", "message" => "Call & Number Masking module is currently disabled by Admin."]);
+            exit;
+        }
         $virtualNum = $settings['virtual_company_number'] ?? '+91 97896 60115';
 
         $stmt = $pdo->prepare("
@@ -10784,6 +10822,10 @@ if ($action === 'simulate_incoming_call' && $_SERVER['REQUEST_METHOD'] === 'POST
             : $rawPhone;
 
         $settings = $pdo->query("SELECT * FROM `masking_settings` WHERE `id` = 1")->fetch(PDO::FETCH_ASSOC);
+        if ($settings && isset($settings['call_module_enabled']) && (int)$settings['call_module_enabled'] === 0) {
+            echo json_encode(["status" => "disabled", "message" => "Call & Number Masking module is currently disabled by Admin."]);
+            exit;
+        }
         $virtualNum = $settings['virtual_company_number'] ?? '+91 95009 04638';
         $eligibleStaff = $settings['eligible_staff_ids'] ?? 'staff_05,admin,all';
         $eligibleArr = array_filter(array_map('trim', explode(',', $eligibleStaff)));

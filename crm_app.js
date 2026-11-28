@@ -1313,10 +1313,11 @@ function enforceGranularActionPermissions() {
   }
 
   // ── SECTION 13: CALL & NUMBER MASKING MODULE ACTIONS (VIEW, CREATE, EDIT, DELETE) ────
-  const canMaskView = isSuperAdmin || canUserPerformAction('masking', 'view');
-  const canMaskCreate = isSuperAdmin || canUserPerformAction('masking', 'create');
-  const canMaskEdit = isSuperAdmin || canUserPerformAction('masking', 'edit');
-  const canMaskDelete = isSuperAdmin || canUserPerformAction('masking', 'delete');
+  const isCallModuleActive = (typeof isCallAndMaskingEnabled === 'function') ? isCallAndMaskingEnabled() : true;
+  const canMaskView = isCallModuleActive && (isSuperAdmin || canUserPerformAction('masking', 'view'));
+  const canMaskCreate = isCallModuleActive && (isSuperAdmin || canUserPerformAction('masking', 'create'));
+  const canMaskEdit = isCallModuleActive && (isSuperAdmin || canUserPerformAction('masking', 'edit'));
+  const canMaskDelete = isCallModuleActive && (isSuperAdmin || canUserPerformAction('masking', 'delete'));
 
   const navMaskingEl = document.getElementById('nav-masking');
   if (navMaskingEl) {
@@ -1589,9 +1590,15 @@ function formatDisplayPhone(rawPhone, customerId = null, forceUnmask = false) {
   const pretty = formatPhoneNumberPretty(rawPhone);
   if (!pretty) return '';
 
+  const isCallModuleActive = (typeof isCallAndMaskingEnabled === 'function') ? isCallAndMaskingEnabled() : true;
   const isGlobalMasked = CRM_STATE?.settings?.maskCustomerNumbers ?? false;
   const isRevealed = customerId && REVEALED_CUSTOMERS.has(customerId);
   const isStaffRole = (ACTIVE_ROLE !== 'admin' && CURRENT_USER?.role !== 'admin');
+
+  // When master Call & Masking module is inactive, Admins always see unmasked numbers
+  if (!isCallModuleActive && !isStaffRole) {
+    return pretty;
+  }
 
   // When masking is active or for staff users:
   if ((isGlobalMasked || isStaffRole) && !isRevealed && !forceUnmask) {
@@ -1814,6 +1821,10 @@ function triggerDirectWhatsAppVoiceCall(phone, mode = 'app') {
 }
 
 function initiateBrandMaskedCall(customerId) {
+  if (typeof isCallAndMaskingEnabled === 'function' && !isCallAndMaskingEnabled()) {
+    showToast('Module Inactive', 'Call & Number Masking is currently disabled in Settings.', 'phone_disabled', 'slate');
+    return;
+  }
   if (typeof canUserPerformAction === 'function' && !canUserPerformAction('masking', 'create')) {
     showToast('Permission Denied', 'Your assigned role does not have permission to initiate calls.', 'lock', 'rose');
     return;
@@ -2378,6 +2389,7 @@ function initSocketIO() {
     // Real-time Inbound Message from WhatsApp (Pushed instantly)
     // Real-time Active Call Broadcast (e.g. from WhatsApp Inbox or softphone)
     SOCKET_IO.on('call:active', (data) => {
+      if (typeof isCallAndMaskingEnabled === 'function' && !isCallAndMaskingEnabled()) return;
       console.log('📞 [Socket.IO Call Active]:', data);
       if (ACTIVE_VIEW === 'masking' && typeof loadMaskingSettingsAndSessions === 'function') {
         loadMaskingSettingsAndSessions();
@@ -2386,24 +2398,28 @@ function initSocketIO() {
 
     // Real-time Telephony Inbound Call Simultaneous Broadcast
     SOCKET_IO.on('call:incoming', (data) => {
+      if (typeof isCallAndMaskingEnabled === 'function' && !isCallAndMaskingEnabled()) return;
       console.log('🔔 [Socket.IO Call Incoming]:', data);
       if (typeof handleSocketIncomingCall === 'function') handleSocketIncomingCall(data);
     });
 
     // Real-time Atomic Call Claimed by Staff Member
     SOCKET_IO.on('call:claimed', (data) => {
+      if (typeof isCallAndMaskingEnabled === 'function' && !isCallAndMaskingEnabled()) return;
       console.log('🔒 [Socket.IO Call Claimed]:', data);
       if (typeof handleSocketCallClaimed === 'function') handleSocketCallClaimed(data);
     });
 
     // Real-time Call Released / Reassigned
     SOCKET_IO.on('call:released', (data) => {
+      if (typeof isCallAndMaskingEnabled === 'function' && !isCallAndMaskingEnabled()) return;
       console.log('🔄 [Socket.IO Call Released/Reassigned]:', data);
       if (typeof handleSocketCallReleased === 'function') handleSocketCallReleased(data);
     });
 
     // Real-time Call Ended / Completed
     SOCKET_IO.on('call:ended', (data) => {
+      if (typeof isCallAndMaskingEnabled === 'function' && !isCallAndMaskingEnabled()) return;
       console.log('🏁 [Socket.IO Call Ended]:', data);
       if (typeof handleSocketCallEnded === 'function') handleSocketCallEnded(data);
     });
@@ -3045,6 +3061,7 @@ if (!window.DISMISSED_CALL_IDS) {
 }
 
 function syncIncomingCallsNow() {
+  if (typeof isCallAndMaskingEnabled === 'function' && !isCallAndMaskingEnabled()) return;
   fetch('api.php?action=get_incoming_calls')
     .then(r => r.json())
     .then(res => {
@@ -4062,6 +4079,18 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
 function applyAuthoritativeDatabaseState(data) {
   if (!data || typeof data !== 'object') return;
   const isSocketAlive = Boolean(typeof SOCKET_IO !== 'undefined' && SOCKET_IO && SOCKET_IO.connected);
+
+  // 0. Sync Master Call & Number Masking Settings early before view renders
+  if (data.maskingSettings && typeof data.maskingSettings === 'object') {
+    if (!CRM_STATE.maskingSettings) CRM_STATE.maskingSettings = {};
+    Object.assign(CRM_STATE.maskingSettings, data.maskingSettings);
+    if (!CRM_STATE.settings) CRM_STATE.settings = {};
+    const isModActive = parseInt(CRM_STATE.maskingSettings.call_module_enabled ?? 1) === 1;
+    CRM_STATE.settings.maskCustomerNumbers = isModActive && (parseInt(CRM_STATE.maskingSettings.chat_masking_enabled ?? 1) === 1);
+  }
+  if (typeof applyCallAndMaskingVisibility === 'function') {
+    applyCallAndMaskingVisibility();
+  }
 
   // 1. Products & Inventory
   if (data.products && Array.isArray(data.products)) {
@@ -6086,6 +6115,9 @@ function switchInboxSubmodule(submodule) {
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
   }
+  if (typeof applyCallAndMaskingVisibility === 'function') {
+    applyCallAndMaskingVisibility();
+  }
 }
 
 function renderInboxSettingsView() {
@@ -6419,6 +6451,14 @@ function switchView(viewName, subName, isFromHistory = false) {
     if (typeof toggleSidebar === 'function') toggleSidebar(false);
   }
 
+  // Enforce Master Call & Number Masking Module Toggle
+  if (viewName === 'masking' && typeof isCallAndMaskingEnabled === 'function' && !isCallAndMaskingEnabled()) {
+    if (typeof showToast === 'function') {
+      showToast('Module Disabled', 'Call & Number Masking is currently turned OFF in Settings.', 'phone_disabled', 'slate');
+    }
+    viewName = 'settings';
+  }
+
   // Enforce Role-Based Access Control
   const currentUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : ((typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? CURRENT_USER : null);
   const isSuperAdminUser = currentUser ? (currentUser.role === 'admin' || currentUser.id === 'admin' || currentUser.role === 'Super Admin' || (currentUser.title && currentUser.title.includes('Admin Manager'))) : false;
@@ -6473,7 +6513,8 @@ function switchView(viewName, subName, isFromHistory = false) {
       }
     }
     if (navBtn) {
-      const canViewModule = (typeof canUserPerformAction === 'function') ? canUserPerformAction(v, 'view') : true;
+      const isCallModActive = (v !== 'masking') || (typeof isCallAndMaskingEnabled !== 'function' || isCallAndMaskingEnabled());
+      const canViewModule = isCallModActive && ((typeof canUserPerformAction === 'function') ? canUserPerformAction(v, 'view') : true);
       navBtn.style.display = canViewModule ? '' : 'none';
       if (v === viewName) {
         navBtn.className = "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition bg-brand-wa text-white font-semibold shadow-sm" + (canViewModule ? '' : ' hidden');
@@ -6616,6 +6657,9 @@ function switchView(viewName, subName, isFromHistory = false) {
   }
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
+  }
+  if (typeof applyCallAndMaskingVisibility === 'function') {
+    applyCallAndMaskingVisibility();
   }
 }
 
@@ -8717,11 +8761,13 @@ function renderChatHeader() {
 
     <!-- Call and Slide-Hide Toggle Button in Header -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      ${(typeof isCallAndMaskingEnabled !== 'function' || isCallAndMaskingEnabled()) ? `
       <!-- BRAND-MASKED WHATSAPP CALL BUTTON -->
       <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1 shrink-0 cursor-pointer" title="${t('customer.call_via', 'Call via')} ${getBrandName()}">
         <span class="material-symbols-outlined text-[15px]">call</span>
         <span class="hidden xl:inline">${t('common.call', 'Call')}</span>
       </button>
+      ` : ''}
 
       <!-- Slide Hide / Show Toggle Button for Customer Profile Panel -->
       <button id="btn-toggle-right-panel" type="button" onclick="toggleRightPanel(null, true)" class="px-2 sm:px-2.5 py-1.5 rounded-lg border ${IS_RIGHT_PANEL_OPEN ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'} font-bold text-xs flex items-center gap-1 shadow-sm transition shrink-0 cursor-pointer" title="${IS_RIGHT_PANEL_OPEN ? t('customer.hide_profile', 'Hide Profile') : t('customer.profile', 'Profile')}">
@@ -12484,6 +12530,7 @@ function renderCustomer360Panel() {
     </div>
 
     <!-- BRAND-MASKED VOICE CALL ACTION -->
+    ${(typeof isCallAndMaskingEnabled !== 'function' || isCallAndMaskingEnabled()) ? `
     <div class="p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-b border-emerald-200">
       <button type="button" onclick="initiateBrandMaskedCall('${customer.id}')" class="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.01] active:scale-[0.99]" title="${t('customer.call_via', 'Call via')} ${getBrandName()}">
         <span class="material-symbols-outlined text-[18px] animate-pulse">call</span>
@@ -12491,6 +12538,7 @@ function renderCustomer360Panel() {
       </button>
       
     </div>
+    ` : ''}
 
     <!-- 1. CUSTOMER PROFILE DETAILS FORM (SHOWN FIRST) -->
     <div class="p-4 border-b border-slate-200 bg-white space-y-3">
@@ -20964,7 +21012,7 @@ function filterPaymentPendingCards() {
   const canFuCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'create') : true);
   const canFuEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'edit') : true);
   const canFuDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'delete') : true);
-  const canCall = canFuCreate || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true);
+  const canCall = (typeof isCallAndMaskingEnabled !== 'function' || isCallAndMaskingEnabled()) && (canFuCreate || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true));
 
   container.innerHTML = list.map(fu => {
     const isOverdue = isFollowupOverdue(fu);
@@ -21261,7 +21309,7 @@ function filterFollowupsCards() {
   const canFuCreate = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'create') : true);
   const canFuEdit = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'edit') : true);
   const canFuDelete = isSuperAdmin || (typeof canUserPerformAction === 'function' ? canUserPerformAction('followups', 'delete') : true);
-  const canCall = canFuCreate || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true);
+  const canCall = (typeof isCallAndMaskingEnabled !== 'function' || isCallAndMaskingEnabled()) && (canFuCreate || (typeof canUserPerformAction === 'function' ? canUserPerformAction('inbox', 'create') : true));
 
   container.innerHTML = list.map(fu => {
     const isOverdue = isFollowupOverdue(fu);
@@ -22517,6 +22565,9 @@ function filterCatalogGrid() {
   updateCatalogMetrics();
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
+  }
+  if (typeof applyCallAndMaskingVisibility === 'function') {
+    applyCallAndMaskingVisibility();
   }
 }
 
@@ -30083,6 +30134,9 @@ function renderOrdersHistoryTable() {
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
   }
+  if (typeof applyCallAndMaskingVisibility === 'function') {
+    applyCallAndMaskingVisibility();
+  }
 }
 window.renderOrdersHistoryTable = renderOrdersHistoryTable;
 
@@ -32247,6 +32301,9 @@ function renderCustomersGrid(searchFilter = '') {
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
   }
+  if (typeof applyCallAndMaskingVisibility === 'function') {
+    applyCallAndMaskingVisibility();
+  }
 }
 window.renderCustomersGrid = renderCustomersGrid;
 
@@ -33820,6 +33877,9 @@ function _populateBrandSettingsFields() {
   updateBrandPreview();
   if (typeof enforceGranularActionPermissions === 'function') {
     enforceGranularActionPermissions();
+  }
+  if (typeof applyCallAndMaskingVisibility === 'function') {
+    applyCallAndMaskingVisibility();
   }
 }
 
@@ -41034,6 +41094,7 @@ window.renderMaskingView = renderMaskingView;
 
 // Handle Inbound Call Broadcast received via Socket.IO
 function handleSocketIncomingCall(data) {
+  if (typeof isCallAndMaskingEnabled === 'function' && !isCallAndMaskingEnabled()) return;
   if (!data || !data.call_id) return;
 
   // 1. Ignore if explicitly dismissed by user in this session
@@ -42455,6 +42516,128 @@ async function toggleMaskingSetting(key, isChecked) {
   }
 }
 window.toggleMaskingSetting = toggleMaskingSetting;
+
+function isCallAndMaskingEnabled() {
+  const val = CRM_STATE?.maskingSettings?.call_module_enabled;
+  if (val === undefined || val === null) return true;
+  return parseInt(val) === 1;
+}
+window.isCallAndMaskingEnabled = isCallAndMaskingEnabled;
+
+function applyCallAndMaskingVisibility() {
+  const isEnabled = isCallAndMaskingEnabled();
+
+  // 1. Sync Master Toggle UI in WhatsApp Settings (#view-settings)
+  const masterChk = document.getElementById('toggle-master-call-module');
+  const masterBadge = document.getElementById('settings-master-call-badge');
+  const masterLabel = document.getElementById('settings-master-call-label');
+  if (masterChk) masterChk.checked = isEnabled;
+  if (masterBadge) {
+    masterBadge.innerText = isEnabled ? 'ACTIVE' : 'INACTIVE';
+    masterBadge.className = isEnabled
+      ? 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200'
+      : 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200';
+  }
+  if (masterLabel) {
+    masterLabel.innerText = isEnabled ? 'ENABLED' : 'DISABLED';
+    masterLabel.className = isEnabled ? 'text-xs font-extrabold text-emerald-700' : 'text-xs font-extrabold text-slate-500';
+  }
+
+  // 2. Sidebar Nav & Active View Guard
+  const navMasking = document.getElementById('nav-masking');
+  if (navMasking) {
+    const hasRoleView = (typeof canUserPerformAction === 'function') ? canUserPerformAction('masking', 'view') : true;
+    navMasking.style.display = (isEnabled && hasRoleView) ? '' : 'none';
+  }
+  if (!isEnabled && typeof ACTIVE_VIEW !== 'undefined' && ACTIVE_VIEW === 'masking') {
+    if (typeof MASKING_VIEW_POLL_INTERVAL !== 'undefined' && MASKING_VIEW_POLL_INTERVAL) {
+      clearInterval(MASKING_VIEW_POLL_INTERVAL);
+      MASKING_VIEW_POLL_INTERVAL = null;
+    }
+    if (typeof switchView === 'function') switchView('settings');
+  }
+
+  // 3. Header, Mobile Settings & Inbox Settings Masking Toggles
+  ['btn-mask-toggle', 'btn-settings-mask-toggle', 'inbox-settings-mask-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isEnabled ? '' : 'none';
+  });
+
+  // 4. Outbound Call & Simulation Buttons across Chat, Customer 360 & Follow-ups
+  document.querySelectorAll('[onclick*="initiateBrandMaskedCall"], [onclick*="handleFollowupCallCustomer"], [onclick*="triggerSimulatedIncomingCall"]').forEach(el => {
+    el.style.display = isEnabled ? '' : 'none';
+  });
+
+  // 5. Audit Trail 'CALLING' Filter Option
+  const auditCallingOpt = document.querySelector('#view-audit option[value="CALLING"]');
+  if (auditCallingOpt) {
+    auditCallingOpt.hidden = !isEnabled;
+    auditCallingOpt.disabled = !isEnabled;
+  }
+
+  // 6. Close Call Modals if Module Disabled
+  if (!isEnabled) {
+    if (typeof stopSoftphoneRingTone === 'function') stopSoftphoneRingTone();
+    ['modal-incoming-call-alert', 'modal-brand-call'].forEach(mId => {
+      const mEl = document.getElementById(mId);
+      if (mEl && !mEl.classList.contains('hidden')) {
+        mEl.classList.add('hidden');
+      }
+    });
+  }
+}
+window.applyCallAndMaskingVisibility = applyCallAndMaskingVisibility;
+
+async function toggleMasterCallMaskingModule(isChecked) {
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const isAdmin = !user || user.role === 'admin' || user.id === 'admin' || user.role === 'Super Admin';
+  if (!isAdmin && typeof canUserPerformAction === 'function' && !canUserPerformAction('masking', 'edit')) {
+    showToast('Permission Denied', 'Only Administrators can toggle the Call & Number Masking module.', 'lock', 'rose');
+    applyCallAndMaskingVisibility();
+    return;
+  }
+
+  const nextVal = isChecked ? 1 : 0;
+  if (!CRM_STATE.maskingSettings) CRM_STATE.maskingSettings = {};
+  CRM_STATE.maskingSettings.call_module_enabled = nextVal;
+  if (!CRM_STATE.settings) CRM_STATE.settings = {};
+  CRM_STATE.settings.maskCustomerNumbers = isChecked && (parseInt(CRM_STATE.maskingSettings.chat_masking_enabled ?? 1) === 1);
+
+  applyCallAndMaskingVisibility();
+  if (typeof updateMaskingUI === 'function') updateMaskingUI();
+  if (typeof renderCurrentView === 'function') renderCurrentView();
+
+  try {
+    const res = await fetch('api.php?action=save_masking_settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        call_module_enabled: nextVal,
+        updated_by: user?.name || user?.username || 'Super Admin'
+      })
+    });
+    const data = await res.json();
+    if (data && data.status === 'success') {
+      if (data.settings) Object.assign(CRM_STATE.maskingSettings, data.settings);
+      showToast(
+        isChecked ? 'Call & Masking Enabled' : 'Call & Masking Hidden',
+        isChecked
+          ? 'Call & Number Masking features are now visible across the CRM.'
+          : 'All call & masking features are hidden and phone numbers are unmasked for Admins.',
+        isChecked ? 'phone_locked' : 'phone_disabled',
+        isChecked ? 'emerald' : 'slate'
+      );
+      applyCallAndMaskingVisibility();
+      if (typeof renderCurrentView === 'function') renderCurrentView();
+    } else {
+      throw new Error(data?.message || 'Failed to save setting');
+    }
+  } catch (err) {
+    console.error('Failed to toggle master call masking module:', err);
+    showToast('Error', 'Could not save Call & Number Masking module state.', 'error', 'rose');
+  }
+}
+window.toggleMasterCallMaskingModule = toggleMasterCallMaskingModule;
 
 async function saveMaskingConfigurationForm(event) {
   if (event) event.preventDefault();
