@@ -820,7 +820,8 @@ $publicActions = [
     'stream_audio',
     'play_audio',
     'bulk_link_action',
-    'verify_backup_download'
+    'verify_backup_download',
+    'verify_backup_request'
 ];
 
 if (!in_array($action, $publicActions)) {
